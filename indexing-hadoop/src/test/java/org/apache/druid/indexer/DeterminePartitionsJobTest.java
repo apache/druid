@@ -21,13 +21,12 @@ package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Files;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -41,6 +40,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -51,28 +51,35 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class DeterminePartitionsJobTest
 {
+  @Nullable
+  private static final Long NO_TARGET_ROWS_PER_SEGMENT = null;
+  @Nullable
+  private static final Long NO_MAX_ROWS_PER_SEGMENT = null;
 
-  private HadoopDruidIndexerConfig config;
-  private int expectedNumOfSegments;
-  private int[] expectedNumOfShardsForEachSegment;
-  private String[][][] expectedStartEndForEachShard;
-  private File dataFile;
-  private File tmpDir;
+  private final HadoopDruidIndexerConfig config;
+  private final int expectedNumOfSegments;
+  private final int[] expectedNumOfShardsForEachSegment;
+  private final String[][][] expectedStartEndForEachShard;
+  private final File dataFile;
+  private final File tmpDir;
 
   @Parameterized.Parameters(name = "assumeGrouped={0}, "
-                                   + "targetPartitionSize={1}, "
-                                   + "interval={2}"
-                                   + "expectedNumOfSegments={3}, "
-                                   + "expectedNumOfShardsForEachSegment={4}, "
-                                   + "expectedStartEndForEachShard={5}, "
-                                   + "data={6}")
+                                   + "targetRowsPerSegment={1}, "
+                                   + "maxRowsPerSegment={2}, "
+                                   + "interval={3}"
+                                   + "expectedNumOfSegments={4}, "
+                                   + "expectedNumOfShardsForEachSegment={5}, "
+                                   + "expectedStartEndForEachShard={6}, "
+                                   + "data={7}")
   public static Collection<Object[]> constructFeed()
   {
     return Arrays.asList(
         new Object[][]{
             {
+                // Test partitoning by targetRowsPerSegment
                 true,
-                3L,
+                2,
+                NO_MAX_ROWS_PER_SEGMENT,
                 "2014-10-22T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -82,12 +89,41 @@ public class DeterminePartitionsJobTest
                         {"c.example.com", "e.example.com"},
                         {"e.example.com", "g.example.com"},
                         {"g.example.com", "i.example.com"},
-                        {"i.example.com", null }
+                        {"i.example.com", null}
                     }
                 },
                 ImmutableList.of(
                     "2014102200,a.example.com,CN,100",
-                    "2014102200,b.exmaple.com,US,50",
+                    "2014102200,b.example.com,US,50",
+                    "2014102200,c.example.com,US,200",
+                    "2014102200,d.example.com,US,250",
+                    "2014102200,e.example.com,US,123",
+                    "2014102200,f.example.com,US,567",
+                    "2014102200,g.example.com,US,11",
+                    "2014102200,h.example.com,US,251",
+                    "2014102200,i.example.com,US,963",
+                    "2014102200,j.example.com,US,333"
+                )
+            },
+            {
+                true,
+                NO_TARGET_ROWS_PER_SEGMENT,
+                2,
+                "2014-10-22T00:00:00Z/P1D",
+                1,
+                new int[]{5},
+                new String[][][]{
+                    {
+                        {null, "c.example.com"},
+                        {"c.example.com", "e.example.com"},
+                        {"e.example.com", "g.example.com"},
+                        {"g.example.com", "i.example.com"},
+                        {"i.example.com", null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102200,a.example.com,CN,100",
+                    "2014102200,b.example.com,US,50",
                     "2014102200,c.example.com,US,200",
                     "2014102200,d.example.com,US,250",
                     "2014102200,e.example.com,US,123",
@@ -100,7 +136,8 @@ public class DeterminePartitionsJobTest
             },
             {
                 false,
-                3L,
+                NO_TARGET_ROWS_PER_SEGMENT,
+                2,
                 "2014-10-20T00:00:00Z/P1D",
                 1,
                 new int[]{5},
@@ -116,8 +153,8 @@ public class DeterminePartitionsJobTest
                 ImmutableList.of(
                     "2014102000,a.example.com,CN,100",
                     "2014102000,a.example.com,CN,100",
-                    "2014102000,b.exmaple.com,US,50",
-                    "2014102000,b.exmaple.com,US,50",
+                    "2014102000,b.example.com,US,50",
+                    "2014102000,b.example.com,US,50",
                     "2014102000,c.example.com,US,200",
                     "2014102000,c.example.com,US,200",
                     "2014102000,d.example.com,US,250",
@@ -138,7 +175,8 @@ public class DeterminePartitionsJobTest
             },
             {
                 true,
-                6L,
+                NO_TARGET_ROWS_PER_SEGMENT,
+                5,
                 "2014-10-20T00:00:00Z/P3D",
                 3,
                 new int[]{2, 2, 2},
@@ -158,7 +196,7 @@ public class DeterminePartitionsJobTest
                 },
                 ImmutableList.of(
                     "2014102000,a.example.com,CN,100",
-                    "2014102000,b.exmaple.com,CN,50",
+                    "2014102000,b.example.com,CN,50",
                     "2014102000,c.example.com,CN,200",
                     "2014102000,d.example.com,US,250",
                     "2014102000,e.example.com,US,123",
@@ -167,9 +205,8 @@ public class DeterminePartitionsJobTest
                     "2014102000,h.example.com,US,251",
                     "2014102000,i.example.com,US,963",
                     "2014102000,j.example.com,US,333",
-                    "2014102000,k.example.com,US,555",
                     "2014102100,a.example.com,CN,100",
-                    "2014102100,b.exmaple.com,CN,50",
+                    "2014102100,b.example.com,CN,50",
                     "2014102100,c.example.com,CN,200",
                     "2014102100,d.example.com,US,250",
                     "2014102100,e.example.com,US,123",
@@ -178,9 +215,8 @@ public class DeterminePartitionsJobTest
                     "2014102100,h.example.com,US,251",
                     "2014102100,i.example.com,US,963",
                     "2014102100,j.example.com,US,333",
-                    "2014102100,k.example.com,US,555",
                     "2014102200,a.example.com,CN,100",
-                    "2014102200,b.exmaple.com,CN,50",
+                    "2014102200,b.example.com,CN,50",
                     "2014102200,c.example.com,CN,200",
                     "2014102200,d.example.com,US,250",
                     "2014102200,e.example.com,US,123",
@@ -188,8 +224,32 @@ public class DeterminePartitionsJobTest
                     "2014102200,g.example.com,US,11",
                     "2014102200,h.example.com,US,251",
                     "2014102200,i.example.com,US,963",
-                    "2014102200,j.example.com,US,333",
-                    "2014102200,k.example.com,US,555"
+                    "2014102200,j.example.com,US,333"
+                )
+            },
+            {
+                true,
+                NO_TARGET_ROWS_PER_SEGMENT,
+                1000,
+                "2014-10-22T00:00:00Z/P1D",
+                1,
+                new int[]{1},
+                new String[][][]{
+                    {
+                        {null, null}
+                    }
+                },
+                ImmutableList.of(
+                    "2014102200,a.example.com,CN,100",
+                    "2014102200,b.example.com,US,50",
+                    "2014102200,c.example.com,US,200",
+                    "2014102200,d.example.com,US,250",
+                    "2014102200,e.example.com,US,123",
+                    "2014102200,f.example.com,US,567",
+                    "2014102200,g.example.com,US,11",
+                    "2014102200,h.example.com,US,251",
+                    "2014102200,i.example.com,US,963",
+                    "2014102200,j.example.com,US,333"
                 )
             }
         }
@@ -198,7 +258,8 @@ public class DeterminePartitionsJobTest
 
   public DeterminePartitionsJobTest(
       boolean assumeGrouped,
-      Long targetPartitionSize,
+      @Nullable Integer targetRowsPerSegment,
+      Integer maxRowsPerSegment,
       String interval,
       int expectedNumOfSegments,
       int[] expectedNumOfShardsForEachSegment,
@@ -212,10 +273,10 @@ public class DeterminePartitionsJobTest
 
     dataFile = File.createTempFile("test_website_data", "tmp");
     dataFile.deleteOnExit();
-    tmpDir = Files.createTempDir();
+    tmpDir = FileUtils.createTempDir();
     tmpDir.deleteOnExit();
 
-    FileUtils.writeLines(dataFile, data);
+    org.apache.commons.io.FileUtils.writeLines(dataFile, data);
 
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
@@ -225,7 +286,11 @@ public class DeterminePartitionsJobTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
+                            new DimensionsSpec(
+                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")),
+                                null,
+                                null
+                            ),
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),
                             false,
@@ -257,23 +322,25 @@ public class DeterminePartitionsJobTest
             new HadoopTuningConfig(
                 tmpDir.getCanonicalPath(),
                 null,
-                new SingleDimensionPartitionsSpec(null, targetPartitionSize, null, assumeGrouped),
+                new SingleDimensionPartitionsSpec(targetRowsPerSegment, maxRowsPerSegment, null, assumeGrouped),
                 null,
                 null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
                 null,
                 null,
                 null,
                 false,
                 false,
+                false,
+                false,
+                null,
+                false,
+                false,
+                null,
+                null,
+                null,
+                false,
+                false,
+                null,
                 null,
                 null,
                 null
@@ -293,9 +360,9 @@ public class DeterminePartitionsJobTest
     Assert.assertEquals(expectedNumOfSegments, config.getSchema().getTuningConfig().getShardSpecs().size());
 
     for (Map.Entry<Long, List<HadoopyShardSpec>> entry : config.getSchema()
-                                                                   .getTuningConfig()
-                                                                   .getShardSpecs()
-                                                                   .entrySet()) {
+                                                               .getTuningConfig()
+                                                               .getShardSpecs()
+                                                               .entrySet()) {
       int partitionNum = 0;
       List<HadoopyShardSpec> specs = entry.getValue();
       Assert.assertEquals(expectedNumOfShardsForEachSegment[segmentNum], specs.size());
@@ -317,7 +384,7 @@ public class DeterminePartitionsJobTest
   @After
   public void tearDown() throws Exception
   {
-    FileUtils.forceDelete(dataFile);
+    org.apache.commons.io.FileUtils.forceDelete(dataFile);
     FileUtils.deleteDirectory(tmpDir);
   }
 }

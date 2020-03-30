@@ -41,7 +41,7 @@ import java.util.List;
  */
 @Command(
     name = "hadoop",
-    description = "Runs the batch Hadoop Druid Indexer, see http://druid.io/docs/latest/Batch-ingestion.html for a description."
+    description = "Runs the batch Hadoop Druid Indexer, see https://druid.apache.org/docs/latest/Batch-ingestion.html for a description."
 )
 public class CliHadoopIndexer implements Runnable
 {
@@ -87,8 +87,7 @@ public class CliHadoopIndexer implements Runnable
       final List<URL> nonHadoopURLs = new ArrayList<>();
       nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
 
-      final List<URL> driverURLs = new ArrayList<>();
-      driverURLs.addAll(nonHadoopURLs);
+      final List<URL> driverURLs = new ArrayList<>(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
       for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extensionsConfig)) {
         final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);

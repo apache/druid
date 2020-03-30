@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class HttpEmitterTest
 {
   private final MockHttpClient httpClient = new MockHttpClient();
-  private static final ObjectMapper objectMapper = new ObjectMapper()
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
   {
     @Override
     public byte[] writeValueAsBytes(Object value)
@@ -70,8 +70,9 @@ public class HttpEmitterTest
     final HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
         .setHttpTimeoutAllowanceFactor(timeoutAllowanceFactor)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, objectMapper);
+    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
 
     long startMs = System.currentTimeMillis();
     emitter.start();

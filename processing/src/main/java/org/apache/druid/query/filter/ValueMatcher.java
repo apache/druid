@@ -21,32 +21,16 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
 /**
+ * An object that returns a boolean indicating if the "current" row should be selected or not. The most prominent use
+ * of this interface is that it is returned by the {@link Filter} "makeMatcher" method, where it is used to identify
+ * selected rows for filtered cursors and filtered aggregators.
+ *
+ * @see org.apache.druid.query.filter.vector.VectorValueMatcher, the vectorized version
  */
 public interface ValueMatcher extends HotLoopCallee
 {
   @CalledFromHotLoop
   boolean matches();
-
-  // Utility method to match null values.
-  static ValueMatcher nullValueMatcher(BaseNullableColumnValueSelector selector)
-  {
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        return selector.isNull();
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("selector", selector);
-      }
-    };
-  }
 }

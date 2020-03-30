@@ -36,12 +36,15 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 
 /**
+ * Selector for a string-typed column, either single- or multi-valued. This is named a "dimension" selector for legacy
+ * reasons: in the past, all Druid dimensions were string-typed.
+ *
+ * @see org.apache.druid.segment.vector.SingleValueDimensionVectorSelector, a vectorized version
+ * @see org.apache.druid.segment.vector.MultiValueDimensionVectorSelector, another vectorized version
  */
 @PublicApi
-public interface DimensionSelector extends ColumnValueSelector<Object>, HotLoopCallee
+public interface DimensionSelector extends ColumnValueSelector<Object>, DimensionDictionarySelector, HotLoopCallee
 {
-  int CARDINALITY_UNKNOWN = -1;
-
   /**
    * Returns the indexed values at the current position in this DimensionSelector.
    *
@@ -64,75 +67,6 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, HotLoopC
   ValueMatcher makeValueMatcher(Predicate<String> predicate);
 
   /**
-   * Value cardinality is the cardinality of the different occurring values.  If there were 4 rows:
-   *
-   * A,B
-   * A
-   * B
-   * A
-   *
-   * Value cardinality would be 2.
-   *
-   * Cardinality may be unknown (e.g. the selector used by IncrementalIndex while reading input rows),
-   * in which case this method will return -1. If cardinality is unknown, you should assume this
-   * dimension selector has no dictionary, and avoid storing ids, calling "lookupId", or calling "lookupName"
-   * outside of the context of operating on a single row.
-   *
-   * @return the value cardinality, or -1 if unknown.
-   */
-  int getValueCardinality();
-
-  /**
-   * The Name is the String name of the actual field.  It is assumed that storage layers convert names
-   * into id values which can then be used to get the string value.  For example
-   *
-   * A,B
-   * A
-   * A,B
-   * B
-   *
-   * getRow() would return
-   *
-   * getRow(0) =&gt; [0 1]
-   * getRow(1) =&gt; [0]
-   * getRow(2) =&gt; [0 1]
-   * getRow(3) =&gt; [1]
-   *
-   * and then lookupName would return:
-   *
-   * lookupName(0) =&gt; A
-   * lookupName(1) =&gt; B
-   *
-   * @param id id to lookup the field name for
-   * @return the field name for the given id
-   */
-  @CalledFromHotLoop
-  @Nullable
-  String lookupName(int id);
-
-  /**
-   * Returns true if it is possible to {@link #lookupName(int)} by ids from 0 to {@link #getValueCardinality()}
-   * before the rows with those ids are returned.
-   *
-   * <p>Returns false if {@link #lookupName(int)} could be called with ids, returned from the most recent call of {@link
-   * #getRow()} on this DimensionSelector, but not earlier. If {@link #getValueCardinality()} of this DimensionSelector
-   * additionally returns {@link #CARDINALITY_UNKNOWN}, {@code lookupName()} couldn't be called with ids, returned by
-   * not the most recent call of {@link #getRow()}, i. e. names for ids couldn't be looked up "later". If {@link
-   * #getValueCardinality()} returns a non-negative number, {@code lookupName()} could be called with any ids, returned
-   * from {@code #getRow()} since the creation of this DimensionSelector.
-   *
-   * <p>If {@link #lookupName(int)} is called with an ineligible id, result is undefined: exception could be thrown, or
-   * null returned, or some other random value.
-   */
-  boolean nameLookupPossibleInAdvance();
-
-  /**
-   * Returns {@link IdLookup} if available for this DimensionSelector, or null.
-   */
-  @Nullable
-  IdLookup idLookup();
-
-  /**
    * @deprecated This method is marked as deprecated in DimensionSelector to minimize the probability of accidental
    * calling. "Polymorphism" of DimensionSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
@@ -141,7 +75,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, HotLoopC
   @Override
   default float getFloat()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0.0f;
   }
 
@@ -154,7 +88,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, HotLoopC
   @Override
   default double getDouble()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0.0;
   }
 
@@ -167,7 +101,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, HotLoopC
   @Override
   default long getLong()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0L;
   }
 

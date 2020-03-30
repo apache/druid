@@ -39,7 +39,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,14 +46,14 @@ import java.util.Map;
  */
 public class SegmentAnalyzerTest
 {
-  private static final EnumSet<SegmentMetadataQuery.AnalysisType> emptyAnalyses =
+  private static final EnumSet<SegmentMetadataQuery.AnalysisType> EMPTY_ANALYSES =
       EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class);
 
   @Test
   public void testIncrementalWorks()
   {
     testIncrementalWorksHelper(null);
-    testIncrementalWorksHelper(emptyAnalyses);
+    testIncrementalWorksHelper(EMPTY_ANALYSES);
   }
 
   private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
@@ -113,7 +112,7 @@ public class SegmentAnalyzerTest
   public void testMappedWorks()
   {
     testMappedWorksHelper(null);
-    testMappedWorksHelper(emptyAnalyses);
+    testMappedWorksHelper(EMPTY_ANALYSES);
   }
 
   private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
@@ -193,7 +192,6 @@ public class SegmentAnalyzerTest
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
         new LegacyDataSource("test"), new LegacySegmentSpec("2011/2012"), null, null, null, analyses, false, false
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    return runner.run(QueryPlus.wrap(query), context).toList();
+    return runner.run(QueryPlus.wrap(query)).toList();
   }
 }

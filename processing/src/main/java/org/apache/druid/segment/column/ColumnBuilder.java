@@ -23,18 +23,25 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class ColumnBuilder
 {
+  @Nullable
   private ValueType type = null;
   private boolean hasMultipleValues = false;
   private boolean filterable = false;
-
-  private Supplier<? extends BaseColumn> columnSupplier = null;
   private boolean dictionaryEncoded = false;
+
+  @Nullable
+  private Supplier<? extends BaseColumn> columnSupplier = null;
+  @Nullable
   private Supplier<BitmapIndex> bitmapIndex = null;
+  @Nullable
   private Supplier<SpatialIndex> spatialIndex = null;
+  @Nullable
   private SmooshedFileMapper fileMapper = null;
 
   public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
@@ -109,6 +116,7 @@ public class ColumnBuilder
             .setHasBitmapIndexes(bitmapIndex != null)
             .setHasSpatialIndexes(spatialIndex != null)
             .setHasMultipleValues(hasMultipleValues)
+            .setIsComplete(true)
             .setFilterable(filterable),
         columnSupplier,
         bitmapIndex,

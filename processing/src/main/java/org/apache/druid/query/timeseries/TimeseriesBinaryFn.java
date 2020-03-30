@@ -21,18 +21,17 @@ package org.apache.druid.query.timeseries;
 
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
-public class TimeseriesBinaryFn
-    implements BinaryFn<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>
+public class TimeseriesBinaryFn implements BinaryOperator<Result<TimeseriesResultValue>>
 {
   private final Granularity gran;
   private final List<AggregatorFactory> aggregations;

@@ -35,8 +35,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Properties;
 
-/**
- */
 public class PropertiesModule implements Module
 {
   private static final Logger log = new Logger(PropertiesModule.class);
@@ -68,9 +66,9 @@ public class PropertiesModule implements Module
         }
 
         if (stream != null) {
-          log.info("Loading properties from %s", propertiesFile);
-          try {
-            fileProps.load(new InputStreamReader(stream, StandardCharsets.UTF_8));
+          log.debug("Loading properties from %s", propertiesFile);
+          try (final InputStreamReader in = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+            fileProps.load(in);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -78,7 +76,7 @@ public class PropertiesModule implements Module
         }
       }
       catch (FileNotFoundException e) {
-        log.wtf(e, "This can only happen if the .exists() call lied.  That's f'd up.");
+        log.wtf(e, "This can only happen if the .exists() call lied.");
       }
       finally {
         CloseQuietly.close(stream);

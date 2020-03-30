@@ -57,7 +57,8 @@ public class InputRowSerdeTest
   private List<String> dims;
   private Map<String, Object> event;
 
-  {
+  static {
+    NullHandling.initializeForTests();
     new AggregatorsModule(); //registers ComplexMetric serde for hyperUnique
   }
 
@@ -157,7 +158,7 @@ public class InputRowSerdeTest
     Assert.assertEquals(5.0f, out.getMetric("m1out").floatValue(), 0.00001);
     Assert.assertEquals(100L, out.getMetric("m2out"));
     Assert.assertEquals(1, ((HyperLogLogCollector) out.getRaw("m3out")).estimateCardinality(), 0.001);
-    Assert.assertEquals(0L, out.getMetric("unparseable"));
+    Assert.assertEquals(NullHandling.defaultLongValue(), out.getMetric("unparseable"));
 
     EasyMock.verify(mockedAggregator);
     EasyMock.verify(mockedNullAggregator);

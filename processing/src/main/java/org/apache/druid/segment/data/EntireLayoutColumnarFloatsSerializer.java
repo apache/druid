@@ -33,22 +33,24 @@ import java.nio.channels.WritableByteChannel;
  */
 public class EntireLayoutColumnarFloatsSerializer implements ColumnarFloatsSerializer
 {
-  private static final MetaSerdeHelper<EntireLayoutColumnarFloatsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<EntireLayoutColumnarFloatsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((EntireLayoutColumnarFloatsSerializer x) -> CompressedColumnarFloatsSupplier.VERSION)
       .writeInt(x -> x.numInserted)
       .writeInt(x -> 0)
       .writeByte(x -> CompressionStrategy.NONE.getId());
 
+  private final String columnName;
   private final boolean isLittleEndian;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private WriteOutBytes valuesOut;
 
   private int numInserted = 0;
 
-  EntireLayoutColumnarFloatsSerializer(SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder order)
+  EntireLayoutColumnarFloatsSerializer(String columnName, SegmentWriteOutMedium segmentWriteOutMedium, ByteOrder order)
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    isLittleEndian = order.equals(ByteOrder.LITTLE_ENDIAN);
+    this.isLittleEndian = order.equals(ByteOrder.LITTLE_ENDIAN);
   }
 
   @Override
@@ -73,18 +75,21 @@ public class EntireLayoutColumnarFloatsSerializer implements ColumnarFloatsSeria
     }
     valuesOut.writeInt(valueBits);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override
   public long getSerializedSize() throws IOException
   {
-    return metaSerdeHelper.size(this) + valuesOut.size();
+    return META_SERDE_HELPER.size(this) + valuesOut.size();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     valuesOut.writeTo(channel);
   }
 }

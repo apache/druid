@@ -23,11 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -37,9 +32,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
@@ -53,43 +47,23 @@ import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
-import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
-public class ExpressionsTest extends CalciteTestBase
+public class ExpressionsTest extends ExpressionTestBase
 {
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  private final PlannerContext plannerContext = PlannerContext.create(
-      CalciteTests.createOperatorTable(),
-      CalciteTests.createExprMacroTable(),
-      new PlannerConfig(),
-      ImmutableMap.of(),
-      CalciteTests.REGULAR_USER_AUTH_RESULT
-  );
-  private final RowSignature rowSignature = RowSignature
+  private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
       .add("t", ValueType.LONG)
       .add("a", ValueType.LONG)
@@ -104,7 +78,8 @@ public class ExpressionsTest extends CalciteTestBase
       .add("tstr", ValueType.STRING)
       .add("dstr", ValueType.STRING)
       .build();
-  private final Map<String, Object> bindings = ImmutableMap.<String, Object>builder()
+
+  private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
       .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
       .put("a", 10)
       .put("b", 25)
@@ -118,21 +93,24 @@ public class ExpressionsTest extends CalciteTestBase
       .put("tstr", "2000-02-03 04:05:06")
       .put("dstr", "2000-02-03")
       .build();
-  private final RelDataTypeFactory typeFactory = new JavaTypeFactoryImpl();
-  private final RexBuilder rexBuilder = new RexBuilder(typeFactory);
-  private final RelDataType relDataType = rowSignature.getRelDataType(typeFactory);
+
+  private ExpressionTestHelper testHelper;
+
+  @Before
+  public void setUp()
+  {
+    testHelper = new ExpressionTestHelper(ROW_SIGNATURE, BINDINGS);
+  }
 
   @Test
   public void testConcat()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            typeFactory.createSqlType(SqlTypeName.VARCHAR),
-            SqlStdOperatorTable.CONCAT,
-            ImmutableList.of(
-                inputRef("s"),
-                rexBuilder.makeLiteral("bar")
-            )
+    testHelper.testExpression(
+        SqlTypeName.VARCHAR,
+        SqlStdOperatorTable.CONCAT,
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("bar")
         ),
         DruidExpression.fromExpression("concat(\"s\",'bar')"),
         "foobar"
@@ -142,11 +120,9 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testCharacterLength()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.CHARACTER_LENGTH,
-            inputRef("s")
-        ),
+    testHelper.testExpression(
+        SqlStdOperatorTable.CHARACTER_LENGTH,
+        testHelper.makeInputRef("s"),
         DruidExpression.fromExpression("strlen(\"s\")"),
         3L
     );
@@ -155,12 +131,12 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRegexpExtract()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new RegexpExtractOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            rexBuilder.makeLiteral("f(.)"),
-            integerLiteral(1)
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f(.)"),
+            testHelper.makeLiteral(1)
         ),
         DruidExpression.of(
             SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 1, true, null)),
@@ -169,11 +145,11 @@ public class ExpressionsTest extends CalciteTestBase
         "o"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RegexpExtractOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            rexBuilder.makeLiteral("f(.)")
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f(.)")
         ),
         DruidExpression.of(
             SimpleExtraction.of("s", new RegexDimExtractionFn("f(.)", 0, true, null)),
@@ -186,44 +162,44 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testStringFormat()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new StringFormatOperatorConversion().calciteOperator(),
-            rexBuilder.makeLiteral("%x"),
-            inputRef("b")
+    testHelper.testExpression(
+        new StringFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("%x"),
+            testHelper.makeInputRef("b")
         ),
         DruidExpression.fromExpression("format('%x',\"b\")"),
         "19"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new StringFormatOperatorConversion().calciteOperator(),
-            rexBuilder.makeLiteral("%s %,d"),
-            inputRef("s"),
-            integerLiteral(1234)
+    testHelper.testExpression(
+        new StringFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("%s %,d"),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1234)
         ),
         DruidExpression.fromExpression("format('%s %,d',\"s\",1234)"),
         "foo 1,234"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new StringFormatOperatorConversion().calciteOperator(),
-            rexBuilder.makeLiteral("%s %,d"),
-            inputRef("s")
+    testHelper.testExpression(
+        new StringFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("%s %,d"),
+            testHelper.makeInputRef("s")
         ),
         DruidExpression.fromExpression("format('%s %,d',\"s\")"),
         "%s %,d; foo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new StringFormatOperatorConversion().calciteOperator(),
-            rexBuilder.makeLiteral("%s %,d"),
-            inputRef("s"),
-            integerLiteral(1234),
-            integerLiteral(6789)
+    testHelper.testExpression(
+        new StringFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("%s %,d"),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1234),
+            testHelper.makeLiteral(6789)
         ),
         DruidExpression.fromExpression("format('%s %,d',\"s\",1234,6789)"),
         "foo 1,234"
@@ -233,31 +209,31 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testStrpos()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new StrposOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            rexBuilder.makeLiteral("oo")
+    testHelper.testExpression(
+        new StrposOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("oo")
         ),
         DruidExpression.fromExpression("(strpos(\"s\",'oo') + 1)"),
         2L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new StrposOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            rexBuilder.makeLiteral("ax")
+    testHelper.testExpression(
+        new StrposOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("ax")
         ),
         DruidExpression.fromExpression("(strpos(\"s\",'ax') + 1)"),
         0L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new StrposOperatorConversion().calciteOperator(),
-            rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.VARCHAR)),
-            rexBuilder.makeLiteral("ax")
+    testHelper.testExpression(
+        new StrposOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
+            testHelper.makeLiteral("ax")
         ),
         DruidExpression.fromExpression("(strpos(null,'ax') + 1)"),
         NullHandling.replaceWithDefault() ? 0L : null
@@ -267,44 +243,40 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testParseLong()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new ParseLongOperatorConversion().calciteOperator(),
-            inputRef("intstr")
-        ),
+    testHelper.testExpression(
+        new ParseLongOperatorConversion().calciteOperator(),
+        testHelper.makeInputRef("intstr"),
         DruidExpression.fromExpression("parse_long(\"intstr\")"),
         -100L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new ParseLongOperatorConversion().calciteOperator(),
-            inputRef("hexstr"),
-            rexBuilder.makeExactLiteral(BigDecimal.valueOf(16))
+    testHelper.testExpression(
+        new ParseLongOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("hexstr"),
+            testHelper.makeLiteral(BigDecimal.valueOf(16))
         ),
         DruidExpression.fromExpression("parse_long(\"hexstr\",16)"),
         239L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new ParseLongOperatorConversion().calciteOperator(),
-            rexBuilder.makeCall(
+    testHelper.testExpression(
+        new ParseLongOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
                 SqlStdOperatorTable.CONCAT,
-                rexBuilder.makeLiteral("0x"),
-                inputRef("hexstr")
+                testHelper.makeLiteral("0x"),
+                testHelper.makeInputRef("hexstr")
             ),
-            rexBuilder.makeExactLiteral(BigDecimal.valueOf(16))
+            testHelper.makeLiteral(BigDecimal.valueOf(16))
         ),
         DruidExpression.fromExpression("parse_long(concat('0x',\"hexstr\"),16)"),
         239L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new ParseLongOperatorConversion().calciteOperator(),
-            inputRef("hexstr")
-        ),
+    testHelper.testExpression(
+        new ParseLongOperatorConversion().calciteOperator(),
+        testHelper.makeInputRef("hexstr"),
         DruidExpression.fromExpression("parse_long(\"hexstr\")"),
         NullHandling.sqlCompatible() ? null : 0L
     );
@@ -313,33 +285,33 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testPosition()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.POSITION,
-            rexBuilder.makeLiteral("oo"),
-            inputRef("s")
+    testHelper.testExpression(
+        SqlStdOperatorTable.POSITION,
+        ImmutableList.of(
+            testHelper.makeLiteral("oo"),
+            testHelper.makeInputRef("s")
         ),
         DruidExpression.fromExpression("(strpos(\"s\",'oo',0) + 1)"),
         2L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.POSITION,
-            rexBuilder.makeLiteral("oo"),
-            inputRef("s"),
-            rexBuilder.makeExactLiteral(BigDecimal.valueOf(2))
+    testHelper.testExpression(
+        SqlStdOperatorTable.POSITION,
+        ImmutableList.of(
+            testHelper.makeLiteral("oo"),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(BigDecimal.valueOf(2))
         ),
         DruidExpression.fromExpression("(strpos(\"s\",'oo',(2 - 1)) + 1)"),
         2L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.POSITION,
-            rexBuilder.makeLiteral("oo"),
-            inputRef("s"),
-            rexBuilder.makeExactLiteral(BigDecimal.valueOf(3))
+    testHelper.testExpression(
+        SqlStdOperatorTable.POSITION,
+        ImmutableList.of(
+            testHelper.makeLiteral("oo"),
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(BigDecimal.valueOf(3))
         ),
         DruidExpression.fromExpression("(strpos(\"s\",'oo',(3 - 1)) + 1)"),
         0L
@@ -349,8 +321,12 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testPower()
   {
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.POWER, inputRef("a"), integerLiteral(2)),
+    testHelper.testExpression(
+        SqlStdOperatorTable.POWER,
+        ImmutableList.of(
+            testHelper.makeInputRef("a"),
+            testHelper.makeLiteral(2)
+        ),
         DruidExpression.fromExpression("pow(\"a\",2)"),
         100.0
     );
@@ -359,26 +335,30 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testFloor()
   {
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("a")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.FLOOR,
+        testHelper.makeInputRef("a"),
         DruidExpression.fromExpression("floor(\"a\")"),
         10.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("x")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.FLOOR,
+        testHelper.makeInputRef("x"),
         DruidExpression.fromExpression("floor(\"x\")"),
         2.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("y")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.FLOOR,
+        testHelper.makeInputRef("y"),
         DruidExpression.fromExpression("floor(\"y\")"),
         3.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.FLOOR, inputRef("z")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.FLOOR,
+        testHelper.makeInputRef("z"),
         DruidExpression.fromExpression("floor(\"z\")"),
         -3.0
     );
@@ -387,26 +367,30 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testCeil()
   {
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("a")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.CEIL,
+        testHelper.makeInputRef("a"),
         DruidExpression.fromExpression("ceil(\"a\")"),
         10.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("x")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.CEIL,
+        testHelper.makeInputRef("x"),
         DruidExpression.fromExpression("ceil(\"x\")"),
         3.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("y")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.CEIL,
+        testHelper.makeInputRef("y"),
         DruidExpression.fromExpression("ceil(\"y\")"),
         3.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(SqlStdOperatorTable.CEIL, inputRef("z")),
+    testHelper.testExpression(
+        SqlStdOperatorTable.CEIL,
+        testHelper.makeInputRef("z"),
         DruidExpression.fromExpression("ceil(\"z\")"),
         -2.0
     );
@@ -417,50 +401,70 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final SqlFunction truncateFunction = new TruncateOperatorConversion().calciteOperator();
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("a")),
+    testHelper.testExpression(
+        truncateFunction,
+        testHelper.makeInputRef("a"),
         DruidExpression.fromExpression("(cast(cast(\"a\" * 1,'long'),'double') / 1)"),
         10.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("x")),
+    testHelper.testExpression(
+        truncateFunction,
+        testHelper.makeInputRef("x"),
         DruidExpression.fromExpression("(cast(cast(\"x\" * 1,'long'),'double') / 1)"),
         2.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("y")),
+    testHelper.testExpression(
+        truncateFunction,
+        testHelper.makeInputRef("y"),
         DruidExpression.fromExpression("(cast(cast(\"y\" * 1,'long'),'double') / 1)"),
         3.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("z")),
+    testHelper.testExpression(
+        truncateFunction,
+        testHelper.makeInputRef("z"),
         DruidExpression.fromExpression("(cast(cast(\"z\" * 1,'long'),'double') / 1)"),
         -2.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("x"), integerLiteral(1)),
+    testHelper.testExpression(
+        truncateFunction,
+        ImmutableList.of(
+            testHelper.makeInputRef("x"),
+            testHelper.makeLiteral(1)
+        ),
         DruidExpression.fromExpression("(cast(cast(\"x\" * 10.0,'long'),'double') / 10.0)"),
         2.2
     );
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("z"), integerLiteral(1)),
+    testHelper.testExpression(
+        truncateFunction,
+        ImmutableList.of(
+            testHelper.makeInputRef("z"),
+            testHelper.makeLiteral(1)
+        ),
         DruidExpression.fromExpression("(cast(cast(\"z\" * 10.0,'long'),'double') / 10.0)"),
         -2.2
     );
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("b"), integerLiteral(-1)),
+    testHelper.testExpression(
+        truncateFunction,
+        ImmutableList.of(
+            testHelper.makeInputRef("b"),
+            testHelper.makeLiteral(-1)
+        ),
         DruidExpression.fromExpression("(cast(cast(\"b\" * 0.1,'long'),'double') / 0.1)"),
         20.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(truncateFunction, inputRef("z"), integerLiteral(-1)),
+    testHelper.testExpression(
+        truncateFunction,
+        ImmutableList.of(
+            testHelper.makeInputRef("z"),
+            testHelper.makeLiteral(-1)
+        ),
         DruidExpression.fromExpression("(cast(cast(\"z\" * 0.1,'long'),'double') / 0.1)"),
         0.0
     );
@@ -471,44 +475,57 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("a")),
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("a"),
         DruidExpression.fromExpression("round(\"a\")"),
         10L
     );
 
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("b")),
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("b"),
         DruidExpression.fromExpression("round(\"b\")"),
         25L
     );
 
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("b"), integerLiteral(-1)),
+    testHelper.testExpression(
+        roundFunction,
+        ImmutableList.of(
+            testHelper.makeInputRef("b"),
+            testHelper.makeLiteral(-1)
+        ),
         DruidExpression.fromExpression("round(\"b\",-1)"),
         30L
     );
 
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("x")),
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("x"),
         DruidExpression.fromExpression("round(\"x\")"),
         2.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("x"), integerLiteral(1)),
+    testHelper.testExpression(
+        roundFunction,
+        ImmutableList.of(
+            testHelper.makeInputRef("x"),
+            testHelper.makeLiteral(1)
+        ),
         DruidExpression.fromExpression("round(\"x\",1)"),
         2.3
     );
 
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("y")),
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("y"),
         DruidExpression.fromExpression("round(\"y\")"),
         3.0
     );
 
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("z")),
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("z"),
         DruidExpression.fromExpression("round(\"z\")"),
         -2.0
     );
@@ -519,10 +536,13 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("The first argument to the function[round] should be integer or double type but get the STRING type");
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("s")),
+    expectException(
+        IAE.class,
+        "The first argument to the function[round] should be integer or double type but get the STRING type"
+    );
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("s"),
         DruidExpression.fromExpression("round(\"s\")"),
         "IAE Exception"
     );
@@ -533,10 +553,16 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("The second argument to the function[round] should be integer type but get the STRING type");
-    testExpression(
-        rexBuilder.makeCall(roundFunction, inputRef("x"), rexBuilder.makeLiteral("foo")),
+    expectException(
+        IAE.class,
+        "The second argument to the function[round] should be integer type but get the STRING type"
+    );
+    testHelper.testExpression(
+        roundFunction,
+        ImmutableList.of(
+            testHelper.makeInputRef("x"),
+            testHelper.makeLiteral("foo")
+        ),
         DruidExpression.fromExpression("round(\"x\",'foo')"),
         "IAE Exception"
     );
@@ -545,21 +571,21 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testDateTrunc()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new DateTruncOperatorConversion().calciteOperator(),
-            rexBuilder.makeLiteral("hour"),
-            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
+    testHelper.testExpression(
+        new DateTruncOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("hour"),
+            testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
         DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H',null,'UTC')"),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new DateTruncOperatorConversion().calciteOperator(),
-            rexBuilder.makeLiteral("DAY"),
-            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
+    testHelper.testExpression(
+        new DateTruncOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("DAY"),
+            testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z"))
         ),
         DruidExpression.fromExpression("timestamp_floor(949550706000,'P1D',null,'UTC')"),
         DateTimes.of("2000-02-03T00:00:00").getMillis()
@@ -569,34 +595,34 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTrim()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.TRIM,
-            rexBuilder.makeFlag(SqlTrimFunction.Flag.BOTH),
-            rexBuilder.makeLiteral(" "),
-            inputRef("spacey")
+    testHelper.testExpression(
+        SqlStdOperatorTable.TRIM,
+        ImmutableList.of(
+            testHelper.makeFlag(SqlTrimFunction.Flag.BOTH),
+            testHelper.makeLiteral(" "),
+            testHelper.makeInputRef("spacey")
         ),
         DruidExpression.fromExpression("trim(\"spacey\",' ')"),
         "hey there"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.TRIM,
-            rexBuilder.makeFlag(SqlTrimFunction.Flag.LEADING),
-            rexBuilder.makeLiteral(" h"),
-            inputRef("spacey")
+    testHelper.testExpression(
+        SqlStdOperatorTable.TRIM,
+        ImmutableList.of(
+            testHelper.makeFlag(SqlTrimFunction.Flag.LEADING),
+            testHelper.makeLiteral(" h"),
+            testHelper.makeInputRef("spacey")
         ),
         DruidExpression.fromExpression("ltrim(\"spacey\",' h')"),
         "ey there  "
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.TRIM,
-            rexBuilder.makeFlag(SqlTrimFunction.Flag.TRAILING),
-            rexBuilder.makeLiteral(" e"),
-            inputRef("spacey")
+    testHelper.testExpression(
+        SqlStdOperatorTable.TRIM,
+        ImmutableList.of(
+            testHelper.makeFlag(SqlTrimFunction.Flag.TRAILING),
+            testHelper.makeLiteral(" e"),
+            testHelper.makeInputRef("spacey")
         ),
         DruidExpression.fromExpression("rtrim(\"spacey\",' e')"),
         "  hey ther"
@@ -606,23 +632,23 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testPad()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new LPadOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            rexBuilder.makeLiteral(5, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
-            rexBuilder.makeLiteral("x")
+    testHelper.testExpression(
+        new LPadOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(5),
+            testHelper.makeLiteral("x")
         ),
         DruidExpression.fromExpression("lpad(\"s\",5,'x')"),
         "xxfoo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RPadOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            rexBuilder.makeLiteral(5, typeFactory.createSqlType(SqlTypeName.INTEGER), true),
-            rexBuilder.makeLiteral("x")
+    testHelper.testExpression(
+        new RPadOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(5),
+            testHelper.makeLiteral("x")
         ),
         DruidExpression.fromExpression("rpad(\"s\",5,'x')"),
         "fooxx"
@@ -633,23 +659,23 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeFloor()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeFloorOperatorConversion().calciteOperator(),
-            timestampLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
-            rexBuilder.makeLiteral("PT1H")
+    testHelper.testExpression(
+        new TimeFloorOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
+            testHelper.makeLiteral("PT1H")
         ),
         DruidExpression.fromExpression("timestamp_floor(949550706000,'PT1H',null,'UTC')"),
         DateTimes.of("2000-02-03T04:00:00").getMillis()
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeFloorOperatorConversion().calciteOperator(),
-            inputRef("t"),
-            rexBuilder.makeLiteral("P1D"),
-            rexBuilder.makeNullLiteral(typeFactory.createSqlType(SqlTypeName.TIMESTAMP)),
-            rexBuilder.makeLiteral("America/Los_Angeles")
+    testHelper.testExpression(
+        new TimeFloorOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("P1D"),
+            testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
+            testHelper.makeLiteral("America/Los_Angeles")
         ),
         DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'America/Los_Angeles')"),
         DateTimes.of("2000-02-02T08:00:00").getMillis()
@@ -661,14 +687,40 @@ public class ExpressionsTest extends CalciteTestBase
   {
     // FLOOR(__time TO unit)
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.FLOOR,
-            inputRef("t"),
-            rexBuilder.makeFlag(TimeUnitRange.YEAR)
+    testHelper.testExpression(
+        SqlStdOperatorTable.FLOOR,
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
         DruidExpression.fromExpression("timestamp_floor(\"t\",'P1Y',null,'UTC')"),
         DateTimes.of("2000").getMillis()
+    );
+  }
+
+  @Test
+  public void testTimeCeil()
+  {
+    testHelper.testExpression(
+        new TimeCeilOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral(DateTimes.of("2000-02-03T04:05:06Z")),
+            testHelper.makeLiteral("PT1H")
+        ),
+        DruidExpression.fromExpression("timestamp_ceil(949550706000,'PT1H',null,'UTC')"),
+        DateTimes.of("2000-02-03T05:00:00").getMillis()
+    );
+
+    testHelper.testExpression(
+        new TimeCeilOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("P1D"),
+            testHelper.makeNullLiteral(SqlTypeName.TIMESTAMP),
+            testHelper.makeLiteral("America/Los_Angeles")
+        ),
+        DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1D',null,'America/Los_Angeles')"),
+        DateTimes.of("2000-02-03T08:00:00").getMillis()
     );
   }
 
@@ -677,11 +729,11 @@ public class ExpressionsTest extends CalciteTestBase
   {
     // CEIL(__time TO unit)
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.CEIL,
-            inputRef("t"),
-            rexBuilder.makeFlag(TimeUnitRange.YEAR)
+    testHelper.testExpression(
+        SqlStdOperatorTable.CEIL,
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeFlag(TimeUnitRange.YEAR)
         ),
         DruidExpression.fromExpression("timestamp_ceil(\"t\",'P1Y',null,'UTC')"),
         DateTimes.of("2001").getMillis()
@@ -691,14 +743,26 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeShift()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeShiftOperatorConversion().calciteOperator(),
-            inputRef("t"),
-            rexBuilder.makeLiteral("PT2H"),
-            rexBuilder.makeLiteral(-3, typeFactory.createSqlType(SqlTypeName.INTEGER), true)
+    testHelper.testExpression(
+        new TimeShiftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("PT2H"),
+            testHelper.makeLiteral(-3)
         ),
-        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3)"),
+        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'UTC')"),
+        DateTimes.of("2000-02-02T22:05:06").getMillis()
+    );
+
+    testHelper.testExpression(
+        new TimeShiftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("PT2H"),
+            testHelper.makeLiteral(-3),
+            testHelper.makeLiteral("America/Los_Angeles")
+        ),
+        DruidExpression.fromExpression("timestamp_shift(\"t\",'PT2H',-3,'America/Los_Angeles')"),
         DateTimes.of("2000-02-02T22:05:06").getMillis()
     );
   }
@@ -706,22 +770,22 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeExtract()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeExtractOperatorConversion().calciteOperator(),
-            inputRef("t"),
-            rexBuilder.makeLiteral("QUARTER")
+    testHelper.testExpression(
+        new TimeExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("QUARTER")
         ),
         DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeExtractOperatorConversion().calciteOperator(),
-            inputRef("t"),
-            rexBuilder.makeLiteral("DAY"),
-            rexBuilder.makeLiteral("America/Los_Angeles")
+    testHelper.testExpression(
+        new TimeExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("DAY"),
+            testHelper.makeLiteral("America/Los_Angeles")
         ),
         DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','America/Los_Angeles')"),
         2L
@@ -733,11 +797,11 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final Period period = new Period("P1DT1H1M");
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.DATETIME_PLUS,
-            inputRef("t"),
-            rexBuilder.makeIntervalLiteral(
+    testHelper.testExpression(
+        SqlStdOperatorTable.DATETIME_PLUS,
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral(
                 new BigDecimal(period.toStandardDuration().getMillis()), // DAY-TIME literals value is millis
                 new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.MINUTE, SqlParserPos.ZERO)
             )
@@ -755,18 +819,18 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final Period period = new Period("P1Y1M");
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.DATETIME_PLUS,
-            inputRef("t"),
-            rexBuilder.makeIntervalLiteral(
+    testHelper.testExpression(
+        SqlStdOperatorTable.DATETIME_PLUS,
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral(
                 new BigDecimal(13), // YEAR-MONTH literals value is months
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),1)"
+            "timestamp_shift(\"t\",concat('P', 13, 'M'),1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").plus(period).getMillis()
     );
@@ -777,16 +841,14 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final Period period = new Period("P1DT1H1M");
 
-    testExpression(
-        rexBuilder.makeCall(
-            typeFactory.createSqlType(SqlTypeName.TIMESTAMP),
-            SqlStdOperatorTable.MINUS_DATE,
-            ImmutableList.of(
-                inputRef("t"),
-                rexBuilder.makeIntervalLiteral(
-                    new BigDecimal(period.toStandardDuration().getMillis()), // DAY-TIME literals value is millis
-                    new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.MINUTE, SqlParserPos.ZERO)
-                )
+    testHelper.testExpression(
+        SqlTypeName.TIMESTAMP,
+        SqlStdOperatorTable.MINUS_DATE,
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral(
+                new BigDecimal(period.toStandardDuration().getMillis()), // DAY-TIME literals value is millis
+                new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.MINUTE, SqlParserPos.ZERO)
             )
         ),
         DruidExpression.of(
@@ -802,21 +864,19 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final Period period = new Period("P1Y1M");
 
-    testExpression(
-        rexBuilder.makeCall(
-            typeFactory.createSqlType(SqlTypeName.TIMESTAMP),
-            SqlStdOperatorTable.MINUS_DATE,
-            ImmutableList.of(
-                inputRef("t"),
-                rexBuilder.makeIntervalLiteral(
-                    new BigDecimal(13), // YEAR-MONTH literals value is months
-                    new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
-                )
+    testHelper.testExpression(
+        SqlTypeName.TIMESTAMP,
+        SqlStdOperatorTable.MINUS_DATE,
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral(
+                new BigDecimal(13), // YEAR-MONTH literals value is months
+                new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
         DruidExpression.of(
             null,
-            "timestamp_shift(\"t\",concat('P', 13, 'M'),-1)"
+            "timestamp_shift(\"t\",concat('P', 13, 'M'),-1,'UTC')"
         ),
         DateTimes.of("2000-02-03T04:05:06").minus(period).getMillis()
     );
@@ -825,22 +885,22 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeParse()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeParseOperatorConversion().calciteOperator(),
-            inputRef("tstr"),
-            rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")
+    testHelper.testExpression(
+        new TimeParseOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("tstr"),
+            testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
-        DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss')"),
+        DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         DateTimes.of("2000-02-03T04:05:06").getMillis()
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeParseOperatorConversion().calciteOperator(),
-            inputRef("tstr"),
-            rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss"),
-            rexBuilder.makeLiteral("America/Los_Angeles")
+    testHelper.testExpression(
+        new TimeParseOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("tstr"),
+            testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss"),
+            testHelper.makeLiteral("America/Los_Angeles")
         ),
         DruidExpression.fromExpression("timestamp_parse(\"tstr\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
         DateTimes.of("2000-02-03T04:05:06-08:00").getMillis()
@@ -850,22 +910,22 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testTimeFormat()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeFormatOperatorConversion().calciteOperator(),
-            inputRef("t"),
-            rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss")
+    testHelper.testExpression(
+        new TimeFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss")
         ),
         DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','UTC')"),
         "2000-02-03 04:05:06"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new TimeFormatOperatorConversion().calciteOperator(),
-            inputRef("t"),
-            rexBuilder.makeLiteral("yyyy-MM-dd HH:mm:ss"),
-            rexBuilder.makeLiteral("America/Los_Angeles")
+    testHelper.testExpression(
+        new TimeFormatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("t"),
+            testHelper.makeLiteral("yyyy-MM-dd HH:mm:ss"),
+            testHelper.makeLiteral("America/Los_Angeles")
         ),
         DruidExpression.fromExpression("timestamp_format(\"t\",'yyyy-MM-dd HH:mm:ss','America/Los_Angeles')"),
         "2000-02-02 20:05:06"
@@ -875,21 +935,21 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testExtract()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.EXTRACT,
-            rexBuilder.makeFlag(TimeUnitRange.QUARTER),
-            inputRef("t")
+    testHelper.testExpression(
+        SqlStdOperatorTable.EXTRACT,
+        ImmutableList.of(
+            testHelper.makeFlag(TimeUnitRange.QUARTER),
+            testHelper.makeInputRef("t")
         ),
         DruidExpression.fromExpression("timestamp_extract(\"t\",'QUARTER','UTC')"),
         1L
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            SqlStdOperatorTable.EXTRACT,
-            rexBuilder.makeFlag(TimeUnitRange.DAY),
-            inputRef("t")
+    testHelper.testExpression(
+        SqlStdOperatorTable.EXTRACT,
+        ImmutableList.of(
+            testHelper.makeFlag(TimeUnitRange.DAY),
+            testHelper.makeInputRef("t")
         ),
         DruidExpression.fromExpression("timestamp_extract(\"t\",'DAY','UTC')"),
         3L
@@ -899,10 +959,10 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testCastAsTimestamp()
   {
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.TIMESTAMP),
-            inputRef("t")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.TIMESTAMP),
+            testHelper.makeInputRef("t")
         ),
         DruidExpression.of(
             SimpleExtraction.of("t", null),
@@ -911,10 +971,10 @@ public class ExpressionsTest extends CalciteTestBase
         DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
 
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.TIMESTAMP),
-            inputRef("tstr")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.TIMESTAMP),
+            testHelper.makeInputRef("tstr")
         ),
         DruidExpression.of(
             null,
@@ -927,12 +987,12 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testCastFromTimestamp()
   {
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.VARCHAR),
-            rexBuilder.makeAbstractCast(
-                typeFactory.createSqlType(SqlTypeName.TIMESTAMP),
-                inputRef("t")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.VARCHAR),
+            testHelper.makeAbstractCast(
+                testHelper.createSqlType(SqlTypeName.TIMESTAMP),
+                testHelper.makeInputRef("t")
             )
         ),
         DruidExpression.fromExpression(
@@ -941,12 +1001,12 @@ public class ExpressionsTest extends CalciteTestBase
         "2000-02-03 04:05:06"
     );
 
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.BIGINT),
-            rexBuilder.makeAbstractCast(
-                typeFactory.createSqlType(SqlTypeName.TIMESTAMP),
-                inputRef("t")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.BIGINT),
+            testHelper.makeAbstractCast(
+                testHelper.createSqlType(SqlTypeName.TIMESTAMP),
+                testHelper.makeInputRef("t")
             )
         ),
         DruidExpression.of(
@@ -960,19 +1020,19 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testCastAsDate()
   {
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.DATE),
-            inputRef("t")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.DATE),
+            testHelper.makeInputRef("t")
         ),
         DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'UTC')"),
         DateTimes.of("2000-02-03").getMillis()
     );
 
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.DATE),
-            inputRef("dstr")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.DATE),
+            testHelper.makeInputRef("dstr")
         ),
         DruidExpression.fromExpression(
             "timestamp_floor(timestamp_parse(\"dstr\",null,'UTC'),'P1D',null,'UTC')"
@@ -984,12 +1044,12 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testCastFromDate()
   {
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.VARCHAR),
-            rexBuilder.makeAbstractCast(
-                typeFactory.createSqlType(SqlTypeName.DATE),
-                inputRef("t")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.VARCHAR),
+            testHelper.makeAbstractCast(
+                testHelper.createSqlType(SqlTypeName.DATE),
+                testHelper.makeInputRef("t")
             )
         ),
         DruidExpression.fromExpression(
@@ -998,12 +1058,12 @@ public class ExpressionsTest extends CalciteTestBase
         "2000-02-03"
     );
 
-    testExpression(
-        rexBuilder.makeAbstractCast(
-            typeFactory.createSqlType(SqlTypeName.BIGINT),
-            rexBuilder.makeAbstractCast(
-                typeFactory.createSqlType(SqlTypeName.DATE),
-                inputRef("t")
+    testHelper.testExpression(
+        testHelper.makeAbstractCast(
+            testHelper.createSqlType(SqlTypeName.BIGINT),
+            testHelper.makeAbstractCast(
+                testHelper.createSqlType(SqlTypeName.DATE),
+                testHelper.makeInputRef("t")
             )
         ),
         DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'UTC')"),
@@ -1014,38 +1074,30 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testReverse()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new ReverseOperatorConversion().calciteOperator(),
-            inputRef("s")
-        ),
+    testHelper.testExpression(
+        new ReverseOperatorConversion().calciteOperator(),
+        testHelper.makeInputRef("s"),
         DruidExpression.fromExpression("reverse(\"s\")"),
         "oof"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new ReverseOperatorConversion().calciteOperator(),
-            inputRef("spacey")
-        ),
+    testHelper.testExpression(
+        new ReverseOperatorConversion().calciteOperator(),
+        testHelper.makeInputRef("spacey"),
         DruidExpression.fromExpression("reverse(\"spacey\")"),
         "  ereht yeh  "
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new ReverseOperatorConversion().calciteOperator(),
-            inputRef("tstr")
-        ),
+    testHelper.testExpression(
+        new ReverseOperatorConversion().calciteOperator(),
+        testHelper.makeInputRef("tstr"),
         DruidExpression.fromExpression("reverse(\"tstr\")"),
         "60:50:40 30-20-0002"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new ReverseOperatorConversion().calciteOperator(),
-            inputRef("dstr")
-        ),
+    testHelper.testExpression(
+        new ReverseOperatorConversion().calciteOperator(),
+        testHelper.makeInputRef("dstr"),
         DruidExpression.fromExpression("reverse(\"dstr\")"),
         "30-20-0002"
     );
@@ -1054,14 +1106,11 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalReverseWithWrongType()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[reverse] needs a string argument");
+    expectException(IAE.class, "Function[reverse] needs a string argument");
 
-    testExpression(
-        rexBuilder.makeCall(
-            new ReverseOperatorConversion().calciteOperator(),
-            inputRef("a")
-        ),
+    testHelper.testExpression(
+        new ReverseOperatorConversion().calciteOperator(),
+        testHelper.makeInputRef("a"),
         DruidExpression.fromExpression("reverse(\"a\")"),
         null
     );
@@ -1070,51 +1119,51 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRight()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new RightOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(1)
+    testHelper.testExpression(
+        new RightOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1)
         ),
         DruidExpression.fromExpression("right(\"s\",1)"),
         "o"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RightOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(2)
+    testHelper.testExpression(
+        new RightOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(2)
         ),
         DruidExpression.fromExpression("right(\"s\",2)"),
         "oo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RightOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(3)
+    testHelper.testExpression(
+        new RightOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(3)
         ),
         DruidExpression.fromExpression("right(\"s\",3)"),
         "foo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RightOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(4)
+    testHelper.testExpression(
+        new RightOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(4)
         ),
         DruidExpression.fromExpression("right(\"s\",4)"),
         "foo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RightOperatorConversion().calciteOperator(),
-            inputRef("tstr"),
-            integerLiteral(5)
+    testHelper.testExpression(
+        new RightOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("tstr"),
+            testHelper.makeLiteral(5)
         ),
         DruidExpression.fromExpression("right(\"tstr\",5)"),
         "05:06"
@@ -1124,14 +1173,13 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalRightWithNegativeNumber()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[right] needs a postive integer as second argument");
+    expectException(IAE.class, "Function[right] needs a postive integer as second argument");
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RightOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(-1)
+    testHelper.testExpression(
+        new RightOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(-1)
         ),
         DruidExpression.fromExpression("right(\"s\",-1)"),
         null
@@ -1141,15 +1189,13 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalRightWithWrongType()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[right] needs a string as first argument "
-                                    + "and an integer as second argument");
+    expectException(IAE.class, "Function[right] needs a string as first argument and an integer as second argument");
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RightOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            inputRef("s")
+    testHelper.testExpression(
+        new RightOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeInputRef("s")
         ),
         DruidExpression.fromExpression("right(\"s\",\"s\")"),
         null
@@ -1159,51 +1205,51 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testLeft()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new LeftOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(1)
+    testHelper.testExpression(
+        new LeftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1)
         ),
         DruidExpression.fromExpression("left(\"s\",1)"),
         "f"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new LeftOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(2)
+    testHelper.testExpression(
+        new LeftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(2)
         ),
         DruidExpression.fromExpression("left(\"s\",2)"),
         "fo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new LeftOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(3)
+    testHelper.testExpression(
+        new LeftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(3)
         ),
         DruidExpression.fromExpression("left(\"s\",3)"),
         "foo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new LeftOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(4)
+    testHelper.testExpression(
+        new LeftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(4)
         ),
         DruidExpression.fromExpression("left(\"s\",4)"),
         "foo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new LeftOperatorConversion().calciteOperator(),
-            inputRef("tstr"),
-            integerLiteral(10)
+    testHelper.testExpression(
+        new LeftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("tstr"),
+            testHelper.makeLiteral(10)
         ),
         DruidExpression.fromExpression("left(\"tstr\",10)"),
         "2000-02-03"
@@ -1213,14 +1259,13 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalLeftWithNegativeNumber()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[left] needs a postive integer as second argument");
+    expectException(IAE.class, "Function[left] needs a postive integer as second argument");
 
-    testExpression(
-        rexBuilder.makeCall(
-            new LeftOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(-1)
+    testHelper.testExpression(
+        new LeftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(-1)
         ),
         DruidExpression.fromExpression("left(\"s\",-1)"),
         null
@@ -1230,15 +1275,13 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalLeftWithWrongType()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[left] needs a string as first argument "
-                                    + "and an integer as second argument");
+    expectException(IAE.class, "Function[left] needs a string as first argument and an integer as second argument");
 
-    testExpression(
-        rexBuilder.makeCall(
-            new LeftOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            inputRef("s")
+    testHelper.testExpression(
+        new LeftOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeInputRef("s")
         ),
         DruidExpression.fromExpression("left(\"s\",\"s\")"),
         null
@@ -1248,31 +1291,31 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testRepeat()
   {
-    testExpression(
-        rexBuilder.makeCall(
-            new RepeatOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(1)
+    testHelper.testExpression(
+        new RepeatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1)
         ),
         DruidExpression.fromExpression("repeat(\"s\",1)"),
         "foo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RepeatOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(3)
+    testHelper.testExpression(
+        new RepeatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(3)
         ),
         DruidExpression.fromExpression("repeat(\"s\",3)"),
         "foofoofoo"
     );
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RepeatOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            integerLiteral(-1)
+    testHelper.testExpression(
+        new RepeatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(-1)
         ),
         DruidExpression.fromExpression("repeat(\"s\",-1)"),
         null
@@ -1282,48 +1325,16 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalRepeatWithWrongType()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[repeat] needs a string as first argument "
-                                    + "and an integer as second argument");
+    expectException(IAE.class, "Function[repeat] needs a string as first argument and an integer as second argument");
 
-    testExpression(
-        rexBuilder.makeCall(
-            new RepeatOperatorConversion().calciteOperator(),
-            inputRef("s"),
-            inputRef("s")
+    testHelper.testExpression(
+        new RepeatOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeInputRef("s")
         ),
         DruidExpression.fromExpression("repeat(\"s\",\"s\")"),
         null
     );
-  }
-
-  private RexNode inputRef(final String columnName)
-  {
-    final int columnNumber = rowSignature.getRowOrder().indexOf(columnName);
-    return rexBuilder.makeInputRef(relDataType.getFieldList().get(columnNumber).getType(), columnNumber);
-  }
-
-  private RexNode timestampLiteral(final DateTime timestamp)
-  {
-    return rexBuilder.makeTimestampLiteral(Calcites.jodaToCalciteTimestampString(timestamp, DateTimeZone.UTC), 0);
-  }
-
-  private RexNode integerLiteral(final int integer)
-  {
-    return rexBuilder.makeLiteral(new BigDecimal(integer), typeFactory.createSqlType(SqlTypeName.INTEGER), true);
-  }
-
-  private void testExpression(
-      final RexNode rexNode,
-      final DruidExpression expectedExpression,
-      final Object expectedResult
-  )
-  {
-    final DruidExpression expression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
-    Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
-
-    final ExprEval result = Parser.parse(expression.getExpression(), plannerContext.getExprMacroTable())
-                                  .eval(Parser.withMap(bindings));
-    Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
 }

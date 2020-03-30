@@ -27,7 +27,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.CloserRule;
@@ -56,11 +56,13 @@ public class BufferHashGrouperTest
     final Grouper<Integer> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(1000)),
         GrouperTestUtil.intKeySerde(),
-        columnSelectorFactory,
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("valueSum", "value"),
-            new CountAggregatorFactory("count")
-        },
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
         Integer.MAX_VALUE,
         0,
         0,
@@ -131,7 +133,7 @@ public class BufferHashGrouperTest
   @Test
   public void testGrowingOverflowingInteger()
   {
-    // This test checks the bug reported in https://github.com/apache/incubator-druid/pull/4333 only when
+    // This test checks the bug reported in https://github.com/apache/druid/pull/4333 only when
     // NullHandling.replaceWithDefault() is true
     if (NullHandling.replaceWithDefault()) {
       final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
@@ -187,11 +189,13 @@ public class BufferHashGrouperTest
     final BufferHashGrouper<Integer> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(buffer),
         GrouperTestUtil.intKeySerde(),
-        columnSelectorFactory,
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("valueSum", "value"),
-            new CountAggregatorFactory("count")
-        },
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
         Integer.MAX_VALUE,
         maxLoadFactor,
         initialBuckets,

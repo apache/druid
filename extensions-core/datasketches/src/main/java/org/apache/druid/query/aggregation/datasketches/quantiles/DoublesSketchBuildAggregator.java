@@ -19,29 +19,33 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
+
+import javax.annotation.Nullable;
 
 public class DoublesSketchBuildAggregator implements Aggregator
 {
 
   private final ColumnValueSelector<Double> valueSelector;
-  private final int size;
 
+  @Nullable
   private UpdateDoublesSketch sketch;
 
   public DoublesSketchBuildAggregator(final ColumnValueSelector<Double> valueSelector, final int size)
   {
     this.valueSelector = valueSelector;
-    this.size = size;
     sketch = DoublesSketch.builder().setK(size).build();
   }
 
   @Override
   public synchronized void aggregate()
   {
+    if (valueSelector.isNull()) {
+      return;
+    }
     sketch.update(valueSelector.getDouble());
   }
 
@@ -68,5 +72,4 @@ public class DoublesSketchBuildAggregator implements Aggregator
   {
     sketch = null;
   }
-
 }

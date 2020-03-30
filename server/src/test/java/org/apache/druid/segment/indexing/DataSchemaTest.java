@@ -22,6 +22,7 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -52,6 +53,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 public class DataSchemaTest
@@ -90,7 +92,7 @@ public class DataSchemaTest
 
     Assert.assertEquals(
         ImmutableSet.of("time", "col1", "col2", "metric1", "metric2"),
-        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
+        schema.getDimensionsSpec().getDimensionExclusions()
     );
   }
 
@@ -280,13 +282,13 @@ public class DataSchemaTest
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectCause(CoreMatchers.instanceOf(JsonMappingException.class));
     expectedException.expectMessage(
-        "Instantiation of [simple type, class org.apache.druid.data.input.impl.StringInputRowParser] value failed: parseSpec"
+        "Cannot construct instance of `org.apache.druid.data.input.impl.StringInputRowParser`, problem: parseSpec"
     );
 
     // Jackson creates a default type parser (StringInputRowParser) for an invalid type.
     schema.getParser();
   }
-  
+
   @Test
   public void testEmptyDatasource()
   {
@@ -322,6 +324,41 @@ public class DataSchemaTest
         null,
         jsonMapper
     );
+  }
+
+
+  @Test
+  public void testInvalidWhitespaceDatasource()
+  {
+    Map<String, String> invalidCharToDataSourceName = ImmutableMap.of(
+        "\\t", "\tab\t",
+        "\\r", "\rcarriage\return\r",
+        "\\n", "\nnew\nline\n"
+    );
+
+    for (Map.Entry<String, String> entry : invalidCharToDataSourceName.entrySet()) {
+      testInvalidWhitespaceDatasourceHelper(entry.getValue(), entry.getKey());
+    }
+  }
+
+  private void testInvalidWhitespaceDatasourceHelper(String dataSource, String invalidChar)
+  {
+    String testFailMsg = "dataSource contain invalid whitespace character: " + invalidChar;
+    try {
+      DataSchema schema = new DataSchema(
+          dataSource,
+          Collections.emptyMap(),
+          null,
+          null,
+          null,
+          jsonMapper
+      );
+      Assert.fail(testFailMsg);
+    }
+    catch (IllegalArgumentException errorMsg) {
+      String expectedMsg = "dataSource cannot contain whitespace character except space.";
+      Assert.assertEquals(testFailMsg, expectedMsg, errorMsg.getMessage());
+    }
   }
 
   @Test
@@ -433,13 +470,15 @@ public class DataSchemaTest
 
     TestModifiedDataSchema originalSchema = new TestModifiedDataSchema(
         "test",
-        parser,
+        null,
+        null,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
             },
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
         null,
+        parser,
         jsonMapper,
         "some arbitrary string"
     );

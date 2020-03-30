@@ -17,23 +17,19 @@ under the License.
 
 
 
-Apache Druid (incubating) is a high performance analytics data store for event-driven data. More information about Druid
-can be found on http://www.druid.io.
-
-The Druid community is in the process of migrating to Apache by way of the Apache Incubator. Eventually, as we proceed
-along this path, our site will move from http://druid.io/ to https://druid.apache.org/.
-
+Apache Druid is a high performance analytics data store for event-driven data. More information about Druid
+can be found on https://druid.apache.org.
 
 Documentation
 -------------
-You can find the documentation for {THIS_OR_THE_LATEST} Druid release on the project website http://druid.io/docs/{DRUIDVERSION}/.
+You can find the documentation for {THIS_OR_THE_LATEST} Druid release on the project website https://druid.apache.org/docs/{DRUIDVERSION}/.
 
-You can get started with Druid with our quickstart at http://druid.io/docs/{DRUIDVERSION}/tutorials/quickstart.html.
+You can get started with Druid with our quickstart at https://druid.apache.org/docs/{DRUIDVERSION}/tutorials/quickstart.html.
 
 
 Build from Source
 -----------------
-You can build Apache Druid (incubating) directly from source.
+You can build Apache Druid directly from source.
 
 Prerequisites:
   JDK 8, 8u92+
@@ -62,8 +58,6 @@ licenses, and skip the unit tests, you would run:
 
     mvn clean install -Papache-release,dist,rat -DskipTests
 
-Note: the AWS S3 unit tests require the 'AWS_DEFAULT_REGION' environment variable to be set to function correctly.
-
 
 Community
 ---------
@@ -77,13 +71,6 @@ dev-subscribe@druid.apache.org.
 
 Contributing
 ------------
-If you find any bugs, please file a GitHub issue at https://github.com/apache/incubator-druid/issues.
+If you find any bugs, please file a GitHub issue at https://github.com/apache/druid/issues.
 
-If you wish to contribute, please follow the guidelines listed at http://druid.io/community/.
-
-
-Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the
-Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the
-infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful
-ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it
-does indicate that the project has yet to be fully endorsed by the ASF.
+If you wish to contribute, please follow the guidelines listed at https://druid.apache.org/community/.

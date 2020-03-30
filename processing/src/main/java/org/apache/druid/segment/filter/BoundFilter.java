@@ -34,20 +34,28 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Comparator;
+import java.util.Objects;
+import java.util.Set;
 
 public class BoundFilter implements Filter
 {
   private final BoundDimFilter boundDimFilter;
   private final Comparator<String> comparator;
   private final ExtractionFn extractionFn;
+  private final FilterTuning filterTuning;
 
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
@@ -61,6 +69,7 @@ public class BoundFilter implements Filter
     this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
     this.floatPredicateSupplier = boundDimFilter.getFloatPredicateSupplier();
     this.doublePredicateSupplier = boundDimFilter.getDoublePredicateSupplier();
+    this.filterTuning = boundDimFilter.getFilterTuning();
   }
 
   @Override
@@ -125,15 +134,42 @@ public class BoundFilter implements Filter
   }
 
   @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    return DimensionHandlerUtils.makeVectorProcessor(
+        boundDimFilter.getDimension(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
+        factory
+    ).makeMatcher(getPredicateFactory());
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
+  }
+
+  @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
+  }
+  @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
   }
 
   @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, boundDimFilter.getDimension(), columnSelector, indexSelector);
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return boundDimFilter.getRequiredColumns();
   }
 
   private static Pair<Integer, Integer> getStartEndIndexes(
@@ -270,5 +306,27 @@ public class BoundFilter implements Filter
       return (lowerComparing >= 0) && (upperComparing > 0);
     }
     return (lowerComparing >= 0) && (upperComparing >= 0);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BoundFilter that = (BoundFilter) o;
+    return Objects.equals(boundDimFilter, that.boundDimFilter) &&
+           Objects.equals(comparator, that.comparator) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(boundDimFilter, comparator, extractionFn, filterTuning);
   }
 }

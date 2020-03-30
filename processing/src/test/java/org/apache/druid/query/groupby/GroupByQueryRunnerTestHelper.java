@@ -20,9 +20,6 @@
 package org.apache.druid.query.groupby;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -37,11 +34,10 @@ import org.joda.time.chrono.ISOChronology;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
+ *
  */
 public class GroupByQueryRunnerTestHelper
 {
@@ -54,42 +50,63 @@ public class GroupByQueryRunnerTestHelper
         toolChest
     );
 
-    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
+    Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query));
     return queryResult.toList();
   }
 
-  public static Row createExpectedRow(final String timestamp, Object... vals)
+  public static ResultRow createExpectedRow(final GroupByQuery query, final String timestamp, Object... vals)
   {
-    return createExpectedRow(DateTimes.of(timestamp), vals);
+    return createExpectedRow(query, DateTimes.of(timestamp), vals);
   }
 
-  public static Row createExpectedRow(final DateTime timestamp, Object... vals)
+  /**
+   * Create a {@link ResultRow} for a given {@link GroupByQuery}. The size of the row will include space
+   * for postaggregations.
+   */
+  public static ResultRow createExpectedRow(final GroupByQuery query, final DateTime timestamp, Object... vals)
   {
     Preconditions.checkArgument(vals.length % 2 == 0);
 
-    Map<String, Object> theVals = new HashMap<>();
-    for (int i = 0; i < vals.length; i += 2) {
-      theVals.put(vals[i].toString(), vals[i + 1]);
+    final ResultRow row = ResultRow.create(query.getResultRowSizeWithPostAggregators());
+
+    if (query.getResultRowHasTimestamp()) {
+      row.set(0, timestamp.getMillis());
     }
 
-    return new MapBasedRow(timestamp, theVals);
+    for (int i = 0; i < vals.length; i += 2) {
+      final int position = query.getResultRowSignature().indexOf(vals[i].toString());
+      row.set(position, vals[i + 1]);
+    }
+
+    return row;
   }
 
-  public static List<Row> createExpectedRows(String[] columnNames, Object[]... values)
+  /**
+   * Create a collection of {@link ResultRow} objects for a given {@link GroupByQuery}. The size of the rows will
+   * include space for postaggregations.
+   */
+  public static List<ResultRow> createExpectedRows(
+      final GroupByQuery query,
+      final String[] columnNames,
+      final Object[]... values
+  )
   {
-    int timeIndex = Arrays.asList(columnNames).indexOf(ColumnHolder.TIME_COLUMN_NAME);
+    final int timeIndex = Arrays.asList(columnNames).indexOf(ColumnHolder.TIME_COLUMN_NAME);
     Preconditions.checkArgument(timeIndex >= 0);
 
-    List<Row> expected = new ArrayList<>();
+    List<ResultRow> expected = new ArrayList<>();
     for (Object[] value : values) {
       Preconditions.checkArgument(value.length == columnNames.length);
-      Map<String, Object> theVals = Maps.newHashMapWithExpectedSize(value.length);
+      ResultRow row = ResultRow.create(query.getResultRowSizeWithPostAggregators());
       for (int i = 0; i < columnNames.length; i++) {
         if (i != timeIndex) {
-          theVals.put(columnNames[i], value[i]);
+          final int position = query.getResultRowSignature().indexOf(columnNames[i]);
+          row.set(position, value[i]);
+        } else if (query.getResultRowHasTimestamp()) {
+          row.set(0, new DateTime(value[i], ISOChronology.getInstanceUTC()).getMillis());
         }
       }
-      expected.add(new MapBasedRow(new DateTime(value[timeIndex], ISOChronology.getInstanceUTC()), theVals));
+      expected.add(row);
     }
     return expected;
   }

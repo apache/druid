@@ -32,6 +32,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.http.client.NettyHttpClient;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.BasicHTTPEscalator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
@@ -39,8 +40,10 @@ import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticato
 import org.apache.druid.security.basic.authentication.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
 import org.apache.druid.security.basic.authentication.db.cache.CoordinatorPollingBasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.db.cache.MetadataStoragePollingBasicAuthenticatorCacheManager;
+import org.apache.druid.security.basic.authentication.db.cache.NoopBasicAuthenticatorCacheNotifier;
 import org.apache.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
+import org.apache.druid.security.basic.authentication.db.updater.NoopBasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.endpoint.BasicAuthenticatorResource;
 import org.apache.druid.security.basic.authentication.endpoint.BasicAuthenticatorResourceHandler;
 import org.apache.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
@@ -51,8 +54,10 @@ import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCac
 import org.apache.druid.security.basic.authorization.db.cache.CoordinatorBasicAuthorizerCacheNotifier;
 import org.apache.druid.security.basic.authorization.db.cache.CoordinatorPollingBasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.db.cache.MetadataStoragePollingBasicAuthorizerCacheManager;
+import org.apache.druid.security.basic.authorization.db.cache.NoopBasicAuthorizerCacheNotifier;
 import org.apache.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
 import org.apache.druid.security.basic.authorization.db.updater.CoordinatorBasicAuthorizerMetadataStorageUpdater;
+import org.apache.druid.security.basic.authorization.db.updater.NoopBasicAuthorizerMetadataStorageUpdater;
 import org.apache.druid.security.basic.authorization.endpoint.BasicAuthorizerResource;
 import org.apache.druid.security.basic.authorization.endpoint.BasicAuthorizerResourceHandler;
 import org.apache.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler;
@@ -62,100 +67,147 @@ import java.util.List;
 
 public class BasicSecurityDruidModule implements DruidModule
 {
+
   @Override
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.auth.basic.common", BasicAuthCommonCacheConfig.class);
+    JsonConfigProvider.bind(binder, "druid.auth.basic.composition", BasicAuthClassCompositionConfig.class);
+    JsonConfigProvider.bind(binder, "druid.auth.basic.ssl", BasicAuthSSLConfig.class);
 
     LifecycleModule.register(binder, BasicAuthenticatorMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthorizerMetadataStorageUpdater.class);
     LifecycleModule.register(binder, BasicAuthenticatorCacheManager.class);
     LifecycleModule.register(binder, BasicAuthorizerCacheManager.class);
+    LifecycleModule.register(binder, BasicAuthenticatorCacheNotifier.class);
+    LifecycleModule.register(binder, BasicAuthorizerCacheNotifier.class);
 
     Jerseys.addResource(binder, BasicAuthenticatorResource.class);
     Jerseys.addResource(binder, BasicAuthorizerResource.class);
+
+    binder.requestStaticInjection(BasicSecuritySSLSocketFactory.class);
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthenticatorMetadataStorageUpdater createAuthenticatorStorageUpdater(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthenticatorMetadataStorageUpdater createAuthenticatorStorageUpdater(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthenticatorMetadataStorageUpdater.class);
-    } else {
-      return null;
-    }
+    return getInstance(
+        injector,
+        config.getAuthenticatorMetadataStorageUpdater(),
+        CoordinatorBasicAuthenticatorMetadataStorageUpdater.class,
+        NoopBasicAuthenticatorMetadataStorageUpdater.class
+    );
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthenticatorCacheManager createAuthenticatorCacheManager(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthenticatorCacheManager createAuthenticatorCacheManager(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(MetadataStoragePollingBasicAuthenticatorCacheManager.class);
-    } else {
-      return injector.getInstance(CoordinatorPollingBasicAuthenticatorCacheManager.class);
-    }
+    return getInstance(
+        injector,
+        config.getAuthenticatorCacheManager(),
+        MetadataStoragePollingBasicAuthenticatorCacheManager.class,
+        CoordinatorPollingBasicAuthenticatorCacheManager.class
+    );
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthenticatorResourceHandler createAuthenticatorResourceHandler(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthenticatorResourceHandler createAuthenticatorResourceHandler(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthenticatorResourceHandler.class);
-    } else {
-      return injector.getInstance(DefaultBasicAuthenticatorResourceHandler.class);
-    }
+    return getInstance(
+        injector,
+        config.getAuthenticatorResourceHandler(),
+        CoordinatorBasicAuthenticatorResourceHandler.class,
+        DefaultBasicAuthenticatorResourceHandler.class
+    );
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthenticatorCacheNotifier createAuthenticatorCacheNotifier(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthenticatorCacheNotifier createAuthenticatorCacheNotifier(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthenticatorCacheNotifier.class);
-    } else {
-      return null;
-    }
+    return getInstance(
+        injector,
+        config.getAuthenticatorCacheNotifier(),
+        CoordinatorBasicAuthenticatorCacheNotifier.class,
+        NoopBasicAuthenticatorCacheNotifier.class
+    );
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthorizerMetadataStorageUpdater createAuthorizerStorageUpdater(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthorizerMetadataStorageUpdater createAuthorizerStorageUpdater(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthorizerMetadataStorageUpdater.class);
-    } else {
-      return null;
-    }
+    return getInstance(
+        injector,
+        config.getAuthorizerMetadataStorageUpdater(),
+        CoordinatorBasicAuthorizerMetadataStorageUpdater.class,
+        NoopBasicAuthorizerMetadataStorageUpdater.class
+    );
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthorizerCacheManager createAuthorizerCacheManager(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthorizerCacheManager createAuthorizerCacheManager(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(MetadataStoragePollingBasicAuthorizerCacheManager.class);
-    } else {
-      return injector.getInstance(CoordinatorPollingBasicAuthorizerCacheManager.class);
-    }
+    return getInstance(
+        injector,
+        config.getAuthorizerCacheManager(),
+        MetadataStoragePollingBasicAuthorizerCacheManager.class,
+        CoordinatorPollingBasicAuthorizerCacheManager.class
+    );
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthorizerResourceHandler createAuthorizerResourceHandler(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthorizerResourceHandler createAuthorizerResourceHandler(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthorizerResourceHandler.class);
-    } else {
-      return injector.getInstance(DefaultBasicAuthorizerResourceHandler.class);
-    }
+    return getInstance(
+        injector,
+        config.getAuthorizerResourceHandler(),
+        CoordinatorBasicAuthorizerResourceHandler.class,
+        DefaultBasicAuthorizerResourceHandler.class
+    );
   }
 
-  @Provides @LazySingleton
-  public static BasicAuthorizerCacheNotifier createAuthorizerCacheNotifier(final Injector injector)
+  @Provides
+  @LazySingleton
+  public static BasicAuthorizerCacheNotifier createAuthorizerCacheNotifier(
+      final Injector injector,
+      BasicAuthClassCompositionConfig config
+  ) throws ClassNotFoundException
   {
-    if (isCoordinator(injector)) {
-      return injector.getInstance(CoordinatorBasicAuthorizerCacheNotifier.class);
-    } else {
-      return null;
-    }
+    return getInstance(
+        injector,
+        config.getAuthorizerCacheNotifier(),
+        CoordinatorBasicAuthorizerCacheNotifier.class,
+        NoopBasicAuthorizerCacheNotifier.class
+    );
   }
-
+  
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -163,9 +215,33 @@ public class BasicSecurityDruidModule implements DruidModule
         new SimpleModule("BasicDruidSecurity").registerSubtypes(
             BasicHTTPAuthenticator.class,
             BasicHTTPEscalator.class,
-            BasicRoleBasedAuthorizer.class
+            BasicRoleBasedAuthorizer.class,
+            NettyHttpClient.class
         )
     );
+  }
+
+  /**
+   * Returns the instance provided either by a config property or coordinator-run class or default class.
+   * The order of check corresponds to the order of method params.
+   */
+  private static <T> T getInstance(
+      Injector injector,
+      String configClassName,
+      Class<? extends T> classRunByCoordinator,
+      Class<? extends T> defaultClass
+  ) throws ClassNotFoundException
+  {
+    if (configClassName != null) {
+      // ClassCastException is thrown in case of a mismatch, configuration fix is required.
+      @SuppressWarnings("unchecked")
+      final T instance = (T) injector.getInstance(Class.forName(configClassName));
+      return instance;
+    }
+    if (isCoordinator(injector)) {
+      return injector.getInstance(classRunByCoordinator);
+    }
+    return injector.getInstance(defaultClass);
   }
 
   private static boolean isCoordinator(Injector injector)

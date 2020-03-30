@@ -21,10 +21,9 @@ package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.BaseQuery;
@@ -50,18 +49,18 @@ import java.util.List;
 
 public class GroupByQueryTest
 {
-  private static final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testQuerySerialization() throws IOException
   {
     Query query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setPostAggregatorSpecs(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
         .setLimitSpec(
             new DefaultLimitSpec(
@@ -75,8 +74,8 @@ public class GroupByQueryTest
         )
         .build();
 
-    String json = jsonMapper.writeValueAsString(query);
-    Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    String json = JSON_MAPPER.writeValueAsString(query);
+    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
   }
@@ -93,10 +92,10 @@ public class GroupByQueryTest
                                            .addDimension(new DefaultDimensionSpec("baz", "baz", ValueType.STRING))
                                            .build();
 
-    final Ordering<Row> rowOrdering = query.getRowOrdering(false);
+    final Ordering<ResultRow> rowOrdering = query.getRowOrdering(false);
     final int compare = rowOrdering.compare(
-        new MapBasedRow(0L, ImmutableMap.of("foo", 1, "bar", 1f, "baz", "a")),
-        new MapBasedRow(0L, ImmutableMap.of("foo", 1L, "bar", 1d, "baz", "b"))
+        ResultRow.of(1, 1f, "a"),
+        ResultRow.of(1L, 1d, "b")
     );
     Assert.assertEquals(-1, compare);
   }
@@ -108,7 +107,7 @@ public class GroupByQueryTest
         "2011-11-07/2011-11-08")));
     QuerySegmentSpec outerQuerySegmentSpec = new MultipleIntervalSegmentSpec(Collections.singletonList((Intervals.of(
         "2011-11-04/2011-11-08"))));
-    List<AggregatorFactory> aggs = Collections.singletonList(QueryRunnerTestHelper.rowsCount);
+    List<AggregatorFactory> aggs = Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT);
     final GroupByQuery innerQuery = GroupByQuery.builder()
                                                 .setDataSource("blah")
                                                 .setInterval(innerQuerySegmentSpec)
@@ -123,5 +122,23 @@ public class GroupByQueryTest
         .setGranularity(Granularities.DAY)
         .build();
     Assert.assertEquals(innerQuerySegmentSpec, BaseQuery.getQuerySegmentSpecForLookUp(query));
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(GroupByQuery.class)
+                  .usingGetClass()
+                  // The 'duration' field is used by equals via getDuration(), which computes it lazily in a way
+                  // that confuses EqualsVerifier.
+                  .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
+                  // Fields derived from other fields are not included in equals/hashCode
+                  .withIgnoredFields(
+                      "applyLimitPushDown",
+                      "postProcessingFn",
+                      "resultRowSignature",
+                      "universalTimestamp"
+                  )
+                  .verify();
   }
 }

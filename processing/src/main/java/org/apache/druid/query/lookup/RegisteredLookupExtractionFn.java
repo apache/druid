@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 
@@ -47,8 +48,8 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       @JacksonInject LookupExtractorFactoryContainerProvider manager,
       @JsonProperty("lookup") String lookup,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
-      @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
-      @JsonProperty("injective") final Boolean injective,
+      @JsonProperty("replaceMissingValueWith") @Nullable final String replaceMissingValueWith,
+      @JsonProperty("injective") @Nullable final Boolean injective,
       @JsonProperty("optimize") Boolean optimize
   )
   {
@@ -73,12 +74,14 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return retainMissingValue;
   }
 
+  @Nullable
   @JsonProperty("replaceMissingValueWith")
   public String getReplaceMissingValueWith()
   {
     return replaceMissingValueWith;
   }
 
+  @Nullable
   @JsonProperty("injective")
   public Boolean isInjective()
   {
@@ -94,7 +97,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getCanonicalName());
+    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getName());
     final byte[] lookupName = StringUtils.toUtf8(getLookup());
     final byte[] delegateKey = ensureDelegate().getCacheKey();
     return ByteBuffer
@@ -143,18 +146,18 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
-          final LookupExtractor factory = Preconditions.checkNotNull(
-              manager.get(getLookup()),
-              "Lookup [%s] not found",
-              getLookup()
-          ).getLookupExtractorFactory().get();
+          final LookupExtractor factory =
+              manager.get(getLookup())
+                     .orElseThrow(() -> new ISE("Lookup [%s] not found", getLookup()))
+                     .getLookupExtractorFactory()
+                     .get();
 
           delegate = new LookupExtractionFn(
               factory,
-              isRetainMissingValue(),
-              getReplaceMissingValueWith(),
-              injective == null ? factory.isOneToOne() : injective,
-              isOptimize()
+              retainMissingValue,
+              replaceMissingValueWith,
+              injective,
+              optimize
           );
         }
       }

@@ -22,20 +22,22 @@ package org.apache.druid.indexing.common.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 
 public class TaskConfig
 {
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
-      "org.apache.hadoop:hadoop-client:2.8.3"
+      "org.apache.hadoop:hadoop-client:2.8.5"
   );
 
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
-
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
 
   @JsonProperty
@@ -62,6 +64,9 @@ public class TaskConfig
   @JsonProperty
   private final Period directoryLockTimeout;
 
+  @JsonProperty
+  private final List<StorageLocationConfig> shuffleDataLocations;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
@@ -71,7 +76,8 @@ public class TaskConfig
       @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
       @JsonProperty("restoreTasksOnRestart") boolean restoreTasksOnRestart,
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
-      @JsonProperty("directoryLockTimeout") Period directoryLockTimeout
+      @JsonProperty("directoryLockTimeout") Period directoryLockTimeout,
+      @JsonProperty("shuffleDataLocations") List<StorageLocationConfig> shuffleDataLocations
   )
   {
     this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
@@ -89,6 +95,13 @@ public class TaskConfig
     this.directoryLockTimeout = directoryLockTimeout == null
                                 ? DEFAULT_DIRECTORY_LOCK_TIMEOUT
                                 : directoryLockTimeout;
+    if (shuffleDataLocations == null) {
+      this.shuffleDataLocations = Collections.singletonList(
+          new StorageLocationConfig(new File(defaultDir(null, "intermediary-segments")), null, null)
+      );
+    } else {
+      this.shuffleDataLocations = shuffleDataLocations;
+    }
   }
 
   @JsonProperty
@@ -111,6 +124,11 @@ public class TaskConfig
   public File getTaskWorkDir(String taskId)
   {
     return new File(getTaskDir(taskId), "work");
+  }
+
+  public File getTaskTempDir(String taskId)
+  {
+    return new File(getTaskDir(taskId), "temp");
   }
 
   public File getTaskLockFile(String taskId)
@@ -154,7 +172,13 @@ public class TaskConfig
     return directoryLockTimeout;
   }
 
-  private String defaultDir(String configParameter, final String defaultVal)
+  @JsonProperty
+  public List<StorageLocationConfig> getShuffleDataLocations()
+  {
+    return shuffleDataLocations;
+  }
+
+  private String defaultDir(@Nullable String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
       return Paths.get(getBaseDir(), defaultVal).toString();

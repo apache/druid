@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 cat <<EOT > ca_intermediate.conf
 [req]
@@ -31,7 +33,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=intermediate@druid.io
+emailAddress=intermediate@druid.apache.org
 CN = intermediate
 
 [ req_ext ]
@@ -62,7 +64,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=intermediate-client@druid.io
+emailAddress=intermediate-client@druid.apache.org
 CN = localhost
 
 [ req_ext ]

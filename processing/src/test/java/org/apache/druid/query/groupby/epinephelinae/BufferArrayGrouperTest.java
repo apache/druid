@@ -27,11 +27,14 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -40,11 +43,17 @@ import java.util.List;
 
 public class BufferArrayGrouperTest
 {
+  @BeforeClass
+  public static void setUpStatic()
+  {
+    NullHandling.initializeForTests();
+  }
+
   @Test
   public void testAggregate()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final IntGrouper grouper = newGrouper(columnSelectorFactory, 1024);
+    final IntGrouper grouper = newGrouper(columnSelectorFactory, 32768);
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     grouper.aggregate(12);
@@ -77,11 +86,13 @@ public class BufferArrayGrouperTest
 
     final BufferArrayGrouper grouper = new BufferArrayGrouper(
         Suppliers.ofInstance(buffer),
-        columnSelectorFactory,
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory("valueSum", "value"),
-            new CountAggregatorFactory("count")
-        },
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
         1000
     );
     grouper.init();
@@ -91,23 +102,29 @@ public class BufferArrayGrouperTest
   @Test
   public void testRequiredBufferCapacity()
   {
-    int[] cardinalityArray = new int[]{1, 10, Integer.MAX_VALUE - 1};
-    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
+    final int[] cardinalityArray = new int[]{1, 10, Integer.MAX_VALUE - 1, Integer.MAX_VALUE};
+    final AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new LongSumAggregatorFactory("sum", "sum")
     };
-    long[] requiredSizes;
+
+    final long[] requiredSizes;
+
     if (NullHandling.sqlCompatible()) {
       // We need additional size to store nullability information.
-      requiredSizes = new long[]{19, 101, 19058917368L};
+      requiredSizes = new long[]{19, 101, 19595788279L, 19595788288L};
     } else {
-      requiredSizes = new long[]{17, 90, 16911433721L};
+      requiredSizes = new long[]{17, 90, 17448304632L, 17448304640L};
     }
 
     for (int i = 0; i < cardinalityArray.length; i++) {
-      Assert.assertEquals(requiredSizes[i], BufferArrayGrouper.requiredBufferCapacity(
-          cardinalityArray[i],
-          aggregatorFactories
-      ));
+      Assert.assertEquals(
+          StringUtils.format("cardinality[%d]", cardinalityArray[i]),
+          requiredSizes[i],
+          BufferArrayGrouper.requiredBufferCapacity(
+              cardinalityArray[i],
+              aggregatorFactories
+          )
+      );
     }
   }
 }

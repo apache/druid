@@ -40,12 +40,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.apache.druid.java.util.emitter.core.EmitterTest.okResponse;
-import static org.junit.Assert.assertEquals;
-
 public class ParametrizedUriEmitterTest
 {
-  private static final ObjectMapper jsonMapper = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   private MockHttpClient httpClient;
   private Lifecycle lifecycle;
@@ -69,9 +66,13 @@ public class ParametrizedUriEmitterTest
     final Properties props = new Properties();
     props.setProperty("org.apache.druid.java.util.emitter.type", "parametrized");
     props.setProperty("org.apache.druid.java.util.emitter.recipientBaseUrlPattern", uriPattern);
+    props.setProperty(
+        "org.apache.druid.java.util.emitter.httpEmitting.flushTimeOut",
+        String.valueOf(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
+    );
     lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, lifecycle);
-    assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
+    Assert.assertEquals(ParametrizedUriEmitter.class, emitter.getClass());
     lifecycle.start();
     return emitter;
   }
@@ -101,13 +102,13 @@ public class ParametrizedUriEmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
-            return GoHandlers.immediateFuture(okResponse());
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(1)
     );
@@ -140,7 +141,7 @@ public class ParametrizedUriEmitterTest
                 request.getUrl(),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
-            return GoHandlers.immediateFuture(okResponse());
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(2)
     );
@@ -151,8 +152,9 @@ public class ParametrizedUriEmitterTest
     emitter.flush();
     Assert.assertTrue(httpClient.succeeded());
     Map<String, String> expected = ImmutableMap.of(
-        "http://example.com/test1", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(0))),
-        "http://example.com/test2", StringUtils.format("[%s]\n", jsonMapper.writeValueAsString(events.get(1))));
+        "http://example.com/test1", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(0))),
+        "http://example.com/test2", StringUtils.format("[%s]\n", JSON_MAPPER.writeValueAsString(events.get(1)))
+    );
     Assert.assertEquals(expected, results);
   }
 
@@ -175,13 +177,13 @@ public class ParametrizedUriEmitterTest
             Assert.assertEquals(
                 StringUtils.format(
                     "[%s,%s]\n",
-                    jsonMapper.writeValueAsString(events.get(0)),
-                    jsonMapper.writeValueAsString(events.get(1))
+                    JSON_MAPPER.writeValueAsString(events.get(0)),
+                    JSON_MAPPER.writeValueAsString(events.get(1))
                 ),
                 StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
             );
 
-            return GoHandlers.immediateFuture(okResponse());
+            return GoHandlers.immediateFuture(EmitterTest.okResponse());
           }
         }.times(1)
     );
@@ -209,7 +211,9 @@ public class ParametrizedUriEmitterTest
       Assert.assertEquals(
           e.getMessage(),
           StringUtils.format(
-              "ParametrizedUriExtractor with pattern http://example.com/{keyNotSetInEvents} requires keyNotSetInEvents to be set in event, but found %s", event.toMap())
+              "ParametrizedUriExtractor with pattern http://example.com/{keyNotSetInEvents} requires keyNotSetInEvents to be set in event, but found %s",
+              event.toMap()
+          )
       );
     }
   }

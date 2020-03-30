@@ -35,6 +35,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -123,7 +124,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    // This is likely wrong as well as combine(), see https://github.com/apache/incubator-druid/pull/2602#issuecomment-321224202
+    // This is likely wrong as well as combine(), see https://github.com/apache/druid/pull/2602#issuecomment-321224202
     return new LongSumAggregateCombiner();
   }
 
@@ -147,8 +148,9 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
     return object;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

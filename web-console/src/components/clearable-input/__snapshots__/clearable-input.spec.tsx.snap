@@ -1,0 +1,43 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`clearable-input matches snapshot 1`] = `
+<div
+  class="bp3-input-group clearable-input testClassName"
+>
+  <input
+    class="bp3-input"
+    placeholder="testPlaceholder"
+    style="padding-right: 0px;"
+    type="text"
+    value="testValue"
+  />
+  <span
+    class="bp3-input-action"
+  >
+    <button
+      class="bp3-button bp3-minimal"
+      type="button"
+    >
+      <span
+        class="bp3-icon bp3-icon-cross"
+        icon="cross"
+      >
+        <svg
+          data-icon="cross"
+          height="16"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <desc>
+            cross
+          </desc>
+          <path
+            d="M9.41 8l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L8 6.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L6.59 8 3.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71L8 9.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L9.41 8z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </span>
+    </button>
+  </span>
+</div>
+`;

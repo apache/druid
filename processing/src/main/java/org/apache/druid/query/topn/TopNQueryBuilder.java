@@ -230,7 +230,7 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder filters(String dimensionName, String value, String... values)
   {
-    dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+    dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null, null);
     return this;
   }
 
@@ -253,9 +253,21 @@ public class TopNQueryBuilder
     return this;
   }
 
+  public TopNQueryBuilder aggregators(AggregatorFactory... aggs)
+  {
+    aggregatorSpecs = Arrays.asList(aggs);
+    return this;
+  }
+
   public TopNQueryBuilder postAggregators(Collection<PostAggregator> p)
   {
     postAggregatorSpecs = new ArrayList<>(p); // defensive copy
+    return this;
+  }
+
+  public TopNQueryBuilder postAggregators(PostAggregator... postAggs)
+  {
+    postAggregatorSpecs = Arrays.asList(postAggs);
     return this;
   }
 

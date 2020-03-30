@@ -23,7 +23,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -32,12 +35,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * This class is responsible for managing data sources and their states like timeline, total segment size, and number of
@@ -115,8 +118,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceSizes()
   {
-    return dataSources.entrySet().stream()
-                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getTotalSegmentSize()));
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getTotalSegmentSize);
   }
 
   /**
@@ -127,8 +129,7 @@ public class SegmentManager
    */
   public Map<String, Long> getDataSourceCounts()
   {
-    return dataSources.entrySet().stream()
-                      .collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getNumSegments()));
+    return CollectionUtils.mapValues(dataSources, SegmentManager.DataSourceState::getNumSegments);
   }
 
   public boolean isSegmentCached(final DataSegment segment)
@@ -136,25 +137,38 @@ public class SegmentManager
     return segmentLoader.isSegmentLoaded(segment);
   }
 
-  @Nullable
-  public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline(String dataSource)
+  /**
+   * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
+   * datasource of a single table.
+   *
+   * @param analysis data source analysis information
+   *
+   * @return timeline, if it exists
+   *
+   * @throws IllegalStateException if 'analysis' does not represent a scan-based datasource of a single table
+   */
+  public Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> getTimeline(DataSourceAnalysis analysis)
   {
-    final DataSourceState dataSourceState = dataSources.get(dataSource);
-    return dataSourceState == null ? null : dataSourceState.getTimeline();
+    final TableDataSource tableDataSource =
+        analysis.getBaseTableDataSource()
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+
+    return Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTimeline);
   }
 
   /**
    * Load a single segment.
    *
    * @param segment segment to load
+   * @param lazy    whether to lazy load columns metadata
    *
    * @return true if the segment was newly loaded, false if it was already loaded
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
-    final Segment adapter = getAdapter(segment);
+    final Segment adapter = getAdapter(segment, lazy);
 
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
@@ -177,7 +191,9 @@ public class SegmentManager
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
-                segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
+                segment.getShardSpec().createChunk(
+                    ReferenceCountingSegment.wrapSegment(adapter, segment.getShardSpec())
+                )
             );
             dataSourceState.addSegment(segment);
             resultSupplier.set(true);
@@ -189,11 +205,11 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
-  private Segment getAdapter(final DataSegment segment) throws SegmentLoadingException
+  private Segment getAdapter(final DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
     final Segment adapter;
     try {
-      adapter = segmentLoader.getSegment(segment);
+      adapter = segmentLoader.getSegment(segment, lazy);
     }
     catch (SegmentLoadingException e) {
       segmentLoader.cleanup(segment);
@@ -216,16 +232,18 @@ public class SegmentManager
         (dataSourceName, dataSourceState) -> {
           if (dataSourceState == null) {
             log.info("Told to delete a queryable for a dataSource[%s] that doesn't exist.", dataSourceName);
+            return null;
           } else {
             final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
                 dataSourceState.getTimeline();
 
+            final ShardSpec shardSpec = segment.getShardSpec();
             final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
                 segment.getInterval(),
                 segment.getVersion(),
                 // remove() internally searches for a partitionChunk to remove which is *equal* to the given
                 // partitionChunk. Note that partitionChunk.equals() checks only the partitionNum, but not the object.
-                segment.getShardSpec().createChunk(null)
+                segment.getShardSpec().createChunk(ReferenceCountingSegment.wrapSegment(null, shardSpec))
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
@@ -242,10 +260,10 @@ public class SegmentManager
                   segment.getVersion()
               );
             }
-          }
 
-          // Returning null removes the entry of dataSource from the map
-          return dataSourceState == null || dataSourceState.isEmpty() ? null : dataSourceState;
+            // Returning null removes the entry of dataSource from the map
+            return dataSourceState.isEmpty() ? null : dataSourceState;
+          }
         }
     );
 

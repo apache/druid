@@ -28,10 +28,10 @@ import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
@@ -41,7 +41,9 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,10 +56,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-
 @RunWith(Parameterized.class)
-public class GroupByQueryMergeBufferTest
+public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
 {
   private static final long TIMEOUT = 5000;
 
@@ -65,7 +65,7 @@ public class GroupByQueryMergeBufferTest
   {
     private int minRemainBufferNum;
 
-    public TestBlockingPool(Supplier<ByteBuffer> generator, int limit)
+    TestBlockingPool(Supplier<ByteBuffer> generator, int limit)
     {
       super(generator, limit);
       minRemainBufferNum = limit;
@@ -93,18 +93,18 @@ public class GroupByQueryMergeBufferTest
       return holder;
     }
 
-    public void resetMinRemainBufferNum()
+    void resetMinRemainBufferNum()
     {
       minRemainBufferNum = PROCESSING_CONFIG.getNumMergeBuffers();
     }
 
-    public int getMinRemainBufferNum()
+    int getMinRemainBufferNum()
     {
       return minRemainBufferNum;
     }
   }
 
-  public static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
+  private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
   {
     @Override
     public String getFormatString()
@@ -142,51 +142,35 @@ public class GroupByQueryMergeBufferTest
         configSupplier,
         new GroupByStrategyV1(
             configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
+            new GroupByQueryEngine(configSupplier, BUFFER_POOL),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
+            BUFFER_POOL
         ),
         new GroupByStrategyV2(
             PROCESSING_CONFIG,
             configSupplier,
-            bufferPool,
-            mergeBufferPool,
+            Suppliers.ofInstance(new QueryConfig()),
+            BUFFER_POOL,
+            MERGE_BUFFER_POOL,
             mapper,
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        strategySelector,
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
     return new GroupByQueryRunnerFactory(strategySelector, toolChest);
   }
 
-  private static final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(
+  private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
       "GroupByQueryEngine-bufferPool",
-      new Supplier<ByteBuffer>()
-      {
-        @Override
-        public ByteBuffer get()
-        {
-          return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
-        }
-      }
+      () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes())
   );
 
-  private static final TestBlockingPool mergeBufferPool = new TestBlockingPool(
-      new Supplier<ByteBuffer>()
-      {
-        @Override
-        public ByteBuffer get()
-        {
-          return ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes());
-        }
-      },
+  private static final TestBlockingPool MERGE_BUFFER_POOL = new TestBlockingPool(
+      () -> ByteBuffer.allocateDirect(PROCESSING_CONFIG.intermediateComputeSizeBytes()),
       PROCESSING_CONFIG.getNumMergeBuffers()
   );
 
-  private static final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+  private static final GroupByQueryRunnerFactory FACTORY = makeQueryRunnerFactory(
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
@@ -198,34 +182,34 @@ public class GroupByQueryMergeBufferTest
       }
   );
 
-  private QueryRunner<Row> runner;
+  private final QueryRunner<ResultRow> runner;
 
   @AfterClass
   public static void teardownClass()
   {
-    bufferPool.close();
-    mergeBufferPool.close();
+    BUFFER_POOL.close();
+    MERGE_BUFFER_POOL.close();
   }
 
   @Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
       args.add(new Object[]{runner});
     }
     return args;
   }
 
-  public GroupByQueryMergeBufferTest(QueryRunner<Row> runner)
+  public GroupByQueryMergeBufferTest(QueryRunner<ResultRow> runner)
   {
-    this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    this.runner = FACTORY.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
   }
 
   @Before
   public void setup()
   {
-    mergeBufferPool.resetMinRemainBufferNum();
+    MERGE_BUFFER_POOL.resetMinRemainBufferNum();
   }
 
   @Test
@@ -233,17 +217,17 @@ public class GroupByQueryMergeBufferTest
   {
     final GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
-        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
-    assertEquals(2, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(2, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assert.assertEquals(3, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -254,24 +238,24 @@ public class GroupByQueryMergeBufferTest
         .setDataSource(
             new QueryDataSource(
                 GroupByQuery.builder()
-                            .setDataSource(QueryRunnerTestHelper.dataSource)
-                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                             .setGranularity(Granularities.ALL)
                             .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
-        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
-    assertEquals(1, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assert.assertEquals(3, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -284,34 +268,34 @@ public class GroupByQueryMergeBufferTest
                 GroupByQuery.builder()
                             .setDataSource(
                                 GroupByQuery.builder()
-                                            .setDataSource(QueryRunnerTestHelper.dataSource)
-                                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                             .setGranularity(Granularities.ALL)
                                             .setDimensions(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
                                             )
-                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                                             .build()
                             )
-                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                             .setGranularity(Granularities.ALL)
                             .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
-        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
-    assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(0, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assert.assertEquals(3, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -326,8 +310,8 @@ public class GroupByQueryMergeBufferTest
                                 GroupByQuery.builder()
                                             .setDataSource(
                                                 GroupByQuery.builder()
-                                                            .setDataSource(QueryRunnerTestHelper.dataSource)
-                                                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                                                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                                             .setGranularity(Granularities.ALL)
                                                             .setDimensions(Lists.newArrayList(
                                                                 new DefaultDimensionSpec("quality", "alias"),
@@ -335,35 +319,35 @@ public class GroupByQueryMergeBufferTest
                                                                 new DefaultDimensionSpec("placement", null)
                                                             ))
                                                             .setAggregatorSpecs(Collections.singletonList(
-                                                                QueryRunnerTestHelper.rowsCount))
+                                                                QueryRunnerTestHelper.ROWS_COUNT))
                                                             .build()
                                             )
-                                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                             .setGranularity(Granularities.ALL)
                                             .setDimensions(
                                                 new DefaultDimensionSpec("quality", "alias"),
                                                 new DefaultDimensionSpec("market", null)
                                             )
-                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                                             .build()
                             )
-                            .setInterval(QueryRunnerTestHelper.firstToThird)
+                            .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
                             .setGranularity(Granularities.ALL)
                             .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.rowsCount))
+                            .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
                             .build()
             )
         )
         .setGranularity(Granularities.ALL)
-        .setInterval(QueryRunnerTestHelper.firstToThird)
+        .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // This should be 0 because the broker needs 2 buffers and the queryable node needs one.
-    assertEquals(0, mergeBufferPool.getMinRemainBufferNum());
-    assertEquals(3, mergeBufferPool.getPoolSize());
+    Assert.assertEquals(0, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assert.assertEquals(3, MERGE_BUFFER_POOL.getPoolSize());
   }
 }

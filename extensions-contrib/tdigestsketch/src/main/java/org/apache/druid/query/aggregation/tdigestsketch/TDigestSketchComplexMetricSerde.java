@@ -41,7 +41,7 @@ public class TDigestSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public String getTypeName()
   {
-    return TDigestBuildSketchAggregatorFactory.TYPE_NAME;
+    return TDigestSketchAggregatorFactory.TYPE_NAME;
   }
 
   @Override

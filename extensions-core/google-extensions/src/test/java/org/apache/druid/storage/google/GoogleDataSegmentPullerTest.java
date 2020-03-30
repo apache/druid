@@ -22,29 +22,26 @@ package org.apache.druid.storage.google;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.googleapis.testing.json.GoogleJsonResponseExceptionFactoryTesting;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-
-import static org.easymock.EasyMock.expect;
-import static org.junit.Assert.assertFalse;
 
 public class GoogleDataSegmentPullerTest extends EasyMockSupport
 {
-  private static final String bucket = "bucket";
-  private static final String path = "/path/to/storage/index.zip";
+  private static final String BUCKET = "bucket";
+  private static final String PATH = "/path/to/storage/index.zip";
 
   @Test(expected = SegmentLoadingException.class)
   public void testDeleteOutputDirectoryWhenErrorIsRaisedPullingSegmentFiles()
       throws IOException, SegmentLoadingException
   {
-    final File outDir = Files.createTempDirectory("druid").toFile();
+    final File outDir = FileUtils.createTempDir();
     try {
       GoogleStorage storage = createMock(GoogleStorage.class);
       final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
@@ -52,14 +49,14 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
           300,
           "test"
       );
-      expect(storage.get(EasyMock.eq(bucket), EasyMock.eq(path))).andThrow(exception);
+      EasyMock.expect(storage.get(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(exception);
 
       replayAll();
 
       GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
-      puller.getSegmentFiles(bucket, path, outDir);
+      puller.getSegmentFiles(BUCKET, PATH, outDir);
 
-      assertFalse(outDir.exists());
+      Assert.assertFalse(outDir.exists());
 
       verifyAll();
     }

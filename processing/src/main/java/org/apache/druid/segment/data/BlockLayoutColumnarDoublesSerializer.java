@@ -25,6 +25,8 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -35,25 +37,29 @@ import java.nio.channels.WritableByteChannel;
  */
 public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSerializer
 {
-  private static final MetaSerdeHelper<BlockLayoutColumnarDoublesSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<BlockLayoutColumnarDoublesSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((BlockLayoutColumnarDoublesSerializer x) -> CompressedColumnarDoublesSuppliers.VERSION)
       .writeInt(x -> x.numInserted)
       .writeInt(x -> CompressedPools.BUFFER_SIZE / Double.BYTES)
       .writeByte(x -> x.compression.getId());
 
+  private final String columnName;
   private final GenericIndexedWriter<ByteBuffer> flattener;
   private final CompressionStrategy compression;
 
   private int numInserted = 0;
+  @Nullable
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarDoublesSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(
         segmentWriteOutMedium,
         filenameBase,
@@ -73,6 +79,12 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
   }
 
   @Override
+  public int size()
+  {
+    return numInserted;
+  }
+
+  @Override
   public void add(double value) throws IOException
   {
     if (endBuffer == null) {
@@ -86,20 +98,23 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
 
     endBuffer.putDouble(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 

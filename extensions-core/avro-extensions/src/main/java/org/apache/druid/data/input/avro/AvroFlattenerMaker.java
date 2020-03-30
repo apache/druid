@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -41,9 +42,10 @@ import java.util.stream.Collectors;
 
 public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<GenericRecord>
 {
-  static final Configuration JSONPATH_CONFIGURATION =
+  private static final JsonProvider AVRO_JSON_PROVIDER = new GenericAvroJsonProvider();
+  private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
-                   .jsonProvider(new GenericAvroJsonProvider())
+                   .jsonProvider(AVRO_JSON_PROVIDER)
                    .mappingProvider(new NotImplementedMappingProvider())
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
@@ -57,17 +59,17 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       Schema.Type.DOUBLE
   );
 
-  public static boolean isPrimitive(Schema schema)
+  private static boolean isPrimitive(Schema schema)
   {
     return ROOT_TYPES.contains(schema.getType());
   }
 
-  public static boolean isPrimitiveArray(Schema schema)
+  private static boolean isPrimitiveArray(Schema schema)
   {
     return schema.getType().equals(Schema.Type.ARRAY) && isPrimitive(schema.getElementType());
   }
 
-  public static boolean isOptionalPrimitive(Schema schema)
+  private static boolean isOptionalPrimitive(Schema schema)
   {
     return schema.getType().equals(Schema.Type.UNION) &&
            schema.getTypes().size() == 2 &&
@@ -79,17 +81,20 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
            );
   }
 
-  static boolean isFieldPrimitive(Schema.Field field)
+  private static boolean isFieldPrimitive(Schema.Field field)
   {
     return isPrimitive(field.schema()) ||
            isPrimitiveArray(field.schema()) ||
            isOptionalPrimitive(field.schema());
   }
 
-
   private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
 
+  /**
+   * @param fromPigAvroStorage boolean to specify the data file is stored using AvroStorage
+   * @param binaryAsString boolean to encode the byte[] as a string.
+   */
   public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString)
   {
     this.fromPigAvroStorage = fromPigAvroStorage;
@@ -126,6 +131,12 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
     throw new UnsupportedOperationException("Avro + JQ not supported");
   }
 
+  @Override
+  public JsonProvider getJsonProvider()
+  {
+    return AVRO_JSON_PROVIDER;
+  }
+
   private Object transformValue(final Object field)
   {
     if (fromPigAvroStorage && field instanceof GenericData.Array) {
@@ -137,12 +148,10 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       } else {
         return ((ByteBuffer) field).array();
       }
-    }
-    if (field instanceof Utf8) {
+    } else if (field instanceof Utf8) {
       return field.toString();
-    }
-    if (field instanceof List) {
-      return ((List) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
+    } else if (field instanceof List) {
+      return ((List<?>) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
     return field;
   }

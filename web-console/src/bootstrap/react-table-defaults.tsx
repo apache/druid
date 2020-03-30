@@ -16,18 +16,18 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
-import { Loader } from '../components/loader';
+import { Loader } from '../components';
 import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
 import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
 /* tslint:disable:max-classes-per-file */
 
-class NoData extends React.Component {
-  render() {
+class NoData extends React.PureComponent {
+  render(): JSX.Element | null {
     const { children } = this.props;
     if (!children) return null;
     return <div className="rt-noData">{children}</div>;
@@ -37,7 +37,8 @@ class NoData extends React.Component {
 /* tslint:enable:max-classes-per-file */
 
 Object.assign(ReactTableDefaults, {
-  defaultFilterMethod: (filter: Filter, row: any, column: any) => {
+  className: '-striped -highlight',
+  defaultFilterMethod: (filter: Filter, row: any) => {
     const id = filter.pivotId || filter.id;
     return booleanCustomTableFilter(filter, row[id]);
   },
@@ -48,8 +49,18 @@ Object.assign(ReactTableDefaults, {
   PaginationComponent: ReactTableCustomPagination,
   AggregatedComponent: (opt: any) => {
     const { subRows, column } = opt;
-    const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row[column.id]);
+    const previewValues = subRows
+      .filter((d: any) => typeof d[column.id] !== 'undefined')
+      .map((row: any) => row[column.id]);
     const previewCount = countBy(previewValues);
-    return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
-  }
+    return (
+      <span>
+        {Object.keys(previewCount)
+          .sort()
+          .map(v => `${v} (${previewCount[v]})`)
+          .join(', ')}
+      </span>
+    );
+  },
+  defaultPageSize: 20,
 });

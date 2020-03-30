@@ -30,8 +30,8 @@ import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -48,6 +48,7 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class ClientInfoResourceTest
 {
@@ -128,7 +129,8 @@ public class ClientInfoResourceTest
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(ImmutableList.of(server)).anyTimes();
 
     timelineServerView = EasyMock.createMock(TimelineServerView.class);
-    EasyMock.expect(timelineServerView.getTimeline(EasyMock.anyObject(TableDataSource.class))).andReturn(timeline);
+    EasyMock.expect(timelineServerView.getTimeline(EasyMock.anyObject(DataSourceAnalysis.class)))
+            .andReturn((Optional) Optional.of(timeline));
 
     EasyMock.replay(serverInventoryView, timelineServerView);
 

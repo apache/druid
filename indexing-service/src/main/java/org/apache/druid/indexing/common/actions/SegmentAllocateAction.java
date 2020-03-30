@@ -19,16 +19,17 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
 import org.apache.druid.indexing.overlord.LockResult;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,9 +37,14 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
+import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -49,13 +55,17 @@ import java.util.stream.Collectors;
  * segments for the given timestamp, or if the prior segments for the given timestamp are already at the
  * preferredSegmentGranularity. Otherwise, the prior segments will take precedence.
  * <p/>
- * This action implicitly acquires locks when it allocates segments. You do not have to acquire them beforehand,
- * although you *do* have to release them yourself.
+ * This action implicitly acquires some task locks when it allocates segments. You do not have to acquire them
+ * beforehand, although you *do* have to release them yourself. (Note that task locks are automatically released when
+ * the task is finished.)
  * <p/>
- * If this action cannot acquire an appropriate lock, or if it cannot expand an existing segment set, it returns null.
+ * If this action cannot acquire an appropriate task lock, or if it cannot expand an existing segment set, it returns
+ * null.
  */
 public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 {
+  public static final String TYPE = "segmentAllocate";
+
   private static final Logger log = new Logger(SegmentAllocateAction.class);
 
   // Prevent spinning forever in situations where the segment list just won't stop changing.
@@ -68,7 +78,10 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   private final String sequenceName;
   private final String previousSegmentId;
   private final boolean skipSegmentLineageCheck;
+  private final PartialShardSpec partialShardSpec;
+  private final LockGranularity lockGranularity;
 
+  @JsonCreator
   public SegmentAllocateAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("timestamp") DateTime timestamp,
@@ -76,7 +89,10 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       @JsonProperty("preferredSegmentGranularity") Granularity preferredSegmentGranularity,
       @JsonProperty("sequenceName") String sequenceName,
       @JsonProperty("previousSegmentId") String previousSegmentId,
-      @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck
+      @JsonProperty("skipSegmentLineageCheck") boolean skipSegmentLineageCheck,
+      // nullable for backward compatibility
+      @JsonProperty("shardSpecFactory") @Nullable PartialShardSpec partialShardSpec,
+      @JsonProperty("lockGranularity") @Nullable LockGranularity lockGranularity // nullable for backward compatibility
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -89,6 +105,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     this.sequenceName = Preconditions.checkNotNull(sequenceName, "sequenceName");
     this.previousSegmentId = previousSegmentId;
     this.skipSegmentLineageCheck = skipSegmentLineageCheck;
+    this.partialShardSpec = partialShardSpec == null ? NumberedPartialShardSpec.instance() : partialShardSpec;
+    this.lockGranularity = lockGranularity == null ? LockGranularity.TIME_CHUNK : lockGranularity;
   }
 
   @JsonProperty
@@ -133,6 +151,18 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
     return skipSegmentLineageCheck;
   }
 
+  @JsonProperty("shardSpecFactory")
+  public PartialShardSpec getPartialShardSpec()
+  {
+    return partialShardSpec;
+  }
+
+  @JsonProperty
+  public LockGranularity getLockGranularity()
+  {
+    return lockGranularity;
+  }
+
   @Override
   public TypeReference<SegmentIdWithShardSpec> getReturnTypeReference()
   {
@@ -160,29 +190,28 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       // 1) if something overlaps our timestamp, use that
       // 2) otherwise try preferredSegmentGranularity & going progressively smaller
 
-      final Interval rowInterval = queryGranularity.bucket(timestamp);
+      final Interval rowInterval = queryGranularity.bucket(timestamp).withChronology(ISOChronology.getInstanceUTC());
 
-      final Set<DataSegment> usedSegmentsForRow = ImmutableSet.copyOf(
-          msc.getUsedSegmentsForInterval(dataSource, rowInterval)
-      );
+      final Set<DataSegment> usedSegmentsForRow =
+          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
 
-      final SegmentIdWithShardSpec identifier = usedSegmentsForRow.isEmpty() ?
-                                                tryAllocateFirstSegment(toolbox, task, rowInterval) :
-                                                tryAllocateSubsequentSegment(
-                                               toolbox,
-                                               task,
-                                               rowInterval,
-                                               usedSegmentsForRow.iterator().next()
-                                           );
+      final SegmentIdWithShardSpec identifier;
+      if (usedSegmentsForRow.isEmpty()) {
+        identifier = tryAllocateFirstSegment(toolbox, task, rowInterval);
+      } else {
+        identifier = tryAllocateSubsequentSegment(toolbox, task, rowInterval, usedSegmentsForRow.iterator().next());
+      }
       if (identifier != null) {
         return identifier;
       }
 
       // Could not allocate a pending segment. There's a chance that this is because someone else inserted a segment
-      // overlapping with this row between when we called "mdc.getUsedSegmentsForInterval" and now. Check it again,
+      // overlapping with this row between when we called "msc.retrieveUsedSegmentsForInterval" and now. Check it again,
       // and if it's different, repeat.
 
-      if (!ImmutableSet.copyOf(msc.getUsedSegmentsForInterval(dataSource, rowInterval)).equals(usedSegmentsForRow)) {
+      Set<DataSegment> newUsedSegmentsForRow =
+          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
+      if (!newUsedSegmentsForRow.equals(usedSegmentsForRow)) {
         if (attempt < MAX_ATTEMPTS) {
           final long shortRandomSleep = 50 + (long) (ThreadLocalRandom.current().nextDouble() * 450);
           log.debug(
@@ -240,7 +269,11 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   {
     // Existing segment(s) exist for this row; use the interval of the first one.
     if (!usedSegment.getInterval().contains(rowInterval)) {
-      log.error("The interval of existing segment[%s] doesn't contain rowInterval[%s]", usedSegment, rowInterval);
+      log.error(
+          "The interval of existing segment[%s] doesn't contain rowInterval[%s]",
+          usedSegment.getId(),
+          rowInterval
+      );
       return null;
     } else {
       // If segment allocation failed here, it is highly likely an unrecoverable error. We log here for easier
@@ -257,43 +290,31 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       boolean logOnFail
   )
   {
-    log.debug(
-        "Trying to allocate pending segment for rowInterval[%s], segmentInterval[%s].",
-        rowInterval,
-        tryInterval
+    // This action is always used by appending tasks, which cannot change the segment granularity of existing
+    // dataSources. So, all lock requests should be segmentLock.
+    final LockResult lockResult = toolbox.getTaskLockbox().tryLock(
+        task,
+        new LockRequestForNewSegment(
+            lockGranularity,
+            TaskLockType.EXCLUSIVE,
+            task.getGroupId(),
+            dataSource,
+            tryInterval,
+            partialShardSpec,
+            task.getPriority(),
+            sequenceName,
+            previousSegmentId,
+            skipSegmentLineageCheck
+        )
     );
-    final LockResult lockResult = toolbox.getTaskLockbox().tryLock(TaskLockType.EXCLUSIVE, task, tryInterval);
+
     if (lockResult.isRevoked()) {
       // We had acquired a lock but it was preempted by other locks
       throw new ISE("The lock for interval[%s] is preempted and no longer valid", tryInterval);
     }
 
     if (lockResult.isOk()) {
-      final SegmentIdWithShardSpec identifier;
-      try {
-        identifier = toolbox.getTaskLockbox().doInCriticalSection(
-            task,
-            ImmutableList.of(tryInterval),
-            CriticalAction
-                .<SegmentIdWithShardSpec>builder()
-                .onValidLocks(
-                    () -> toolbox.getIndexerMetadataStorageCoordinator().allocatePendingSegment(
-                        dataSource,
-                        sequenceName,
-                        previousSegmentId,
-                        tryInterval,
-                        lockResult.getTaskLock().getVersion(),
-                        skipSegmentLineageCheck
-                    )
-                )
-                .onInvalidLocks(() -> null)
-                .build()
-        );
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-
+      final SegmentIdWithShardSpec identifier = lockResult.getNewSegmentId();
       if (identifier != null) {
         return identifier;
       } else {
@@ -340,7 +361,9 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
            ", preferredSegmentGranularity=" + preferredSegmentGranularity +
            ", sequenceName='" + sequenceName + '\'' +
            ", previousSegmentId='" + previousSegmentId + '\'' +
-           ", skipSegmentLineageCheck='" + skipSegmentLineageCheck + '\'' +
+           ", skipSegmentLineageCheck=" + skipSegmentLineageCheck +
+           ", partialShardSpec=" + partialShardSpec +
+           ", lockGranularity=" + lockGranularity +
            '}';
   }
 }

@@ -22,15 +22,8 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -43,9 +36,12 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -56,7 +52,6 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 @RunWith(Parameterized.class)
@@ -70,6 +65,15 @@ public class FilterPartitionTest extends BaseFilterTest
     )
     {
       super(dimension, value);
+    }
+
+    public NoBitmapSelectorFilter(
+        String dimension,
+        String value,
+        FilterTuning filterTuning
+    )
+    {
+      super(dimension, value, filterTuning);
     }
 
     @Override
@@ -147,34 +151,17 @@ public class FilterPartitionTest extends BaseFilterTest
     }
   }
 
-  private static String JS_FN = "function(str) { return 'super-' + str; }";
-  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
+  private static final String JS_FN = "function(str) { return 'super-' + str; }";
+  private static final ExtractionFn JS_EXTRACTION_FN =
+      new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
 
-  private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
-              null,
-              null
-          )
-      )
-  );
-
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "B453B411", "dim2", ImmutableList.of("c", "d", "e"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "7", "dim1", "HELLO", "dim2", ImmutableList.of("foo"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "8", "dim1", "abc", "dim2", ImmutableList.of("bar"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "9", "dim1", "1", "dim2", ImmutableList.of("foo", "bar"))).get(0)
-  );
+  private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
+      .addAll(DEFAULT_ROWS)
+      .add(makeDefaultSchemaRow("6", "B453B411", ImmutableList.of("c", "d", "e"), null, null, null, null))
+      .add(makeDefaultSchemaRow("7", "HELLO", ImmutableList.of("foo"), null, null, null, null))
+      .add(makeDefaultSchemaRow("8", "abc", ImmutableList.of("bar"), null, null, null, null))
+      .add(makeDefaultSchemaRow("9", "1", ImmutableList.of("foo", "bar"), null, null, null, null))
+      .build();
 
   public FilterPartitionTest(
       String testName,
@@ -205,7 +192,7 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new SelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new SelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
     assertFilterMatches(new SelectorDimFilter("dim1", "1", null), ImmutableList.of("3", "9"));
-    assertFilterMatches(new SelectorDimFilter("dim1", "def", null), ImmutableList.of("4"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "abdef", null), ImmutableList.of("4"));
     assertFilterMatches(new SelectorDimFilter("dim1", "abc", null), ImmutableList.of("5", "8"));
     assertFilterMatches(new SelectorDimFilter("dim1", "ab", null), ImmutableList.of());
   }
@@ -222,7 +209,7 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "1", null), ImmutableList.of("3", "9"));
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "def", null), ImmutableList.of("4"));
+    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "abdef", null), ImmutableList.of("4"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "abc", null), ImmutableList.of("5", "8"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "ab", null), ImmutableList.of());
 
@@ -234,7 +221,7 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-10", JS_EXTRACTION_FN), ImmutableList.of("1"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN), ImmutableList.of("2"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-1", JS_EXTRACTION_FN), ImmutableList.of("3", "9"));
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-def", JS_EXTRACTION_FN), ImmutableList.of("4"));
+    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-abdef", JS_EXTRACTION_FN), ImmutableList.of("4"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-abc", JS_EXTRACTION_FN), ImmutableList.of("5", "8"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-ab", JS_EXTRACTION_FN), ImmutableList.of());
   }
@@ -627,7 +614,7 @@ public class FilterPartitionTest extends BaseFilterTest
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "6", null),
         new AndDimFilter(Arrays.asList(
-            new NoBitmapSelectorDimFilter("dim1", "def", null),
+            new NoBitmapSelectorDimFilter("dim1", "abdef", null),
             new SelectorDimFilter("dim2", "c", null)
         )
         ))
@@ -681,7 +668,7 @@ public class FilterPartitionTest extends BaseFilterTest
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "super-6", JS_EXTRACTION_FN),
         new AndDimFilter(Arrays.asList(
-            new NoBitmapSelectorDimFilter("dim1", "super-def", JS_EXTRACTION_FN),
+            new NoBitmapSelectorDimFilter("dim1", "super-abdef", JS_EXTRACTION_FN),
             new SelectorDimFilter("dim2", "super-c", JS_EXTRACTION_FN)
         )
         ))
@@ -726,5 +713,85 @@ public class FilterPartitionTest extends BaseFilterTest
         dimFilter3,
         ImmutableList.of("2", "3", "4", "6", "7", "9")
     );
+  }
+
+  @Test
+  public void testAnalyze()
+  {
+    if (!(adapter instanceof QueryableIndexStorageAdapter)) {
+      return;
+    }
+    QueryableIndexStorageAdapter storageAdapter = (QueryableIndexStorageAdapter) adapter;
+    final ColumnSelectorBitmapIndexSelector bitmapIndexSelector = storageAdapter.makeBitmapIndexSelector(BaseFilterTest.VIRTUAL_COLUMNS);
+
+    // has bitmap index, will use it by default
+    Filter normalFilter = new SelectorFilter("dim1", "HELLO");
+    QueryableIndexStorageAdapter.FilterAnalysis filterAnalysisNormal =
+        storageAdapter.analyzeFilter(normalFilter, bitmapIndexSelector, null);
+    Assert.assertTrue(filterAnalysisNormal.getPreFilterBitmap() != null);
+    Assert.assertTrue(filterAnalysisNormal.getPostFilter() == null);
+
+
+    // no bitmap index, should be a post filter
+    Filter noBitmapFilter = new NoBitmapSelectorFilter("dim1", "HELLO");
+    QueryableIndexStorageAdapter.FilterAnalysis noBitmapFilterAnalysis =
+        storageAdapter.analyzeFilter(noBitmapFilter, bitmapIndexSelector, null);
+    Assert.assertTrue(noBitmapFilterAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(noBitmapFilterAnalysis.getPostFilter() != null);
+
+    // this column has a bitmap index, but is forced to not use it
+    Filter bitmapFilterWithForceNoIndexTuning = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(false, null, null)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithForceNoIndexTuningAnalysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithForceNoIndexTuning, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPostFilter() != null);
+
+    // this max cardinality is too low to use bitmap index
+    Filter bitmapFilterWithCardinalityMax = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, 0, 3)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMaxAnalysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMax, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPostFilter() != null);
+
+    // this max cardinality is high enough that we can still use bitmap index
+    Filter bitmapFilterWithCardinalityMax2 = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, 0, 1000)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMax2Analysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMax2, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPreFilterBitmap() != null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPostFilter() == null);
+
+    // this min cardinality is too high, will not use bitmap index
+    Filter bitmapFilterWithCardinalityMin = new SelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, 1000, null)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis bitmapFilterWithCardinalityMinAnalysis =
+        storageAdapter.analyzeFilter(bitmapFilterWithCardinalityMin, bitmapIndexSelector, null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPostFilter() != null);
+
+    // cannot force using bitmap if there are no bitmaps
+    Filter noBitmapFilterWithForceUse = new NoBitmapSelectorFilter(
+        "dim1",
+        "HELLO",
+        new FilterTuning(true, null, null)
+    );
+    QueryableIndexStorageAdapter.FilterAnalysis noBitmapFilterWithForceUseAnalysis =
+        storageAdapter.analyzeFilter(noBitmapFilterWithForceUse, bitmapIndexSelector, null);
+    Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPreFilterBitmap() == null);
+    Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPostFilter() != null);
   }
 }

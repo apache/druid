@@ -41,7 +41,7 @@ public class CompressedLongsAutoEncodingSerdeTest
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (long bpv : bitsPerValueParameters) {
+    for (long bpv : BITS_PER_VALUE_PARAMETERS) {
       for (CompressionStrategy strategy : CompressionStrategy.values()) {
         data.add(new Object[]{bpv, strategy, ByteOrder.BIG_ENDIAN});
         data.add(new Object[]{bpv, strategy, ByteOrder.LITTLE_ENDIAN});
@@ -50,7 +50,7 @@ public class CompressedLongsAutoEncodingSerdeTest
     return data;
   }
 
-  private static final long[] bitsPerValueParameters = new long[]{1, 2, 4, 7, 11, 14, 18, 23, 31, 39, 46, 55, 62};
+  private static final long[] BITS_PER_VALUE_PARAMETERS = new long[]{1, 2, 4, 7, 11, 14, 18, 23, 31, 39, 46, 55, 62};
 
   protected final CompressionFactory.LongEncodingStrategy encodingStrategy = CompressionFactory.LongEncodingStrategy.AUTO;
   protected final CompressionStrategy compressionStrategy;
@@ -78,7 +78,7 @@ public class CompressedLongsAutoEncodingSerdeTest
     double numValuesPerByte = 8.0 / (double) numBits;
 
     int numRows = (int) (blockSize * numValuesPerByte) * 2 + ThreadLocalRandom.current().nextInt(1, 101);
-    long chunk[] = new long[numRows];
+    long[] chunk = new long[numRows];
     for (int i = 0; i < numRows; i++) {
       chunk[i] = ThreadLocalRandom.current().nextLong(bound);
     }
@@ -95,6 +95,7 @@ public class CompressedLongsAutoEncodingSerdeTest
   public void testValues(long[] values) throws Exception
   {
     ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+        "test",
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,

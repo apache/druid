@@ -32,11 +32,13 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Period;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,12 +47,13 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
  */
 @RunWith(Parameterized.class)
-public class VarianceGroupByQueryTest
+public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
 {
   private final GroupByQueryConfig config;
   private final QueryRunner<Row> runner;
@@ -58,9 +61,22 @@ public class VarianceGroupByQueryTest
   private final String testName;
 
   @Parameterized.Parameters(name = "{0}")
-  public static Collection<?> constructorFeeder()
+  public static Collection<Object[]> constructorFeeder()
   {
-    return GroupByQueryRunnerTest.constructorFeeder();
+    // Use GroupByQueryRunnerTest's constructorFeeder, but remove vectorized tests, since this aggregator
+    // can't vectorize yet.
+    return GroupByQueryRunnerTest.constructorFeeder().stream()
+                                 .filter(constructor -> !((boolean) constructor[4]) /* !vectorize */)
+                                 .map(
+                                     constructor ->
+                                         new Object[]{
+                                             constructor[0],
+                                             constructor[1],
+                                             constructor[2],
+                                             constructor[3]
+                                         }
+                                 )
+                                 .collect(Collectors.toList());
   }
 
   public VarianceGroupByQueryTest(
@@ -81,18 +97,18 @@ public class VarianceGroupByQueryTest
   {
     GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(VarianceTestHelper.indexVarianceAggr)
-        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.stddevOfIndexPostAggr))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setAggregatorSpecs(VarianceTestHelper.INDEX_VARIANCE_AGGR)
+        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
     VarianceTestHelper.RowBuilder builder =
         new VarianceTestHelper.RowBuilder(new String[]{"alias", "index_stddev", "index_var"});
 
-    List<Row> expectedResults = builder
+    List<ResultRow> expectedResults = builder
         .add("2011-04-01", "automotive", 0d, 0d)
         .add("2011-04-01", "business", 0d, 0d)
         .add("2011-04-01", "entertainment", 0d, 0d)
@@ -112,9 +128,9 @@ public class VarianceGroupByQueryTest
         .add("2011-04-02", "premium", 621.3898134843073d, 386125.30030206224d)
         .add("2011-04-02", "technology", 0d, 0d)
         .add("2011-04-02", "travel", 0d, 0d)
-        .build();
+        .build(query);
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "variance");
   }
 
@@ -123,22 +139,22 @@ public class VarianceGroupByQueryTest
   {
     GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(
-            QueryRunnerTestHelper.rowsCount,
-            VarianceTestHelper.indexVarianceAggr,
+            QueryRunnerTestHelper.ROWS_COUNT,
+            VarianceTestHelper.INDEX_VARIANCE_AGGR,
             new LongSumAggregatorFactory("idx", "index")
         )
-        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.stddevOfIndexPostAggr))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setPostAggregatorSpecs(Collections.singletonList(VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
     VarianceTestHelper.RowBuilder builder =
         new VarianceTestHelper.RowBuilder(new String[]{"alias", "rows", "idx", "index_stddev", "index_var"});
 
-    List<Row> expectedResults = builder
+    List<ResultRow> expectedResults = builder
         .add("2011-04-01", "automotive", 1L, 135L, 0d, 0d)
         .add("2011-04-01", "business", 1L, 118L, 0d, 0d)
         .add("2011-04-01", "entertainment", 1L, 158L, 0d, 0d)
@@ -158,9 +174,9 @@ public class VarianceGroupByQueryTest
         .add("2011-04-02", "premium", 3L, 2505L, 621.3898134843073d, 386125.30030206224d)
         .add("2011-04-02", "technology", 1L, 97L, 0d, 0d)
         .add("2011-04-02", "travel", 1L, 126L, 0d, 0d)
-        .build();
+        .build(query);
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -171,41 +187,41 @@ public class VarianceGroupByQueryTest
         new String[]{"alias", "rows", "index", "index_var", "index_stddev"}
     );
 
-    List<Row> expectedResults = expect
-        .add("2011-04-01", "automotive", 2L, 269L, 299.0009819048282, 17.29164485827847)
-        .add("2011-04-01", "mezzanine", 6L, 4420L, 254083.76447001836, 504.06722217380724)
-        .add("2011-04-01", "premium", 6L, 4416L, 252279.2020389339, 502.27403082275106)
-        .build();
-
     GroupByQuery query = GroupByQuery
         .builder()
-        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(
-            QueryRunnerTestHelper.rowsCount,
-            QueryRunnerTestHelper.indexLongSum,
-            VarianceTestHelper.indexVarianceAggr
+            QueryRunnerTestHelper.ROWS_COUNT,
+            QueryRunnerTestHelper.INDEX_LONG_SUM,
+            VarianceTestHelper.INDEX_VARIANCE_AGGR
         )
-        .setPostAggregatorSpecs(ImmutableList.of(VarianceTestHelper.stddevOfIndexPostAggr))
+        .setPostAggregatorSpecs(ImmutableList.of(VarianceTestHelper.STD_DEV_OF_INDEX_POST_AGGR))
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(
             new OrHavingSpec(
                 ImmutableList.of(
-                    new GreaterThanHavingSpec(VarianceTestHelper.stddevOfIndexMetric, 15L) // 3 rows
+                    new GreaterThanHavingSpec(VarianceTestHelper.STD_DEV_OF_INDEX_METRIC, 15L) // 3 rows
                 )
             )
         )
         .build();
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    List<ResultRow> expectedResults = expect
+        .add("2011-04-01", "automotive", 2L, 269L, 299.0009819048282, 17.29164485827847)
+        .add("2011-04-01", "mezzanine", 6L, 4420L, 254083.76447001836, 504.06722217380724)
+        .add("2011-04-01", "premium", 6L, 4416L, 252279.2020389339, 502.27403082275106)
+        .build(query);
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "havingSpec");
 
     query = query.withLimitSpec(
         new DefaultLimitSpec(
             Collections.singletonList(
                 OrderByColumnSpec.asc(
-                    VarianceTestHelper.stddevOfIndexMetric
+                    VarianceTestHelper.STD_DEV_OF_INDEX_METRIC
                 )
             ), 2
         )
@@ -214,7 +230,7 @@ public class VarianceGroupByQueryTest
     expectedResults = expect
         .add("2011-04-01", "automotive", 2L, 269L, 299.0009819048282, 17.29164485827847)
         .add("2011-04-01", "premium", 6L, 4416L, 252279.2020389339, 502.27403082275106)
-        .build();
+        .build(query);
 
     results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "limitSpec");

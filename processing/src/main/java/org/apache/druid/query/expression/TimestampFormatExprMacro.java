@@ -21,6 +21,7 @@ package org.apache.druid.query.expression;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -34,10 +35,12 @@ import java.util.List;
 
 public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_format";
+
   @Override
   public String name()
   {
-    return "timestamp_format";
+    return FN_NAME;
   }
 
   @Override
@@ -65,11 +68,16 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final DateTimeFormatter formatter = formatString == null
-                                        ? ISODateTimeFormat.dateTime()
+                                        ? ISODateTimeFormat.dateTime().withZone(timeZone)
                                         : DateTimeFormat.forPattern(formatString).withZone(timeZone);
 
-    class TimestampFormatExpr implements Expr
+    class TimestampFormatExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private TimestampFormatExpr(Expr arg)
+      {
+        super(FN_NAME, arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -83,13 +91,31 @@ public class TimestampFormatExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new TimestampFormatExpr(newArg));
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (args.size() > 2) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              args.get(1).stringify(),
+              args.get(2).stringify()
+          );
+        }
+        if (args.size() > 1) {
+          return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
+        }
+        return super.stringify();
       }
     }
 
-    return new TimestampFormatExpr();
+    return new TimestampFormatExpr(arg);
   }
 }

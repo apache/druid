@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.memory.Memory;
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.UpdateDoublesSketch;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.GenericColumnSerializer;
@@ -39,7 +39,7 @@ import java.nio.ByteBuffer;
 public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
 {
 
-  private static final DoublesSketchObjectStrategy strategy = new DoublesSketchObjectStrategy();
+  private static final DoublesSketchObjectStrategy STRATEGY = new DoublesSketchObjectStrategy();
 
   @Override
   public String getTypeName()
@@ -50,7 +50,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy<DoublesSketch> getObjectStrategy()
   {
-    return strategy;
+    return STRATEGY;
   }
 
   @Override
@@ -105,7 +105,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
-    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, strategy, builder.getFileMapper());
+    final GenericIndexed<DoublesSketch> column = GenericIndexed.read(buffer, STRATEGY, builder.getFileMapper());
     builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 

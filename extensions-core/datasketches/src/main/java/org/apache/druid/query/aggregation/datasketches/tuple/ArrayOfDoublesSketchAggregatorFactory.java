@@ -22,10 +22,10 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.yahoo.sketches.Util;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
+import org.apache.datasketches.Util;
+import org.apache.datasketches.tuple.ArrayOfDoublesSetOperationBuilder;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesUnion;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -285,10 +285,11 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return new ArrayOfDoublesSketchAggregatorFactory(name, name, nominalEntries, null, numberOfValues);
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(final Object object)
+  public Object finalizeComputation(@Nullable final Object object)
   {
-    return ((ArrayOfDoublesSketch) object).getEstimate();
+    return object == null ? null : ((ArrayOfDoublesSketch) object).getEstimate();
   }
 
   @Override
@@ -322,7 +323,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     if (!Objects.equals(metricColumns, that.metricColumns)) {
       return false;
     }
-    return numberOfValues != that.numberOfValues;
+    return numberOfValues == that.numberOfValues;
   }
 
   @Override

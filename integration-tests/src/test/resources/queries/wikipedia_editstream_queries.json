@@ -93,6 +93,29 @@
                     "type" : "longLast",
                     "name" : "lastCount",
                     "fieldName" : "count"
+                },
+                {
+                    "type":"HLLSketchBuild",
+                    "name":"approxCountHLL",
+                    "fieldName":"user",
+                    "lgK":12,
+                    "tgtHllType":"HLL_4",
+                    "round":true
+                },
+                {
+                    "type":"thetaSketch",
+                    "name":"approxCountTheta",
+                    "fieldName":"user",
+                    "size":16384,
+                    "shouldFinalize":true,
+                    "isInputThetaSketch":false,
+                    "errorBoundsStdDev":null
+                },
+                {
+                    "type":"quantilesDoublesSketch",
+                    "name":"quantilesDoublesSketch",
+                    "fieldName":"user",
+                    "k":2
                 }
             ],
             "context": {
@@ -111,6 +134,9 @@
                     "lastAdded": 210.0,
                     "firstCount": 1,
                     "lastCount": 1,
+                    "quantilesDoublesSketch":2390950,
+                    "approxCountTheta":219483.4076460526,
+                    "approxCountHLL":216700,
                     "delta": 5.48967603E8,
                     "variation": 1.274085073E9,
                     "delta_hist": {
@@ -218,6 +244,29 @@
                     "type" : "longLast",
                     "name" : "lastCount",
                     "fieldName" : "count"
+                },
+                {
+                    "type":"HLLSketchBuild",
+                    "name":"approxCountHLL",
+                    "fieldName":"user",
+                    "lgK":12,
+                    "tgtHllType":"HLL_4",
+                    "round":true
+                },
+                {
+                    "type":"thetaSketch",
+                    "name":"approxCountTheta",
+                    "fieldName":"user",
+                    "size":16384,
+                    "shouldFinalize":true,
+                    "isInputThetaSketch":false,
+                    "errorBoundsStdDev":null
+                },
+                {
+                    "type":"quantilesDoublesSketch",
+                    "name":"quantilesDoublesSketch",
+                    "fieldName":"user",
+                    "k":2
                 }
             ],
             "context": {
@@ -236,6 +285,9 @@
                     "lastAdded": 210.0,
                     "firstCount": 1,
                     "lastCount": 1,
+                    "quantilesDoublesSketch":1556534,
+                    "approxCountTheta":157226.06680543753,
+                    "approxCountHLL":158502,
                     "delta": 2.24089868E8,
                     "variation": 4.74698118E8,
                     "delta_hist": {
@@ -433,6 +485,29 @@
                     "type" : "longLast",
                     "name" : "lastCount",
                     "fieldName" : "count"
+                },
+                {
+                    "type":"HLLSketchBuild",
+                    "name":"approxCountHLL",
+                    "fieldName":"user",
+                    "lgK":12,
+                    "tgtHllType":"HLL_4",
+                    "round":true
+                },
+                {
+                    "type":"thetaSketch",
+                    "name":"approxCountTheta",
+                    "fieldName":"user",
+                    "size":16384,
+                    "shouldFinalize":true,
+                    "isInputThetaSketch":false,
+                    "errorBoundsStdDev":null
+                },
+                {
+                    "type":"quantilesDoublesSketch",
+                    "name":"quantilesDoublesSketch",
+                    "fieldName":"user",
+                    "k":2
                 }
             ],
             "dimension": "page",
@@ -453,6 +528,9 @@
                         "count": 1697,
                         "firstCount": 2,
                         "lastCount": 3,
+                        "quantilesDoublesSketch":990,
+                        "approxCountTheta":330.0,
+                        "approxCountHLL":330,
                         "firstAdded": 462.0,
                         "lastAdded": 1871.0,
                         "page": "Wikipedia:Administrators'_noticeboard/Incidents",
@@ -467,6 +545,9 @@
                         "count": 967,
                         "firstCount": 1,
                         "lastCount": 1,
+                        "quantilesDoublesSketch":773,
+                        "approxCountTheta":309.0,
+                        "approxCountHLL":309,
                         "firstAdded": 12.0,
                         "lastAdded": 129.0,
                         "page": "2013",
@@ -481,6 +562,9 @@
                         "count": 1700,
                         "firstCount": 1,
                         "lastCount": 5,
+                        "quantilesDoublesSketch":991,
+                        "approxCountTheta":302.0,
+                        "approxCountHLL":302,
                         "firstAdded": 0.0,
                         "lastAdded": 2399.0,
                         "page": "Wikipedia:Vandalismusmeldung",
@@ -580,6 +664,29 @@
                     "type" : "longLast",
                     "name" : "lastCount",
                     "fieldName" : "count"
+                },
+                {
+                    "type":"HLLSketchBuild",
+                    "name":"approxCountHLL",
+                    "fieldName":"user",
+                    "lgK":12,
+                    "tgtHllType":"HLL_4",
+                    "round":true
+                },
+                {
+                    "type":"thetaSketch",
+                    "name":"approxCountTheta",
+                    "fieldName":"user",
+                    "size":16384,
+                    "shouldFinalize":true,
+                    "isInputThetaSketch":false,
+                    "errorBoundsStdDev":null
+                },
+                {
+                    "type":"quantilesDoublesSketch",
+                    "name":"quantilesDoublesSketch",
+                    "fieldName":"user",
+                    "k":2
                 }
             ],
             "dimension": "page",
@@ -602,6 +709,9 @@
                         "lastCount": 1,
                         "firstAdded": 12.0,
                         "lastAdded": 129.0,
+                        "quantilesDoublesSketch":692,
+                        "approxCountTheta":251.0,
+                        "approxCountHLL":251,
                         "page": "2013",
                         "delta": 35313.0,
                         "variation": 88165.0,
@@ -616,6 +726,9 @@
                         "lastCount": 1,
                         "firstAdded": 29.0,
                         "lastAdded": 37.0,
+                        "quantilesDoublesSketch":398,
+                        "approxCountTheta":203.0,
+                        "approxCountHLL":203,
                         "page": "Gérard_Depardieu",
                         "delta": 7027.0,
                         "variation": 49549.0,
@@ -630,6 +743,9 @@
                         "lastCount": 1,
                         "firstAdded": 29.0,
                         "lastAdded": 35.0,
+                        "quantilesDoublesSketch":447,
+                        "approxCountTheta":13.0,
+                        "approxCountHLL":13,
                         "page": "Zichyújfalu",
                         "delta": 9030.0,
                         "variation": 12872.0,
@@ -702,6 +818,29 @@
                     "type" : "longLast",
                     "name" : "lastCount",
                     "fieldName" : "count"
+                },
+                {
+                    "type":"HLLSketchBuild",
+                    "name":"approxCountHLL",
+                    "fieldName":"user",
+                    "lgK":12,
+                    "tgtHllType":"HLL_4",
+                    "round":true
+                },
+                {
+                    "type":"thetaSketch",
+                    "name":"approxCountTheta",
+                    "fieldName":"user",
+                    "size":16384,
+                    "shouldFinalize":true,
+                    "isInputThetaSketch":false,
+                    "errorBoundsStdDev":null
+                },
+                {
+                    "type":"quantilesDoublesSketch",
+                    "name":"quantilesDoublesSketch",
+                    "fieldName":"user",
+                    "k":2
                 }
             ],
             "postAggregations": [
@@ -755,6 +894,9 @@
                         "lastCount": 9,
                         "firstAdded": 1612.0,
                         "lastAdded": 560.0,
+                        "quantilesDoublesSketch":168,
+                        "approxCountTheta":1.0,
+                        "approxCountHLL":1,
                         "page": "User:Cyde/List_of_candidates_for_speedy_deletion/Subpage",
                         "delta": 670.0,
                         "variation": 302148.0,
@@ -770,6 +912,9 @@
                         "lastCount": 5,
                         "firstAdded": 0.0,
                         "lastAdded": 2399.0,
+                        "quantilesDoublesSketch":991,
+                        "approxCountTheta":302.0,
+                        "approxCountHLL":302,
                         "page": "Wikipedia:Vandalismusmeldung",
                         "delta": -5446.0,
                         "variation": 1043750.0,
@@ -785,6 +930,9 @@
                         "lastCount": 3,
                         "firstAdded": 462.0,
                         "lastAdded": 1871.0,
+                        "quantilesDoublesSketch":990,
+                        "approxCountTheta":330.0,
+                        "approxCountHLL":330,
                         "page": "Wikipedia:Administrators'_noticeboard/Incidents",
                         "delta": 770071.0,
                         "variation": 2855849.0,
@@ -1009,7 +1157,7 @@
         ]
     },
     {
-        "description": "groupBy, six aggs, namespace + robot dim, postAggs",
+        "description": "groupBy, nine aggs, namespace + robot dim, postAggs",
         "query": {
             "queryType": "groupBy",
             "dataSource": "wikipedia_editstream",
@@ -1044,6 +1192,29 @@
                     "type" : "longLast",
                     "name" : "lastCount",
                     "fieldName" : "count"
+                },
+                {
+                    "type":"HLLSketchBuild",
+                    "name":"approxCountHLL",
+                    "fieldName":"user",
+                    "lgK":12,
+                    "tgtHllType":"HLL_4",
+                    "round":true
+                },
+                {
+                    "type":"thetaSketch",
+                    "name":"approxCountTheta",
+                    "fieldName":"user",
+                    "size":16384,
+                    "shouldFinalize":true,
+                    "isInputThetaSketch":false,
+                    "errorBoundsStdDev":null
+                },
+                {
+                    "type":"quantilesDoublesSketch",
+                    "name":"quantilesDoublesSketch",
+                    "fieldName":"user",
+                    "k":2
                 }
             ],
             "postAggregations": [
@@ -1084,6 +1255,9 @@
                 "event": {
                     "sumOfRowsAndCount": 2268154.0,
                     "count": 1286354,
+                    "quantilesDoublesSketch":981800,
+                    "approxCountTheta":196257.61632104203,
+                    "approxCountHLL":194323,
                     "firstCount": 1,
                     "lastCount": 1,
                     "firstAdded": 70.0,
@@ -1099,6 +1273,9 @@
                 "event": {
                     "sumOfRowsAndCount": 1385233.0,
                     "count": 693711,
+                    "quantilesDoublesSketch":691522,
+                    "approxCountTheta":256.0,
+                    "approxCountHLL":256,
                     "firstCount": 1,
                     "lastCount": 1,
                     "firstAdded": 39.0,
@@ -1114,6 +1291,9 @@
                 "event": {
                     "sumOfRowsAndCount": 878393.0,
                     "count": 492643,
+                    "quantilesDoublesSketch":385750,
+                    "approxCountTheta":48129.087284782676,
+                    "approxCountHLL":47963,
                     "firstCount": 2,
                     "lastCount": 1,
                     "firstAdded": 431.0,
@@ -1174,12 +1354,12 @@
                     {
                         "dimension": "page",
                         "value": "League_of_Legends",
-			"count":21
+                        "count":21
                     },
                     {
                         "dimension": "page",
                         "value": "The_best_ADs_in_The_League_of_legends",
-			"count":2
+                        "count":2
                     }
                 ]
             }
@@ -1297,6 +1477,458 @@
                         "rows": 800
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "description": "topN, 1 agg, join to lookup",
+        "query": {
+            "queryType": "topN",
+            "dataSource": {
+                "type": "join",
+                "left": "wikipedia_editstream",
+                "right": {
+                    "type": "lookup",
+                    "lookup": "wiki-simple"
+                },
+                "rightPrefix": "j.",
+                "condition": "page == \"j.k\"",
+                "joinType": "LEFT"
+            },
+            "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
+            "granularity": "all",
+            "virtualColumns": [
+                {
+                    "type": "expression",
+                    "name": "lookupPage",
+                    "expression": "nvl(\"j.v\", \"page\")",
+                    "outputType": "string"
+                }
+            ],
+            "aggregations": [
+                {
+                    "type": "count",
+                    "name": "rows"
+                }
+            ],
+            "dimension": "lookupPage",
+            "metric": "rows",
+            "threshold": 3,
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "result": [
+                    {
+                        "lookupPage": "lookup!",
+                        "rows": 991
+                    },
+                    {
+                        "lookupPage": "Wikipedia:Administrators'_noticeboard/Incidents",
+                        "rows": 990
+                    },
+                    {
+                        "lookupPage": "Wikipedia:Administrator_intervention_against_vandalism",
+                        "rows": 800
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "description": "topN, 1 agg, join to inline",
+        "query": {
+            "queryType": "topN",
+            "dataSource": {
+                "type": "join",
+                "left": "wikipedia_editstream",
+                "right": {
+                    "type": "inline",
+                    "columnNames": ["page", "lookupPage"],
+                    "columnTypes": ["string", "string"],
+                    "rows": [
+                        ["Wikipedia:Vandalismusmeldung", "inline join!"]
+                    ]
+                },
+                "rightPrefix": "j.",
+                "condition": "page == \"j.page\"",
+                "joinType": "LEFT"
+            },
+            "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
+            "granularity": "all",
+            "virtualColumns": [
+                {
+                    "type": "expression",
+                    "name": "lookupPage",
+                    "expression": "nvl(\"j.lookupPage\", \"page\")",
+                    "outputType": "string"
+                }
+            ],
+            "aggregations": [
+                {
+                    "type": "count",
+                    "name": "rows"
+                }
+            ],
+            "dimension": "lookupPage",
+            "metric": "rows",
+            "threshold": 3,
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "result": [
+                    {
+                        "lookupPage": "inline join!",
+                        "rows": 991
+                    },
+                    {
+                        "lookupPage": "Wikipedia:Administrators'_noticeboard/Incidents",
+                        "rows": 990
+                    },
+                    {
+                        "lookupPage": "Wikipedia:Administrator_intervention_against_vandalism",
+                        "rows": 800
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "description": "groupBy, 1 agg, subquery over join to inline",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "query",
+                "query": {
+                    "queryType": "groupBy",
+                    "dataSource": {
+                        "type": "join",
+                        "left": "wikipedia_editstream",
+                        "right": {
+                            "type": "inline",
+                            "columnNames": ["page", "lookupPage"],
+                            "columnTypes": ["string", "string"],
+                            "rows": [
+                                ["Wikipedia:Vandalismusmeldung", "inline join!"]
+                            ]
+                        },
+                        "rightPrefix": "j.",
+                        "condition": "page == \"j.page\"",
+                        "joinType": "LEFT"
+                    },
+                    "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
+                    "granularity": "all",
+                    "virtualColumns": [
+                        {
+                            "type": "expression",
+                            "name": "lookupPage",
+                            "expression": "nvl(\"j.lookupPage\", \"page\")",
+                            "outputType": "string"
+                        }
+                    ],
+                    "aggregations": [
+                        {
+                            "type": "count",
+                            "name": "rows"
+                        }
+                    ],
+                    "dimensions": ["lookupPage"]
+                }
+            },
+            "intervals": ["2013-01-01T00:00:00.000/2013-01-02T00:00:00.000"],
+            "granularity": "all",
+            "aggregations": [
+                {
+                    "type": "longSum",
+                    "name": "rows_outer",
+                    "fieldName": "rows"
+                }
+            ],
+            "dimensions": ["lookupPage"],
+            "limitSpec": {
+                "type": "default",
+                "columns": [
+                    {
+                        "dimension": "rows_outer",
+                        "dimensionOrder": "numeric",
+                        "direction": "descending"
+                    }
+                ],
+                "limit": 3
+            },
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "event": {
+                    "lookupPage": "inline join!",
+                    "rows_outer": 991
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "event": {
+                    "lookupPage": "Wikipedia:Administrators'_noticeboard/Incidents",
+                    "rows_outer": 990
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "2013-01-01T00:00:00.000Z",
+                "event": {
+                    "lookupPage": "Wikipedia:Administrator_intervention_against_vandalism",
+                    "rows_outer": 800
+                }
+            }
+        ]
+    },
+    {
+        "description": "groupBy on lookup",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "lookup",
+                "lookup": "wiki-simple"
+            },
+            "intervals": [
+                "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+            ],
+            "granularity": "all",
+            "dimensions": ["k", "v", "nonexistent"],
+            "aggregations": [
+                {
+                    "type": "count",
+                    "name": "rows"
+                }
+            ],
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "k": "Wikipedia:Vandalismusmeldung",
+                    "v": "lookup!",
+                    "nonexistent": null,
+                    "rows": 1
+                }
+            }
+        ]
+    },
+    {
+        "description": "groupBy on inline",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "inline",
+                "columnNames": ["k", "v"],
+                "columnTypes": ["string", "string"],
+                "rows": [
+                    ["Wikipedia:Vandalismusmeldung", "inline!"]
+                ]
+            },
+            "intervals": [
+                "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+            ],
+            "granularity": "all",
+            "dimensions": ["k", "v", "nonexistent"],
+            "aggregations": [
+                {
+                    "type": "count",
+                    "name": "rows"
+                }
+            ],
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "k": "Wikipedia:Vandalismusmeldung",
+                    "v": "inline!",
+                    "nonexistent": null,
+                    "rows": 1
+                }
+            }
+        ]
+    },
+    {
+        "description": "groupBy on topN subquery on inline",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "query",
+                "query": {
+                    "queryType": "topN",
+                    "dataSource": {
+                        "type": "inline",
+                        "columnNames": [
+                            "k",
+                            "v"
+                        ],
+                        "columnTypes": [
+                            "string",
+                            "string"
+                        ],
+                        "rows": [
+                            [
+                                "Wikipedia:Vandalismusmeldung",
+                                "inline!"
+                            ]
+                        ]
+                    },
+                    "intervals": [
+                        "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+                    ],
+                    "granularity": "all",
+                    "dimension": {
+                        "type": "default",
+                        "dimension": "k",
+                        "outputName": "d"
+                    },
+                    "aggregations": [
+                        {
+                            "type": "count",
+                            "name": "rows"
+                        }
+                    ],
+                    "metric": "rows",
+                    "threshold": 3,
+                    "context": {
+                        "useCache": "true",
+                        "populateCache": "true",
+                        "timeout": 360000
+                    }
+                }
+            },
+            "intervals": [
+                "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+            ],
+            "granularity": "all",
+            "dimensions": [
+                "d",
+                {
+                    "type": "default",
+                    "dimension": "rows",
+                    "outputName": "rows",
+                    "outputType": "long"
+                }
+            ],
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Vandalismusmeldung",
+                    "rows": 1
+                }
+            }
+        ]
+    },
+    {
+        "description": "groupBy on topN subquery on table",
+        "query": {
+            "queryType": "groupBy",
+            "dataSource": {
+                "type": "query",
+                "query": {
+                    "queryType": "topN",
+                    "dataSource": "wikipedia_editstream",
+                    "intervals": ["2013-01-01T00:00:00.000/2013-01-08T00:00:00.000"],
+                    "granularity": "all",
+                    "aggregations": [
+                        {
+                            "type": "count",
+                            "name": "rows"
+                        }
+                    ],
+                    "dimension": {"type": "default", "dimension": "page", "outputName": "d"},
+                    "metric": "rows",
+                    "threshold": 3,
+                    "context": {
+                        "useCache": "true",
+                        "populateCache": "true",
+                        "timeout": 360000
+                    }
+                }
+            },
+            "intervals": [
+                "0000-01-01T00:00:00.000/3000-01-01T00:00:00.000"
+            ],
+            "granularity": "all",
+            "dimensions": [
+                "d",
+                {
+                    "type": "default",
+                    "dimension": "rows",
+                    "outputName": "rows",
+                    "outputType": "long"
+                }
+            ],
+            "context": {
+                "useCache": "true",
+                "populateCache": "true",
+                "timeout": 360000
+            }
+        },
+        "expectedResults": [
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Administrator_intervention_against_vandalism",
+                    "rows": 800
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Administrators'_noticeboard/Incidents",
+                    "rows": 990
+                }
+            },
+            {
+                "version": "v1",
+                "timestamp": "0000-01-01T00:00:00.000Z",
+                "event": {
+                    "d": "Wikipedia:Vandalismusmeldung",
+                    "rows": 991
+                }
             }
         ]
     }

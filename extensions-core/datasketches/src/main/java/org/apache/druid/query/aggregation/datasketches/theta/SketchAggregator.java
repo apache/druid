@@ -19,12 +19,14 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import com.yahoo.sketches.Family;
-import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Union;
+import org.apache.datasketches.Family;
+import org.apache.datasketches.theta.SetOperation;
+import org.apache.datasketches.theta.Union;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+
+import javax.annotation.Nullable;
 
 import java.util.List;
 
@@ -32,6 +34,8 @@ public class SketchAggregator implements Aggregator
 {
   private final BaseObjectColumnValueSelector selector;
   private final int size;
+
+  @Nullable
   private Union union;
 
   public SketchAggregator(BaseObjectColumnValueSelector selector, int size)

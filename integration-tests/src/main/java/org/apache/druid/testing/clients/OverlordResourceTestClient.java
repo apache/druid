@@ -25,6 +25,7 @@ import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,12 +37,11 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -52,7 +52,6 @@ public class OverlordResourceTestClient
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String indexer;
-  private final StatusResponseHandler responseHandler;
 
   @Inject
   OverlordResourceTestClient(
@@ -64,7 +63,6 @@ public class OverlordResourceTestClient
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.indexer = config.getIndexerUrl();
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
   }
 
   private String getIndexerURL()
@@ -86,7 +84,7 @@ public class OverlordResourceTestClient
                         "application/json",
                         StringUtils.toUtf8(task)
                     ),
-                responseHandler
+                StatusResponseHandler.getInstance()
             ).get();
             if (!response.getStatus().equals(HttpResponseStatus.OK)) {
               throw new ISE(
@@ -111,7 +109,7 @@ public class OverlordResourceTestClient
     }
   }
 
-  public TaskState getTaskStatus(String taskID)
+  public TaskStatusPlus getTaskStatus(String taskID)
   {
     try {
       StatusResponseHolder response = makeRequest(
@@ -130,7 +128,7 @@ public class OverlordResourceTestClient
           {
           }
       );
-      return taskStatusResponse.getStatus().getStatusCode();
+      return taskStatusResponse.getStatus();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -183,17 +181,45 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID, final int millisEach, final int numTimes)
   {
-    RetryUtil.retryUntil(
+    ITRetryUtil.retryUntil(
         new Callable<Boolean>()
         {
           @Override
           public Boolean call()
           {
-            TaskState status = getTaskStatus(taskID);
+            TaskState status = getTaskStatus(taskID).getStatusCode();
             if (status == TaskState.FAILED) {
               throw new ISE("Indexer task FAILED");
             }
             return status == TaskState.SUCCESS;
+          }
+        },
+        true,
+        millisEach,
+        numTimes,
+        taskID
+    );
+  }
+
+  public void waitUntilTaskFails(final String taskID)
+  {
+    waitUntilTaskFails(taskID, 10000, 60);
+  }
+
+
+  public void waitUntilTaskFails(final String taskID, final int millisEach, final int numTimes)
+  {
+    ITRetryUtil.retryUntil(
+        new Callable<Boolean>()
+        {
+          @Override
+          public Boolean call()
+          {
+            TaskState status = getTaskStatus(taskID).getStatusCode();
+            if (status == TaskState.SUCCESS) {
+              throw new ISE("Indexer task SUCCEED");
+            }
+            return status == TaskState.FAILED;
           }
         },
         true,
@@ -212,7 +238,7 @@ public class OverlordResourceTestClient
                   "application/json",
                   StringUtils.toUtf8(spec)
               ),
-          responseHandler
+          StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
@@ -245,7 +271,7 @@ public class OverlordResourceTestClient
                   StringUtils.urlEncode(id)
               ))
           ),
-          responseHandler
+          StatusResponseHandler.getInstance()
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
@@ -265,7 +291,7 @@ public class OverlordResourceTestClient
   {
     try {
       StatusResponseHolder response = this.httpClient
-          .go(new Request(method, new URL(url)), responseHandler).get();
+          .go(new Request(method, new URL(url)), StatusResponseHandler.getInstance()).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
       }

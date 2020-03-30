@@ -397,7 +397,7 @@ class ParquetGroupConverter
               return bytes;
             }
           default:
-            throw new RE("Unknown primitive conversion: %s", ot.name());
+            throw new RE("Unknown primitive conversion: %s", pt.getPrimitiveTypeName());
         }
       }
     }
@@ -467,7 +467,7 @@ class ParquetGroupConverter
     return false;
   }
 
-  private boolean binaryAsString;
+  private final boolean binaryAsString;
 
   ParquetGroupConverter(boolean binaryAsString)
   {

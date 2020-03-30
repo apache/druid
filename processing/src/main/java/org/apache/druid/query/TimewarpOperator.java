@@ -26,6 +26,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
@@ -35,7 +36,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import java.util.Collections;
-import java.util.Map;
 
 /**
  * TimewarpOperator is an example post-processing operator that maps current time
@@ -79,7 +79,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
       {
         final DateTimeZone tz = queryPlus.getQuery().getTimezone();
         final long offset = computeOffset(now, tz);
@@ -92,8 +92,11 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
         );
         return Sequences.map(
             baseRunner.run(
-                queryPlus.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(
-                    Collections.singletonList(modifiedInterval))),
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withQuerySegmentSpec(
+                        new MultipleIntervalSegmentSpec(Collections.singletonList(modifiedInterval))
+                    )
+                ),
                 responseContext
             ),
             new Function<T, T>()

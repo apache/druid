@@ -19,9 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import com.google.common.collect.ImmutableList;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
@@ -55,4 +56,24 @@ public class ArrayOfDoublesSketchAggregatorFactoryTest
     Assert.assertEquals(3, combiner.getObject().getEstimate(), 0);
   }
 
+  @Test
+  public void testEquals()
+  {
+    final ArrayOfDoublesSketchAggregatorFactory a1 = new ArrayOfDoublesSketchAggregatorFactory(
+        "name",
+        "field",
+        1,
+        ImmutableList.of("met"),
+        1
+    );
+    final ArrayOfDoublesSketchAggregatorFactory a2 = new ArrayOfDoublesSketchAggregatorFactory(
+        "name",
+        "field",
+        1,
+        ImmutableList.of("met"),
+        1
+    );
+
+    Assert.assertEquals(a1, a2);
+  }
 }

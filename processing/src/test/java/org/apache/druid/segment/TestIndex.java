@@ -33,7 +33,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -76,6 +75,9 @@ public class TestIndex
       "qualityFloat",
       "qualityDouble",
       "qualityNumericString",
+      "longNumericNull",
+      "floatNumericNull",
+      "doubleNumericNull",
       "placement",
       "placementish",
       "index",
@@ -85,18 +87,6 @@ public class TestIndex
       "indexMin",
       "indexMaxPlusTen"
   };
-  public static final String[] DIMENSIONS = new String[]{
-      "market",
-      "quality",
-      "qualityLong",
-      "qualityFloat",
-      "qualityDouble",
-      "qualityNumericString",
-      "placement",
-      "placementish",
-      "partial_null_column",
-      "null_column"
-  };
 
   public static final List<DimensionSchema> DIMENSION_SCHEMAS = Arrays.asList(
       new StringDimensionSchema("market"),
@@ -105,6 +95,9 @@ public class TestIndex
       new FloatDimensionSchema("qualityFloat"),
       new DoubleDimensionSchema("qualityDouble"),
       new StringDimensionSchema("qualityNumericString"),
+      new LongDimensionSchema("longNumericNull"),
+      new FloatDimensionSchema("floatNumericNull"),
+      new DoubleDimensionSchema("doubleNumericNull"),
       new StringDimensionSchema("placement"),
       new StringDimensionSchema("placementish"),
       new StringDimensionSchema("partial_null_column"),
@@ -118,6 +111,9 @@ public class TestIndex
       new FloatDimensionSchema("qualityFloat"),
       new DoubleDimensionSchema("qualityDouble"),
       new StringDimensionSchema("qualityNumericString", null, false),
+      new LongDimensionSchema("longNumericNull"),
+      new FloatDimensionSchema("floatNumericNull"),
+      new DoubleDimensionSchema("doubleNumericNull"),
       new StringDimensionSchema("placement", null, false),
       new StringDimensionSchema("placementish", null, false),
       new StringDimensionSchema("partial_null_column", null, false),
@@ -154,16 +150,14 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  private static final IndexSpec indexSpec = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = new IndexSpec();
 
   private static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
   private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
-    if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
-      ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
-    }
+    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
   }
 
   private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
@@ -203,8 +197,8 @@ public class TestIndex
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec, null);
-      INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec, null);
+      INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, INDEX_SPEC, null);
+      INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, INDEX_SPEC, null);
 
       return INDEX_IO.loadIndex(
           INDEX_MERGER.mergeQueryableIndex(
@@ -212,7 +206,7 @@ public class TestIndex
               true,
               METRIC_AGGS,
               mergedFile,
-              indexSpec,
+              INDEX_SPEC,
               null
           )
       );
@@ -269,13 +263,18 @@ public class TestIndex
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup, boolean bitmap)
   {
+    CharSource stream = getResourceCharSource(resourceFilename);
+    return makeRealtimeIndex(stream, rollup, bitmap);
+  }
+
+  public static CharSource getResourceCharSource(final String resourceFilename)
+  {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     if (resource == null) {
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
-    CharSource stream = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
-    return makeRealtimeIndex(stream, rollup, bitmap);
+    return Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
   }
 
   public static IncrementalIndex makeRealtimeIndex(final CharSource source)
@@ -379,7 +378,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
+      INDEX_MERGER.persist(index, someTmpFile, INDEX_SPEC, null);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

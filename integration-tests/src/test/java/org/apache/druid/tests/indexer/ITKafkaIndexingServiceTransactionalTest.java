@@ -19,29 +19,45 @@
 
 package org.apache.druid.tests.indexer;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.testng.annotations.AfterClass;
+import org.apache.druid.tests.TestNGGroup;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 /**
  * This is a test for the Kafka indexing service with transactional topics
  */
+@Test(groups = TestNGGroup.KAFKA_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexerTest
 {
   private static final Logger LOG = new Logger(ITKafkaIndexingServiceTransactionalTest.class);
   private static final String DATASOURCE = "kafka_indexing_service_txn_test";
 
-  @Test
-  public void testKafka()
+  @DataProvider
+  public static Object[][] testParams()
   {
-    LOG.info("Starting test: ITKafkaIndexingServiceTransactionalTest");
-    doKafkaIndexTest(DATASOURCE, true);
+    return new Object[][]{
+        {"legacy_parser"},
+        {"input_format"}
+    };
   }
 
-  @AfterClass
+  @Test(dataProvider = "testParams")
+  public void testKafka(String param)
+  {
+    final String supervisorSpecPath = "legacy_parser".equals(param)
+                                      ? INDEXER_FILE_LEGACY_PARSER
+                                      : INDEXER_FILE_INPUT_FORMAT;
+    LOG.info("Starting test: ITKafkaIndexingServiceTransactionalTest");
+    doKafkaIndexTest(StringUtils.format("%s_%s", DATASOURCE, param), supervisorSpecPath, false);
+  }
+
+  @AfterMethod
   public void afterClass()
   {
     LOG.info("teardown");

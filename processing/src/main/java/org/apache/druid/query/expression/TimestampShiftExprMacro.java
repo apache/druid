@@ -30,13 +30,16 @@ import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_shift";
+
   @Override
   public String name()
   {
-    return "timestamp_shift";
+    return FN_NAME;
   }
 
   @Override
@@ -70,17 +73,16 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     return args.get(2).eval(bindings).asInt();
   }
 
-  private static class TimestampShiftExpr implements Expr
+  private static class TimestampShiftExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    private final Expr arg;
     private final Chronology chronology;
     private final Period period;
     private final int step;
 
-    public TimestampShiftExpr(final List<Expr> args)
+    TimestampShiftExpr(final List<Expr> args)
     {
+      super(FN_NAME, args);
       final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
-      arg = args.get(0);
       period = granularity.getPeriod();
       chronology = ISOChronology.getInstance(granularity.getTimeZone());
       step = getStep(args, ExprUtils.nilBindings());
@@ -90,24 +92,22 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      return ExprEval.of(chronology.add(period, arg.eval(bindings).asLong(), step));
+      return ExprEval.of(chronology.add(period, args.get(0).eval(bindings).asLong(), step));
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public Expr visit(Shuttle shuttle)
     {
-      arg.visit(visitor);
-      visitor.visit(this);
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampShiftExpr(newArgs));
     }
   }
 
-  private static class TimestampShiftDynamicExpr implements Expr
+  private static class TimestampShiftDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    private final List<Expr> args;
-
-    public TimestampShiftDynamicExpr(final List<Expr> args)
+    TimestampShiftDynamicExpr(final List<Expr> args)
     {
-      this.args = args;
+      super(FN_NAME, args);
     }
 
     @Nonnull
@@ -122,12 +122,10 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public Expr visit(Shuttle shuttle)
     {
-      for (Expr arg : args) {
-        arg.visit(visitor);
-      }
-      visitor.visit(this);
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampShiftDynamicExpr(newArgs));
     }
   }
 }

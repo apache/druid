@@ -48,7 +48,7 @@ import java.util.UUID;
 public abstract class JsonConfigTesterBase<T>
 {
 
-  protected static final String configPrefix = "druid.test.prefix";
+  protected static final String CONFIG_PREFIX = "druid.test.prefix";
   protected Injector injector;
   protected final Class<T> clazz = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
 
@@ -60,7 +60,7 @@ public abstract class JsonConfigTesterBase<T>
   {
     return StringUtils.format(
         "%s.%s",
-        configPrefix, fieldName
+        CONFIG_PREFIX, fieldName
     );
   }
   protected static String getPropertyKey(Field field)
@@ -84,7 +84,7 @@ public abstract class JsonConfigTesterBase<T>
       binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
       binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
       binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-      JsonConfigProvider.bind(binder, configPrefix, clazz);
+      JsonConfigProvider.bind(binder, CONFIG_PREFIX, clazz);
     }
   };
 
@@ -148,7 +148,7 @@ public abstract class JsonConfigTesterBase<T>
         ImmutableList.of(simpleJsonConfigModule)
     );
     configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
-    configProvider = JsonConfigProvider.of(configPrefix, clazz);
+    configProvider = JsonConfigProvider.of(CONFIG_PREFIX, clazz);
   }
 
   @Test

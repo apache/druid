@@ -57,7 +57,13 @@
     },
     "tuningConfig": {
       "type": "index_parallel",
-      "maxNumSubTasks": 10
+      "maxNumConcurrentSubTasks": 10,
+      "forceGuaranteedRollup": "%%FORCE_GUARANTEED_ROLLUP%%",
+      "splitHintSpec": {
+        "type": "maxSize",
+        "maxSplitSize": 1
+      },
+      "partitionsSpec": %%PARTITIONS_SPEC%%
     }
   }
 }

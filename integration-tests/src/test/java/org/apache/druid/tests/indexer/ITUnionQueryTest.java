@@ -36,8 +36,9 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.EventReceiverFirehoseTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.ServerDiscoveryUtil;
+import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -51,9 +52,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+@Test(groups = TestNGGroup.QUERY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITUnionQueryTest extends AbstractIndexerTest
 {
@@ -112,7 +113,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       }
 
       // wait until all events are ingested
-      RetryUtil.retryUntil(
+      ITRetryUtil.retryUntil(
           () -> {
             for (int i = 0; i < numTasks; i++) {
               final int countRows = queryHelper.countRows(fullDatasourceName + i, "2013-08-31/2013-09-01");
@@ -135,7 +136,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       String queryResponseTemplate;
       try {
         InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(UNION_QUERIES_RESOURCE);
-        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
       catch (IOException e) {
         throw new ISE(e, "could not read query file: %s", UNION_QUERIES_RESOURCE);
@@ -156,15 +157,8 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       // task should complete only after the segments are loaded by historical node
       for (int i = 0; i < numTasks; i++) {
         final int taskNum = i;
-        RetryUtil.retryUntil(
-            new Callable<Boolean>()
-            {
-              @Override
-              public Boolean call()
-              {
-                return coordinator.areSegmentsLoaded(fullDatasourceName + taskNum);
-              }
-            },
+        ITRetryUtil.retryUntil(
+            () -> coordinator.areSegmentsLoaded(fullDatasourceName + taskNum),
             true,
             10000,
             10,
@@ -198,7 +192,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
     return StringUtils.replace(taskAsString, EVENT_RECEIVER_SERVICE_PREFIX, serviceName);
   }
 
-  public void postEvents(int id) throws Exception
+  private void postEvents(int id) throws Exception
   {
     final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_PREFIX + id);
     eventReceiverSelector.start();
@@ -210,13 +204,12 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       LOG.info("Event Receiver Found at host [%s]", host);
 
       LOG.info("Checking worker /status/health for [%s]", host);
-      final StatusResponseHandler handler = new StatusResponseHandler(StandardCharsets.UTF_8);
-      RetryUtil.retryUntilTrue(
+      ITRetryUtil.retryUntilTrue(
           () -> {
             try {
               StatusResponseHolder response = httpClient.go(
                   new Request(HttpMethod.GET, new URL(StringUtils.format("https://%s/status/health", host))),
-                  handler
+                  StatusResponseHandler.getInstance()
               ).get();
               return response.getStatus().equals(HttpResponseStatus.OK);
             }

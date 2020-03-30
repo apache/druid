@@ -54,6 +54,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.segment.AbstractSegment;
@@ -62,6 +63,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
@@ -80,10 +82,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -122,7 +122,7 @@ public class ServerManagerTest
           }
 
           @Override
-          public Segment getSegment(final DataSegment segment)
+          public Segment getSegment(final DataSegment segment, boolean lazy)
           {
             return new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
@@ -159,6 +159,7 @@ public class ServerManagerTest
         new LocalCacheProvider().get(),
         new CacheConfig(),
         segmentManager,
+        NoopJoinableFactory.INSTANCE,
         new ServerConfig()
     );
 
@@ -446,8 +447,7 @@ public class ServerManagerTest
           @Override
           public void run()
           {
-            Map<String, Object> context = new HashMap<String, Object>();
-            Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query), context);
+            Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query));
             seq.toList();
             Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
 
@@ -480,7 +480,8 @@ public class ServerManagerTest
               NoneShardSpec.instance(),
               IndexIO.CURRENT_VERSION_ID,
               123L
-          )
+          ),
+          false
       );
     }
     catch (SegmentLoadingException e) {
@@ -581,7 +582,7 @@ public class ServerManagerTest
     @Override
     public QueryMetrics<Query<?>> makeMetrics(QueryType query)
     {
-      return new DefaultQueryMetrics<>(new DefaultObjectMapper());
+      return new DefaultQueryMetrics<>();
     }
 
     @Override
@@ -684,7 +685,7 @@ public class ServerManagerTest
     }
 
     @Override
-    public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+    public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
     {
       return new BlockingSequence<>(runner.run(queryPlus, responseContext), waitLatch, waitYieldLatch, notifyLatch);
     }

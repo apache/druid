@@ -1,4 +1,4 @@
-Apache Druid (incubating)
+Apache Druid
 Copyright 2019 The Apache Software Foundation
 
 This product includes software developed at
@@ -7,21 +7,7 @@ The Apache Software Foundation (http://www.apache.org/).
 
 ############ SOURCE/JAVA-CORE ############
 
-================= Apache Hive =================
-Apache Hive
-Copyright 2008-2018 The Apache Software Foundation
-
-
-
-
-================= Apache Lucene =================
-Apache Lucene
-Copyright 2001-2019 The Apache Software Foundation
-
-
-
-
-================= Apache Calcite =================
+================= Apache Calcite 1.10.0 =================
 Apache Calcite
 Copyright 2012-2019 The Apache Software Foundation
 
@@ -33,28 +19,70 @@ and released as the LucidDB project.
 
 
 
-================= Apache Hadoop =================
+================= Apache Flink 1.8.1 =================
+Apache Flink
+Copyright 2014-2019 The Apache Software Foundation
+
+
+
+
+================= Apache Hadoop 2.8.5 =================
 Apache Hadoop
 Copyright 2009-2017 The Apache Software Foundation
 
 
 
 
-================= Metamarkets java-util =================
-java-util
-Copyright 2011-2017 Metamarkets Group Inc.
+================= Apache Hive 2.0.0 =================
+Apache Hive
+Copyright 2008-2015 The Apache Software Foundation
 
 
 
 
-================= Metamarkets bytebuffer-collections =================
+================= Apache Hive 2.0.1 =================
+Apache Hive
+Copyright 2008-2016 The Apache Software Foundation
+
+
+
+
+================= Apache Hive 2.7.0 =================
+Apache Hive
+Copyright 2008-2018 The Apache Software Foundation
+
+
+
+
+================= Apache Kafka 1.0 =================
+Apache Kafka
+Copyright 2017 The Apache Software Foundation.
+
+
+
+
+================= Apache Lucene 6.2.0 =================
+Apache Lucene
+Copyright 2014 The Apache Software Foundation
+
+
+
+
+================= Metamarkets bytebuffer-collections 0.2.5 =================
 bytebuffer-collections
 Copyright 2011-2015 Metamarkets Group Inc.
 
 
 
 
-================= Metamarkets extendedset =================
+================= Metamarkets java-util 1.3.3 =================
+java-util
+Copyright 2011-2017 Metamarkets Group Inc.
+
+
+
+
+================= Metamarkets extendedset 1.3.10 =================
 extendedset
 Copyright 2012 Metamarkets Group Inc.
 
@@ -63,3 +91,6 @@ Copyright 2012 Metamarkets Group Inc.
 This library contains a modified version of Alessandro Colantonio's CONCISE
 (COmpressed 'N' Composable Integer SEt) library, extending the functionality of
 ConciseSet to use IntBuffers.
+
+
+

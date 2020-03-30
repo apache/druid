@@ -19,9 +19,8 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -32,7 +31,9 @@ import org.joda.time.Interval;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * DefaultQueryMetrics is unsafe for use from multiple threads. It fails with RuntimeException on access not from the
@@ -41,16 +42,23 @@ import java.util.concurrent.TimeUnit;
  */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
-  protected final ObjectMapper jsonMapper;
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
 
-  /** Non final to give subclasses ability to reassign it. */
+  /**
+   * Non final to give subclasses ability to reassign it.
+   */
   protected Thread ownerThread = Thread.currentThread();
 
-  public DefaultQueryMetrics(ObjectMapper jsonMapper)
+  private static String getTableNamesAsString(DataSource dataSource)
   {
-    this.jsonMapper = jsonMapper;
+    final Set<String> names = dataSource.getTableNames();
+
+    if (names.size() == 1) {
+      return Iterables.getOnlyElement(names);
+    } else {
+      return names.stream().sorted().collect(Collectors.toList()).toString();
+    }
   }
 
   protected void checkModifiedFromOwnerThread()
@@ -64,7 +72,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     }
   }
 
-  protected void setDimension(String dimension, String value)
+  protected void setDimension(String dimension, Object value)
   {
     checkModifiedFromOwnerThread();
     builder.setDimension(dimension, value);
@@ -79,13 +87,14 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     hasFilters(query);
     duration(query);
     queryId(query);
+    subQueryId(query);
     sqlQueryId(query);
   }
 
   @Override
   public void dataSource(QueryType query)
   {
-    setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()));
+    setDimension(DruidMetrics.DATASOURCE, getTableNamesAsString(query.getDataSource()));
   }
 
   @Override
@@ -123,6 +132,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void subQueryId(QueryType query)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
   public void sqlQueryId(QueryType query)
   {
     // Emit nothing by default.
@@ -131,15 +146,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public void context(QueryType query)
   {
-    try {
-      setDimension(
-          "context",
-          jsonMapper.writeValueAsString(query.getContext() == null ? ImmutableMap.of() : query.getContext())
-      );
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    setDimension("context", query.getContext() == null ? ImmutableMap.of() : query.getContext());
   }
 
   @Override
@@ -173,12 +180,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void chunkInterval(Interval interval)
-  {
-    setDimension("chunkInterval", interval.toString());
-  }
-
-  @Override
   public void preFilters(List<Filter> preFilters)
   {
     // Emit nothing by default.
@@ -192,6 +193,18 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
 
   @Override
   public void identity(String identity)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void vectorized(final boolean vectorized)
+  {
+    // Emit nothing by default.
+  }
+
+  @Override
+  public void parallelMergeParallelism(final int parallelism)
   {
     // Emit nothing by default.
   }
@@ -232,13 +245,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return reportMillisTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
-  @Deprecated
-  @Override
-  public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
-  {
-    return reportMillisTimeMetric("query/intervalChunk/time", timeNs);
-  }
-
   @Override
   public QueryMetrics<QueryType> reportCpuTime(long timeNs)
   {
@@ -262,18 +268,6 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public QueryMetrics<QueryType> reportNodeTime(long timeNs)
   {
     return reportMillisTimeMetric("query/node/time", timeNs);
-  }
-
-  private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
-  {
-    return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
-  }
-
-  protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
-  {
-    checkModifiedFromOwnerThread();
-    metrics.put(metricName, value);
-    return this;
   }
 
   @Override
@@ -304,6 +298,48 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportParallelMergeParallelism(int parallelism)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeInputSequences(long numSequences)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeInputRows(long numRows)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeOutputRows(long numRows)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeTaskCount(long numTasks)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportParallelMergeTotalCpuTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
+  }
+
+  @Override
   public void emit(ServiceEmitter emitter)
   {
     checkModifiedFromOwnerThread();
@@ -311,5 +347,17 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
       emitter.emit(builder.build(metric.getKey(), metric.getValue()));
     }
     metrics.clear();
+  }
+
+  protected QueryMetrics<QueryType> reportMetric(String metricName, Number value)
+  {
+    checkModifiedFromOwnerThread();
+    metrics.put(metricName, value);
+    return this;
+  }
+
+  private QueryMetrics<QueryType> reportMillisTimeMetric(String metricName, long timeNs)
+  {
+    return reportMetric(metricName, TimeUnit.NANOSECONDS.toMillis(timeNs));
   }
 }

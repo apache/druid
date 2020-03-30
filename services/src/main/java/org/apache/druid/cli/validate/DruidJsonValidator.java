@@ -41,6 +41,7 @@ import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -98,7 +99,7 @@ public class DruidJsonValidator extends GuiceRunnable
     return ImmutableList.of(
         // It's unknown if those modules are required in DruidJsonValidator.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123603498
+        // See https://github.com/apache/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -129,6 +130,7 @@ public class DruidJsonValidator extends GuiceRunnable
                 new FirehoseModule(),
                 new IndexingHadoopModule(),
                 new IndexingServiceFirehoseModule(),
+                new IndexingServiceInputSourceModule(),
                 new LocalDataStorageDruidModule()
             )
         )

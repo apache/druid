@@ -23,8 +23,9 @@ import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -45,26 +46,29 @@ public interface SqlAggregator
    * Returns a Druid Aggregation corresponding to a SQL {@link AggregateCall}. This method should ignore filters;
    * they will be applied to your aggregator in a later step.
    *
-   * @param plannerContext       SQL planner context
-   * @param querySignature       signature of the rows row signature and re-usable virtual column references
-   * @param rexBuilder           a rexBuilder, in case you need one
-   * @param name                 desired output name of the aggregation
-   * @param aggregateCall        aggregate call object
-   * @param project              project that should be applied before aggregation; may be null
-   * @param existingAggregations existing aggregations for this query; useful for re-using aggregations. May be safely
-   *                             ignored if you do not want to re-use existing aggregations.
-   * @param finalizeAggregations true if this query should include explicit finalization for all of its
-   *                             aggregators, where required. This is set for subqueries where Druid's native query
-   *                             layer does not do this automatically.
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          input row signature
+   * @param virtualColumnRegistry re-usable virtual column references
+   * @param rexBuilder            a rexBuilder, in case you need one
+   * @param name                  desired output name of the aggregation
+   * @param aggregateCall         aggregate call object
+   * @param project               project that should be applied before aggregation; may be null
+   * @param existingAggregations  existing aggregations for this query; useful for re-using aggregations. May be safely
+   *                              ignored if you do not want to re-use existing aggregations.
+   * @param finalizeAggregations  true if this query should include explicit finalization for all of its
+   *                              aggregators, where required. This is set for subqueries where Druid's native query
+   *                              layer does not do this automatically.
    *
    * @return aggregation, or null if the call cannot be translated
    */
   @Nullable
   Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexBuilder rexBuilder,
-      String name, AggregateCall aggregateCall,
+      String name,
+      AggregateCall aggregateCall,
       Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations

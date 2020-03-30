@@ -84,12 +84,12 @@ import java.util.TreeMap;
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
 {
-  private static final AggregatorFactory[] aggs1 = {
+  private static final AggregatorFactory[] AGGS1 = {
       new LongSumAggregatorFactory("visited_num", "visited_num"),
       new HyperUniquesAggregatorFactory("unique_hosts", "host")
   };
 
-  private static final AggregatorFactory[] aggs2 = {
+  private static final AggregatorFactory[] AGGS2 = {
       new CountAggregatorFactory("count")
   };
 
@@ -156,7 +156,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -204,7 +204,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -253,7 +253,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -311,7 +311,7 @@ public class IndexGeneratorJobTest
                 ),
                 null,
                 null,
-                aggs1,
+                AGGS1,
                 "website"
             },
             {
@@ -344,7 +344,7 @@ public class IndexGeneratorJobTest
                 ),
                 1, // force 1 row max per index for easier testing
                 null,
-                aggs2,
+                AGGS2,
                 "inherit_dims"
             },
             {
@@ -369,7 +369,14 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new JSONParseSpec(
                         new TimestampSpec("ts", "yyyyMMddHH", null),
-                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("B", "F", "M", "Q", "X", "Y")), null, null),
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                            "B",
+                            "F",
+                            "M",
+                            "Q",
+                            "X",
+                            "Y"
+                        )), null, null),
                         null,
                         null
                     ),
@@ -377,7 +384,7 @@ public class IndexGeneratorJobTest
                 ),
                 1, // force 1 row max per index for easier testing
                 null,
-                aggs2,
+                AGGS2,
                 "inherit_dims2"
             }
         }
@@ -521,6 +528,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
+                null,
                 maxRowsInMemory,
                 maxBytesInMemory,
                 true,
@@ -537,6 +545,7 @@ public class IndexGeneratorJobTest
                 false,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -551,12 +560,22 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = new ArrayList<>();
     if ("hashed".equals(partitionType)) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], null, HadoopDruidIndexerConfig.JSON_MAPPER));
+        specs.add(new HashBasedNumberedShardSpec(
+            shardInfo[0],
+            shardInfo[1],
+            null,
+            HadoopDruidIndexerConfig.JSON_MAPPER
+        ));
       }
     } else if ("single".equals(partitionType)) {
       int partitionNum = 0;
       for (String[] shardInfo : (String[][]) shardInfoForEachShard) {
-        specs.add(new SingleDimensionShardSpec("host", shardInfo[0], shardInfo[1], partitionNum++));
+        specs.add(new SingleDimensionShardSpec(
+            "host",
+            shardInfo[0],
+            shardInfo[1],
+            partitionNum++
+        ));
       }
     } else {
       throw new RE("Invalid partition type:[%s]", partitionType);

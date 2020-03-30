@@ -25,15 +25,19 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 public class ExprMacroTest
 {
+  private static final String IPV4_STRING = "192.168.0.1";
+  private static final long IPV4_LONG = 3232235521L;
   private static final Expr.ObjectBinding BINDINGS = Parser.withMap(
       ImmutableMap.<String, Object>builder()
           .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
+          .put("t1", DateTimes.of("2000-02-03T00:00:00").getMillis())
           .put("tstr", "2000-02-03T04:05:06")
           .put("tstr_sql", "2000-02-03 04:05:06")
           .put("x", "foo")
@@ -41,8 +45,18 @@ public class ExprMacroTest
           .put("z", 3.1)
           .put("CityOfAngels", "America/Los_Angeles")
           .put("spacey", "  hey there  ")
+          .put("ipv4_string", IPV4_STRING)
+          .put("ipv4_long", IPV4_LONG)
+          .put("ipv4_network", "192.168.0.0")
+          .put("ipv4_broadcast", "192.168.255.255")
           .build()
   );
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -68,7 +82,7 @@ public class ExprMacroTest
   @Test
   public void testLookupNotFound()
   {
-    expectedException.expect(NullPointerException.class);
+    expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Lookup [lookylook] not found");
     assertExpr("lookup(x, 'lookylook')", null);
   }
@@ -88,6 +102,7 @@ public class ExprMacroTest
     assertExpr("timestamp_ceil(t, 'P1D',null,'America/Los_Angeles')", DateTimes.of("2000-02-03T08").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D',null,CityOfAngels)", DateTimes.of("2000-02-03T08").getMillis());
     assertExpr("timestamp_ceil(t, 'P1D','1970-01-01T01','Etc/UTC')", DateTimes.of("2000-02-04T01").getMillis());
+    assertExpr("timestamp_ceil(t1, 'P1D')", DateTimes.of("2000-02-03").getMillis());
   }
 
   @Test
@@ -185,9 +200,45 @@ public class ExprMacroTest
     assertExpr("rtrim(spacey, substring(spacey, 0, 4))", "  hey ther");
   }
 
+  @Test
+  public void testIPv4AddressParse()
+  {
+    Long nullLong = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
+    assertExpr("ipv4_parse(x)", nullLong);
+    assertExpr("ipv4_parse(ipv4_string)", IPV4_LONG);
+    assertExpr("ipv4_parse(ipv4_long)", IPV4_LONG);
+    assertExpr("ipv4_parse(ipv4_stringify(ipv4_long))", IPV4_LONG);
+  }
+
+  @Test
+  public void testIPv4AddressStringify()
+  {
+    assertExpr("ipv4_stringify(x)", null);
+    assertExpr("ipv4_stringify(ipv4_long)", IPV4_STRING);
+    assertExpr("ipv4_stringify(ipv4_string)", IPV4_STRING);
+    assertExpr("ipv4_stringify(ipv4_parse(ipv4_string))", IPV4_STRING);
+  }
+
+  @Test
+  public void testIPv4AddressMatch()
+  {
+    assertExpr("ipv4_match(ipv4_string,    '10.0.0.0/8')", 0L);
+    assertExpr("ipv4_match(ipv4_string,    '192.168.0.0/16')", 1L);
+    assertExpr("ipv4_match(ipv4_network,   '192.168.0.0/16')", 1L);
+    assertExpr("ipv4_match(ipv4_broadcast, '192.168.0.0/16')", 1L);
+  }
+
   private void assertExpr(final String expression, final Object expectedResult)
   {
     final Expr expr = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
     Assert.assertEquals(expression, expectedResult, expr.eval(BINDINGS).value());
+
+    final Expr exprNotFlattened = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE, false);
+    final Expr roundTripNotFlattened =
+        Parser.parse(exprNotFlattened.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTripNotFlattened.eval(BINDINGS).value());
+
+    final Expr roundTrip = Parser.parse(expr.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTrip.eval(BINDINGS).value());
   }
 }

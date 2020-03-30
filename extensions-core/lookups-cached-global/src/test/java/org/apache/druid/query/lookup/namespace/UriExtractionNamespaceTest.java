@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Module;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.annotations.Json;
@@ -43,6 +44,10 @@ import java.util.Map;
  */
 public class UriExtractionNamespaceTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   public static ObjectMapper registerTypes(
       final ObjectMapper mapper
   )
@@ -349,8 +354,8 @@ public class UriExtractionNamespaceTest
     );
 
     Assert.assertEquals(
-        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(),
-        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getName(),
+        namespace.getNamespaceParseSpec().getClass().getName()
     );
     Assert.assertEquals("file:/foo", namespace.getUriPrefix().toString());
     Assert.assertEquals("a.b.c", namespace.getFileRegex());
@@ -367,8 +372,8 @@ public class UriExtractionNamespaceTest
     );
 
     Assert.assertEquals(
-        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(),
-        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+        UriExtractionNamespace.ObjectMapperFlatDataParser.class.getName(),
+        namespace.getNamespaceParseSpec().getClass().getName()
     );
     Assert.assertEquals("file:/foo", namespace.getUri().toString());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());

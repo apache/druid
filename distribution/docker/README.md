@@ -19,24 +19,22 @@
 
 ## Build
 
-From the root of the repo, run `docker build -t druid:tag -f distribution/docker/Dockerfile .`
+From the root of the repo, run `docker build -t apache/druid:tag -f distribution/docker/Dockerfile .`
 
 ## Run
 
-Edit `environment` to suite. Run 'docker-compose -f distribution/docker/docker-compose.yml up`
+Edit `environment` to suite. Run `docker-compose -f distribution/docker/docker-compose.yml up`
 
-## mysql database connector
+## Java 11 (experimental)
 
-This image contains solely the postgres metadata database connector. If you need
-the mysql metadata storage connector, consider adding these lines before the `addgroup`
-run-command.
+From the root of the repo, run `docker build -t apache/druid:tag -f distribution/docker/Dockerfile.java11 .` which will build Druid to run in a Java 11 environment.
 
-```
-RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \
- && sha256sum --ignore-missing -c /src/distribution/docker/sha256sums.txt \
- && ln -s /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar /opt/druid/lib
-```
+## MySQL Database Connector
 
-Alternatively, cd src/distribution/docker; docker build -t druid:mysql --build-arg DRUID_RELEASE=upstream -f Dockerfile.mysql .
+This image contains solely the postgres metadata storage connector. If you
+need the mysql metadata storage connector, you can use Dockerfile.mysql to add
+it to the base image above.
 
-where `upstream` is the version to use as the base (e.g. druid:0.14.0 from Dockerhub)
+`docker build -t apache/druid:tag-mysql --build-arg DRUID_RELEASE=apache/druid:tag -f distribution/docker/Dockerfile.mysql .`
+
+where `druid:tag` is the version to use as the base.

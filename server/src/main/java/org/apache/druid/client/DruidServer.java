@@ -202,7 +202,11 @@ public class DruidServer implements Comparable<DruidServer>
             currSize.addAndGet(segment.getSize());
             totalSegments.incrementAndGet();
           } else {
-            log.warn("Asked to add data segment that already exists!? server[%s], segment[%s]", getName(), segment);
+            log.warn(
+                "Asked to add data segment that already exists!? server[%s], segment[%s]",
+                getName(),
+                segment.getId()
+            );
           }
           return dataSource;
         }
@@ -232,7 +236,6 @@ public class DruidServer implements Comparable<DruidServer>
                 segmentId
             );
             // Returning null from the lambda here makes the ConcurrentHashMap to not record any entry.
-            //noinspection ReturnOfNull
             return null;
           }
           DataSegment segment = dataSource.removeSegment(segmentId);
@@ -244,7 +247,6 @@ public class DruidServer implements Comparable<DruidServer>
             log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", getName(), segmentId);
           }
           // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-          //noinspection ReturnOfNull
           return dataSource.isEmpty() ? null : dataSource;
         }
     );

@@ -35,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 
 /**
+ *
  */
 public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
 {
@@ -169,6 +170,12 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
                     .put(DimFilterUtils.STRING_SEPARATOR);
     }
     return filterCacheKey.array();
+  }
+
+  @Override
+  public DimensionSpec withDimension(String newDimension)
+  {
+    return new ListFilteredDimensionSpec(delegate.withDimension(newDimension), values, isWhitelist);
   }
 
   @Override

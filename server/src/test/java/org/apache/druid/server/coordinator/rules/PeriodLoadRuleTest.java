@@ -37,10 +37,12 @@ import org.junit.Test;
  */
 public class PeriodLoadRuleTest
 {
-  private static final DataSegment.Builder builder = DataSegment.builder()
-                                                            .dataSource("test")
-                                                            .version(DateTimes.nowUtc().toString())
-                                                            .shardSpec(NoneShardSpec.instance());
+  private static final DataSegment.Builder BUILDER = DataSegment
+      .builder()
+      .dataSource("test")
+      .version(DateTimes.nowUtc().toString())
+      .shardSpec(NoneShardSpec.instance())
+      .size(0);
 
   @Test
   public void testAppliesToAll()
@@ -52,9 +54,9 @@ public class PeriodLoadRuleTest
         ImmutableMap.of("", 0)
     );
 
-    Assert.assertTrue(rule.appliesTo(builder.interval(Intervals.of("2012-01-01/2012-12-31")).build(), now));
-    Assert.assertTrue(rule.appliesTo(builder.interval(Intervals.of("1000-01-01/2012-12-31")).build(), now));
-    Assert.assertTrue(rule.appliesTo(builder.interval(Intervals.of("0500-01-01/2100-12-31")).build(), now));
+    Assert.assertTrue(rule.appliesTo(BUILDER.interval(Intervals.of("2012-01-01/2012-12-31")).build(), now));
+    Assert.assertTrue(rule.appliesTo(BUILDER.interval(Intervals.of("1000-01-01/2012-12-31")).build(), now));
+    Assert.assertTrue(rule.appliesTo(BUILDER.interval(Intervals.of("0500-01-01/2100-12-31")).build(), now));
   }
 
   @Test
@@ -67,17 +69,17 @@ public class PeriodLoadRuleTest
         ImmutableMap.of("", 0)
     );
 
-    Assert.assertTrue(rule.appliesTo(builder.interval(new Interval(now.minusWeeks(1), now)).build(), now));
+    Assert.assertTrue(rule.appliesTo(BUILDER.interval(new Interval(now.minusWeeks(1), now)).build(), now));
     Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusDays(1), now.plusDays(1)))
+            BUILDER.interval(new Interval(now.minusDays(1), now.plusDays(1)))
                    .build(),
             now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
-            builder.interval(new Interval(now.plusDays(1), now.plusDays(2)))
+            BUILDER.interval(new Interval(now.plusDays(1), now.plusDays(2)))
                        .build(),
             now
         )
@@ -96,13 +98,13 @@ public class PeriodLoadRuleTest
 
     Assert.assertTrue(
             rule.appliesTo(
-                    builder.interval(new Interval(now.minusWeeks(1), now.plusWeeks(1))).build(),
+                    BUILDER.interval(new Interval(now.minusWeeks(1), now.plusWeeks(1))).build(),
                     now
             )
     );
     Assert.assertTrue(
             rule.appliesTo(
-                    builder.interval(
+                    BUILDER.interval(
                             new Interval(now.minusMonths(1).minusWeeks(1), now.minusMonths(1).plusWeeks(1))
                     ).build(),
                     now
@@ -127,13 +129,13 @@ public class PeriodLoadRuleTest
 
     Assert.assertTrue(
         includeFutureRule.appliesTo(
-            builder.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
+            BUILDER.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now
         )
     );
     Assert.assertFalse(
         notIncludeFutureRule.appliesTo(
-            builder.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
+            BUILDER.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now
         )
     );

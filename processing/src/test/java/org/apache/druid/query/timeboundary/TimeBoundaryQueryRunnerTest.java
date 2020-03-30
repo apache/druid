@@ -32,8 +32,11 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -52,10 +55,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  */
@@ -73,7 +73,7 @@ public class TimeBoundaryQueryRunnerTest
   }
 
   private final QueryRunner runner;
-  private static final QueryRunnerFactory factory = new TimeBoundaryQueryRunnerFactory(
+  private static final QueryRunnerFactory FACTORY = new TimeBoundaryQueryRunnerFactory(
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
   private static Segment segment0;
@@ -130,7 +130,7 @@ public class TimeBoundaryQueryRunnerTest
 
   private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
+    return SegmentId.of(QueryRunnerTestHelper.DATA_SOURCE, interval, version, NoneShardSpec.instance());
   }
 
   private QueryRunner getCustomRunner() throws IOException
@@ -144,12 +144,19 @@ public class TimeBoundaryQueryRunnerTest
     segment0 = new IncrementalIndexSegment(index0, makeIdentifier(index0, "v1"));
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
 
-    VersionedIntervalTimeline<String, Segment> timeline =
-        new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
-    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk<>(segment0));
-    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk<>(segment1));
+    VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
+    timeline.add(
+        index0.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment0))
+    );
+    timeline.add(
+        index1.getInterval(),
+        "v1",
+        new SingleElementPartitionChunk<>(ReferenceCountingSegment.wrapRootGenerationSegment(segment1))
+    );
 
-    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
+    return QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, FACTORY);
   }
 
   @Test
@@ -162,9 +169,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "automotive")
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    HashMap<String, Object> context = new HashMap<String, Object>();
     List<Result<TimeBoundaryResultValue>> results =
-        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
 
     Assert.assertTrue(Iterables.size(results) > 0);
 
@@ -186,9 +192,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .filters("quality", "foobar") // foobar dimension does not exist
                                                 .build();
     Assert.assertTrue(timeBoundaryQuery.hasFilters());
-    HashMap<String, Object> context = new HashMap<String, Object>();
     List<Result<TimeBoundaryResultValue>> results =
-        customRunner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
+        customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
 
     Assert.assertTrue(Iterables.size(results) == 0);
   }
@@ -201,8 +206,7 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .build();
     Assert.assertFalse(timeBoundaryQuery.hasFilters());
-    HashMap<String, Object> context = new HashMap<String, Object>();
-    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
+    Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
@@ -219,8 +223,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MAX_TIME)
                                                 .build();
-    ConcurrentMap<String, Object> context = new ConcurrentHashMap<>();
-    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
+    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
@@ -238,8 +242,8 @@ public class TimeBoundaryQueryRunnerTest
                                                 .dataSource("testing")
                                                 .bound(TimeBoundaryQuery.MIN_TIME)
                                                 .build();
-    ConcurrentMap<String, Object> context = new ConcurrentHashMap<>();
-    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
+    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery), context).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();

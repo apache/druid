@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -30,9 +31,16 @@ import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+
+import java.util.Set;
 
 /**
  */
@@ -42,6 +50,7 @@ public class DimensionPredicateFilter implements Filter
   private final DruidPredicateFactory predicateFactory;
   private final String basePredicateString;
   private final ExtractionFn extractionFn;
+  private final FilterTuning filterTuning;
 
   public DimensionPredicateFilter(
       final String dimension,
@@ -49,10 +58,21 @@ public class DimensionPredicateFilter implements Filter
       final ExtractionFn extractionFn
   )
   {
+    this(dimension, predicateFactory, extractionFn, null);
+  }
+
+  public DimensionPredicateFilter(
+      final String dimension,
+      final DruidPredicateFactory predicateFactory,
+      final ExtractionFn extractionFn,
+      final FilterTuning filterTuning
+  )
+  {
     Preconditions.checkNotNull(predicateFactory, "predicateFactory");
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.basePredicateString = predicateFactory.toString();
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
 
     if (extractionFn == null) {
       this.predicateFactory = predicateFactory;
@@ -70,19 +90,58 @@ public class DimensionPredicateFilter implements Filter
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
 
         @Override
         public DruidFloatPredicate makeFloatPredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidFloatPredicate()
+          {
+            @Override
+            public boolean applyFloat(float input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
 
         @Override
         public DruidDoublePredicate makeDoublePredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidDoublePredicate()
+          {
+            @Override
+            public boolean applyDouble(double input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
       };
     }
@@ -101,9 +160,37 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    return DimensionHandlerUtils.makeVectorProcessor(
+        dimension,
+        VectorValueMatcherColumnProcessorFactory.instance(),
+        factory
+    ).makeMatcher(predicateFactory);
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
+  }
+
+  @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
   }
 
   @Override

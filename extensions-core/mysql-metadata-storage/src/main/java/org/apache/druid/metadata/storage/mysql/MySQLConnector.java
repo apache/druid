@@ -45,6 +45,7 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String PAYLOAD_TYPE = "LONGBLOB";
   private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
   private static final String QUOTE_STRING = "`";
+  private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
   private static final String MYSQL_JDBC_DRIVER_CLASS_NAME = "com.mysql.jdbc.Driver";
 
   private final DBI dbi;
@@ -64,7 +65,7 @@ public class MySQLConnector extends SQLMetadataConnector
     catch (ClassNotFoundException e) {
       throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
                    + "distribution but is required to use MySQL. Please download a compatible library (for example "
-                   + "'mysql-connector-java-5.1.38.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
+                   + "'mysql-connector-java-5.1.48.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
                    + "https://druid.apache.org/downloads for more details.",
                 MYSQL_JDBC_DRIVER_CLASS_NAME
       );
@@ -156,6 +157,12 @@ public class MySQLConnector extends SQLMetadataConnector
   protected String getSerialType()
   {
     return SERIAL_TYPE;
+  }
+
+  @Override
+  protected String getCollation()
+  {
+    return COLLATION;
   }
 
   @Override

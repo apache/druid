@@ -61,7 +61,7 @@ public interface IndexMerger
 {
   Logger log = new Logger(IndexMerger.class);
 
-  SerializerUtils serializerUtils = new SerializerUtils();
+  SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
   int INVALID_ROW = -1;
 
   static List<String> getMergedDimensionsFromQueryableIndexes(List<QueryableIndex> indexes)
@@ -88,6 +88,7 @@ public interface IndexMerger
     }
   }
 
+  @Nullable
   static List<String> getLongestSharedDimOrder(List<IndexableAdapter> indexes)
   {
     int maxSize = 0;
@@ -398,7 +399,7 @@ public interface IndexMerger
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
           int allocationSize = indexed.size() * Integer.BYTES;
-          log.debug("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
+          log.trace("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
           mergeBufferTotalSize += allocationSize;
           final ByteBuffer conversionDirectBuffer = ByteBuffer.allocateDirect(allocationSize);
           conversions[i] = conversionDirectBuffer.asIntBuffer();
@@ -418,7 +419,7 @@ public interface IndexMerger
           pQueue.add(Pair.of(i, iter));
         }
       }
-      log.info("Allocated [%,d] bytes of dictionary merging direct buffers", mergeBufferTotalSize);
+      log.debug("Allocated [%,d] bytes of dictionary merging direct buffers", mergeBufferTotalSize);
     }
 
     @Override
@@ -481,11 +482,11 @@ public interface IndexMerger
     {
       long mergeBufferTotalSize = 0;
       for (Pair<ByteBuffer, Integer> bufferAllocation : directBufferAllocations) {
-        log.debug("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
+        log.trace("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
         mergeBufferTotalSize += bufferAllocation.rhs;
         ByteBufferUtils.free(bufferAllocation.lhs);
       }
-      log.info("Freed [%,d] bytes of dictionary merging direct buffers", mergeBufferTotalSize);
+      log.debug("Freed [%,d] bytes of dictionary merging direct buffers", mergeBufferTotalSize);
     }
   }
 }

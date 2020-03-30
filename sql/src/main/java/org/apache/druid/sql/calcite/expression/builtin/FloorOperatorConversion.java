@@ -19,20 +19,17 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+
+import javax.annotation.Nullable;
 
 public class FloorOperatorConversion implements SqlOperatorConversion
 {
@@ -43,6 +40,7 @@ public class FloorOperatorConversion implements SqlOperatorConversion
   }
 
   @Override
+  @Nullable
   public DruidExpression toDruidExpression(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
@@ -50,36 +48,18 @@ public class FloorOperatorConversion implements SqlOperatorConversion
   )
   {
     final RexCall call = (RexCall) rexNode;
-    final RexNode arg = call.getOperands().get(0);
-    final DruidExpression druidExpression = Expressions.toDruidExpression(
-        plannerContext,
-        rowSignature,
-        arg
-    );
-    if (druidExpression == null) {
-      return null;
-    } else if (call.getOperands().size() == 1) {
-      // FLOOR(expr)
-      return druidExpression.map(
-          simpleExtraction -> null, // BucketExtractionFn could do this, but it's lame since it returns strings.
-          expression -> StringUtils.format("floor(%s)", expression)
-      );
-    } else if (call.getOperands().size() == 2) {
-      // FLOOR(expr TO timeUnit)
-      final RexLiteral flag = (RexLiteral) call.getOperands().get(1);
-      final TimeUnitRange timeUnit = (TimeUnitRange) flag.getValue();
-      final PeriodGranularity granularity = TimeUnits.toQueryGranularity(timeUnit, plannerContext.getTimeZone());
-      if (granularity == null) {
-        return null;
-      }
 
-      return TimeFloorOperatorConversion.applyTimestampFloor(
-          druidExpression,
-          granularity,
-          plannerContext.getExprMacroTable()
+    if (call.getOperands().size() == 1) {
+      // FLOOR(expr) -- numeric FLOOR
+      return OperatorConversions.convertCall(plannerContext, rowSignature, call, "floor");
+    } else if (call.getOperands().size() == 2) {
+      // FLOOR(expr TO timeUnit) -- time FLOOR
+      return DruidExpression.fromFunctionCall(
+          "timestamp_floor",
+          TimeFloorOperatorConversion.toTimestampFloorOrCeilArgs(plannerContext, rowSignature, call.getOperands())
       );
     } else {
-      // WTF? FLOOR with 3 arguments?
+      // WTF? FLOOR with the wrong number of arguments?
       return null;
     }
   }

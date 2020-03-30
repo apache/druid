@@ -33,7 +33,7 @@ import java.util.Set;
 
 public class S3DataSegmentPusherConfigTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testSerialization() throws IOException
@@ -41,8 +41,8 @@ public class S3DataSegmentPusherConfigTest
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
                         + "\"disableAcl\":false,\"maxListingLength\":2000,\"useS3aSchema\":false}";
 
-    S3DataSegmentPusherConfig config = jsonMapper.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
-    Assert.assertEquals(jsonConfig, jsonMapper.writeValueAsString(config));
+    S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
+    Assert.assertEquals(jsonConfig, JSON_MAPPER.writeValueAsString(config));
   }
 
   @Test
@@ -50,10 +50,10 @@ public class S3DataSegmentPusherConfigTest
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\"}";
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                                + "\"disableAcl\":false,\"maxListingLength\":1000,\"useS3aSchema\":false}";
+                                + "\"disableAcl\":false,\"maxListingLength\":1024,\"useS3aSchema\":false}";
 
-    S3DataSegmentPusherConfig config = jsonMapper.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
-    Assert.assertEquals(expectedJsonConfig, jsonMapper.writeValueAsString(config));
+    S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
+    Assert.assertEquals(expectedJsonConfig, JSON_MAPPER.writeValueAsString(config));
   }
 
   @Test
@@ -63,10 +63,10 @@ public class S3DataSegmentPusherConfigTest
                         + "\"disableAcl\":false,\"maxListingLength\":-1}";
     Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
-    S3DataSegmentPusherConfig config = jsonMapper.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
+    S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Set<ConstraintViolation<S3DataSegmentPusherConfig>> violations = validator.validate(config);
     Assert.assertEquals(1, violations.size());
     ConstraintViolation violation = Iterators.getOnlyElement(violations.iterator());
-    Assert.assertEquals("must be greater than or equal to 0", violation.getMessage());
+    Assert.assertEquals("must be greater than or equal to 1", violation.getMessage());
   }
 }

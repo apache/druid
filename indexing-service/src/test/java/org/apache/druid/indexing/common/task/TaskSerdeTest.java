@@ -21,17 +21,25 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientKillQuery;
+import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.NoopInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -72,13 +80,17 @@ public class TaskSerdeTest
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    jsonMapper.registerSubtypes(
+        new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
+        new NamedType(IndexTuningConfig.class, "index")
+    );
   }
 
   @Test
   public void testIndexTaskIOConfigDefaults() throws Exception
   {
     final IndexTask.IndexIOConfig ioConfig = jsonMapper.readValue(
-        "{\"type\":\"index\"}",
+        "{\"type\":\"index\",\"inputSource\":{\"type\":\"noop\"},\"inputFormat\":{\"type\":\"noop\"}}",
         IndexTask.IndexIOConfig.class
     );
 
@@ -129,7 +141,7 @@ public class TaskSerdeTest
     Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
-        "{\"type\":\"index\", \"numShards\":10}",
+        "{\"type\":\"index\", \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
@@ -137,7 +149,7 @@ public class TaskSerdeTest
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
-        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":10}",
+        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
@@ -153,12 +165,13 @@ public class TaskSerdeTest
     Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
-        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1}",
+        "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+    Assert.assertNotNull(tuningConfig.getMaxRowsPerSegment());
+    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, tuningConfig.getMaxRowsPerSegment().intValue());
   }
 
   @Test
@@ -167,7 +180,7 @@ public class TaskSerdeTest
     thrown.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
 
     jsonMapper.readValue(
-        "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":10}",
+        "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
   }
@@ -181,29 +194,30 @@ public class TaskSerdeTest
         new IndexIngestionSpec(
             new DataSchema(
                 "foo",
-                null,
+                new TimestampSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
-                null,
-                jsonMapper
+                null
             ),
-            new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true),
             new IndexTuningConfig(
                 null,
-                10000,
+                null,
                 10,
                 null,
                 null,
                 9999,
                 null,
                 null,
+                new DynamicPartitionsSpec(10000, null),
                 indexSpec,
+                null,
                 3,
-                true,
                 false,
                 null,
                 null,
@@ -217,7 +231,8 @@ public class TaskSerdeTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     final String json = jsonMapper.writeValueAsString(task);
@@ -234,8 +249,8 @@ public class TaskSerdeTest
     IndexTask.IndexIOConfig taskIoConfig = task.getIngestionSchema().getIOConfig();
     IndexTask.IndexIOConfig task2IoConfig = task2.getIngestionSchema().getIOConfig();
 
-    Assert.assertTrue(taskIoConfig.getFirehoseFactory() instanceof LocalFirehoseFactory);
-    Assert.assertTrue(task2IoConfig.getFirehoseFactory() instanceof LocalFirehoseFactory);
+    Assert.assertTrue(taskIoConfig.getInputSource() instanceof LocalInputSource);
+    Assert.assertTrue(task2IoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
 
     IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
@@ -263,29 +278,30 @@ public class TaskSerdeTest
         new IndexIngestionSpec(
             new DataSchema(
                 "foo",
-                null,
+                new TimestampSpec(null, null, null),
+                DimensionsSpec.EMPTY,
                 new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
                 new UniformGranularitySpec(
                     Granularities.DAY,
                     null,
                     ImmutableList.of(Intervals.of("2010-01-01/P2D"))
                 ),
-                null,
-                jsonMapper
+                null
             ),
-            new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
+            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true),
             new IndexTuningConfig(
                 null,
-                10000,
+                null,
                 10,
                 null,
                 null,
                 null,
                 null,
                 null,
+                new DynamicPartitionsSpec(10000, null),
                 indexSpec,
+                null,
                 3,
-                true,
                 false,
                 null,
                 null,
@@ -299,7 +315,8 @@ public class TaskSerdeTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
@@ -320,14 +337,14 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertTrue(task.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
-    Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
+    Assert.assertTrue(task.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
+    Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
   }
 
   @Test
   public void testKillTaskSerde() throws Exception
   {
-    final KillTask task = new KillTask(
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
         null,
         "foo",
         Intervals.of("2010-01-01/P1D"),
@@ -337,7 +354,7 @@ public class TaskSerdeTest
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final KillTask task2 = (KillTask) jsonMapper.readValue(json, Task.class);
+    final KillUnusedSegmentsTask task2 = (KillUnusedSegmentsTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
@@ -347,9 +364,9 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
 
-    final KillTask task3 = (KillTask) jsonMapper.readValue(
+    final KillUnusedSegmentsTask task3 = (KillUnusedSegmentsTask) jsonMapper.readValue(
         jsonMapper.writeValueAsString(
-            new ClientKillQuery(
+            new ClientKillUnusedSegmentsTaskQuery(
                 "foo",
                 Intervals.of("2010-01-01/P1D")
             )
@@ -378,13 +395,12 @@ public class TaskSerdeTest
             ),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null),
-                (schema, config, metrics) -> null,
-                null
+                (schema, config, metrics) -> null
             ),
 
             new RealtimeTuningConfig(
                 1,
-                null,
+                10L,
                 new Period("PT10M"),
                 null,
                 null,
@@ -393,6 +409,7 @@ public class TaskSerdeTest
                 1,
                 NoneShardSpec.instance(),
                 indexSpec,
+                null,
                 null,
                 0,
                 0,
@@ -433,6 +450,10 @@ public class TaskSerdeTest
     Assert.assertEquals(
         task.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod(),
         task2.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod()
+    );
+    Assert.assertEquals(
+        task.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory(),
+        task2.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory()
     );
     Assert.assertEquals(
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),

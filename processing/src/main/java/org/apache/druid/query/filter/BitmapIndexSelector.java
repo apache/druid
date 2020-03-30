@@ -38,6 +38,7 @@ public interface BitmapIndexSelector
   boolean hasMultipleValues(String dimension);
   int getNumRows();
   BitmapFactory getBitmapFactory();
+  @Nullable
   BitmapIndex getBitmapIndex(String dimension);
   @Nullable
   ImmutableBitmap getBitmapIndex(String dimension, String value);

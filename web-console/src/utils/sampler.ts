@@ -18,45 +18,56 @@
 
 import axios from 'axios';
 
-import { getDruidErrorMessage } from './druid-query';
-import { filterMap, sortWithPrefixSuffix } from './general';
+import { getDruidErrorMessage, queryDruidRune } from './druid-query';
+import { alphanumericCompare, filterMap, sortWithPrefixSuffix } from './general';
 import {
   DimensionsSpec,
-  getEmptyTimestampSpec,
+  getDummyTimestampSpec,
+  getSpecType,
   IngestionSpec,
-  IoConfig, MetricSpec,
-  Parser,
-  ParseSpec,
-  Transform, TransformSpec
+  IngestionType,
+  InputFormat,
+  IoConfig,
+  isColumnTimestampSpec,
+  isDruidSource,
+  MetricSpec,
+  TimestampSpec,
+  Transform,
+  TransformSpec,
+  upgradeSpec,
 } from './ingestion-spec';
-import { deepGet, deepSet, shallowCopy, whitelistKeys } from './object-change';
-import { QueryState } from './query-state';
+import { deepGet, deepSet } from './object-change';
 
 const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
-  // skipCache: true,
-  numRows: 500
+  numRows: 500,
+  timeoutMs: 15000,
 };
 
-export interface SampleSpec {
-  type: 'index';
-  spec: IngestionSpec;
+export type SampleSpec = IngestionSpec & {
   samplerConfig: SamplerConfig;
-}
+};
 
 export interface SamplerConfig {
   numRows?: number;
-  cacheKey?: string;
-  skipCache?: boolean;
+  timeoutMs?: number;
 }
 
 export interface SampleResponse {
-  cacheKey?: string;
   data: SampleEntry[];
 }
 
+export type CacheRows = Record<string, any>[];
+
+export interface SampleResponseWithExtraInfo extends SampleResponse {
+  queryGranularity?: any;
+  rollup?: boolean;
+  columns?: Record<string, any>;
+  aggregators?: Record<string, any>;
+}
+
 export interface SampleEntry {
-  raw: string;
+  input: Record<string, any>;
   parsed?: Record<string, any>;
   unparseable?: boolean;
   error?: string;
@@ -67,9 +78,15 @@ export interface HeaderAndRows {
   rows: SampleEntry[];
 }
 
+export interface ExampleManifest {
+  name: string;
+  description: string;
+  spec: any;
+}
+
 function dedupe(xs: string[]): string[] {
   const seen: Record<string, boolean> = {};
-  return xs.filter((x) => {
+  return xs.filter(x => {
     if (seen[x]) {
       return false;
     } else {
@@ -79,10 +96,48 @@ function dedupe(xs: string[]): string[] {
   });
 }
 
-export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string): string[] {
-  let columns = sortWithPrefixSuffix(dedupe(
-    [].concat(...(filterMap(sampleResponse.data, s => s.parsed ? Object.keys(s.parsed) : null) as any))
-  ).sort(), ['__time'], []);
+export function getCacheRowsFromSampleResponse(
+  sampleResponse: SampleResponse,
+  useParsed = false,
+): CacheRows {
+  const key = useParsed ? 'parsed' : 'input';
+  return filterMap(sampleResponse.data, d => d[key]).slice(0, 20);
+}
+
+export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
+  if (!cacheRows) return sampleSpec;
+
+  // If this is already an inline spec there is nothing to do
+  if (deepGet(sampleSpec, 'spec.ioConfig.inputSource.type') === 'inline') return sampleSpec;
+
+  // Make the spec into an inline json spec
+  sampleSpec = deepSet(sampleSpec, 'type', 'index');
+  sampleSpec = deepSet(sampleSpec, 'spec.type', 'index');
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', 'index');
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputSource', {
+    type: 'inline',
+    data: cacheRows.map(r => JSON.stringify(r)).join('\n'),
+  });
+
+  const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
+  const inputFormat: InputFormat = { type: 'json' };
+  if (flattenSpec) inputFormat.flattenSpec = flattenSpec;
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat', inputFormat);
+
+  return sampleSpec;
+}
+
+export function headerFromSampleResponse(
+  sampleResponse: SampleResponse,
+  ignoreColumn?: string,
+  columnOrder?: string[],
+): string[] {
+  let columns = sortWithPrefixSuffix(
+    dedupe(sampleResponse.data.flatMap(s => (s.parsed ? Object.keys(s.parsed) : []))).sort(),
+    columnOrder || ['__time'],
+    [],
+    alphanumericCompare,
+  );
 
   if (ignoreColumn) {
     columns = columns.filter(c => c !== ignoreColumn);
@@ -91,14 +146,35 @@ export function headerFromSampleResponse(sampleResponse: SampleResponse, ignoreC
   return columns;
 }
 
-export function headerAndRowsFromSampleResponse(sampleResponse: SampleResponse, ignoreColumn?: string, parsedOnly = false): HeaderAndRows {
+export function headerAndRowsFromSampleResponse(
+  sampleResponse: SampleResponse,
+  ignoreColumn?: string,
+  columnOrder?: string[],
+  parsedOnly = false,
+): HeaderAndRows {
   return {
-    header: headerFromSampleResponse(sampleResponse, ignoreColumn),
-    rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data
+    header: headerFromSampleResponse(sampleResponse, ignoreColumn, columnOrder),
+    rows: parsedOnly ? sampleResponse.data.filter((d: any) => d.parsed) : sampleResponse.data,
   };
 }
 
-async function postToSampler(sampleSpec: SampleSpec, forStr: string): Promise<SampleResponse> {
+export async function getProxyOverlordModules(): Promise<string[]> {
+  let statusResp: any;
+  try {
+    statusResp = await axios.get(`/proxy/overlord/status`);
+  } catch (e) {
+    throw new Error(getDruidErrorMessage(e));
+  }
+
+  return statusResp.data.modules.map((m: any) => m.artifact);
+}
+
+export async function postToSampler(
+  sampleSpec: SampleSpec,
+  forStr: string,
+): Promise<SampleResponse> {
+  sampleSpec = fixSamplerTypes(sampleSpec);
+
   let sampleResp: any;
   try {
     sampleResp = await axios.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
@@ -109,234 +185,413 @@ async function postToSampler(sampleSpec: SampleSpec, forStr: string): Promise<Sa
   return sampleResp.data;
 }
 
-export async function sampleForConnect(spec: IngestionSpec): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
+export type SampleStrategy = 'start' | 'end';
 
-  const sampleSpec: SampleSpec = {
-    type: 'index',
-    spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index')
-      // dataSchema: {
-      //   dataSource: 'sample',
-      //   parser: {
-      //     type: 'string',
-      //     parseSpec: {
-      //       format: 'json',
-      //       dimensionsSpec: {},
-      //       timestampSpec: getEmptyTimestampSpec()
-      //     }
-      //   }
-      // }
-    } as any,
-    samplerConfig: BASE_SAMPLER_CONFIG
-  };
-
-  return postToSampler(sampleSpec, 'connect');
+function makeSamplerIoConfig(
+  ioConfig: IoConfig,
+  specType: IngestionType,
+  sampleStrategy: SampleStrategy,
+): IoConfig {
+  ioConfig = deepSet(ioConfig || {}, 'type', specType);
+  if (specType === 'kafka') {
+    ioConfig = deepSet(ioConfig, 'useEarliestOffset', sampleStrategy === 'start');
+  } else if (specType === 'kinesis') {
+    ioConfig = deepSet(ioConfig, 'useEarliestSequenceNumber', sampleStrategy === 'start');
+  }
+  return ioConfig;
 }
 
-export async function sampleForParser(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-  const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
+/**
+  This is a hack to deal with the fact that the sampler can not deal with the index_parallel type
+ */
+function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
+  let samplerType: string = getSpecType(sampleSpec);
+  if (samplerType === 'index_parallel') {
+    samplerType = 'index';
+  }
+
+  sampleSpec = deepSet(sampleSpec, 'type', samplerType);
+  sampleSpec = deepSet(sampleSpec, 'spec.type', samplerType);
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.type', samplerType);
+  sampleSpec = deepSet(sampleSpec, 'spec.tuningConfig.type', samplerType);
+  return sampleSpec;
+}
+
+function cleanupQueryGranularity(queryGranularity: any): any {
+  let queryGranularityType = deepGet(queryGranularity, 'type');
+  if (typeof queryGranularityType !== 'string') return queryGranularity;
+  queryGranularityType = queryGranularityType.toUpperCase();
+
+  const knownGranularity = [
+    'NONE',
+    'SECOND',
+    'MINUTE',
+    'HOUR',
+    'DAY',
+    'WEEK',
+    'MONTH',
+    'YEAR',
+  ].includes(queryGranularityType);
+
+  return knownGranularity ? queryGranularityType : queryGranularity;
+}
+
+export async function sampleForConnect(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+): Promise<SampleResponseWithExtraInfo> {
+  const samplerType = getSpecType(spec);
+  let ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'spec.ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
+
+  const reingestMode = isDruidSource(spec);
+  if (!reingestMode) {
+    ioConfig = deepSet(ioConfig, 'inputFormat', {
+      type: 'regex',
+      pattern: '(.*)',
+      columns: ['raw'],
+    });
+  }
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      type: samplerType,
+      ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        parser: {
-          type: parser.type,
-          parseSpec: (
-            parser.parseSpec ?
-              Object.assign({}, parser.parseSpec, {
-                dimensionsSpec: {},
-                timestampSpec: getEmptyTimestampSpec()
-              }) :
-              undefined
-          ) as any
-        }
-      }
+        timestampSpec: getDummyTimestampSpec(),
+        dimensionsSpec: {},
+      },
+    } as any,
+    samplerConfig: BASE_SAMPLER_CONFIG,
+  };
+
+  const samplerResponse: SampleResponseWithExtraInfo = await postToSampler(sampleSpec, 'connect');
+
+  if (!samplerResponse.data.length) return samplerResponse;
+
+  if (reingestMode) {
+    const segmentMetadataResponse = await queryDruidRune({
+      queryType: 'segmentMetadata',
+      dataSource: deepGet(ioConfig, 'inputSource.dataSource'),
+      intervals: [deepGet(ioConfig, 'inputSource.interval')],
+      merge: true,
+      lenientAggregatorMerge: true,
+      analysisTypes: ['timestampSpec', 'queryGranularity', 'aggregators', 'rollup'],
+    });
+
+    if (Array.isArray(segmentMetadataResponse) && segmentMetadataResponse.length === 1) {
+      const segmentMetadataResponse0 = segmentMetadataResponse[0];
+      samplerResponse.queryGranularity = cleanupQueryGranularity(
+        segmentMetadataResponse0.queryGranularity,
+      );
+      samplerResponse.rollup = segmentMetadataResponse0.rollup;
+      samplerResponse.columns = segmentMetadataResponse0.columns;
+      samplerResponse.aggregators = segmentMetadataResponse0.aggregators;
+    } else {
+      throw new Error(`unexpected response from segmentMetadata query`);
+    }
+  }
+
+  return samplerResponse;
+}
+
+export async function sampleForParser(
+  spec: IngestionSpec,
+  sampleStrategy: SampleStrategy,
+): Promise<SampleResponse> {
+  const samplerType = getSpecType(spec);
+  const ioConfig: IoConfig = makeSamplerIoConfig(
+    deepGet(spec, 'spec.ioConfig'),
+    samplerType,
+    sampleStrategy,
+  );
+
+  const sampleSpec: SampleSpec = {
+    type: samplerType,
+    spec: {
+      ioConfig,
+      dataSchema: {
+        dataSource: 'sample',
+        timestampSpec: getDummyTimestampSpec(),
+        dimensionsSpec: {},
+      },
     },
-    samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+    samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
   return postToSampler(sampleSpec, 'parser');
 }
 
-export async function sampleForTimestamp(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-  const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
-  const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
+export async function sampleForTimestamp(
+  spec: IngestionSpec,
+  cacheRows: CacheRows,
+): Promise<SampleResponse> {
+  const samplerType = getSpecType(spec);
+  const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
+  const columnTimestampSpec = isColumnTimestampSpec(timestampSpec);
 
-  const sampleSpec: SampleSpec = {
-    type: 'index',
+  // First do a query with a static timestamp spec
+  const sampleSpecColumns: SampleSpec = {
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      ioConfig: deepGet(spec, 'spec.ioConfig'),
       dataSchema: {
         dataSource: 'sample',
-        parser: {
-          type: parser.type,
-          parseSpec: Object.assign({}, parseSpec, {
-            dimensionsSpec: {}
-          })
-        }
-      }
+        dimensionsSpec: {},
+        timestampSpec: columnTimestampSpec ? getDummyTimestampSpec() : timestampSpec,
+      },
     },
-    samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+    samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  return postToSampler(sampleSpec, 'timestamp');
+  const sampleColumns = await postToSampler(
+    applyCache(sampleSpecColumns, cacheRows),
+    'timestamp-columns',
+  );
+
+  // If we are not parsing a column then there is nothing left to do
+  if (!columnTimestampSpec) return sampleColumns;
+
+  // If we are trying to parts a column then get a bit fancy:
+  // Query the same sample again (same cache key)
+  const sampleSpec: SampleSpec = {
+    type: samplerType,
+    spec: {
+      ioConfig: deepGet(spec, 'spec.ioConfig'),
+      dataSchema: {
+        dataSource: 'sample',
+        dimensionsSpec: {},
+        timestampSpec,
+      },
+    },
+    samplerConfig: BASE_SAMPLER_CONFIG,
+  };
+
+  const sampleTime = await postToSampler(applyCache(sampleSpec, cacheRows), 'timestamp-time');
+
+  if (sampleTime.data.length !== sampleColumns.data.length) {
+    // If the two responses did not come from the same cache (or for some reason have different lengths) then
+    // just return the one with the parsed time column.
+    return sampleTime;
+  }
+
+  const sampleTimeData = sampleTime.data;
+  return Object.assign({}, sampleColumns, {
+    data: sampleColumns.data.map((d, i) => {
+      // Merge the column sample with the time column sample
+      if (!d.parsed) return d;
+      const timeDatumParsed = sampleTimeData[i].parsed;
+      d.parsed.__time = timeDatumParsed ? timeDatumParsed.__time : null;
+      return d;
+    }),
+  });
 }
 
-export async function sampleForTransform(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-  const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
-  const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
-  const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
+export async function sampleForTransform(
+  spec: IngestionSpec,
+  cacheRows: CacheRows,
+): Promise<SampleResponse> {
+  const samplerType = getSpecType(spec);
+  const inputFormatColumns: string[] = deepGet(spec, 'spec.ioConfig.inputFormat.columns') || [];
+  const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
+  const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
 
   // Extra step to simulate auto detecting dimension with transforms
   const specialDimensionSpec: DimensionsSpec = {};
   if (transforms && transforms.length) {
-
     const sampleSpecHack: SampleSpec = {
-      type: 'index',
+      type: samplerType,
       spec: {
-        ioConfig: deepSet(ioConfig, 'type', 'index'),
+        ioConfig: deepGet(spec, 'spec.ioConfig'),
         dataSchema: {
           dataSource: 'sample',
-          parser: {
-            type: parser.type,
-            parseSpec: Object.assign({}, parseSpec, {
-              dimensionsSpec: {}
-            })
-          }
-        }
+          timestampSpec,
+          dimensionsSpec: {},
+        },
       },
-      samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-        cacheKey
-      })
+      samplerConfig: BASE_SAMPLER_CONFIG,
     };
 
-    const sampleResponseHack = await postToSampler(sampleSpecHack, 'transform-pre');
+    const sampleResponseHack = await postToSampler(
+      applyCache(sampleSpecHack, cacheRows),
+      'transform-pre',
+    );
 
-    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name)));
+    specialDimensionSpec.dimensions = dedupe(
+      headerFromSampleResponse(
+        sampleResponseHack,
+        '__time',
+        ['__time'].concat(inputFormatColumns),
+      ).concat(transforms.map(t => t.name)),
+    );
   }
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      ioConfig: deepGet(spec, 'spec.ioConfig'),
       dataSchema: {
         dataSource: 'sample',
-        parser: {
-          type: parser.type,
-          parseSpec: Object.assign({}, parseSpec, {
-            dimensionsSpec: specialDimensionSpec // Hack Hack Hack
-          })
-        },
-        transformSpec: {
-          transforms
-        }
-      }
-    },
-    samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
-  };
-
-  return postToSampler(sampleSpec, 'transform');
-}
-
-export async function sampleForFilter(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-  const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
-  const parseSpec: ParseSpec = deepGet(spec, 'dataSchema.parser.parseSpec') || {};
-  const transforms: Transform[] = deepGet(spec, 'dataSchema.transformSpec.transforms') || [];
-  const filter: any = deepGet(spec, 'dataSchema.transformSpec.filter');
-
-  // Extra step to simulate auto detecting dimension with transforms
-  const specialDimensionSpec: DimensionsSpec = {};
-  if (transforms && transforms.length) {
-
-    const sampleSpecHack: SampleSpec = {
-      type: 'index',
-      spec: {
-        ioConfig: deepSet(ioConfig, 'type', 'index'),
-        dataSchema: {
-          dataSource: 'sample',
-          parser: {
-            type: parser.type,
-            parseSpec: Object.assign({}, parseSpec, {
-              dimensionsSpec: {}
-            })
-          }
-        }
-      },
-      samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-        cacheKey
-      })
-    };
-
-    const sampleResponseHack = await postToSampler(sampleSpecHack, 'filter-pre');
-
-    specialDimensionSpec.dimensions = dedupe(headerFromSampleResponse(sampleResponseHack, '__time').concat(transforms.map(t => t.name)));
-  }
-
-  const sampleSpec: SampleSpec = {
-    type: 'index',
-    spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
-      dataSchema: {
-        dataSource: 'sample',
-        parser: {
-          type: parser.type,
-          parseSpec: Object.assign({}, parseSpec, {
-            dimensionsSpec: specialDimensionSpec // Hack Hack Hack
-          })
-        },
+        timestampSpec,
+        dimensionsSpec: specialDimensionSpec, // Hack Hack Hack
         transformSpec: {
           transforms,
-          filter
-        }
-      }
+        },
+      },
     },
-    samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+    samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  return postToSampler(sampleSpec, 'filter');
+  return postToSampler(applyCache(sampleSpec, cacheRows), 'transform');
 }
 
-export async function sampleForSchema(spec: IngestionSpec, cacheKey: string | undefined): Promise<SampleResponse> {
-  const ioConfig: IoConfig = deepGet(spec, 'ioConfig') || {};
-  const parser: Parser = deepGet(spec, 'dataSchema.parser') || {};
-  const transformSpec: TransformSpec = deepGet(spec, 'dataSchema.transformSpec') || ({} as TransformSpec);
-  const metricsSpec: MetricSpec[] = deepGet(spec, 'dataSchema.metricsSpec') || [];
-  const queryGranularity: string = deepGet(spec, 'dataSchema.granularitySpec.queryGranularity') || 'NONE';
+export async function sampleForFilter(
+  spec: IngestionSpec,
+  cacheRows: CacheRows,
+): Promise<SampleResponse> {
+  const samplerType = getSpecType(spec);
+  const inputFormatColumns: string[] = deepGet(spec, 'spec.ioConfig.inputFormat.columns') || [];
+  const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
+  const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
+  const filter: any = deepGet(spec, 'spec.dataSchema.transformSpec.filter');
+
+  // Extra step to simulate auto detecting dimension with transforms
+  const specialDimensionSpec: DimensionsSpec = {};
+  if (transforms && transforms.length) {
+    const sampleSpecHack: SampleSpec = {
+      type: samplerType,
+      spec: {
+        ioConfig: deepGet(spec, 'spec.ioConfig'),
+        dataSchema: {
+          dataSource: 'sample',
+          timestampSpec,
+          dimensionsSpec: {},
+        },
+      },
+      samplerConfig: BASE_SAMPLER_CONFIG,
+    };
+
+    const sampleResponseHack = await postToSampler(
+      applyCache(sampleSpecHack, cacheRows),
+      'filter-pre',
+    );
+
+    specialDimensionSpec.dimensions = dedupe(
+      headerFromSampleResponse(
+        sampleResponseHack,
+        '__time',
+        ['__time'].concat(inputFormatColumns),
+      ).concat(transforms.map(t => t.name)),
+    );
+  }
 
   const sampleSpec: SampleSpec = {
-    type: 'index',
+    type: samplerType,
     spec: {
-      ioConfig: deepSet(ioConfig, 'type', 'index'),
+      ioConfig: deepGet(spec, 'spec.ioConfig'),
       dataSchema: {
         dataSource: 'sample',
-        parser: whitelistKeys(parser, ['type', 'parseSpec']) as Parser,
-        transformSpec,
-        metricsSpec,
-        granularitySpec: {
-          queryGranularity
-        }
-      }
+        timestampSpec,
+        dimensionsSpec: specialDimensionSpec, // Hack Hack Hack
+        transformSpec: {
+          transforms,
+          filter,
+        },
+      },
     },
-    samplerConfig: Object.assign({}, BASE_SAMPLER_CONFIG, {
-      cacheKey
-    })
+    samplerConfig: BASE_SAMPLER_CONFIG,
   };
 
-  return postToSampler(sampleSpec, 'schema');
+  return postToSampler(applyCache(sampleSpec, cacheRows), 'filter');
+}
+
+export async function sampleForSchema(
+  spec: IngestionSpec,
+  cacheRows: CacheRows,
+): Promise<SampleResponse> {
+  const samplerType = getSpecType(spec);
+  const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
+  const transformSpec: TransformSpec =
+    deepGet(spec, 'spec.dataSchema.transformSpec') || ({} as TransformSpec);
+  const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec');
+  const metricsSpec: MetricSpec[] = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
+  const queryGranularity: string =
+    deepGet(spec, 'spec.dataSchema.granularitySpec.queryGranularity') || 'NONE';
+
+  const sampleSpec: SampleSpec = {
+    type: samplerType,
+    spec: {
+      ioConfig: deepGet(spec, 'spec.ioConfig'),
+      dataSchema: {
+        dataSource: 'sample',
+        timestampSpec,
+        transformSpec,
+        granularitySpec: {
+          queryGranularity,
+        },
+        dimensionsSpec,
+        metricsSpec,
+      },
+    },
+    samplerConfig: BASE_SAMPLER_CONFIG,
+  };
+
+  return postToSampler(applyCache(sampleSpec, cacheRows), 'schema');
+}
+
+export async function sampleForExampleManifests(
+  exampleManifestUrl: string,
+): Promise<ExampleManifest[]> {
+  const exampleSpec: SampleSpec = {
+    type: 'index_parallel',
+    spec: {
+      ioConfig: {
+        type: 'index_parallel',
+        inputSource: { type: 'http', uris: [exampleManifestUrl] },
+        inputFormat: { type: 'tsv', findColumnsFromHeader: true },
+      },
+      dataSchema: {
+        dataSource: 'sample',
+        timestampSpec: {
+          column: 'timestamp',
+          missingValue: '2010-01-01T00:00:00Z',
+        },
+        dimensionsSpec: {},
+      },
+    },
+    samplerConfig: { numRows: 50, timeoutMs: 10000 },
+  };
+
+  const exampleData = await postToSampler(exampleSpec, 'example-manifest');
+
+  return filterMap(exampleData.data, datum => {
+    const parsed = datum.parsed;
+    if (!parsed) return;
+    let { name, description, spec } = parsed;
+    try {
+      spec = JSON.parse(spec);
+    } catch {
+      return;
+    }
+
+    if (
+      typeof name === 'string' &&
+      typeof description === 'string' &&
+      spec &&
+      typeof spec === 'object'
+    ) {
+      return {
+        name: parsed.name,
+        description: parsed.description,
+        spec: upgradeSpec(spec),
+      };
+    } else {
+      return;
+    }
+  });
 }

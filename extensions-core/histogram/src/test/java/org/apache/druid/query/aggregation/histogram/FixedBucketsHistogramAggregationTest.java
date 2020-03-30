@@ -25,8 +25,11 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -41,9 +44,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
-public class FixedBucketsHistogramAggregationTest
+public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlingTest
 {
   private AggregationTestHelper helper;
 
@@ -146,7 +150,7 @@ public class FixedBucketsHistogramAggregationTest
                    + "\"intervals\": [ \"1970/2050\" ]"
                    + "}";
 
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),
         parseSpec,
         metricSpec,
@@ -156,6 +160,6 @@ public class FixedBucketsHistogramAggregationTest
         query
     );
 
-    return (MapBasedRow) seq.toList().get(0);
+    return seq.toList().get(0).toMapBasedRow((GroupByQuery) helper.readQuery(query));
   }
 }

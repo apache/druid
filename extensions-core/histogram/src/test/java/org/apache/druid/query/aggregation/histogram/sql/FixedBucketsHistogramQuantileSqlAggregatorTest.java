@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
@@ -53,6 +53,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
@@ -62,8 +63,6 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -97,10 +96,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
@@ -140,7 +137,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                                              20,
                                                              0,
                                                              10,
-                                                             FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                                             FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -155,28 +153,29 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                    .interval(index.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new QuantileSqlAggregator(), new FixedBucketsHistogramQuantileSqlAggregator()),
         ImmutableSet.of()
     );
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
         new PlannerFactory(
-            druidSchema,
-            systemSchema,
+            rootSchema,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            CalciteTests.DRUID_SCHEMA_NAME
         )
     );
   }
@@ -205,7 +204,12 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0299999713897705,
@@ -239,25 +243,55 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                            )
                            .aggregators(ImmutableList.of(
                                new FixedBucketsHistogramAggregatorFactory(
-                                   "a0:agg", "m1", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   "a0:agg",
+                                   "m1",
+                                   20,
+                                   0.0d,
+                                   10.0d,
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FixedBucketsHistogramAggregatorFactory(
-                                   "a4:agg", "v0", 40, 0.0d, 20.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   "a4:agg",
+                                   "v0",
+                                   40,
+                                   0.0d,
+                                   20.0d,
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FilteredAggregatorFactory(
                                    new FixedBucketsHistogramAggregatorFactory(
-                                       "a5:agg", "m1", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       "a5:agg",
+                                       "m1",
+                                       20,
+                                       0.0d,
+                                       10.0d,
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new SelectorDimFilter("dim1", "abc", null)
                                ),
                                new FilteredAggregatorFactory(
                                    new FixedBucketsHistogramAggregatorFactory(
-                                       "a6:agg", "m1", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       "a6:agg",
+                                       "m1",
+                                       20,
+                                       0.0d,
+                                       10.0d,
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                                ),
                                new FixedBucketsHistogramAggregatorFactory(
-                                   "a8:agg", "cnt", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   "a8:agg",
+                                   "cnt",
+                                   20,
+                                   0.0d,
+                                   10.0d,
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                )
                            ))
                            .postAggregators(
@@ -296,7 +330,12 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = lifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0299999713897705,
@@ -325,7 +364,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                    20,
                                    0.0,
                                    10.0,
-                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FixedBucketsHistogramAggregatorFactory(
                                    "a2:agg",
@@ -333,7 +373,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                    30,
                                    0.0,
                                    10.0,
-                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                   false
                                ),
                                new FilteredAggregatorFactory(
                                    new FixedBucketsHistogramAggregatorFactory(
@@ -342,7 +383,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                        20,
                                        0.0,
                                        10.0,
-                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new SelectorDimFilter("dim1", "abc", null)
                                ),
@@ -353,7 +395,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                        20,
                                        0.0,
                                        10.0,
-                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                       FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                       false
                                    ),
                                    new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                                )
@@ -382,7 +425,12 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                        + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
       expectedResults = ImmutableList.of(new Object[]{7.0, 11.940000534057617});
@@ -427,7 +475,8 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                          100,
                                          0,
                                          100.0d,
-                                         FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                         FixedBucketsHistogram.OutlierHandlingMode.IGNORE,
+                                         false
                                      )
                                  )
                                  .setPostAggregatorSpecs(

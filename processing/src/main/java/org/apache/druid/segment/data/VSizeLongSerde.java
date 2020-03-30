@@ -21,6 +21,8 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.IAE;
 
+import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -35,8 +37,8 @@ import java.nio.ByteOrder;
 public class VSizeLongSerde
 {
 
-  public static final int SUPPORTED_SIZES[] = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
-  public static final byte EMPTY[] = {0, 0, 0, 0};
+  public static final int[] SUPPORTED_SIZES = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
+  public static final byte[] EMPTY = {0, 0, 0, 0};
 
   public static int getBitsForMax(long value)
   {
@@ -189,6 +191,7 @@ public class VSizeLongSerde
 
   private static final class Size1Ser implements LongSerializer
   {
+    @Nullable
     OutputStream output = null;
     ByteBuffer buffer;
     byte curByte = 0;
@@ -242,6 +245,7 @@ public class VSizeLongSerde
 
   private static final class Size2Ser implements LongSerializer
   {
+    @Nullable
     OutputStream output = null;
     ByteBuffer buffer;
     byte curByte = 0;
@@ -295,8 +299,8 @@ public class VSizeLongSerde
 
   private static final class Mult4Ser implements LongSerializer
   {
-
-    OutputStream output = null;
+    @Nullable
+    OutputStream output;
     ByteBuffer buffer;
     int numBytes;
     byte curByte = 0;
@@ -361,6 +365,7 @@ public class VSizeLongSerde
 
   private static final class Mult8Ser implements LongSerializer
   {
+    @Nullable
     OutputStream output;
     ByteBuffer buffer;
     int numBytes;

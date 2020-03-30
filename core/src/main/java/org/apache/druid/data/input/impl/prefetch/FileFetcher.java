@@ -20,17 +20,14 @@
 package org.apache.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Predicate;
-import org.apache.commons.io.IOUtils;
-import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.data.input.impl.RetryingInputStream;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -39,29 +36,20 @@ import java.util.concurrent.ExecutorService;
  * See the javadoc of {@link PrefetchableTextFilesFirehoseFactory} for more details.
  */
 public class FileFetcher<T> extends Fetcher<T>
-
 {
   private static final int BUFFER_SIZE = 1024 * 4;
   private final ObjectOpenFunction<T> openObjectFunction;
   private final Predicate<Throwable> retryCondition;
   private final byte[] buffer;
-  // maximum retry for fetching an object from the remote site
-  private final int maxFetchRetry;
-
-  public int getMaxFetchRetry()
-  {
-    return maxFetchRetry;
-  }
 
   FileFetcher(
       CacheManager<T> cacheManager,
       List<T> objects,
       ExecutorService fetchExecutor,
       @Nullable File temporaryDirectory,
-      PrefetchConfig prefetchConfig,
+      FetchConfig fetchConfig,
       ObjectOpenFunction<T> openObjectFunction,
-      Predicate<Throwable> retryCondition,
-      Integer maxFetchRetries
+      Predicate<Throwable> retryCondition
   )
   {
 
@@ -70,17 +58,16 @@ public class FileFetcher<T> extends Fetcher<T>
         objects,
         fetchExecutor,
         temporaryDirectory,
-        prefetchConfig
+        fetchConfig
     );
 
     this.openObjectFunction = openObjectFunction;
     this.retryCondition = retryCondition;
     this.buffer = new byte[BUFFER_SIZE];
-    this.maxFetchRetry = maxFetchRetries;
   }
 
   /**
-   * Downloads an object. It retries downloading {@link #maxFetchRetry}
+   * Downloads an object. It retries downloading {@link FetchConfig#maxFetchRetry}
    * times and throws an exception.
    *
    * @param object  an object to be downloaded
@@ -91,35 +78,27 @@ public class FileFetcher<T> extends Fetcher<T>
   @Override
   protected long download(T object, File outFile) throws IOException
   {
-    try {
-      return RetryUtils.retry(
-          () -> {
-            try (final InputStream is = openObjectFunction.open(object);
-                 final OutputStream os = new FileOutputStream(outFile)) {
-              return IOUtils.copyLarge(is, os, buffer);
-            }
-          },
-          retryCondition,
-          outFile::delete,
-          maxFetchRetry + 1,
-          StringUtils.format("Failed to download object[%s]", object)
-      );
-    }
-    catch (Exception e) {
-      throw new IOException(e);
-    }
+    return FileUtils.copyLarge(
+        object,
+        openObjectFunction,
+        outFile,
+        buffer,
+        retryCondition,
+        getFetchConfig().getMaxFetchRetry() + 1,
+        StringUtils.format("Failed to download object[%s]", object)
+    );
   }
 
   /**
-   * Generates an instance of {@link OpenedObject} for which the underlying stream may be re-opened and retried
+   * Generates an instance of {@link OpenObject} for which the underlying stream may be re-opened and retried
    * based on the exception and retry condition.
    */
   @Override
-  protected OpenedObject<T> generateOpenObject(T object) throws IOException
+  protected OpenObject<T> generateOpenObject(T object) throws IOException
   {
-    return new OpenedObject<>(
+    return new OpenObject<>(
         object,
-        new RetryingInputStream<>(object, openObjectFunction, retryCondition, getMaxFetchRetry()),
+        new RetryingInputStream<>(object, openObjectFunction, retryCondition, getFetchConfig().getMaxFetchRetry()),
         getNoopCloser()
     );
   }

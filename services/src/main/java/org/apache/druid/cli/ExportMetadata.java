@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -44,6 +43,7 @@ import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 
 import javax.annotation.Nullable;
 import javax.xml.bind.DatatypeConverter;
@@ -53,6 +53,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -126,9 +127,9 @@ public class ExportMetadata extends GuiceRunnable
 
   private static final Logger log = new Logger(ExportMetadata.class);
 
-  private static final CSVParser parser = new CSVParser();
+  private static final CSVParser PARSER = new CSVParser();
 
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   public ExportMetadata()
   {
@@ -142,7 +143,7 @@ public class ExportMetadata extends GuiceRunnable
         // This area is copied from CreateTables.
         // It's unknown why those modules are required in CreateTables, and if all of those modules are required or not.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123602930
+        // See https://github.com/apache/druid/pull/4429#discussion_r123602930
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
@@ -189,9 +190,9 @@ public class ExportMetadata extends GuiceRunnable
   public void run()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(ObjectMapper.class, jsonMapper);
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    jsonMapper.setInjectableValues(injectableValues);
+    injectableValues.addValue(ObjectMapper.class, JSON_MAPPER);
+    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
+    JSON_MAPPER.setInjectableValues(injectableValues);
 
     if (hadoopStorageDirectory != null && newLocalPath != null) {
       throw new IllegalArgumentException(
@@ -263,13 +264,13 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, datasourceTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //dataSource
@@ -294,13 +295,13 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, rulesTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //id
@@ -325,13 +326,13 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, configTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //name
@@ -354,13 +355,13 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, supervisorTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
 
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //id
@@ -386,13 +387,13 @@ public class ExportMetadata extends GuiceRunnable
     String outFile = StringUtils.format("%s/%s.csv", outputPath, segmentsTableName);
     try (
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), Charsets.UTF_8)
+            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
         );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), Charsets.UTF_8);
+        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
       String line;
       while ((line = reader.readLine()) != null) {
-        String[] parsed = parser.parseLine(line);
+        String[] parsed = PARSER.parseLine(line);
         StringBuilder newLineBuilder = new StringBuilder();
         newLineBuilder.append(parsed[0]).append(","); //id
         newLineBuilder.append(parsed[1]).append(","); //dataSource
@@ -425,7 +426,7 @@ public class ExportMetadata extends GuiceRunnable
       String payload
   ) throws IOException
   {
-    DataSegment segment = jsonMapper.readValue(DatatypeConverter.parseHexBinary(payload), DataSegment.class);
+    DataSegment segment = JSON_MAPPER.readValue(DatatypeConverter.parseHexBinary(payload), DataSegment.class);
     String uniqueId = getUniqueIDFromLocalLoadSpec(segment.getLoadSpec());
     String segmentPath = DataSegmentPusher.getDefaultStorageDirWithExistingUniquePath(segment, uniqueId);
 
@@ -452,7 +453,7 @@ public class ExportMetadata extends GuiceRunnable
       );
     }
 
-    String serialized = jsonMapper.writeValueAsString(segment);
+    String serialized = JSON_MAPPER.writeValueAsString(segment);
     if (useHexBlobs) {
       return DatatypeConverter.printHexBinary(StringUtils.toUtf8(serialized));
     } else {

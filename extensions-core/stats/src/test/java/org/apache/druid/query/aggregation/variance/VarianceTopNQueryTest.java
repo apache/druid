@@ -37,6 +37,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerTest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -47,7 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class VarianceTopNQueryTest
+public class VarianceTopNQueryTest extends InitializedNullHandlingTest
 {
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -68,16 +69,16 @@ public class VarianceTopNQueryTest
   public void testFullOnTopNOverUniques()
   {
     TopNQuery query = new TopNQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(QueryRunnerTestHelper.uniqueMetric)
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .granularity(QueryRunnerTestHelper.ALL_GRAN)
+        .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+        .metric(QueryRunnerTestHelper.UNIQUE_METRIC)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
-                    VarianceTestHelper.commonPlusVarAggregators,
+                    VarianceTestHelper.COMMON_PLUS_VAR_AGGREGATORS,
                     Lists.newArrayList(
                         new DoubleMaxAggregatorFactory("maxIndex", "index"),
                         new DoubleMinAggregatorFactory("minIndex", "index")
@@ -85,11 +86,11 @@ public class VarianceTopNQueryTest
                 )
             )
         )
-        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
@@ -135,15 +136,9 @@ public class VarianceTopNQueryTest
       TopNQuery query
   )
   {
-    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
-    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(
-        QueryPlus.wrap(query),
-        ImmutableMap.of()
-    );
+    final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(QueryPlus.wrap(query));
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;
   }

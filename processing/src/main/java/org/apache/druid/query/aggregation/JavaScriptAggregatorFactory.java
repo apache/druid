@@ -35,6 +35,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
@@ -65,8 +66,8 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * in {@link #compileScript(String, String, String)} without worrying about final modifiers
    * on the fields of the created object
    *
-   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
-   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
+   * @see <a href="https://github.com/apache/druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/druid/pull/6662#discussion_r237013157</a>
    */
   private volatile JavaScriptAggregator.@MonotonicNonNull ScriptAggregator compiledScript;
 
@@ -202,8 +203,9 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
     return object;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return object;
   }

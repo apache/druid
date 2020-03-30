@@ -24,17 +24,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,11 +64,12 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject ObjectMapper configMapper
+      @JacksonInject ObjectMapper configMapper,
+      @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
     super(
-        id == null ? getFormattedId(dataSchema.getDataSource(), TYPE) : id,
+        getOrMakeId(id, dataSchema.getDataSource(), TYPE),
         taskResource,
         dataSchema,
         tuningConfig,
@@ -77,11 +78,16 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         chatHandlerProvider,
         authorizerMapper,
         rowIngestionMetersFactory,
-        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE),
+        appenderatorsManager
     );
     this.configMapper = configMapper;
     this.ioConfig = ioConfig;
 
+    Preconditions.checkArgument(
+        ioConfig.getStartSequenceNumbers().getExclusivePartitions().isEmpty(),
+        "All startSequenceNumbers must be inclusive"
+    );
   }
 
   long getPollRetryMs()
@@ -129,26 +135,17 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   @Override
   protected SeekableStreamIndexTaskRunner<Integer, Long> createTaskRunner()
   {
-    if (context != null && context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED) != null
-        && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
-      return new IncrementalPublishingKafkaIndexTaskRunner(
-          this,
-          parser,
-          authorizerMapper,
-          chatHandlerProvider,
-          savedParseExceptions,
-          rowIngestionMetersFactory
-      );
-    } else {
-      return new LegacyKafkaIndexTaskRunner(
-          this,
-          parser,
-          authorizerMapper,
-          chatHandlerProvider,
-          savedParseExceptions,
-          rowIngestionMetersFactory
-      );
-    }
+    //noinspection unchecked
+    return new IncrementalPublishingKafkaIndexTaskRunner(
+        this,
+        dataSchema.getParser(),
+        authorizerMapper,
+        chatHandlerProvider,
+        savedParseExceptions,
+        rowIngestionMetersFactory,
+        appenderatorsManager,
+        lockGranularityToUse
+    );
   }
 
   @Override
@@ -161,8 +158,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       final Map<String, Object> props = new HashMap<>(((KafkaIndexTaskIOConfig) super.ioConfig).getConsumerProperties());
 
       props.put("auto.offset.reset", "none");
-      props.put("key.deserializer", ByteArrayDeserializer.class.getName());
-      props.put("value.deserializer", ByteArrayDeserializer.class.getName());
 
       return new KafkaRecordSupplier(props, configMapper);
     }

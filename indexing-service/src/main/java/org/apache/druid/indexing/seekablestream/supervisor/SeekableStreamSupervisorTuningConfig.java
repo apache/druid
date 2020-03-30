@@ -26,11 +26,11 @@ import org.joda.time.Period;
 
 public interface SeekableStreamSupervisorTuningConfig
 {
-
+  String DEFAULT_OFFSET_FETCH_PERIOD = "PT30S";
   int DEFAULT_CHAT_RETRIES = 8;
   String DEFAULT_HTTP_TIMEOUT = "PT10S";
   String DEFAULT_SHUTDOWN_TIMEOUT = "PT80S";
-
+  String DEFAULT_REPARTITION_TRANSITION_DURATION = "PT2M";
 
   static Duration defaultDuration(final Period period, final String theDefault)
   {
@@ -51,6 +51,12 @@ public interface SeekableStreamSupervisorTuningConfig
 
   @JsonProperty
   Duration getShutdownTimeout();
+
+  @JsonProperty
+  Duration getRepartitionTransitionDuration();
+
+  @JsonProperty
+  Duration getOffsetFetchPeriod();
 
   SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig();
 }

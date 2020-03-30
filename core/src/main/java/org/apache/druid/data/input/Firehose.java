@@ -38,10 +38,9 @@ import java.io.IOException;
  * any) run out.
  *
  * Concurrency:
- * The three methods {@link #hasMore()}, {@link #nextRow()} and {@link #commit()} are all called from the same thread.
- * {@link #commit()}, however, returns a callback which will be called on another thread. {@link #close()} might be
- * called concurrently from a thread different from the thread calling {@link #hasMore()}, {@link #nextRow()} and {@link
- * #commit()}.
+ * The two methods {@link #hasMore()} and {@link #nextRow()} are all called from the same thread.
+ * {@link #close()} might be called concurrently from a thread different from the thread calling {@link #hasMore()}
+ * and {@link #nextRow()}.
  * </p>
  */
 @ExtensionPoint
@@ -56,7 +55,7 @@ public interface Firehose extends Closeable
    *
    * @return true if and when there is another row available, false if the stream has dried up
    */
-  boolean hasMore();
+  boolean hasMore() throws IOException;
 
   /**
    * The next row available.  Should only be called if hasMore returns true.
@@ -65,57 +64,32 @@ public interface Firehose extends Closeable
    * @return The next row
    */
   @Nullable
-  InputRow nextRow();
+  InputRow nextRow() throws IOException;
 
   /**
-   * Returns an InputRowPlusRaw object containing the InputRow plus the raw, unparsed data corresponding to the next row
-   * available. Used in the sampler to provide the caller with information to assist in configuring a parse spec. If a
-   * ParseException is thrown by the parser, it should be caught and returned in the InputRowPlusRaw so we will be able
-   * to provide information on the raw row which failed to be parsed. Should only be called if hasMore returns true.
+   * Returns an {@link InputRowListPlusRawValues} object containing the InputRow plus the raw, unparsed data corresponding to
+   * the next row available. Used in the sampler to provide the caller with information to assist in configuring a parse
+   * spec. If a ParseException is thrown by the parser, it should be caught and returned in the InputRowListPlusRawValues so
+   * we will be able to provide information on the raw row which failed to be parsed. Should only be called if hasMore
+   * returns true.
    *
-   * @return an InputRowPlusRaw which may contain any of: an InputRow, the raw data, or a ParseException
+   * @return an InputRowListPlusRawValues which may contain any of: an InputRow, map of the raw data, or a ParseException
    */
-  default InputRowPlusRaw nextRowWithRaw()
+  @Deprecated
+  default InputRowListPlusRawValues nextRowWithRaw() throws IOException
   {
     try {
-      return InputRowPlusRaw.of(nextRow(), null);
+      return InputRowListPlusRawValues.of(nextRow(), null);
     }
     catch (ParseException e) {
-      return InputRowPlusRaw.of(null, e);
+      return InputRowListPlusRawValues.of(null, e);
     }
   }
 
   /**
-   * Returns a runnable that will "commit" everything read up to the point at which commit() is called.  This is
-   * often equivalent to everything that has been read since the last commit() call (or instantiation of the object),
-   * but doesn't necessarily have to be.
-   *
-   * This method is called when the main processing loop starts to persist its current batch of things to process.
-   * The returned runnable will be run when the current batch has been successfully persisted, there is usually
-   * some time lag between when this method is called and when the runnable is run.  The Runnable is also run on
-   * a separate thread so its operation should be thread-safe.
-   *
-   * The Runnable is essentially just a lambda/closure that is run() after data supplied by this instance has
-   * been committed on the writer side of this interface protocol.
-   * <p>
-   * A simple implementation of this interface might do nothing when run() is called
-   * (in which case the same do-nothing instance can be returned every time), or
-   * a more complex implementation might clean up temporary resources that are no longer needed
-   * because of InputRows delivered by prior calls to {@link #nextRow()}.
-   * </p>
-   */
-  Runnable commit();
-
-  /**
-   * Closes the "ingestion side" of the Firehose, potentially concurrently with calls to {@link #hasMore()}, {@link
-   * #nextRow()} and {@link #commit()} being made from a different thread. {@link #hasMore()} and {@link #nextRow()}
+   * Closes the "ingestion side" of the Firehose, potentially concurrently with calls to {@link #hasMore()} and {@link
+   * #nextRow()} being made from a different thread. {@link #hasMore()} and {@link #nextRow()}
    * continue to work after close(), but since the ingestion side is closed rows will eventually run out.
-   *
-   * The effects of calling run() on the {@link Runnable} object returned from {@link #commit()} (in other words,
-   * doing the commit) concurrently or after close() are unspecified: commit may not be performed silently (that is,
-   * run() call completes without an Exception, but the commit is not actually done), or a error may result. Note that
-   * {@link #commit()} method itself can be called concurrently with close(), but it doesn't make much sense, because
-   * run() on the returned Runnable then can't be called.
    */
   @Override
   void close() throws IOException;

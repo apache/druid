@@ -29,12 +29,15 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
+import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
+import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -46,28 +49,36 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
 import org.apache.druid.indexing.worker.WorkerTaskMonitor;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.indexing.worker.http.ShuffleResource;
 import org.apache.druid.indexing.worker.http.TaskManagementResource;
 import org.apache.druid.indexing.worker.http.WorkerResource;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.lookup.LookupSerdeModule;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 
 /**
+ *
  */
 @Command(
     name = "middleManager",
-    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service, see http://druid.io/docs/latest/design/middlemanager.html for a description"
+    description = "Runs a Middle Manager, this is a \"task\" node used as part of the remote indexing service, see https://druid.apache.org/docs/latest/design/middlemanager.html for a description"
 )
 public class CliMiddleManager extends ServerRunnable
 {
@@ -90,6 +101,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
+            binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
@@ -99,9 +111,10 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
             binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
 
-            binder.bind(IndexingServiceClient.class).toProvider(Providers.of(null));
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>() {})
+            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>() {})
                   .toProvider(Providers.of(null));
+            binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
             PolyBind.createChoice(
                 binder,
@@ -117,25 +130,30 @@ public class CliMiddleManager extends ServerRunnable
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
+            bindWorkerManagementClasses(binder);
 
-            binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
-            binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
-
-            LifecycleModule.register(binder, WorkerTaskMonitor.class);
             binder.bind(JettyServerInitializer.class)
                   .to(MiddleManagerJettyServerInitializer.class)
                   .in(LazySingleton.class);
-            Jerseys.addResource(binder, WorkerResource.class);
-            Jerseys.addResource(binder, TaskManagementResource.class);
+
+            binder.bind(AppenderatorsManager.class)
+                  .to(DummyForInjectionAppenderatorsManager.class)
+                  .in(LazySingleton.class);
+
+            Jerseys.addResource(binder, ShuffleResource.class);
 
             LifecycleModule.register(binder, Server.class);
 
-            bindAnnouncer(
+            bindNodeRoleAndAnnouncer(
                 binder,
-                DiscoverySideEffectsProvider.builder(NodeType.MIDDLE_MANAGER)
-                                            .serviceClasses(ImmutableList.of(WorkerNodeService.class))
-                                            .build()
+                DiscoverySideEffectsProvider
+                    .builder(NodeRole.MIDDLE_MANAGER)
+                    .serviceClasses(ImmutableList.of(WorkerNodeService.class))
+                    .build()
             );
+
+            Jerseys.addResource(binder, SelfDiscoveryResource.class);
+            LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
           }
 
           @Provides
@@ -147,7 +165,8 @@ public class CliMiddleManager extends ServerRunnable
                 node.getHostAndPortToUse(),
                 config.getIp(),
                 config.getCapacity(),
-                config.getVersion()
+                config.getVersion(),
+                config.getCategory()
             );
           }
 
@@ -158,12 +177,25 @@ public class CliMiddleManager extends ServerRunnable
             return new WorkerNodeService(
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
-                workerConfig.getVersion()
+                workerConfig.getVersion(),
+                workerConfig.getCategory()
             );
           }
         },
         new IndexingServiceFirehoseModule(),
-        new IndexingServiceTaskLogsModule()
+        new IndexingServiceInputSourceModule(),
+        new IndexingServiceTaskLogsModule(),
+        new IndexingServiceTuningConfigModule(),
+        new LookupSerdeModule()
     );
+  }
+
+  public static void bindWorkerManagementClasses(Binder binder)
+  {
+    binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
+    binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
+    LifecycleModule.register(binder, WorkerTaskMonitor.class);
+    Jerseys.addResource(binder, WorkerResource.class);
+    Jerseys.addResource(binder, TaskManagementResource.class);
   }
 }

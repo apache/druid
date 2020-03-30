@@ -24,7 +24,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
 
@@ -125,8 +127,9 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
    * Not implemented. Throws UnsupportedOperationException.
    */
   @SuppressWarnings("unchecked")
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
     return af.finalizeComputation((T) object);
   }
@@ -159,12 +162,14 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   }
 
   /**
-   * Not implemented. Throws UnsupportedOperationException.
+   * This method must be implemented since it is called by
+   * {@link org.apache.druid.query.groupby.GroupByQuery#computeResultRowSignature}. Returning "COMPLEX" causes the
+   * return type to be treated as unknown.
    */
   @Override
   public String getTypeName()
   {
-    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
+    return ValueType.COMPLEX.name();
   }
 
   /**

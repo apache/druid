@@ -29,22 +29,22 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.AbstractTextFilesFirehoseFactory;
 import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.utils.CompressionUtils;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 
 /**
+ * Firehose that reads data from files on local disk
  */
 public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
 {
-  private static final EmittingLogger log = new EmittingLogger(LocalFirehoseFactory.class);
-
   private final File baseDir;
   private final String filter;
+  @Nullable
   private final StringInputRowParser parser;
 
   @JsonCreator
@@ -52,7 +52,7 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
       @JsonProperty("baseDir") File baseDir,
       @JsonProperty("filter") String filter,
       // Backwards compatible
-      @JsonProperty("parser") StringInputRowParser parser
+      @Nullable @JsonProperty("parser") StringInputRowParser parser
   )
   {
     this.baseDir = baseDir;
@@ -73,6 +73,7 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   }
 
   @JsonProperty
+  @Nullable
   public StringInputRowParser getParser()
   {
     return parser;
@@ -81,13 +82,11 @@ public class LocalFirehoseFactory extends AbstractTextFilesFirehoseFactory<File>
   @Override
   protected Collection<File> initObjects()
   {
-    final Collection<File> files = FileUtils.listFiles(
-        Preconditions.checkNotNull(baseDir).getAbsoluteFile(),
+    return FileUtils.listFiles(
+        Preconditions.checkNotNull(baseDir, "baseDir").getAbsoluteFile(),
         new WildcardFileFilter(filter),
         TrueFileFilter.INSTANCE
     );
-    log.info("Initialized with " + files + " files");
-    return files;
   }
 
   @Override

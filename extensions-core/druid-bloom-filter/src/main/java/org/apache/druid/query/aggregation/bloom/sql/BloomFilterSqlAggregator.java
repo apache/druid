@@ -38,6 +38,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -46,8 +47,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -68,7 +68,8 @@ public class BloomFilterSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      VirtualColumnRegistry virtualColumnRegistry,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -77,7 +78,6 @@ public class BloomFilterSqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
-    final RowSignature rowSignature = querySignature.getRowSignature();
     final RexNode inputOperand = Expressions.fromFieldAccess(
         rowSignature,
         project,
@@ -168,13 +168,16 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           input.getSimpleExtraction().getExtractionFn()
       );
     } else {
-      VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           input,
           inputOperand.getType().getSqlTypeName()
       );
       virtualColumns.add(virtualColumn);
-      spec = new DefaultDimensionSpec(virtualColumn.getOutputName(), virtualColumn.getOutputName());
+      spec = new DefaultDimensionSpec(
+          virtualColumn.getOutputName(),
+          StringUtils.format("%s:%s", name, virtualColumn.getOutputName())
+      );
     }
 
     aggregatorFactory = new BloomFilterAggregatorFactory(

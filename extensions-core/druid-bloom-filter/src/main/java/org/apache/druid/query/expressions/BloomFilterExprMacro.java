@@ -34,7 +34,7 @@ import java.util.List;
 
 public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static String FN_NAME = "bloom_filter_test";
+  public static final String FN_NAME = "bloom_filter_test";
 
   @Override
   public String name()
@@ -67,8 +67,13 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
       throw new RuntimeException("Failed to deserialize bloom filter", ioe);
     }
 
-    class BloomExpr implements Expr
+    class BloomExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private BloomExpr(Expr arg)
+      {
+        super(FN_NAME, arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -111,14 +116,15 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
         return filter.testBytes(null, 0, 0);
       }
 
+
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new BloomExpr(newArg));
       }
     }
 
-    return new BloomExpr();
+    return new BloomExpr(arg);
   }
 }

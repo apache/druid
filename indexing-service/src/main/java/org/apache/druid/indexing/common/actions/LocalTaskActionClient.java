@@ -28,12 +28,12 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 public class LocalTaskActionClient implements TaskActionClient
 {
+  private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
+
   private final Task task;
   private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
   private final TaskAuditLogConfig auditLogConfig;
-
-  private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
 
   public LocalTaskActionClient(
       Task task,
@@ -51,7 +51,7 @@ public class LocalTaskActionClient implements TaskActionClient
   @Override
   public <RetType> RetType submit(TaskAction<RetType> taskAction)
   {
-    log.info("Performing action for task[%s]: %s", task.getId(), taskAction);
+    log.debug("Performing action for task[%s]: %s", task.getId(), taskAction);
 
     if (auditLogConfig.isEnabled() && taskAction.isAudited()) {
       // Add audit log

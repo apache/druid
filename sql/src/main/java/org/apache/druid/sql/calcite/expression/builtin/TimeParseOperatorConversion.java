@@ -19,17 +19,25 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.joda.time.DateTimeZone;
+
+import java.util.stream.Collectors;
 
 public class TimeParseOperatorConversion implements SqlOperatorConversion
 {
@@ -54,6 +62,34 @@ public class TimeParseOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, "timestamp_parse");
+    final RexCall call = (RexCall) rexNode;
+    final RexNode timeArg = call.getOperands().get(0);
+    final DruidExpression timeExpression = Expressions.toDruidExpression(plannerContext, rowSignature, timeArg);
+    if (timeExpression == null) {
+      return null;
+    }
+
+    final String pattern = OperatorConversions.getOperandWithDefault(
+        call.getOperands(),
+        1,
+        RexLiteral::stringValue,
+        null
+    );
+
+    final DateTimeZone timeZone = OperatorConversions.getOperandWithDefault(
+        call.getOperands(),
+        2,
+        operand -> DateTimes.inferTzFromString(RexLiteral.stringValue(operand)),
+        plannerContext.getTimeZone()
+    );
+
+    return DruidExpression.fromFunctionCall(
+        "timestamp_parse",
+        ImmutableList.of(
+            timeExpression.getExpression(),
+            DruidExpression.stringLiteral(pattern),
+            DruidExpression.stringLiteral(timeZone.getID())
+        ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
+    );
   }
 }

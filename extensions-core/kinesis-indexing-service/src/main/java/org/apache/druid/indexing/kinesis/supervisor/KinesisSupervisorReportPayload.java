@@ -19,9 +19,12 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 
-import java.util.Collections;
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 
 public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
@@ -31,7 +34,13 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Integer partitions,
       Integer replicas,
       Long durationSeconds,
-      boolean suspended
+      boolean suspended,
+      boolean healthy,
+      SupervisorStateManager.State state,
+      SupervisorStateManager.State detailedState,
+      List<SupervisorStateManager.ExceptionEvent> recentErrors,
+      @Nullable Map<String, Long> minimumLagMillis,
+      @Nullable Long aggregateLagMillis
   )
   {
     super(
@@ -40,11 +49,17 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
         partitions,
         replicas,
         durationSeconds,
-        Collections.emptyMap(),
-        Collections.emptyMap(),
         null,
         null,
-        suspended
+        null,
+        minimumLagMillis,
+        aggregateLagMillis,
+        null,
+        suspended,
+        healthy,
+        state,
+        detailedState,
+        recentErrors
     );
   }
 
@@ -59,8 +74,13 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
            ", durationSeconds=" + getDurationSeconds() +
            ", active=" + getActiveTasks() +
            ", publishing=" + getPublishingTasks() +
-           ", suspended=" + getSuspended() +
+           ", suspended=" + isSuspended() +
+           ", healthy=" + isHealthy() +
+           ", state=" + getState() +
+           ", detailedState=" + getDetailedState() +
+           ", recentErrors=" + getRecentErrors() +
+           (getMinimumLagMillis() != null ? ", minimumLagMillis=" + getMinimumLagMillis() : "") +
+           (getAggregateLagMillis() != null ? ", aggregateLagMillis=" + getAggregateLagMillis() : "") +
            '}';
   }
-
 }

@@ -22,11 +22,10 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
+import org.apache.druid.indexing.common.actions.RetrieveUnusedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentMetadataUpdateAction;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -49,7 +48,7 @@ public class MoveTask extends AbstractFixedIntervalTask
       @JsonProperty("interval") Interval interval,
       @JsonProperty("target") Map<String, Object> targetLoadSpec,
       @JsonProperty("context") Map<String, Object> context,
-      // See https://github.com/apache/incubator-druid/pull/1922
+      // See https://github.com/apache/druid/pull/1922
       @JsonProperty("targetLoadSpec") Map<String, Object> targetLoadSpecCOMPAT
   )
   {
@@ -71,21 +70,12 @@ public class MoveTask extends AbstractFixedIntervalTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    // Confirm we have a lock (will throw if there isn't exactly one element)
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox.getTaskActionClient()));
-
-    if (!myLock.getDataSource().equals(getDataSource())) {
-      throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
-    }
-
-    if (!myLock.getInterval().equals(getInterval())) {
-      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
-    }
+    final TaskLock myLock = getAndCheckLock(toolbox);
 
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+        .submit(new RetrieveUnusedSegmentsAction(myLock.getDataSource(), myLock.getInterval()));
 
     // Verify none of these segments have versions > lock version
     for (final DataSegment unusedSegment : unusedSegments) {

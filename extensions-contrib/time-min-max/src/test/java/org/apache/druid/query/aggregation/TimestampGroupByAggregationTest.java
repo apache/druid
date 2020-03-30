@@ -21,13 +21,13 @@ package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -175,7 +175,7 @@ public class TimestampGroupByAggregationTest
         "  ]\n" +
         "}";
     ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
-    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         zip.getInputStream(zip.getEntry("druid.sample.tsv")),
         recordParser,
         aggregator,
@@ -185,8 +185,11 @@ public class TimestampGroupByAggregationTest
         groupBy
     );
 
-    List<Row> results = seq.toList();
+    int groupByFieldNumber = ((GroupByQuery) helper.readQuery(groupBy)).getResultRowSignature()
+                                                                       .indexOf(groupByField);
+
+    List<ResultRow> results = seq.toList();
     Assert.assertEquals(36, results.size());
-    Assert.assertEquals(expected, ((MapBasedRow) results.get(0)).getEvent().get(groupByField));
+    Assert.assertEquals(expected, results.get(0).get(groupByFieldNumber));
   }
 }

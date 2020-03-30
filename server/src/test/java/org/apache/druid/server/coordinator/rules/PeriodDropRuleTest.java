@@ -32,10 +32,12 @@ import org.junit.Test;
  */
 public class PeriodDropRuleTest
 {
-  private static final DataSegment.Builder builder = DataSegment.builder()
-                                                          .dataSource("test")
-                                                          .version(DateTimes.of("2012-12-31T01:00:00").toString())
-                                                          .shardSpec(NoneShardSpec.instance());
+  private static final DataSegment.Builder BUILDER = DataSegment
+      .builder()
+      .dataSource("test")
+      .version(DateTimes.of("2012-12-31T01:00:00").toString())
+      .shardSpec(NoneShardSpec.instance())
+      .size(0);
 
   @Test
   public void testAppliesToAll()
@@ -48,7 +50,7 @@ public class PeriodDropRuleTest
 
     Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(
+            BUILDER.interval(
                 new Interval(
                     now.minusDays(2),
                     now.minusDays(1)
@@ -59,7 +61,7 @@ public class PeriodDropRuleTest
     );
     Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusYears(100), now.minusDays(1)))
+            BUILDER.interval(new Interval(now.minusYears(100), now.minusDays(1)))
                        .build(),
             now
         )
@@ -77,28 +79,28 @@ public class PeriodDropRuleTest
 
     Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusWeeks(1), now.minusDays(1)))
+            BUILDER.interval(new Interval(now.minusWeeks(1), now.minusDays(1)))
                        .build(),
             now
         )
     );
     Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusDays(1), now))
+            BUILDER.interval(new Interval(now.minusDays(1), now))
                    .build(),
             now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusYears(1), now.minusDays(1)))
+            BUILDER.interval(new Interval(now.minusYears(1), now.minusDays(1)))
                        .build(),
             now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusMonths(2), now.minusDays(1)))
+            BUILDER.interval(new Interval(now.minusMonths(2), now.minusDays(1)))
                        .build(),
             now
         )
@@ -120,13 +122,13 @@ public class PeriodDropRuleTest
 
     Assert.assertTrue(
         includeFutureRule.appliesTo(
-            builder.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
+            BUILDER.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now
         )
     );
     Assert.assertFalse(
         notIncludeFutureRule.appliesTo(
-            builder.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
+            BUILDER.interval(new Interval(now.plusDays(1), now.plusDays(2))).build(),
             now
         )
     );

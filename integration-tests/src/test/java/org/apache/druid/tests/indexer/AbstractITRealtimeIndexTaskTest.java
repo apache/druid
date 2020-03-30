@@ -24,19 +24,20 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.io.Closeable;
 import java.io.InputStream;
-import java.util.concurrent.Callable;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -57,17 +58,19 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
   static final int DELAY_BETWEEN_EVENTS_SECS = 4;
-  String taskID;
   final String TIME_PLACEHOLDER = "YYYY-MM-DDTHH:MM:SS";
-  // format for putting datestamp into events
-  final DateTimeFormatter EVENT_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss");
+  // format for putting timestamp into events
+  static final DateTimeFormatter EVENT_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss");
   // format for the querying interval
-  final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
+  private static final DateTimeFormatter INTERVAL_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:'00Z'");
   // format for the expected timestamp in a query response
-  final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
+  private static final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
   DateTime dtFirst;            // timestamp of 1st event
   DateTime dtLast;             // timestamp of last event
   DateTime dtGroupBy;          // timestamp for expected response for groupBy query
+
+  static final int NUM_RETRIES = 60;
+  static final long DELAY_FOR_RETRIES_MS = 10000;
 
   @Inject
   ServerDiscoveryFactory factory;
@@ -84,21 +87,20 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   {
     fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix();
 
-    LOG.info("Starting test: ITRealtimeIndexTaskTest");
-    try (final Closeable closeable = unloader(fullDatasourceName)) {
-      // the task will run for 3 minutes and then shutdown itself
+    LOG.info("Starting test: %s", this.getClass().getSimpleName());
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      // the task will run for 5 minutes and then shutdown itself
       String task = setShutOffTime(
           getResourceAsString(getTaskResource()),
-          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
+          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5))
       );
       task = StringUtils.replace(task, "%%DATASOURCE%%", fullDatasourceName);
 
       LOG.info("indexerSpec: [%s]\n", task);
-      taskID = indexer.submitTask(task);
-
+      String taskID = indexer.submitTask(task);
 
       // sleep for a while to let peons finish starting up
-      TimeUnit.SECONDS.sleep(5);
+      TimeUnit.SECONDS.sleep(60);
 
       // this posts 22 events, one every 4 seconds
       // each event contains the current time as its timestamp except
@@ -106,8 +108,17 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       //   the timestamp for the 18th event is 2 seconds earlier than the 17th
       postEvents();
 
-      // sleep for a while to let the events be ingested
-      TimeUnit.SECONDS.sleep(5);
+      // wait for a while to let the events be ingested
+      ITRetryUtil.retryUntil(
+          () -> {
+            final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
+            return countRows == getNumExpectedRowsIngested();
+          },
+          true,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
+          "Waiting all events are ingested"
+      );
 
       // put the timestamps into the query structure
       String query_response_template;
@@ -115,7 +126,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       if (null == is) {
         throw new ISE("could not open query file: %s", getQueriesResource());
       }
-      query_response_template = IOUtils.toString(is, "UTF-8");
+      query_response_template = IOUtils.toString(is, StandardCharsets.UTF_8);
 
       String queryStr = query_response_template;
       queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
@@ -144,18 +155,11 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       indexer.waitUntilTaskCompletes(taskID);
 
       // task should complete only after the segments are loaded by historical node
-      RetryUtil.retryUntil(
-          new Callable<Boolean>()
-          {
-            @Override
-            public Boolean call()
-            {
-              return coordinator.areSegmentsLoaded(fullDatasourceName);
-            }
-          },
+      ITRetryUtil.retryUntil(
+          () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
-          10000,
-          60,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
           "Real-time generated segments loaded"
       );
 
@@ -167,12 +171,12 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
     }
   }
 
-  String setShutOffTime(String taskAsString, DateTime time)
+  private String setShutOffTime(String taskAsString, DateTime time)
   {
     return StringUtils.replace(taskAsString, "#SHUTOFFTIME", time.toString());
   }
 
-  String getRouterURL()
+  private String getRouterURL()
   {
     return StringUtils.format(
         "%s/druid/v2?pretty",
@@ -184,4 +188,6 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   abstract String getQueriesResource();
 
   abstract void postEvents() throws Exception;
+
+  abstract int getNumExpectedRowsIngested();
 }

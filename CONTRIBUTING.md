@@ -24,9 +24,9 @@ When submitting a pull request (PR), please use the following guidelines:
 - Make sure your code respects existing formatting conventions. In general, follow
   the same coding style as the code that you are modifying.
 - For Intellij you can import our code style settings xml: [`druid_intellij_formatting.xml`](
-  https://github.com/apache/incubator-druid/raw/master/dev/druid_intellij_formatting.xml).
+  https://github.com/apache/druid/raw/master/dev/druid_intellij_formatting.xml).
 - For Eclipse you can import our code style settings xml: [`eclipse_formatting.xml`](
-  https://github.com/apache/incubator-druid/raw/master/dev/eclipse_formatting.xml).
+  https://github.com/apache/druid/raw/master/dev/eclipse_formatting.xml).
 - Do add/update documentation appropriately for the change you are making.
 - If you are introducing a new feature you may want to first write about your idea
   for feedback to [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org). Or create an issue
@@ -36,18 +36,17 @@ When submitting a pull request (PR), please use the following guidelines:
 - Do not use author tags/information in the code.
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
-- Keep the number of commits small and combine commits for related changes.
-  Each commit should compile on its own and ideally pass tests.
-- Keep formatting changes in separate commits to make code reviews easier and
-  distinguish them from actual code changes.
+- If you are adding or updating a dependency, be sure to update the version, license, or notice information in
+  [licenses.yaml](https://github.com/apache/druid/blob/master/licenses.yaml) as appropriate to help ease
+  LICENSE and NOTICE management for ASF releases.
 
 You can find more developers' resources in [`dev/`](dev) directory.
 
 ## GitHub Workflow
 
-1. Fork the apache/incubator-druid repository into your GitHub account
+1. Fork the apache/druid repository into your GitHub account
 
-    https://github.com/apache/incubator-druid/fork
+    https://github.com/apache/druid/fork
 
 1. Clone your fork of the GitHub repository
 
@@ -60,7 +59,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
 1. Add a remote to keep up with upstream changes
 
     ```
-    git remote add upstream https://github.com/apache/incubator-druid.git
+    git remote add upstream https://github.com/apache/druid.git
     ```
 
     If you already have a copy, fetch upstream changes
@@ -107,7 +106,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
     If you recently pushed your changes GitHub will automatically pop up a
     `Compare & pull request` button for any branches you recently pushed to. If you
     click that button it will automatically offer you to submit your pull-request
-    to the apache/incubator-druid repository.
+    to the apache/druid repository.
 
     - Give your pull-request a meaningful title.
     - In the description, explain your changes and the problem they are solving.

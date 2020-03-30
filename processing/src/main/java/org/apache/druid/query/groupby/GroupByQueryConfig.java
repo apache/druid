@@ -29,8 +29,10 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
+  public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT = "applyLimitPushDownToSegment";
   public static final String CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY = "forcePushDownNestedQuery";
   public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
+  public static final String CTX_KEY_ARRAY_RESULT_ROWS = "resultAsArray";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
@@ -42,6 +44,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_FORCE_HASH_AGGREGATION = "forceHashAggregation";
   private static final String CTX_KEY_INTERMEDIATE_COMBINE_DEGREE = "intermediateCombineDegree";
   private static final String CTX_KEY_NUM_PARALLEL_COMBINE_THREADS = "numParallelCombineThreads";
+  public static final String CTX_KEY_VECTORIZE = "vectorize";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V2;
@@ -77,6 +80,9 @@ public class GroupByQueryConfig
   private boolean forcePushDownLimit = false;
 
   @JsonProperty
+  private boolean applyLimitPushDownToSegment = true;
+
+  @JsonProperty
   private boolean forcePushDownNestedQuery = false;
 
   @JsonProperty
@@ -87,6 +93,9 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private int numParallelCombineThreads = 1;
+
+  @JsonProperty
+  private boolean vectorize = false;
 
   public String getDefaultStrategy()
   {
@@ -153,6 +162,11 @@ public class GroupByQueryConfig
     return forcePushDownLimit;
   }
 
+  public boolean isApplyLimitPushDownToSegment()
+  {
+    return applyLimitPushDownToSegment;
+  }
+
   public boolean isForceHashAggregation()
   {
     return forceHashAggregation;
@@ -166,6 +180,11 @@ public class GroupByQueryConfig
   public int getNumParallelCombineThreads()
   {
     return numParallelCombineThreads;
+  }
+
+  public boolean isVectorize()
+  {
+    return vectorize;
   }
 
   public boolean isForcePushDownNestedQuery()
@@ -203,10 +222,17 @@ public class GroupByQueryConfig
         getMaxOnDiskStorage()
     );
     newConfig.maxMergingDictionarySize = Math.min(
-        ((Number) query.getContextValue(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getMaxMergingDictionarySize())).longValue(),
+        ((Number) query.getContextValue(
+            CTX_KEY_MAX_MERGING_DICTIONARY_SIZE,
+            getMaxMergingDictionarySize()
+        )).longValue(),
         getMaxMergingDictionarySize()
     );
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
+    newConfig.applyLimitPushDownToSegment = query.getContextBoolean(
+        CTX_KEY_APPLY_LIMIT_PUSH_DOWN_TO_SEGMENT,
+        isApplyLimitPushDownToSegment()
+    );
     newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
     newConfig.forcePushDownNestedQuery = query.getContextBoolean(CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, isForcePushDownNestedQuery());
     newConfig.intermediateCombineDegree = query.getContextValue(
@@ -217,6 +243,7 @@ public class GroupByQueryConfig
         CTX_KEY_NUM_PARALLEL_COMBINE_THREADS,
         getNumParallelCombineThreads()
     );
+    newConfig.vectorize = query.getContextBoolean(CTX_KEY_VECTORIZE, isVectorize());
     return newConfig;
   }
 
@@ -237,6 +264,7 @@ public class GroupByQueryConfig
            ", forceHashAggregation=" + forceHashAggregation +
            ", intermediateCombineDegree=" + intermediateCombineDegree +
            ", numParallelCombineThreads=" + numParallelCombineThreads +
+           ", vectorize=" + vectorize +
            ", forcePushDownNestedQuery=" + forcePushDownNestedQuery +
            '}';
   }

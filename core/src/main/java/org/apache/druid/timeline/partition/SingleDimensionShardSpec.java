@@ -31,11 +31,10 @@ import org.apache.druid.java.util.common.ISE;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
- * Class uses getters/setters to work around http://jira.codehaus.org/browse/MSHADE-92
- *
- * Adjust to JsonCreator and final fields when resolved.
+ * {@link ShardSpec} for range partitioning based on a single dimension
  */
 public class SingleDimensionShardSpec implements ShardSpec
 {
@@ -46,6 +45,12 @@ public class SingleDimensionShardSpec implements ShardSpec
   private final String end;
   private final int partitionNum;
 
+  /**
+   * @param dimension    partition dimension
+   * @param start        inclusive start of this range
+   * @param end          exclusive end of this range
+   * @param partitionNum unique ID for this shard
+   */
   @JsonCreator
   public SingleDimensionShardSpec(
       @JsonProperty("dimension") String dimension,
@@ -54,6 +59,7 @@ public class SingleDimensionShardSpec implements ShardSpec
       @JsonProperty("partitionNum") int partitionNum
   )
   {
+    Preconditions.checkArgument(partitionNum >= 0, "partitionNum >= 0");
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.start = start;
     this.end = end;
@@ -132,6 +138,12 @@ public class SingleDimensionShardSpec implements ShardSpec
   }
 
   @Override
+  public boolean isCompatible(Class<? extends ShardSpec> other)
+  {
+    return other == SingleDimensionShardSpec.class;
+  }
+
+  @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return new StringPartitionChunk<T>(start, end, partitionNum, obj);
@@ -172,5 +184,27 @@ public class SingleDimensionShardSpec implements ShardSpec
            ", end='" + end + '\'' +
            ", partitionNum=" + partitionNum +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SingleDimensionShardSpec that = (SingleDimensionShardSpec) o;
+    return partitionNum == that.partitionNum &&
+           Objects.equals(dimension, that.dimension) &&
+           Objects.equals(start, that.start) &&
+           Objects.equals(end, that.end);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, start, end, partitionNum);
   }
 }

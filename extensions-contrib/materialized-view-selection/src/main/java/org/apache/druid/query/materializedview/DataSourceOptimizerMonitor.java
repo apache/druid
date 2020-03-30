@@ -41,7 +41,7 @@ public class DataSourceOptimizerMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter) 
   {
-    List<DataSourceOptimizerStats> stats = optimizer.getAndResetStats();
+    final List<DataSourceOptimizerStats> stats = optimizer.getAndResetStats();
     for (DataSourceOptimizerStats stat : stats) {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       builder.setDimension("dataSource", stat.getBase());
@@ -50,9 +50,9 @@ public class DataSourceOptimizerMonitor extends AbstractMonitor
       emitter.emit(builder.build("/materialized/view/query/hitRate", stat.getHitRate()));
       emitter.emit(builder.build("/materialized/view/select/avgCostMS", stat.getOptimizerCost()));
       Map<String, Long> derivativesStats = stat.getDerivativesHitCount();
-      for (String derivative : derivativesStats.keySet()) {
-        builder.setDimension("derivative", derivative);
-        emitter.emit(builder.build("/materialized/view/derivative/numSelected", derivativesStats.get(derivative)));
+      for (Map.Entry<String, Long> derivative : derivativesStats.entrySet()) {
+        builder.setDimension("derivative", derivative.getKey());
+        emitter.emit(builder.build("/materialized/view/derivative/numSelected", derivative.getValue()));
       }
       final ServiceMetricEvent.Builder builder2 = new ServiceMetricEvent.Builder();
       builder2.setDimension("dataSource", stat.getBase());

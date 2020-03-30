@@ -51,8 +51,8 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -95,12 +95,8 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -117,8 +113,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -130,7 +128,6 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.utils.Runnables;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -166,12 +163,12 @@ import java.util.regex.Pattern;
 public class AppenderatorDriverRealtimeIndexTaskTest
 {
   private static final Logger log = new Logger(AppenderatorDriverRealtimeIndexTaskTest.class);
-  private static final ServiceEmitter emitter = new ServiceEmitter(
+  private static final ServiceEmitter EMITTER = new ServiceEmitter(
       "service",
       "host",
       new NoopEmitter()
   );
-  private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+  private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
   private static final String FAIL_DIM = "__fail__";
 
@@ -224,12 +221,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     }
 
     @Override
-    public Runnable commit()
-    {
-      return Runnables.getNoopRunnable();
-    }
-
-    @Override
     public void close()
     {
       synchronized (this) {
@@ -274,12 +265,13 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private File baseDir;
   private File reportsFile;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
+  private AppenderatorsManager appenderatorsManager;
 
   @Before
   public void setUp() throws IOException
   {
-    EmittingLogger.registerEmitter(emitter);
-    emitter.start();
+    EmittingLogger.registerEmitter(EMITTER);
+    EMITTER.start();
     taskExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("realtime-index-task-test-%d"));
     now = DateTimes.nowUtc();
 
@@ -288,6 +280,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
     derbyConnector.createPendingSegmentsTable();
+
+    appenderatorsManager = new TestAppenderatorsManager();
 
     baseDir = tempFolder.newFolder();
     reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
@@ -1375,7 +1369,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       final Long maxTotalRows
   )
   {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         TestHelper.makeJsonMapper().convertValue(
@@ -1400,11 +1393,10 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         new AggregatorFactory[]{new CountAggregatorFactory("rows"), new LongSumAggregatorFactory("met1", "met1")},
         new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
         transformSpec,
-        objectMapper
+        OBJECT_MAPPER
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new TestFirehoseFactory(),
-        null,
         null
     );
     RealtimeAppenderatorTuningConfig tuningConfig = new RealtimeAppenderatorTuningConfig(
@@ -1412,6 +1404,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         maxRowsPerSegment,
         maxTotalRows,
+        null,
         null,
         null,
         null,
@@ -1432,7 +1425,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        appenderatorsManager
     )
     {
       @Override
@@ -1470,8 +1464,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private void makeToolboxFactory(final File directory)
   {
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    taskLockbox = new TaskLockbox(taskStorage);
-
     publishedSegments = new CopyOnWriteArrayList<>();
 
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -1519,13 +1511,15 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         return result;
       }
     };
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null);
+
+    taskLockbox = new TaskLockbox(taskStorage, mdc);
+    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null, null);
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,
         mdc,
-        emitter,
+        EMITTER,
         EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
@@ -1533,23 +1527,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         taskActionToolbox,
         new TaskAuditLogConfig(false)
     );
-    IntervalChunkingQueryRunnerDecorator queryRunnerDecorator = new IntervalChunkingQueryRunnerDecorator(
-        null,
-        null,
-        null
-    )
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return delegate;
-      }
-    };
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(queryRunnerDecorator),
+                new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 (query, future) -> {
                   // do nothing
@@ -1598,8 +1580,9 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     taskToolboxFactory = new TaskToolboxFactory(
         taskConfig,
+        new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
         taskActionClientFactory,
-        emitter,
+        EMITTER,
         new TestDataSegmentPusher(),
         new TestDataSegmentKiller(),
         null, // DataSegmentMover
@@ -1609,6 +1592,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         handoffNotifierFactory,
         () -> conglomerate,
         Execs.directExecutor(), // queryExecutorService
+        NoopJoinableFactory.INSTANCE,
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
@@ -1621,7 +1605,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
-        new TaskReportFileWriter(reportsFile)
+        new SingleFileTaskReportFileWriter(reportsFile),
+        null
     );
   }
 
@@ -1641,7 +1626,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> results =
-        task.getQueryRunner(query).run(QueryPlus.wrap(query), ImmutableMap.of()).toList();
+        task.getQueryRunner(query).run(QueryPlus.wrap(query)).toList();
 
     if (results.isEmpty()) {
       return 0L;
@@ -1652,7 +1637,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
   private IngestionStatsAndErrorsTaskReportData getTaskReportData() throws IOException
   {
-    Map<String, TaskReport> taskReports = objectMapper.readValue(
+    Map<String, TaskReport> taskReports = OBJECT_MAPPER.readValue(
         reportsFile,
         new TypeReference<Map<String, TaskReport>>()
         {

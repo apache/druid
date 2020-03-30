@@ -91,7 +91,8 @@ public class WorkerResource
           enabledWorker.getHost(),
           enabledWorker.getIp(),
           enabledWorker.getCapacity(),
-          DISABLED_VERSION
+          DISABLED_VERSION,
+          enabledWorker.getCategory()
       );
       curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
       workerTaskManager.workerDisabled();
@@ -191,7 +192,7 @@ public class WorkerResource
       return Response.status(501)
                      .entity(StringUtils.format(
                          "Log streaming not supported by [%s]",
-                         taskRunner.getClass().getCanonicalName()
+                         taskRunner.getClass().getName()
                      ))
                      .build();
     }

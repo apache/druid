@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.yahoo.sketches.hll.HllSketch;
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -36,7 +36,6 @@ import java.util.Set;
  * Returns a human-readable summary of a given {@link HllSketch}.
  * This is a string returned by toString() method of the sketch.
  * This can be useful for debugging.
- * @author Alexander Saydakov
  */
 public class HllSketchToStringPostAggregator implements PostAggregator
 {

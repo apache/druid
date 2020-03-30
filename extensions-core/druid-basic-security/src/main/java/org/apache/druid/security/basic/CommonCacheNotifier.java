@@ -24,7 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -59,16 +59,17 @@ public class CommonCacheNotifier
   private static final EmittingLogger LOG = new EmittingLogger(CommonCacheNotifier.class);
 
   /**
-   * {@link NodeType#COORDINATOR} is intentionally omitted because it gets its information about the auth state directly
+   * {@link NodeRole#COORDINATOR} is intentionally omitted because it gets its information about the auth state directly
    * from metadata storage.
    */
-  private static final List<NodeType> NODE_TYPES = Arrays.asList(
-      NodeType.BROKER,
-      NodeType.OVERLORD,
-      NodeType.HISTORICAL,
-      NodeType.PEON,
-      NodeType.ROUTER,
-      NodeType.MIDDLE_MANAGER
+  private static final List<NodeRole> NODE_TYPES = Arrays.asList(
+      NodeRole.BROKER,
+      NodeRole.OVERLORD,
+      NodeRole.HISTORICAL,
+      NodeRole.PEON,
+      NodeRole.ROUTER,
+      NodeRole.MIDDLE_MANAGER,
+      NodeRole.INDEXER
   );
 
   private final DruidNodeDiscoveryProvider discoveryProvider;
@@ -87,7 +88,7 @@ public class CommonCacheNotifier
       String callerName
   )
   {
-    this.exec = Execs.scheduledSingleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
+    this.exec = Execs.singleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
     this.callerName = callerName;
     this.updateQueue = new LinkedBlockingQueue<>();
     this.itemConfigMap = itemConfigMap;
@@ -106,6 +107,7 @@ public class CommonCacheNotifier
               Pair<String, byte[]> update = updateQueue.take();
               String authorizer = update.lhs;
               byte[] serializedMap = update.rhs;
+
               BasicAuthDBConfig authorizerConfig = itemConfigMap.get(update.lhs);
               if (!authorizerConfig.isEnableCacheNotifications()) {
                 continue;
@@ -156,20 +158,23 @@ public class CommonCacheNotifier
     );
   }
 
-  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthorizerPrefix, byte[] serializedUserMap)
+  private List<ListenableFuture<StatusResponseHolder>> sendUpdate(String updatedAuthenticatorPrefix, byte[] serializedEntity)
   {
     List<ListenableFuture<StatusResponseHolder>> futures = new ArrayList<>();
-    for (NodeType nodeType : NODE_TYPES) {
-      DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeType(nodeType);
+    for (NodeRole nodeRole : NODE_TYPES) {
+      DruidNodeDiscovery nodeDiscovery = discoveryProvider.getForNodeRole(nodeRole);
       Collection<DiscoveryDruidNode> nodes = nodeDiscovery.getAllNodes();
       for (DiscoveryDruidNode node : nodes) {
-        URL listenerURL = getListenerURL(node.getDruidNode(), baseUrl, updatedAuthorizerPrefix);
+        URL listenerURL = getListenerURL(
+            node.getDruidNode(),
+            StringUtils.format(baseUrl, StringUtils.urlEncode(updatedAuthenticatorPrefix))
+        );
 
         // best effort, if this fails, remote node will poll and pick up the update eventually
         Request req = new Request(HttpMethod.POST, listenerURL);
-        req.setContent(MediaType.APPLICATION_JSON, serializedUserMap);
+        req.setContent(MediaType.APPLICATION_JSON, serializedEntity);
 
-        BasicAuthDBConfig itemConfig = itemConfigMap.get(updatedAuthorizerPrefix);
+        BasicAuthDBConfig itemConfig = itemConfigMap.get(updatedAuthenticatorPrefix);
 
         ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,
@@ -182,18 +187,19 @@ public class CommonCacheNotifier
     return futures;
   }
 
-  private URL getListenerURL(DruidNode druidNode, String baseUrl, String itemName)
+  private URL getListenerURL(DruidNode druidNode, String baseUrl)
   {
     try {
       return new URL(
           druidNode.getServiceScheme(),
           druidNode.getHost(),
           druidNode.getPortToUse(),
-          StringUtils.format(baseUrl, StringUtils.urlEncode(itemName))
+          baseUrl
       );
     }
     catch (MalformedURLException mue) {
-      LOG.error(callerName + ":WTF? Malformed url for DruidNode[%s] and itemName[%s]", druidNode, itemName);
+      LOG.error(callerName + ": Malformed url for DruidNode[%s] and baseUrl[%s]", druidNode, baseUrl);
+
       throw new RuntimeException(mue);
     }
   }

@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -32,24 +33,27 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
+import java.util.concurrent.ThreadLocalRandom;
 
 @RunWith(Parameterized.class)
 public class CompressedColumnarIntsSerializerTest
@@ -64,6 +68,9 @@ public class CompressedColumnarIntsSerializerTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   public CompressedColumnarIntsSerializerTest(
       CompressionStrategy compressionStrategy,
@@ -100,56 +107,6 @@ public class CompressedColumnarIntsSerializerTest
     segmentWriteOutMedium.close();
   }
 
-  private void generateVals(final int totalSize, final int maxValue)
-  {
-    vals = new int[totalSize];
-    for (int i = 0; i < vals.length; ++i) {
-      vals[i] = rand.nextInt(maxValue);
-    }
-  }
-
-  private void checkSerializedSizeAndData(int chunkFactor) throws Exception
-  {
-    FileSmoosher smoosher = new FileSmoosher(temporaryFolder.newFolder());
-
-    CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(
-        segmentWriteOutMedium,
-        "test",
-        chunkFactor,
-        byteOrder,
-        compressionStrategy
-    );
-    CompressedColumnarIntsSupplier supplierFromList = CompressedColumnarIntsSupplier.fromList(
-        IntArrayList.wrap(vals),
-        chunkFactor,
-        byteOrder,
-        compressionStrategy,
-        segmentWriteOutMedium.getCloser()
-    );
-    writer.open();
-    for (int val : vals) {
-      writer.addValue(val);
-    }
-    long writtenLength = writer.getSerializedSize();
-    final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
-    writer.writeTo(writeOutBytes, smoosher);
-    smoosher.close();
-
-    assertEquals(writtenLength, supplierFromList.getSerializedSize());
-
-    // read from ByteBuffer and check values
-    CompressedColumnarIntsSupplier supplierFromByteBuffer = CompressedColumnarIntsSupplier.fromByteBuffer(
-        ByteBuffer.wrap(IOUtils.toByteArray(writeOutBytes.asInputStream())),
-        byteOrder
-    );
-    ColumnarInts columnarInts = supplierFromByteBuffer.get();
-    assertEquals(vals.length, columnarInts.size());
-    for (int i = 0; i < vals.length; ++i) {
-      assertEquals(vals[i], columnarInts.get(i));
-    }
-    CloseQuietly.close(columnarInts);
-  }
-
   @Test
   public void testSmallData() throws Exception
   {
@@ -181,17 +138,104 @@ public class CompressedColumnarIntsSerializerTest
     checkSerializedSizeAndData(2);
   }
 
+  @Test
+  public void testMultiValueFileLargeData() throws Exception
+  {
+    // more than one chunk
+    for (int maxValue : MAX_VALUES) {
+      for (int chunkFactor : CHUNK_FACTORS) {
+        generateVals((rand.nextInt(5) + 5) * chunkFactor + rand.nextInt(chunkFactor), maxValue);
+        checkV2SerializedSizeAndData(chunkFactor);
+      }
+    }
+  }
+
+  // this test takes ~30 minutes to run
+  @Ignore
+  @Test
+  public void testTooManyValues() throws IOException
+  {
+    expectedException.expect(ColumnCapacityExceededException.class);
+    expectedException.expectMessage(ColumnCapacityExceededException.formatMessage("test"));
+    try (
+        SegmentWriteOutMedium segmentWriteOutMedium =
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
+    ) {
+      CompressedColumnarIntsSerializer serializer = new CompressedColumnarIntsSerializer(
+          "test",
+          segmentWriteOutMedium,
+          "test",
+          CompressedColumnarIntsSupplier.MAX_INTS_IN_BUFFER,
+          byteOrder,
+          compressionStrategy
+      );
+      serializer.open();
+
+      final long numRows = Integer.MAX_VALUE + 100L;
+      for (long i = 0L; i < numRows; i++) {
+        serializer.addValue(ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE));
+      }
+    }
+  }
+
+  private void generateVals(final int totalSize, final int maxValue)
+  {
+    vals = new int[totalSize];
+    for (int i = 0; i < vals.length; ++i) {
+      vals[i] = rand.nextInt(maxValue);
+    }
+  }
+
+  private void checkSerializedSizeAndData(int chunkFactor) throws Exception
+  {
+    FileSmoosher smoosher = new FileSmoosher(temporaryFolder.newFolder());
+
+    CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(
+        "test",
+        segmentWriteOutMedium,
+        "test",
+        chunkFactor,
+        byteOrder,
+        compressionStrategy
+    );
+    CompressedColumnarIntsSupplier supplierFromList = CompressedColumnarIntsSupplier.fromList(
+        IntArrayList.wrap(vals),
+        chunkFactor,
+        byteOrder,
+        compressionStrategy,
+        segmentWriteOutMedium.getCloser()
+    );
+    writer.open();
+    for (int val : vals) {
+      writer.addValue(val);
+    }
+    long writtenLength = writer.getSerializedSize();
+    final WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+    writer.writeTo(writeOutBytes, smoosher);
+    smoosher.close();
+
+    Assert.assertEquals(writtenLength, supplierFromList.getSerializedSize());
+
+    // read from ByteBuffer and check values
+    CompressedColumnarIntsSupplier supplierFromByteBuffer = CompressedColumnarIntsSupplier.fromByteBuffer(
+        ByteBuffer.wrap(IOUtils.toByteArray(writeOutBytes.asInputStream())),
+        byteOrder
+    );
+    ColumnarInts columnarInts = supplierFromByteBuffer.get();
+    Assert.assertEquals(vals.length, columnarInts.size());
+    for (int i = 0; i < vals.length; ++i) {
+      Assert.assertEquals(vals[i], columnarInts.get(i));
+    }
+    CloseQuietly.close(columnarInts);
+  }
 
   private void checkV2SerializedSizeAndData(int chunkFactor) throws Exception
   {
-    File tmpDirectory = Files.createTempDirectory(StringUtils.format(
-        "CompressedIntsIndexedWriterTest_%d",
-        chunkFactor
-    )).toFile();
-
+    File tmpDirectory = FileUtils.createTempDir(StringUtils.format("CompressedIntsIndexedWriterTest_%d", chunkFactor));
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
 
     CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(
+        "test",
         segmentWriteOutMedium,
         chunkFactor,
         byteOrder,
@@ -221,23 +265,11 @@ public class CompressedColumnarIntsSerializerTest
         byteOrder
     );
     ColumnarInts columnarInts = supplierFromByteBuffer.get();
-    assertEquals(vals.length, columnarInts.size());
+    Assert.assertEquals(vals.length, columnarInts.size());
     for (int i = 0; i < vals.length; ++i) {
-      assertEquals(vals[i], columnarInts.get(i));
+      Assert.assertEquals(vals[i], columnarInts.get(i));
     }
     CloseQuietly.close(columnarInts);
     mapper.close();
-  }
-
-  @Test
-  public void testMultiValueFileLargeData() throws Exception
-  {
-    // more than one chunk
-    for (int maxValue : MAX_VALUES) {
-      for (int chunkFactor : CHUNK_FACTORS) {
-        generateVals((rand.nextInt(5) + 5) * chunkFactor + rand.nextInt(chunkFactor), maxValue);
-        checkV2SerializedSizeAndData(chunkFactor);
-      }
-    }
   }
 }

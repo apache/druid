@@ -29,9 +29,10 @@ import org.apache.druid.indexer.HadoopTuningConfig;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SQLMetadataSegmentManager;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,15 +51,13 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 
-import static org.easymock.EasyMock.createMock;
-
-public class MaterializedViewSupervisorSpecTest 
+public class MaterializedViewSupervisorSpecTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-  
+  private final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+
   @Before
   public void setup()
   {
@@ -69,55 +69,56 @@ public class MaterializedViewSupervisorSpecTest
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class, objectMapper)
             .addValue(MetadataSupervisorManager.class, null)
-            .addValue(SQLMetadataSegmentManager.class, null)
+            .addValue(SqlSegmentsMetadataManager.class, null)
             .addValue(IndexerMetadataStorageCoordinator.class, null)
             .addValue(MaterializedViewTaskConfig.class, new MaterializedViewTaskConfig())
-            .addValue(AuthorizerMapper.class, createMock(AuthorizerMapper.class))
+            .addValue(AuthorizerMapper.class, EasyMock.createMock(AuthorizerMapper.class))
             .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
+            .addValue(SupervisorStateManagerConfig.class, new SupervisorStateManagerConfig())
     );
   }
 
   @Test
-  public void testSupervisorSerialization() throws IOException 
+  public void testSupervisorSerialization() throws IOException
   {
     String supervisorStr = "{\n" +
-        "  \"type\" : \"derivativeDataSource\",\n" +
-        "  \"baseDataSource\": \"wikiticker\",\n" +
-        "  \"dimensionsSpec\":{\n" +
-        "            \"dimensions\" : [\n" +
-        "              \"isUnpatrolled\",\n" +
-        "              \"metroCode\",\n" +
-        "              \"namespace\",\n" +
-        "              \"page\",\n" +
-        "              \"regionIsoCode\",\n" +
-        "              \"regionName\",\n" +
-        "              \"user\"\n" +
-        "            ]\n" +
-        "          },\n" +
-        "    \"metricsSpec\" : [\n" +
-        "        {\n" +
-        "          \"name\" : \"count\",\n" +
-        "          \"type\" : \"count\"\n" +
-        "        },\n" +
-        "        {\n" +
-        "          \"name\" : \"added\",\n" +
-        "          \"type\" : \"longSum\",\n" +
-        "          \"fieldName\" : \"added\"\n" +
-        "        }\n" +
-        "      ],\n" +
-        "  \"tuningConfig\": {\n" +
-        "      \"type\" : \"hadoop\"\n" +
-        "  }\n" +
-        "}";
+                           "  \"type\" : \"derivativeDataSource\",\n" +
+                           "  \"baseDataSource\": \"wikiticker\",\n" +
+                           "  \"dimensionsSpec\":{\n" +
+                           "            \"dimensions\" : [\n" +
+                           "              \"isUnpatrolled\",\n" +
+                           "              \"metroCode\",\n" +
+                           "              \"namespace\",\n" +
+                           "              \"page\",\n" +
+                           "              \"regionIsoCode\",\n" +
+                           "              \"regionName\",\n" +
+                           "              \"user\"\n" +
+                           "            ]\n" +
+                           "          },\n" +
+                           "    \"metricsSpec\" : [\n" +
+                           "        {\n" +
+                           "          \"name\" : \"count\",\n" +
+                           "          \"type\" : \"count\"\n" +
+                           "        },\n" +
+                           "        {\n" +
+                           "          \"name\" : \"added\",\n" +
+                           "          \"type\" : \"longSum\",\n" +
+                           "          \"fieldName\" : \"added\"\n" +
+                           "        }\n" +
+                           "      ],\n" +
+                           "  \"tuningConfig\": {\n" +
+                           "      \"type\" : \"hadoop\"\n" +
+                           "  }\n" +
+                           "}";
     MaterializedViewSupervisorSpec expected = new MaterializedViewSupervisorSpec(
         "wikiticker",
         new DimensionsSpec(
             Lists.newArrayList(
                 new StringDimensionSchema("isUnpatrolled"),
-                new StringDimensionSchema("metroCode"), 
-                new StringDimensionSchema("namespace"), 
-                new StringDimensionSchema("page"), 
-                new StringDimensionSchema("regionIsoCode"), 
+                new StringDimensionSchema("metroCode"),
+                new StringDimensionSchema("namespace"),
+                new StringDimensionSchema("page"),
+                new StringDimensionSchema("regionIsoCode"),
                 new StringDimensionSchema("regionName"),
                 new StringDimensionSchema("user")
             ),
@@ -142,8 +143,9 @@ public class MaterializedViewSupervisorSpecTest
         null,
         null,
         new MaterializedViewTaskConfig(),
-        createMock(AuthorizerMapper.class),
-        new NoopChatHandlerProvider()
+        EasyMock.createMock(AuthorizerMapper.class),
+        new NoopChatHandlerProvider(),
+        new SupervisorStateManagerConfig()
     );
     MaterializedViewSupervisorSpec spec = objectMapper.readValue(supervisorStr, MaterializedViewSupervisorSpec.class);
     Assert.assertEquals(expected.getBaseDataSource(), spec.getBaseDataSource());
@@ -190,11 +192,17 @@ public class MaterializedViewSupervisorSpecTest
     Assert.assertFalse(spec.isSuspended());
 
     String suspendedSerialized = objectMapper.writeValueAsString(spec.createSuspendedSpec());
-    MaterializedViewSupervisorSpec suspendedSpec = objectMapper.readValue(suspendedSerialized, MaterializedViewSupervisorSpec.class);
+    MaterializedViewSupervisorSpec suspendedSpec = objectMapper.readValue(
+        suspendedSerialized,
+        MaterializedViewSupervisorSpec.class
+    );
     Assert.assertTrue(suspendedSpec.isSuspended());
 
     String runningSerialized = objectMapper.writeValueAsString(spec.createRunningSpec());
-    MaterializedViewSupervisorSpec runningSpec = objectMapper.readValue(runningSerialized, MaterializedViewSupervisorSpec.class);
+    MaterializedViewSupervisorSpec runningSpec = objectMapper.readValue(
+        runningSerialized,
+        MaterializedViewSupervisorSpec.class
+    );
     Assert.assertFalse(runningSpec.isSuspended());
   }
 
@@ -205,7 +213,8 @@ public class MaterializedViewSupervisorSpecTest
     expectedException.expectMessage(
         "baseDataSource cannot be null or empty. Please provide a baseDataSource."
     );
-    MaterializedViewSupervisorSpec materializedViewSupervisorSpec = new MaterializedViewSupervisorSpec(
+    //noinspection ResultOfObjectAllocationIgnored (this method call will trigger the expected exception)
+    new MaterializedViewSupervisorSpec(
         "",
         new DimensionsSpec(
             Lists.newArrayList(
@@ -238,8 +247,9 @@ public class MaterializedViewSupervisorSpecTest
         null,
         null,
         new MaterializedViewTaskConfig(),
-        createMock(AuthorizerMapper.class),
-        new NoopChatHandlerProvider()
+        EasyMock.createMock(AuthorizerMapper.class),
+        new NoopChatHandlerProvider(),
+        new SupervisorStateManagerConfig()
     );
   }
 
@@ -250,7 +260,8 @@ public class MaterializedViewSupervisorSpecTest
     expectedException.expectMessage(
         "baseDataSource cannot be null or empty. Please provide a baseDataSource."
     );
-    MaterializedViewSupervisorSpec materializedViewSupervisorSpec = new MaterializedViewSupervisorSpec(
+    //noinspection ResultOfObjectAllocationIgnored (this method call will trigger the expected exception)
+    new MaterializedViewSupervisorSpec(
         null,
         new DimensionsSpec(
             Lists.newArrayList(
@@ -283,8 +294,9 @@ public class MaterializedViewSupervisorSpecTest
         null,
         null,
         new MaterializedViewTaskConfig(),
-        createMock(AuthorizerMapper.class),
-        new NoopChatHandlerProvider()
+        EasyMock.createMock(AuthorizerMapper.class),
+        new NoopChatHandlerProvider(),
+        new SupervisorStateManagerConfig()
     );
   }
 }

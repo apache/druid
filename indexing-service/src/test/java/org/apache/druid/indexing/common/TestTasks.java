@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Task;
 
@@ -69,6 +70,11 @@ public class TestTasks
     }
 
     @Override
+    public void stopGracefully(TaskConfig taskConfig)
+    {
+    }
+
+    @Override
     public TaskStatus run(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
@@ -94,6 +100,11 @@ public class TestTasks
     public boolean isReady(TaskActionClient taskActionClient)
     {
       return true;
+    }
+
+    @Override
+    public void stopGracefully(TaskConfig taskConfig)
+    {
     }
 
     @Override

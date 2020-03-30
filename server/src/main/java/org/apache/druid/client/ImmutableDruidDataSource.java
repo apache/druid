@@ -22,23 +22,19 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Ordering;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 
 /**
- * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
+ * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data
+ * source.
  *
  * @see DruidDataSource - a mutable counterpart of this class
  */
@@ -114,41 +110,6 @@ public class ImmutableDruidDataSource
     return totalSizeOfSegments;
   }
 
-  /**
-   * This method finds the overshadowed segments from the given segments
-   *
-   * @return set of overshadowed segments
-   */
-  public static Set<DataSegment> determineOvershadowedSegments(Iterable<DataSegment> segments)
-  {
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = buildTimelines(segments);
-
-    final Set<DataSegment> overshadowedSegments = new HashSet<>();
-    for (DataSegment dataSegment : segments) {
-      final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
-      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
-        overshadowedSegments.add(dataSegment);
-      }
-    }
-    return overshadowedSegments;
-  }
-
-  /**
-   * Builds a timeline from given segments
-   *
-   * @return map of datasource to VersionedIntervalTimeline of segments
-   */
-  private static Map<String, VersionedIntervalTimeline<String, DataSegment>> buildTimelines(
-      Iterable<DataSegment> segments
-  )
-  {
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
-    segments.forEach(segment -> timelines
-        .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
-        .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)));
-    return timelines;
-  }
-
   @Override
   public String toString()
   {
@@ -160,8 +121,41 @@ public class ImmutableDruidDataSource
            + "'}";
   }
 
+  /**
+   * ImmutableDruidDataSource should be considered a container, not a data class. The idea is the same as behind
+   * prohibiting/limiting equals() (and therefore usage as HashSet/HashMap keys) of DataSegment: see
+   * https://github.com/apache/druid/issues/6358. When somebody wants to deduplicate ImmutableDruidDataSource
+   * objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name
+   * manually.
+   *
+   * See https://github.com/apache/druid/issues/7858
+   */
   @Override
   public boolean equals(Object o)
+  {
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
+  }
+
+  /**
+   * ImmutableDruidDataSource should be considered a container, not a data class. The idea is the same as behind
+   * prohibiting/limiting hashCode() (and therefore usage as HashSet/HashMap keys) of DataSegment: see
+   * https://github.com/apache/druid/issues/6358. When somebody wants to deduplicate ImmutableDruidDataSource
+   * objects, they would need to put them into a Map<String, ImmutableDruidDataSource> and resolve conflicts by name
+   * manually.
+   *
+   * See https://github.com/apache/druid/issues/7858
+   */
+  @Override
+  public int hashCode()
+  {
+    throw new UnsupportedOperationException("ImmutableDruidDataSource shouldn't be used as the key in containers");
+  }
+
+  /**
+   * This method should only be used in tests.
+   */
+  @VisibleForTesting
+  public boolean equalsForTesting(Object o)
   {
     if (this == o) {
       return true;
@@ -181,11 +175,5 @@ public class ImmutableDruidDataSource
     }
 
     return this.idToSegments.equals(that.idToSegments);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, properties, idToSegments);
   }
 }

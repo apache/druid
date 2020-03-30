@@ -42,7 +42,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class HttpPostEmitterStressTest
 {
   private static final int N = 10_000;
-  private static final ObjectMapper objectMapper = new ObjectMapper()
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
   {
     @Override
     public byte[] writeValueAsBytes(Object value)
@@ -59,12 +59,13 @@ public class HttpPostEmitterStressTest
     HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setFlushMillis(100)
         .setFlushCount(4)
+        .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
         .setMaxBatchSize(1024 * 1024)
         // For this test, we don't need any batches to be dropped, i. e. "gaps" in data
         .setBatchQueueSizeLimit(1000)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, objectMapper);
+    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
     int nThreads = Runtime.getRuntime().availableProcessors() * 2;
     final List<IntList> eventsPerThread = new ArrayList<>(nThreads);
     final List<List<Batch>> eventBatchesPerThread = new ArrayList<>(nThreads);

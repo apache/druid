@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.yahoo.sketches.Util;
-import com.yahoo.sketches.quantiles.DoublesSketch;
-import com.yahoo.sketches.quantiles.DoublesUnion;
+import org.apache.datasketches.Util;
+import org.apache.datasketches.quantiles.DoublesSketch;
+import org.apache.datasketches.quantiles.DoublesUnion;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -240,10 +240,11 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     }
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(final Object object)
+  public Object finalizeComputation(@Nullable final Object object)
   {
-    return ((DoublesSketch) object).getN();
+    return object == null ? null : ((DoublesSketch) object).getN();
   }
 
   @Override

@@ -92,6 +92,9 @@ class Batch extends AbstractQueuedLongSynchronizer
    * Ordering number of this batch, as they filled & emitted in {@link HttpPostEmitter} serially, starting from 0.
    * It's a boxed Long rather than primitive long, because we want to minimize the number of allocations done in
    * {@link HttpPostEmitter#onSealExclusive} and so the probability of {@link OutOfMemoryError}.
+   *
+   * See {@link HttpPostEmitter#concurrentBatch} which may store this object.
+   *
    * @see HttpPostEmitter#onSealExclusive
    * @see HttpPostEmitter#concurrentBatch
    */

@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,9 +34,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.CacheStrategy;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -50,16 +47,22 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
+ *
  */
 public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery>
 {
@@ -73,23 +76,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       {
       };
 
-  @Deprecated
-  private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TimeseriesQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
-  public TimeseriesQueryQueryToolChest(IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator)
+  public TimeseriesQueryQueryToolChest()
   {
-    this(intervalChunkingQueryRunnerDecorator, DefaultTimeseriesQueryMetricsFactory.instance());
+    this(DefaultTimeseriesQueryMetricsFactory.instance());
   }
 
   @Inject
-  public TimeseriesQueryQueryToolChest(
-      IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator,
-      TimeseriesQueryMetricsFactory queryMetricsFactory
-  )
+  public TimeseriesQueryQueryToolChest(TimeseriesQueryMetricsFactory queryMetricsFactory)
   {
-    this.intervalChunkingQueryRunnerDecorator = intervalChunkingQueryRunnerDecorator;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -99,13 +96,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(
-        queryRunner)
+        queryRunner,
+        this::createResultComparator,
+        this::createMergeFn
+    )
     {
       @Override
       public Sequence<Result<TimeseriesResultValue>> doRun(
           QueryRunner<Result<TimeseriesResultValue>> baseRunner,
           QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-          Map<String, Object> context
+          ResponseContext context
       )
       {
         int limit = ((TimeseriesQuery) queryPlus.getQuery()).getLimit();
@@ -119,26 +119,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           return result.limit(limit);
         }
         return result;
-      }
-
-      @Override
-      protected Ordering<Result<TimeseriesResultValue>> makeOrdering(Query<Result<TimeseriesResultValue>> query)
-      {
-        return ResultGranularTimestampComparator.create(
-            ((TimeseriesQuery) query).getGranularity(), query.isDescending()
-        );
-      }
-
-      @Override
-      protected BinaryFn<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> createMergeFn(
-          Query<Result<TimeseriesResultValue>> input
-      )
-      {
-        TimeseriesQuery query = (TimeseriesQuery) input;
-        return new TimeseriesBinaryFn(
-            query.getGranularity(),
-            query.getAggregatorSpecs()
-        );
       }
     };
 
@@ -211,23 +191,43 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     };
   }
 
+  @Override
+  public BinaryOperator<Result<TimeseriesResultValue>> createMergeFn(
+      Query<Result<TimeseriesResultValue>> query
+  )
+  {
+    TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+    return new TimeseriesBinaryFn(timeseriesQuery.getGranularity(), timeseriesQuery.getAggregatorSpecs());
+  }
+
+  @Override
+  public Comparator<Result<TimeseriesResultValue>> createResultComparator(Query<Result<TimeseriesResultValue>> query)
+  {
+    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
+  }
+
   private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
   {
     List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     String[] aggregatorNames = new String[aggregatorSpecs.size()];
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      aggregators[i] = aggregatorSpecs.get(i)
-                                      .factorize(RowBasedColumnSelectorFactory.create(() -> new MapBasedRow(
-                                          null,
-                                          null
-                                      ), null));
+      aggregators[i] =
+          aggregatorSpecs.get(i)
+                         .factorize(
+                             RowBasedColumnSelectorFactory.create(
+                                 RowAdapters.standardRow(),
+                                 () -> new MapBasedRow(null, null),
+                                 RowSignature.empty(),
+                                 false
+                             )
+                         );
       aggregatorNames[i] = aggregatorSpecs.get(i).getName();
     }
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
     TimeseriesResultBuilder bob = new TimeseriesResultBuilder(start);
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      bob.addMetric(aggregatorNames[i], aggregators[i]);
+      bob.addMetric(aggregatorNames[i], aggregators[i].get());
       aggregators[i].close();
     }
     return bob.build();
@@ -334,7 +334,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             List<Object> results = (List<Object>) input;
             final Map<String, Object> retVal = Maps.newLinkedHashMap();
 
-            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
             Iterator<Object> resultIter = results.iterator();
 
             final Number timestampNumber = (Number) resultIter.next();
@@ -346,12 +345,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             }
 
             CacheStrategy.fetchAggregatorsFromCache(
-                aggsIter,
+                aggs,
                 resultIter,
                 isResultLevelCache,
-                (aggName, aggValueObject) -> {
+                (aggName, aggPosition, aggValueObject) -> {
                   retVal.put(aggName, aggValueObject);
-                  return null;
                 }
             );
 
@@ -375,15 +373,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(
-        (queryPlus, responseContext) -> {
-          TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
-          if (timeseriesQuery.getDimensionsFilter() != null) {
-            timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
-            queryPlus = queryPlus.withQuery(timeseriesQuery);
-          }
-          return runner.run(queryPlus, responseContext);
-        }, this);
+    return (queryPlus, responseContext) -> {
+      TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
+      if (timeseriesQuery.getDimensionsFilter() != null) {
+        timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+        queryPlus = queryPlus.withQuery(timeseriesQuery);
+      }
+      return runner.run(queryPlus, responseContext);
+    };
   }
 
   @Override
@@ -402,6 +399,43 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     return makeComputeManipulatorFn(query, fn, true);
+  }
+
+  @Override
+  public RowSignature resultArraySignature(TimeseriesQuery query)
+  {
+    return RowSignature.builder()
+                       .addTimeColumn()
+                       .addAggregators(query.getAggregatorSpecs())
+                       .addPostAggregators(query.getPostAggregatorSpecs())
+                       .build();
+  }
+
+  @Override
+  public Sequence<Object[]> resultsAsArrays(
+      final TimeseriesQuery query,
+      final Sequence<Result<TimeseriesResultValue>> resultSequence
+  )
+  {
+    final List<String> fields = resultArraySignature(query).getColumnNames();
+
+    return Sequences.map(
+        resultSequence,
+        result -> {
+          final Object[] retVal = new Object[fields.size()];
+
+          // Position 0 is always __time.
+          retVal[0] = result.getTimestamp().getMillis();
+
+          // Add other fields.
+          final Map<String, Object> resultMap = result.getValue().getBaseObject();
+          for (int i = 1; i < fields.size(); i++) {
+            retVal[i] = resultMap.get(fields.get(i));
+          }
+
+          return retVal;
+        }
+    );
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(

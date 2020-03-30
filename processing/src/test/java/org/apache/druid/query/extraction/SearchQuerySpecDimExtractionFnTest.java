@@ -35,7 +35,7 @@ import java.util.List;
  */
 public class SearchQuerySpecDimExtractionFnTest
 {
-  private static final String[] testStrings = {
+  private static final String[] TEST_STRINGS = {
       "Kyoto",
       "Calgary",
       "Tokyo",
@@ -56,7 +56,7 @@ public class SearchQuerySpecDimExtractionFnTest
     List<String> expected = ImmutableList.of("Kyoto", "Tokyo", "Toyokawa", "Yorktown");
     List<String> extracted = new ArrayList<>();
 
-    for (String str : testStrings) {
+    for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
       if (res != null) {
         extracted.add(res);
@@ -77,7 +77,7 @@ public class SearchQuerySpecDimExtractionFnTest
     List<String> expected = ImmutableList.of("Kyoto");
     List<String> extracted = new ArrayList<>();
 
-    for (String str : testStrings) {
+    for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
       if (res != null) {
         extracted.add(res);
@@ -98,7 +98,7 @@ public class SearchQuerySpecDimExtractionFnTest
     List<String> expected = ImmutableList.of("Tokyo", "Toyokawa");
     List<String> extracted = new ArrayList<>();
 
-    for (String str : testStrings) {
+    for (String str : TEST_STRINGS) {
       String res = extractionFn.apply(str);
       if (res != null) {
         extracted.add(res);

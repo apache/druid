@@ -41,7 +41,7 @@ import java.nio.ByteBuffer;
  */
 public class TestQueryRunners
 {
-  private static final TopNQueryConfig topNConfig = new TopNQueryConfig();
+  private static final TopNQueryConfig TOPN_CONFIG = new TopNQueryConfig();
 
   public static CloseableStupidPool<ByteBuffer> createDefaultNonBlockingPool()
   {
@@ -55,10 +55,7 @@ public class TestQueryRunners
   {
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         pool,
-        new TopNQueryQueryToolChest(
-            topNConfig,
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new TopNQueryQueryToolChest(TOPN_CONFIG),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     return new FinalizeResultsQueryRunner<T>(
@@ -70,8 +67,7 @@ public class TestQueryRunners
   public static <T> QueryRunner<T> makeTimeSeriesQueryRunner(Segment adapter)
   {
     QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -87,10 +83,7 @@ public class TestQueryRunners
     final SearchQueryConfig config = new SearchQueryConfig();
     QueryRunnerFactory factory = new SearchQueryRunnerFactory(
         new SearchStrategySelector(Suppliers.ofInstance(config)),
-        new SearchQueryQueryToolChest(
-            config,
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new SearchQueryQueryToolChest(config),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     return new FinalizeResultsQueryRunner<T>(

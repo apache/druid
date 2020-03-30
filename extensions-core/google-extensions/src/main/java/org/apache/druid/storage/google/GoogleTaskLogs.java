@@ -23,6 +23,7 @@ import com.google.api.client.http.InputStreamContent;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -30,9 +31,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogs;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.Date;
 
 public class GoogleTaskLogs implements TaskLogs
 {
@@ -40,12 +42,21 @@ public class GoogleTaskLogs implements TaskLogs
 
   private final GoogleTaskLogsConfig config;
   private final GoogleStorage storage;
+  private final GoogleInputDataConfig inputDataConfig;
+  private final CurrentTimeMillisSupplier timeSupplier;
 
   @Inject
-  public GoogleTaskLogs(GoogleTaskLogsConfig config, GoogleStorage storage)
+  public GoogleTaskLogs(
+      GoogleTaskLogsConfig config,
+      GoogleStorage storage,
+      GoogleInputDataConfig inputDataConfig,
+      CurrentTimeMillisSupplier timeSupplier
+  )
   {
     this.config = config;
     this.storage = storage;
+    this.inputDataConfig = inputDataConfig;
+    this.timeSupplier = timeSupplier;
   }
 
   @Override
@@ -66,27 +77,28 @@ public class GoogleTaskLogs implements TaskLogs
 
   private void pushTaskFile(final File logFile, final String taskKey) throws IOException
   {
-    FileInputStream fileStream = new FileInputStream(logFile);
+    try (final InputStream fileStream = Files.newInputStream(logFile.toPath())) {
 
-    InputStreamContent mediaContent = new InputStreamContent("text/plain", fileStream);
-    mediaContent.setLength(logFile.length());
+      InputStreamContent mediaContent = new InputStreamContent("text/plain", fileStream);
+      mediaContent.setLength(logFile.length());
 
-    try {
-      RetryUtils.retry(
-          (RetryUtils.Task<Void>) () -> {
-            storage.insert(config.getBucket(), taskKey, mediaContent);
-            return null;
-          },
-          GoogleUtils::isRetryable,
-          1,
-          5
-      );
-    }
-    catch (IOException e) {
-      throw e;
-    }
-    catch (Exception e) {
-      throw new RE(e, "Failed to upload [%s] to [%s]", logFile, taskKey);
+      try {
+        RetryUtils.retry(
+            (RetryUtils.Task<Void>) () -> {
+              storage.insert(config.getBucket(), taskKey, mediaContent);
+              return null;
+            },
+            GoogleUtils::isRetryable,
+            1,
+            5
+        );
+      }
+      catch (IOException e) {
+        throw e;
+      }
+      catch (Exception e) {
+        throw new RE(e, "Failed to upload [%s] to [%s]", logFile, taskKey);
+      }
     }
   }
 
@@ -158,14 +170,39 @@ public class GoogleTaskLogs implements TaskLogs
   }
 
   @Override
-  public void killAll()
+  public void killAll() throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    LOG.info(
+        "Deleting all task logs from gs location [bucket: '%s' prefix: '%s'].",
+        config.getBucket(),
+        config.getPrefix()
+    );
+
+    long now = timeSupplier.getAsLong();
+    killOlderThan(now);
   }
 
   @Override
-  public void killOlderThan(long timestamp)
+  public void killOlderThan(long timestamp) throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    LOG.info(
+        "Deleting all task logs from gs location [bucket: '%s' prefix: '%s'] older than %s.",
+        config.getBucket(),
+        config.getPrefix(),
+        new Date(timestamp)
+    );
+    try {
+      GoogleUtils.deleteObjectsInPath(
+          storage,
+          inputDataConfig,
+          config.getBucket(),
+          config.getPrefix(),
+          (object) -> object.getUpdated().getValue() < timestamp
+      );
+    }
+    catch (Exception e) {
+      LOG.error("Error occurred while deleting task log files from gs. Error: %s", e.getMessage());
+      throw new IOException(e);
+    }
   }
 }

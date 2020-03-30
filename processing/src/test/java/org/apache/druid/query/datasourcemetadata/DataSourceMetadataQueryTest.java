@@ -37,6 +37,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.LogicalSegment;
@@ -51,12 +53,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 public class DataSourceMetadataQueryTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   @Test
   public void testQuerySerialization() throws IOException
@@ -65,8 +65,8 @@ public class DataSourceMetadataQueryTest
                         .dataSource("testing")
                         .build();
 
-    String json = jsonMapper.writeValueAsString(query);
-    Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    String json = JSON_MAPPER.writeValueAsString(query);
+    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
   }
@@ -138,8 +138,8 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
                                                             .dataSource("testing")
                                                             .build();
-    ConcurrentMap<String, Object> context = new ConcurrentHashMap<>();
-    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
+    ResponseContext context = ConcurrentResponseContext.createEmpty();
+    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();
     DataSourceMetadataResultValue val = results.iterator().next().getValue();

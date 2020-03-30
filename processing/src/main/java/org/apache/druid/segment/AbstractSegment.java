@@ -19,9 +19,12 @@
 
 package org.apache.druid.segment;
 
+import javax.annotation.Nullable;
+
 public abstract class AbstractSegment implements Segment
 {
   @Override
+  @Nullable
   public <T> T as(Class<T> clazz)
   {
     if (clazz.equals(QueryableIndex.class)) {

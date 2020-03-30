@@ -19,34 +19,100 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.concurrent.TimeUnit;
 
 @PublicApi
 public class QueryContexts
 {
+  public static final String FINALIZE_KEY = "finalize";
   public static final String PRIORITY_KEY = "priority";
+  public static final String LANE_KEY = "lane";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
-  @Deprecated
-  public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
+  public static final String BROKER_PARALLEL_MERGE_KEY = "enableParallelMerge";
+  public static final String BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY = "parallelMergeInitialYieldRows";
+  public static final String BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY = "parallelMergeSmallBatchRows";
+  public static final String BROKER_PARALLELISM = "parallelMergeParallelism";
+  public static final String VECTORIZE_KEY = "vectorize";
+  public static final String VECTOR_SIZE_KEY = "vectorSize";
+  public static final String MAX_SUBQUERY_ROWS_KEY = "maxSubqueryRows";
+  public static final String JOIN_FILTER_PUSH_DOWN_KEY = "enableJoinFilterPushDown";
+  public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
+  public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
+  public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
+  public static final Vectorize DEFAULT_VECTORIZE = Vectorize.FALSE;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
+  public static final boolean DEFAULT_ENABLE_PARALLEL_MERGE = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
+  public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY = 10000;
+
+  @SuppressWarnings("unused") // Used by Jackson serialization
+  public enum Vectorize
+  {
+    FALSE {
+      @Override
+      public boolean shouldVectorize(final boolean canVectorize)
+      {
+        return false;
+      }
+    },
+    TRUE {
+      @Override
+      public boolean shouldVectorize(final boolean canVectorize)
+      {
+        return canVectorize;
+      }
+    },
+    FORCE {
+      @Override
+      public boolean shouldVectorize(final boolean canVectorize)
+      {
+        if (!canVectorize) {
+          throw new ISE("Cannot vectorize!");
+        }
+
+        return true;
+      }
+    };
+
+    public abstract boolean shouldVectorize(boolean canVectorize);
+
+    @JsonCreator
+    public static Vectorize fromString(String str)
+    {
+      return Vectorize.valueOf(StringUtils.toUpperCase(str));
+    }
+
+    @Override
+    @JsonValue
+    public String toString()
+    {
+      return StringUtils.toLowerCase(name()).replace('_', '-');
+    }
+  }
 
   public static <T> boolean isBySegment(Query<T> query)
   {
@@ -100,7 +166,7 @@ public class QueryContexts
 
   public static <T> boolean isFinalize(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "finalize", defaultValue);
+    return parseBoolean(query, FINALIZE_KEY, defaultValue);
   }
 
   public static <T> boolean isSerializeDateTimeAsLong(Query<T> query, boolean defaultValue)
@@ -111,6 +177,21 @@ public class QueryContexts
   public static <T> boolean isSerializeDateTimeAsLongInner(Query<T> query, boolean defaultValue)
   {
     return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
+  }
+
+  public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
+  {
+    return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
+  }
+
+  public static <T> int getVectorSize(Query<T> query, int defaultSize)
+  {
+    return parseInt(query, VECTOR_SIZE_KEY, defaultSize);
+  }
+
+  public static <T> int getMaxSubqueryRows(Query<T> query, int defaultSize)
+  {
+    return parseInt(query, MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
   public static <T> int getUncoveredIntervalsLimit(Query<T> query)
@@ -133,11 +214,54 @@ public class QueryContexts
     return parseInt(query, PRIORITY_KEY, defaultValue);
   }
 
-  @Deprecated
-  public static <T> String getChunkPeriod(Query<T> query)
+  public static <T> String getLane(Query<T> query)
   {
-    return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");
+    return (String) query.getContextValue(LANE_KEY);
   }
+
+  public static <T> boolean getEnableParallelMerges(Query<T> query)
+  {
+    return parseBoolean(query, BROKER_PARALLEL_MERGE_KEY, DEFAULT_ENABLE_PARALLEL_MERGE);
+  }
+
+  public static <T> int getParallelMergeInitialYieldRows(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLEL_MERGE_INITIAL_YIELD_ROWS_KEY, defaultValue);
+  }
+
+  public static <T> int getParallelMergeSmallBatchRows(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLEL_MERGE_SMALL_BATCH_ROWS_KEY, defaultValue);
+  }
+
+  public static <T> int getParallelMergeParallelism(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, BROKER_PARALLELISM, defaultValue);
+  }
+  public static <T> boolean getEnableJoinFilterRewriteValueColumnFilters(Query<T> query)
+  {
+    return parseBoolean(
+        query,
+        JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY,
+        DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS
+    );
+  }
+
+  public static <T> long getJoinFilterRewriteMaxSize(Query<T> query)
+  {
+    return parseLong(query, JOIN_FILTER_REWRITE_MAX_SIZE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY);
+  }
+
+  public static <T> boolean getEnableJoinFilterPushDown(Query<T> query)
+  {
+    return parseBoolean(query, JOIN_FILTER_PUSH_DOWN_KEY, DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
+  }
+
+  public static <T> boolean getEnableJoinFilterRewrite(Query<T> query)
+  {
+    return parseBoolean(query, JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
+  }
+
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {
@@ -238,5 +362,20 @@ public class QueryContexts
 
   private QueryContexts()
   {
+  }
+
+  static <T, E extends Enum<E>> E parseEnum(Query<T> query, String key, Class<E> clazz, E defaultValue)
+  {
+    Object val = query.getContextValue(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Enum.valueOf(clazz, StringUtils.toUpperCase((String) val));
+    } else if (val instanceof Boolean) {
+      return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(val)));
+    } else {
+      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+    }
   }
 }

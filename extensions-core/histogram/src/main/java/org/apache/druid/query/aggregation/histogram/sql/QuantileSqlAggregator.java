@@ -39,6 +39,7 @@ import org.apache.druid.query.aggregation.histogram.ApproximateHistogramAggregat
 import org.apache.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -46,8 +47,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -68,7 +68,8 @@ public class QuantileSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
@@ -77,7 +78,6 @@ public class QuantileSqlAggregator implements SqlAggregator
       final boolean finalizeAggregations
   )
   {
-    final RowSignature rowSignature = querySignature.getRowSignature();
     final DruidExpression input = Expressions.toDruidExpression(
         plannerContext,
         rowSignature,
@@ -175,14 +175,15 @@ public class QuantileSqlAggregator implements SqlAggregator
     final List<VirtualColumn> virtualColumns = new ArrayList<>();
 
     if (input.isDirectColumnAccess()) {
-      if (rowSignature.getColumnType(input.getDirectColumn()) == ValueType.COMPLEX) {
+      if (rowSignature.getColumnType(input.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
         aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
             histogramName,
             input.getDirectColumn(),
             resolution,
             numBuckets,
             lowerLimit,
-            upperLimit
+            upperLimit,
+            false
         );
       } else {
         aggregatorFactory = new ApproximateHistogramAggregatorFactory(
@@ -191,12 +192,13 @@ public class QuantileSqlAggregator implements SqlAggregator
             resolution,
             numBuckets,
             lowerLimit,
-            upperLimit
+            upperLimit,
+            false
         );
       }
     } else {
       final VirtualColumn virtualColumn =
-          querySignature.getOrCreateVirtualColumnForExpression(plannerContext, input, SqlTypeName.FLOAT);
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, SqlTypeName.FLOAT);
       virtualColumns.add(virtualColumn);
       aggregatorFactory = new ApproximateHistogramAggregatorFactory(
           histogramName,
@@ -204,7 +206,8 @@ public class QuantileSqlAggregator implements SqlAggregator
           resolution,
           numBuckets,
           lowerLimit,
-          upperLimit
+          upperLimit,
+          false
       );
     }
 

@@ -32,11 +32,11 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.context.ResponseContext;
 
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -87,7 +87,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     Query<T> query = queryPlus.getQuery();
     final int priority = QueryContexts.getPriority(query);
@@ -132,7 +132,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     throw new RuntimeException(e);
                                   }
                                   catch (Exception e) {
-                                    log.error(e, "Exception with one of the sequences!");
+                                    log.noStackTrace().error(e, "Exception with one of the sequences!");
                                     Throwables.propagateIfPossible(e);
                                     throw new RuntimeException(e);
                                   }
@@ -144,7 +144,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                 )
             );
 
-            queryWatcher.registerQuery(query, futures);
+            queryWatcher.registerQueryFuture(query, futures);
 
             try {
               return new MergeIterable<>(
@@ -155,7 +155,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               ).iterator();
             }
             catch (InterruptedException e) {
-              log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+              log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
             }
@@ -163,7 +163,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               throw new QueryInterruptedException(e);
             }
             catch (TimeoutException e) {
-              log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+              log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
               futures.cancel(true);
               throw new QueryInterruptedException(e);
             }

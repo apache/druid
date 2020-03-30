@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.variance;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -31,7 +32,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class VarianceAggregatorTest
+public class VarianceAggregatorTest extends InitializedNullHandlingTest
 {
   private VarianceAggregatorFactory aggFactory;
   private ColumnSelectorFactory colSelectorFactory;
@@ -66,6 +67,7 @@ public class VarianceAggregatorTest
     selector = new TestFloatColumnSelector(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
   }
 

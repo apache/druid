@@ -21,10 +21,11 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 
@@ -49,22 +50,75 @@ public interface SqlOperatorConversion
    * @see Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)
    */
   @Nullable
-  DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode);
+  DruidExpression toDruidExpression(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode
+  );
 
   /**
-   * Returns a Druid Aggregation corresponding to a SQL {@link SqlOperator} used to filter rows
+   * Translate a Calcite {@code RexNode} to a Druid expression, with the possibility of having postagg operands.
    *
-   * @param plannerContext   SQL planner context
-   * @param querySignature   signature of the rows being aggregated and expression column references
-   * @param rexNode          filter expression rex node
+   * @param plannerContext SQL planner context
+   * @param rowSignature   signature of the rows to be extracted from
+   * @param rexNode        expression meant to be applied on top of the rows
+   * @param postAggregatorVisitor visitor that manages postagg names and tracks postaggs that were created as
+   *                              by the translation
    *
-   * @return filter, or null if the call cannot be translated
+   * @return Druid expression, or null if translation is not possible
+   *
+   * @see Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)
+   */
+  @Nullable
+  default DruidExpression toDruidExpressionWithPostAggOperands(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode,
+      PostAggregatorVisitor postAggregatorVisitor
+  )
+  {
+    return toDruidExpression(plannerContext, rowSignature, rexNode);
+  }
+
+  /**
+   * Returns a Druid filter corresponding to a Calcite {@code RexNode} used as a filter condition.
+   *
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          input row signature
+   * @param virtualColumnRegistry re-usable virtual column references
+   * @param rexNode               filter expression rex node
+   *
+   * @return filter, or null if the call cannot be translated to a filter
    */
   @Nullable
   default DimFilter toDruidFilter(
       PlannerContext plannerContext,
-      DruidQuerySignature querySignature,
+      RowSignature rowSignature,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
       RexNode rexNode
+  )
+  {
+    return null;
+  }
+
+  /**
+   * Returns a Druid PostAggregator corresponding to a Calcite {@link RexNode} used to transform a row after
+   * aggregation has occurred.
+   *
+   * @param plannerContext   SQL planner context
+   * @param querySignature   signature of the rows to be extracted from
+   * @param rexNode          expression meant to be applied on top of the rows
+   *
+   * @param postAggregatorVisitor visitor that manages postagg names and tracks postaggs that were created
+   *                              by the translation
+   * @return filter, or null if the call cannot be translated
+   */
+  @Nullable
+  default PostAggregator toPostAggregator(
+      PlannerContext plannerContext,
+      RowSignature querySignature,
+      RexNode rexNode,
+      PostAggregatorVisitor postAggregatorVisitor
   )
   {
     return null;

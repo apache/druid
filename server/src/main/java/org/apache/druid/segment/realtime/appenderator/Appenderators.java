@@ -20,27 +20,28 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.ShardSpec;
-import org.joda.time.Interval;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.concurrent.ExecutorService;
 
 public class Appenderators
 {
   public static Appenderator createRealtime(
+      String id,
       DataSchema schema,
       AppenderatorConfig config,
       FireDepartmentMetrics metrics,
@@ -52,32 +53,46 @@ public class Appenderators
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats
   )
   {
     return new AppenderatorImpl(
+        id,
         schema,
         config,
+        false,
         metrics,
         dataSegmentPusher,
         objectMapper,
-        conglomerate,
         segmentAnnouncer,
-        emitter,
-        queryExecutorService,
+        new SinkQuerySegmentWalker(
+            schema.getDataSource(),
+            new VersionedIntervalTimeline<>(
+                String.CASE_INSENSITIVE_ORDER
+            ),
+            objectMapper,
+            emitter,
+            conglomerate,
+            queryExecutorService,
+            joinableFactory,
+            Preconditions.checkNotNull(cache, "cache"),
+            cacheConfig,
+            cachePopulatorStats
+        ),
         indexIO,
         indexMerger,
-        cache,
-        cacheConfig,
-        cachePopulatorStats
+        cache
     );
   }
 
   public static Appenderator createOffline(
+      String id,
       DataSchema schema,
       AppenderatorConfig config,
+      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -86,12 +101,13 @@ public class Appenderators
   )
   {
     return new AppenderatorImpl(
+        id,
         schema,
         config,
+        storeCompactionState,
         metrics,
         dataSegmentPusher,
         objectMapper,
-        null,
         new DataSegmentAnnouncer()
         {
           @Override
@@ -119,17 +135,9 @@ public class Appenderators
           }
         },
         null,
-        null,
         indexIO,
         indexMerger,
-        null,
-        null,
         null
     );
-  }
-
-  public static String getSequenceName(Interval interval, String version, ShardSpec shardSpec)
-  {
-    return StringUtils.format("index_%s_%s_%d", interval, version, shardSpec.getPartitionNum());
   }
 }

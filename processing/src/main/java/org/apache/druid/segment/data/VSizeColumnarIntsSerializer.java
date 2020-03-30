@@ -26,6 +26,8 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
@@ -37,7 +39,7 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
 {
   private static final byte VERSION = VSizeColumnarInts.VERSION;
 
-  private static final MetaSerdeHelper<VSizeColumnarIntsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<VSizeColumnarIntsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((VSizeColumnarIntsSerializer x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> Ints.checkedCast(x.valuesOut.size()));
@@ -46,8 +48,10 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
   private final int numBytes;
 
   private final ByteBuffer helperBuffer = ByteBuffer.allocate(Integer.BYTES);
-  private WriteOutBytes valuesOut = null;
   private boolean bufPaddingWritten = false;
+
+  @Nullable
+  private WriteOutBytes valuesOut = null;
 
   public VSizeColumnarIntsSerializer(final SegmentWriteOutMedium segmentWriteOutMedium, final int maxValue)
   {
@@ -75,14 +79,14 @@ public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializ
   public long getSerializedSize() throws IOException
   {
     writeBufPadding();
-    return metaSerdeHelper.size(this) + valuesOut.size();
+    return META_SERDE_HELPER.size(this) + valuesOut.size();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeBufPadding();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     valuesOut.writeTo(channel);
   }
 

@@ -23,14 +23,13 @@ import com.google.common.collect.RangeSet;
 import org.apache.druid.segment.filter.TrueFilter;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.Set;
 
 /**
  */
 public class TrueDimFilter implements DimFilter
 {
-  private static HashSet<String> REQUIRED_COLUMNS = new HashSet<>();
-
   @Override
   public byte[] getCacheKey()
   {        
@@ -56,8 +55,8 @@ public class TrueDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return REQUIRED_COLUMNS;
+    return Collections.emptySet();
   }
 }

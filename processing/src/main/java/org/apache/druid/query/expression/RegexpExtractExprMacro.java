@@ -21,6 +21,7 @@ package org.apache.druid.query.expression;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -32,10 +33,12 @@ import java.util.regex.Pattern;
 
 public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "regexp_extract";
+
   @Override
   public String name()
   {
-    return "regexp_extract";
+    return FN_NAME;
   }
 
   @Override
@@ -57,8 +60,14 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     final Pattern pattern = Pattern.compile(String.valueOf(patternExpr.getLiteralValue()));
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
-    class RegexpExtractExpr implements Expr
+
+    class RegexpExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private RegexpExtractExpr(Expr arg)
+      {
+        super(FN_NAME, arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -70,12 +79,27 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new RegexpExtractExpr(newArg));
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (indexExpr != null) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              patternExpr.stringify(),
+              indexExpr.stringify()
+          );
+        }
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
       }
     }
-    return new RegexpExtractExpr();
+    return new RegexpExtractExpr(arg);
   }
 }

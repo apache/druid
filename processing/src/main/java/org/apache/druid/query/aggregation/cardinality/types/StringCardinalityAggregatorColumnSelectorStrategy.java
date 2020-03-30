@@ -84,7 +84,7 @@ public class StringCardinalityAggregatorColumnSelectorStrategy implements Cardin
       // Skip counting null values when we are not replacing null with default value.
       // A special value for null in case null handling is configured to use empty string for null.
       if (NullHandling.replaceWithDefault() || value != null) {
-        collector.add(CardinalityAggregator.hashFn.hashUnencodedChars(nullToSpecial(value)).asBytes());
+        collector.add(CardinalityAggregator.HASH_FUNCTION.hashUnencodedChars(nullToSpecial(value)).asBytes());
       }
     }
   }

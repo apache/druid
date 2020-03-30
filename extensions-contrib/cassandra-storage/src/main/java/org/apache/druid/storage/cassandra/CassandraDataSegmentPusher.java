@@ -34,15 +34,14 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 
 /**
  * Cassandra Segment Pusher
- *
- * @author boneill42
  */
 public class CassandraDataSegmentPusher extends CassandraStorage implements DataSegmentPusher
 {
@@ -90,9 +89,9 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 
     int version = SegmentUtils.getVersionFromDir(indexFilesDir);
 
-    try {
+    try (final InputStream fileStream = Files.newInputStream(compressedIndexFile.toPath())) {
       long start = System.currentTimeMillis();
-      ChunkedStorage.newWriter(indexStorage, key, new FileInputStream(compressedIndexFile))
+      ChunkedStorage.newWriter(indexStorage, key, fileStream)
                     .withConcurrencyLevel(CONCURRENCY).call();
       byte[] json = jsonMapper.writeValueAsBytes(segment);
       MutationBatch mutation = this.keyspace.prepareMutationBatch();

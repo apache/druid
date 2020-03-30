@@ -38,7 +38,10 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -50,9 +53,12 @@ import java.util.Objects;
 @JsonTypeName("variance")
 public class VarianceAggregatorFactory extends AggregatorFactory
 {
+  private static final String VARIANCE_TYPE_NAME = "variance";
   protected final String fieldName;
   protected final String name;
+  @Nullable
   protected final String estimator;
+  @Nullable
   private final String inputType;
 
   protected final boolean isVariancePop;
@@ -61,8 +67,8 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public VarianceAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("estimator") String estimator,
-      @JsonProperty("inputType") String inputType
+      @JsonProperty("estimator") @Nullable String estimator,
+      @JsonProperty("inputType") @Nullable String inputType
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -72,7 +78,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     this.fieldName = fieldName;
     this.estimator = estimator;
     this.isVariancePop = VarianceAggregatorCollector.isVariancePop(estimator);
-    this.inputType = inputType == null ? "float" : inputType;
+    this.inputType = inputType;
   }
 
   public VarianceAggregatorFactory(String name, String fieldName)
@@ -83,7 +89,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "variance";
+    return VARIANCE_TYPE_NAME;
   }
 
   @Override
@@ -100,15 +106,21 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       return NoopAggregator.instance();
     }
 
-    if ("float".equalsIgnoreCase(inputType)) {
+    final String type = getTypeString(metricFactory);
+
+    if (ValueType.FLOAT.name().equalsIgnoreCase(type)) {
       return new VarianceAggregator.FloatVarianceAggregator(selector);
-    } else if ("long".equalsIgnoreCase(inputType)) {
+    } else if (ValueType.DOUBLE.name().equalsIgnoreCase(type)) {
+      return new VarianceAggregator.DoubleVarianceAggregator(selector);
+    } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
       return new VarianceAggregator.LongVarianceAggregator(selector);
-    } else if ("variance".equalsIgnoreCase(inputType)) {
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
       return new VarianceAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
-        "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
+        "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
+        fieldName,
+        inputType
     );
   }
 
@@ -119,15 +131,21 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
     }
-    if ("float".equalsIgnoreCase(inputType)) {
+    final String type = getTypeString(metricFactory);
+
+    if (ValueType.FLOAT.name().equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.FloatVarianceAggregator(selector);
-    } else if ("long".equalsIgnoreCase(inputType)) {
+    } else if (ValueType.DOUBLE.name().equalsIgnoreCase(type)) {
+      return new VarianceBufferAggregator.DoubleVarianceAggregator(selector);
+    } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.LongVarianceAggregator(selector);
-    } else if ("variance".equalsIgnoreCase(inputType)) {
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.ObjectVarianceAggregator(selector);
     }
     throw new IAE(
-        "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
+        "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
+        fieldName,
+        inputType
     );
   }
 
@@ -202,10 +220,11 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     return VarianceAggregatorCollector.COMPARATOR;
   }
 
+  @Nullable
   @Override
-  public Object finalizeComputation(Object object)
+  public Object finalizeComputation(@Nullable Object object)
   {
-    return ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
+    return object == null ? null : ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
   }
 
   @Override
@@ -236,6 +255,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     return name;
   }
 
+  @Nullable
   @JsonProperty
   public String getEstimator()
   {
@@ -245,7 +265,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @JsonProperty
   public String getInputType()
   {
-    return inputType;
+    return inputType == null ? StringUtils.toLowerCase(ValueType.FLOAT.name()) : inputType;
   }
 
   @Override
@@ -300,4 +320,19 @@ public class VarianceAggregatorFactory extends AggregatorFactory
 
     return Objects.hash(fieldName, name, estimator, inputType, isVariancePop);
   }
+
+  private String getTypeString(ColumnSelectorFactory metricFactory)
+  {
+    String type = inputType;
+    if (type == null) {
+      ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+      if (capabilities != null) {
+        type = StringUtils.toLowerCase(capabilities.getType().name());
+      } else {
+        type = StringUtils.toLowerCase(ValueType.FLOAT.name());
+      }
+    }
+    return type;
+  }
+
 }

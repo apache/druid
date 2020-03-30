@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +67,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
 
     final JSONPathSpec flattenSpec;
-    if (parseSpec != null && (parseSpec instanceof AvroParseSpec)) {
+    if (parseSpec instanceof AvroParseSpec) {
       flattenSpec = ((AvroParseSpec) parseSpec).getFlattenSpec();
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;
@@ -92,6 +93,7 @@ public class ParquetAvroHadoopInputRowParser implements InputRowParser<GenericRe
   /**
    * imitate avro extension {@link org.apache.druid.data.input.avro.AvroParsers#parseGenericRecord}
    */
+  @Nonnull
   @Override
   public List<InputRow> parseBatch(GenericRecord record)
   {

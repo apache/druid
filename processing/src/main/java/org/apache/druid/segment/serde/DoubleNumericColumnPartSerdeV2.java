@@ -42,7 +42,7 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
   @JsonCreator
   public static DoubleNumericColumnPartSerdeV2 getDoubleGenericColumnPartSerde(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
-      @Nullable @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
+      @JsonProperty("bitmapSerdeFactory") @Nullable BitmapSerdeFactory bitmapSerdeFactory
   )
   {
     return new DoubleNumericColumnPartSerdeV2(
@@ -54,7 +54,7 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
 
   private final ByteOrder byteOrder;
   @Nullable
-  private Serializer serializer;
+  private final Serializer serializer;
   private final BitmapSerdeFactory bitmapSerdeFactory;
 
   public DoubleNumericColumnPartSerdeV2(
@@ -87,8 +87,11 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
 
   public static class SerializerBuilder
   {
+    @Nullable
     private ByteOrder byteOrder = null;
+    @Nullable
     private Serializer delegate = null;
+    @Nullable
     private BitmapSerdeFactory bitmapSerdeFactory = null;
 
     public SerializerBuilder withByteOrder(final ByteOrder byteOrder)

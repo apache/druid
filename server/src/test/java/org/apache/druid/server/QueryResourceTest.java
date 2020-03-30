@@ -22,27 +22,33 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -68,34 +74,28 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
-/**
- *
- */
 public class QueryResourceTest
 {
-  private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.of());
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private static final AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
+  private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(ImmutableMap.of());
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  private static final AuthenticationResult AUTHENTICATION_RESULT =
+      new AuthenticationResult("druid", "druid", null, null);
 
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
-  public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
+
+  private static final QuerySegmentWalker TEST_SEGMENT_WALKER = new QuerySegmentWalker()
   {
     @Override
     public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
     {
-      return new QueryRunner<T>()
-      {
-        @Override
-        public Sequence<T> run(QueryPlus<T> query, Map<String, Object> responseContext)
-        {
-          return Sequences.empty();
-        }
-      };
+      return (queryPlus, responseContext) -> Sequences.empty();
     }
 
     @Override
@@ -105,17 +105,66 @@ public class QueryResourceTest
     }
   };
 
+  private static final String SIMPLE_TIMESERIES_QUERY =
+      "{\n"
+      + "    \"queryType\": \"timeseries\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2015-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ]\n"
+      + "}";
 
-  private static final ServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
+  private static final String SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL =
+      "{\n"
+      + "    \"queryType\": \"timeseries\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2014-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ]\n"
+      + "}";
+
+  private static final String SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY =
+      "{\n"
+      + "    \"queryType\": \"timeseries\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2015-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ],\n"
+      + "    \"context\": { \"priority\": -1 }"
+      + "}";
+
+
+  private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
 
   private QueryResource queryResource;
-  private QueryManager queryManager;
+  private QueryScheduler queryScheduler;
   private TestRequestLogger testRequestLogger;
 
   @BeforeClass
   public static void staticSetup()
   {
-    EmittingLogger.registerEmitter(noopServiceEmitter);
+    EmittingLogger.registerEmitter(NOOP_SERVICE_EMITTER);
   }
 
   @Before
@@ -125,60 +174,46 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-    queryManager = new QueryManager();
+    queryScheduler = new QueryScheduler(
+        8,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        NoQueryLaningStrategy.INSTANCE,
+        new ServerConfig()
+    );
     testRequestLogger = new TestRequestLogger();
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER
         ),
-        jsonMapper,
-        jsonMapper,
-        queryManager,
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
         new AuthConfig(),
         null,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
   }
 
-  private static final String simpleTimeSeriesQuery = "{\n"
-                                                      + "    \"queryType\": \"timeseries\",\n"
-                                                      + "    \"dataSource\": \"mmx_metrics\",\n"
-                                                      + "    \"granularity\": \"hour\",\n"
-                                                      + "    \"intervals\": [\n"
-                                                      + "      \"2014-12-17/2015-12-30\"\n"
-                                                      + "    ],\n"
-                                                      + "    \"aggregations\": [\n"
-                                                      + "      {\n"
-                                                      + "        \"type\": \"count\",\n"
-                                                      + "        \"name\": \"rows\"\n"
-                                                      + "      }\n"
-                                                      + "    ]\n"
-                                                      + "}";
+
+  @After
+  public void tearDown()
+  {
+    EasyMock.verify(testServletRequest);
+  }
 
   @Test
   public void testGoodQuery() throws IOException
   {
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    expectPermissiveHappyPathAuth();
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
-            .anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
-
-    EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -198,7 +233,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
         .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -210,7 +245,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -233,7 +268,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
         .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -245,7 +280,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
@@ -273,7 +308,7 @@ public class QueryResourceTest
     EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
         .anyTimes();
 
     smileRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -284,7 +319,7 @@ public class QueryResourceTest
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
         null /*pretty*/,
         smileRequest
     );
@@ -317,7 +352,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
+            .andReturn(AUTHENTICATION_RESULT)
             .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
@@ -351,26 +386,26 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             authMapper
         ),
-        jsonMapper,
-        jsonMapper,
-        queryManager,
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
 
 
     try {
       queryResource.doPost(
-          new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
+          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
           null /*pretty*/,
           testServletRequest
       );
@@ -387,7 +422,7 @@ public class QueryResourceTest
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ((StreamingOutput) response.getEntity()).write(baos);
-    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
+    final List<Result<TimeBoundaryResultValue>> responses = JSON_MAPPER.readValue(
         baos.toByteArray(),
         new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
     );
@@ -419,7 +454,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(authenticationResult)
+            .andReturn(AUTHENTICATION_RESULT)
             .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -465,20 +500,20 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             authMapper
         ),
-        jsonMapper,
-        jsonMapper,
-        queryManager,
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -511,7 +546,7 @@ public class QueryResourceTest
         }
     );
 
-    queryManager.registerQuery(query, future);
+    queryScheduler.registerQueryFuture(query, future);
     startAwaitLatch.await();
 
     Executors.newSingleThreadExecutor().submit(
@@ -544,7 +579,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
 
     EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(authenticationResult)
+        .andReturn(AUTHENTICATION_RESULT)
             .anyTimes();
 
     testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
@@ -587,20 +622,20 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            warehouse,
-            testSegmentWalker,
-            new DefaultGenericQueryMetricsFactory(jsonMapper),
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
             authMapper
         ),
-        jsonMapper,
-        jsonMapper,
-        queryManager,
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory(jsonMapper)
+        new DefaultGenericQueryMetricsFactory()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -633,7 +668,7 @@ public class QueryResourceTest
         }
     );
 
-    queryManager.registerQuery(query, future);
+    queryScheduler.registerQueryFuture(query, future);
     startAwaitLatch.await();
 
     Executors.newSingleThreadExecutor().submit(
@@ -655,9 +690,244 @@ public class QueryResourceTest
     waitFinishLatch.await();
   }
 
-  @After
-  public void tearDown()
+  @Test(timeout = 10_000L)
+  public void testTooManyQuery() throws InterruptedException
   {
-    EasyMock.verify(testServletRequest);
+    expectPermissiveHappyPathAuth();
+
+    final CountDownLatch waitTwoScheduled = new CountDownLatch(2);
+    final CountDownLatch waitAllFinished = new CountDownLatch(3);
+    final QueryScheduler laningScheduler = new QueryScheduler(
+        2,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        NoQueryLaningStrategy.INSTANCE,
+        new ServerConfig()
+    );
+
+    createScheduledQueryResource(laningScheduler, Collections.emptyList(), ImmutableList.of(waitTwoScheduled));
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+    waitTwoScheduled.await();
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> {
+          Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
+          QueryCapacityExceededException ex;
+          try {
+            ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          Assert.assertEquals(QueryCapacityExceededException.makeTotalErrorMessage(2), ex.getMessage());
+          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+        }
+    );
+    waitAllFinished.await();
+  }
+
+  @Test(timeout = 10_000L)
+  public void testTooManyQueryInLane() throws InterruptedException
+  {
+    expectPermissiveHappyPathAuth();
+    final CountDownLatch waitTwoStarted = new CountDownLatch(2);
+    final CountDownLatch waitOneScheduled = new CountDownLatch(1);
+    final CountDownLatch waitAllFinished = new CountDownLatch(3);
+    final QueryScheduler scheduler = new QueryScheduler(
+        40,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new HiLoQueryLaningStrategy(2),
+        new ServerConfig()
+    );
+
+    createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
+
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+    waitOneScheduled.await();
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
+        waitAllFinished,
+        response -> {
+          Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
+          QueryCapacityExceededException ex;
+          try {
+            ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          Assert.assertEquals(
+              QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
+              ex.getMessage()
+          );
+          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+
+        }
+    );
+    waitTwoStarted.await();
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+
+    waitAllFinished.await();
+  }
+
+  @Test(timeout = 10_000L)
+  public void testTooManyQueryInLaneImplicitFromDurationThreshold() throws InterruptedException
+  {
+    expectPermissiveHappyPathAuth();
+    final CountDownLatch waitTwoStarted = new CountDownLatch(2);
+    final CountDownLatch waitOneScheduled = new CountDownLatch(1);
+    final CountDownLatch waitAllFinished = new CountDownLatch(3);
+    final QueryScheduler scheduler = new QueryScheduler(
+        40,
+        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null),
+        new HiLoQueryLaningStrategy(1),
+        new ServerConfig()
+    );
+
+    createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
+
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+    waitOneScheduled.await();
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> {
+          Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
+          QueryCapacityExceededException ex;
+          try {
+            ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          Assert.assertEquals(
+              QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
+              ex.getMessage()
+          );
+          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+        }
+    );
+    waitTwoStarted.await();
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+
+    waitAllFinished.await();
+  }
+
+  private void createScheduledQueryResource(
+      QueryScheduler scheduler,
+      Collection<CountDownLatch> beforeScheduler,
+      Collection<CountDownLatch> inScheduler
+  )
+  {
+
+    QuerySegmentWalker texasRanger = new QuerySegmentWalker()
+    {
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
+      {
+        return (queryPlus, responseContext) -> {
+          beforeScheduler.forEach(CountDownLatch::countDown);
+
+          return scheduler.run(
+              scheduler.prioritizeAndLaneQuery(queryPlus, ImmutableSet.of()),
+              new LazySequence<T>(() -> {
+                inScheduler.forEach(CountDownLatch::countDown);
+                try {
+                  // pretend to be a query that is waiting on results
+                  Thread.sleep(500);
+                }
+                catch (InterruptedException ignored) {
+                }
+                // all that waiting for nothing :(
+                return Sequences.empty();
+              })
+          );
+        };
+      }
+
+      @Override
+      public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
+      {
+        return getQueryRunnerForIntervals(null, null);
+      }
+    };
+
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            texasRanger,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER
+        ),
+        JSON_MAPPER,
+        JSON_MAPPER,
+        scheduler,
+        new AuthConfig(),
+        null,
+        new DefaultGenericQueryMetricsFactory()
+    );
+  }
+
+  private void assertResponseAndCountdownOrBlockForever(String query, CountDownLatch done, Consumer<Response> asserts)
+  {
+    Executors.newSingleThreadExecutor().submit(() -> {
+      try {
+        Response response = queryResource.doPost(
+            new ByteArrayInputStream(query.getBytes("UTF-8")),
+            null,
+            testServletRequest
+        );
+        asserts.accept(response);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      done.countDown();
+    });
+  }
+
+  private void expectPermissiveHappyPathAuth()
+  {
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+
+    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(AUTHENTICATION_RESULT)
+            .anyTimes();
+
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    EasyMock.expectLastCall().anyTimes();
+
+    EasyMock.replay(testServletRequest);
   }
 }

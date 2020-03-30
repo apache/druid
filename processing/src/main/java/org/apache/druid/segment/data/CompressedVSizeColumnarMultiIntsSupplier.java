@@ -44,11 +44,15 @@ import java.util.Iterator;
  */
 public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>
 {
-  private static final byte version = 0x2;
+  private static final byte VERSION = 0x2;
 
-  /** See class-level comment */
+  /**
+   * See class-level comment
+   */
   private final CompressedVSizeColumnarIntsSupplier offsetSupplier;
-  /** See class-level comment */
+  /**
+   * See class-level comment
+   */
   private final CompressedVSizeColumnarIntsSupplier valueSupplier;
 
   private CompressedVSizeColumnarMultiIntsSupplier(
@@ -69,7 +73,7 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{version}));
+    Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{VERSION}));
     offsetSupplier.writeTo(channel, smoosher);
     valueSupplier.writeTo(channel, smoosher);
   }
@@ -78,7 +82,7 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == version) {
+    if (versionFromBuffer == VERSION) {
       CompressedVSizeColumnarIntsSupplier offsetSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
           order
@@ -176,6 +180,39 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
       final int size = offsets.get(index + 1) - offset;
       rowValues.setValues(offset, size);
       return rowValues;
+    }
+
+    @Override
+    public IndexedInts getUnshared(int index)
+    {
+      final int offset = offsets.get(index);
+      final int size = offsets.get(index + 1) - offset;
+
+      class UnsharedIndexedInts implements IndexedInts
+      {
+        @Override
+        public int size()
+        {
+          return size;
+        }
+
+        @Override
+        public int get(int index)
+        {
+          if (index >= size) {
+            throw new IAE("Index[%d] >= size[%d]", index, size);
+          }
+          return values.get(index + offset);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("values", values);
+        }
+      }
+
+      return new UnsharedIndexedInts();
     }
 
     @Override

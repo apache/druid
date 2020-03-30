@@ -105,26 +105,20 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
     }
 
     @Override
-    public boolean hasMore()
+    public boolean hasMore() throws IOException
     {
       return currentFirehose.hasMore();
     }
 
     @Nullable
     @Override
-    public InputRow nextRow()
+    public InputRow nextRow() throws IOException
     {
       InputRow rv = currentFirehose.nextRow();
       if (!currentFirehose.hasMore()) {
         nextFirehose();
       }
       return rv;
-    }
-
-    @Override
-    public Runnable commit()
-    {
-      return currentFirehose.commit();
     }
 
     @Override

@@ -26,8 +26,10 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
+import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 
 import javax.annotation.Nullable;
@@ -48,7 +50,9 @@ public class BasicAuthUtils
   private static final Logger log = new Logger(BasicAuthUtils.class);
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   public static final String ADMIN_NAME = "admin";
+  public static final String ADMIN_GROUP_MAPPING_NAME = "adminGroupMapping";
   public static final String INTERNAL_USER_NAME = "druid_system";
+  public static final String SEARCH_RESULT_CONTEXT_KEY = "searchResult";
 
   // PBKDF2WithHmacSHA512 is chosen since it has built-in support in Java8.
   // Argon2 (https://github.com/p-h-c/phc-winner-argon2) is newer but the only presently
@@ -57,26 +61,39 @@ public class BasicAuthUtils
   // 256-bit salt should be more than sufficient for uniqueness, expected user count is on the order of thousands.
   public static final int SALT_LENGTH = 32;
   public static final int DEFAULT_KEY_ITERATIONS = 10000;
+  public static final int DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS = 600;
+  public static final int DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS = 3600;
+  public static final int DEFAULT_CREDENTIAL_CACHE_SIZE = 100;
   public static final int KEY_LENGTH = 512;
   public static final String ALGORITHM = "PBKDF2WithHmacSHA512";
 
-  public static final TypeReference AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthenticatorUser>> AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthenticatorUser>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_USER_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerUser>> AUTHORIZER_USER_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerUser>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerGroupMapping>> AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE =
+      new TypeReference<Map<String, BasicAuthorizerGroupMapping>>()
+      {
+      };
+
+  public static final TypeReference<Map<String, BasicAuthorizerRole>> AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerRole>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<UserAndRoleMap> AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<UserAndRoleMap>()
+      {
+      };
+
+  public static final TypeReference<GroupMappingAndRoleMap> AUTHORIZER_GROUP_MAPPING_AND_ROLE_MAP_TYPE_REFERENCE =
+      new TypeReference<GroupMappingAndRoleMap>()
       {
       };
 
@@ -95,8 +112,8 @@ public class BasicAuthUtils
       return key.getEncoded();
     }
     catch (InvalidKeySpecException ikse) {
-      log.error("WTF? invalid keyspec");
-      throw new RuntimeException("WTF? invalid keyspec", ikse);
+      log.error("Invalid keyspec");
+      throw new RuntimeException("Invalid keyspec", ikse);
     }
     catch (NoSuchAlgorithmException nsae) {
       log.error("%s not supported on this system.", ALGORITHM);
@@ -106,7 +123,7 @@ public class BasicAuthUtils
 
   public static byte[] generateSalt()
   {
-    byte salt[] = new byte[SALT_LENGTH];
+    byte[] salt = new byte[SALT_LENGTH];
     SECURE_RANDOM.nextBytes(salt);
     return salt;
   }
@@ -155,7 +172,7 @@ public class BasicAuthUtils
         userMap = objectMapper.readValue(userMapBytes, AUTHENTICATOR_USER_MAP_TYPE_REFERENCE);
       }
       catch (IOException ioe) {
-        throw new RuntimeException(ioe);
+        throw new RuntimeException("Couldn't deserialize authenticator userMap!", ioe);
       }
     }
     return userMap;
@@ -170,7 +187,7 @@ public class BasicAuthUtils
       return objectMapper.writeValueAsBytes(userMap);
     }
     catch (IOException ioe) {
-      throw new ISE(ioe, "WTF? Couldn't serialize userMap!");
+      throw new ISE(ioe, "Couldn't serialize authenticator userMap!");
     }
   }
 
@@ -187,7 +204,7 @@ public class BasicAuthUtils
         userMap = objectMapper.readValue(userMapBytes, BasicAuthUtils.AUTHORIZER_USER_MAP_TYPE_REFERENCE);
       }
       catch (IOException ioe) {
-        throw new RuntimeException(ioe);
+        throw new RuntimeException("Couldn't deserialize authorizer userMap!", ioe);
       }
     }
     return userMap;
@@ -199,7 +216,36 @@ public class BasicAuthUtils
       return objectMapper.writeValueAsBytes(userMap);
     }
     catch (IOException ioe) {
-      throw new ISE(ioe, "WTF? Couldn't serialize userMap!");
+      throw new ISE(ioe, "Couldn't serialize authorizer userMap!");
+    }
+  }
+
+  public static Map<String, BasicAuthorizerGroupMapping> deserializeAuthorizerGroupMappingMap(
+      ObjectMapper objectMapper,
+      byte[] groupMappingMapBytes
+  )
+  {
+    Map<String, BasicAuthorizerGroupMapping> groupMappingMap;
+    if (groupMappingMapBytes == null) {
+      groupMappingMap = new HashMap<>();
+    } else {
+      try {
+        groupMappingMap = objectMapper.readValue(groupMappingMapBytes, BasicAuthUtils.AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE);
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException("Couldn't deserialize authorizer groupMappingMap!", ioe);
+      }
+    }
+    return groupMappingMap;
+  }
+
+  public static byte[] serializeAuthorizerGroupMappingMap(ObjectMapper objectMapper, Map<String, BasicAuthorizerGroupMapping> groupMappingMap)
+  {
+    try {
+      return objectMapper.writeValueAsBytes(groupMappingMap);
+    }
+    catch (IOException ioe) {
+      throw new ISE(ioe, "Couldn't serialize authorizer groupMappingMap!");
     }
   }
 
@@ -216,7 +262,7 @@ public class BasicAuthUtils
         roleMap = objectMapper.readValue(roleMapBytes, BasicAuthUtils.AUTHORIZER_ROLE_MAP_TYPE_REFERENCE);
       }
       catch (IOException ioe) {
-        throw new RuntimeException(ioe);
+        throw new RuntimeException("Couldn't deserialize authorizer roleMap!", ioe);
       }
     }
     return roleMap;
@@ -228,7 +274,7 @@ public class BasicAuthUtils
       return objectMapper.writeValueAsBytes(roleMap);
     }
     catch (IOException ioe) {
-      throw new ISE(ioe, "WTF? Couldn't serialize roleMap!");
+      throw new ISE(ioe, "Couldn't serialize authorizer roleMap!");
     }
   }
 }

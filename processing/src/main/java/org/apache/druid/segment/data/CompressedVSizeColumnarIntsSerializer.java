@@ -25,6 +25,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -37,7 +39,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
 {
   private static final byte VERSION = CompressedVSizeColumnarIntsSupplier.VERSION;
 
-  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedVSizeColumnarIntsSerializer x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> x.numInserted)
@@ -45,6 +47,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       .writeByte(x -> x.compression.getId());
 
   public static CompressedVSizeColumnarIntsSerializer create(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
@@ -52,6 +55,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   )
   {
     return new CompressedVSizeColumnarIntsSerializer(
+        columnName,
         segmentWriteOutMedium,
         filenameBase,
         maxValue,
@@ -61,17 +65,20 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
     );
   }
 
+  private final String columnName;
   private final int numBytes;
   private final int chunkFactor;
   private final boolean isBigEndian;
   private final CompressionStrategy compression;
   private final GenericIndexedWriter<ByteBuffer> flattener;
   private final ByteBuffer intBuffer;
-
-  private ByteBuffer endBuffer;
   private int numInserted;
 
+  @Nullable
+  private ByteBuffer endBuffer;
+
   CompressedVSizeColumnarIntsSerializer(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
@@ -81,6 +88,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   )
   {
     this(
+        columnName,
         segmentWriteOutMedium,
         maxValue,
         chunkFactor,
@@ -96,6 +104,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   }
 
   CompressedVSizeColumnarIntsSerializer(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final int maxValue,
       final int chunkFactor,
@@ -104,6 +113,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       final GenericIndexedWriter<ByteBuffer> flattener
   )
   {
+    this.columnName = columnName;
     this.numBytes = VSizeColumnarInts.getNumBytesForMax(maxValue);
     this.chunkFactor = chunkFactor;
     int chunkBytes = chunkFactor * numBytes;
@@ -146,20 +156,23 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       endBuffer.put(intBuffer.array(), 0, numBytes);
     }
     numInserted++;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 

@@ -53,7 +53,8 @@ public class Bounds
           false,
           null,
           bound.getExtractionFn(),
-          bound.getOrdering()
+          bound.getOrdering(),
+          bound.getFilterTuning()
       );
     } else {
       // bound.getLower() != null
@@ -65,7 +66,8 @@ public class Bounds
           !bound.isLowerStrict(),
           null,
           bound.getExtractionFn(),
-          bound.getOrdering()
+          bound.getOrdering(),
+          bound.getFilterTuning()
       );
     }
   }
@@ -113,7 +115,8 @@ public class Bounds
         range.hasUpperBound() && range.upperBoundType() == BoundType.OPEN,
         null,
         boundRefKey.getExtractionFn(),
-        boundRefKey.getComparator()
+        boundRefKey.getComparator(),
+        null
     );
   }
 
@@ -127,7 +130,8 @@ public class Bounds
         false,
         null,
         boundRefKey.getExtractionFn(),
-        boundRefKey.getComparator()
+        boundRefKey.getComparator(),
+        null
     );
   }
 
@@ -141,7 +145,8 @@ public class Bounds
         false,
         null,
         boundRefKey.getExtractionFn(),
-        boundRefKey.getComparator()
+        boundRefKey.getComparator(),
+        null
     );
   }
 
@@ -155,7 +160,8 @@ public class Bounds
         false,
         null,
         boundRefKey.getExtractionFn(),
-        boundRefKey.getComparator()
+        boundRefKey.getComparator(),
+        null
     );
   }
 
@@ -169,7 +175,8 @@ public class Bounds
         true,
         null,
         boundRefKey.getExtractionFn(),
-        boundRefKey.getComparator()
+        boundRefKey.getComparator(),
+        null
     );
   }
 
@@ -183,7 +190,8 @@ public class Bounds
         false,
         null,
         boundRefKey.getExtractionFn(),
-        boundRefKey.getComparator()
+        boundRefKey.getComparator(),
+        null
     );
   }
 
@@ -202,7 +210,8 @@ public class Bounds
         true,
         null,
         boundRefKey.getExtractionFn(),
-        boundRefKey.getComparator()
+        boundRefKey.getComparator(),
+        null
     );
   }
 }

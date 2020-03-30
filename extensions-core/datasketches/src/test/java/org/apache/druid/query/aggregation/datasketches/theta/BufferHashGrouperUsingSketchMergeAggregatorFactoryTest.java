@@ -20,12 +20,13 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.yahoo.sketches.theta.Sketches;
-import com.yahoo.sketches.theta.UpdateSketch;
+import org.apache.datasketches.theta.Sketches;
+import org.apache.datasketches.theta.UpdateSketch;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.BufferHashGrouper;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
@@ -47,11 +48,13 @@ public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
     final BufferHashGrouper<Integer> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
         GrouperTestUtil.intKeySerde(),
-        columnSelectorFactory,
-        new AggregatorFactory[]{
-            new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2),
-            new CountAggregatorFactory("count")
-        },
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2),
+                new CountAggregatorFactory("count")
+            )
+        ),
         Integer.MAX_VALUE,
         0.75f,
         initialBuckets,

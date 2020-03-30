@@ -30,11 +30,12 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -115,13 +116,20 @@ public class DruidRexExecutor implements RexExecutor
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
 
-          if (exprResult.type() == ExprType.LONG) {
-            bigDecimal = BigDecimal.valueOf(exprResult.asLong());
+          if (exprResult.isNumericNull()) {
+            literal = rexBuilder.makeNullLiteral(constExp.getType());
           } else {
-            bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
-          }
+            if (exprResult.type() == ExprType.LONG) {
+              bigDecimal = BigDecimal.valueOf(exprResult.asLong());
+            } else {
+              bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
+            }
 
-          literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);
+            literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);
+          }
+        } else if (sqlTypeName == SqlTypeName.ARRAY) {
+          assert exprResult.isArray();
+          literal = rexBuilder.makeLiteral(Arrays.asList(exprResult.asArray()), constExp.getType(), true);
         } else {
           literal = rexBuilder.makeLiteral(exprResult.value(), constExp.getType(), true);
         }

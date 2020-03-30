@@ -42,6 +42,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -172,7 +173,7 @@ public class AppenderatorPlumber implements Plumber
     return new QueryRunner<T>()
     {
       @Override
-      public Sequence<T> run(final QueryPlus<T> queryPlus, final Map<String, Object> responseContext)
+      public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
       {
         return queryPlus.run(appenderator, responseContext);
       }
@@ -458,10 +459,10 @@ public class AppenderatorPlumber implements Plumber
     // WARNING: Committers.nil() here means that on-disk data can get out of sync with committing.
     Futures.addCallback(
         appenderator.push(segmentsToPush, Committers.nil(), false),
-        new FutureCallback<SegmentsAndMetadata>()
+        new FutureCallback<SegmentsAndCommitMetadata>()
         {
           @Override
-          public void onSuccess(SegmentsAndMetadata result)
+          public void onSuccess(SegmentsAndCommitMetadata result)
           {
             // Immediately publish after pushing
             for (DataSegment pushedSegment : result.getSegments()) {

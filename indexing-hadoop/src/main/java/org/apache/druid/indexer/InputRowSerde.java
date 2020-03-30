@@ -289,7 +289,7 @@ public class InputRowSerde
     }
   }
 
-  public static final SerializeResult toBytes(
+  public static SerializeResult toBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       final InputRow row,
       AggregatorFactory[] aggs
@@ -408,6 +408,7 @@ public class InputRowSerde
     return result;
   }
 
+  @Nullable
   private static List<String> readStringArray(DataInput in) throws IOException
   {
     int count = WritableUtils.readVInt(in);
@@ -421,7 +422,7 @@ public class InputRowSerde
     return values;
   }
 
-  public static final InputRow fromBytes(
+  public static InputRow fromBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       byte[] data,
       AggregatorFactory[] aggs
@@ -493,6 +494,7 @@ public class InputRowSerde
     }
   }
 
+  @Nullable
   private static String getType(String metric, AggregatorFactory[] aggs, int i)
   {
     if (aggs[i].getName().equals(metric)) {

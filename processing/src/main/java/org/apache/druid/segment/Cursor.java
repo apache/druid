@@ -23,13 +23,15 @@ import org.joda.time.DateTime;
 
 /**
  * Cursor is an interface for iteration over a range of data points, used during query execution. {@link
- * QueryableIndexStorageAdapter.QueryableIndexCursor} is an implementation for historical segments, and {@link
+ * QueryableIndexCursorSequenceBuilder.QueryableIndexCursor} is an implementation for historical segments, and {@link
  * org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter.IncrementalIndexCursor} is an implementation for {@link
  * org.apache.druid.segment.incremental.IncrementalIndex}.
  *
  * Cursor is conceptually similar to {@link TimeAndDimsPointer}, but the latter is used for historical segment creation
  * rather than query execution (as Cursor). If those abstractions could be collapsed (and if it is worthwhile) is yet to
  * be determined.
+ *
+ * @see org.apache.druid.segment.vector.VectorCursor, the vectorized version
  */
 public interface Cursor
 {
@@ -37,7 +39,6 @@ public interface Cursor
   DateTime getTime();
   void advance();
   void advanceUninterruptibly();
-  void advanceTo(int offset);
   boolean isDone();
   boolean isDoneOrInterrupted();
   void reset();

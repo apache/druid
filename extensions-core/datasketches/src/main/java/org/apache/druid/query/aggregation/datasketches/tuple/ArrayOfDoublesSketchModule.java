@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
+import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
@@ -47,23 +47,9 @@ public class ArrayOfDoublesSketchModule implements DruidModule
   @Override
   public void configure(final Binder binder)
   {
-    if (ComplexMetrics.getSerdeForType(ARRAY_OF_DOUBLES_SKETCH) == null) {
-      ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH, new ArrayOfDoublesSketchMergeComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG) == null) {
-      ComplexMetrics.registerSerde(
-          ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG,
-          new ArrayOfDoublesSketchMergeComplexMetricSerde()
-      );
-    }
-
-    if (ComplexMetrics.getSerdeForType(ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG) == null) {
-      ComplexMetrics.registerSerde(
-          ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG,
-          new ArrayOfDoublesSketchBuildComplexMetricSerde()
-      );
-    }
+    ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH, new ArrayOfDoublesSketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG, new ArrayOfDoublesSketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG, new ArrayOfDoublesSketchBuildComplexMetricSerde());
   }
 
   @Override

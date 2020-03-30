@@ -19,16 +19,17 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.yahoo.sketches.hll.HllSketch;
-import com.yahoo.sketches.hll.TgtHllType;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import java.util.List;
+
 /**
  * This aggregator builds sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
- * @author Alexander Saydakov
  */
 public class HllSketchBuildAggregator implements Aggregator
 {
@@ -100,6 +101,12 @@ public class HllSketchBuildAggregator implements Aggregator
       sketch.update(((Number) value).doubleValue());
     } else if (value instanceof String) {
       sketch.update(((String) value).toCharArray());
+    } else if (value instanceof List) {
+      // noinspection unchecked
+      List<String> list = (List<String>) value;
+      for (String v : list) {
+        sketch.update(v.toCharArray());
+      }
     } else if (value instanceof char[]) {
       sketch.update((char[]) value);
     } else if (value instanceof byte[]) {

@@ -19,444 +19,129 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.TaskResource;
+import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.java.util.common.Pair;
+import org.hamcrest.Matchers;
 import org.joda.time.Interval;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSupervisorTaskTest
+@RunWith(Enclosed.class)
+public class ParallelIndexSupervisorTaskTest
 {
-  private File inputDir;
-
-  @Before
-  public void setup() throws IOException
+  @RunWith(Parameterized.class)
+  public static class CreateMergeIoConfigsTest
   {
-    inputDir = temporaryFolder.newFolder("data");
-    // set up data
-    for (int i = 0; i < 5; i++) {
-      try (final Writer writer =
-               Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
-        writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 24 + i, i));
-        writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 25 + i, i));
-      }
-    }
+    private static final int TOTAL_NUM_MERGE_TASKS = 10;
+    private static final Function<List<HashPartitionLocation>, PartialHashSegmentMergeIOConfig>
+        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialHashSegmentMergeIOConfig::new;
 
-    for (int i = 0; i < 5; i++) {
-      try (final Writer writer =
-               Files.newBufferedWriter(new File(inputDir, "filtered_" + i).toPath(), StandardCharsets.UTF_8)) {
-        writer.write(StringUtils.format("2017-12-%d,%d th test file\n", 25 + i, i));
-      }
-    }
-
-    indexingServiceClient = new LocalIndexingServiceClient();
-    localDeepStorage = temporaryFolder.newFolder("localStorage");
-  }
-
-  @After
-  public void teardown()
-  {
-    indexingServiceClient.shutdown();
-    temporaryFolder.delete();
-  }
-
-  @Test
-  public void testIsReady() throws Exception
-  {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
-
-    prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
-
-    final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.createRunner(toolbox);
-    final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = runner.subTaskSpecIterator().iterator();
-
-    while (subTaskSpecIterator.hasNext()) {
-      final ParallelIndexSubTaskSpec spec = subTaskSpecIterator.next();
-      final ParallelIndexSubTask subTask = new ParallelIndexSubTask(
-          null,
-          spec.getGroupId(),
-          null,
-          spec.getSupervisorTaskId(),
-          0,
-          spec.getIngestionSpec(),
-          spec.getContext(),
-          indexingServiceClient,
-          null
-      );
-      final TaskActionClient subTaskActionClient = createActionClient(subTask);
-      prepareTaskForLocking(subTask);
-      Assert.assertTrue(subTask.isReady(subTaskActionClient));
-    }
-  }
-
-  private void runTestWithoutIntervalTask() throws Exception
-  {
-    final ParallelIndexSupervisorTask task = newTask(
-        null,
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
-
-    prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
-    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
-    shutdownTask(task);
-  }
-
-  @Test
-  public void testWithoutInterval() throws Exception
-  {
-    // Ingest all data.
-    runTestWithoutIntervalTask();
-
-    // Read the segments for one day.
-    final Interval interval = Intervals.of("2017-12-24/P1D");
-    final List<DataSegment> oldSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
-    Assert.assertEquals(1, oldSegments.size());
-
-    // Reingest the same data. Each segment should get replaced by a segment with a newer version.
-    runTestWithoutIntervalTask();
-
-    // Verify that the segment has been replaced.
-    final List<DataSegment> newSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
-    Assert.assertEquals(1, newSegments.size());
-    Assert.assertTrue(oldSegments.get(0).getVersion().compareTo(newSegments.get(0).getVersion()) < 0);
-  }
-
-  @Test()
-  public void testRunInParallel() throws Exception
-  {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
-
-    prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
-    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
-  }
-
-  @Test
-  public void testRunInSequential() throws Exception
-  {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null)
-            {
-              @Override
-              public boolean isSplittable()
-              {
-                return false;
-              }
-            },
-            false
-        )
-    );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
-
-    prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
-    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
-  }
-
-  @Test
-  public void testPublishEmptySegments() throws Exception
-  {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2020/2021"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        )
-    );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
-
-    prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
-    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
-  }
-
-  @Test
-  public void testWith1MaxNumSubTasks() throws Exception
-  {
-    final ParallelIndexSupervisorTask task = newTask(
-        Intervals.of("2017/2018"),
-        new ParallelIndexIOConfig(
-            new LocalFirehoseFactory(inputDir, "test_*", null),
-            false
-        ),
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
-    );
-    actionClient = createActionClient(task);
-    toolbox = createTaskToolbox(task);
-
-    prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
-    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
-    Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getRunner());
-  }
-
-  private ParallelIndexSupervisorTask newTask(
-      Interval interval,
-      ParallelIndexIOConfig ioConfig
-  )
-  {
-    return newTask(
-        interval,
-        ioConfig,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            2,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
-    );
-  }
-
-  private ParallelIndexSupervisorTask newTask(
-      Interval interval,
-      ParallelIndexIOConfig ioConfig,
-      ParallelIndexTuningConfig tuningConfig
-  )
-  {
-    // set up ingestion spec
-    //noinspection unchecked
-    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            getObjectMapper().convertValue(
-                new StringInputRowParser(
-                    DEFAULT_PARSE_SPEC,
-                    null
-                ),
-                Map.class
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null,
-            getObjectMapper()
-        ),
-        ioConfig,
-        tuningConfig
-    );
-
-    // set up test tools
-    return new TestSupervisorTask(
-        null,
-        null,
-        ingestionSpec,
-        new HashMap<>(),
-        indexingServiceClient
-    );
-  }
-
-  private static class TestSupervisorTask extends TestParallelIndexSupervisorTask
-  {
-    private final IndexingServiceClient indexingServiceClient;
-
-    TestSupervisorTask(
-        String id,
-        TaskResource taskResource,
-        ParallelIndexIngestionSpec ingestionSchema,
-        Map<String, Object> context,
-        IndexingServiceClient indexingServiceClient
-    )
+    @Parameterized.Parameters(name = "count = {0}")
+    public static Iterable<? extends Object> data()
     {
-      super(
-          id,
-          taskResource,
-          ingestionSchema,
-          context,
-          indexingServiceClient
+      // different scenarios for last (index = 10 - 1 = 9) partition:
+      return Arrays.asList(
+          20,  // even partitions per task: round(20 / 10) * (10 - 1) = 2 * 9 = 18 < 20
+          24,  // round down:               round(24 / 10) * (10 - 1) = 2 * 9 = 18 < 24
+          25,  // round up to greater:      round(25 / 10) * (10 - 1) = 3 * 9 = 27 > 25 (index out of bounds)
+          27   // round up to equal:        round(27 / 10) * (10 - 1) = 3 * 9 = 27 == 27 (empty partition)
       );
-      this.indexingServiceClient = indexingServiceClient;
     }
 
-    @Override
-    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
+    @Parameterized.Parameter
+    public int count;
+
+    @Test
+    public void handlesLastPartitionCorrectly()
     {
-      setRunner(
-          new TestRunner(
-              toolbox,
-              this,
-              indexingServiceClient
+      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      assertNoMissingPartitions(count, assignedPartitionLocation);
+    }
+
+    @Test
+    public void sizesPartitionsEvenly()
+    {
+      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<Integer> actualPartitionSizes = assignedPartitionLocation.stream()
+                                                                    .map(i -> i.getPartitionLocations().size())
+                                                                    .collect(Collectors.toList());
+      List<Integer> sortedPartitionSizes = Ordering.natural().sortedCopy(actualPartitionSizes);
+      int minPartitionSize = sortedPartitionSizes.get(0);
+      int maxPartitionSize = sortedPartitionSizes.get(sortedPartitionSizes.size() - 1);
+      int partitionSizeRange = maxPartitionSize - minPartitionSize;
+
+      Assert.assertThat(
+          "partition sizes = " + actualPartitionSizes,
+          partitionSizeRange,
+          Matchers.is(Matchers.both(Matchers.greaterThanOrEqualTo(0)).and(Matchers.lessThanOrEqualTo(1)))
+      );
+    }
+
+    private List<PartialHashSegmentMergeIOConfig> createMergeIOConfigs()
+    {
+      return ParallelIndexSupervisorTask.createMergeIOConfigs(
+          TOTAL_NUM_MERGE_TASKS,
+          createPartitionToLocations(count),
+          CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG
+      );
+    }
+
+    private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> createPartitionToLocations(int count)
+    {
+      return IntStream.range(0, count).boxed().collect(
+          Collectors.toMap(
+              i -> Pair.of(createInterval(i), i),
+              i -> Collections.singletonList(createPartitionLocation(i))
           )
       );
-      return getRunner();
     }
-  }
 
-  private static class TestRunner extends TestParallelIndexTaskRunner
-  {
-    private final ParallelIndexSupervisorTask supervisorTask;
+    private static HashPartitionLocation createPartitionLocation(int id)
+    {
+      return new HashPartitionLocation(
+          "host",
+          0,
+          false,
+          "subTaskId",
+          createInterval(id),
+          id
+      );
+    }
 
-    TestRunner(
-        TaskToolbox toolbox,
-        ParallelIndexSupervisorTask supervisorTask,
-        @Nullable IndexingServiceClient indexingServiceClient
+    private static Interval createInterval(int id)
+    {
+      return Intervals.utc(id, id + 1);
+    }
+
+    private static void assertNoMissingPartitions(
+        int count,
+        List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation
     )
     {
-      super(
-          toolbox,
-          supervisorTask.getId(),
-          supervisorTask.getGroupId(),
-          supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext(),
-          indexingServiceClient
-      );
-      this.supervisorTask = supervisorTask;
-    }
+      List<Integer> expectedIds = IntStream.range(0, count).boxed().collect(Collectors.toList());
 
-    @Override
-    ParallelIndexSubTaskSpec newTaskSpec(InputSplit split)
-    {
-      final FiniteFirehoseFactory baseFirehoseFactory = (FiniteFirehoseFactory) getIngestionSchema()
-          .getIOConfig()
-          .getFirehoseFactory();
-      return new TestParallelIndexSubTaskSpec(
-          supervisorTask.getId() + "_" + getAndIncrementNextSpecId(),
-          supervisorTask.getGroupId(),
-          supervisorTask,
-          new ParallelIndexIngestionSpec(
-              getIngestionSchema().getDataSchema(),
-              new ParallelIndexIOConfig(
-                  baseFirehoseFactory.withSplit(split),
-                  getIngestionSchema().getIOConfig().isAppendToExisting()
-              ),
-              getIngestionSchema().getTuningConfig()
-          ),
-          supervisorTask.getContext(),
-          split
-      );
-    }
-  }
+      List<Integer> actualIds = assignedPartitionLocation.stream()
+                                                         .flatMap(
+                                                             i -> i.getPartitionLocations()
+                                                                   .stream()
+                                                                   .map(HashPartitionLocation::getPartitionId)
+                                                         )
+                                                         .sorted()
+                                                         .collect(Collectors.toList());
 
-  private static class TestParallelIndexSubTaskSpec extends ParallelIndexSubTaskSpec
-  {
-    private final ParallelIndexSupervisorTask supervisorTask;
-
-    TestParallelIndexSubTaskSpec(
-        String id,
-        String groupId,
-        ParallelIndexSupervisorTask supervisorTask,
-        ParallelIndexIngestionSpec ingestionSpec,
-        Map<String, Object> context,
-        InputSplit inputSplit
-    )
-    {
-      super(id, groupId, supervisorTask.getId(), ingestionSpec, context, inputSplit);
-      this.supervisorTask = supervisorTask;
-    }
-
-    @Override
-    public ParallelIndexSubTask newSubTask(int numAttempts)
-    {
-      return new ParallelIndexSubTask(
-          null,
-          getGroupId(),
-          null,
-          getSupervisorTaskId(),
-          numAttempts,
-          getIngestionSpec(),
-          getContext(),
-          null,
-          new LocalParallelIndexTaskClientFactory(supervisorTask)
-      );
+      Assert.assertEquals(expectedIds, actualIds);
     }
   }
 }

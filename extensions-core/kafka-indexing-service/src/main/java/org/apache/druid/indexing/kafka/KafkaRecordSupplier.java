@@ -20,10 +20,12 @@
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.PasswordProvider;
@@ -32,8 +34,12 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,13 +47,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
-  private final Map<String, Object> consumerProperties;
-  private final ObjectMapper sortingMapper;
   private boolean closed;
 
   public KafkaRecordSupplier(
@@ -55,52 +60,60 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       ObjectMapper sortingMapper
   )
   {
-    this.consumerProperties = consumerProperties;
-    this.sortingMapper = sortingMapper;
-    this.consumer = getKafkaConsumer();
+    this(getKafkaConsumer(sortingMapper, consumerProperties));
+  }
+
+  @VisibleForTesting
+  public KafkaRecordSupplier(
+      KafkaConsumer<byte[], byte[]> consumer
+  )
+  {
+    this.consumer = consumer;
   }
 
   @Override
   public void assign(Set<StreamPartition<Integer>> streamPartitions)
   {
-    consumer.assign(streamPartitions
-                        .stream()
-                        .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
-                        .collect(Collectors.toSet()));
+    wrapExceptions(() -> consumer.assign(streamPartitions
+                                             .stream()
+                                             .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
+                                             .collect(Collectors.toSet())));
   }
 
   @Override
   public void seek(StreamPartition<Integer> partition, Long sequenceNumber)
   {
-    consumer.seek(new TopicPartition(partition.getStream(), partition.getPartitionId()), sequenceNumber);
+    wrapExceptions(() -> consumer.seek(
+        new TopicPartition(partition.getStream(), partition.getPartitionId()),
+        sequenceNumber
+    ));
   }
 
   @Override
   public void seekToEarliest(Set<StreamPartition<Integer>> partitions)
   {
-    consumer.seekToBeginning(partitions
-                                 .stream()
-                                 .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
-                                 .collect(Collectors.toList()));
+    wrapExceptions(() -> consumer.seekToBeginning(partitions
+                                                      .stream()
+                                                      .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
+                                                      .collect(Collectors.toList())));
   }
 
   @Override
   public void seekToLatest(Set<StreamPartition<Integer>> partitions)
   {
-    consumer.seekToEnd(partitions
-                           .stream()
-                           .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
-                           .collect(Collectors.toList()));
+    wrapExceptions(() -> consumer.seekToEnd(partitions
+                                                .stream()
+                                                .map(e -> new TopicPartition(e.getStream(), e.getPartitionId()))
+                                                .collect(Collectors.toList())));
   }
 
   @Override
   public Set<StreamPartition<Integer>> getAssignment()
   {
-    Set<TopicPartition> topicPartitions = consumer.assignment();
-    return topicPartitions
-        .stream()
-        .map(e -> new StreamPartition<>(e.topic(), e.partition()))
-        .collect(Collectors.toSet());
+    return wrapExceptions(() -> consumer.assignment()
+                                        .stream()
+                                        .map(e -> new StreamPartition<>(e.topic(), e.partition()))
+                                        .collect(Collectors.toSet()));
   }
 
   @Nonnull
@@ -122,9 +135,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public Long getLatestSequenceNumber(StreamPartition<Integer> partition)
   {
-    Long currPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    Long currPos = getPosition(partition);
     seekToLatest(Collections.singleton(partition));
-    Long nextPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    Long nextPos = getPosition(partition);
     seek(partition, currPos);
     return nextPos;
   }
@@ -132,9 +145,9 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public Long getEarliestSequenceNumber(StreamPartition<Integer> partition)
   {
-    Long currPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    Long currPos = getPosition(partition);
     seekToEarliest(Collections.singleton(partition));
-    Long nextPos = consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    Long nextPos = getPosition(partition);
     seek(partition, currPos);
     return nextPos;
   }
@@ -142,17 +155,22 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   @Override
   public Long getPosition(StreamPartition<Integer> partition)
   {
-    return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
+    return wrapExceptions(() -> consumer.position(new TopicPartition(
+        partition.getStream(),
+        partition.getPartitionId()
+    )));
   }
 
   @Override
   public Set<Integer> getPartitionIds(String stream)
   {
-    List<PartitionInfo> partitions = consumer.partitionsFor(stream);
-    if (partitions == null) {
-      throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", stream);
-    }
-    return partitions.stream().map(PartitionInfo::partition).collect(Collectors.toSet());
+    return wrapExceptions(() -> {
+      List<PartitionInfo> partitions = consumer.partitionsFor(stream);
+      if (partitions == null) {
+        throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", stream);
+      }
+      return partitions.stream().map(PartitionInfo::partition).collect(Collectors.toSet());
+    });
   }
 
   @Override
@@ -188,7 +206,33 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     }
   }
 
-  private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
+  private static Deserializer getKafkaDeserializer(Properties properties, String kafkaConfigKey)
+  {
+    Deserializer deserializerObject;
+    try {
+      Class deserializerClass = Class.forName(properties.getProperty(
+          kafkaConfigKey,
+          ByteArrayDeserializer.class.getTypeName()
+      ));
+      Method deserializerMethod = deserializerClass.getMethod("deserialize", String.class, byte[].class);
+
+      Type deserializerReturnType = deserializerMethod.getGenericReturnType();
+
+      if (deserializerReturnType == byte[].class) {
+        deserializerObject = (Deserializer) deserializerClass.getConstructor().newInstance();
+      } else {
+        throw new IllegalArgumentException("Kafka deserializers must return a byte array (byte[]), " +
+                                           deserializerClass.getName() + " returns " +
+                                           deserializerReturnType.getTypeName());
+      }
+    }
+    catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+      throw new StreamException(e);
+    }
+    return deserializerObject;
+  }
+
+  private static KafkaConsumer<byte[], byte[]> getKafkaConsumer(ObjectMapper sortingMapper, Map<String, Object> consumerProperties)
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
@@ -197,12 +241,32 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
-      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      return new KafkaConsumer<>(props, new ByteArrayDeserializer(), new ByteArrayDeserializer());
+      Thread.currentThread().setContextClassLoader(KafkaRecordSupplier.class.getClassLoader());
+      Deserializer keyDeserializerObject = getKafkaDeserializer(props, "key.deserializer");
+      Deserializer valueDeserializerObject = getKafkaDeserializer(props, "value.deserializer");
+
+      return new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
     }
   }
 
+  private static <T> T wrapExceptions(Callable<T> callable)
+  {
+    try {
+      return callable.call();
+    }
+    catch (Exception e) {
+      throw new StreamException(e);
+    }
+  }
+
+  private static void wrapExceptions(Runnable runnable)
+  {
+    wrapExceptions(() -> {
+      runnable.run();
+      return null;
+    });
+  }
 }

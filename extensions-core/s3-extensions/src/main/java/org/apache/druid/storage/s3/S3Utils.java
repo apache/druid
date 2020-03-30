@@ -23,36 +23,46 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.RetryUtils.Task;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.List;
 
 /**
  *
  */
 public class S3Utils
 {
+  private static final String SCHEME = S3StorageDruidModule.SCHEME;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
-  private static final String MIMETYPE_JETS3T_DIRECTORY = "application/x-directory";
+  private static final Logger log = new Logger(S3Utils.class);
+
 
   static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
     final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    return isIOException || isTimeout;
+    final boolean badStatusCode = ex.getStatusCode() == 400 || ex.getStatusCode() == 403 || ex.getStatusCode() == 404;
+    return !badStatusCode && (isIOException || isTimeout);
   }
 
   public static final Predicate<Throwable> S3RETRY = new Predicate<Throwable>()
@@ -76,10 +86,9 @@ public class S3Utils
    * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried.
    */
-  public static <T> T retryS3Operation(Task<T> f) throws Exception
+  static <T> T retryS3Operation(Task<T> f) throws Exception
   {
-    final int maxTries = 10;
-    return RetryUtils.retry(f, S3RETRY, maxTries);
+    return RetryUtils.retry(f, S3RETRY, RetryUtils.DEFAULT_MAX_TRIES);
   }
 
   static boolean isObjectInBucketIgnoringPermission(
@@ -101,92 +110,47 @@ public class S3Utils
     }
   }
 
+  /**
+   * Create an iterator over a set of S3 objects specified by a set of prefixes.
+   *
+   * For each provided prefix URI, the iterator will walk through all objects that are in the same bucket as the
+   * provided URI and whose keys start with that URI's path, except for directory placeholders (which will be
+   * ignored). The iterator is computed incrementally by calling {@link ServerSideEncryptingAmazonS3#listObjectsV2} for
+   * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
+   * constructed.
+   */
   public static Iterator<S3ObjectSummary> objectSummaryIterator(
       final ServerSideEncryptingAmazonS3 s3Client,
-      final String bucket,
-      final String prefix,
-      final int numMaxKeys
+      final Iterable<URI> prefixes,
+      final int maxListingLength
   )
   {
-    final ListObjectsV2Request request = new ListObjectsV2Request()
-        .withBucketName(bucket)
-        .withPrefix(prefix)
-        .withMaxKeys(numMaxKeys);
-
-    return new Iterator<S3ObjectSummary>()
-    {
-      private ListObjectsV2Result result;
-      private Iterator<S3ObjectSummary> objectSummaryIterator;
-
-      {
-        fetchNextBatch();
-      }
-
-      private void fetchNextBatch()
-      {
-        result = s3Client.listObjectsV2(request);
-        objectSummaryIterator = result.getObjectSummaries().iterator();
-        request.setContinuationToken(result.getContinuationToken());
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return objectSummaryIterator.hasNext() || result.isTruncated();
-      }
-
-      @Override
-      public S3ObjectSummary next()
-      {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-
-        if (objectSummaryIterator.hasNext()) {
-          return objectSummaryIterator.next();
-        }
-
-        if (result.isTruncated()) {
-          fetchNextBatch();
-        }
-
-        if (!objectSummaryIterator.hasNext()) {
-          throw new ISE(
-              "Failed to further iterate on bucket[%s] and prefix[%s]. The last continuationToken was [%s]",
-              bucket,
-              prefix,
-              result.getContinuationToken()
-          );
-        }
-
-        return objectSummaryIterator.next();
-      }
-    };
+    return new ObjectSummaryIterator(s3Client, prefixes, maxListingLength);
   }
 
-  public static String constructSegmentPath(String baseKey, String storageDir)
+  /**
+   * Create an {@link URI} from the given {@link S3ObjectSummary}. The result URI is composed as below.
+   *
+   * <pre>
+   * {@code s3://{BUCKET_NAME}/{OBJECT_KEY}}
+   * </pre>
+   */
+  public static URI summaryToUri(S3ObjectSummary object)
+  {
+    return summaryToCloudObjectLocation(object).toUri(SCHEME);
+  }
+
+  public static CloudObjectLocation summaryToCloudObjectLocation(S3ObjectSummary object)
+  {
+    return new CloudObjectLocation(object.getBucketName(), object.getKey());
+  }
+
+  static String constructSegmentPath(String baseKey, String storageDir)
   {
     return JOINER.join(
         baseKey.isEmpty() ? null : baseKey,
         storageDir
     ) + "/index.zip";
-  }
-
-  static String indexZipForSegmentPath(String s3Path)
-  {
-    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/index.zip";
-  }
-
-  static String toFilename(String key)
-  {
-    return toFilename(key, "");
-  }
-
-  static String toFilename(String key, final String suffix)
-  {
-    String filename = key.substring(key.lastIndexOf('/') + 1); // characters after last '/'
-    filename = filename.substring(0, filename.length() - suffix.length()); // remove the suffix from the end
-    return filename;
   }
 
   static AccessControlList grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
@@ -198,35 +162,15 @@ public class S3Utils
 
   public static String extractS3Key(URI uri)
   {
-    return uri.getPath().startsWith("/") ? uri.getPath().substring(1) : uri.getPath();
+    return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
   }
 
-  // Copied from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder()
-  public static boolean isDirectoryPlaceholder(String key, ObjectMetadata objectMetadata)
+  public static URI checkURI(URI uri)
   {
-    // Recognize "standard" directory place-holder indications used by
-    // Amazon's AWS Console and Panic's Transmit.
-    if (key.endsWith("/") && objectMetadata.getContentLength() == 0) {
-      return true;
+    if (uri.getScheme().equalsIgnoreCase(S3StorageDruidModule.SCHEME_S3_ZIP)) {
+      uri = URI.create(SCHEME + uri.toString().substring(S3StorageDruidModule.SCHEME_S3_ZIP.length()));
     }
-    // Recognize s3sync.rb directory placeholders by MD5/ETag value.
-    if ("d66759af42f282e1ba19144df2d405d0".equals(objectMetadata.getETag())) {
-      return true;
-    }
-    // Recognize place-holder objects created by the Google Storage console
-    // or S3 Organizer Firefox extension.
-    if (key.endsWith("_$folder$") && objectMetadata.getContentLength() == 0) {
-      return true;
-    }
-
-    // We don't use JetS3t APIs anymore, but the below check is still needed for backward compatibility.
-
-    // Recognize legacy JetS3t directory place-holder objects, only gives
-    // accurate results if an object's metadata is populated.
-    if (objectMetadata.getContentLength() == 0 && MIMETYPE_JETS3T_DIRECTORY.equals(objectMetadata.getContentType())) {
-      return true;
-    }
-    return false;
+    return CloudObjectLocation.validateUriScheme(SCHEME, uri);
   }
 
   /**
@@ -258,5 +202,87 @@ public class S3Utils
     }
 
     return objectSummary;
+  }
+
+  /**
+   * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
+   * @param s3Client s3 client
+   * @param config   specifies the configuration to use when finding matching files in S3 to delete
+   * @param bucket   s3 bucket
+   * @param prefix   the file prefix
+   * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
+   * @throws Exception
+   */
+  public static void deleteObjectsInPath(
+      ServerSideEncryptingAmazonS3 s3Client,
+      S3InputDataConfig config,
+      String bucket,
+      String prefix,
+      Predicate<S3ObjectSummary> filter
+  )
+      throws Exception
+  {
+    final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(config.getMaxListingLength());
+    final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
+        s3Client,
+        ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
+        config.getMaxListingLength()
+    );
+
+    while (iterator.hasNext()) {
+      final S3ObjectSummary nextObject = iterator.next();
+      if (filter.apply(nextObject)) {
+        keysToDelete.add(new DeleteObjectsRequest.KeyVersion(nextObject.getKey()));
+        if (keysToDelete.size() == config.getMaxListingLength()) {
+          deleteBucketKeys(s3Client, bucket, keysToDelete);
+          log.info("Deleted %d files", keysToDelete.size());
+          keysToDelete.clear();
+        }
+      }
+    }
+
+    if (keysToDelete.size() > 0) {
+      deleteBucketKeys(s3Client, bucket, keysToDelete);
+      log.info("Deleted %d files", keysToDelete.size());
+    }
+  }
+
+  private static void deleteBucketKeys(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String bucket,
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete
+  )
+      throws Exception
+  {
+    DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
+    S3Utils.retryS3Operation(() -> {
+      s3Client.deleteObjects(deleteRequest);
+      return null;
+    });
+  }
+
+  /**
+   * Uploads a file to S3 if possible. First trying to set ACL to give the bucket owner full control of the file before uploading.
+   *
+   * @param service    S3 client
+   * @param disableAcl true if ACL shouldn't be set for the file
+   * @param key        The key under which to store the new object.
+   * @param file       The path of the file to upload to Amazon S3.
+   */
+  static void uploadFileIfPossible(
+      ServerSideEncryptingAmazonS3 service,
+      boolean disableAcl,
+      String bucket,
+      String key,
+      File file
+  )
+  {
+    final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
+
+    if (!disableAcl) {
+      putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
+    }
+    log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
+    service.putObject(putObjectRequest);
   }
 }

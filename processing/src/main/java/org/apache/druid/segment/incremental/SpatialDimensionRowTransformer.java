@@ -33,6 +33,8 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -208,6 +210,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     return true;
   }
 
+  @Nullable
   private static Float tryParseFloat(String val)
   {
     try {
@@ -225,6 +228,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
    *
    * @return decoded coordinate, or null if it could not be decoded
    */
+  @Nullable
   public static float[] decode(final String encodedCoordinate)
   {
     if (encodedCoordinate == null) {

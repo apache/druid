@@ -27,6 +27,7 @@ import com.google.common.base.Joiner;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
@@ -49,15 +50,13 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,8 +64,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -85,9 +82,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       };
 
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
-  private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
-  private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
-  private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
   private static final Long NOT_SET = -1L;
   private static final Long END_OF_PARTITION = Long.MAX_VALUE;
 
@@ -133,32 +127,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  protected void scheduleReporting(ScheduledExecutorService reportingExec)
+  protected int getTaskGroupIdForPartition(Integer partitionId)
   {
-    KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
-    KafkaSupervisorTuningConfig tuningConfig = spec.getTuningConfig();
-    reportingExec.scheduleAtFixedRate(
-        updateCurrentAndLatestOffsets(),
-        ioConfig.getStartDelay().getMillis() + INITIAL_GET_OFFSET_DELAY_MILLIS, // wait for tasks to start up
-        Math.max(
-            tuningConfig.getOffsetFetchPeriod().getMillis(), MINIMUM_GET_OFFSET_PERIOD_MILLIS
-        ),
-        TimeUnit.MILLISECONDS
-    );
-
-    reportingExec.scheduleAtFixedRate(
-        emitLag(),
-        ioConfig.getStartDelay().getMillis() + INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS, // wait for tasks to start up
-        monitorSchedulerConfig.getEmitterPeriod().getMillis(),
-        TimeUnit.MILLISECONDS
-    );
-  }
-
-
-  @Override
-  protected int getTaskGroupIdForPartition(Integer partition)
-  {
-    return partition % spec.getIoConfig().getTaskCount();
+    return partitionId % spec.getIoConfig().getTaskCount();
   }
 
   @Override
@@ -180,7 +151,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   )
   {
     KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<Integer, Long> partitionLag = getLagPerPartition(getHighestCurrentOffsets());
+    Map<Integer, Long> partitionLag = getRecordLagPerPartition(getHighestCurrentOffsets());
     return new KafkaSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getTopic(),
@@ -191,7 +162,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? sequenceLastUpdated : null,
-        spec.isSuspended()
+        spec.isSuspended(),
+        stateManager.isHealthy(),
+        stateManager.getSupervisorState().getBasicState(),
+        stateManager.getSupervisorState(),
+        stateManager.getExceptionEvents()
     );
   }
 
@@ -218,7 +193,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         kafkaIoConfig.getPollTimeout(),
         true,
         minimumMessageTime,
-        maximumMessageTime
+        maximumMessageTime,
+        ioConfig.getInputFormat(
+            spec.getDataSchema().getParser() == null ? null : spec.getDataSchema().getParser().getParseSpec()
+        )
     );
   }
 
@@ -236,6 +214,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
     final Map<String, Object> context = createBaseTaskContexts();
     context.put(CHECKPOINTS_CTX_KEY, checkpoints);
+    // Kafka index task always uses incremental handoff since 0.16.0.
+    // The below is for the compatibility when you want to downgrade your cluster to something earlier than 0.16.0.
+    // Kafka index task will pick up LegacyKafkaIndexTaskRunner without the below configuration.
+    context.put("IS_INCREMENTAL_HANDOFF_SUPPORTED", true);
 
     List<SeekableStreamIndexTask<Integer, Long>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
@@ -250,15 +232,45 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           null,
           null,
           rowIngestionMetersFactory,
-          sortingMapper
+          sortingMapper,
+          null
       ));
     }
     return taskList;
   }
 
+  @Override
+  protected Map<Integer, Long> getPartitionRecordLag()
+  {
+    Map<Integer, Long> highestCurrentOffsets = getHighestCurrentOffsets();
+
+    if (latestSequenceFromStream == null) {
+      return null;
+    }
+
+    if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
+      log.warn(
+          "Lag metric: Kafka partitions %s do not match task partitions %s",
+          latestSequenceFromStream.keySet(),
+          highestCurrentOffsets.keySet()
+      );
+    }
+
+    return getRecordLagPerPartition(highestCurrentOffsets);
+  }
+
+  @Nullable
+  @Override
+  protected Map<Integer, Long> getPartitionTimeLag()
+  {
+    // time lag not currently support with kafka
+    return null;
+  }
 
   @Override
-  protected Map<Integer, Long> getLagPerPartition(Map<Integer, Long> currentOffsets)
+  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
+  @SuppressWarnings("SSBasedInspection")
+  protected Map<Integer, Long> getRecordLagPerPartition(Map<Integer, Long> currentOffsets)
   {
     return currentOffsets
         .entrySet()
@@ -276,60 +288,21 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
+  protected Map<Integer, Long> getTimeLagPerPartition(Map<Integer, Long> currentOffsets)
+  {
+    return null;
+  }
+
+  @Override
   protected KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<Integer, Long> map)
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, map, Collections.emptySet()));
+    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, map));
   }
 
   @Override
   protected OrderedSequenceNumber<Long> makeSequenceNumber(Long seq, boolean isExclusive)
   {
     return KafkaSequenceNumber.of(seq);
-  }
-
-  private Runnable emitLag()
-  {
-    return () -> {
-      try {
-        Map<Integer, Long> highestCurrentOffsets = getHighestCurrentOffsets();
-        String dataSource = spec.getDataSchema().getDataSource();
-
-        if (latestSequenceFromStream == null) {
-          throw new ISE("Latest offsets from Kafka have not been fetched");
-        }
-
-        if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
-          log.warn(
-              "Lag metric: Kafka partitions %s do not match task partitions %s",
-              latestSequenceFromStream.keySet(),
-              highestCurrentOffsets.keySet()
-          );
-        }
-
-        Map<Integer, Long> partitionLags = getLagPerPartition(highestCurrentOffsets);
-        long maxLag = 0, totalLag = 0, avgLag;
-        for (long lag : partitionLags.values()) {
-          if (lag > maxLag) {
-            maxLag = lag;
-          }
-          totalLag += lag;
-        }
-        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
-
-        emitter.emit(
-            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", totalLag)
-        );
-        emitter.emit(
-            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/maxLag", maxLag)
-        );
-        emitter.emit(
-            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/avgLag", avgLag)
-        );
-      }
-      catch (Exception e) {
-        log.warn(e, "Unable to compute Kafka lag");
-      }
-    };
   }
 
   @Override
@@ -346,6 +319,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   @Override
   protected boolean isEndOfShard(Long seqNum)
+  {
+    return false;
+  }
+
+  @Override
+  protected boolean isShardExpirationMarker(Long seqNum)
   {
     return false;
   }
@@ -380,5 +359,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   public KafkaSupervisorIOConfig getIoConfig()
   {
     return spec.getIoConfig();
+  }
+
+  @VisibleForTesting
+  public KafkaSupervisorTuningConfig getTuningConfig()
+  {
+    return spec.getTuningConfig();
   }
 }

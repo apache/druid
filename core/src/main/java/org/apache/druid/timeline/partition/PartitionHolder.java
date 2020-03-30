@@ -20,74 +20,79 @@
 package org.apache.druid.timeline.partition;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
+import org.apache.druid.timeline.Overshadowable;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.Spliterator;
-import java.util.TreeSet;
+import java.util.Objects;
 
 /**
  * An object that clumps together multiple other objects which each represent a shard of some space.
  */
-public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
+public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<PartitionChunk<T>>
 {
-  private final TreeSet<PartitionChunk<T>> holderSet;
+  private final OvershadowableManager<T> overshadowableManager;
+
+  public static <T extends Overshadowable<T>> PartitionHolder<T> copyWithOnlyVisibleChunks(
+      PartitionHolder<T> partitionHolder
+  )
+  {
+    return new PartitionHolder<>(OvershadowableManager.copyVisible(partitionHolder.overshadowableManager));
+  }
+
+  public static <T extends Overshadowable<T>> PartitionHolder<T> deepCopy(PartitionHolder<T> partitionHolder)
+  {
+    return new PartitionHolder<>(OvershadowableManager.deepCopy(partitionHolder.overshadowableManager));
+  }
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
   {
-    this.holderSet = new TreeSet<>();
+    this.overshadowableManager = new OvershadowableManager<>();
     add(initialChunk);
   }
 
   public PartitionHolder(List<PartitionChunk<T>> initialChunks)
   {
-    this.holderSet = new TreeSet<>();
+    this.overshadowableManager = new OvershadowableManager<>();
     for (PartitionChunk<T> chunk : initialChunks) {
       add(chunk);
     }
   }
 
-  public PartitionHolder(PartitionHolder partitionHolder)
+  protected PartitionHolder(OvershadowableManager<T> overshadowableManager)
   {
-    this.holderSet = new TreeSet<>();
-    this.holderSet.addAll(partitionHolder.holderSet);
+    this.overshadowableManager = overshadowableManager;
   }
 
-  public void add(PartitionChunk<T> chunk)
+  public ImmutablePartitionHolder<T> asImmutable()
   {
-    holderSet.add(chunk);
+    return new ImmutablePartitionHolder<>(OvershadowableManager.copyVisible(overshadowableManager));
   }
 
+  public boolean add(PartitionChunk<T> chunk)
+  {
+    return overshadowableManager.addChunk(chunk);
+  }
+
+  @Nullable
   public PartitionChunk<T> remove(PartitionChunk<T> chunk)
   {
-    if (!holderSet.isEmpty()) {
-      // Somewhat funky implementation in order to return the removed object as it exists in the set
-      SortedSet<PartitionChunk<T>> tailSet = holderSet.tailSet(chunk, true);
-      if (!tailSet.isEmpty()) {
-        PartitionChunk<T> element = tailSet.first();
-        if (chunk.equals(element)) {
-          holderSet.remove(element);
-          return element;
-        }
-      }
-    }
-    return null;
+    return overshadowableManager.removeChunk(chunk);
   }
 
   public boolean isEmpty()
   {
-    return holderSet.isEmpty();
+    return overshadowableManager.isEmpty();
   }
 
   public boolean isComplete()
   {
-    if (holderSet.isEmpty()) {
+    if (overshadowableManager.isEmpty()) {
       return false;
     }
 
-    Iterator<PartitionChunk<T>> iter = holderSet.iterator();
+    Iterator<PartitionChunk<T>> iter = iterator();
 
     PartitionChunk<T> curr = iter.next();
 
@@ -96,7 +101,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
     }
 
     if (curr.isEnd()) {
-      return true;
+      return overshadowableManager.isComplete();
     }
 
     while (iter.hasNext()) {
@@ -106,7 +111,7 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
       }
 
       if (next.isEnd()) {
-        return true;
+        return overshadowableManager.isComplete();
       }
       curr = next;
     }
@@ -116,24 +121,18 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
 
   public PartitionChunk<T> getChunk(final int partitionNum)
   {
-    final Iterator<PartitionChunk<T>> retVal = Iterators.filter(
-        holderSet.iterator(),
-        input -> input.getChunkNumber() == partitionNum
-    );
-
-    return retVal.hasNext() ? retVal.next() : null;
+    return overshadowableManager.getChunk(partitionNum);
   }
 
   @Override
   public Iterator<PartitionChunk<T>> iterator()
   {
-    return holderSet.iterator();
+    return overshadowableManager.visibleChunksIterator();
   }
 
-  @Override
-  public Spliterator<PartitionChunk<T>> spliterator()
+  public List<PartitionChunk<T>> getOvershadowed()
   {
-    return holderSet.spliterator();
+    return overshadowableManager.getOvershadowedChunks();
   }
 
   public Iterable<T> payloads()
@@ -150,27 +149,21 @@ public class PartitionHolder<T> implements Iterable<PartitionChunk<T>>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    PartitionHolder that = (PartitionHolder) o;
-
-    if (!holderSet.equals(that.holderSet)) {
-      return false;
-    }
-
-    return true;
+    PartitionHolder<?> that = (PartitionHolder<?>) o;
+    return Objects.equals(overshadowableManager, that.overshadowableManager);
   }
 
   @Override
   public int hashCode()
   {
-    return holderSet.hashCode();
+    return Objects.hash(overshadowableManager);
   }
 
   @Override
   public String toString()
   {
     return "PartitionHolder{" +
-           "holderSet=" + holderSet +
+           "overshadowableManager=" + overshadowableManager +
            '}';
   }
 }

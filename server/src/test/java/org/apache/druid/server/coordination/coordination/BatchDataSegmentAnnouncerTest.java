@@ -68,9 +68,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class BatchDataSegmentAnnouncerTest
 {
-  private static final String testBasePath = "/test";
-  private static final String testSegmentsPath = "/test/segments/id";
-  private static final Joiner joiner = Joiner.on("/");
+  private static final String TEST_BASE_PATH = "/test";
+  private static final String TEST_SEGMENTS_PATH = "/test/segments/id";
+  private static final Joiner JOINER = Joiner.on("/");
   private static final int NUM_THREADS = 4;
 
   private TestingCluster testingCluster;
@@ -100,7 +100,7 @@ public class BatchDataSegmentAnnouncerTest
                                 .build();
     cf.start();
     cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(testBasePath);
+    cf.create().creatingParentsIfNeeded().forPath(TEST_BASE_PATH);
 
     jsonMapper = TestHelper.makeJsonMapper();
 
@@ -154,7 +154,7 @@ public class BatchDataSegmentAnnouncerTest
           @Override
           public String getBase()
           {
-            return testBasePath;
+            return TEST_BASE_PATH;
           }
         },
         announcer,
@@ -187,17 +187,17 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.announceSegment(firstSegment);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      Set<DataSegment> segments = segmentReader.read(joiner.join(testSegmentsPath, zNode));
+      Set<DataSegment> segments = segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode));
       Assert.assertEquals(segments.iterator().next(), firstSegment);
     }
 
     segmentAnnouncer.announceSegment(secondSegment);
 
     for (String zNode : zNodes) {
-      Set<DataSegment> segments = segmentReader.read(joiner.join(testSegmentsPath, zNode));
+      Set<DataSegment> segments = segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode));
       Assert.assertEquals(Sets.newHashSet(firstSegment, secondSegment), segments);
     }
 
@@ -210,13 +210,13 @@ public class BatchDataSegmentAnnouncerTest
     segmentAnnouncer.unannounceSegment(firstSegment);
 
     for (String zNode : zNodes) {
-      Set<DataSegment> segments = segmentReader.read(joiner.join(testSegmentsPath, zNode));
+      Set<DataSegment> segments = segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode));
       Assert.assertEquals(segments.iterator().next(), secondSegment);
     }
 
     segmentAnnouncer.unannounceSegment(secondSegment);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
 
     snapshot = segmentAnnouncer.getSegmentChangesSince(
         snapshot.getCounter()
@@ -240,10 +240,10 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.announceSegment(firstSegment);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertTrue(announcedSegment.getDimensions().isEmpty());
       Assert.assertTrue(announcedSegment.getMetrics().isEmpty());
@@ -251,7 +251,7 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.unannounceSegment(firstSegment);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
   }
 
   @Test
@@ -263,17 +263,17 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.announceSegment(firstSegment);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertNull(announcedSegment.getLoadSpec());
     }
 
     segmentAnnouncer.unannounceSegment(firstSegment);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
   }
 
   @Test
@@ -292,12 +292,12 @@ public class BatchDataSegmentAnnouncerTest
       maxBytesPerNode.set(prevMax);
     }
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
     Assert.assertEquals(20, zNodes.size());
 
     Set<DataSegment> segments = Sets.newHashSet(testSegments);
     for (String zNode : zNodes) {
-      for (DataSegment segment : segmentReader.read(joiner.join(testSegmentsPath, zNode))) {
+      for (DataSegment segment : segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode))) {
         Assert.assertTrue("Invalid segment " + segment, segments.remove(segment));
       }
     }
@@ -322,13 +322,13 @@ public class BatchDataSegmentAnnouncerTest
   {
     segmentAnnouncer.announceSegments(testSegments);
 
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    List<String> zNodes = cf.getChildren().forPath(TEST_SEGMENTS_PATH);
 
     Assert.assertEquals(2, zNodes.size());
 
     Set<DataSegment> allSegments = new HashSet<>();
     for (String zNode : zNodes) {
-      allSegments.addAll(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      allSegments.addAll(segmentReader.read(JOINER.join(TEST_SEGMENTS_PATH, zNode)));
     }
     Assert.assertEquals(allSegments, testSegments);
 
@@ -344,7 +344,7 @@ public class BatchDataSegmentAnnouncerTest
 
     segmentAnnouncer.unannounceSegments(testSegments);
 
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+    Assert.assertTrue(cf.getChildren().forPath(TEST_SEGMENTS_PATH).isEmpty());
 
     if (testHistory) {
       snapshot = segmentAnnouncer.getSegmentChangesSince(
@@ -444,6 +444,7 @@ public class BatchDataSegmentAnnouncerTest
                       .dimensions(ImmutableList.of("dim1", "dim2"))
                       .metrics(ImmutableList.of("met1", "met2"))
                       .loadSpec(ImmutableMap.of("type", "local"))
+                      .size(0)
                       .build();
   }
 

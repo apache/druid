@@ -30,11 +30,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.joda.time.Period;
 
 import java.util.Map;
@@ -65,6 +65,14 @@ public class CastOperatorConversion implements SqlOperatorConversion
     // Timestamps are treated as longs (millis since the epoch) in Druid expressions.
     builder.put(SqlTypeName.TIMESTAMP, ExprType.LONG);
     builder.put(SqlTypeName.DATE, ExprType.LONG);
+
+    for (SqlTypeName type : SqlTypeName.DAY_INTERVAL_TYPES) {
+      builder.put(type, ExprType.LONG);
+    }
+
+    for (SqlTypeName type : SqlTypeName.YEAR_INTERVAL_TYPES) {
+      builder.put(type, ExprType.LONG);
+    }
 
     EXPRESSION_TYPES = builder.build();
   }

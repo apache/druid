@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.movingaverage;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -31,6 +32,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,17 +41,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
-
-/**
- * Unit tests for PostAveragerCalcualtor
- */
 public class PostAveragerAggregatorCalculatorTest
 {
-
-  private MovingAverageQuery query;
   private PostAveragerAggregatorCalculator pac;
   private Map<String, Object> event;
   private MapBasedRow row;
@@ -58,9 +51,13 @@ public class PostAveragerAggregatorCalculatorTest
   public void setup()
   {
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
-    query = new MovingAverageQuery(
+    NullHandling.initializeForTests();
+    MovingAverageQuery query = new MovingAverageQuery(
         new TableDataSource("d"),
-        new MultipleIntervalSegmentSpec(Collections.singletonList(new Interval("2017-01-01/2017-01-01", ISOChronology.getInstanceUTC()))),
+        new MultipleIntervalSegmentSpec(Collections.singletonList(new Interval(
+            "2017-01-01/2017-01-01",
+            ISOChronology.getInstanceUTC()
+        ))),
         null,
         Granularities.DAY,
         null,
@@ -88,22 +85,22 @@ public class PostAveragerAggregatorCalculatorTest
   @Test
   public void testApply()
   {
-    event.put("count", new Double(10.0));
-    event.put("avgCount", new Double(12.0));
+    event.put("count", 10.0);
+    event.put("avgCount", 12.0);
 
     Row result = pac.apply(row);
 
-    assertEquals(result.getMetric("avgCountRatio").floatValue(), 10.0f / 12.0f, 0.0);
+    Assert.assertEquals(10.0f / 12.0f, result.getMetric("avgCountRatio").floatValue(), 0.0);
   }
 
   @Test
   public void testApplyMissingColumn()
   {
-    event.put("count", new Double(10.0));
+    event.put("count", 10.0);
 
     Row result = pac.apply(row);
 
-    assertEquals(result.getMetric("avgCountRatio").floatValue(), 0.0, 0.0);
-    assertNull(result.getRaw("avgCountRatio"));
+    Assert.assertEquals(0.0, result.getMetric("avgCountRatio").floatValue(), 0.0);
+    Assert.assertNull(result.getRaw("avgCountRatio"));
   }
 }

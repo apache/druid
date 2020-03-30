@@ -710,8 +710,7 @@ public final class ProtoTestEventWrapper
         }
         org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo other = (org.apache.druid.data.input.protobuf.ProtoTestEventWrapper.ProtoTestEvent.Foo) obj;
 
-        boolean result = true;
-        result = result && (hasBar() == other.hasBar());
+        boolean result = hasBar() == other.hasBar();
         if (hasBar()) {
           result = result && getBar()
               .equals(other.getBar());

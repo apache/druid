@@ -24,17 +24,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
-import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -68,14 +66,12 @@ public class SegmentNukeAction implements TaskAction<Void>
   @Override
   public Void perform(Task task, TaskActionToolbox toolbox)
   {
-    TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
-
-    final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
+    TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          intervals,
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {
@@ -117,7 +113,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   public String toString()
   {
     return "SegmentNukeAction{" +
-           "segments=" + Iterables.transform(segments, DataSegment::getId) +
+           "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            '}';
   }
 }

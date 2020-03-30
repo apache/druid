@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -36,8 +37,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -85,7 +84,7 @@ public class ChainedExecutionQueryRunnerTest
 
     Capture<ListenableFuture> capturedFuture = EasyMock.newCapture();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
-    watcher.registerQuery(
+    watcher.registerQueryFuture(
         EasyMock.anyObject(),
         EasyMock.and(EasyMock.anyObject(), EasyMock.capture(capturedFuture))
     );
@@ -119,13 +118,12 @@ public class ChainedExecutionQueryRunnerTest
          runners
         )
     );
-    Map<String, Object> context = ImmutableMap.of();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
                                   .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .build();
-    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
+    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
         new Runnable()
@@ -209,7 +207,7 @@ public class ChainedExecutionQueryRunnerTest
 
     Capture<ListenableFuture> capturedFuture = Capture.newInstance();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
-    watcher.registerQuery(
+    watcher.registerQueryFuture(
         EasyMock.anyObject(),
         EasyMock.and(EasyMock.anyObject(), EasyMock.capture(capturedFuture))
     );
@@ -244,14 +242,13 @@ public class ChainedExecutionQueryRunnerTest
             runners
         )
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .intervals("2014/2015")
                                   .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
                                   .context(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 100, "queryId", "test"))
                                   .build();
-    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query), context);
+    final Sequence seq = chainedRunner.run(QueryPlus.wrap(query));
 
     Future resultFuture = Executors.newFixedThreadPool(1).submit(
         new Runnable()
@@ -327,7 +324,7 @@ public class ChainedExecutionQueryRunnerTest
     }
 
     @Override
-    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, Map<String, Object> responseContext)
+    public Sequence<Integer> run(QueryPlus<Integer> queryPlus, ResponseContext responseContext)
     {
       // do a lot of work
       synchronized (this) {

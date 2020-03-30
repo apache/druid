@@ -54,6 +54,7 @@ public abstract class LoadRule implements Rule
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
   static final String ASSIGNED_COUNT = "assignedCount";
   static final String DROPPED_COUNT = "droppedCount";
+  public static final String REQUIRED_CAPACITY = "requiredCapacity";
 
   private final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
   private final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();
@@ -77,7 +78,9 @@ public abstract class LoadRule implements Rule
       assign(params, segment, stats);
 
       drop(params, segment, stats);
-
+      for (String tier : targetReplicants.keySet()) {
+        stats.addToTieredStat(REQUIRED_CAPACITY, tier, segment.getSize() * targetReplicants.getInt(tier));
+      }
       return stats;
     }
     finally {
@@ -392,7 +395,7 @@ public abstract class LoadRule implements Rule
       left = dropSegmentFromServers(balancerStrategy, segment, activeServers, left);
     }
     if (left != 0) {
-      log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getId());
+      log.warn("I have no servers serving [%s]?", segment.getId());
     }
     return numToDrop - left;
   }

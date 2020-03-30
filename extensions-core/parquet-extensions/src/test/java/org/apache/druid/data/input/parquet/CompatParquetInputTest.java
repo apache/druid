@@ -19,21 +19,19 @@
 
 package org.apache.druid.data.input.parquet;
 
-import avro.shaded.com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.path.StaticPathSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class CompatParquetInputTest extends BaseParquetInputTest
@@ -69,9 +67,9 @@ public class CompatParquetInputTest extends BaseParquetInputTest
 
     InputRow row = ((List<InputRow>) config.getParser().parseBatch(data)).get(0);
 
-    // without binaryAsString: true, the value would something like "[104, 101, 121, 32, 116, 104, 105, 115, 32, 105, 115, 3.... ]"
-    assertEquals(row.getDimension("field").get(0), "hey this is &é(-è_çà)=^$ù*! Ω^^");
-    assertEquals(row.getTimestampFromEpoch(), 1471800234);
+    // without binaryAsString: true, the value would be "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg=="
+    Assert.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", row.getDimension("field").get(0));
+    Assert.assertEquals(1471800234, row.getTimestampFromEpoch());
   }
 
 
@@ -87,10 +85,10 @@ public class CompatParquetInputTest extends BaseParquetInputTest
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
     List<InputRow> rows2 = getAllRows(parserType, config);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("-1", rows.get(0).getDimension("col").get(0));
-    assertEquals(-1, rows.get(0).getMetric("metric1"));
-    assertTrue(rows2.get(2).getDimension("col").isEmpty());
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("-1", rows.get(0).getDimension("col").get(0));
+    Assert.assertEquals(-1, rows.get(0).getMetric("metric1"));
+    Assert.assertTrue(rows2.get(2).getDimension("col").isEmpty());
   }
 
   @Test
@@ -158,30 +156,30 @@ public class CompatParquetInputTest extends BaseParquetInputTest
     config.intoConfiguration(job);
     Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("true", rows.get(0).getDimension("boolColumn").get(0));
-    assertEquals("0", rows.get(0).getDimension("byteColumn").get(0));
-    assertEquals("1", rows.get(0).getDimension("shortColumn").get(0));
-    assertEquals("2", rows.get(0).getDimension("intColumn").get(0));
-    assertEquals("0", rows.get(0).getDimension("longColumn").get(0));
-    assertEquals("0.2", rows.get(0).getDimension("doubleColumn").get(0));
-    assertEquals("val_0", rows.get(0).getDimension("binaryColumn").get(0));
-    assertEquals("val_0", rows.get(0).getDimension("stringColumn").get(0));
-    assertEquals("SPADES", rows.get(0).getDimension("enumColumn").get(0));
-    assertTrue(rows.get(0).getDimension("maybeBoolColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeByteColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeShortColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeIntColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeLongColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeDoubleColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeBinaryColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeStringColumn").isEmpty());
-    assertTrue(rows.get(0).getDimension("maybeEnumColumn").isEmpty());
-    assertEquals("arr_0", rows.get(0).getDimension("stringsColumn").get(0));
-    assertEquals("arr_1", rows.get(0).getDimension("stringsColumn").get(1));
-    assertEquals("0", rows.get(0).getDimension("intSetColumn").get(0));
-    assertEquals("val_1", rows.get(0).getDimension("extractByLogicalMap").get(0));
-    assertEquals("1", rows.get(0).getDimension("extractByComplexLogicalMap").get(0));
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("true", rows.get(0).getDimension("boolColumn").get(0));
+    Assert.assertEquals("0", rows.get(0).getDimension("byteColumn").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("shortColumn").get(0));
+    Assert.assertEquals("2", rows.get(0).getDimension("intColumn").get(0));
+    Assert.assertEquals("0", rows.get(0).getDimension("longColumn").get(0));
+    Assert.assertEquals("0.2", rows.get(0).getDimension("doubleColumn").get(0));
+    Assert.assertEquals("val_0", rows.get(0).getDimension("binaryColumn").get(0));
+    Assert.assertEquals("val_0", rows.get(0).getDimension("stringColumn").get(0));
+    Assert.assertEquals("SPADES", rows.get(0).getDimension("enumColumn").get(0));
+    Assert.assertTrue(rows.get(0).getDimension("maybeBoolColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeByteColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeShortColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeIntColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeLongColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeDoubleColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeBinaryColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeStringColumn").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("maybeEnumColumn").isEmpty());
+    Assert.assertEquals("arr_0", rows.get(0).getDimension("stringsColumn").get(0));
+    Assert.assertEquals("arr_1", rows.get(0).getDimension("stringsColumn").get(1));
+    Assert.assertEquals("0", rows.get(0).getDimension("intSetColumn").get(0));
+    Assert.assertEquals("val_1", rows.get(0).getDimension("extractByLogicalMap").get(0));
+    Assert.assertEquals("1", rows.get(0).getDimension("extractByComplexLogicalMap").get(0));
   }
 
   @Test
@@ -199,10 +197,10 @@ public class CompatParquetInputTest extends BaseParquetInputTest
     );
     config.intoConfiguration(job);
     List<InputRow> rows = getAllRows(parserType, config);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("1", rows.get(0).getDimension("repeatedInt").get(0));
-    assertEquals("2", rows.get(0).getDimension("repeatedInt").get(1));
-    assertEquals("3", rows.get(0).getDimension("repeatedInt").get(2));
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("1", rows.get(0).getDimension("repeatedInt").get(0));
+    Assert.assertEquals("2", rows.get(0).getDimension("repeatedInt").get(1));
+    Assert.assertEquals("3", rows.get(0).getDimension("repeatedInt").get(2));
   }
 
   @Test
@@ -223,10 +221,10 @@ public class CompatParquetInputTest extends BaseParquetInputTest
 
     config.intoConfiguration(job);
     List<InputRow> rows = getAllRows(parserType, config);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("5", rows.get(0).getDimension("primitive").get(0));
-    assertEquals("4", rows.get(0).getDimension("extracted1").get(0));
-    assertEquals("6", rows.get(0).getDimension("extracted2").get(0));
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("5", rows.get(0).getDimension("primitive").get(0));
+    Assert.assertEquals("4", rows.get(0).getDimension("extracted1").get(0));
+    Assert.assertEquals("6", rows.get(0).getDimension("extracted2").get(0));
   }
 
   @Test
@@ -245,13 +243,13 @@ public class CompatParquetInputTest extends BaseParquetInputTest
     );
     config.intoConfiguration(job);
     List<InputRow> rows = getAllRows(parserType, config);
-    assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    assertEquals("10", rows.get(0).getDimension("optionalPrimitive").get(0));
-    assertEquals("9", rows.get(0).getDimension("requiredPrimitive").get(0));
-    assertTrue(rows.get(0).getDimension("repeatedPrimitive").isEmpty());
-    assertTrue(rows.get(0).getDimension("extractedOptional").isEmpty());
-    assertEquals("9", rows.get(0).getDimension("extractedRequired").get(0));
-    assertEquals("9", rows.get(0).getDimension("extractedRepeated").get(0));
-    assertEquals("10", rows.get(0).getDimension("extractedRepeated").get(1));
+    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals("10", rows.get(0).getDimension("optionalPrimitive").get(0));
+    Assert.assertEquals("9", rows.get(0).getDimension("requiredPrimitive").get(0));
+    Assert.assertTrue(rows.get(0).getDimension("repeatedPrimitive").isEmpty());
+    Assert.assertTrue(rows.get(0).getDimension("extractedOptional").isEmpty());
+    Assert.assertEquals("9", rows.get(0).getDimension("extractedRequired").get(0));
+    Assert.assertEquals("9", rows.get(0).getDimension("extractedRepeated").get(0));
+    Assert.assertEquals("10", rows.get(0).getDimension("extractedRepeated").get(1));
   }
 }

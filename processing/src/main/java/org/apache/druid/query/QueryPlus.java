@@ -23,10 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.context.ResponseContext;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 
 /**
  * An immutable composite object of {@link Query} + extra stuff needed in {@link QueryRunner}s.
@@ -126,14 +125,6 @@ public final class QueryPlus<T>
   }
 
   /**
-   * Equivalent of withQuery(getQuery().withQuerySegmentSpec(spec)).
-   */
-  public QueryPlus<T> withQuerySegmentSpec(QuerySegmentSpec spec)
-  {
-    return new QueryPlus<>(query.withQuerySegmentSpec(spec), queryMetrics, identity);
-  }
-
-  /**
    * Equivalent of withQuery(getQuery().withOverriddenContext(ImmutableMap.of(MAX_QUEUED_BYTES_KEY, maxQueuedBytes))).
    */
   public QueryPlus<T> withMaxQueuedBytes(long maxQueuedBytes)
@@ -153,7 +144,7 @@ public final class QueryPlus<T>
     return new QueryPlus<>(replacementQuery, queryMetrics, identity);
   }
 
-  public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context)
+  public Sequence<T> run(QuerySegmentWalker walker, ResponseContext context)
   {
     return query.getRunner(walker).run(this, context);
   }

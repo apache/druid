@@ -27,6 +27,8 @@ import it.unimi.dsi.fastutil.longs.LongList;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -38,11 +40,11 @@ import java.nio.channels.WritableByteChannel;
  */
 public class IntermediateColumnarLongsSerializer implements ColumnarLongsSerializer
 {
+  private final String columnName;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ByteOrder order;
   private final CompressionStrategy compression;
-  private LongList tempOut = null;
 
   private int numInserted = 0;
 
@@ -52,15 +54,20 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   private long maxVal = Long.MIN_VALUE;
   private long minVal = Long.MAX_VALUE;
 
+  @Nullable
+  private LongList tempOut = null;
+  @Nullable
   private ColumnarLongsSerializer delegate;
 
   IntermediateColumnarLongsSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.order = order;
@@ -88,6 +95,9 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
     }
     tempOut.add(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
       uniqueValues.put(value, uniqueValues.size());
       valuesAddedInOrder.add(value);
@@ -123,9 +133,10 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
     }
 
     if (compression == CompressionStrategy.NONE) {
-      delegate = new EntireLayoutColumnarLongsSerializer(segmentWriteOutMedium, writer);
+      delegate = new EntireLayoutColumnarLongsSerializer(columnName, segmentWriteOutMedium, writer);
     } else {
       delegate = new BlockLayoutColumnarLongsSerializer(
+          columnName,
           segmentWriteOutMedium,
           filenameBase,
           order,

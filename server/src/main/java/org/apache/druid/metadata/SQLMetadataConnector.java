@@ -42,6 +42,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
@@ -55,6 +56,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
+  private static final String COLLATION = "";
 
   static final int DEFAULT_MAX_TRIES = 10;
 
@@ -91,6 +93,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected String getPayloadType()
   {
     return PAYLOAD_TYPE;
+  }
+
+  /**
+   * The character set and collation for case-sensitive nonbinary string comparison
+   *
+   * @return the collation for the character set
+   */
+  protected String getCollation()
+  {
+    return COLLATION;
   }
 
   /**
@@ -208,7 +220,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
-                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) %4$s NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  start VARCHAR(255) NOT NULL,\n"
                 + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
@@ -219,7 +231,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  PRIMARY KEY (id),\n"
                 + "  UNIQUE (sequence_name_prev_id_sha1)\n"
                 + ")",
-                tableName, getPayloadType(), getQuoteString()
+                tableName, getPayloadType(), getQuoteString(), getCollation()
             ),
             StringUtils.format(
                 "CREATE INDEX idx_%1$s_datasource_end ON %1$s(dataSource, %2$send%2$s)",
@@ -241,13 +253,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         ImmutableList.of(
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
-                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) %3$s NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  commit_metadata_payload %2$s NOT NULL,\n"
                 + "  commit_metadata_sha1 VARCHAR(255) NOT NULL,\n"
                 + "  PRIMARY KEY (dataSource)\n"
                 + ")",
-                tableName, getPayloadType()
+                tableName, getPayloadType(), getCollation()
             )
         )
     );
@@ -261,7 +273,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
-                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) %4$s NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
                 + "  start VARCHAR(255) NOT NULL,\n"
                 + "  %3$send%3$s VARCHAR(255) NOT NULL,\n"
@@ -271,7 +283,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getPayloadType(), getQuoteString()
+                tableName, getPayloadType(), getQuoteString(), getCollation()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_used ON %1$s(used)", tableName),
             StringUtils.format(
@@ -291,12 +303,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format(
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
-                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) %3$s NOT NULL,\n"
                 + "  version VARCHAR(255) NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getPayloadType()
+                tableName, getPayloadType(), getCollation()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_datasource ON %1$s(dataSource)", tableName)
         )
@@ -329,13 +341,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 "CREATE TABLE %1$s (\n"
                 + "  id VARCHAR(255) NOT NULL,\n"
                 + "  created_date VARCHAR(255) NOT NULL,\n"
-                + "  datasource VARCHAR(255) NOT NULL,\n"
+                + "  datasource VARCHAR(255) %3$s NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
                 + "  status_payload %2$s NOT NULL,\n"
                 + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getPayloadType()
+                tableName, getPayloadType(), getCollation()
             ),
             StringUtils.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
         )
@@ -585,7 +597,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   @Override
-  public byte[] lookup(
+  public @Nullable byte[] lookup(
       final String tableName,
       final String keyColumn,
       final String valueColumn,
@@ -604,7 +616,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public byte[] lookupWithHandle(
+  public @Nullable byte[] lookupWithHandle(
       final Handle handle,
       final String tableName,
       final String keyColumn,

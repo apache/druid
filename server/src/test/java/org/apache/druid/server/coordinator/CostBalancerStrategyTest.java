@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -47,7 +48,7 @@ import java.util.stream.IntStream;
 
 public class CostBalancerStrategyTest
 {
-  private static final Interval day = Intervals.of("2015-01-01T00/2015-01-01T01");
+  private static final Interval DAY = Intervals.of("2015-01-01T00/2015-01-01T01");
 
   /**
    * Create Druid cluster with serverCount servers having maxSegments segments each, and 1 server with 98 segment
@@ -94,7 +95,7 @@ public class CostBalancerStrategyTest
       segments.put(segment.getId(), segment);
       EasyMock.expect(druidServer.getSegment(segment.getId())).andReturn(segment).anyTimes();
     }
-    EasyMock.expect(druidServer.getLazyAllSegments()).andReturn(segments.values()).anyTimes();
+    ImmutableDruidServerTests.expectSegments(druidServer, segments.values());
 
     EasyMock.replay(druidServer);
     serverHolderList.add(new ServerHolder(druidServer, fromPeon));
@@ -110,7 +111,7 @@ public class CostBalancerStrategyTest
    */
   public static DataSegment getSegment(int index)
   {
-    return getSegment(index, "DUMMY", day);
+    return getSegment(index, "DUMMY", DAY);
   }
 
   public static DataSegment getSegment(int index, String dataSource, Interval interval)
@@ -165,7 +166,7 @@ public class CostBalancerStrategyTest
     CostBalancerStrategy strategy = new CostBalancerStrategy(
         MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
     );
-    double segmentCost = strategy.computeJointSegmentsCost(
+    double segmentCost = CostBalancerStrategy.computeJointSegmentsCost(
         getSegment(
             100,
             "DUMMY",

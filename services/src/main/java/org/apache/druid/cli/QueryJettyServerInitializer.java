@@ -22,6 +22,7 @@ package org.apache.druid.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -45,16 +46,20 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
 public class QueryJettyServerInitializer implements JettyServerInitializer
 {
   private static final Logger log = new Logger(QueryJettyServerInitializer.class);
-  private static List<String> UNSECURED_PATHS = Collections.singletonList("/status/health");
+  private static List<String> UNSECURED_PATHS = Lists.newArrayList(
+      "/status/health",
+      "/druid/historical/v1/readiness",
+      "/druid/broker/v1/readiness"
+  );
 
   private final List<Handler> extensionHandlers;
 
@@ -96,8 +101,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
     // perform no-op authorization for these resources
-    AuthenticationUtils.addNoopAuthorizationFilters(root, UNSECURED_PATHS);
-    AuthenticationUtils.addNoopAuthorizationFilters(root, authConfig.getUnsecuredPaths());
+    AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, UNSECURED_PATHS);
+    AuthenticationUtils.addNoopAuthenticationAndAuthorizationFilters(root, authConfig.getUnsecuredPaths());
 
     List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);

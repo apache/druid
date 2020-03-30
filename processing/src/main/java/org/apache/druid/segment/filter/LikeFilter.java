@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -28,33 +29,42 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 public class LikeFilter implements Filter
 {
   private final String dimension;
   private final ExtractionFn extractionFn;
   private final LikeDimFilter.LikeMatcher likeMatcher;
+  private final FilterTuning filterTuning;
 
   public LikeFilter(
       final String dimension,
       final ExtractionFn extractionFn,
-      final LikeDimFilter.LikeMatcher likeMatcher
+      final LikeDimFilter.LikeMatcher likeMatcher,
+      final FilterTuning filterTuning
   )
   {
     this.dimension = dimension;
     this.extractionFn = extractionFn;
     this.likeMatcher = likeMatcher;
+    this.filterTuning = filterTuning;
   }
 
   @Override
@@ -76,9 +86,37 @@ public class LikeFilter implements Filter
   }
 
   @Override
+  public VectorValueMatcher makeVectorMatcher(final VectorColumnSelectorFactory factory)
+  {
+    return DimensionHandlerUtils.makeVectorProcessor(
+        dimension,
+        VectorValueMatcherColumnProcessorFactory.instance(),
+        factory
+    ).makeMatcher(likeMatcher.predicateFactory(extractionFn));
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
+  }
+
+  @Override
+  public Set<String> getRequiredColumns()
+  {
+    return ImmutableSet.of(dimension);
+  }
+
+  @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+  {
+    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
   }
 
   @Override

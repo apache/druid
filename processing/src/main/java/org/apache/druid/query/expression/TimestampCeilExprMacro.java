@@ -26,16 +26,20 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_ceil";
+
   @Override
   public String name()
   {
-    return "timestamp_ceil";
+    return FN_NAME;
   }
 
   @Override
@@ -52,14 +56,13 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TimestampCeilExpr implements Expr
+  private static class TimestampCeilExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    private final Expr arg;
     private final Granularity granularity;
 
-    public TimestampCeilExpr(final List<Expr> args)
+    TimestampCeilExpr(final List<Expr> args)
     {
-      this.arg = args.get(0);
+      super(FN_NAME, args);
       this.granularity = getGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -67,19 +70,24 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      ExprEval eval = arg.eval(bindings);
+      ExprEval eval = args.get(0).eval(bindings);
       if (eval.isNumericNull()) {
         // Return null if the argument if null.
         return ExprEval.of(null);
       }
-      return ExprEval.of(granularity.bucketEnd(DateTimes.utc(arg.eval(bindings).asLong())).getMillis());
+      DateTime argTime = DateTimes.utc(eval.asLong());
+      DateTime bucketStartTime = granularity.bucketStart(argTime);
+      if (argTime.equals(bucketStartTime)) {
+        return ExprEval.of(bucketStartTime.getMillis());
+      }
+      return ExprEval.of(granularity.increment(bucketStartTime).getMillis());
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public Expr visit(Shuttle shuttle)
     {
-      arg.visit(visitor);
-      visitor.visit(this);
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampCeilExpr(newArgs));
     }
   }
 
@@ -93,13 +101,11 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     );
   }
 
-  private static class TimestampCeilDynamicExpr implements Expr
+  private static class TimestampCeilDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    private final List<Expr> args;
-
-    public TimestampCeilDynamicExpr(final List<Expr> args)
+    TimestampCeilDynamicExpr(final List<Expr> args)
     {
-      this.args = args;
+      super(FN_NAME, args);
     }
 
     @Nonnull
@@ -107,16 +113,19 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     public ExprEval eval(final ObjectBinding bindings)
     {
       final PeriodGranularity granularity = getGranularity(args, bindings);
-      return ExprEval.of(granularity.bucketEnd(DateTimes.utc(args.get(0).eval(bindings).asLong())).getMillis());
+      DateTime argTime = DateTimes.utc(args.get(0).eval(bindings).asLong());
+      DateTime bucketStartTime = granularity.bucketStart(argTime);
+      if (argTime.equals(bucketStartTime)) {
+        return ExprEval.of(bucketStartTime.getMillis());
+      }
+      return ExprEval.of(granularity.increment(bucketStartTime).getMillis());
     }
 
     @Override
-    public void visit(final Visitor visitor)
+    public Expr visit(Shuttle shuttle)
     {
-      for (Expr arg : args) {
-        arg.visit(visitor);
-      }
-      visitor.visit(this);
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new TimestampCeilDynamicExpr(newArgs));
     }
   }
 }

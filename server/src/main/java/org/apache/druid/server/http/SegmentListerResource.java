@@ -108,12 +108,13 @@ public class SegmentListerResource
    * @param hash hash received in last response.
    * @param timeout after which response is sent even if there are no new segment updates.
    * @param req
+   * @return null to avoid "MUST return a non-void type" warning.
    * @throws IOException
    */
   @GET
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
-  public void getSegments(
+  public Void getSegments(
       @QueryParam("counter") long counter,
       @QueryParam("hash") long hash,
       @QueryParam("timeout") long timeout,
@@ -122,12 +123,12 @@ public class SegmentListerResource
   {
     if (announcer == null) {
       sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "announcer is not available.");
-      return;
+      return null;
     }
 
     if (timeout <= 0) {
       sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "timeout must be positive.");
-      return;
+      return null;
     }
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
@@ -208,6 +209,7 @@ public class SegmentListerResource
     );
 
     asyncContext.setTimeout(timeout);
+    return null;
   }
 
   /**
@@ -246,8 +248,8 @@ public class SegmentListerResource
     }
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
-    final ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future = loadDropRequestHandler
-        .processBatch(changeRequestList);
+    final ListenableFuture<List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus>> future =
+        loadDropRequestHandler.processBatch(changeRequestList);
 
     final AsyncContext asyncContext = req.startAsync();
 

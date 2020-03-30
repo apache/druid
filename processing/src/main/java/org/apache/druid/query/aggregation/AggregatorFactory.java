@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -38,7 +39,13 @@ import java.util.Map;
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
- * to extend {@link NullableAggregatorFactory}.
+ * to extend {@link NullableNumericAggregatorFactory}.
+ *
+ * Implementations are also expected to correctly handle single/multi value string type columns as it makes sense
+ * for them e.g. doubleSum aggregator tries to parse the string value as double and assumes it to be zero if parsing
+ * fails.
+ * If it is a multi value column then each individual value should be taken into account for aggregation e.g. if a row
+ * had value ["1","1","1"] , doubleSum aggregation would take each of them and sum them to 3.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
@@ -48,6 +55,23 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract Aggregator factorize(ColumnSelectorFactory metricFactory);
 
   public abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
+
+  /**
+   * Create a VectorAggregator based on the provided column selector factory. Will throw an exception if
+   * this aggregation class does not support vectorization: check "canVectorize" first.
+   */
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    throw new UOE("Aggregator[%s] cannot vectorize", getClass().getName());
+  }
+
+  /**
+   * Returns whether or not this aggregation class supports vectorization. The default implementation returns false.
+   */
+  public boolean canVectorize()
+  {
+    return false;
+  }
 
   public abstract Comparator getComparator();
 
@@ -82,11 +106,11 @@ public abstract class AggregatorFactory implements Cacheable
   /**
    * Creates an {@link AggregateCombiner} which supports nullability.
    * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
-   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * to extend {@link NullableNumericAggregatorFactory} instead of overriding this method.
    * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
    *
    * @see AggregateCombiner
-   * @see NullableAggregatorFactory
+   * @see NullableNumericAggregatorFactory
    */
   public AggregateCombiner makeNullableAggregateCombiner()
   {
@@ -102,11 +126,11 @@ public abstract class AggregatorFactory implements Cacheable
    * For simple aggregators, the combining factory may be computed by simply creating a new factory that is the same as
    * the current, except with its input column renamed to the same as the output column. For example, this aggregator:
    *
-   *   {"type": "longSum", "fieldName": "foo", "name": "bar"}
+   * {"type": "longSum", "fieldName": "foo", "name": "bar"}
    *
    * Would become:
    *
-   *   {"type": "longSum", "fieldName": "bar", "name": "bar"}
+   * {"type": "longSum", "fieldName": "bar", "name": "bar"}
    *
    * Sometimes, the type or other parameters of the combining aggregator will be different from the original aggregator.
    * For example, the {@link CountAggregatorFactory} getCombiningFactory method will return a
@@ -185,6 +209,22 @@ public abstract class AggregatorFactory implements Cacheable
    */
   public abstract List<String> requiredFields();
 
+  /**
+   * Get the type name of the intermediate type for this aggregator. This is the same as the type returned by
+   * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
+   * returned by {@link #finalizeComputation}.
+   *
+   * If the type is complex (i.e. not a simple, numeric {@link org.apache.druid.segment.column.ValueType}) then there
+   * must be a corresponding {@link org.apache.druid.segment.serde.ComplexMetricSerde} which was registered with
+   * {@link org.apache.druid.segment.serde.ComplexMetrics#registerSerde} using this type name.
+   *
+   * If you need a ValueType enum corresponding to this aggregator, a good way to do that is:
+   *
+   * <pre>
+   *   Optional.ofNullable(GuavaUtils.getEnumIfPresent(ValueType.class, aggregator.getTypeName()))
+   *           .orElse(ValueType.COMPLEX);
+   * </pre>
+   */
   public abstract String getTypeName();
 
   /**
@@ -197,7 +237,7 @@ public abstract class AggregatorFactory implements Cacheable
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
    * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
-   * to extend {@link NullableAggregatorFactory} instead of overriding this method.
+   * to extend {@link NullableNumericAggregatorFactory} instead of overriding this method.
    * Default implementation calls {@link #makeAggregateCombiner()} for backwards compatibility.
    *
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.

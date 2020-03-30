@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.writeout;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.File;
@@ -35,7 +35,7 @@ public final class TmpFileSegmentWriteOutMedium implements SegmentWriteOutMedium
   TmpFileSegmentWriteOutMedium(File outDir) throws IOException
   {
     File tmpOutputFilesDir = new File(outDir, "tmpOutputFiles");
-    FileUtils.forceMkdir(tmpOutputFilesDir);
+    org.apache.commons.io.FileUtils.forceMkdir(tmpOutputFilesDir);
     closer.register(() -> FileUtils.deleteDirectory(tmpOutputFilesDir));
     this.dir = tmpOutputFilesDir;
   }

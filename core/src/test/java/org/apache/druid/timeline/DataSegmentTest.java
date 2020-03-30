@@ -26,10 +26,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.TestObjectMapper;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
@@ -38,19 +41,15 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 
 /**
  */
 public class DataSegmentTest
 {
-  private static final ObjectMapper mapper = new TestObjectMapper();
+  private static final ObjectMapper MAPPER = new TestObjectMapper();
   private static final int TEST_VERSION = 0x9;
 
   private static ShardSpec getShardSpec(final int partitionNum)
@@ -92,6 +91,12 @@ public class DataSegmentTest
       {
         return true;
       }
+
+      @Override
+      public boolean isCompatible(Class<? extends ShardSpec> other)
+      {
+        return false;
+      }
     };
   }
 
@@ -99,8 +104,8 @@ public class DataSegmentTest
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    mapper.setInjectableValues(injectableValues);
+    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
+    MAPPER.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -117,28 +122,32 @@ public class DataSegmentTest
         loadSpec,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(3, 0),
+        new CompactionState(
+            new HashedPartitionsSpec(100000, null, ImmutableList.of("dim1")),
+            ImmutableMap.of()
+        ),
         TEST_VERSION,
         1
     );
 
-    final Map<String, Object> objectMap = mapper.readValue(
-        mapper.writeValueAsString(segment),
+    final Map<String, Object> objectMap = MAPPER.readValue(
+        MAPPER.writeValueAsString(segment),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(10, objectMap.size());
+    Assert.assertEquals(11, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(interval.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
     Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
 
-    DataSegment deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    DataSegment deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
 
     Assert.assertEquals(segment.getDataSource(), deserializedSegment.getDataSource());
     Assert.assertEquals(segment.getInterval(), deserializedSegment.getInterval());
@@ -150,13 +159,13 @@ public class DataSegmentTest
     Assert.assertEquals(segment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(segment.getId(), deserializedSegment.getId());
 
-    deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(0, segment.compareTo(deserializedSegment));
 
-    deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(0, deserializedSegment.compareTo(segment));
 
-    deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    deserializedSegment = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(segment.hashCode(), deserializedSegment.hashCode());
   }
 
@@ -168,6 +177,7 @@ public class DataSegmentTest
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(NoneShardSpec.instance())
+                                           .size(0)
                                            .build();
 
     Assert.assertEquals(
@@ -184,6 +194,7 @@ public class DataSegmentTest
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(0))
+                                           .size(0)
                                            .build();
 
     Assert.assertEquals(
@@ -200,6 +211,7 @@ public class DataSegmentTest
                                            .interval(Intervals.of("2012-01-01/2012-01-02"))
                                            .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                            .shardSpec(getShardSpec(7))
+                                           .size(0)
                                            .build();
 
     Assert.assertEquals(
@@ -211,44 +223,12 @@ public class DataSegmentTest
   @Test
   public void testV1SerializationNullMetrics() throws Exception
   {
-    final DataSegment segment = DataSegment.builder()
-                                           .dataSource("foo")
-                                           .interval(Intervals.of("2012-01-01/2012-01-02"))
-                                           .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
-                                           .build();
+    final DataSegment segment =
+        makeDataSegment("foo", "2012-01-01/2012-01-02", DateTimes.of("2012-01-01T11:22:33.444Z").toString());
 
-    final DataSegment segment2 = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
+    final DataSegment segment2 = MAPPER.readValue(MAPPER.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals("empty dimensions", ImmutableList.of(), segment2.getDimensions());
     Assert.assertEquals("empty metrics", ImmutableList.of(), segment2.getMetrics());
-  }
-
-  @Test
-  public void testBucketMonthComparator()
-  {
-    DataSegment[] sortedOrder = {
-        makeDataSegment("test1", "2011-01-01/2011-01-02", "a"),
-        makeDataSegment("test1", "2011-01-02/2011-01-03", "a"),
-        makeDataSegment("test1", "2011-01-02/2011-01-03", "b"),
-        makeDataSegment("test2", "2011-01-01/2011-01-02", "a"),
-        makeDataSegment("test2", "2011-01-02/2011-01-03", "a"),
-        makeDataSegment("test1", "2011-02-01/2011-02-02", "a"),
-        makeDataSegment("test1", "2011-02-02/2011-02-03", "a"),
-        makeDataSegment("test1", "2011-02-02/2011-02-03", "b"),
-        makeDataSegment("test2", "2011-02-01/2011-02-02", "a"),
-        makeDataSegment("test2", "2011-02-02/2011-02-03", "a"),
-    };
-
-    List<DataSegment> shuffled = new ArrayList<>(Arrays.asList(sortedOrder));
-    Collections.shuffle(shuffled);
-
-    Set<DataSegment> theSet = new TreeSet<>(DataSegment.bucketMonthComparator());
-    theSet.addAll(shuffled);
-
-    int index = 0;
-    for (DataSegment dataSegment : theSet) {
-      Assert.assertEquals(sortedOrder[index], dataSegment);
-      ++index;
-    }
   }
 
   private DataSegment makeDataSegment(String dataSource, String interval, String version)

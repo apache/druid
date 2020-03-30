@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.yahoo.sketches.hll.HllSketch;
-import com.yahoo.sketches.hll.TgtHllType;
-import com.yahoo.sketches.hll.Union;
+import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.hll.TgtHllType;
+import org.apache.datasketches.hll.Union;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -37,7 +37,6 @@ import javax.annotation.Nullable;
 /**
  * This aggregator factory is for merging existing sketches.
  * The input column must contain {@link HllSketch}
- * @author Alexander Saydakov
  */
 public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
 {
@@ -47,10 +46,11 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
-      @JsonProperty("tgtHllType") @Nullable final String tgtHllType
+      @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType);
+    super(name, fieldName, lgK, tgtHllType, round);
   }
 
   @Override
@@ -60,10 +60,11 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
       HllSketchMergeAggregatorFactory castedOther = (HllSketchMergeAggregatorFactory) other;
 
       return new HllSketchMergeAggregatorFactory(
-              getName(),
-              getName(),
-              Math.max(getLgK(), castedOther.getLgK()),
-              getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType()
+          getName(),
+          getName(),
+          Math.max(getLgK(), castedOther.getLgK()),
+          getTgtHllType().compareTo(castedOther.getTgtHllType()) < 0 ? castedOther.getTgtHllType() : getTgtHllType(),
+          isRound() || castedOther.isRound()
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);

@@ -1,0 +1,78 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ingestion-spec upgrades 1`] = `
+Object {
+  "spec": Object {
+    "dataSchema": Object {
+      "dataSource": "wikipedia",
+      "dimensionsSpec": Object {
+        "dimensions": Array [
+          "channel",
+          "cityName",
+          "comment",
+        ],
+      },
+      "granularitySpec": Object {
+        "queryGranularity": "HOUR",
+        "rollup": true,
+        "segmentGranularity": "DAY",
+        "type": "uniform",
+      },
+      "metricsSpec": Array [
+        Object {
+          "name": "count",
+          "type": "count",
+        },
+        Object {
+          "fieldName": "added",
+          "name": "sum_added",
+          "type": "longSum",
+        },
+      ],
+      "timestampSpec": Object {
+        "column": "timestamp",
+        "format": "iso",
+      },
+      "transformSpec": Object {
+        "filter": Object {
+          "dimension": "commentLength",
+          "type": "selector",
+          "value": "35",
+        },
+        "transforms": Array [
+          Object {
+            "expression": "concat(\\"channel\\", 'lol')",
+            "name": "channel",
+            "type": "expression",
+          },
+        ],
+      },
+    },
+    "ioConfig": Object {
+      "inputFormat": Object {
+        "flattenSpec": Object {
+          "fields": Array [
+            Object {
+              "expr": "$.cityName",
+              "name": "cityNameAlt",
+              "type": "path",
+            },
+          ],
+        },
+        "type": "json",
+      },
+      "inputSource": Object {
+        "type": "http",
+        "uris": Array [
+          "https://static.imply.io/data/wikipedia.json.gz",
+        ],
+      },
+      "type": "index_parallel",
+    },
+    "tuningConfig": Object {
+      "type": "index_parallel",
+    },
+  },
+  "type": "index_parallel",
+}
+`;

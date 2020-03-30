@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -52,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -78,12 +81,14 @@ public class SupervisorResource
 
   private final TaskMaster taskMaster;
   private final AuthorizerMapper authorizerMapper;
+  private final ObjectMapper objectMapper;
 
   @Inject
-  public SupervisorResource(TaskMaster taskMaster, AuthorizerMapper authorizerMapper)
+  public SupervisorResource(TaskMaster taskMaster, AuthorizerMapper authorizerMapper, ObjectMapper objectMapper)
   {
     this.taskMaster = taskMaster;
     this.authorizerMapper = authorizerMapper;
+    this.objectMapper = objectMapper;
   }
 
   @POST
@@ -118,6 +123,8 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetAll(
       @QueryParam("full") String full,
+      @QueryParam("state") Boolean state,
+      @QueryParam("system") String system,
       @Context final HttpServletRequest req
   )
   {
@@ -128,20 +135,56 @@ public class SupervisorResource
               manager,
               manager.getSupervisorIds()
           );
+          final boolean includeFull = full != null;
+          final boolean includeState = state != null && state;
+          final boolean includeSystem = system != null;
 
-          if (full == null) {
-            return Response.ok(authorizedSupervisorIds).build();
-          } else {
-            List<Map<String, ?>> all =
-                authorizedSupervisorIds.stream()
-                                       .map(x -> ImmutableMap.<String, Object>builder()
-                                           .put("id", x)
-                                           .put("spec", manager.getSupervisorSpec(x).get())
-                                           .build()
-                                       )
-                                       .collect(Collectors.toList());
-            return Response.ok(all).build();
+          if (includeFull || includeState || includeSystem) {
+            List<SupervisorStatus> allStates = authorizedSupervisorIds
+                .stream()
+                .map(x -> {
+                  Optional<SupervisorStateManager.State> theState =
+                      manager.getSupervisorState(x);
+                  SupervisorStatus.Builder theBuilder = new SupervisorStatus.Builder();
+                  theBuilder.withId(x);
+                  if (theState.isPresent()) {
+                    theBuilder.withState(theState.get().getBasicState().toString())
+                              .withDetailedState(theState.get().toString())
+                              .withHealthy(theState.get().isHealthy());
+                  }
+                  if (includeFull) {
+                    Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
+                    if (theSpec.isPresent()) {
+                      theBuilder.withSpec(manager.getSupervisorSpec(x).get());
+                    }
+                  }
+                  if (includeSystem) {
+                    Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
+                    if (theSpec.isPresent()) {
+                      try {
+                        // serializing SupervisorSpec here, so that callers of `druid/indexer/v1/supervisor?system`
+                        // which are outside the overlord process can deserialize the response and get a json
+                        // payload of SupervisorSpec object when they don't have guice bindings for all the fields
+                        // for example, broker does not have bindings for all fields of `KafkaSupervisorSpec` or
+                        // `KinesisSupervisorSpec`
+                        theBuilder.withSpecString(objectMapper.writeValueAsString(manager.getSupervisorSpec(x).get()));
+                      }
+                      catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                      }
+                      theBuilder.withType(manager.getSupervisorSpec(x).get().getType())
+                                .withSource(manager.getSupervisorSpec(x).get().getSource())
+                                .withSuspended(manager.getSupervisorSpec(x).get().isSuspended());
+                    }
+                  }
+                  return theBuilder.build();
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+            return Response.ok(allStates).build();
           }
+
+          return Response.ok(authorizedSupervisorIds).build();
         }
     );
   }
@@ -182,6 +225,31 @@ public class SupervisorResource
           }
 
           return Response.ok(spec.get()).build();
+        }
+    );
+  }
+
+  @GET
+  @Path("/{id}/health")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response specGetHealth(@PathParam("id") final String id)
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          Optional<Boolean> healthy = manager.isSupervisorHealthy(id);
+          if (!healthy.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format("[%s] does not exist or health check not implemented", id)
+                           ))
+                           .build();
+          }
+
+          return Response.status(healthy.get() ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE)
+                         .entity(ImmutableMap.of("healthy", healthy.get()))
+                         .build();
         }
     );
   }
@@ -263,27 +331,36 @@ public class SupervisorResource
   @POST
   @Path("/suspendAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response suspendAll()
+  public Response suspendAll(@Context final HttpServletRequest req)
   {
-    return suspendOrResumeAll(true);
+    return suspendOrResumeAll(req, true);
   }
 
   @POST
   @Path("/resumeAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response resumeAll()
+  public Response resumeAll(@Context final HttpServletRequest req)
   {
-    return suspendOrResumeAll(false);
+    return suspendOrResumeAll(req, false);
   }
 
   @POST
   @Path("/terminateAll")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response terminateAll()
+  public Response terminateAll(@Context final HttpServletRequest req)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          manager.stopAndRemoveAllSupervisors();
+          Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+              req,
+              manager,
+              manager.getSupervisorIds()
+          );
+
+          for (final String supervisorId : authorizedSupervisorIds) {
+            manager.stopAndRemoveSupervisor(supervisorId);
+          }
+
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
@@ -311,7 +388,8 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specGetHistory(
       @Context final HttpServletRequest req,
-      @PathParam("id") final String id)
+      @PathParam("id") final String id
+  )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
@@ -429,11 +507,20 @@ public class SupervisorResource
     );
   }
 
-  private Response suspendOrResumeAll(boolean suspend)
+  private Response suspendOrResumeAll(final HttpServletRequest req, final boolean suspend)
   {
     return asLeaderWithSupervisorManager(
         manager -> {
-          manager.suspendOrResumeAllSupervisors(suspend);
+          Set<String> authorizedSupervisorIds = filterAuthorizedSupervisorIds(
+              req,
+              manager,
+              manager.getSupervisorIds()
+          );
+
+          for (final String supervisorId : authorizedSupervisorIds) {
+            manager.suspendOrResumeSupervisor(supervisorId, suspend);
+          }
+
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );

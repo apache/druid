@@ -64,6 +64,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -77,12 +78,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
 @RunWith(Parameterized.class)
-public class IncrementalIndexStorageAdapterTest
+public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingTest
 {
   interface IndexCreator
   {
@@ -356,7 +358,7 @@ public class IncrementalIndexStorageAdapterTest
                   .dimension("sally")
                   .metric("cnt")
                   .threshold(10)
-                  .aggregators(Collections.singletonList(new LongSumAggregatorFactory("cnt", "cnt")))
+                  .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
                   .build(),
               new IncrementalIndexStorageAdapter(index),
               null
@@ -494,7 +496,7 @@ public class IncrementalIndexStorageAdapterTest
   @Test
   public void testCursorDictionaryRaceConditionFix() throws Exception
   {
-    // Tests the dictionary ID race condition bug described at https://github.com/apache/incubator-druid/pull/6340
+    // Tests the dictionary ID race condition bug described at https://github.com/apache/druid/pull/6340
 
     final IncrementalIndex index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();
@@ -651,7 +653,7 @@ public class IncrementalIndexStorageAdapterTest
     Assert.assertEquals(1, assertCursorsNotEmpty.get());
   }
 
-  private class DictionaryRaceTestFilter implements Filter
+  private static class DictionaryRaceTestFilter implements Filter
   {
     private final IncrementalIndex index;
     private final long timestamp;
@@ -694,9 +696,21 @@ public class IncrementalIndexStorageAdapterTest
     }
 
     @Override
+    public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
+    {
+      return true;
+    }
+
+    @Override
     public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
     {
       return true;
+    }
+
+    @Override
+    public Set<String> getRequiredColumns()
+    {
+      return Collections.emptySet();
     }
 
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory

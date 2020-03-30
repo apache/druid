@@ -43,7 +43,7 @@ public class AvroParsers
   )
   {
     final JSONPathSpec flattenSpec;
-    if (parseSpec != null && (parseSpec instanceof AvroParseSpec)) {
+    if (parseSpec instanceof AvroParseSpec) {
       flattenSpec = ((AvroParseSpec) parseSpec).getFlattenSpec();
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;

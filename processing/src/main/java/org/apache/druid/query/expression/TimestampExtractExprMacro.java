@@ -34,25 +34,34 @@ import java.util.List;
 
 public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_extract";
+
   public enum Unit
   {
     EPOCH,
+    MICROSECOND,
+    MILLISECOND,
     SECOND,
     MINUTE,
     HOUR,
     DAY,
     DOW,
+    ISODOW,
     DOY,
     WEEK,
     MONTH,
     QUARTER,
-    YEAR
+    YEAR,
+    ISOYEAR,
+    DECADE,
+    CENTURY,
+    MILLENNIUM
   }
 
   @Override
   public String name()
   {
-    return "timestamp_extract";
+    return FN_NAME;
   }
 
   @Override
@@ -82,8 +91,13 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
 
     final ISOChronology chronology = ISOChronology.getInstance(timeZone);
 
-    class TimestampExtractExpr implements Expr
+    class TimestampExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
+      private TimestampExtractExpr(Expr arg)
+      {
+        super(FN_NAME, arg);
+      }
+
       @Nonnull
       @Override
       public ExprEval eval(final ObjectBinding bindings)
@@ -94,9 +108,15 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           return ExprEval.of(null);
         }
         final DateTime dateTime = new DateTime(val, chronology);
+        long epoch = dateTime.getMillis() / 1000;
+
         switch (unit) {
           case EPOCH:
-            return ExprEval.of(dateTime.getMillis() / 1000);
+            return ExprEval.of(epoch);
+          case MICROSECOND:
+            return ExprEval.of(epoch / 1000);
+          case MILLISECOND:
+            return ExprEval.of(dateTime.millisOfSecond().get());
           case SECOND:
             return ExprEval.of(dateTime.secondOfMinute().get());
           case MINUTE:
@@ -106,6 +126,8 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
           case DAY:
             return ExprEval.of(dateTime.dayOfMonth().get());
           case DOW:
+            return ExprEval.of(dateTime.dayOfWeek().get());
+          case ISODOW:
             return ExprEval.of(dateTime.dayOfWeek().get());
           case DOY:
             return ExprEval.of(dateTime.dayOfYear().get());
@@ -117,19 +139,45 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
             return ExprEval.of((dateTime.monthOfYear().get() - 1) / 3 + 1);
           case YEAR:
             return ExprEval.of(dateTime.year().get());
+          case ISOYEAR:
+            return ExprEval.of(dateTime.year().get());
+          case DECADE:
+            // The year field divided by 10, See https://www.postgresql.org/docs/10/functions-datetime.html
+            return ExprEval.of(dateTime.year().get() / 10);
+          case CENTURY:
+            return ExprEval.of(Math.ceil((double) dateTime.year().get() / 100));
+          case MILLENNIUM:
+            // Years in the 1900s are in the second millennium. The third millennium started January 1, 2001.
+            // See https://www.postgresql.org/docs/10/functions-datetime.html
+            return ExprEval.of(Math.ceil((double) dateTime.year().get() / 1000));
           default:
             throw new ISE("Unhandled unit[%s]", unit);
         }
       }
 
       @Override
-      public void visit(final Visitor visitor)
+      public Expr visit(Shuttle shuttle)
       {
-        arg.visit(visitor);
-        visitor.visit(this);
+        Expr newArg = arg.visit(shuttle);
+        return shuttle.visit(new TimestampExtractExpr(newArg));
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (args.size() > 2) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              args.get(1).stringify(),
+              args.get(2).stringify()
+          );
+        }
+        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
       }
     }
 
-    return new TimestampExtractExpr();
+    return new TimestampExtractExpr(arg);
   }
 }

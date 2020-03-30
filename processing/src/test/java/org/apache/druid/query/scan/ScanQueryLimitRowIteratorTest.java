@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.context.ResponseContext;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,11 +41,11 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ScanQueryLimitRowIteratorTest
 {
   private static final int NUM_ELEMENTS = 1000;
-  private static int batchSize;
-  private static int limit;
+  private final int batchSize;
+  private final int limit;
   private static List<ScanResultValue> singleEventScanResultValues = new ArrayList<>();
   private static List<ScanResultValue> multiEventScanResultValues = new ArrayList<>();
-  private static final ScanQuery.ResultFormat resultFormat = ScanQuery.ResultFormat.RESULT_FORMAT_LIST;
+  private static final ScanQuery.ResultFormat RESULT_FORMAT = ScanQuery.ResultFormat.RESULT_FORMAT_LIST;
 
   public ScanQueryLimitRowIteratorTest(
       final int batchSize,
@@ -75,7 +76,7 @@ public class ScanQueryLimitRowIteratorTest
       singleEventScanResultValues.add(
           ScanQueryTestHelper.generateScanResultValue(
               ThreadLocalRandom.current().nextLong(),
-              resultFormat,
+              RESULT_FORMAT,
               1
           ));
     }
@@ -83,14 +84,14 @@ public class ScanQueryLimitRowIteratorTest
       multiEventScanResultValues.add(
           ScanQueryTestHelper.generateScanResultValue(
               ThreadLocalRandom.current().nextLong(),
-              resultFormat,
+              RESULT_FORMAT,
               batchSize
           ));
     }
     multiEventScanResultValues.add(
         ScanQueryTestHelper.generateScanResultValue(
             ThreadLocalRandom.current().nextLong(),
-            resultFormat,
+            RESULT_FORMAT,
             NUM_ELEMENTS % batchSize
         ));
   }
@@ -106,15 +107,15 @@ public class ScanQueryLimitRowIteratorTest
                             .order(ScanQuery.Order.NONE)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
-                            .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-                            .resultFormat(resultFormat)
+                            .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                            .resultFormat(RESULT_FORMAT)
                             .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
                             .build();
     QueryPlus<ScanResultValue> queryPlus = QueryPlus.wrap(query);
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(multiEventScanResultValues)),
         queryPlus,
-        ImmutableMap.of()
+        ResponseContext.createEmpty()
     );
 
     int count = 0;
@@ -147,14 +148,14 @@ public class ScanQueryLimitRowIteratorTest
                             .order(ScanQuery.Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
-                            .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-                            .resultFormat(resultFormat)
+                            .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                            .resultFormat(RESULT_FORMAT)
                             .build();
     QueryPlus<ScanResultValue> queryPlus = QueryPlus.wrap(query);
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(singleEventScanResultValues)),
         queryPlus,
-        ImmutableMap.of()
+        ResponseContext.createEmpty()
     );
 
     int count = 0;
@@ -186,8 +187,8 @@ public class ScanQueryLimitRowIteratorTest
                             .order(ScanQuery.Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
-                            .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
-                            .resultFormat(resultFormat)
+                            .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                            .resultFormat(RESULT_FORMAT)
                             .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
                             .build();
 
@@ -195,7 +196,7 @@ public class ScanQueryLimitRowIteratorTest
     ScanQueryLimitRowIterator itr = new ScanQueryLimitRowIterator(
         ((queryInput, responseContext) -> Sequences.simple(singleEventScanResultValues)),
         queryPlus,
-        ImmutableMap.of()
+        ResponseContext.createEmpty()
     );
 
     int count = 0;

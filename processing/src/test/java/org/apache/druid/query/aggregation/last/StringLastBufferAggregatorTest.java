@@ -27,7 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class StringLastBufferAggregatorTest
 {
@@ -62,16 +61,11 @@ public class StringLastBufferAggregatorTest
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        false
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -83,9 +77,46 @@ public class StringLastBufferAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expectec last string value", "DDDD", sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), new Long(sp.lhs));
+    Assert.assertEquals("expected last string value", "DDDD", sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), sp.lhs);
 
+  }
+
+  @Test
+  public void testBufferAggregateWithFoldCheck()
+  {
+    final long[] timestamps = {1526724600L, 1526724700L, 1526724800L, 1526725900L, 1526725000L};
+    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
+    Integer maxStringBytes = 1024;
+
+    TestLongColumnSelector longColumnSelector = new TestLongColumnSelector(timestamps);
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringLastAggregatorFactory factory = new StringLastAggregatorFactory(
+        "billy", "billy", maxStringBytes
+    );
+
+    StringLastBufferAggregator agg = new StringLastBufferAggregator(
+        longColumnSelector,
+        objectColumnSelector,
+        maxStringBytes,
+        true
+    );
+
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    int position = 0;
+
+    agg.init(buf, position);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < timestamps.length; i++) {
+      aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
+    }
+
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+
+    Assert.assertEquals("expected last string value", "DDDD", sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(1526725900L), sp.lhs);
   }
 
   @Test
@@ -106,16 +137,11 @@ public class StringLastBufferAggregatorTest
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        false
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -127,13 +153,13 @@ public class StringLastBufferAggregatorTest
     SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
 
 
-    Assert.assertEquals("expectec last string value", strings[2], sp.rhs);
-    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[2]), new Long(sp.lhs));
+    Assert.assertEquals("expected last string value", strings[2], sp.rhs);
+    Assert.assertEquals("last string timestamp is the biggest", new Long(timestamps[2]), sp.lhs);
 
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testNoStringValue()
+  @Test
+  public void testNonStringValue()
   {
 
     final long[] timestamps = {1526724000L, 1526724600L};
@@ -150,16 +176,11 @@ public class StringLastBufferAggregatorTest
     StringLastBufferAggregator agg = new StringLastBufferAggregator(
         longColumnSelector,
         objectColumnSelector,
-        maxStringBytes
+        maxStringBytes,
+        false
     );
 
-    String testString = "ZZZZ";
-
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
-    buf.putLong(1526728500L);
-    buf.putInt(testString.length());
-    buf.put(testString.getBytes(StandardCharsets.UTF_8));
-
     int position = 0;
 
     agg.init(buf, position);
@@ -167,5 +188,10 @@ public class StringLastBufferAggregatorTest
     for (int i = 0; i < timestamps.length; i++) {
       aggregateBuffer(longColumnSelector, objectColumnSelector, agg, buf, position);
     }
+
+    SerializablePairLongString sp = ((SerializablePairLongString) agg.get(buf, position));
+
+    Assert.assertEquals(1526724600L, (long) sp.lhs);
+    Assert.assertEquals("2.0", sp.rhs);
   }
 }

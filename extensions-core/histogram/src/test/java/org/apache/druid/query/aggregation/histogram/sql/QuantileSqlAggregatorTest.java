@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
@@ -52,6 +52,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
@@ -61,8 +62,6 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -96,10 +95,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
@@ -139,7 +136,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                                              null,
                                                              null,
                                                              null,
-                                                             null
+                                                             null,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -154,28 +152,29 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                    .interval(index.getDataInterval())
                    .version("1")
                    .shardSpec(new LinearShardSpec(0))
+                   .size(0)
                    .build(),
         index
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(new QuantileSqlAggregator()),
         ImmutableSet.of()
     );
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
       new PlannerFactory(
-          druidSchema,
-          systemSchema,
+          rootSchema,
           CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
           operatorTable,
           CalciteTests.createExprMacroTable(),
           plannerConfig,
           AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-          CalciteTests.getJsonMapper()
+          CalciteTests.getJsonMapper(),
+          CalciteTests.DRUID_SCHEMA_NAME
       )
     );
   }
@@ -205,7 +204,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
@@ -239,18 +243,18 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                   )
               )
               .aggregators(ImmutableList.of(
-                  new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
-                  new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
-                  new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null),
+                  new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null, false),
+                  new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null, false),
+                  new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null, false),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null),
+                      new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null, false),
                       new SelectorDimFilter("dim1", "abc", null)
                   ),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null),
+                      new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null, false),
                       new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                   ),
-                  new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null)
+                  new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null, false)
               ))
               .postAggregators(
                   new QuantilePostAggregator("a0", "a0:agg", 0.01f),
@@ -284,7 +288,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                        + "FROM foo";
 
     // Verify results
-    final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = lifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0}
     );
@@ -300,14 +309,14 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
               .granularity(Granularities.ALL)
               .aggregators(ImmutableList.of(
-                  new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null),
-                  new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null),
+                  new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null, false),
+                  new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null, false),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null),
+                      new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null, false),
                       new SelectorDimFilter("dim1", "abc", null)
                   ),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null),
+                      new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null, false),
                       new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                   )
               ))
@@ -334,7 +343,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                        + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
       expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
@@ -376,7 +390,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                             null,
                             null,
                             null,
-                            null
+                            null,
+                            false
                         )
                     )
                     .setPostAggregatorSpecs(

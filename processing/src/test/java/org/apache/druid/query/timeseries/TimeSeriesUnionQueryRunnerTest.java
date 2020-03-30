@@ -34,15 +34,14 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnionQueryRunner;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class TimeSeriesUnionQueryRunnerTest
@@ -62,7 +61,7 @@ public class TimeSeriesUnionQueryRunnerTest
     return QueryRunnerTestHelper.cartesian(
         QueryRunnerTestHelper.makeUnionQueryRunners(
             new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+                new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -84,17 +83,17 @@ public class TimeSeriesUnionQueryRunnerTest
   public void testUnionTimeseries()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(QueryRunnerTestHelper.unionDataSource)
-                                  .granularity(QueryRunnerTestHelper.dayGran)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .dataSource(QueryRunnerTestHelper.UNION_DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                   .aggregators(
                                       Arrays.asList(
-                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.ROWS_COUNT,
                                           new LongSumAggregatorFactory(
                                               "idx",
                                               "index"
                                           ),
-                                          QueryRunnerTestHelper.qualityUniques
+                                          QueryRunnerTestHelper.QUALITY_UNIQUES
                                       )
                                   )
                                   .descending(descending)
@@ -114,8 +113,7 @@ public class TimeSeriesUnionQueryRunnerTest
             )
         )
     );
-    HashMap<String, Object> context = new HashMap<>();
-    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query), context).toList();
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
 
     assertExpectedResults(expectedResults, results);
   }
@@ -132,11 +130,11 @@ public class TimeSeriesUnionQueryRunnerTest
                                           )
                                       )
                                   )
-                                  .granularity(QueryRunnerTestHelper.dayGran)
-                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                   .aggregators(
                                       Arrays.asList(
-                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.ROWS_COUNT,
                                           new LongSumAggregatorFactory(
                                               "idx",
                                               "index"
@@ -145,7 +143,7 @@ public class TimeSeriesUnionQueryRunnerTest
                                   )
                                   .descending(descending)
                                   .build();
-    QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator());
+    QueryToolChest toolChest = new TimeseriesQueryQueryToolChest();
     final List<Result<TimeseriesResultValue>> ds1 = Lists.newArrayList(
         new Result<>(
             DateTimes.of("2011-04-02"),
@@ -178,7 +176,7 @@ public class TimeSeriesUnionQueryRunnerTest
               @Override
               public Sequence<Result<TimeseriesResultValue>> run(
                   QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-                  Map<String, Object> responseContext
+                  ResponseContext responseContext
               )
               {
                 if (queryPlus.getQuery().getDataSource().equals(new TableDataSource("ds1"))) {
@@ -218,8 +216,7 @@ public class TimeSeriesUnionQueryRunnerTest
         )
     );
 
-    Iterable<Result<TimeseriesResultValue>> results =
-        mergingrunner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
+    Iterable<Result<TimeseriesResultValue>> results = mergingrunner.run(QueryPlus.wrap(query)).toList();
 
     assertExpectedResults(expectedResults, results);
 

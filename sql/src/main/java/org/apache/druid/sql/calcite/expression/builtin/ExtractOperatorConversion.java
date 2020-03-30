@@ -27,11 +27,11 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.query.expression.TimestampExtractExprMacro;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.util.Map;
 
@@ -40,16 +40,23 @@ public class ExtractOperatorConversion implements SqlOperatorConversion
   private static final Map<TimeUnitRange, TimestampExtractExprMacro.Unit> EXTRACT_UNIT_MAP =
       ImmutableMap.<TimeUnitRange, TimestampExtractExprMacro.Unit>builder()
           .put(TimeUnitRange.EPOCH, TimestampExtractExprMacro.Unit.EPOCH)
+          .put(TimeUnitRange.MICROSECOND, TimestampExtractExprMacro.Unit.MICROSECOND)
+          .put(TimeUnitRange.MILLISECOND, TimestampExtractExprMacro.Unit.MILLISECOND)
           .put(TimeUnitRange.SECOND, TimestampExtractExprMacro.Unit.SECOND)
           .put(TimeUnitRange.MINUTE, TimestampExtractExprMacro.Unit.MINUTE)
           .put(TimeUnitRange.HOUR, TimestampExtractExprMacro.Unit.HOUR)
           .put(TimeUnitRange.DAY, TimestampExtractExprMacro.Unit.DAY)
           .put(TimeUnitRange.DOW, TimestampExtractExprMacro.Unit.DOW)
+          .put(TimeUnitRange.ISODOW, TimestampExtractExprMacro.Unit.ISODOW)
           .put(TimeUnitRange.DOY, TimestampExtractExprMacro.Unit.DOY)
           .put(TimeUnitRange.WEEK, TimestampExtractExprMacro.Unit.WEEK)
           .put(TimeUnitRange.MONTH, TimestampExtractExprMacro.Unit.MONTH)
           .put(TimeUnitRange.QUARTER, TimestampExtractExprMacro.Unit.QUARTER)
           .put(TimeUnitRange.YEAR, TimestampExtractExprMacro.Unit.YEAR)
+          .put(TimeUnitRange.ISOYEAR, TimestampExtractExprMacro.Unit.ISOYEAR)
+          .put(TimeUnitRange.DECADE, TimestampExtractExprMacro.Unit.DECADE)
+          .put(TimeUnitRange.CENTURY, TimestampExtractExprMacro.Unit.CENTURY)
+          .put(TimeUnitRange.MILLENNIUM, TimestampExtractExprMacro.Unit.MILLENNIUM)
           .build();
 
   @Override

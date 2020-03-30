@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.FileUtils.FileCopyResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -105,7 +105,7 @@ public class SegmentManagerThreadSafetyTest
           public List<StorageLocationConfig> getLocations()
           {
             return Collections.singletonList(
-                new StorageLocationConfig().setPath(segmentCacheDir)
+                new StorageLocationConfig(segmentCacheDir, null, null)
             );
           }
         },
@@ -123,13 +123,13 @@ public class SegmentManagerThreadSafetyTest
     FileUtils.deleteDirectory(segmentCacheDir);
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 6000L)
   public void testLoadSameSegment() throws IOException, ExecutionException, InterruptedException
   {
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
     final List<Future> futures = IntStream
         .range(0, 16)
-        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment)))
+        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false)))
         .collect(Collectors.toList());
     for (Future future : futures) {
       future.get();
@@ -139,7 +139,7 @@ public class SegmentManagerThreadSafetyTest
     Assert.assertEquals(0, segmentLoader.getSegmentLocks().size());
   }
 
-  @Test(timeout = 5000L)
+  @Test(timeout = 6000L)
   public void testLoadMultipleSegments() throws IOException, ExecutionException, InterruptedException
   {
     final List<DataSegment> segments = new ArrayList<>(88);
@@ -154,7 +154,7 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment);
+              segmentManager.loadSegment(segment, false);
             }
             catch (SegmentLoadingException e) {
               throw new RuntimeException(e);
@@ -185,7 +185,7 @@ public class SegmentManagerThreadSafetyTest
     );
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
-    FileUtils.forceMkdir(segmentDir);
+    org.apache.commons.io.FileUtils.forceMkdir(segmentDir);
 
     final File factoryJson = new File(segmentDir, "factory.json");
     objectMapper.writeValue(factoryJson, new TestSegmentizerFactory());
@@ -203,7 +203,7 @@ public class SegmentManagerThreadSafetyTest
     {
       numFileLoaded.compute(sourceFile, (f, numLoaded) -> numLoaded == null ? 1 : numLoaded + 1);
       try {
-        FileUtils.copyDirectory(sourceFile, dir);
+        org.apache.commons.io.FileUtils.copyDirectory(sourceFile, dir);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -222,7 +222,7 @@ public class SegmentManagerThreadSafetyTest
   private static class TestSegmentizerFactory implements SegmentizerFactory
   {
     @Override
-    public Segment factorize(DataSegment segment, File parentDir)
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy)
     {
       return new Segment()
       {

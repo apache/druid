@@ -27,19 +27,18 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface IndexingServiceClient
 {
-  void killSegments(String dataSource, Interval interval);
+  void killUnusedSegments(String dataSource, Interval interval);
 
   int killPendingSegments(String dataSource, DateTime end);
 
   String compactSegments(
       List<DataSegment> segments,
-      boolean keepSegmentGranularity,
-      @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
-      @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   );
 
@@ -47,7 +46,7 @@ public interface IndexingServiceClient
 
   String runTask(Object taskObject);
 
-  String killTask(String taskId);
+  String cancelTask(String taskId);
 
   /**
    * Gets all tasks that are waiting, pending, or running.
@@ -55,6 +54,8 @@ public interface IndexingServiceClient
   List<TaskStatusPlus> getActiveTasks();
 
   TaskStatusResponse getTaskStatus(String taskId);
+
+  Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException;
 
   @Nullable
   TaskStatusPlus getLastCompleteTask();

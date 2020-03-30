@@ -38,7 +38,8 @@ import java.util.Map;
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
 {
 
-  public static Logger LOG = new Logger(TestQueryHelper.class);
+  public static final Logger LOG = new Logger(TestQueryHelper.class);
+
   private final AbstractQueryResourceTestClient queryClient;
   private final ObjectMapper jsonMapper;
   protected final String broker;
@@ -64,7 +65,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   public abstract void testQueriesFromFile(String filePath, int timesToRun) throws Exception;
 
-  protected abstract String getQueryURL(String schemeAndHost);
+  public abstract String getQueryURL(String schemeAndHost);
 
   public void testQueriesFromFile(String url, String filePath, int timesToRun) throws Exception
   {
@@ -145,5 +146,4 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
       return (Integer) map.get("rows");
     }
   }
-
 }

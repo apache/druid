@@ -40,6 +40,7 @@ public class PredicateFirehose implements Firehose
   private final Firehose firehose;
   private final Predicate<InputRow> predicate;
 
+  @Nullable
   private InputRow savedInputRow = null;
 
   public PredicateFirehose(Firehose firehose, Predicate<InputRow> predicate)
@@ -49,7 +50,7 @@ public class PredicateFirehose implements Firehose
   }
 
   @Override
-  public boolean hasMore()
+  public boolean hasMore() throws IOException
   {
     if (savedInputRow != null) {
       return true;
@@ -78,12 +79,6 @@ public class PredicateFirehose implements Firehose
     final InputRow row = savedInputRow;
     savedInputRow = null;
     return row;
-  }
-
-  @Override
-  public Runnable commit()
-  {
-    return firehose.commit();
   }
 
   @Override

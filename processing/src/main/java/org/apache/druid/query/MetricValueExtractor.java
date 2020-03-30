@@ -50,6 +50,12 @@ public class MetricValueExtractor
     return retVal == null ? null : ((Number) retVal).doubleValue();
   }
 
+  public Float getFloatMetric(String name)
+  {
+    final Object retVal = value.get(name);
+    return retVal == null ? null : ((Number) retVal).floatValue();
+  }
+
   public Long getLongMetric(String name)
   {
     final Object retVal = value.get(name);

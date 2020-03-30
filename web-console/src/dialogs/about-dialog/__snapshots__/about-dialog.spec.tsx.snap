@@ -1,0 +1,151 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`about dialog matches snapshot 1`] = `
+<div
+  class="bp3-portal"
+>
+  <div
+    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+  >
+    <div
+      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    >
+      <div
+        class="bp3-dialog about-dialog"
+      >
+        <div
+          class="bp3-dialog-header"
+        >
+          <span
+            class="bp3-icon bp3-icon-graph"
+            icon="graph"
+          >
+            <svg
+              data-icon="graph"
+              height="20"
+              viewBox="0 0 20 20"
+              width="20"
+            >
+              <desc>
+                graph
+              </desc>
+              <path
+                d="M17.5 4A2.5 2.5 0 0015 6.5c0 .06.01.12.02.18l-1.9.84C12.38 6.6 11.27 6 10 6c-.83 0-1.59.25-2.23.68L4.91 4.14c.05-.21.09-.42.09-.64a2.5 2.5 0 00-5 0A2.5 2.5 0 002.5 6c.42 0 .81-.11 1.16-.3l2.79 2.48C6.17 8.73 6 9.34 6 10c0 1.41.73 2.64 1.83 3.35l-.56 1.67A2.498 2.498 0 005 17.5a2.5 2.5 0 005 0c0-.74-.32-1.39-.83-1.85l.56-1.68c.09.01.18.03.27.03 2.21 0 4-1.79 4-4 0-.22-.03-.44-.07-.65l2.02-.9c.43.34.96.55 1.55.55a2.5 2.5 0 000-5z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+          <h4
+            class="bp3-heading"
+          >
+            Apache Druid
+          </h4>
+          <button
+            aria-label="Close"
+            class="bp3-button bp3-minimal bp3-dialog-close-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-small-cross"
+              icon="small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+                height="20"
+                viewBox="0 0 20 20"
+                width="20"
+              >
+                <desc>
+                  small-cross
+                </desc>
+                <path
+                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+        <div
+          class="bp3-dialog-body"
+        >
+          <p>
+            <strong>
+              Apache Druid is a high performance real-time analytics database.
+            </strong>
+          </p>
+          <p>
+            For help and support with Druid, please refer to the
+             
+            <a
+              href="https://druid.apache.org/community/"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              community page
+            </a>
+             and the
+             
+            <a
+              href="https://groups.google.com/forum/#!forum/druid-user"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              user groups
+            </a>
+            .
+          </p>
+          <p>
+            Druid is made with ❤️ by a community of passionate developers. To contribute, join in the discussion on the
+             
+            <a
+              href="https://lists.apache.org/list.html?dev@druid.apache.org"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              developer group
+            </a>
+            .
+          </p>
+        </div>
+        <div
+          class="bp3-dialog-footer"
+        >
+          <div
+            class="bp3-dialog-footer-actions"
+          >
+            <button
+              class="bp3-button"
+              type="button"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                Close
+              </span>
+            </button>
+            <a
+              class="bp3-button bp3-intent-primary"
+              href="https://druid.apache.org"
+              role="button"
+              tabindex="0"
+              target="_blank"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                Visit Druid
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

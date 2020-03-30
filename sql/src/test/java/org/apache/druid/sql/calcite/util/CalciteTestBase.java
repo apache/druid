@@ -19,14 +19,22 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.http.SqlParameter;
 import org.junit.BeforeClass;
+
+import java.util.List;
 
 public abstract class CalciteTestBase
 {
+  public static final List<SqlParameter> DEFAULT_PARAMETERS = ImmutableList.of();
+
   @BeforeClass
   public static void setupCalciteProperties()
   {
     Calcites.setSystemProperties();
+    NullHandling.initializeForTests();
   }
 }

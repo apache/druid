@@ -73,7 +73,7 @@ public class DruidConvention implements Convention
   @Override
   public boolean satisfies(RelTrait trait)
   {
-    return trait == this;
+    return trait.equals(this);
   }
 
   @Override

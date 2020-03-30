@@ -41,8 +41,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.FullResponseHandler;
-import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -198,7 +198,7 @@ public abstract class IndexTaskClient implements AutoCloseable
     return executorService.submit(callable);
   }
 
-  protected boolean isSuccess(FullResponseHolder responseHolder)
+  protected boolean isSuccess(StringFullResponseHolder responseHolder)
   {
     return responseHolder.getStatus().getCode() / 100 == 2;
   }
@@ -209,7 +209,7 @@ public abstract class IndexTaskClient implements AutoCloseable
     new Socket(host, port).close();
   }
 
-  protected FullResponseHolder submitRequestWithEmptyContent(
+  protected StringFullResponseHolder submitRequestWithEmptyContent(
       String taskId,
       HttpMethod method,
       String encodedPathSuffix,
@@ -223,7 +223,7 @@ public abstract class IndexTaskClient implements AutoCloseable
   /**
    * To use this method, {@link #objectMapper} should be a jsonMapper.
    */
-  protected FullResponseHolder submitJsonRequest(
+  protected StringFullResponseHolder submitJsonRequest(
       String taskId,
       HttpMethod method,
       String encodedPathSuffix,
@@ -246,7 +246,7 @@ public abstract class IndexTaskClient implements AutoCloseable
   /**
    * To use this method, {@link #objectMapper} should be a smileMapper.
    */
-  protected FullResponseHolder submitSmileRequest(
+  protected StringFullResponseHolder submitSmileRequest(
       String taskId,
       HttpMethod method,
       String encodedPathSuffix,
@@ -301,7 +301,7 @@ public abstract class IndexTaskClient implements AutoCloseable
   /**
    * Sends an HTTP request to the task of the specified {@code taskId} and returns a response if it succeeded.
    */
-  private FullResponseHolder submitRequest(
+  private StringFullResponseHolder submitRequest(
       String taskId,
       @Nullable String mediaType, // nullable if content is empty
       HttpMethod method,
@@ -341,7 +341,7 @@ public abstract class IndexTaskClient implements AutoCloseable
           content
       );
 
-      FullResponseHolder response = null;
+      StringFullResponseHolder response = null;
       try {
         // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
         // for tasks that happen to still be starting up, so test the connection first to keep the logs clean.
@@ -375,7 +375,9 @@ public abstract class IndexTaskClient implements AutoCloseable
           if (headerId != null && !headerId.equals(taskId)) {
             log.warn(
                 "Expected worker to have taskId [%s] but has taskId [%s], will retry in [%d]s",
-                taskId, headerId, TASK_MISMATCH_RETRY_DELAY_SECONDS
+                taskId,
+                headerId,
+                TASK_MISMATCH_RETRY_DELAY_SECONDS
             );
             delay = Duration.standardSeconds(TASK_MISMATCH_RETRY_DELAY_SECONDS);
           } else {
@@ -413,8 +415,11 @@ public abstract class IndexTaskClient implements AutoCloseable
         }
       }
       catch (NoTaskLocationException e) {
-        log.info("No TaskLocation available for task [%s], this task may not have been assigned to a worker yet or "
-                 + "may have already completed", taskId);
+        log.info(
+            "No TaskLocation available for task [%s], this task may not have been assigned to a worker yet "
+            + "or may have already completed",
+            taskId
+        );
         throw e;
       }
       catch (Exception e) {
@@ -424,11 +429,11 @@ public abstract class IndexTaskClient implements AutoCloseable
     }
   }
 
-  private FullResponseHolder submitRequest(Request request) throws IOException, ChannelException
+  private StringFullResponseHolder submitRequest(Request request) throws IOException, ChannelException
   {
     try {
       log.debug("HTTP %s: %s", request.getMethod().getName(), request.getUrl().toString());
-      return httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
+      return httpClient.go(request, new StringFullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
     }
     catch (Exception e) {
       throw throwIfPossible(e);

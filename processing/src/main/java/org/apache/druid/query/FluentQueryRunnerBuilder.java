@@ -21,9 +21,10 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 public class FluentQueryRunnerBuilder<T>
 {
@@ -49,7 +50,7 @@ public class FluentQueryRunnerBuilder<T>
     }
 
     @Override
-    public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
+    public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
     {
       return baseRunner.run(queryPlus, responseContext);
     }
@@ -71,12 +72,17 @@ public class FluentQueryRunnerBuilder<T>
 
     public FluentQueryRunner emitCPUTimeMetric(ServiceEmitter emitter)
     {
+      return emitCPUTimeMetric(emitter, new AtomicLong(0L));
+    }
+
+    public FluentQueryRunner emitCPUTimeMetric(ServiceEmitter emitter, AtomicLong accumulator)
+    {
       return from(
           CPUTimeMetricQueryRunner.safeBuild(
               baseRunner,
               toolChest,
               emitter,
-              new AtomicLong(0L),
+              accumulator,
               true
           )
       );
@@ -90,6 +96,11 @@ public class FluentQueryRunnerBuilder<T>
     public FluentQueryRunner mergeResults()
     {
       return from(toolChest.mergeResults(baseRunner));
+    }
+
+    public FluentQueryRunner map(final Function<QueryRunner<T>, QueryRunner<T>> mapFn)
+    {
+      return from(mapFn.apply(baseRunner));
     }
   }
 }

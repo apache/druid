@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
@@ -42,7 +43,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 {
   public static final byte VERSION = 0x2;
 
-  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSupplier> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<CompressedVSizeColumnarIntsSupplier> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedVSizeColumnarIntsSupplier x) -> VERSION)
       .writeByte(x -> ByteUtils.checkedCast(x.numBytes))
       .writeInt(x -> x.totalSize)
@@ -124,13 +125,13 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + baseBuffers.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + baseBuffers.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     baseBuffers.writeTo(channel, smoosher);
   }
 
@@ -159,6 +160,34 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
           sizePer,
           numBytes,
           GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression)),
+          compression
+      );
+
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      SmooshedFileMapper mapper
+  )
+  {
+    byte versionFromBuffer = buffer.get();
+
+    if (versionFromBuffer == VERSION) {
+      final int numBytes = buffer.get();
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+
+      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
+
+      return new CompressedVSizeColumnarIntsSupplier(
+          totalSize,
+          sizePer,
+          numBytes,
+          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression), mapper),
           compression
       );
 
@@ -289,7 +318,9 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
     int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    /** buffer's position must be 0 */
+    /**
+     * buffer's position must be 0
+     */
     ByteBuffer buffer;
     boolean bigEndian;
 
@@ -320,6 +351,66 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
       }
 
       return _get(buffer, bigEndian, bufferIndex);
+    }
+
+    @Override
+    public void get(int[] out, int start, int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        // assumes the number of entries in each buffer is a power of 2
+        final int bufferNum = (start + p) >> div;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int currBufferStart = bufferNum * sizePer;
+        final int nextBufferStart = currBufferStart + sizePer;
+
+        int i;
+        for (i = p; i < length; i++) {
+          final int index = start + i;
+          if (index >= nextBufferStart) {
+            break;
+          }
+
+          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+        }
+
+        assert i > p;
+        p = i;
+      }
+    }
+
+    @Override
+    public void get(final int[] out, final int[] indexes, final int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        // assumes the number of entries in each buffer is a power of 2
+        final int bufferNum = indexes[p] >> div;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int currBufferStart = bufferNum * sizePer;
+        final int nextBufferStart = currBufferStart + sizePer;
+
+        int i;
+        for (i = p; i < length; i++) {
+          final int index = indexes[i];
+          if (index >= nextBufferStart) {
+            break;
+          }
+
+          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+        }
+
+        assert i > p;
+        p = i;
+      }
     }
 
     /**

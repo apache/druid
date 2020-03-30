@@ -28,19 +28,18 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.Result;
-import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.Collections;
 
 /**
+ *
  */
 public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 {
@@ -57,9 +56,15 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final QueryPlus<T> input, final Map<String, Object> responseContext)
+  public Sequence<T> run(final QueryPlus<T> input, final ResponseContext responseContext)
   {
-    final QueryPlus<T> queryPlus = input.withQuerySegmentSpec(specificSpec);
+    final QueryPlus<T> queryPlus = input.withQuery(
+        Queries.withSpecificSegments(
+            input.getQuery(),
+            Collections.singletonList(specificSpec.getDescriptor())
+        )
+    );
+
     final Query<T> query = queryPlus.getQuery();
 
     final Thread currThread = Thread.currentThread();
@@ -151,14 +156,12 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
     );
   }
 
-  private void appendMissingSegment(Map<String, Object> responseContext)
+  private void appendMissingSegment(ResponseContext responseContext)
   {
-    List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
-    if (missingSegments == null) {
-      missingSegments = new ArrayList<>();
-      responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
-    }
-    missingSegments.add(specificSpec.getDescriptor());
+    responseContext.add(
+        ResponseContext.Key.MISSING_SEGMENTS,
+        Collections.singletonList(specificSpec.getDescriptor())
+    );
   }
 
   private <RetType> RetType doNamed(Thread currThread, String currName, String newName, Supplier<RetType> toRun)

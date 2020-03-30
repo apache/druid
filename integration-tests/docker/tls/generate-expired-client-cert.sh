@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 cat <<EOT > expired_csr.conf
 [req]
@@ -31,7 +33,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=integration-test@druid.io
+emailAddress=integration-test@druid.apache.org
 CN = localhost
 
 [ req_ext ]
@@ -62,7 +64,7 @@ default_md = default
 preserve = no
 policy = policy_match
 serial = certs.seq
-email_in_dn=integration-test@druid.io
+email_in_dn=integration-test@druid.apache.org
 
 [req]
 default_bits = 4096
@@ -77,7 +79,7 @@ ST=DR
 L=Druid City
 O=Druid
 OU=IntegrationTests
-emailAddress=integration-test@druid.io
+emailAddress=integration-test@druid.apache.org
 CN = itroot
 
 [ v3_ca ]

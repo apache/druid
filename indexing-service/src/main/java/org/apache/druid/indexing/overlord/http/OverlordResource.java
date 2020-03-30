@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -32,6 +33,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -50,6 +52,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
+import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.http.security.TaskResourceFilter;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
@@ -104,6 +107,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @Path("/druid/indexer/v1")
 public class OverlordResource
@@ -117,6 +121,7 @@ public class OverlordResource
   private final JacksonConfigManager configManager;
   private final AuditManager auditManager;
   private final AuthorizerMapper authorizerMapper;
+  private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
@@ -129,7 +134,8 @@ public class OverlordResource
       TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager,
       AuditManager auditManager,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter
   )
   {
     this.taskMaster = taskMaster;
@@ -139,16 +145,19 @@ public class OverlordResource
     this.configManager = configManager;
     this.auditManager = auditManager;
     this.authorizerMapper = authorizerMapper;
+    this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
   }
 
+  /**
+   * Warning, magic: {@link org.apache.druid.client.indexing.HttpIndexingServiceClient#runTask} may call this method
+   * remotely with {@link ClientTaskQuery} objects, but we deserialize {@link Task} objects. See the comment for {@link
+   * ClientTaskQuery} for details.
+   */
   @POST
   @Path("/task")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response taskPost(
-      final Task task,
-      @Context final HttpServletRequest req
-  )
+  public Response taskPost(final Task task, @Context final HttpServletRequest req)
   {
     final String dataSource = task.getDataSource();
     final ResourceAction resourceAction = new ResourceAction(
@@ -259,6 +268,7 @@ public class OverlordResource
               workItem.getTaskId(),
               new TaskStatusPlus(
                   taskInfo.getId(),
+                  taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
                   taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
                   taskInfo.getCreatedTime(),
                   // Would be nice to include the real queue insertion time, but the
@@ -280,6 +290,7 @@ public class OverlordResource
             taskid,
             new TaskStatusPlus(
                 taskInfo.getId(),
+                taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
                 taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
                 taskInfo.getCreatedTime(),
                 // Would be nice to include the real queue insertion time, but the
@@ -288,7 +299,7 @@ public class OverlordResource
                 taskInfo.getStatus().getStatusCode(),
                 RunnerTaskState.WAITING,
                 taskInfo.getStatus().getDuration(),
-                TaskLocation.unknown(),
+                taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
                 taskInfo.getDataSource(),
                 taskInfo.getStatus().getErrorMsg()
             )
@@ -367,15 +378,13 @@ public class OverlordResource
   @Path("/taskStatus")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response getMultipleTaskStatuses(
-      Set<String> taskIds
-  )
+  public Response getMultipleTaskStatuses(Set<String> taskIds)
   {
     if (taskIds == null || taskIds.size() == 0) {
       return Response.status(Response.Status.BAD_REQUEST).entity("No TaskIds provided.").build();
     }
 
-    Map<String, TaskStatus> result = new HashMap<>(taskIds.size());
+    Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
     for (String taskId : taskIds) {
       Optional<TaskStatus> optional = taskStorageQueryAdapter.getStatus(taskId);
       if (optional.isPresent()) {
@@ -574,6 +583,7 @@ public class OverlordResource
     List<TaskStatusPlus> finalTaskList = new ArrayList<>();
     Function<AnyTask, TaskStatusPlus> activeTaskTransformFunc = workItem -> new TaskStatusPlus(
         workItem.getTaskId(),
+        workItem.getTaskGroupId(),
         workItem.getTaskType(),
         workItem.getCreatedTime(),
         workItem.getQueueInsertionTime(),
@@ -587,6 +597,7 @@ public class OverlordResource
 
     Function<TaskInfo<Task, TaskStatus>, TaskStatusPlus> completeTaskTransformFunc = taskInfo -> new TaskStatusPlus(
         taskInfo.getId(),
+        taskInfo.getTask() == null ? null : taskInfo.getTask().getGroupId(),
         taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
         taskInfo.getCreatedTime(),
         // Would be nice to include the real queue insertion time, but the
@@ -595,7 +606,7 @@ public class OverlordResource
         taskInfo.getStatus().getStatusCode(),
         RunnerTaskState.NONE,
         taskInfo.getStatus().getDuration(),
-        TaskLocation.unknown(),
+        taskInfo.getStatus().getLocation() == null ? TaskLocation.unknown() : taskInfo.getStatus().getLocation(),
         taskInfo.getDataSource(),
         taskInfo.getStatus().getErrorMsg()
     );
@@ -623,6 +634,7 @@ public class OverlordResource
         allActiveTasks.add(
             new AnyTask(
                 task.getId(),
+                task.getTask() == null ? null : task.getTask().getGroupId(),
                 task.getTask() == null ? null : task.getTask().getType(),
                 SettableFuture.create(),
                 task.getDataSource(),
@@ -715,7 +727,7 @@ public class OverlordResource
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",
                   taskRunner,
-                  taskRunner.getClass().getCanonicalName()
+                  taskRunner.getClass().getName()
               );
               return Response.serverError()
                              .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
@@ -724,6 +736,47 @@ public class OverlordResource
           }
         }
     );
+  }
+
+  @POST
+  @Path("/worker/{host}/enable")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response enableWorker(@PathParam("host") final String host)
+  {
+    return changeWorkerStatus(host, WorkerTaskRunner.ActionType.ENABLE);
+  }
+
+  @POST
+  @Path("/worker/{host}/disable")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response disableWorker(@PathParam("host") final String host)
+  {
+    return changeWorkerStatus(host, WorkerTaskRunner.ActionType.DISABLE);
+  }
+
+  private Response changeWorkerStatus(String host, WorkerTaskRunner.ActionType action)
+  {
+    try {
+      if (WorkerTaskRunner.ActionType.DISABLE.equals(action)) {
+        workerTaskRunnerQueryAdapter.disableWorker(host);
+        return Response.ok(ImmutableMap.of(host, "disabled")).build();
+      } else if (WorkerTaskRunner.ActionType.ENABLE.equals(action)) {
+        workerTaskRunnerQueryAdapter.enableWorker(host);
+        return Response.ok(ImmutableMap.of(host, "enabled")).build();
+      } else {
+        return Response.serverError()
+                       .entity(ImmutableMap.of("error", "Worker does not support " + action + " action!"))
+                       .build();
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Error in posting [%s] action to [%s]", action, host);
+      return Response.serverError()
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
+    }
   }
 
   @GET
@@ -946,6 +999,7 @@ public class OverlordResource
 
   private static class AnyTask extends TaskRunnerWorkItem
   {
+    private final String taskGroupId;
     private final String taskType;
     private final String dataSource;
     private final TaskState taskState;
@@ -956,6 +1010,7 @@ public class OverlordResource
 
     AnyTask(
         String taskId,
+        String taskGroupId,
         String taskType,
         ListenableFuture<TaskStatus> result,
         String dataSource,
@@ -967,6 +1022,7 @@ public class OverlordResource
     )
     {
       super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
+      this.taskGroupId = taskGroupId;
       this.taskType = taskType;
       this.dataSource = dataSource;
       this.taskState = state;
@@ -992,6 +1048,11 @@ public class OverlordResource
     public String getDataSource()
     {
       return dataSource;
+    }
+
+    public String getTaskGroupId()
+    {
+      return taskGroupId;
     }
 
     public TaskState getTaskState()
@@ -1026,6 +1087,7 @@ public class OverlordResource
     {
       return new AnyTask(
           getTaskId(),
+          getTaskGroupId(),
           getTaskType(),
           getResult(),
           getDataSource(),

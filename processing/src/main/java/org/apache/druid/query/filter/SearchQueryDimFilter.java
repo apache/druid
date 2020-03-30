@@ -19,17 +19,21 @@
 
 package org.apache.druid.query.filter;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.search.SearchQuerySpec;
 import org.apache.druid.segment.filter.SearchQueryFilter;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -37,12 +41,16 @@ public class SearchQueryDimFilter implements DimFilter
 {
   private final String dimension;
   private final SearchQuerySpec query;
+  @Nullable
   private final ExtractionFn extractionFn;
+  @Nullable
+  private final FilterTuning filterTuning;
 
   public SearchQueryDimFilter(
       @JsonProperty("dimension") String dimension,
       @JsonProperty("query") SearchQuerySpec query,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
+      @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -51,6 +59,17 @@ public class SearchQueryDimFilter implements DimFilter
     this.dimension = dimension;
     this.query = query;
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
+  }
+
+  @VisibleForTesting
+  public SearchQueryDimFilter(
+      String dimension,
+      SearchQuerySpec query,
+      @Nullable ExtractionFn extractionFn
+  )
+  {
+    this(dimension, query, extractionFn, null);
   }
 
   @JsonProperty
@@ -65,10 +84,19 @@ public class SearchQueryDimFilter implements DimFilter
     return query;
   }
 
+  @Nullable
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonProperty
+  public FilterTuning getFilterTuning()
+  {
+    return filterTuning;
   }
 
   @Override
@@ -97,7 +125,7 @@ public class SearchQueryDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new SearchQueryFilter(dimension, query, extractionFn);
+    return new SearchQueryFilter(dimension, query, extractionFn, filterTuning);
   }
 
   @Override
@@ -107,9 +135,9 @@ public class SearchQueryDimFilter implements DimFilter
   }
 
   @Override
-  public HashSet<String> getRequiredColumns()
+  public Set<String> getRequiredColumns()
   {
-    return Sets.newHashSet(dimension);
+    return ImmutableSet.of(dimension);
   }
 
   @Override
@@ -119,6 +147,7 @@ public class SearchQueryDimFilter implements DimFilter
            "dimension='" + dimension + '\'' +
            ", query=" + query +
            ", extractionFn='" + extractionFn + '\'' +
+           ", filterTuning=" + filterTuning +
            '}';
   }
 
@@ -128,28 +157,19 @@ public class SearchQueryDimFilter implements DimFilter
     if (this == o) {
       return true;
     }
-    if (!(o instanceof SearchQueryDimFilter)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     SearchQueryDimFilter that = (SearchQueryDimFilter) o;
-
-    if (!dimension.equals(that.dimension)) {
-      return false;
-    }
-    if (!query.equals(that.query)) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-
+    return dimension.equals(that.dimension) &&
+           query.equals(that.query) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dimension.hashCode();
-    result = 31 * result + query.hashCode();
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
+    return Objects.hash(dimension, query, extractionFn, filterTuning);
   }
 }

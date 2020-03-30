@@ -24,6 +24,8 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -34,12 +36,13 @@ import java.nio.channels.WritableByteChannel;
  */
 public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializer
 {
-  private static final MetaSerdeHelper<BlockLayoutColumnarLongsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<BlockLayoutColumnarLongsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((BlockLayoutColumnarLongsSerializer x) -> CompressedColumnarLongsSupplier.VERSION)
       .writeInt(x -> x.numInserted)
       .writeInt(x -> x.sizePer)
       .writeSomething(CompressionFactory.longEncodingWriter(x -> x.writer, x -> x.compression));
 
+  private final String columnName;
   private final int sizePer;
   private final CompressionFactory.LongEncodingWriter writer;
   private final GenericIndexedWriter<ByteBuffer> flattener;
@@ -47,9 +50,11 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
   private int numInserted = 0;
   private int numInsertedForNextFlush;
 
+  @Nullable
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarLongsSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
@@ -57,6 +62,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.sizePer = writer.getBlockSize(CompressedPools.BUFFER_SIZE);
     int bufferSize = writer.getNumBytes(sizePer);
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(segmentWriteOutMedium, filenameBase, compression, bufferSize);
@@ -97,20 +103,23 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
 
     writer.write(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override
   public long getSerializedSize() throws IOException
   {
     writeEndBuffer();
-    return metaSerdeHelper.size(this) + flattener.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + flattener.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
     writeEndBuffer();
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     flattener.writeTo(channel, smoosher);
   }
 

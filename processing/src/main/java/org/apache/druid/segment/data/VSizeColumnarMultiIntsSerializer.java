@@ -26,6 +26,8 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
@@ -36,7 +38,7 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
 {
   private static final byte VERSION = 0x1;
 
-  private static final MetaSerdeHelper<VSizeColumnarMultiIntsSerializer> metaSerdeHelper = MetaSerdeHelper
+  private static final MetaSerdeHelper<VSizeColumnarMultiIntsSerializer> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((VSizeColumnarMultiIntsSerializer x) -> VERSION)
       .writeByte(x -> VSizeColumnarInts.getNumBytesForMax(x.maxId))
       .writeInt(x -> Ints.checkedCast(x.headerOut.size() + x.valuesOut.size() + Integer.BYTES))
@@ -79,17 +81,25 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
     abstract void write(WriteOutBytes out, int v) throws IOException;
   }
 
+  private final String columnName;
   private final int maxId;
   private final WriteInt writeInt;
 
   private final SegmentWriteOutMedium segmentWriteOutMedium;
+  @Nullable
   private WriteOutBytes headerOut = null;
+  @Nullable
   private WriteOutBytes valuesOut = null;
   private int numWritten = 0;
   private boolean numBytesForMaxWritten = false;
 
-  public VSizeColumnarMultiIntsSerializer(SegmentWriteOutMedium segmentWriteOutMedium, int maxId)
+  public VSizeColumnarMultiIntsSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      int maxId
+  )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.maxId = maxId;
     this.writeInt = WriteInt.values()[VSizeColumnarInts.getNumBytesForMax(maxId) - 1];
@@ -116,13 +126,16 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
     headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
 
     ++numWritten;
+    if (numWritten < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override
   public long getSerializedSize() throws IOException
   {
     writeNumBytesForMax();
-    return metaSerdeHelper.size(this) + headerOut.size() + valuesOut.size();
+    return META_SERDE_HELPER.size(this) + headerOut.size() + valuesOut.size();
   }
 
   @Override
@@ -145,7 +158,7 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
         numBytesWritten
     );
 
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     headerOut.writeTo(channel);
     valuesOut.writeTo(channel);
   }

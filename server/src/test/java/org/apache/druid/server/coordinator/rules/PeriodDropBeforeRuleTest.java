@@ -32,10 +32,12 @@ import org.junit.Test;
 
 public class PeriodDropBeforeRuleTest
 {
-  private static final DataSegment.Builder builder = DataSegment.builder()
-                                                                .dataSource("test")
-                                                                .version(DateTimes.of("2012-12-31T01:00:00").toString())
-                                                                .shardSpec(NoneShardSpec.instance());
+  private static final DataSegment.Builder BUILDER = DataSegment
+      .builder()
+      .dataSource("test")
+      .version(DateTimes.of("2012-12-31T01:00:00").toString())
+      .shardSpec(NoneShardSpec.instance())
+      .size(0);
 
   @Test
   public void testSerde() throws Exception
@@ -60,25 +62,25 @@ public class PeriodDropBeforeRuleTest
 
     Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusDays(3), now.minusDays(2))).build(),
+            BUILDER.interval(new Interval(now.minusDays(3), now.minusDays(2))).build(),
             now
         )
     );
     Assert.assertTrue(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusDays(2), now.minusDays(1))).build(),
+            BUILDER.interval(new Interval(now.minusDays(2), now.minusDays(1))).build(),
             now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
-            builder.interval(new Interval(now.minusDays(1), now)).build(),
+            BUILDER.interval(new Interval(now.minusDays(1), now)).build(),
             now
         )
     );
     Assert.assertFalse(
         rule.appliesTo(
-            builder.interval(new Interval(now, now.plusDays(1))).build(),
+            BUILDER.interval(new Interval(now, now.plusDays(1))).build(),
             now
         )
     );

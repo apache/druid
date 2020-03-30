@@ -40,10 +40,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.capture;
-import static org.easymock.EasyMock.eq;
-
 @RunWith(EasyMockRunner.class)
 public class SupervisorManagerTest extends EasyMockSupport
 {
@@ -107,7 +103,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
 
     resetAll();
-    metadataSupervisorManager.insert(eq("id1"), anyObject(NoopSupervisorSpec.class));
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.anyObject(NoopSupervisorSpec.class));
     supervisor2.stop(true);
     replayAll();
 
@@ -314,7 +310,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     // mock suspend, which stops supervisor1 and sets suspended state in metadata, flipping to supervisor2
     // in TestSupervisorSpec implementation of createSuspendedSpec
     resetAll();
-    metadataSupervisorManager.insert(eq("id1"), capture(capturedInsert));
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
     supervisor2.start();
     supervisor1.stop(true);
     replayAll();
@@ -328,7 +324,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     // mock resume, which stops supervisor2 and sets suspended to false in metadata, flipping to supervisor1
     // in TestSupervisorSpec implementation of createRunningSpec
     resetAll();
-    metadataSupervisorManager.insert(eq("id1"), capture(capturedInsert));
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
     supervisor2.stop(true);
     supervisor1.start();
     replayAll();
@@ -341,7 +337,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     // mock stop of suspended then resumed supervisor
     resetAll();
-    metadataSupervisorManager.insert(eq("id1"), anyObject(NoopSupervisorSpec.class));
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.anyObject(NoopSupervisorSpec.class));
     supervisor1.stop(true);
     replayAll();
 
@@ -371,12 +367,12 @@ public class SupervisorManagerTest extends EasyMockSupport
     private final Supervisor suspendedSupervisor;
 
 
-    public TestSupervisorSpec(String id, Supervisor supervisor)
+    TestSupervisorSpec(String id, Supervisor supervisor)
     {
       this(id, supervisor, false, null);
     }
 
-    public TestSupervisorSpec(String id, Supervisor supervisor, boolean suspended, Supervisor suspendedSupervisor)
+    TestSupervisorSpec(String id, Supervisor supervisor, boolean suspended, Supervisor suspendedSupervisor)
     {
       this.id = id;
       this.supervisor = supervisor;
@@ -412,6 +408,18 @@ public class SupervisorManagerTest extends EasyMockSupport
     public boolean isSuspended()
     {
       return suspended;
+    }
+
+    @Override
+    public String getType()
+    {
+      return null;
+    }
+
+    @Override
+    public String getSource()
+    {
+      return null;
     }
 
     @Override

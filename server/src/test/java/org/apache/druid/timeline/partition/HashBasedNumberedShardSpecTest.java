@@ -36,6 +36,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class HashBasedNumberedShardSpecTest
 {
@@ -126,19 +128,30 @@ public class HashBasedNumberedShardSpecTest
   @Test
   public void testIsInChunk()
   {
-
     List<ShardSpec> specs = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       specs.add(new HashOverridenShardSpec(i, 3));
     }
-
 
     assertExistsInOneSpec(specs, new HashInputRow(Integer.MIN_VALUE));
     assertExistsInOneSpec(specs, new HashInputRow(Integer.MAX_VALUE));
     assertExistsInOneSpec(specs, new HashInputRow(0));
     assertExistsInOneSpec(specs, new HashInputRow(1000));
     assertExistsInOneSpec(specs, new HashInputRow(-1000));
+  }
 
+  @Test
+  public void testIsInChunkWithMorePartitionsBeyondNumBucketsReturningTrue()
+  {
+    final int numBuckets = 3;
+    final List<ShardSpec> specs = IntStream.range(0, 10)
+                                           .mapToObj(i -> new HashOverridenShardSpec(i, numBuckets))
+                                           .collect(Collectors.toList());
+
+    for (int i = 0; i < 10; i++) {
+      final InputRow row = new HashInputRow(numBuckets * 10000 + i);
+      Assert.assertTrue(specs.get(i).isInChunk(row.getTimestampFromEpoch(), row));
+    }
   }
 
   @Test
@@ -187,10 +200,7 @@ public class HashBasedNumberedShardSpecTest
 
   public static class HashOverridenShardSpec extends HashBasedNumberedShardSpec
   {
-    public HashOverridenShardSpec(
-        int partitionNum,
-        int partitions
-    )
+    public HashOverridenShardSpec(int partitionNum, int partitions)
     {
       super(partitionNum, partitions, null, ServerTestHelper.MAPPER);
     }

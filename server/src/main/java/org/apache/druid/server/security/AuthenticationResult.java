@@ -43,7 +43,7 @@ public class AuthenticationResult
    * Name of authenticator whom created the results
    *
    * If you found your self asking why the authenticatedBy field can be null please read this
-   * https://github.com/apache/incubator-druid/pull/5706#discussion_r185940889
+   * https://github.com/apache/druid/pull/5706#discussion_r185940889
    */
   @Nullable
   private final String authenticatedBy;
@@ -76,11 +76,13 @@ public class AuthenticationResult
     return authorizerName;
   }
 
+  @Nullable
   public Map<String, Object> getContext()
   {
     return context;
   }
 
+  @Nullable
   public String getAuthenticatedBy()
   {
     return authenticatedBy;

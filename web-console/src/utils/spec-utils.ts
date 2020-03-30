@@ -21,24 +21,37 @@ import { FlattenField } from './ingestion-spec';
 export type ExprType = 'path' | 'jq';
 export type ArrayHandling = 'ignore-arrays' | 'include-arrays';
 
-export function computeFlattenPathsForData(data: Record<string, any>[], exprType: ExprType, arrayHandling: ArrayHandling): FlattenField[] {
-  return computeFlattenExprsForData(data, exprType, arrayHandling).map((expr, i) => {
+export function computeFlattenPathsForData(
+  data: Record<string, any>[],
+  exprType: ExprType,
+  arrayHandling: ArrayHandling,
+): FlattenField[] {
+  return computeFlattenExprsForData(data, exprType, arrayHandling).map(expr => {
     return {
+      name: expr.replace(/^\$?\./, ''),
       type: exprType,
-      name: `expr_${i}`,
-      expr
+      expr,
     };
   });
 }
 
-export function computeFlattenExprsForData(data: Record<string, any>[], exprType: ExprType, arrayHandling: ArrayHandling): string[] {
+export function computeFlattenExprsForData(
+  data: Record<string, any>[],
+  exprType: ExprType,
+  arrayHandling: ArrayHandling,
+): string[] {
   const seenPaths: Record<string, boolean> = {};
   for (const datum of data) {
     const datumKeys = Object.keys(datum);
     for (const datumKey of datumKeys) {
       const datumValue = datum[datumKey];
       if (isNested(datumValue)) {
-        addPath(seenPaths, (exprType === 'path' ? `$.${datumKey}` : `.${datumKey}`), datumValue, arrayHandling);
+        addPath(
+          seenPaths,
+          exprType === 'path' ? `$.${datumKey}` : `.${datumKey}`,
+          datumValue,
+          arrayHandling,
+        );
       }
     }
   }
@@ -46,7 +59,12 @@ export function computeFlattenExprsForData(data: Record<string, any>[], exprType
   return Object.keys(seenPaths).sort();
 }
 
-function addPath(paths: Record<string, boolean>, path: string, value: any, arrayHandling: ArrayHandling) {
+function addPath(
+  paths: Record<string, boolean>,
+  path: string,
+  value: any,
+  arrayHandling: ArrayHandling,
+) {
   if (isNested(value)) {
     if (!Array.isArray(value)) {
       const valueKeys = Object.keys(value);
@@ -58,7 +76,6 @@ function addPath(paths: Record<string, boolean>, path: string, value: any, array
         addPath(paths, `${path}[${i}]`, value[i], arrayHandling);
       }
     }
-
   } else {
     paths[path] = true;
   }

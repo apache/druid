@@ -65,7 +65,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -562,8 +561,7 @@ public class SpatialFilterTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -573,7 +571,7 @@ public class SpatialFilterTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -615,8 +613,7 @@ public class SpatialFilterTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -626,7 +623,7 @@ public class SpatialFilterTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -703,8 +700,7 @@ public class SpatialFilterTest
     );
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -714,7 +710,7 @@ public class SpatialFilterTest
           factory.getToolchest()
       );
 
-      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
     catch (Exception e) {
       throw new RuntimeException(e);

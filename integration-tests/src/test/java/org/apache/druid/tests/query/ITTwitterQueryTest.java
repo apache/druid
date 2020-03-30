@@ -22,14 +22,14 @@ package org.apache.druid.tests.query;
 import com.google.inject.Inject;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
+import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import java.util.concurrent.Callable;
-
+@Test(groups = TestNGGroup.QUERY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTwitterQueryTest
 {
@@ -44,15 +44,8 @@ public class ITTwitterQueryTest
   public void before()
   {
     // ensure that the twitter segments are loaded completely
-    RetryUtil.retryUntilTrue(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            return coordinatorClient.areSegmentsLoaded(TWITTER_DATA_SOURCE);
-          }
-        }, "twitter segment load"
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinatorClient.areSegmentsLoaded(TWITTER_DATA_SOURCE), "twitter segment load"
     );
   }
 

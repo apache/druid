@@ -25,7 +25,13 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchEstimateWithErrorBoundsOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchObjectSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetIntersectOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetNotOperatorConversion;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSetUnionOperatorConversion;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -41,14 +47,21 @@ public class SketchModule implements DruidModule
 
   public static final String THETA_SKETCH_ESTIMATE_POST_AGG = "thetaSketchEstimate";
   public static final String THETA_SKETCH_SET_OP_POST_AGG = "thetaSketchSetOp";
-  
   public static final String THETA_SKETCH_CONSTANT_POST_AGG = "thetaSketchConstant";
+  public static final String THETA_SKETCH_TO_STRING_POST_AGG = "thetaSketchToString";
 
   @Override
   public void configure(Binder binder)
   {
     registerSerde();
-    SqlBindings.addAggregator(binder, ThetaSketchSqlAggregator.class);
+    SqlBindings.addAggregator(binder, ThetaSketchApproxCountDistinctSqlAggregator.class);
+    SqlBindings.addAggregator(binder, ThetaSketchObjectSqlAggregator.class);
+
+    SqlBindings.addOperatorConversion(binder, ThetaSketchEstimateOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, ThetaSketchEstimateWithErrorBoundsOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, ThetaSketchSetIntersectOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, ThetaSketchSetUnionOperatorConversion.class);
+    SqlBindings.addOperatorConversion(binder, ThetaSketchSetNotOperatorConversion.class);
   }
 
   @Override
@@ -60,7 +73,8 @@ public class SketchModule implements DruidModule
                 new NamedType(SketchMergeAggregatorFactory.class, THETA_SKETCH),
                 new NamedType(SketchEstimatePostAggregator.class, THETA_SKETCH_ESTIMATE_POST_AGG),
                 new NamedType(SketchSetPostAggregator.class, THETA_SKETCH_SET_OP_POST_AGG),
-                new NamedType(SketchConstantPostAggregator.class, THETA_SKETCH_CONSTANT_POST_AGG)
+                new NamedType(SketchConstantPostAggregator.class, THETA_SKETCH_CONSTANT_POST_AGG),
+                new NamedType(SketchToStringPostAggregator.class, THETA_SKETCH_TO_STRING_POST_AGG)
             )
             .addSerializer(SketchHolder.class, new SketchHolderJsonSerializer())
     );
@@ -69,16 +83,8 @@ public class SketchModule implements DruidModule
   @VisibleForTesting
   public static void registerSerde()
   {
-    if (ComplexMetrics.getSerdeForType(THETA_SKETCH) == null) {
-      ComplexMetrics.registerSerde(THETA_SKETCH, new SketchMergeComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(THETA_SKETCH_MERGE_AGG) == null) {
-      ComplexMetrics.registerSerde(THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
-    }
-
-    if (ComplexMetrics.getSerdeForType(THETA_SKETCH_BUILD_AGG) == null) {
-      ComplexMetrics.registerSerde(THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
-    }
+    ComplexMetrics.registerSerde(THETA_SKETCH, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
+    ComplexMetrics.registerSerde(THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
   }
 }

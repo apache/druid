@@ -19,19 +19,15 @@
 
 package org.apache.druid.query.movingaverage;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.jackson.DefaultObjectMapper;
 
 @LazySingleton
 public class DefaultMovingAverageQueryMetricsFactory implements MovingAverageQueryMetricsFactory
 {
 
   private static final MovingAverageQueryMetricsFactory INSTANCE =
-      new DefaultMovingAverageQueryMetricsFactory(new DefaultObjectMapper());
+      new DefaultMovingAverageQueryMetricsFactory();
 
   /**
    * Should be used only in tests, directly or indirectly (via {@link
@@ -43,17 +39,9 @@ public class DefaultMovingAverageQueryMetricsFactory implements MovingAverageQue
     return INSTANCE;
   }
 
-  private final ObjectMapper jsonMapper;
-
-  @Inject
-  public DefaultMovingAverageQueryMetricsFactory(@Json ObjectMapper jsonMapper)
-  {
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
   public MovingAverageQueryMetrics makeMetrics()
   {
-    return new DefaultMovingAverageQueryMetrics(jsonMapper);
+    return new DefaultMovingAverageQueryMetrics();
   }
 }

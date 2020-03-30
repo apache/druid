@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 
 public class IdentityExtractionFn implements ExtractionFn
 {
-  private static final IdentityExtractionFn instance = new IdentityExtractionFn();
+  private static final IdentityExtractionFn INSTANCE = new IdentityExtractionFn();
 
   private IdentityExtractionFn()
   {
@@ -82,8 +82,14 @@ public class IdentityExtractionFn implements ExtractionFn
     return o != null && o instanceof IdentityExtractionFn;
   }
 
-  public static final IdentityExtractionFn getInstance()
+  @Override
+  public int hashCode()
   {
-    return instance;
+    return 0;
+  }
+
+  public static IdentityExtractionFn getInstance()
+  {
+    return INSTANCE;
   }
 }

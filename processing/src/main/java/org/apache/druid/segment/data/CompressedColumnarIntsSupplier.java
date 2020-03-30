@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
@@ -43,7 +44,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   public static final byte VERSION = 0x2;
   public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Integer.BYTES;
 
-  private static MetaSerdeHelper<CompressedColumnarIntsSupplier> metaSerdeHelper = MetaSerdeHelper
+  private static MetaSerdeHelper<CompressedColumnarIntsSupplier> META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((CompressedColumnarIntsSupplier x) -> VERSION)
       .writeInt(x -> x.totalSize)
       .writeInt(x -> x.sizePer)
@@ -98,13 +99,13 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   @Override
   public long getSerializedSize()
   {
-    return metaSerdeHelper.size(this) + baseIntBuffers.getSerializedSize();
+    return META_SERDE_HELPER.size(this) + baseIntBuffers.getSerializedSize();
   }
 
   @Override
   public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
   {
-    metaSerdeHelper.writeTo(channel, this);
+    META_SERDE_HELPER.writeTo(channel, this);
     baseIntBuffers.writeTo(channel, smoosher);
   }
 
@@ -126,6 +127,25 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
           totalSize,
           sizePer,
           GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression)),
+          compression
+      );
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static CompressedColumnarIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper mapper)
+  {
+    byte versionFromBuffer = buffer.get();
+
+    if (versionFromBuffer == VERSION) {
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
+      return new CompressedColumnarIntsSupplier(
+          totalSize,
+          sizePer,
+          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression), mapper),
           compression
       );
     }

@@ -21,22 +21,23 @@ package org.apache.druid.query.topn;
 
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BinaryOperator;
 
 /**
  */
-public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<TopNResultValue>, Result<TopNResultValue>>
+public class TopNBinaryFn implements BinaryOperator<Result<TopNResultValue>>
 {
   private final DimensionSpec dimSpec;
   private final Granularity gran;
@@ -95,7 +96,7 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
 
       if (arg1Val != null) {
         // size of map = aggregator + topNDim + postAgg (If sorting is done on post agg field)
-        Map<String, Object> retVal = new LinkedHashMap<>(aggregations.size() + 2);
+        Map<String, Object> retVal = CollectionUtils.newLinkedHashMapWithExpectedSize(aggregations.size() + 2);
 
         retVal.put(dimension, dimensionValue);
         for (AggregatorFactory factory : aggregations) {

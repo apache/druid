@@ -19,7 +19,9 @@
 
 package org.apache.druid.collections.bitmap;
 
+import org.roaringbitmap.BatchIterator;
 import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.PeekableIntIterator;
 
 /**
  * This class is meant to represent a simple wrapper around an immutable bitmap
@@ -31,6 +33,22 @@ public interface ImmutableBitmap
    * @return an iterator over the set bits of this bitmap
    */
   IntIterator iterator();
+
+  /**
+   * @return a peekable iterator which can skip to a position
+   */
+  default PeekableIntIterator peekableIterator()
+  {
+    return new PeekableIteratorAdapter<>(iterator());
+  }
+
+  /**
+   * @return a batched iterator over the set bits of this bitmap
+   */
+  default BatchIterator batchIterator()
+  {
+    return new BatchIteratorAdapter(iterator());
+  }
 
   /**
    * @return The number of bits set to true in this bitmap

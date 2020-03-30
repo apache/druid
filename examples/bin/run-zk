@@ -19,7 +19,7 @@
 
 if [ "$#" -gt 1 ]
 then
-  echo "usage: $0 [conf-dir]" >&2
+  >&2 echo "usage: $0 [conf-dir]"
   exit 1
 fi
 
@@ -35,9 +35,15 @@ fi
 
 CONFDIR="$(cd "$CONFDIR" && pwd)/zk"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
+JAVA_BIN="$(source "$WHEREAMI"/java-util && get_java_bin_dir)"
+if [ -z "$JAVA_BIN" ]; then
+  >&2 echo "Could not find java - please run $WHEREAMI/verify-java to confirm it is installed."
+  exit 1
+fi
 
 cd "$WHEREAMI/.."
-exec java `cat "$CONFDIR"/jvm.config | xargs` \
-  -cp "$WHEREAMI/../zk/lib/*:$WHEREAMI/../zk/*:$CONFDIR" \
+exec "$JAVA_BIN"/java `cat "$CONFDIR"/jvm.config | xargs` \
+  -cp "$WHEREAMI/../lib/*:$CONFDIR" \
+  -Dzookeeper.jmx.log4j.disable=true \
   org.apache.zookeeper.server.quorum.QuorumPeerMain \
   "$CONFDIR"/zoo.cfg

@@ -29,11 +29,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 public class QueryLookupOperatorConversion implements SqlOperatorConversion
 {
@@ -81,7 +81,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
                     (String) lookupNameExpr.getLiteralValue(),
                     false,
                     null,
-                    false,
+                    null,
                     true
                 )
             );
