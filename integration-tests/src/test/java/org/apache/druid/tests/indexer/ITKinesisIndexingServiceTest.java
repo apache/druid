@@ -201,132 +201,138 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     kinesisEventWriter.shutdown();
   }
 
-  public void testKineseIndexDataWithLegacyParserStableState() throws Exception
-  {
-    try (
-        final Closeable ignored1 = unloader(fullDatasourceName)
-    ) {
-      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_LEGACY_PARSER));
-      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-      // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
-      LOG.info("Submitted supervisor");
-      // Start Kinesis data generator
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-      verifyIngestedData(supervisorId);
-    }
-  }
-
-  public void testKineseIndexDataWithInputFormatStableState() throws Exception
-  {
-    try (
-        final Closeable ignored1 = unloader(fullDatasourceName)
-    ) {
-      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-      // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
-      LOG.info("Submitted supervisor");
-      // Start Kinesis data generator
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-      verifyIngestedData(supervisorId);
-    }
-  }
-
-//  public void testKineseIndexDataWithLosingCoordinator() throws Exception
+//  @Test
+//  public void testKineseIndexDataWithLegacyParserStableState() throws Exception
 //  {
 //    try (
 //        final Closeable ignored1 = unloader(fullDatasourceName)
 //    ) {
-////      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-////      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-////      // Start supervisor
-////      String supervisorId = indexer.submitSupervisor(taskSpec);
-////      LOG.info("Submitted supervisor");
-////      // Start Kinesis data generator
-////      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-////      verifyIngestedData(supervisorId);
+//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_LEGACY_PARSER));
+//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+//      // Start supervisor
+//      String supervisorId = indexer.submitSupervisor(taskSpec);
+//      LOG.info("Submitted supervisor");
+//      // Start Kinesis data generator
+//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+//      verifyIngestedData(supervisorId);
 //    }
 //  }
 //
-//  public void testKineseIndexDataWithLosingOverlord() throws Exception
+//  @Test
+//  public void testKineseIndexDataWithInputFormatStableState() throws Exception
 //  {
 //    try (
 //        final Closeable ignored1 = unloader(fullDatasourceName)
 //    ) {
-////      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-////      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-////      // Start supervisor
-////      String supervisorId = indexer.submitSupervisor(taskSpec);
-////      LOG.info("Submitted supervisor");
-////      // Start Kinesis data generator
-////      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-////      verifyIngestedData(supervisorId);
+//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+//      // Start supervisor
+//      String supervisorId = indexer.submitSupervisor(taskSpec);
+//      LOG.info("Submitted supervisor");
+//      // Start Kinesis data generator
+//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+//      verifyIngestedData(supervisorId);
 //    }
 //  }
-//
-//  public void testKineseIndexDataWithLosingHistorical() throws Exception
-//  {
-//    try (
-//        final Closeable ignored1 = unloader(fullDatasourceName)
-//    ) {
-////      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-////      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-////      // Start supervisor
-////      String supervisorId = indexer.submitSupervisor(taskSpec);
-////      LOG.info("Submitted supervisor");
-////      // Start Kinesis data generator
-////      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-////      verifyIngestedData(supervisorId);
-//    }
-//  }
-//
-  public void testKineseIndexDataWithStartStopSupervisor() throws Exception
+
+  public void testKineseIndexDataWithLosingCoordinator() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
     ) {
-      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-      // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
-      LOG.info("Submitted supervisor");
-      // Start generating half of the data
-      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
-      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-      // Suspend the supervisor
-      indexer.suspendSupervisor(supervisorId);
-      // Start generating remainning half of the data
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
-      // Resume the supervisor
-      indexer.resumeSupervisor(supervisorId);
-      // Verify supervisor is healthy after suspension
-      ITRetryUtil.retryUntil(
-          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
-          true,
-          10000,
-          30,
-          "Waiting for supervisor to be healthy"
-      );
-      // Verify that supervisor can catch up with the stream
-      verifyIngestedData(supervisorId);
+//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+//      // Start supervisor
+//      String supervisorId = indexer.submitSupervisor(taskSpec);
+//      LOG.info("Submitted supervisor");
+//      // Start Kinesis data generator
+//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+//      verifyIngestedData(supervisorId);
     }
   }
 
-  public void testKineseIndexDataWithKinesisReshardSplit() throws Exception
+  public void testKineseIndexDataWithLosingOverlord() throws Exception
   {
-    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT * 2
-    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT * 2);
+    try (
+        final Closeable ignored1 = unloader(fullDatasourceName)
+    ) {
+//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+//      // Start supervisor
+//      String supervisorId = indexer.submitSupervisor(taskSpec);
+//      LOG.info("Submitted supervisor");
+//      // Start Kinesis data generator
+//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+//      verifyIngestedData(supervisorId);
+    }
   }
 
-  public void testKineseIndexDataWithKinesisReshardMerge() throws Exception
+  public void testKineseIndexDataWithLosingHistorical() throws Exception
   {
-    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT / 2
-    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT / 2);
+    try (
+        final Closeable ignored1 = unloader(fullDatasourceName)
+    ) {
+//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+//      // Start supervisor
+//      String supervisorId = indexer.submitSupervisor(taskSpec);
+//      LOG.info("Submitted supervisor");
+//      // Start Kinesis data generator
+//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+//      verifyIngestedData(supervisorId);
+    }
   }
+
+//
+//  @Test
+//  public void testKineseIndexDataWithStartStopSupervisor() throws Exception
+//  {
+//    try (
+//        final Closeable ignored1 = unloader(fullDatasourceName)
+//    ) {
+//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+//      // Start supervisor
+//      String supervisorId = indexer.submitSupervisor(taskSpec);
+//      LOG.info("Submitted supervisor");
+//      // Start generating half of the data
+//      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
+//      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
+//      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
+//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+//      // Suspend the supervisor
+//      indexer.suspendSupervisor(supervisorId);
+//      // Start generating remainning half of the data
+//      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
+//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
+//      // Resume the supervisor
+//      indexer.resumeSupervisor(supervisorId);
+//      // Verify supervisor is healthy after suspension
+//      ITRetryUtil.retryUntil(
+//          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
+//          true,
+//          10000,
+//          30,
+//          "Waiting for supervisor to be healthy"
+//      );
+//      // Verify that supervisor can catch up with the stream
+//      verifyIngestedData(supervisorId);
+//    }
+//  }
+//
+//  @Test
+//  public void testKineseIndexDataWithKinesisReshardSplit() throws Exception
+//  {
+//    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT * 2
+//    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT * 2);
+//  }
+//
+//  @Test
+//  public void testKineseIndexDataWithKinesisReshardMerge() throws Exception
+//  {
+//    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT / 2
+//    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT / 2);
+//  }
 
   private void testKineseIndexDataWithKinesisReshardHelper(int newShardCount) throws Exception
   {
@@ -385,14 +391,14 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     this.queryHelper.testQueriesFromString(querySpec, 2);
     LOG.info("Shutting down supervisor");
     indexer.shutdownSupervisor(supervisorId);
-//    // wait for all kafka indexing tasks to finish
-//    LOG.info("Waiting for all indexing tasks to finish");
-//    ITRetryUtil.retryUntilTrue(
-//        () -> (indexer.getPendingTasks().size()
-//               + indexer.getRunningTasks().size()
-//               + indexer.getWaitingTasks().size()) == 0,
-//        "Waiting for Tasks Completion"
-//    );
+    // wait for all kafka indexing tasks to finish
+    LOG.info("Waiting for all indexing tasks to finish");
+    ITRetryUtil.retryUntilTrue(
+        () -> (indexer.getPendingTasks().size()
+               + indexer.getRunningTasks().size()
+               + indexer.getWaitingTasks().size()) == 0,
+        "Waiting for Tasks Completion"
+    );
     // wait for segments to be handed off
     ITRetryUtil.retryUntil(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),

@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.DruidDockerAdminClient;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -48,6 +49,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   @Test
   public void testIndexData() throws Exception
   {
+    DruidDockerAdminClient.test();
     final String reindexDatasource = REINDEX_DATASOURCE + "-testIndexData";
     final String reindexDatasourceWithDruidInputSource = REINDEX_DATASOURCE + "-testIndexData-druidInputSource";
     try (
