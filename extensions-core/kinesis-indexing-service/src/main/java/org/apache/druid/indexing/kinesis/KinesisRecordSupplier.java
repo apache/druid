@@ -821,6 +821,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       }
 
       shardIterator = recordsResult.getNextShardIterator();
+      //reset the timout for the new shardIterator
+      timeoutMillis = System.currentTimeMillis() + fetchSequenceNumberTimeout;
     }
 
     if (shardIterator == null) {
