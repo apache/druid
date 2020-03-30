@@ -25,8 +25,7 @@ import com.amazonaws.services.kinesis.producer.KinesisProducer;
 import com.amazonaws.services.kinesis.producer.KinesisProducerConfiguration;
 import com.amazonaws.util.AwsHostNameUtils;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;
@@ -35,7 +34,7 @@ import java.util.Properties;
 
 public class KinesisEventWriter implements EventWriter
 {
-  private static final Logger LOG = LoggerFactory.getLogger(KinesisEventWriter.class);
+  private static final Logger LOG = new Logger(KinesisEventWriter.class);
 
   private final String streamName;
   private final KinesisProducer kinesisProducer;

@@ -23,13 +23,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class SyntheticGenerator implements Generator
 {
-  private static final Logger log = LoggerFactory.getLogger(SyntheticGenerator.class);
+  private static final Logger log = new Logger(SyntheticGenerator.class);
   static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   static {
@@ -78,13 +78,13 @@ public abstract class SyntheticGenerator implements Generator
     // were dropped or duplicated. We will try to space the event generation over the remainder of the second so that it
     // roughly completes at the top of the second, but if it doesn't complete, it will still send the remainder of the
     // events with the original timestamp, even after wall time has moved onto the next second.
-    DateTime nowCeilingToSecond = DateTime.now().secondOfDay().roundCeilingCopy();
+    DateTime nowCeilingToSecond = DateTimes.nowUtc().secondOfDay().roundCeilingCopy();
     DateTime eventTimestamp = overrrideFirstEventTime == null ? nowCeilingToSecond : overrrideFirstEventTime;
     int seconds = 0;
 
     while (true) {
       try {
-        long sleepMillis = nowCeilingToSecond.getMillis() - DateTime.now().getMillis();
+        long sleepMillis = nowCeilingToSecond.getMillis() - DateTimes.nowUtc().getMillis();
         if (sleepMillis > 0) {
           log.info("Waiting {} ms for next run cycle (at {})", sleepMillis, nowCeilingToSecond);
           Thread.sleep(sleepMillis);
@@ -117,7 +117,7 @@ public abstract class SyntheticGenerator implements Generator
         log.info(
             "Finished writing {} events, current time: {} - updating next timestamp to: {}",
             eventsPerSecond,
-            DateTime.now(),
+            DateTimes.nowUtc(),
             nowCeilingToSecond
         );
 
@@ -149,7 +149,7 @@ public abstract class SyntheticGenerator implements Generator
       return 0;
     }
 
-    DateTime now = DateTime.now();
+    DateTime now = DateTimes.nowUtc();
     DateTime nextSecondToProcessMinusBuffer = secondBeingProcessed.plusSeconds(1).minus(cyclePaddingMs);
 
     if (nextSecondToProcessMinusBuffer.isBefore(now)) {

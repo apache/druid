@@ -35,7 +35,6 @@ import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.FileInputStream;
@@ -70,7 +69,7 @@ public class KinesisAdminClient
                               )).build();
   }
 
-  public void createStream(String streamName, int shardCount, Map<String,String> tags)
+  public void createStream(String streamName, int shardCount, Map<String, String> tags)
   {
     CreateStreamResult createStreamResult = amazonKinesis.createStream(streamName, shardCount);
     if (createStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {

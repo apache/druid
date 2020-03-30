@@ -21,9 +21,11 @@ package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.apache.druid.testing.utils.DruidDockerAdminClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KinesisAdminClient;
 import org.apache.druid.testing.utils.KinesisEventWriter;
@@ -82,9 +84,10 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   @BeforeMethod
   public void before() throws Exception
   {
+    DruidDockerAdminClient.test();
     streamName = "kinesis_index_test_" + UUID.randomUUID();
     String datasource = "kinesis_indexing_service_test_" + UUID.randomUUID();
-    Map<String, String> tags = ImmutableMap.of(STREAM_EXPIRE_TAG, Long.toString(DateTime.now().plusMinutes(30).getMillis()));
+    Map<String, String> tags = ImmutableMap.of(STREAM_EXPIRE_TAG, Long.toString(DateTimes.nowUtc().plusMinutes(30).getMillis()));
     kinesisAdminClient.createStream(streamName, KINESIS_SHARD_COUNT, tags);
     ITRetryUtil.retryUntil(
         () -> kinesisAdminClient.isStreamActive(streamName),
@@ -154,7 +157,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         spec = StringUtils.replace(
             spec,
             "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%",
-            TIMESTAMP_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND-1))
+            TIMESTAMP_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND - 1))
         );
         spec = StringUtils.replace(
             spec,
@@ -169,7 +172,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         spec = StringUtils.replace(
             spec,
             "%%TIMESERIES_QUERY_END%%",
-            INTERVAL_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND-1).plusMinutes(2))
+            INTERVAL_FMT.print(FIRST_EVENT_TIME.plusSeconds(TOTAL_NUMBER_OF_SECOND - 1).plusMinutes(2))
         );
         spec = StringUtils.replace(
             spec,
@@ -184,7 +187,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         return StringUtils.replace(
             spec,
             "%%TIMESERIES_NUMEVENTS%%",
-            Integer.toString(EVENTS_PER_SECOND*TOTAL_NUMBER_OF_SECOND)
+            Integer.toString(EVENTS_PER_SECOND * TOTAL_NUMBER_OF_SECOND)
         );
       }
       catch (Exception e) {
@@ -201,53 +204,53 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     kinesisEventWriter.shutdown();
   }
 
-//  @Test
-//  public void testKineseIndexDataWithLegacyParserStableState() throws Exception
-//  {
-//    try (
-//        final Closeable ignored1 = unloader(fullDatasourceName)
-//    ) {
-//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_LEGACY_PARSER));
-//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-//      // Start supervisor
-//      String supervisorId = indexer.submitSupervisor(taskSpec);
-//      LOG.info("Submitted supervisor");
-//      // Start Kinesis data generator
-//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-//      verifyIngestedData(supervisorId);
-//    }
-//  }
-//
-//  @Test
-//  public void testKineseIndexDataWithInputFormatStableState() throws Exception
-//  {
-//    try (
-//        final Closeable ignored1 = unloader(fullDatasourceName)
-//    ) {
-//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-//      // Start supervisor
-//      String supervisorId = indexer.submitSupervisor(taskSpec);
-//      LOG.info("Submitted supervisor");
-//      // Start Kinesis data generator
-//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-//      verifyIngestedData(supervisorId);
-//    }
-//  }
+  @Test
+  public void testKineseIndexDataWithLegacyParserStableState() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(fullDatasourceName)
+    ) {
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_LEGACY_PARSER));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start Kinesis data generator
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      verifyIngestedData(supervisorId);
+    }
+  }
+
+  @Test
+  public void testKineseIndexDataWithInputFormatStableState() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(fullDatasourceName)
+    ) {
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start Kinesis data generator
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      verifyIngestedData(supervisorId);
+    }
+  }
 
   public void testKineseIndexDataWithLosingCoordinator() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
     ) {
-//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-//      // Start supervisor
-//      String supervisorId = indexer.submitSupervisor(taskSpec);
-//      LOG.info("Submitted supervisor");
-//      // Start Kinesis data generator
-//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-//      verifyIngestedData(supervisorId);
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start Kinesis data generator
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      verifyIngestedData(supervisorId);
     }
   }
 
@@ -256,14 +259,14 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
     ) {
-//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-//      // Start supervisor
-//      String supervisorId = indexer.submitSupervisor(taskSpec);
-//      LOG.info("Submitted supervisor");
-//      // Start Kinesis data generator
-//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-//      verifyIngestedData(supervisorId);
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start Kinesis data generator
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      verifyIngestedData(supervisorId);
     }
   }
 
@@ -272,67 +275,67 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
     ) {
-//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-//      // Start supervisor
-//      String supervisorId = indexer.submitSupervisor(taskSpec);
-//      LOG.info("Submitted supervisor");
-//      // Start Kinesis data generator
-//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-//      verifyIngestedData(supervisorId);
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start Kinesis data generator
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      verifyIngestedData(supervisorId);
     }
   }
 
-//
-//  @Test
-//  public void testKineseIndexDataWithStartStopSupervisor() throws Exception
-//  {
-//    try (
-//        final Closeable ignored1 = unloader(fullDatasourceName)
-//    ) {
-//      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
-//      LOG.info("supervisorSpec: [%s]\n", taskSpec);
-//      // Start supervisor
-//      String supervisorId = indexer.submitSupervisor(taskSpec);
-//      LOG.info("Submitted supervisor");
-//      // Start generating half of the data
-//      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
-//      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-//      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
-//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
-//      // Suspend the supervisor
-//      indexer.suspendSupervisor(supervisorId);
-//      // Start generating remainning half of the data
-//      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
-//      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
-//      // Resume the supervisor
-//      indexer.resumeSupervisor(supervisorId);
-//      // Verify supervisor is healthy after suspension
-//      ITRetryUtil.retryUntil(
-//          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
-//          true,
-//          10000,
-//          30,
-//          "Waiting for supervisor to be healthy"
-//      );
-//      // Verify that supervisor can catch up with the stream
-//      verifyIngestedData(supervisorId);
-//    }
-//  }
-//
-//  @Test
-//  public void testKineseIndexDataWithKinesisReshardSplit() throws Exception
-//  {
-//    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT * 2
-//    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT * 2);
-//  }
-//
-//  @Test
-//  public void testKineseIndexDataWithKinesisReshardMerge() throws Exception
-//  {
-//    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT / 2
-//    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT / 2);
-//  }
+
+  @Test
+  public void testKineseIndexDataWithStartStopSupervisor() throws Exception
+  {
+    try (
+        final Closeable ignored1 = unloader(fullDatasourceName)
+    ) {
+      final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
+      LOG.info("supervisorSpec: [%s]\n", taskSpec);
+      // Start supervisor
+      String supervisorId = indexer.submitSupervisor(taskSpec);
+      LOG.info("Submitted supervisor");
+      // Start generating half of the data
+      int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
+      secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
+      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      // Suspend the supervisor
+      indexer.suspendSupervisor(supervisorId);
+      // Start generating remainning half of the data
+      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
+      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
+      // Resume the supervisor
+      indexer.resumeSupervisor(supervisorId);
+      // Verify supervisor is healthy after suspension
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
+          true,
+          10000,
+          30,
+          "Waiting for supervisor to be healthy"
+      );
+      // Verify that supervisor can catch up with the stream
+      verifyIngestedData(supervisorId);
+    }
+  }
+
+  @Test
+  public void testKineseIndexDataWithKinesisReshardSplit() throws Exception
+  {
+    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT * 2
+    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT * 2);
+  }
+
+  @Test
+  public void testKineseIndexDataWithKinesisReshardMerge() throws Exception
+  {
+    // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT / 2
+    testKineseIndexDataWithKinesisReshardHelper(KINESIS_SHARD_COUNT / 2);
+  }
 
   private void testKineseIndexDataWithKinesisReshardHelper(int newShardCount) throws Exception
   {

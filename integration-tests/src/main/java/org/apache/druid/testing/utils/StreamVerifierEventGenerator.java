@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.utils;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
 import java.util.UUID;
@@ -33,10 +34,10 @@ public class StreamVerifierEventGenerator extends SyntheticGenerator
   @Override
   Object getEvent(int i, DateTime timestamp)
   {
-    return  StreamVerifierSyntheticEvent.of(
+    return StreamVerifierSyntheticEvent.of(
         UUID.randomUUID().toString(),
         timestamp.getMillis(),
-        DateTime.now().getMillis(),
+        DateTimes.nowUtc().getMillis(),
         i,
         i == getEventsPerSecond() ? getSumOfEventSequence(getEventsPerSecond()) : null,
         i == 1

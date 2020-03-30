@@ -25,14 +25,13 @@ import com.github.dockerjava.netty.NettyDockerCmdExecFactory;
 
 public class DruidDockerAdminClient
 {
-  private static final DockerClient docker = DockerClientBuilder.getInstance()
-                                                                .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
-                                                                                              .withConnectTimeout(10 * 1000))
-                                                                .build();
-
+  private static final DockerClient DOCKER_CLIENT = DockerClientBuilder.getInstance()
+                                                                       .withDockerCmdExecFactory((new NettyDockerCmdExecFactory())
+                                                                                                     .withConnectTimeout(10 * 1000))
+                                                                       .build();
   public static void test()
   {
     System.out.println("**********");
-    System.out.println(docker.listImagesCmd().withShowAll(true).exec());
+    System.out.println(DOCKER_CLIENT.listImagesCmd().withShowAll(true).exec());
   }
 }
