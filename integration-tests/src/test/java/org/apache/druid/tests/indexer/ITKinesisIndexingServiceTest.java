@@ -35,6 +35,7 @@ import org.apache.druid.tests.TestNGGroup;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.junit.BeforeClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
@@ -53,7 +54,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   private static final int KINESIS_SHARD_COUNT = 2;
   private static final String STREAM_EXPIRE_TAG = "druid-ci-expire-after";
   private static final long WAIT_TIME_MILLIS = 60 * 1000L;
-  private static final DateTime FIRST_EVENT_TIME = DateTime.parse("1994-04-29T00:00:00.000Z");
+  private static final DateTime FIRST_EVENT_TIME = DateTimes.of(1994, 4, 29, 1, 0);
   private static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/stream_supervisor_spec_legacy_parser.json";
   private static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/stream_supervisor_spec_input_format.json";
   private static final String QUERIES_FILE = "/indexer/stream_index_queries.json";
@@ -67,16 +68,21 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
 
   @Inject
   private DruidClusterAdminClient druidClusterAdminClient;
-  @Inject
-  private KinesisAdminClient kinesisAdminClient;
 
   private String streamName;
   private String fullDatasourceName;
+  private KinesisAdminClient kinesisAdminClient;
   private KinesisEventWriter kinesisEventWriter;
   private WikipediaStreamEventGenerator wikipediaStreamEventGenerator;
   private Function<String, String> kinesisIngestionPropsTransform;
   private Function<String, String> kinesisQueryPropsTransform;
   private int secondsToGenerateRemaining;
+
+  @BeforeClass
+  public void beforeClass() throws Exception
+  {
+    kinesisAdminClient = new KinesisAdminClient(config);
+  }
 
   @BeforeMethod
   public void before() throws Exception

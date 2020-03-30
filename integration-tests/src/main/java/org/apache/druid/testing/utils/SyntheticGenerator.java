@@ -86,13 +86,13 @@ public abstract class SyntheticGenerator implements Generator
       try {
         long sleepMillis = nowCeilingToSecond.getMillis() - DateTimes.nowUtc().getMillis();
         if (sleepMillis > 0) {
-          log.info("Waiting {} ms for next run cycle (at {})", sleepMillis, nowCeilingToSecond);
+          log.info("Waiting %s ms for next run cycle (at %s)", sleepMillis, nowCeilingToSecond);
           Thread.sleep(sleepMillis);
           continue;
         }
 
         log.info(
-            "Beginning run cycle with {} events, target completion time: {}",
+            "Beginning run cycle with %s events, target completion time: %s",
             eventsPerSecond,
             nowCeilingToSecond.plusSeconds(1).minus(cyclePaddingMs)
         );
@@ -102,7 +102,7 @@ public abstract class SyntheticGenerator implements Generator
 
           long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowCeilingToSecond);
           if ((i <= 100 && i % 10 == 0) || i % 100 == 0) {
-            log.info("Event: {}/{}, sleep time: {} ms", i, eventsPerSecond, sleepTime);
+            log.info("Event: %s/%s, sleep time: %s ms", i, eventsPerSecond, sleepTime);
           }
 
           if (sleepTime > 0) {
@@ -115,7 +115,7 @@ public abstract class SyntheticGenerator implements Generator
         seconds++;
 
         log.info(
-            "Finished writing {} events, current time: {} - updating next timestamp to: {}",
+            "Finished writing %s events, current time: %s - updating next timestamp to: %s",
             eventsPerSecond,
             DateTimes.nowUtc(),
             nowCeilingToSecond
@@ -123,7 +123,7 @@ public abstract class SyntheticGenerator implements Generator
 
         if (seconds >= totalNumberOfSecond) {
           log.info(
-              "Finished writing {} seconds",
+              "Finished writing %s seconds",
               seconds
           );
           break;

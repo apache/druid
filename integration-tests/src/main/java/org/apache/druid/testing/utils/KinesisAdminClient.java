@@ -35,7 +35,6 @@ import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
-import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.testing.IntegrationTestingConfig;
 
@@ -47,7 +46,6 @@ public class KinesisAdminClient
 {
   private AmazonKinesis amazonKinesis;
 
-  @Inject
   public KinesisAdminClient(IntegrationTestingConfig config) throws Exception
   {
     String endpoint = config.getStreamEndpoint();
