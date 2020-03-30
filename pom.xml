@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.18.0-SNAPSHOT</version>
+    <version>0.19.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -67,7 +67,7 @@
         <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
         <url>https://github.com/apache/druid.git</url>
-        <tag>0.18.0-SNAPSHOT</tag>
+        <tag>0.19.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
