@@ -56,7 +56,6 @@ public class KinesisEventWriter implements StreamEventWriter
         .setRegion(AwsHostNameUtils.parseRegion(endpoint, null))
         .setRequestTimeout(600000L)
         .setConnectTimeout(300000L)
-        .setRecordMaxBufferedTime(15000)
         .setRecordTtl(9223372036854775807L)
         .setMetricsLevel("none")
         .setAggregationEnabled(aggregate);
