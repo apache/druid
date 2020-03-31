@@ -51,20 +51,20 @@ public class ITTransformTest extends AbstractITBatchIndexTest
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
         final Closeable ignored2 = unloader(reindexDatasourceWithDruidInputSource + config.getExtraDatasourceNameSuffix())
     ) {
-    doIndexTest(
-        INDEX_DATASOURCE,
-        INDEX_TASK_WITH_INPUT_SOURCE,
-        INDEX_QUERIES_RESOURCE,
-        false,
-        true,
-        true
-    );
-    doReindexTest(
-        INDEX_DATASOURCE,
-        reindexDatasourceWithDruidInputSource,
-        REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
-        REINDEX_QUERIES_RESOURCE
-    );
+      doIndexTest(
+          INDEX_DATASOURCE,
+          INDEX_TASK_WITH_INPUT_SOURCE,
+          INDEX_QUERIES_RESOURCE,
+          false,
+          true,
+          true
+      );
+      doReindexTest(
+          INDEX_DATASOURCE,
+          reindexDatasourceWithDruidInputSource,
+          REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
+          REINDEX_QUERIES_RESOURCE
+      );
     }
   }
 
