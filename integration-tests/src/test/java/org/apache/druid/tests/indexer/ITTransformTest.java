@@ -21,9 +21,11 @@ package org.apache.druid.tests.indexer;
 
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
+import org.junit.Ignore;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 @Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
@@ -45,10 +47,10 @@ public class ITTransformTest extends AbstractITBatchIndexTest
   {
     final String reindexDatasourceWithDruidInputSource = REINDEX_DATASOURCE + "-druidInputSource";
 
-    //try (
-    //    final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-    //    final Closeable ignored2 = unloader(reindexDatasourceWithDruidInputSource + config.getExtraDatasourceNameSuffix())
-    //) {
+    try (
+        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored2 = unloader(reindexDatasourceWithDruidInputSource + config.getExtraDatasourceNameSuffix())
+    ) {
     doIndexTest(
         INDEX_DATASOURCE,
         INDEX_TASK_WITH_INPUT_SOURCE,
@@ -63,10 +65,9 @@ public class ITTransformTest extends AbstractITBatchIndexTest
         REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
         REINDEX_QUERIES_RESOURCE
     );
-    //}
+    }
   }
 
-  /*
   // TODO: re-instate this test when https://github.com/apache/druid/issues/9591 is fixed
   // Move the re-index step into testIndexAndReIndexWithTransformSpec for faster tests!
   @Test
@@ -113,5 +114,4 @@ public class ITTransformTest extends AbstractITBatchIndexTest
       );
     }
   }
-   */
 }
