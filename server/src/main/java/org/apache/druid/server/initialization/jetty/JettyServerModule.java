@@ -345,7 +345,13 @@ public class JettyServerModule extends JerseyServletModule
 
       List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
       for (ConnectionFactory cf : connector.getConnectionFactories()) {
-        monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, ACTIVE_CONNECTIONS));
+        // we only want to monitor the first connection factory, since it will pass the connection to subsequent
+        // connection factories (in this case HTTP/1.1 after the connection is unencrypted for SSL)
+        if (cf.getProtocol().equals(connector.getDefaultProtocol())) {
+          monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, ACTIVE_CONNECTIONS));
+        } else {
+          monitoredConnFactories.add(cf);
+        }
       }
       connector.setConnectionFactories(monitoredConnFactories);
     }
