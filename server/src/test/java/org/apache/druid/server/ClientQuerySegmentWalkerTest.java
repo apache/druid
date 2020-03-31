@@ -70,6 +70,8 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -151,12 +153,20 @@ public class ClientQuerySegmentWalkerTest
   // version VERSION, and shard spec SHARD_SPEC.
   private ClientQuerySegmentWalker walker;
 
+  private ObservableQueryScheduler scheduler;
+
   @Before
   public void setUp()
   {
     closer = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
-    initWalker(ImmutableMap.of());
+    scheduler = new ObservableQueryScheduler(
+        8,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        NoQueryLaningStrategy.INSTANCE,
+        new ServerConfig()
+    );
+    initWalker(ImmutableMap.of(), scheduler);
   }
 
   @After
@@ -182,6 +192,11 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
     );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -200,6 +215,11 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(ExpectedQuery.local(query)),
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
     );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -236,6 +256,13 @@ public class ClientQuerySegmentWalkerTest
         ),
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -263,6 +290,11 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(ExpectedQuery.cluster(subquery)),
         ImmutableList.of(new Object[]{3L})
     );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -299,6 +331,13 @@ public class ClientQuerySegmentWalkerTest
             new Object[]{"z", 1L}
         )
     );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -351,6 +390,13 @@ public class ClientQuerySegmentWalkerTest
         ),
         ImmutableList.of(new Object[]{"y", "y", 1L})
     );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -408,9 +454,17 @@ public class ClientQuerySegmentWalkerTest
   }
 
   /**
-   * Initialize (or reinitialize) our {@link #walker} and {@link #closer}.
+   * Initialize (or reinitialize) our {@link #walker} and {@link #closer} with default scheduler.
    */
   private void initWalker(final Map<String, String> serverProperties)
+  {
+    initWalker(serverProperties, QueryStackTests.DEFAULT_NOOP_SCHEDULER);
+  }
+
+  /**
+   * Initialize (or reinitialize) our {@link #walker} and {@link #closer}.
+   */
+  private void initWalker(final Map<String, String> serverProperties, QueryScheduler schedulerForTest)
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final ServerConfig serverConfig = jsonMapper.convertValue(serverProperties, ServerConfig.class);
@@ -472,7 +526,7 @@ public class ClientQuerySegmentWalkerTest
                 ),
                 joinableFactory,
                 conglomerate,
-                null /* QueryScheduler */
+                schedulerForTest
             ),
             ClusterOrLocal.CLUSTER
         ),
@@ -480,8 +534,9 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createLocalQuerySegmentWalker(
                 conglomerate,
                 segmentWrangler,
-                joinableFactory
-            ),
+                joinableFactory,
+                schedulerForTest
+                ),
             ClusterOrLocal.LOCAL
         ),
         conglomerate,
