@@ -72,6 +72,7 @@ public abstract class BaseJettyTest
   protected HttpClient client;
   protected Server server;
   protected int port = -1;
+  protected int tlsPort = -1;
 
   public static void setProperties()
   {
@@ -87,6 +88,8 @@ public abstract class BaseJettyTest
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
     port = node.getPlaintextPort();
+    tlsPort = node.getTlsPort();
+
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);

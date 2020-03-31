@@ -22,6 +22,7 @@ package org.apache.druid.server.initialization.jetty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.fasterxml.jackson.jaxrs.smile.JacksonSmileProvider;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
@@ -536,5 +537,11 @@ public class JettyServerModule extends JerseyServletModule
 
       return newTrustManagers;
     }
+  }
+
+  @VisibleForTesting
+  public int getActiveConnections()
+  {
+    return ACTIVE_CONNECTIONS.get();
   }
 }
