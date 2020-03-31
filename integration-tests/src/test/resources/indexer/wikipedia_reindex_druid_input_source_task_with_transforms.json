@@ -28,24 +28,24 @@
             },
             "dimensionsSpec": {
                 "dimensions": [
-                    "page",
                     {"type": "string", "name": "language", "createBitmapIndex": false},
                     "user",
                     "unpatrolled",
-                    "newPage",
+                    "page",
                     "anonymous",
                     "namespace",
                     "country",
                     "region",
                     "city"
-                ]
+                ],
+                "dimensionExclusions" : ["robot", "continent"]
             },
             "transformSpec": {
                 "transforms": [
                     {
                         "type": "expression",
-                        "name": "newPage",
-                        "expression": "page"
+                        "name": "page",
+                        "expression": "concat('tf_', page)"
                     },
                     {
                         "type": "expression",
