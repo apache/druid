@@ -61,7 +61,6 @@
                             {"type": "string", "name": "language", "createBitmapIndex": false},
                             "user",
                             "unpatrolled",
-                            "newPage",
                             "robot",
                             "anonymous",
                             "namespace",
