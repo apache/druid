@@ -257,6 +257,7 @@ def build_compatible_license_names():
     compatible_licenses['The Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License - Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
+    compatible_licenses['Eclipse Public License v1.0'] = 'Eclipse Public License 1.0'
 
     compatible_licenses['Eclipse Distribution License 1.0'] = 'Eclipse Distribution License 1.0'
     compatible_licenses['Eclipse Distribution License - v 1.0'] = 'Eclipse Distribution License 1.0'
