@@ -23,7 +23,8 @@
             "dataSource":"%%DATASOURCE%%",
             "granularity":"day",
             "dimensions":[
-                "page"
+                "newPage",
+                "city"
             ],
             "filter":{
                 "type":"selector",
@@ -40,6 +41,11 @@
                     "type":"longSum",
                     "fieldName":"double-deleted",
                     "name":"double_deleted_count"
+                },
+                {
+                    "type":"longSum",
+                    "fieldName":"delta",
+                    "name":"delta_overshadowed"
                 }
             ],
             "postAggregations": [
@@ -63,8 +69,10 @@
             "timestamp" : "2013-08-31T00:00:00.000Z",
             "event" : {
                 "added_count_times_ten" : 27160.0,
-                "page" : "tf_Crimson Typhoon",
+                "newPage" : "Crimson Typhoon",
+                "city" : "city-Taiyuan",
                 "double_deleted_count" : 10,
+                "delta_overshadowed" : 450,
                 "added_count" : 2716
             }
         } ]

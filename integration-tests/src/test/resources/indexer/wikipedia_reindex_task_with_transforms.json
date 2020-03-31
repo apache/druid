@@ -49,10 +49,10 @@
                     },
                     "dimensionsSpec": {
                         "dimensions": [
-                            "page",
                             {"type": "string", "name": "language", "createBitmapIndex": false},
                             "user",
                             "unpatrolled",
+                            "page",
                             "newPage",
                             "anonymous",
                             "namespace",
@@ -70,13 +70,18 @@
                             },
                             {
                                 "type": "expression",
-                                "name": "country",
-                                "expression": "concat(\"country-\", country)"
+                                "name": "city",
+                                "expression": "concat('city-', city)"
                             },
                             {
                                 "type": "expression",
                                 "name": "one-plus-triple-added",
                                 "expression": "\"triple-added\" + 1"
+                            },
+                            {
+                                "type": "expression",
+                                "name": "delta",
+                                "expression": "\"delta\" / 2"
                             },
                             {
                                 "type": "expression",

@@ -181,17 +181,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               .from(partitionHolder)
               .transform(chunk -> new DruidSegmentInputEntity(segmentLoader, chunk.getObject(), holder.getInterval()));
         }).iterator();
-    final List<String> effectiveDimensions;
-    if (dimensions == null) {
-      effectiveDimensions = ReingestionTimelineUtils.getUniqueDimensions(
-          timeline,
-          inputRowSchema.getDimensionsSpec().getDimensionExclusions()
-      );
-    } else if (inputRowSchema.getDimensionsSpec().hasCustomDimensions()) {
-      effectiveDimensions = inputRowSchema.getDimensionsSpec().getDimensionNames();
-    } else {
-      effectiveDimensions = dimensions;
-    }
+    final List<String> effectiveDimensions = ReingestionTimelineUtils.getDimensionsToReingest(
+      dimensions,
+      inputRowSchema.getDimensionsSpec(),
+      timeline
+  );
 
     List<String> effectiveMetrics;
     if (metrics == null) {

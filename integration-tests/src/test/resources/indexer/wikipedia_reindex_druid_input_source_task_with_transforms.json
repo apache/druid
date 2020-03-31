@@ -32,25 +32,35 @@
                     "user",
                     "unpatrolled",
                     "page",
+                    "newPage",
                     "anonymous",
                     "namespace",
                     "country",
                     "region",
                     "city"
-                ],
-                "dimensionExclusions" : ["robot", "continent"]
+                ]
             },
             "transformSpec": {
                 "transforms": [
                     {
                         "type": "expression",
-                        "name": "page",
-                        "expression": "concat('tf_', page)"
+                        "name": "newPage",
+                        "expression": "page"
+                    },
+                    {
+                        "type": "expression",
+                        "name": "city",
+                        "expression": "concat('city-', city)"
                     },
                     {
                         "type": "expression",
                         "name": "one-plus-triple-added",
                         "expression": "\"triple-added\" + 1"
+                    },
+                    {
+                        "type": "expression",
+                        "name": "delta",
+                        "expression": "\"delta\" / 2"
                     },
                     {
                         "type": "expression",
