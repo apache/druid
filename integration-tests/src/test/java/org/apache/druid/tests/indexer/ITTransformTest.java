@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -68,12 +69,13 @@ public class ITTransformTest extends AbstractITBatchIndexTest
     }
   }
 
-  // TODO: re-instate this test when https://github.com/apache/druid/issues/9591 is fixed
-  // Move the re-index step into testIndexAndReIndexWithTransformSpec for faster tests!
   @Test
   @Ignore
   public void testIndexAndReIndexUsingIngestSegmentWithTransforms() throws IOException
   {
+    // TODO: re-instate this test when https://github.com/apache/druid/issues/9591 is fixed
+    // Move the re-index step into testIndexAndReIndexWithTransformSpec for faster tests!
+    Assert.fail();
     final String reindexDatasource = REINDEX_DATASOURCE + "-testIndexData";
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
@@ -96,16 +98,18 @@ public class ITTransformTest extends AbstractITBatchIndexTest
     }
   }
 
-  // TODO: re-instate this test when https://github.com/apache/druid/issues/9589 is fixed
   @Test
   @Ignore
   public void testIndexWithFirehoseAndTransforms() throws IOException
   {
+    // TODO: re-instate this test when https://github.com/apache/druid/issues/9589 is fixed
+    Assert.fail();
+    final String indexDatasource = INDEX_DATASOURCE + "-firehose";
     try (
-        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       doIndexTest(
-          INDEX_DATASOURCE,
+          indexDatasource,
           INDEX_TASK_WITH_FIREHOSE,
           INDEX_QUERIES_RESOURCE,
           false,
