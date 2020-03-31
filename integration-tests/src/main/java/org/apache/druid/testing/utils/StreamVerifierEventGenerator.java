@@ -26,9 +26,9 @@ import java.util.UUID;
 
 public class StreamVerifierEventGenerator extends SyntheticGenerator
 {
-  public StreamVerifierEventGenerator(int eventsPerSeconds, long cyclePaddingMs, int totalNumberOfSeconds)
+  public StreamVerifierEventGenerator(int eventsPerSeconds, long cyclePaddingMs)
   {
-    super(eventsPerSeconds, cyclePaddingMs, totalNumberOfSeconds);
+    super(eventsPerSeconds, cyclePaddingMs);
   }
 
   @Override

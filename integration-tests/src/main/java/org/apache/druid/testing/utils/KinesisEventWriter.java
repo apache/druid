@@ -36,10 +36,9 @@ public class KinesisEventWriter implements EventWriter
 {
   private static final Logger LOG = new Logger(KinesisEventWriter.class);
 
-  private final String streamName;
   private final KinesisProducer kinesisProducer;
 
-  public KinesisEventWriter(String endpoint, String streamName, boolean aggregate) throws Exception
+  public KinesisEventWriter(String endpoint, boolean aggregate) throws Exception
   {
     String pathToConfigFile = System.getProperty("override.config.path");
     Properties prop = new Properties();
@@ -63,11 +62,10 @@ public class KinesisEventWriter implements EventWriter
         .setAggregationEnabled(aggregate);
 
     this.kinesisProducer = new KinesisProducer(kinesisProducerConfiguration);
-    this.streamName = streamName;
   }
 
   @Override
-  public void write(String event)
+  public void write(String streamName, String event)
   {
     kinesisProducer.addUserRecord(
         streamName,

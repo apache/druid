@@ -30,9 +30,9 @@ public class WikipediaStreamEventGenerator extends SyntheticGenerator
 {
   private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-  public WikipediaStreamEventGenerator(int eventsPerSeconds, long cyclePaddingMs, int totalNumberOfSeconds)
+  public WikipediaStreamEventGenerator(int eventsPerSeconds, long cyclePaddingMs)
   {
-    super(eventsPerSeconds, cyclePaddingMs, totalNumberOfSeconds);
+    super(eventsPerSeconds, cyclePaddingMs);
   }
 
   @Override

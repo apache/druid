@@ -52,25 +52,22 @@ public abstract class SyntheticGenerator implements Generator
   // second to begin.
   private final long cyclePaddingMs;
 
-  private final int totalNumberOfSecond;
-
-  public SyntheticGenerator(int eventsPerSecond, long cyclePaddingMs, int totalNumberOfSecond)
+  public SyntheticGenerator(int eventsPerSecond, long cyclePaddingMs)
   {
     this.eventsPerSecond = eventsPerSecond;
     this.cyclePaddingMs = cyclePaddingMs;
-    this.totalNumberOfSecond = totalNumberOfSecond;
   }
 
   abstract Object getEvent(int row, DateTime timestamp);
 
   @Override
-  public void start(EventWriter eventWriter)
+  public void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds)
   {
-    start(eventWriter, null);
+    start(streamTopic, eventWriter, totalNumberOfSeconds, null);
   }
 
   @Override
-  public void start(EventWriter eventWriter, DateTime overrrideFirstEventTime)
+  public void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime)
   {
     // The idea here is that we will send [eventsPerSecond] events that will either use [nowFlooredToSecond]
     // or the [overrrideFirstEventTime] as the primary timestamp.
@@ -98,7 +95,7 @@ public abstract class SyntheticGenerator implements Generator
         );
 
         for (int i = 1; i <= eventsPerSecond; i++) {
-          eventWriter.write(MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
+          eventWriter.write(streamTopic, MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
 
           long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowCeilingToSecond);
           if ((i <= 100 && i % 10 == 0) || i % 100 == 0) {
@@ -121,14 +118,14 @@ public abstract class SyntheticGenerator implements Generator
             nowCeilingToSecond
         );
 
-        if (seconds >= totalNumberOfSecond) {
+        if (seconds >= totalNumberOfSeconds) {
+          eventWriter.flush();
           log.info(
               "Finished writing %s seconds",
               seconds
           );
           break;
         }
-        eventWriter.flush();
       }
       catch (Exception e) {
         throw new RuntimeException("Exception in event generation loop", e);

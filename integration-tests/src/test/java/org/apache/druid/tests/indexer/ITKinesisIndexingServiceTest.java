@@ -35,6 +35,7 @@ import org.apache.druid.tests.TestNGGroup;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -81,11 +82,20 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   @BeforeClass
   public void beforeClass() throws Exception
   {
-    kinesisAdminClient = new KinesisAdminClient(config);
+    kinesisAdminClient = new KinesisAdminClient(config.getStreamEndpoint());
+    kinesisEventWriter = new KinesisEventWriter(config.getStreamEndpoint(), false);
+    wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS);
+  }
+
+  @AfterClass
+  public void tearDown()
+  {
+    wikipediaStreamEventGenerator.shutdown();
+    kinesisEventWriter.shutdown();
   }
 
   @BeforeMethod
-  public void before() throws Exception
+  public void before()
   {
     streamName = "kinesis_index_test_" + UUID.randomUUID();
     String datasource = "kinesis_indexing_service_test_" + UUID.randomUUID();
@@ -98,9 +108,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
         30,
         "Wait for stream active"
     );
-    kinesisEventWriter = new KinesisEventWriter(config.getStreamEndpoint(), streamName, false);
     secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
-    wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, TOTAL_NUMBER_OF_SECOND);
     fullDatasourceName = datasource + config.getExtraDatasourceNameSuffix();
     kinesisIngestionPropsTransform = spec -> {
       try {
@@ -201,9 +209,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   @AfterMethod
   public void teardown()
   {
-    kinesisAdminClient.deleteStream(streamName);
-    wikipediaStreamEventGenerator.shutdown();
-    kinesisEventWriter.shutdown();
+//    kinesisAdminClient.deleteStream(streamName);
   }
 
   @Test
@@ -218,7 +224,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       String supervisorId = indexer.submitSupervisor(taskSpec);
       LOG.info("Submitted supervisor");
       // Start Kinesis data generator
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, TOTAL_NUMBER_OF_SECOND, FIRST_EVENT_TIME);
       verifyIngestedData(supervisorId);
     }
   }
@@ -235,7 +241,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       String supervisorId = indexer.submitSupervisor(taskSpec);
       LOG.info("Submitted supervisor");
       // Start Kinesis data generator
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, TOTAL_NUMBER_OF_SECOND, FIRST_EVENT_TIME);
       verifyIngestedData(supervisorId);
     }
   }
@@ -272,13 +278,11 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       // Start generating half of the data
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateFirstRound, FIRST_EVENT_TIME);
       // Suspend the supervisor
       indexer.suspendSupervisor(supervisorId);
       // Start generating remainning half of the data
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateRemaining, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
       // Resume the supervisor
       indexer.resumeSupervisor(supervisorId);
       // Verify supervisor is healthy after suspension
@@ -321,8 +325,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       // Start generating one third of the data (before restarting)
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateFirstRound, FIRST_EVENT_TIME);
       // Restart Druid process
       LOG.info("Restarting Druid process");
       restartRunnable.run();
@@ -330,15 +333,13 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       // Start generating one third of the data (while restarting)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateSecondRound);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateSecondRound, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
       // Wait for Druid process to be available
       LOG.info("Waiting for Druid process to be available");
       waitForReadyRunnable.run();
       LOG.info("Druid process is now available");
       // Start generating remainding data (after restarting)
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateRemaining, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));
       // Verify supervisor is healthy
       ITRetryUtil.retryUntil(
           () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
@@ -365,15 +366,13 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       // Start generating one third of the data (before resharding)
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateFirstRound);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME);
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateFirstRound, FIRST_EVENT_TIME);
       // Reshard the supervisor by split from KINESIS_SHARD_COUNT to newShardCount
       kinesisAdminClient.updateShardCount(streamName, newShardCount);
       // Start generating one third of the data (while resharding)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateSecondRound);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateSecondRound, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
       // Wait for kinesis stream to finish resharding
       ITRetryUtil.retryUntil(
           () -> kinesisAdminClient.isStreamActive(streamName),
@@ -383,8 +382,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
           "Waiting for Kinesis stream to finish resharding"
       );
       // Start generating remainding data (after resharding)
-      wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS, secondsToGenerateRemaining);
-      wikipediaStreamEventGenerator.start(kinesisEventWriter, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));
+      wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateRemaining, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));
       // Verify supervisor is healthy after suspension
       ITRetryUtil.retryUntil(
           () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),

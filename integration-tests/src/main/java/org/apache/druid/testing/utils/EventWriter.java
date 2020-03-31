@@ -21,7 +21,7 @@ package org.apache.druid.testing.utils;
 
 public interface EventWriter
 {
-  void write(String event);
+  void write(String topic, String event);
 
   void shutdown();
 

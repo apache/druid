@@ -36,7 +36,6 @@ import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
 import com.amazonaws.util.AwsHostNameUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.testing.IntegrationTestingConfig;
 
 import java.io.FileInputStream;
 import java.util.Map;
@@ -46,9 +45,8 @@ public class KinesisAdminClient
 {
   private AmazonKinesis amazonKinesis;
 
-  public KinesisAdminClient(IntegrationTestingConfig config) throws Exception
+  public KinesisAdminClient(String endpoint) throws Exception
   {
-    String endpoint = config.getStreamEndpoint();
     String pathToConfigFile = System.getProperty("override.config.path");
     Properties prop = new Properties();
     prop.load(new FileInputStream(pathToConfigFile));

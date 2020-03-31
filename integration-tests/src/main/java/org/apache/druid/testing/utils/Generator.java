@@ -23,9 +23,9 @@ import org.joda.time.DateTime;
 
 public interface Generator
 {
-  void start(EventWriter eventWriter);
+  void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds);
 
-  void start(EventWriter eventWriter, DateTime overrrideFirstEventTime);
+  void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
 
   void shutdown();
 }
