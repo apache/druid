@@ -6,7 +6,8 @@
             "dataSource":"%%DATASOURCE%%",
             "granularity":"day",
             "dimensions":[
-                "page"
+                "page",
+                "city"
             ],
             "filter":{
                 "type":"selector",
@@ -22,6 +23,11 @@
                     "type":"longSum",
                     "fieldName":"triple-added",
                     "name":"added_count"
+                },
+                {
+                    "type":"longSum",
+                    "fieldName":"delta",
+                    "name":"delta_sum"
                 }
             ],
             "postAggregations": [
@@ -46,7 +52,9 @@
             "event" : {
                 "added_count_times_ten" : 27150.0,
                 "page" : "Crimson Typhoon",
+                "city" : "Taiyuan",
                 "added_count" : 2715,
+                "delta_sum" : 900,
                 "rows" : 1
             }
         } ]
