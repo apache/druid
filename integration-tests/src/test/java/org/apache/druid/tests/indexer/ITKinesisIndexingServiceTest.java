@@ -54,7 +54,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
   private static final int KINESIS_SHARD_COUNT = 2;
   private static final String STREAM_EXPIRE_TAG = "druid-ci-expire-after";
-  private static final long WAIT_TIME_MILLIS = 60 * 1000L;
+  private static final long WAIT_TIME_MILLIS = 3 * 60 * 1000L;
   private static final DateTime FIRST_EVENT_TIME = DateTimes.of(1994, 4, 29, 1, 0);
   private static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/stream_supervisor_spec_legacy_parser.json";
   private static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/stream_supervisor_spec_input_format.json";
@@ -77,6 +77,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   private WikipediaStreamEventGenerator wikipediaStreamEventGenerator;
   private Function<String, String> kinesisIngestionPropsTransform;
   private Function<String, String> kinesisQueryPropsTransform;
+  private String supervisorId;
   private int secondsToGenerateRemaining;
 
   @BeforeClass
@@ -209,7 +210,14 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   @AfterMethod
   public void teardown()
   {
-//    kinesisAdminClient.deleteStream(streamName);
+    try {
+      kinesisEventWriter.flush();
+      indexer.shutdownSupervisor(supervisorId);
+      unloader(fullDatasourceName);
+      kinesisAdminClient.deleteStream(streamName);
+    } catch (Exception e) {
+      // Best effort cleanup
+    }
   }
 
   @Test
@@ -221,7 +229,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_LEGACY_PARSER));
       LOG.info("supervisorSpec: [%s]\n", taskSpec);
       // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
+      supervisorId = indexer.submitSupervisor(taskSpec);
       LOG.info("Submitted supervisor");
       // Start Kinesis data generator
       wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, TOTAL_NUMBER_OF_SECOND, FIRST_EVENT_TIME);
@@ -238,7 +246,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
       LOG.info("supervisorSpec: [%s]\n", taskSpec);
       // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
+      supervisorId = indexer.submitSupervisor(taskSpec);
       LOG.info("Submitted supervisor");
       // Start Kinesis data generator
       wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, TOTAL_NUMBER_OF_SECOND, FIRST_EVENT_TIME);
@@ -273,7 +281,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
       LOG.info("supervisorSpec: [%s]\n", taskSpec);
       // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
+      supervisorId = indexer.submitSupervisor(taskSpec);
       LOG.info("Submitted supervisor");
       // Start generating half of the data
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
@@ -320,7 +328,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
       LOG.info("supervisorSpec: [%s]\n", taskSpec);
       // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
+      supervisorId = indexer.submitSupervisor(taskSpec);
       LOG.info("Submitted supervisor");
       // Start generating one third of the data (before restarting)
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
@@ -361,7 +369,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       final String taskSpec = kinesisIngestionPropsTransform.apply(getResourceAsString(INDEXER_FILE_INPUT_FORMAT));
       LOG.info("supervisorSpec: [%s]\n", taskSpec);
       // Start supervisor
-      String supervisorId = indexer.submitSupervisor(taskSpec);
+      supervisorId = indexer.submitSupervisor(taskSpec);
       LOG.info("Submitted supervisor");
       // Start generating one third of the data (before resharding)
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
