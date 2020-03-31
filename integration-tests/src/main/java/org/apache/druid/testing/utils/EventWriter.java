@@ -24,4 +24,6 @@ public interface EventWriter
   void write(String event);
 
   void shutdown();
+
+  void flush();
 }

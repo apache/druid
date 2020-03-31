@@ -128,6 +128,7 @@ public abstract class SyntheticGenerator implements Generator
           );
           break;
         }
+        eventWriter.flush();
       }
       catch (Exception e) {
         throw new RuntimeException("Exception in event generation loop", e);

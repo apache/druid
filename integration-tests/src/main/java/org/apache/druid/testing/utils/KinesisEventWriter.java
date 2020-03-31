@@ -55,7 +55,9 @@ public class KinesisEventWriter implements EventWriter
     KinesisProducerConfiguration kinesisProducerConfiguration = new KinesisProducerConfiguration()
         .setCredentialsProvider(credentials)
         .setRegion(AwsHostNameUtils.parseRegion(endpoint, null))
-        .setRequestTimeout(20000L)
+        .setRequestTimeout(600000L)
+        .setConnectTimeout(300000L)
+        .setRecordMaxBufferedTime(15000)
         .setRecordTtl(9223372036854775807L)
         .setMetricsLevel("none")
         .setAggregationEnabled(aggregate);
@@ -79,5 +81,18 @@ public class KinesisEventWriter implements EventWriter
   {
     LOG.info("Shutting down Kinesis client");
     kinesisProducer.flushSync();
+  }
+
+  @Override
+  public void flush()
+  {
+    kinesisProducer.flushSync();
+    ITRetryUtil.retryUntil(
+        () -> kinesisProducer.getOutstandingRecordsCount() == 0,
+        true,
+        10000,
+        30,
+        "Waiting for all Kinesis tasks to be flushed"
+    );
   }
 }
