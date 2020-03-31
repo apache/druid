@@ -24,7 +24,7 @@ import org.joda.time.DateTime;
 
 import java.util.UUID;
 
-public class StreamVerifierEventGenerator extends SyntheticGenerator
+public class StreamVerifierEventGenerator extends SyntheticStreamGenerator
 {
   public StreamVerifierEventGenerator(int eventsPerSeconds, long cyclePaddingMs)
   {

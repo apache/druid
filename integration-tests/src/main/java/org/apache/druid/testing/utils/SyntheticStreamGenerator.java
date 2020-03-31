@@ -27,9 +27,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
-public abstract class SyntheticGenerator implements Generator
+public abstract class SyntheticStreamGenerator implements StreamGenerator
 {
-  private static final Logger log = new Logger(SyntheticGenerator.class);
+  private static final Logger log = new Logger(SyntheticStreamGenerator.class);
   static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   static {
@@ -52,7 +52,7 @@ public abstract class SyntheticGenerator implements Generator
   // second to begin.
   private final long cyclePaddingMs;
 
-  public SyntheticGenerator(int eventsPerSecond, long cyclePaddingMs)
+  public SyntheticStreamGenerator(int eventsPerSecond, long cyclePaddingMs)
   {
     this.eventsPerSecond = eventsPerSecond;
     this.cyclePaddingMs = cyclePaddingMs;
@@ -61,13 +61,13 @@ public abstract class SyntheticGenerator implements Generator
   abstract Object getEvent(int row, DateTime timestamp);
 
   @Override
-  public void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds)
+  public void start(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds)
   {
-    start(streamTopic, eventWriter, totalNumberOfSeconds, null);
+    start(streamTopic, streamEventWriter, totalNumberOfSeconds, null);
   }
 
   @Override
-  public void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime)
+  public void start(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime)
   {
     // The idea here is that we will send [eventsPerSecond] events that will either use [nowFlooredToSecond]
     // or the [overrrideFirstEventTime] as the primary timestamp.
@@ -95,7 +95,7 @@ public abstract class SyntheticGenerator implements Generator
         );
 
         for (int i = 1; i <= eventsPerSecond; i++) {
-          eventWriter.write(streamTopic, MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
+          streamEventWriter.write(streamTopic, MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
 
           long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowCeilingToSecond);
           if ((i <= 100 && i % 10 == 0) || i % 100 == 0) {
@@ -119,7 +119,7 @@ public abstract class SyntheticGenerator implements Generator
         );
 
         if (seconds >= totalNumberOfSeconds) {
-          eventWriter.flush();
+          streamEventWriter.flush();
           log.info(
               "Finished writing %s seconds",
               seconds

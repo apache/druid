@@ -26,11 +26,11 @@ import org.joda.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-public class WikipediaStreamEventGenerator extends SyntheticGenerator
+public class WikipediaStreamEventStreamGenerator extends SyntheticStreamGenerator
 {
   private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-  public WikipediaStreamEventGenerator(int eventsPerSeconds, long cyclePaddingMs)
+  public WikipediaStreamEventStreamGenerator(int eventsPerSeconds, long cyclePaddingMs)
   {
     super(eventsPerSeconds, cyclePaddingMs);
   }

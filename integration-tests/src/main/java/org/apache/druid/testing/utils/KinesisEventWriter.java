@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
-public class KinesisEventWriter implements EventWriter
+public class KinesisEventWriter implements StreamEventWriter
 {
   private static final Logger LOG = new Logger(KinesisEventWriter.class);
 
@@ -90,7 +90,7 @@ public class KinesisEventWriter implements EventWriter
         true,
         10000,
         30,
-        "Waiting for all Kinesis tasks to be flushed"
+        "Waiting for all Kinesis writes to be flushed"
     );
   }
 }

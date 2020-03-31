@@ -19,13 +19,11 @@
 
 package org.apache.druid.testing.utils;
 
-import org.joda.time.DateTime;
-
-public interface Generator
+public interface StreamEventWriter
 {
-  void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds);
-
-  void start(String streamTopic, EventWriter eventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
+  void write(String topic, String event);
 
   void shutdown();
+
+  void flush();
 }

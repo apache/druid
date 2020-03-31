@@ -30,7 +30,7 @@ import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KinesisAdminClient;
 import org.apache.druid.testing.utils.KinesisEventWriter;
-import org.apache.druid.testing.utils.WikipediaStreamEventGenerator;
+import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.tests.TestNGGroup;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -74,7 +74,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   private String fullDatasourceName;
   private KinesisAdminClient kinesisAdminClient;
   private KinesisEventWriter kinesisEventWriter;
-  private WikipediaStreamEventGenerator wikipediaStreamEventGenerator;
+  private WikipediaStreamEventStreamGenerator wikipediaStreamEventGenerator;
   private Function<String, String> kinesisIngestionPropsTransform;
   private Function<String, String> kinesisQueryPropsTransform;
   private String supervisorId;
@@ -85,7 +85,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   {
     kinesisAdminClient = new KinesisAdminClient(config.getStreamEndpoint());
     kinesisEventWriter = new KinesisEventWriter(config.getStreamEndpoint(), false);
-    wikipediaStreamEventGenerator = new WikipediaStreamEventGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS);
+    wikipediaStreamEventGenerator = new WikipediaStreamEventStreamGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS);
   }
 
   @AfterClass
@@ -215,7 +215,8 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       indexer.shutdownSupervisor(supervisorId);
       unloader(fullDatasourceName);
       kinesisAdminClient.deleteStream(streamName);
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       // Best effort cleanup
     }
   }
