@@ -15,6 +15,11 @@
                 },
                 {
                     "type": "doubleSum",
+                    "name": "triple-added",
+                    "fieldName": "triple-added"
+                },
+                {
+                    "type": "doubleSum",
                     "name": "deleted",
                     "fieldName": "deleted"
                 },
@@ -80,14 +85,7 @@
                         "name": "triple-added",
                         "expression": "added * 3"
                     }
-                ],
-                "filter": {
-                    "type":"or",
-                    "fields": [
-                        { "type": "selector", "dimension": "language", "value": "language-zh" },
-                        { "type": "selector", "dimension": "page", "value": "Crimson Typhoon" }
-                    ]
-                }
+                ]
             }
         },
         "ioConfig": {

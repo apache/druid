@@ -34,21 +34,11 @@ public class ITTransformTest extends AbstractITBatchIndexTest
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries_with_transform.json";
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
 
-  private static final String REINDEX_TASK = "/indexer/wikipedia_reindex_task.json";
-  private static final String REINDEX_TASK_WITH_DRUID_INPUT_SOURCE = "/indexer/wikipedia_reindex_druid_input_source_task.json";
-  private static final String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_reindex_queries.json";
-  private static final String REINDEX_DATASOURCE = "wikipedia_reindex_test";
-
   @Test
   public void testIndexAndReIndexWithTransformSpec() throws Exception
   {
-    final String reindexDatasource = REINDEX_DATASOURCE + "-testIndexData";
-    //final String reindexDatasourceWithDruidInputSource = REINDEX_DATASOURCE + "-testIndexData-druidInputSource";
-
     try (
-        //final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-        final Closeable ignored2 = unloader(reindexDatasource + config.getExtraDatasourceNameSuffix());
-        //final Closeable ignored3 = unloader(reindexDatasourceWithDruidInputSource + config.getExtraDatasourceNameSuffix())
+        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
     ) {
       doIndexTest(
           INDEX_DATASOURCE,
@@ -58,20 +48,6 @@ public class ITTransformTest extends AbstractITBatchIndexTest
           true,
           true
       );
-      /*
-      doReindexTest(
-          INDEX_DATASOURCE,
-          reindexDatasource,
-          REINDEX_TASK,
-          REINDEX_QUERIES_RESOURCE
-      );
-      doReindexTest(
-          INDEX_DATASOURCE,
-          reindexDatasourceWithDruidInputSource,
-          REINDEX_TASK_WITH_DRUID_INPUT_SOURCE,
-          REINDEX_QUERIES_RESOURCE
-      );
-       */
     }
   }
 }
