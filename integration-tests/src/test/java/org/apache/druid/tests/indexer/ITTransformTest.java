@@ -22,7 +22,6 @@ package org.apache.druid.tests.indexer;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -69,8 +68,7 @@ public class ITTransformTest extends AbstractITBatchIndexTest
     }
   }
 
-  @Test
-  @Ignore
+  @Test(enabled = false)
   public void testIndexAndReIndexUsingIngestSegmentWithTransforms() throws IOException
   {
     // TODO: re-instate this test when https://github.com/apache/druid/issues/9591 is fixed
@@ -98,8 +96,7 @@ public class ITTransformTest extends AbstractITBatchIndexTest
     }
   }
 
-  @Test
-  @Ignore
+  @Test(enabled = false)
   public void testIndexWithFirehoseAndTransforms() throws IOException
   {
     // TODO: re-instate this test when https://github.com/apache/druid/issues/9589 is fixed
