@@ -242,6 +242,7 @@ def build_compatible_license_names():
     compatible_licenses['Revised BSD'] = 'BSD-3-Clause License'
     compatible_licenses['New BSD License'] = 'BSD-3-Clause License'
     compatible_licenses['3-Clause BSD License'] = 'BSD-3-Clause License'
+    compatible_licenses['BSD 3-Clause'] = 'BSD-3-Clause License'
 
     compatible_licenses['ICU License'] = 'ICU License'
 

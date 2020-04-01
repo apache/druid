@@ -141,6 +141,7 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>${apache.ranger.gson.version}</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -389,5 +390,17 @@
                 <filtering>true</filtering>
             </testResource>
         </testResources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <usedDependencies>
+                        <!-- These are needed for scope: compile -->
+                        <dependency>org.apache.ranger:ranger-plugins-audit</dependency>
+                    </usedDependencies>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>
