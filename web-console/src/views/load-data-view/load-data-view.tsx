@@ -2111,7 +2111,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 );
                 const newFilter = joinFilter(deepSet(curFilter, `restFilter`, newFilterValue));
                 this.updateSpec(deepSet(spec, 'spec.dataSchema.transformSpec.filter', newFilter));
-                this.queryForFilter();
+                this.setState({ showGlobalFilter: false, newFilterValue: undefined });
               }}
             />
             <Button text="Cancel" onClick={() => this.setState({ showGlobalFilter: false })} />
@@ -2123,7 +2123,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <FormGroup>
           <Button
             text={`${hasGlobalFilter ? 'Edit' : 'Add'} global filter`}
-            onClick={() => this.setState({ showGlobalFilter: true })}
+            onClick={() =>
+              this.setState({
+                showGlobalFilter: true,
+                newFilterValue: deepGet(spec, 'spec.dataSchema.transformSpec.filter'),
+              })
+            }
           />
         </FormGroup>
       );
