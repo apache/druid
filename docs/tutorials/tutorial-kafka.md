@@ -132,8 +132,6 @@ There are no other changes that need to be made hear, so click `Next: Publish` t
 
 ![Data loader publish](../assets/tutorial-kafka-data-loader-08.png "Data loader publish")
 
-Let's name this datasource `wikipedia-kafka`.
-
 Finally, click `Next` to review your spec.
 
 ![Data loader spec](../assets/tutorial-kafka-data-loader-09.png "Data loader spec")
@@ -156,13 +154,13 @@ Navigate to the `Datasources` view from the header.
 
 ![Datasource view](../assets/tutorial-kafka-data-loader-11.png "Datasource view")
 
-When the `wikipedia-kafka` datasource appears here it can be queried. 
+When the `wikipedia` datasource appears here it can be queried. 
 
 *Note:* if the datasource does not appear after a minute you might have not set the supervisor to read from the start of the stream (in the `Tune` step).
 
 At this point, you can go to the `Query` view to run SQL queries against the datasource.
 
-Since this is a small dataset, you can simply run a `SELECT * FROM "wikipedia-kafka"` query to see your results.
+Since this is a small dataset, you can simply run a `SELECT * FROM wikipedia` query to see your results.
 
 ![Query view](../assets/tutorial-kafka-data-loader-12.png "Query view")
 
