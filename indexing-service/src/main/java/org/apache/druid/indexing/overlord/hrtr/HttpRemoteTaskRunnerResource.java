@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateInternalResourceFilter;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -38,7 +38,7 @@ import javax.ws.rs.core.Response;
  * {@link org.apache.druid.indexing.overlord.http.OverlordResource}
  */
 @Path("/druid-internal/v1/httpRemoteTaskRunner")
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters(StateInternalResourceFilter.class)
 public class HttpRemoteTaskRunnerResource
 {
   private final TaskMaster taskMaster;

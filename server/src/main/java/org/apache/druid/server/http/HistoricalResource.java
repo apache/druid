@@ -22,7 +22,7 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordination.ZkCoordinator;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateReadinessResourceFilter;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -46,7 +46,7 @@ public class HistoricalResource
 
   @GET
   @Path("/loadstatus")
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateReadinessResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {

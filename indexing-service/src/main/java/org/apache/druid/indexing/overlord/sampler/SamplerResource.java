@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord.sampler;
 
 import com.google.common.base.Preconditions;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateSamplerResourceFilter;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -35,7 +35,7 @@ public class SamplerResource
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateSamplerResourceFilter.class)
   public SamplerResponse post(final SamplerSpec sampler)
   {
     return Preconditions.checkNotNull(sampler, "Request body cannot be empty").sample();

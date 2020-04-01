@@ -27,11 +27,14 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
-public class StateResourceFilter extends AbstractResourceFilter
+public class StateReadinessResourceFilter extends AbstractResourceFilter
 {
   @Inject
-  public StateResourceFilter(AuthorizerMapper authorizerMapper)
+  public StateReadinessResourceFilter(
+      AuthorizerMapper authorizerMapper
+  )
   {
     super(authorizerMapper);
   }
@@ -40,7 +43,7 @@ public class StateResourceFilter extends AbstractResourceFilter
   public ContainerRequest filter(ContainerRequest request)
   {
     final ResourceAction resourceAction = new ResourceAction(
-        Resource.STATE_RESOURCE,
+        new Resource("READINESS", ResourceType.STATE),
         getAction(request)
     );
 

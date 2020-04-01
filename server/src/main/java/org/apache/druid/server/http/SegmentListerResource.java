@@ -36,7 +36,7 @@ import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.HttpLoadQueuePeon;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateInternalResourceFilter;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -59,7 +59,7 @@ import java.util.List;
  * Endpoints exposed here are to be used only for druid internal management of segments by Coordinators, Brokers etc.
  */
 @Path("/druid-internal/v1/segments/")
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters(StateInternalResourceFilter.class)
 public class SegmentListerResource
 {
   protected static final EmittingLogger log = new EmittingLogger(SegmentListerResource.class);

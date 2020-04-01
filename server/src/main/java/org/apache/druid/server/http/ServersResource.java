@@ -27,7 +27,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateServersResourceFilter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -47,7 +47,7 @@ import java.util.Set;
 /**
  */
 @Path("/druid/coordinator/v1/servers")
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters(StateServersResourceFilter.class)
 public class ServersResource
 {
   private static Map<String, Object> makeSimpleServer(DruidServer input)

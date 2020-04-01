@@ -29,7 +29,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateInternalResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
@@ -81,7 +81,7 @@ public class BrokerQueryResource extends QueryResource
   @Path("/candidates")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE, APPLICATION_SMILE})
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateInternalResourceFilter.class)
   public Response getQueryTargets(
       InputStream in,
       @QueryParam("pretty") String pretty,

@@ -21,7 +21,7 @@ package org.apache.druid.client;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateInternalResourceFilter;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -33,7 +33,7 @@ import javax.ws.rs.core.Response;
  * Collection of http endpoits to introspect state of HttpServerInventoryView instance for debugging.
  */
 @Path("/druid-internal/v1/httpServerInventoryView")
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters(StateInternalResourceFilter.class)
 public class HttpServerInventoryViewResource
 {
   private final HttpServerInventoryView httpServerInventoryView;

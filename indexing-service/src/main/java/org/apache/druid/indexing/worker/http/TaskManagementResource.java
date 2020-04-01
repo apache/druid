@@ -36,7 +36,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.http.SegmentListerResource;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateInternalResourceFilter;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.AsyncEvent;
@@ -58,7 +58,7 @@ import java.io.IOException;
  * Endpoints used by Overlord to Manage tasks on this Middle Manager.
  */
 @Path("/druid-internal/v1/worker/")
-@ResourceFilters(StateResourceFilter.class)
+@ResourceFilters(StateInternalResourceFilter.class)
 public class TaskManagementResource
 {
   protected static final EmittingLogger log = new EmittingLogger(SegmentListerResource.class);

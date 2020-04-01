@@ -28,7 +28,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateStatusResourceFilter;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -74,7 +74,7 @@ public class StatusResource
   }
 
   @GET
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateStatusResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Status doGet(
       @Context final HttpServletRequest req

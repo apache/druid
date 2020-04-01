@@ -36,7 +36,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateInternalResourceFilter;
+import org.apache.druid.server.http.security.StateWorkerResourceFilter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import javax.ws.rs.DefaultValue;
@@ -122,7 +123,7 @@ public class WorkerResource
   @GET
   @Path("/enabled")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateInternalResourceFilter.class)
   public Response isEnabled()
   {
     try {
@@ -138,7 +139,7 @@ public class WorkerResource
   @GET
   @Path("/tasks")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateInternalResourceFilter.class)
   public Response getTasks()
   {
     try {
@@ -166,7 +167,7 @@ public class WorkerResource
   @POST
   @Path("/task/{taskid}/shutdown")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateInternalResourceFilter.class)
   public Response doShutdown(@PathParam("taskid") String taskid)
   {
     try {
@@ -182,7 +183,7 @@ public class WorkerResource
   @GET
   @Path("/task/{taskid}/log")
   @Produces(HttpMediaType.TEXT_PLAIN_UTF8)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateWorkerResourceFilter.class)
   public Response doGetLog(
       @PathParam("taskid") String taskid,
       @QueryParam("offset") @DefaultValue("0") long offset

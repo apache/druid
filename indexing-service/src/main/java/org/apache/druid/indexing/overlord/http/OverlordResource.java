@@ -64,7 +64,9 @@ import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateInternalResourceFilter;
+import org.apache.druid.server.http.security.StateStatusResourceFilter;
+import org.apache.druid.server.http.security.StateWorkerResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -203,7 +205,7 @@ public class OverlordResource
 
   @GET
   @Path("/leader")
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateStatusResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLeader()
   {
@@ -377,7 +379,7 @@ public class OverlordResource
   @POST
   @Path("/taskStatus")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateStatusResourceFilter.class)
   public Response getMultipleTaskStatuses(Set<String> taskIds)
   {
     if (taskIds == null || taskIds.size() == 0) {
@@ -470,7 +472,7 @@ public class OverlordResource
   @POST
   @Path("/action")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateInternalResourceFilter.class)
   public Response doAction(final TaskActionHolder holder)
   {
     return asLeaderWith(
@@ -711,7 +713,7 @@ public class OverlordResource
   @GET
   @Path("/workers")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateWorkerResourceFilter.class)
   public Response getWorkers()
   {
     return asLeaderWith(
@@ -741,7 +743,7 @@ public class OverlordResource
   @POST
   @Path("/worker/{host}/enable")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateWorkerResourceFilter.class)
   public Response enableWorker(@PathParam("host") final String host)
   {
     return changeWorkerStatus(host, WorkerTaskRunner.ActionType.ENABLE);
@@ -750,7 +752,7 @@ public class OverlordResource
   @POST
   @Path("/worker/{host}/disable")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateWorkerResourceFilter.class)
   public Response disableWorker(@PathParam("host") final String host)
   {
     return changeWorkerStatus(host, WorkerTaskRunner.ActionType.DISABLE);
@@ -782,7 +784,7 @@ public class OverlordResource
   @GET
   @Path("/scaling")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateWorkerResourceFilter.class)
   public Response getScalingState()
   {
     // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
