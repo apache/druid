@@ -141,7 +141,8 @@ public class KinesisAdminClient
     return getStreamShardCount(streamDescription);
   }
 
-  private boolean verifyStreamStatus(StreamDescription streamDescription, StreamStatus streamStatusToCheck) {
+  private boolean verifyStreamStatus(StreamDescription streamDescription, StreamStatus streamStatusToCheck)
+  {
     return streamStatusToCheck.toString().equals(streamDescription.getStreamStatus());
   }
 
@@ -150,7 +151,8 @@ public class KinesisAdminClient
     return streamDescription.getShards().size();
   }
 
-  private StreamDescription getStreamDescription(String streamName) {
+  private StreamDescription getStreamDescription(String streamName)
+  {
     DescribeStreamResult describeStreamResult = amazonKinesis.describeStream(streamName);
     if (describeStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
       throw new ISE("Cannot get stream description for integration test");
