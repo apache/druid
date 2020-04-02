@@ -31,6 +31,7 @@ import com.amazonaws.services.kinesis.model.CreateStreamResult;
 import com.amazonaws.services.kinesis.model.DeleteStreamResult;
 import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.ScalingType;
+import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.amazonaws.services.kinesis.model.StreamStatus;
 import com.amazonaws.services.kinesis.model.UpdateShardCountRequest;
 import com.amazonaws.services.kinesis.model.UpdateShardCountResult;
@@ -95,8 +96,14 @@ public class KinesisAdminClient
     }
   }
 
-  public void updateShardCount(String streamName, int newShardCount)
+  /**
+   * This method updates the shard count of {@param streamName} to have a final shard count of {@param newShardCount}
+   * If {@param blocksUntilStarted} is set to true, then this method will blocks until the resharding
+   * started (but not nessesary finished), otherwise, the method will returns right after issue the reshard command
+   */
+  public void updateShardCount(String streamName, int newShardCount, boolean blocksUntilStarted)
   {
+    int originalShardCount = getStreamShardCount(streamName);
     UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
     updateShardCountRequest.setStreamName(streamName);
     updateShardCountRequest.setTargetShardCount(newShardCount);
@@ -105,23 +112,49 @@ public class KinesisAdminClient
     if (updateShardCountResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
       throw new ISE("Cannot update stream's shard count for integration test");
     }
+    if (blocksUntilStarted) {
+      // Wait until the resharding started (or finished)
+      ITRetryUtil.retryUntil(
+          () -> {
+            StreamDescription streamDescription = getStreamDescription(streamName);
+            int updatedShardCount = getStreamShardCount(streamDescription);
+            return verifyStreamStatus(streamDescription, StreamStatus.UPDATING) ||
+                (verifyStreamStatus(streamDescription, StreamStatus.ACTIVE) && updatedShardCount > originalShardCount);
+          },
+          true,
+          30,
+          30,
+          "Kinesis stream resharding to start (or finished)"
+      );
+    }
   }
 
   public boolean isStreamActive(String streamName)
   {
-    DescribeStreamResult describeStreamResult = amazonKinesis.describeStream(streamName);
-    if (describeStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
-      throw new ISE("Cannot get stream status for integration test");
-    }
-    return StreamStatus.ACTIVE.toString().equals(describeStreamResult.getStreamDescription().getStreamStatus());
+    StreamDescription streamDescription = getStreamDescription(streamName);
+    return verifyStreamStatus(streamDescription, StreamStatus.ACTIVE);
   }
 
   public int getStreamShardCount(String streamName)
   {
+    StreamDescription streamDescription = getStreamDescription(streamName);
+    return getStreamShardCount(streamDescription);
+  }
+
+  private boolean verifyStreamStatus(StreamDescription streamDescription, StreamStatus streamStatusToCheck) {
+    return streamStatusToCheck.toString().equals(streamDescription.getStreamStatus());
+  }
+
+  private int getStreamShardCount(StreamDescription streamDescription)
+  {
+    return streamDescription.getShards().size();
+  }
+
+  private StreamDescription getStreamDescription(String streamName) {
     DescribeStreamResult describeStreamResult = amazonKinesis.describeStream(streamName);
     if (describeStreamResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
-      throw new ISE("Cannot get stream status for integration test");
+      throw new ISE("Cannot get stream description for integration test");
     }
-    return describeStreamResult.getStreamDescription().getShards().size();
+    return describeStreamResult.getStreamDescription();
   }
 }

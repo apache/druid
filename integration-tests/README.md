@@ -122,7 +122,6 @@ Then run the tests using a command similar to:
   # Run all integration tests that have been verified to work against a quickstart cluster.
   mvn verify -P int-tests-config-file -Dgroups=quickstart-compatible
 ```
->>>>>>> upstream/master
 
 Running Tests Using A Configuration File for Any Cluster
 -------------------

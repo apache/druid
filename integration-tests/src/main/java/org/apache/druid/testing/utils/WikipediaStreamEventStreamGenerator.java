@@ -47,7 +47,7 @@ public class WikipediaStreamEventStreamGenerator extends SyntheticStreamGenerato
     event.put("robot", "false");
     event.put("anonymous", "false");
     event.put("namespace", "article");
-    event.put("continent", "North Americ");
+    event.put("continent", "North America");
     event.put("country", "United States");
     event.put("region", "Bay Area");
     event.put("city", "San Francisco");

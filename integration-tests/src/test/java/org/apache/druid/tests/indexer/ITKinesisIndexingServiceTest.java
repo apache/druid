@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.annotations.Since;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
@@ -51,8 +52,11 @@ import java.util.function.Function;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
 {
-  private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
+  private static final Logger LOG = new Logger(ITKinesisIndexingServiceTest.class);
   private static final int KINESIS_SHARD_COUNT = 2;
+  // Since this integration test can terminates or be killed un-expectedly, this tag is added to all streams created
+  // to help make stream clean up easier. (Normally, streams should be cleanup automattically by the teardown method)
+  // The value to this tag is a timestamp that can be used by a lambda function to remove unused stream.
   private static final String STREAM_EXPIRE_TAG = "druid-ci-expire-after";
   private static final long WAIT_TIME_MILLIS = 3 * 60 * 1000L;
   private static final DateTime FIRST_EVENT_TIME = DateTimes.of(1994, 4, 29, 1, 0);
@@ -213,16 +217,26 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     try {
       kinesisEventWriter.flush();
       indexer.shutdownSupervisor(supervisorId);
+    }
+    catch (Exception e) {
+      // Best effort cleanup as the supervisor may have already went Bye-Bye
+    }
+    try {
       unloader(fullDatasourceName);
+    }
+    catch (Exception e) {
+      // Best effort cleanup as the datasource may have already went Bye-Bye
+    }
+    try {
       kinesisAdminClient.deleteStream(streamName);
     }
     catch (Exception e) {
-      // Best effort cleanup
+      // Best effort cleanup as the stream may have already went Bye-Bye
     }
   }
 
   @Test
-  public void testKineseIndexDataWithLegacyParserStableState() throws Exception
+  public void testKinesisIndexDataWithLegacyParserStableState() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
@@ -239,7 +253,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   }
 
   @Test
-  public void testKineseIndexDataWithInputFormatStableState() throws Exception
+  public void testKinesisIndexDataWithInputFormatStableState() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
@@ -256,25 +270,25 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   }
 
   @Test
-  public void testKineseIndexDataWithLosingCoordinator() throws Exception
+  public void testKinesisIndexDataWithLosingCoordinator() throws Exception
   {
     testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartCoordinatorContainer(), () -> druidClusterAdminClient.waitUntilCoordinatorReady());
   }
 
   @Test
-  public void testKineseIndexDataWithLosingOverlord() throws Exception
+  public void testKinesisIndexDataWithLosingOverlord() throws Exception
   {
     testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartIndexerContainer(), () -> druidClusterAdminClient.waitUntilIndexerReady());
   }
 
   @Test
-  public void testKineseIndexDataWithLosingHistorical() throws Exception
+  public void testKinesisIndexDataWithLosingHistorical() throws Exception
   {
     testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartHistoricalContainer(), () -> druidClusterAdminClient.waitUntilHistoricalReady());
   }
 
   @Test
-  public void testKineseIndexDataWithStartStopSupervisor() throws Exception
+  public void testKinesisIndexDataWithStartStopSupervisor() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
@@ -288,6 +302,14 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
       wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateFirstRound, FIRST_EVENT_TIME);
+      // Verify supervisor is healthy before suspension
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
+          true,
+          10000,
+          30,
+          "Waiting for supervisor to be healthy"
+      );
       // Suspend the supervisor
       indexer.suspendSupervisor(supervisorId);
       // Start generating remainning half of the data
@@ -308,14 +330,14 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   }
 
   @Test
-  public void testKineseIndexDataWithKinesisReshardSplit() throws Exception
+  public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
   {
     // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT * 2
     testIndexWithKinesisReshardHelper(KINESIS_SHARD_COUNT * 2);
   }
 
   @Test
-  public void testKineseIndexDataWithKinesisReshardMerge() throws Exception
+  public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
   {
     // Reshard the supervisor by split from KINESIS_SHARD_COUNT to KINESIS_SHARD_COUNT / 2
     testIndexWithKinesisReshardHelper(KINESIS_SHARD_COUNT / 2);
@@ -335,6 +357,14 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
       wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateFirstRound, FIRST_EVENT_TIME);
+      // Verify supervisor is healthy before restart
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
+          true,
+          10000,
+          30,
+          "Waiting for supervisor to be healthy"
+      );
       // Restart Druid process
       LOG.info("Restarting Druid process");
       restartRunnable.run();
@@ -376,8 +406,16 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
       wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateFirstRound, FIRST_EVENT_TIME);
-      // Reshard the supervisor by split from KINESIS_SHARD_COUNT to newShardCount
-      kinesisAdminClient.updateShardCount(streamName, newShardCount);
+      // Verify supervisor is healthy before resahrding
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
+          true,
+          10000,
+          30,
+          "Waiting for supervisor to be healthy"
+      );
+      // Reshard the supervisor by split from KINESIS_SHARD_COUNT to newShardCount and waits until the resharding starts
+      kinesisAdminClient.updateShardCount(streamName, newShardCount, true);
       // Start generating one third of the data (while resharding)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
@@ -392,7 +430,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
       );
       // Start generating remainding data (after resharding)
       wikipediaStreamEventGenerator.start(streamName, kinesisEventWriter, secondsToGenerateRemaining, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));
-      // Verify supervisor is healthy after suspension
+      // Verify supervisor is healthy after resahrding
       ITRetryUtil.retryUntil(
           () -> SupervisorStateManager.BasicState.RUNNING.equals(indexer.getSupervisorStatus(supervisorId)),
           true,
@@ -408,7 +446,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
   private void verifyIngestedData(String supervisorId) throws Exception
   {
     // Wait for supervisor to consume events
-    LOG.info("Waiting for [%s] millis for Kafka indexing tasks to consume events", WAIT_TIME_MILLIS);
+    LOG.info("Waiting for [%s] millis for Kinesis indexing tasks to consume events", WAIT_TIME_MILLIS);
     Thread.sleep(WAIT_TIME_MILLIS);
     // Query data
     final String querySpec = kinesisQueryPropsTransform.apply(getResourceAsString(QUERIES_FILE));
@@ -416,7 +454,7 @@ public class ITKinesisIndexingServiceTest extends AbstractITBatchIndexTest
     this.queryHelper.testQueriesFromString(querySpec, 2);
     LOG.info("Shutting down supervisor");
     indexer.shutdownSupervisor(supervisorId);
-    // wait for all kafka indexing tasks to finish
+    // wait for all Kinesis indexing tasks to finish
     LOG.info("Waiting for all indexing tasks to finish");
     ITRetryUtil.retryUntilTrue(
         () -> (indexer.getPendingTasks().size()
