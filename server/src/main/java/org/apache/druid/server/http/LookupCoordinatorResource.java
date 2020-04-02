@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupsState;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.ConfigLookupResourceFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 
@@ -71,7 +71,7 @@ import java.util.Set;
  * Contains information about lookups exposed through the coordinator
  */
 @Path("/druid/coordinator/v1/lookups")
-@ResourceFilters(ConfigResourceFilter.class)
+@ResourceFilters(ConfigLookupResourceFilter.class)
 public class LookupCoordinatorResource
 {
   private static final Logger LOG = new Logger(LookupCoordinatorResource.class);

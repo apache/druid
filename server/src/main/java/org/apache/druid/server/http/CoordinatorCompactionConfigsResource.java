@@ -29,7 +29,7 @@ import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.ConfigCompactionResourceFilter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -50,7 +50,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Path("/druid/coordinator/v1/config/compaction")
-@ResourceFilters(ConfigResourceFilter.class)
+@ResourceFilters(ConfigCompactionResourceFilter.class)
 public class CoordinatorCompactionConfigsResource
 {
   private final JacksonConfigManager manager;

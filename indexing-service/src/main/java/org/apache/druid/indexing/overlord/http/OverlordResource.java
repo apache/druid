@@ -62,7 +62,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.http.HttpMediaType;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.ConfigWorkerResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateInternalResourceFilter;
 import org.apache.druid.server.http.security.StateStatusResourceFilter;
@@ -400,7 +400,7 @@ public class OverlordResource
   @GET
   @Path("/worker")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters(ConfigWorkerResourceFilter.class)
   public Response getWorkerConfig()
   {
     if (workerConfigRef == null) {
@@ -414,7 +414,7 @@ public class OverlordResource
   @POST
   @Path("/worker")
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters(ConfigWorkerResourceFilter.class)
   public Response setWorkerConfig(
       final WorkerBehaviorConfig workerBehaviorConfig,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
@@ -439,7 +439,7 @@ public class OverlordResource
   @GET
   @Path("/worker/history")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters(ConfigWorkerResourceFilter.class)
   public Response getWorkerConfigHistory(
       @QueryParam("interval") final String interval,
       @QueryParam("count") final Integer count

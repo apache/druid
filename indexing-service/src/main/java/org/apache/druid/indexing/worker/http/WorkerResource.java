@@ -35,7 +35,7 @@ import org.apache.druid.indexing.worker.WorkerTaskMonitor;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.HttpMediaType;
-import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.ConfigInternalResourceFilter;
 import org.apache.druid.server.http.security.StateInternalResourceFilter;
 import org.apache.druid.server.http.security.StateWorkerResourceFilter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -83,7 +83,7 @@ public class WorkerResource
   @POST
   @Path("/disable")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters(ConfigInternalResourceFilter.class)
   public Response doDisable()
   {
     try {
@@ -107,7 +107,7 @@ public class WorkerResource
   @POST
   @Path("/enable")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(ConfigResourceFilter.class)
+  @ResourceFilters(ConfigInternalResourceFilter.class)
   public Response doEnable()
   {
     try {
