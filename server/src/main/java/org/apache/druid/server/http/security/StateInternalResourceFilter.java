@@ -20,16 +20,9 @@
 package org.apache.druid.server.http.security;
 
 import com.google.inject.Inject;
-import com.sun.jersey.spi.container.ContainerRequest;
-import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 
-public class StateInternalResourceFilter extends AbstractResourceFilter
+public class StateInternalResourceFilter extends StateResourceFilter
 {
   @Inject
   public StateInternalResourceFilter(
@@ -40,23 +33,8 @@ public class StateInternalResourceFilter extends AbstractResourceFilter
   }
 
   @Override
-  public ContainerRequest filter(ContainerRequest request)
+  public String resourceName()
   {
-    final ResourceAction resourceAction = new ResourceAction(
-        new Resource("INTERNAL", ResourceType.STATE),
-        getAction(request)
-    );
-
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
-        getReq(),
-        resourceAction,
-        getAuthorizerMapper()
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
-    }
-
-    return request;
+    return "INTERNAL";
   }
 }
