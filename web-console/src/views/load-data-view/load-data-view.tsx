@@ -2069,9 +2069,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderGlobalFilterControls() {
     const { spec, showGlobalFilter, newFilterValue } = this.state;
     const intervals: string[] = deepGet(spec, 'spec.dataSchema.granularitySpec.intervals');
-    const hasGlobalFilter = Boolean(
-      intervals || splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter')),
-    );
+    const { restFilter } = splitFilter(deepGet(spec, 'spec.dataSchema.transformSpec.filter'));
+    const hasGlobalFilter = Boolean(intervals || restFilter);
 
     if (showGlobalFilter) {
       return (
@@ -2126,7 +2125,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             onClick={() =>
               this.setState({
                 showGlobalFilter: true,
-                newFilterValue: deepGet(spec, 'spec.dataSchema.transformSpec.filter'),
+                newFilterValue: restFilter,
               })
             }
           />
