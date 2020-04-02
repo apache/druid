@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.AmazonServiceException;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -82,6 +83,10 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
+    if (segmentPusherConfig.getBucket() == null || segmentPusherConfig.getBaseKey() == null) {
+      throw new ISE(
+          "Cannot delete all segment from S3 Deep Storage since druid.storage.bucket and druid.storage.baseKey are not both set.");
+    }
     log.info("Deleting all segment files from s3 location [bucket: '%s' prefix: '%s']",
              segmentPusherConfig.getBucket(), segmentPusherConfig.getBaseKey()
     );
