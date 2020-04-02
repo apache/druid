@@ -4267,7 +4267,7 @@ version: 5.2.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
-net.java.dev.jna: jna-platform
+  - net.java.dev.jna: jna-platform
 
 ---
 
@@ -4277,7 +4277,7 @@ version: 5.0.4
 module: druid-ranger-security
 license_name: MIT License
 libraries:
-net.sf.jopt-simple: jopt-simple
+  - net.sf.jopt-simple: jopt-simple
 copyright: Paul R. Holser, Jr.
 
 ---
@@ -4426,11 +4426,21 @@ license_name: Apache License version 2.0
 libraries:
   - org.xerial.snappy: snappy-java
 notices:
-  - snappy-java: "This product includes software developed by Google\n Snappy: http://code.google.com/p/snappy/\
-\ (New BSD License)\n\n\nThis library containd statically linked libstdc++.\
-\ This inclusion is allowed by\n\"GCC RUntime Library Exception\"\nhttp://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html\n\
-\n== Contributors ==\n* Tatu Saloranta\n* Providing benchmark suite\n\
-\* Alec Wysoker\n* Performance and memory usage improvement\n"
+notices:
+  - snappy-java: |
+      This product includes software developed by Google
+       Snappy: http://code.google.com/p/snappy/ (New BSD License)
+
+
+      This library containd statically linked libstdc++. This inclusion is allowed by
+      "GCC RUntime Library Exception"
+      http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
+
+      == Contributors ==
+        * Tatu Saloranta
+          * Providing benchmark suite
+        * Alec Wysoker
+          * Performance and memory usage improvement
 
 ---
 
