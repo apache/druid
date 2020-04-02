@@ -53,7 +53,10 @@ public class ImmutableDruidDataSource
   {
     this.name = Preconditions.checkNotNull(name);
     this.properties = ImmutableMap.copyOf(properties);
-    this.idToSegments = ImmutableSortedMap.copyOf(idToSegments);
+    // By setting the order to reverse, for a datasource, newer segments will be ordered before older ones.
+    // See the compareTo method of SegmentId class.
+    ImmutableSortedMap.Builder<SegmentId, DataSegment> idToSegmentsBuilder = ImmutableSortedMap.reverseOrder();
+    this.idToSegments = idToSegmentsBuilder.putAll(idToSegments).build();
     this.totalSizeOfSegments = idToSegments.values().stream().mapToLong(DataSegment::getSize).sum();
   }
 
@@ -66,8 +69,9 @@ public class ImmutableDruidDataSource
   {
     this.name = Preconditions.checkNotNull(name);
     this.properties = ImmutableMap.copyOf(properties);
-
-    final ImmutableSortedMap.Builder<SegmentId, DataSegment> idToSegmentsBuilder = ImmutableSortedMap.naturalOrder();
+    // By setting the order to reverse, for a datasource, newer segments will be ordered before older ones.
+    // See the compareTo method of SegmentId class.
+    final ImmutableSortedMap.Builder<SegmentId, DataSegment> idToSegmentsBuilder = ImmutableSortedMap.reverseOrder();
     long totalSizeOfSegments = 0;
     for (DataSegment segment : segments) {
       idToSegmentsBuilder.put(segment.getId(), segment);

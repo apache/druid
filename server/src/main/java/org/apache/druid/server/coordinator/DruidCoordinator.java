@@ -650,11 +650,18 @@ public class DruidCoordinator
         // Do coordinator stuff.
         DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadata.getSnapshotOfDataSourcesWithAllUsedSegments();
 
+        boolean useRoundRobinSegmentLoad = config.getLoadSegmentStrategy().equalsIgnoreCase("roundRobin");
+        DruidCoordinatorRuntimeParams.Builder builder = DruidCoordinatorRuntimeParams
+            .newBuilder()
+            .withStartTimeNanos(startTimeNanos);
+        if (useRoundRobinSegmentLoad) {
+          builder.withUsedSegmentsPickedInRoundRobinFashion(dataSourcesSnapshot);
+        } else {
+          builder.withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot);
+        }
+
         DruidCoordinatorRuntimeParams params =
-            DruidCoordinatorRuntimeParams
-                .newBuilder()
-                .withStartTimeNanos(startTimeNanos)
-                .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
+            builder
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)

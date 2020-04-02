@@ -98,4 +98,10 @@ public abstract class DruidCoordinatorConfig
   {
     return 1;
   }
+
+  @Config("druid.coordinator.load.segment.strategy")
+  public String getLoadSegmentStrategy()
+  {
+    return "newFirst";
+  }
 }
