@@ -21,9 +21,11 @@ package org.apache.druid.segment.indexing;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -54,10 +56,20 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class DataSchemaTest
 {
+
+  private static final String VALID_DATASOURCE_CHARS_NAME = "alpha123..*~!@#&%^&*()-+ Россия\\ 한국 中国!";
+  private static final String VALID_DATASOURCE_CHARS_FOR_SERIALIZER = "alpha123..*~!@#&%^&*()-+ Россия\\\\ 한국 中国!";
+
+  static {
+    // testTransformSpec needs NullHandling initialized.
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -79,7 +91,7 @@ public class DataSchemaTest
     );
 
     DataSchema schema = new DataSchema(
-        "test",
+        VALID_DATASOURCE_CHARS_NAME,
         parser,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -116,7 +128,7 @@ public class DataSchemaTest
     );
 
     DataSchema schema = new DataSchema(
-        "test",
+        VALID_DATASOURCE_CHARS_NAME,
         parser,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -153,7 +165,7 @@ public class DataSchemaTest
     );
 
     DataSchema schema = new DataSchema(
-        "test",
+        VALID_DATASOURCE_CHARS_NAME,
         parserMap,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -211,7 +223,7 @@ public class DataSchemaTest
     );
 
     DataSchema schema = new DataSchema(
-        "test",
+        VALID_DATASOURCE_CHARS_NAME,
         parser,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -244,7 +256,7 @@ public class DataSchemaTest
     );
 
     DataSchema schema = new DataSchema(
-        "test",
+        VALID_DATASOURCE_CHARS_NAME,
         parser,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -262,7 +274,7 @@ public class DataSchemaTest
   public void testSerdeWithInvalidParserMap() throws Exception
   {
     String jsonStr = "{"
-                     + "\"dataSource\":\"test\","
+                     + "\"dataSource\":\"" + VALID_DATASOURCE_CHARS_FOR_SERIALIZER + "\","
                      + "\"parser\":{\"type\":\"invalid\"},"
                      + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
                      + "\"granularitySpec\":{"
@@ -365,7 +377,7 @@ public class DataSchemaTest
   public void testSerde() throws Exception
   {
     String jsonStr = "{"
-                     + "\"dataSource\":\"test\","
+                     + "\"dataSource\":\"" + VALID_DATASOURCE_CHARS_FOR_SERIALIZER + "\","
                      + "\"parser\":{"
                      + "\"type\":\"string\","
                      + "\"parseSpec\":{"
@@ -389,7 +401,7 @@ public class DataSchemaTest
         DataSchema.class
     );
 
-    Assert.assertEquals(actual.getDataSource(), "test");
+    Assert.assertEquals(actual.getDataSource(), VALID_DATASOURCE_CHARS_NAME);
     Assert.assertEquals(
         actual.getParser().getParseSpec(),
         new JSONParseSpec(
@@ -415,6 +427,45 @@ public class DataSchemaTest
   }
 
   @Test
+  public void testSerializeWithInvalidDataSourceName() throws Exception
+  {
+    // Escape backslashes to insert a tab character in the datasource name.
+    List<String> datasources = ImmutableList.of("", "../invalid", "\\tname", "name\\t invalid");
+    for (String datasource : datasources) {
+      String jsonStr = "{"
+                       + "\"dataSource\":\"" + datasource + "\","
+                       + "\"parser\":{"
+                       + "\"type\":\"string\","
+                       + "\"parseSpec\":{"
+                       + "\"format\":\"json\","
+                       + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
+                       + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[]},"
+                       + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
+                       + "\"featureSpec\":{}},"
+                       + "\"encoding\":\"UTF-8\""
+                       + "},"
+                       + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
+                       + "\"granularitySpec\":{"
+                       + "\"type\":\"arbitrary\","
+                       + "\"queryGranularity\":{\"type\":\"duration\",\"duration\":86400000,\"origin\":\"1970-01-01T00:00:00.000Z\"},"
+                       + "\"intervals\":[\"2014-01-01T00:00:00.000Z/2015-01-01T00:00:00.000Z\"]}}";
+      try {
+        jsonMapper.readValue(
+            jsonMapper.writeValueAsString(
+                jsonMapper.readValue(jsonStr, DataSchema.class)
+            ),
+            DataSchema.class
+        );
+      }
+      catch (ValueInstantiationException e) {
+        Assert.assertEquals(IllegalArgumentException.class, e.getCause().getClass());
+        continue;
+      }
+      Assert.fail("Serialization of datasource " + datasource + " should have failed.");
+    }
+  }
+
+  @Test
   public void testSerdeWithUpdatedDataSchemaAddedField() throws IOException
   {
     Map<String, Object> parser = jsonMapper.convertValue(
@@ -430,7 +481,7 @@ public class DataSchemaTest
     );
 
     DataSchema originalSchema = new DataSchema(
-        "test",
+        VALID_DATASOURCE_CHARS_NAME,
         parser,
         new AggregatorFactory[]{
             new DoubleSumAggregatorFactory("metric1", "col1"),
@@ -469,7 +520,7 @@ public class DataSchemaTest
     );
 
     TestModifiedDataSchema originalSchema = new TestModifiedDataSchema(
-        "test",
+        VALID_DATASOURCE_CHARS_NAME,
         null,
         null,
         new AggregatorFactory[]{
