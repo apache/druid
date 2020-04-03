@@ -379,6 +379,10 @@
         "title": "DatasourceMetadata queries",
         "sidebar_label": "DatasourceMetadata"
       },
+      "querying/datatypes": {
+        "title": "Data types and casts",
+        "sidebar_label": "Data types"
+      },
       "querying/dimensionspecs": {
         "title": "Transforming Dimension Values"
       },

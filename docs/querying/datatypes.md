@@ -31,6 +31,8 @@ sidebar_label: "Data types"
   patterns in this markdown file and parse it to TypeScript file for web console
 -->
 
+Druid supports basic data types for use Druid SQL and native querying.  This page describes those data types and describes
+the mapping between data types in Druid SQL, native querying, and standard SQL.  
 
 ## Supported data types
 
@@ -68,12 +70,6 @@ The following table describes how SQL types map onto Druid types during query ru
 |DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting, e.g. `2000-01-02`. For handling other formats, use one of the [time functions](#time-functions)|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
-Casts between two SQL types
-that have the same Druid runtime type will have no effect, other than exceptions noted in the table. Casts between two
-SQL types that have different Druid runtime types will generate a runtime cast in Druid. If a value cannot be properly
-cast to another value, as in `CAST('foo' AS BIGINT)`, the runtime will substitute a default value. NULL values cast
-to non-nullable types will also be substituted with a default value (for example, nulls cast to numbers will be
-converted to zeroes). See more about NULL handling in [Null handling modes](#null-handling-modes).
 
 For mathematical operations, Druid SQL uses integer math if all operands involved in an expression are integers.
 Otherwise, Druid switches to floating point math. You can force this result by casting one of your operands

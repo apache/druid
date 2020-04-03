@@ -58,8 +58,8 @@
     "Querying": [
       "querying/queryoverview",
       "querying/sql",
-      "querying/datatypes"
-      "querying/queryfunctions"
+      "querying/datatypes",
+      "querying/queryfunctions",
       {
         "type": "subcategory",
         "label": "Native query types",
