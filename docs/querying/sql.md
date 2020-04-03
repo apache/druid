@@ -1,7 +1,7 @@
 ---
 id: sql
 title: "SQL"
-sidebar_label: "Druid SQL"
+sidebar_label: "Druid SQL syntax"
 ---
 
 <!--

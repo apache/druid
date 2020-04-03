@@ -179,6 +179,9 @@
       "development/extensions-core/druid-lookups": {
         "title": "Cached Lookup Module"
       },
+      "development/extensions-core/druid-pac4j": {
+        "title": "Druid pac4j based Security extension"
+      },
       "development/extensions-core/examples": {
         "title": "Extension Examples"
       },
@@ -416,9 +419,17 @@
       "querying/query-context": {
         "title": "Query context"
       },
+      "querying/queryfunctions": {
+        "title": "Druid query functions",
+        "sidebar_label": "Query functions"
+      },
       "querying/querying": {
         "title": "Native queries",
         "sidebar_label": "Making native queries"
+      },
+      "querying/queryoverview": {
+        "title": "Druid querying overview",
+        "sidebar_label": "Overview"
       },
       "querying/scan-query": {
         "title": "Scan queries",
@@ -444,7 +455,7 @@
       },
       "querying/sql": {
         "title": "SQL",
-        "sidebar_label": "Druid SQL"
+        "sidebar_label": "Druid SQL syntax"
       },
       "querying/timeboundaryquery": {
         "title": "TimeBoundary queries",
