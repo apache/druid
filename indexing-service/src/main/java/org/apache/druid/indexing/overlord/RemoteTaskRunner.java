@@ -987,12 +987,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       final RemoteTaskRunnerWorkItem taskRunnerWorkItem;
       synchronized (statusLock) {
         try {
-          switch (event.getType()) {
+          switch (event.getType()) { // lgtm [java/dereferenced-value-may-be-null]
             case CHILD_ADDED:
             case CHILD_UPDATED:
-              taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
+              taskId = ZKPaths.getNodeFromPath(event.getData().getPath()); // lgtm [java/dereferenced-value-may-be-null]
               final TaskAnnouncement announcement = jsonMapper.readValue(
-                  event.getData().getData(), TaskAnnouncement.class
+                  event.getData().getData(), TaskAnnouncement.class // lgtm [java/dereferenced-value-may-be-null]
               );
 
               log.info(
@@ -1044,7 +1044,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               }
               break;
             case CHILD_REMOVED:
-              taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
+              taskId = ZKPaths.getNodeFromPath(event.getData().getPath()); // lgtm [java/dereferenced-value-may-be-null]
               taskRunnerWorkItem = runningTasks.remove(taskId);
               if (taskRunnerWorkItem != null) {
                 log.info("Task[%s] just disappeared!", taskId);
@@ -1077,16 +1077,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           }
         }
         catch (Exception e) {
-          String workerHost = null;
           String znode = null;
-          if (zkWorker != null && zkWorker.getWorker() != null) {
-            workerHost = zkWorker.getWorker().getHost();
-          }
           if (event != null && event.getData() != null) {
             znode = event.getData().getPath();
           }
           log.makeAlert(e, "Failed to handle new worker status")
-             .addData("worker", workerHost)
+             .addData("worker", zkWorker.getWorker().getHost())
              .addData("znode", znode)
              .emit();
         }
