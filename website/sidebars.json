@@ -60,6 +60,7 @@
       "querying/sql",
       "querying/datatypes",
       "querying/queryfunctions",
+      "querying/aggregationfunctions",
       {
         "type": "subcategory",
         "label": "Native query types",

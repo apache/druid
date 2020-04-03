@@ -33,7 +33,3 @@ sidebar_label: "Query functions"
 
 TODO
 
-## Aggregation functions
-
-## Regular functions
-
