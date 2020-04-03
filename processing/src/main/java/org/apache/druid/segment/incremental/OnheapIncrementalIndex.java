@@ -105,10 +105,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
    */
   private static long getMaxBytesPerRowForAggregators(IncrementalIndexSchema incrementalIndexSchema)
   {
-    long maxAggregatorIntermediateSize = Integer.BYTES * incrementalIndexSchema.getMetrics().length;
+    long maxAggregatorIntermediateSize = ((long) Integer.BYTES) * incrementalIndexSchema.getMetrics().length;
     maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
                                            .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls()
-                                                                    + Long.BYTES * 2)
+                                                                    + Long.BYTES * 2L)
                                            .sum();
     return maxAggregatorIntermediateSize;
   }
