@@ -667,17 +667,21 @@ public class DruidCoordinator
         // Do coordinator stuff.
         DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
 
-        DruidCoordinatorRuntimeParams params =
-            DruidCoordinatorRuntimeParams
-                .newBuilder()
-                .withDatabaseRuleManager(metadataRuleManager)
-                .withStartTimeNanos(startTimeNanos)
-                .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
-                .withDynamicConfigs(getDynamicConfigs())
-                .withCompactionConfig(getCompactionConfig())
-                .withEmitter(emitter)
-                .withBalancerStrategy(balancerStrategy)
-                .build();
+        boolean useRoundRobinSegmentLoad = config.getLoadSegmentStrategy().equalsIgnoreCase("roundRobin");
+        DruidCoordinatorRuntimeParams.Builder builder = DruidCoordinatorRuntimeParams
+            .newBuilder()
+            .withDatabaseRuleManager(metadataRuleManager)
+            .withStartTimeNanos(startTimeNanos);
+        if (useRoundRobinSegmentLoad) {
+          builder.withUsedSegmentsPickedInRoundRobinFashion(dataSourcesSnapshot);
+        } else {
+          builder.withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot);
+        }
+        DruidCoordinatorRuntimeParams params = builder.withDynamicConfigs(getDynamicConfigs())
+                                                      .withCompactionConfig(getCompactionConfig())
+                                                      .withEmitter(emitter)
+                                                      .withBalancerStrategy(balancerStrategy)
+                                                      .build();
 
         boolean coordinationPaused = getDynamicConfigs().getPauseCoordination();
         if (coordinationPaused

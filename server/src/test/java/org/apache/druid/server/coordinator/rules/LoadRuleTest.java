@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -661,11 +662,61 @@ public class LoadRuleTest
     EasyMock.verify(throttler);
   }
 
+  @Test
+  public void testLoadingSegmentsInRoundRobinFashion()
+  {
+    List<DataSegment> segments = new ArrayList<>();
+    segments.add(createDataSegment("foo", Intervals.of("2020-01-01T00:00:00.000Z/2020-01-02T00:00:00.000Z")));
+    segments.add(createDataSegment("bar", Intervals.of("2020-01-03T00:00:00.000Z/2020-01-04T00:00:00.000Z")));
+    segments.add(createDataSegment("bar", Intervals.of("2020-01-06T00:00:00.000Z/2020-01-07T00:00:00.000Z")));
+    segments.add(createDataSegment("foo", Intervals.of("2020-01-09T00:00:00.000Z/2020-01-10T00:00:00.000Z")));
+
+    DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+
+    DruidCoordinatorRuntimeParams druidCoordinatorRuntimeParams = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withUsedSegmentsPickedInRoundRobinFashion(dataSourcesSnapshot)
+        .build();
+
+    Set<DataSegment> usedSegments = druidCoordinatorRuntimeParams.getUsedSegments();
+
+    List<String> segmentDatasources = new ArrayList<>(4);
+    List<Interval> segmentIntervals = new ArrayList<>(4);
+    usedSegments.forEach((DataSegment dataSegment) -> {
+      segmentDatasources.add(dataSegment.getDataSource());
+      segmentIntervals.add(dataSegment.getInterval());
+    });
+
+    // Assert segments picked in round robin fashion according to the datasource
+    Assert.assertNotEquals(segmentDatasources.get(0), segmentDatasources.get(1));
+    Assert.assertNotEquals(segmentDatasources.get(1), segmentDatasources.get(2));
+    Assert.assertNotEquals(segmentDatasources.get(2), segmentDatasources.get(3));
+
+    // Assert that for a datasource, segments are sorted newer to older
+    Assert.assertTrue(segmentIntervals.get(0).isAfter(segmentIntervals.get(2)));
+    Assert.assertTrue(segmentIntervals.get(1).isAfter(segmentIntervals.get(3)));
+  }
+
   private DataSegment createDataSegment(String dataSource)
   {
     return new DataSegment(
         dataSource,
         Intervals.of("0/3000"),
+        DateTimes.nowUtc().toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        0,
+        0
+    );
+  }
+
+  private DataSegment createDataSegment(String dataSource, Interval interval)
+  {
+    return new DataSegment(
+        dataSource,
+        interval,
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
         new ArrayList<>(),

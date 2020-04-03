@@ -22,7 +22,10 @@ package org.apache.druid.server.coordinator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -31,10 +34,15 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
@@ -56,11 +64,50 @@ public class DruidCoordinatorRuntimeParams
     return segmentsSet;
   }
 
+  /**
+   * Creates a {@link Set} by choosing used segments from each datasource in a round robin fashion.
+   * The order of segments picked for a datasource is dependent on the iteration order of
+   * {@link ImmutableDruidDataSource#getSegments()}. So if it is desired to have newer segments
+   * be picked up before the older ones, the {@link Collection} returned by {@link ImmutableDruidDataSource#getSegments()}
+   * needs to be setup accordingly.
+   */
+  private static Set<DataSegment> createUsedSegmentSetInRoundRobinFashion(Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments)
+  {
+    Set<String> datasourcesSet = dataSourcesWithAllUsedSegments.keySet();
+    Map<String, Iterator<DataSegment>> iterators = Maps.newHashMapWithExpectedSize(datasourcesSet.size());
+    List<String> datasources = new ArrayList<>(datasourcesSet);
+    int numDatasources = datasources.size();
+    Set<String> exhaustedDatasources = Sets.newHashSetWithExpectedSize(numDatasources);
+    Set<DataSegment> segments = new LinkedHashSet<>();
+    int i = 0;
+    String datasource;
+    Iterator<DataSegment> iterator;
+    while (exhaustedDatasources.size() < numDatasources) {
+      datasource = datasources.get(i);
+      if (exhaustedDatasources.contains(datasource)) {
+        i = (i + 1) % numDatasources;
+        continue;
+      }
+      String finalDatasource = datasource;
+      iterator = iterators.computeIfAbsent(
+          datasource,
+          s -> dataSourcesWithAllUsedSegments.get(finalDatasource).getSegments().iterator()
+      );
+      if (iterator.hasNext()) {
+        segments.add(iterator.next());
+      } else {
+        exhaustedDatasources.add(datasource);
+      }
+      i = (i + 1) % numDatasources;
+    }
+    return segments;
+  }
+
   private final long startTimeNanos;
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
-  private final @Nullable TreeSet<DataSegment> usedSegments;
+  private final @Nullable Set<DataSegment> usedSegments;
   private final @Nullable DataSourcesSnapshot dataSourcesSnapshot;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
@@ -76,7 +123,7 @@ public class DruidCoordinatorRuntimeParams
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
-      @Nullable TreeSet<DataSegment> usedSegments,
+      @Nullable Set<DataSegment> usedSegments,
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
@@ -134,7 +181,7 @@ public class DruidCoordinatorRuntimeParams
     return dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource();
   }
 
-  public TreeSet<DataSegment> getUsedSegments()
+  public Set<DataSegment> getUsedSegments()
   {
     Preconditions.checkState(usedSegments != null, "usedSegments or dataSourcesSnapshot must be set");
     return usedSegments;
@@ -246,7 +293,7 @@ public class DruidCoordinatorRuntimeParams
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
-    private @Nullable TreeSet<DataSegment> usedSegments;
+    private @Nullable Set<DataSegment> usedSegments;
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
@@ -279,7 +326,7 @@ public class DruidCoordinatorRuntimeParams
         DruidCluster cluster,
         MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
-        @Nullable TreeSet<DataSegment> usedSegments,
+        @Nullable Set<DataSegment> usedSegments,
         @Nullable DataSourcesSnapshot dataSourcesSnapshot,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
@@ -355,6 +402,14 @@ public class DruidCoordinatorRuntimeParams
     public Builder withSnapshotOfDataSourcesWithAllUsedSegments(DataSourcesSnapshot snapshot)
     {
       this.usedSegments = createUsedSegmentsSet(snapshot.iterateAllUsedSegmentsInSnapshot());
+      this.dataSourcesSnapshot = snapshot;
+      return this;
+    }
+
+    @VisibleForTesting
+    public Builder withUsedSegmentsPickedInRoundRobinFashion(DataSourcesSnapshot snapshot)
+    {
+      this.usedSegments = createUsedSegmentSetInRoundRobinFashion(snapshot.getDataSourcesMap());
       this.dataSourcesSnapshot = snapshot;
       return this;
     }
