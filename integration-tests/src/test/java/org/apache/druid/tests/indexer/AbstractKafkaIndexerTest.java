@@ -28,7 +28,7 @@ import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
+import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -161,7 +161,7 @@ abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
     properties.setProperty("value.serializer", ByteArraySerializer.class.getName());
     if (txnEnabled) {
       properties.setProperty("enable.idempotence", "true");
-      properties.setProperty("transactional.id", RandomIdUtils.getRandomId());
+      properties.setProperty("transactional.id", TaskIdUtils.getRandomId());
     }
 
     KafkaProducer<String, String> producer = new KafkaProducer<>(
