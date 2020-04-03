@@ -122,17 +122,8 @@
     <notes><![CDATA[
    file name: jackson-mapper-asl-1.9.13.jar
    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@.*$</packageUrl>
-    <cve>CVE-2017-7525</cve>
-    <cve>CVE-2017-15095</cve>
-    <cve>CVE-2017-17485</cve>
-    <cve>CVE-2018-5968</cve>
-    <cve>CVE-2018-7489</cve>
-    <cve>CVE-2018-14718</cve>
-    <cve>CVE-2019-10172</cve>
-    <cve>CVE-2019-14540</cve>
-    <cve>CVE-2019-16335</cve>
-    <cve>CVE-2019-17267</cve>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@1.9.13$</packageUrl>
+    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13 ince it is via curator-x-discovery -->
   </suppress>
   <suppress>
     <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
