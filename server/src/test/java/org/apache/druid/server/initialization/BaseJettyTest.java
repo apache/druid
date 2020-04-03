@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.initialization;
 
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
@@ -60,6 +61,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
@@ -175,6 +177,70 @@ public abstract class BaseJettyTest
         //
       }
       return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
+    }
+  }
+
+  @Path("/latched")
+  public static class LatchedResource
+  {
+    private final LatchedRequestStateHolder state;
+
+    @Inject
+    public LatchedResource(LatchedRequestStateHolder state)
+    {
+      this.state = state;
+    }
+
+    @GET
+    @Path("/hello")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response hello()
+    {
+      state.serverStartRequest();
+      try {
+        state.serverWaitForClientReadyToFinishRequest();
+      }
+      catch (InterruptedException ignored) {
+      }
+      return Response.ok(DEFAULT_RESPONSE_CONTENT).build();
+    }
+  }
+
+  public static class LatchedRequestStateHolder
+  {
+    private static final int timeoutMillis = 10_000;
+    private CountDownLatch requestStartLatch;
+    private CountDownLatch requestEndLatch;
+
+    public LatchedRequestStateHolder()
+    {
+      reset();
+    }
+
+    public void reset()
+    {
+      requestStartLatch = new CountDownLatch(1);
+      requestEndLatch = new CountDownLatch(1);
+    }
+
+    public void clientWaitForServerToStartRequest() throws InterruptedException
+    {
+      requestStartLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    public void serverStartRequest()
+    {
+      requestStartLatch.countDown();
+    }
+
+    public void serverWaitForClientReadyToFinishRequest() throws InterruptedException
+    {
+      requestEndLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    public void clientReadyToFinishRequest()
+    {
+      requestEndLatch.countDown();
     }
   }
 

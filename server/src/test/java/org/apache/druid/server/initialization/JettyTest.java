@@ -90,7 +90,9 @@ public class JettyTest extends BaseJettyTest
 
   private HttpClientConfig sslConfig;
 
-  private Injector inj;
+  private Injector injector;
+
+  private LatchedRequestStateHolder latchedRequestState;
 
   @Override
   protected Injector setupInjector()
@@ -184,8 +186,8 @@ public class JettyTest extends BaseJettyTest
       throw new RuntimeException(e);
     }
 
-
-    inj = Initialization.makeInjectorWithModules(
+    latchedRequestState = new LatchedRequestStateHolder();
+    injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.<Module>of(
             new Module()
@@ -200,6 +202,7 @@ public class JettyTest extends BaseJettyTest
                 );
                 binder.bind(TLSServerConfig.class).toInstance(tlsConfig);
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
+                binder.bind(LatchedRequestStateHolder.class).toInstance(latchedRequestState);
 
                 Multibinder<ServletFilterHolder> multibinder = Multibinder.newSetBinder(
                     binder,
@@ -241,7 +244,9 @@ public class JettyTest extends BaseJettyTest
                     }
                 );
 
+
                 Jerseys.addResource(binder, SlowResource.class);
+                Jerseys.addResource(binder, LatchedResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
                 Jerseys.addResource(binder, DirectlyReturnResource.class);
@@ -252,7 +257,7 @@ public class JettyTest extends BaseJettyTest
         )
     );
 
-    return inj;
+    return injector;
   }
 
   @Test
@@ -439,22 +444,23 @@ public class JettyTest extends BaseJettyTest
     try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(out)) {
       gzipOutputStream.write(text.getBytes(Charset.defaultCharset()));
     }
-    Request request = new Request(HttpMethod.POST, new URL("http://localhost:" + port + "/slow/hello"));
+    Request request = new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/latched/hello"));
     request.setHeader("Content-Encoding", "gzip");
     request.setContent(MediaType.TEXT_PLAIN, out.toByteArray());
 
-    JettyServerModule jsm = inj.getInstance(JettyServerModule.class);
+    JettyServerModule jsm = injector.getInstance(JettyServerModule.class);
+    latchedRequestState.reset();
+
     Assert.assertEquals(0, jsm.getActiveConnections());
     ListenableFuture<InputStream> go = client.go(
         request,
         new InputStreamResponseHandler()
     );
-    // sad
-    Thread.sleep(100);
+    latchedRequestState.clientWaitForServerToStartRequest();
     Assert.assertEquals(1, jsm.getActiveConnections());
+    latchedRequestState.clientReadyToFinishRequest();
     go.get();
-    // it can take a bit to close the connection
-    Thread.sleep(1000);
+    waitForJettyServerModuleActiveConnectionsZero(jsm);
     Assert.assertEquals(0, jsm.getActiveConnections());
   }
 
@@ -466,10 +472,9 @@ public class JettyTest extends BaseJettyTest
     try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(out)) {
       gzipOutputStream.write(text.getBytes(Charset.defaultCharset()));
     }
-    Request request = new Request(HttpMethod.POST, new URL("https://localhost:" + tlsPort + "/slow/hello"));
+    Request request = new Request(HttpMethod.GET, new URL("https://localhost:" + tlsPort + "/latched/hello"));
     request.setHeader("Content-Encoding", "gzip");
     request.setContent(MediaType.TEXT_PLAIN, out.toByteArray());
-
     HttpClient client;
     try {
       client = HttpClientInit.createClient(
@@ -481,18 +486,30 @@ public class JettyTest extends BaseJettyTest
       throw new RuntimeException(e);
     }
 
-    JettyServerModule jsm = inj.getInstance(JettyServerModule.class);
+    JettyServerModule jsm = injector.getInstance(JettyServerModule.class);
+    latchedRequestState.reset();
+
     Assert.assertEquals(0, jsm.getActiveConnections());
     ListenableFuture<InputStream> go = client.go(
         request,
         new InputStreamResponseHandler()
     );
-    // sad
-    Thread.sleep(100);
+    latchedRequestState.clientWaitForServerToStartRequest();
     Assert.assertEquals(1, jsm.getActiveConnections());
+    latchedRequestState.clientReadyToFinishRequest();
     go.get();
-    // it can take a bit to close the connection
-    Thread.sleep(1000);
+    waitForJettyServerModuleActiveConnectionsZero(jsm);
     Assert.assertEquals(0, jsm.getActiveConnections());
+  }
+
+  private void waitForJettyServerModuleActiveConnectionsZero(JettyServerModule jsm) throws InterruptedException
+  {
+    // it can take a bit to close the connection, so maybe sleep for a while and hope it closes
+    final int sleepTimeMills = 10;
+    final int totalSleeps = 5_000 / sleepTimeMills;
+    int count = 0;
+    while (jsm.getActiveConnections() > 0 && count++ < totalSleeps) {
+      Thread.sleep(sleepTimeMills);
+    }
   }
 }
