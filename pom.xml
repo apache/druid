@@ -76,7 +76,7 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>4.2.0</apache.curator.version>
+        <apache.curator.version>4.3.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <apache.kafka.version>2.2.2</apache.kafka.version>
         <avatica.version>1.15.0</avatica.version>
