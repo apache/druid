@@ -48,6 +48,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -619,9 +620,9 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(200, response.getStatus());
 
     List<ResourceAction> perms = ImmutableList.of(
-        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
-        new ResourceAction(new Resource("B", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("A"), ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource(new ResourceName("B"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("C"), ResourceType.CONFIG), Action.WRITE)
     );
 
     response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", perms);
@@ -637,9 +638,9 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(expectedRole, response.getEntity());
 
     List<ResourceAction> newPerms = ImmutableList.of(
-        new ResourceAction(new Resource("D", ResourceType.DATASOURCE), Action.READ),
-        new ResourceAction(new Resource("B", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("F", ResourceType.CONFIG), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("D"), ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource(new ResourceName("B"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("C"), ResourceType.CONFIG), Action.WRITE)
     );
 
     response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", newPerms);
@@ -681,15 +682,15 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(200, response.getStatus());
 
     List<ResourceAction> perms = ImmutableList.of(
-        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
-        new ResourceAction(new Resource("B", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("A"), ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource(new ResourceName("B"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("C"), ResourceType.CONFIG), Action.WRITE)
     );
 
     List<ResourceAction> perms2 = ImmutableList.of(
-        new ResourceAction(new Resource("D", ResourceType.STATE), Action.READ),
-        new ResourceAction(new Resource("E", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("F", ResourceType.CONFIG), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("D"), ResourceType.STATE), Action.READ),
+        new ResourceAction(new Resource(new ResourceName("E"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("F"), ResourceType.CONFIG), Action.WRITE)
     );
 
     response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", perms);
@@ -817,12 +818,12 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(expectedRoleSimplifiedPerms2, response.getEntity());
 
     perms = ImmutableList.of(
-        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
-        new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("A"), ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource(new ResourceName("B"), ResourceType.CONFIG), Action.WRITE)
     );
 
     perms2 = ImmutableList.of(
-        new ResourceAction(new Resource("E", ResourceType.DATASOURCE), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("E"), ResourceType.DATASOURCE), Action.WRITE)
     );
 
     response = resource.setRolePermissions(req, AUTHORIZER_NAME, "druidRole", perms);
@@ -935,9 +936,9 @@ public class CoordinatorBasicAuthorizerResourceTest
     Assert.assertEquals(200, response.getStatus());
 
     List<ResourceAction> perms = ImmutableList.of(
-        new ResourceAction(new Resource("A", ResourceType.DATASOURCE), Action.READ),
-        new ResourceAction(new Resource("B", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("C", ResourceType.CONFIG), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("A"), ResourceType.DATASOURCE), Action.READ),
+        new ResourceAction(new Resource(new ResourceName("B"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("C"), ResourceType.CONFIG), Action.WRITE)
     );
 
     for (int i = 0; i < testMultiple; i++) {

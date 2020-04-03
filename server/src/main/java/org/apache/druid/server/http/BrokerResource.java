@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.BrokerServerView;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateStatusResourceFilter;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -44,7 +44,7 @@ public class BrokerResource
 
   @GET
   @Path("/loadstatus")
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateStatusResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {

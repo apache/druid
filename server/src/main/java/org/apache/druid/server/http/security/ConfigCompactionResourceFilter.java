@@ -21,6 +21,7 @@ package org.apache.druid.server.http.security;
 
 import com.google.inject.Inject;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceName;
 
 public class ConfigCompactionResourceFilter extends ConfigResourceFilter
 {
@@ -33,8 +34,8 @@ public class ConfigCompactionResourceFilter extends ConfigResourceFilter
   }
 
   @Override
-  public String resourceName()
+  public ResourceName resourceName()
   {
-    return "COMPACTION";
+    return ResourceName.COMPACTION;
   }
 }

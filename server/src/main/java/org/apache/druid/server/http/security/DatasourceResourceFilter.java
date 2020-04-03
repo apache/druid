@@ -30,6 +30,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.core.PathSegment;
@@ -72,7 +73,7 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
     return request;
   }
 
-  private String getRequestDatasourceName(ContainerRequest request)
+  private ResourceName getRequestDatasourceName(ContainerRequest request)
   {
     final String dataSourceName = request.getPathSegments()
                                          .get(
@@ -89,6 +90,6 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
                                              ) + 1
                                          ).getPath();
     Preconditions.checkNotNull(dataSourceName);
-    return dataSourceName;
+    return new ResourceName(dataSourceName);
   }
 }

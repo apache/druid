@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicAuthDBConfig;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
@@ -89,7 +90,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     Map<String, BasicAuthorizerRole> roleMap = roleProvider.getRoleMap(name);
 
     if (roleNames.isEmpty()) {
-      return new Access(false);
+      return new Access(false, "No roles set");
     }
     if (roleMap == null) {
       throw new IAE("Could not load roleMap for authorizer [%s]", name);
@@ -106,7 +107,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
       }
     }
 
-    return new Access(false);
+    return new Access(false, StringUtils.format("access not allowed on resource %s", resource));
   }
 
   private boolean permissionCheck(Resource resource, Action action, BasicAuthorizerPermission permission)

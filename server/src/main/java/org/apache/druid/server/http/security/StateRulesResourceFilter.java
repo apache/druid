@@ -21,6 +21,7 @@ package org.apache.druid.server.http.security;
 
 import com.google.inject.Inject;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceName;
 
 public class StateRulesResourceFilter extends StateResourceFilter
 {
@@ -33,8 +34,9 @@ public class StateRulesResourceFilter extends StateResourceFilter
   }
 
   @Override
-  public String resourceName()
+  public ResourceName resourceName()
   {
-    return "RULES";
+    return ResourceName.RULES;
   }
+
 }

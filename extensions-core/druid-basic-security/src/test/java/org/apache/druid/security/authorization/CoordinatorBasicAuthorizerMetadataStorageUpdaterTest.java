@@ -39,6 +39,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.junit.Assert;
 import org.junit.Before;
@@ -453,7 +454,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
     List<ResourceAction> permsToAdd = ImmutableList.of(
         new ResourceAction(
-            new Resource("testResource", ResourceType.DATASOURCE),
+            new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
             Action.WRITE
         )
     );
@@ -501,7 +502,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
     List<ResourceAction> permsToAdd = ImmutableList.of(
         new ResourceAction(
-            new Resource("testResource", ResourceType.DATASOURCE),
+            new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
             Action.WRITE
         )
     );
@@ -518,7 +519,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
     List<ResourceAction> permsToAdd = ImmutableList.of(
         new ResourceAction(
-            new Resource("??????????", ResourceType.DATASOURCE),
+            new Resource(new ResourceName("??????????"), ResourceType.DATASOURCE),
             Action.WRITE
         )
     );

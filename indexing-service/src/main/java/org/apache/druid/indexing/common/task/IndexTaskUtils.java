@@ -29,6 +29,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.CircularBuffer;
 
@@ -67,7 +68,7 @@ public class IndexTaskUtils
   )
   {
     ResourceAction resourceAction = new ResourceAction(
-        new Resource(datasource, ResourceType.DATASOURCE),
+        new Resource(new ResourceName(datasource), ResourceType.DATASOURCE),
         action
     );
 

@@ -27,6 +27,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 
 public class ConfigResourceFilter extends AbstractResourceFilter
@@ -60,8 +61,8 @@ public class ConfigResourceFilter extends AbstractResourceFilter
     return request;
   }
 
-  public String resourceName()
+  public ResourceName resourceName()
   {
-    return "CONFIG";
+    return ResourceName.CONFIG;
   }
 }

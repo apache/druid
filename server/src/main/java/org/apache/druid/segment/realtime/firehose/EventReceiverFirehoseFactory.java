@@ -49,6 +49,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.joda.time.DateTime;
 
@@ -351,7 +352,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
-              new Resource("INTERNAL", ResourceType.STATE),
+              new Resource(ResourceName.INTERNAL, ResourceType.STATE),
               Action.WRITE
           ),
           authorizerMapper
@@ -534,7 +535,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
-              new Resource("INTERNAL", ResourceType.STATE),
+              new Resource(ResourceName.INTERNAL, ResourceType.STATE),
               Action.WRITE
           ),
           authorizerMapper

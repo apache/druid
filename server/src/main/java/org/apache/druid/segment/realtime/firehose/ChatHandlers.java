@@ -26,6 +26,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.servlet.http.HttpServletRequest;
@@ -45,7 +46,7 @@ public class ChatHandlers
   )
   {
     ResourceAction resourceAction = new ResourceAction(
-        new Resource(dataSource, ResourceType.DATASOURCE),
+        new Resource(new ResourceName(dataSource), ResourceType.DATASOURCE),
         action
     );
 

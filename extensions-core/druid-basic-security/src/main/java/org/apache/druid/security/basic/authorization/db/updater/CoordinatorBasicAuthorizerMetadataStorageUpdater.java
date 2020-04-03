@@ -57,6 +57,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.joda.time.Duration;
 
@@ -1189,32 +1190,32 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private static List<ResourceAction> makeSuperUserPermissions()
   {
     ResourceAction datasourceR = new ResourceAction(
-        new Resource(".*", ResourceType.DATASOURCE),
+        new Resource(ResourceName.SUPERUSER, ResourceType.DATASOURCE),
         Action.READ
     );
 
     ResourceAction datasourceW = new ResourceAction(
-        new Resource(".*", ResourceType.DATASOURCE),
+        new Resource(ResourceName.SUPERUSER, ResourceType.DATASOURCE),
         Action.WRITE
     );
 
     ResourceAction configR = new ResourceAction(
-        new Resource(".*", ResourceType.CONFIG),
+        new Resource(ResourceName.SUPERUSER, ResourceType.CONFIG),
         Action.READ
     );
 
     ResourceAction configW = new ResourceAction(
-        new Resource(".*", ResourceType.CONFIG),
+        new Resource(ResourceName.SUPERUSER, ResourceType.CONFIG),
         Action.WRITE
     );
 
     ResourceAction stateR = new ResourceAction(
-        new Resource(".*", ResourceType.STATE),
+        new Resource(ResourceName.SUPERUSER, ResourceType.STATE),
         Action.READ
     );
 
     ResourceAction stateW = new ResourceAction(
-        new Resource(".*", ResourceType.STATE),
+        new Resource(ResourceName.SUPERUSER, ResourceType.STATE),
         Action.WRITE
     );
 

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.http.security;
 
-import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -27,11 +26,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 
-public class StateResourceFilter extends AbstractResourceFilter
+public abstract class StateResourceFilter extends AbstractResourceFilter
 {
-  @Inject
   public StateResourceFilter(AuthorizerMapper authorizerMapper)
   {
     super(authorizerMapper);
@@ -58,8 +57,5 @@ public class StateResourceFilter extends AbstractResourceFilter
     return request;
   }
 
-  public String resourceName()
-  {
-    return "STATE";
-  }
+  public abstract ResourceName resourceName();
 }

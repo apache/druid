@@ -74,6 +74,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.timeline.DataSegment;
@@ -163,7 +164,7 @@ public class OverlordResource
   {
     final String dataSource = task.getDataSource();
     final ResourceAction resourceAction = new ResourceAction(
-        new Resource(dataSource, ResourceType.DATASOURCE),
+        new Resource(new ResourceName(dataSource), ResourceType.DATASOURCE),
         Action.WRITE
     );
 
@@ -566,7 +567,7 @@ public class OverlordResource
     // fail fast if user not authorized to access datasource
     if (dataSource != null) {
       final ResourceAction resourceAction = new ResourceAction(
-          new Resource(dataSource, ResourceType.DATASOURCE),
+          new Resource(new ResourceName(dataSource), ResourceType.DATASOURCE),
           Action.READ
       );
       final Access authResult = AuthorizationUtils.authorizeResourceAction(
@@ -692,8 +693,8 @@ public class OverlordResource
     final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         request,
         ImmutableList.of(
-            new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.READ),
-            new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE)
+            new ResourceAction(new Resource(new ResourceName(dataSource), ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource(new ResourceName(dataSource), ResourceType.DATASOURCE), Action.WRITE)
         ),
         authorizerMapper
     );
@@ -975,7 +976,7 @@ public class OverlordResource
         );
       }
       return Collections.singletonList(
-          new ResourceAction(new Resource(taskDatasource, ResourceType.DATASOURCE), Action.READ)
+          new ResourceAction(new Resource(new ResourceName(taskDatasource), ResourceType.DATASOURCE), Action.READ)
       );
     };
     List<TaskStatusPlus> optionalTypeFilteredList = collectionToFilter;

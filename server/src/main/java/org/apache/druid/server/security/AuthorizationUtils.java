@@ -361,7 +361,7 @@ public class AuthorizationUtils
    * datasource name.
    */
   public static final Function<String, ResourceAction> DATASOURCE_READ_RA_GENERATOR = input -> new ResourceAction(
-      new Resource(input, ResourceType.DATASOURCE),
+      new Resource(new ResourceName(input), ResourceType.DATASOURCE),
       Action.READ
   );
 
@@ -370,7 +370,7 @@ public class AuthorizationUtils
    * datasource name.
    */
   public static final Function<String, ResourceAction> DATASOURCE_WRITE_RA_GENERATOR = input -> new ResourceAction(
-      new Resource(input, ResourceType.DATASOURCE),
+      new Resource(new ResourceName(input), ResourceType.DATASOURCE),
       Action.WRITE
   );
 }

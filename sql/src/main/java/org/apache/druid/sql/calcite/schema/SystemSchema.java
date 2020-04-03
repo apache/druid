@@ -72,6 +72,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -1007,7 +1008,7 @@ public class SystemSchema extends AbstractSchema
   {
     final Access stateAccess = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
-        Collections.singletonList(new ResourceAction(new Resource("SERVERS", ResourceType.STATE), Action.READ)),
+        Collections.singletonList(new ResourceAction(new Resource(ResourceName.SERVERS, ResourceType.STATE), Action.READ)),
         authorizerMapper
     );
     if (!stateAccess.isAllowed()) {

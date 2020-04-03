@@ -24,12 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Resource
 {
-  private final String name;
+  private final ResourceName name;
   private final ResourceType type;
 
   @JsonCreator
   public Resource(
-      @JsonProperty("name") String name,
+      @JsonProperty("name") ResourceName name,
       @JsonProperty("type") ResourceType type
   )
   {
@@ -40,7 +40,7 @@ public class Resource
   @JsonProperty
   public String getName()
   {
-    return name;
+    return name.toString();
   }
 
   @JsonProperty

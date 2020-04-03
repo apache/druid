@@ -38,6 +38,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.junit.After;
 import org.junit.Assert;
@@ -161,7 +162,7 @@ public class BasicRoleBasedAuthorizerTest
     updater.assignUserRole(DB_AUTHORIZER_NAME, "druid", "druidRole");
 
     List<ResourceAction> permissions = Collections.singletonList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.WRITE)
     );
 
     updater.setPermissions(DB_AUTHORIZER_NAME, "druidRole", permissions);
@@ -170,14 +171,14 @@ public class BasicRoleBasedAuthorizerTest
 
     Access access = authorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertTrue(access.isAllowed());
 
     access = authorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
@@ -192,7 +193,7 @@ public class BasicRoleBasedAuthorizerTest
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "druidGroupMapping", "druidRole");
 
     List<ResourceAction> permissions = Collections.singletonList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE)
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.WRITE)
     );
 
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "druidRole", permissions);
@@ -204,14 +205,14 @@ public class BasicRoleBasedAuthorizerTest
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
@@ -225,8 +226,8 @@ public class BasicRoleBasedAuthorizerTest
     updater.createRole(LDAP_AUTHORIZER_NAME, "adminDruidRole");
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "adminGrroupMapping", "adminDruidRole");
     List<ResourceAction> adminPermissions = Arrays.asList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.READ)
     );
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "adminDruidRole", adminPermissions);
 
@@ -237,7 +238,7 @@ public class BasicRoleBasedAuthorizerTest
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "userGrroupMapping", "userDruidRole");
 
     List<ResourceAction> userPermissions = Collections.singletonList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.READ)
     );
 
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "userDruidRole", userPermissions);
@@ -249,21 +250,21 @@ public class BasicRoleBasedAuthorizerTest
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
@@ -274,21 +275,21 @@ public class BasicRoleBasedAuthorizerTest
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertFalse(access.isAllowed());
@@ -303,8 +304,8 @@ public class BasicRoleBasedAuthorizerTest
     updater.createRole(LDAP_AUTHORIZER_NAME, "adminDruidRole");
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "adminGrroupMapping", "adminDruidRole");
     List<ResourceAction> adminPermissions = Arrays.asList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.READ)
     );
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "adminDruidRole", adminPermissions);
 
@@ -315,7 +316,7 @@ public class BasicRoleBasedAuthorizerTest
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "userGrroupMapping", "userDruidRole");
 
     List<ResourceAction> userPermissions = Collections.singletonList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.READ)
     );
 
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "userDruidRole", userPermissions);
@@ -327,21 +328,21 @@ public class BasicRoleBasedAuthorizerTest
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
@@ -352,21 +353,21 @@ public class BasicRoleBasedAuthorizerTest
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertFalse(access.isAllowed());
@@ -381,8 +382,8 @@ public class BasicRoleBasedAuthorizerTest
     updater.assignGroupMappingRole(LDAP_AUTHORIZER_NAME, "druidGroupMapping", "druidRole");
 
     List<ResourceAction> permissions = Arrays.asList(
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.WRITE),
-        new ResourceAction(new Resource("testResource", ResourceType.DATASOURCE), Action.READ)
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.WRITE),
+        new ResourceAction(new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE), Action.READ)
     );
 
     updater.setPermissions(LDAP_AUTHORIZER_NAME, "druidRole", permissions);
@@ -394,28 +395,28 @@ public class BasicRoleBasedAuthorizerTest
 
     Access access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("testResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("testResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.WRITE
     );
     Assert.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
-        new Resource("wrongResource", ResourceType.DATASOURCE),
+        new Resource(new ResourceName("wrongResource"), ResourceType.DATASOURCE),
         Action.READ
     );
     Assert.assertFalse(access.isAllowed());
