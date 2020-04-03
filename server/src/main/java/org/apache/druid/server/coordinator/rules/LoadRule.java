@@ -74,8 +74,9 @@ public abstract class LoadRule implements Rule
       currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
 
       final CoordinatorStats stats = new CoordinatorStats();
+      long time = System.currentTimeMillis();
       assign(params, segment, stats);
-
+      log.info("Time to run assign: " + (System.currentTimeMillis() - time));
       drop(params, segment, stats);
 
       return stats;
@@ -99,9 +100,13 @@ public abstract class LoadRule implements Rule
     // if primary replica already exists or is loading
     final int loading = params.getSegmentReplicantLookup().getTotalReplicants(segment.getId());
     if (!currentReplicants.isEmpty() || loading > 0) {
+      long time = System.currentTimeMillis();
       assignReplicas(params, segment, stats, null);
+      log.info("Time to run assignReplicas: " + (System.currentTimeMillis() - time));
     } else {
+      long time = System.currentTimeMillis();
       final ServerHolder primaryHolderToLoad = assignPrimary(params, segment);
+      log.info("Time to run assignPrimary: " + (System.currentTimeMillis() - time));
       if (primaryHolderToLoad == null) {
         // cluster does not have any replicants and cannot identify primary holder
         // this implies that no assignment could be done
@@ -111,6 +116,7 @@ public abstract class LoadRule implements Rule
       int numAssigned = 1; // 1 replica (i.e., primary replica) already assigned
 
       final String tier = primaryHolderToLoad.getServer().getTier();
+      time = System.currentTimeMillis();
       // assign replicas for the rest of the tier
       numAssigned += assignReplicasForTier(
           tier,
@@ -120,10 +126,13 @@ public abstract class LoadRule implements Rule
           createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad)),
           segment
       );
+      log.info("Time to run assignReplicasForTier: " + (System.currentTimeMillis() - time));
       stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
 
+      time = System.currentTimeMillis();
       // do assign replicas for the other tiers.
       assignReplicas(params, segment, stats, tier /* to skip */);
+      log.info("Time to run assignReplicasForOtherTiers: " + (System.currentTimeMillis() - time));
     }
   }
 

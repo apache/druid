@@ -101,6 +101,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
+    long time = System.currentTimeMillis();
     for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
@@ -123,7 +124,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
         missingRules++;
       }
     }
-
+    log.info("Time to cycle through all segments and rules: " + (System.currentTimeMillis() - time));
     if (!segmentsWithMissingRules.isEmpty()) {
       log.makeAlert("Unable to find matching rules!")
          .addData("segmentsWithMissingRulesCount", missingRules)
