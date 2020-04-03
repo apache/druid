@@ -24,6 +24,118 @@ sidebar_label: "Aggregation functions"
   -->
 
 
+
+<div style="color:red">
+
+<br />TODO: intro text ... all of this just experimental, at this point. 
+
+</div>
+
+
+## About aggregation functions
+
+Aggregation functions can appear in the SELECT clause of any query. Any aggregator can be filtered using syntax like
+`AGG(expr) FILTER(WHERE whereExpr)`. Filtered aggregators will only aggregate rows that match their filter. It's
+possible for two aggregators in the same SQL query to have different filters.
+
+Only the COUNT aggregation can accept DISTINCT.
+
+## Aggregation function descriptions
+
+|Function|Notes|
+|--------|-----|
+|`COUNT(*)`|Counts the number of rows.|
+|`COUNT(DISTINCT expr)`|Counts distinct values of expr, which can be string, numeric, or hyperUnique. By default this is approximate, using a variant of [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf). To get exact counts set "useApproximateCountDistinct" to "false". If you do this, expr must be string or numeric, since exact counts are not possible using hyperUnique columns. See also `APPROX_COUNT_DISTINCT(expr)`. In exact mode, only one distinct count per query is permitted.|
+|`SUM(expr)`|Sums numbers.|
+|`MIN(expr)`|Takes the minimum of numbers.|
+|`MAX(expr)`|Takes the maximum of numbers.|
+|`AVG(expr)`|Averages numbers.|
+|`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". This uses Druid's built-in "cardinality" or "hyperUnique" aggregators. See also `COUNT(DISTINCT expr)`.|
+|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.html) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.html) column. The `size` parameter is described in the Theta sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`DS_HLL(expr, [lgK, tgtHllType])`|Creates an [HLL sketch](../development/extensions-core/datasketches-hll.html) on the values of expr, which can be a regular column or a column containing HLL sketches. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`DS_THETA(expr, [size])`|Creates a [Theta sketch](../development/extensions-core/datasketches-theta.html) on the values of expr, which can be a regular column or a column containing Theta sketches. The `size` parameter is described in the Theta sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.html#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
+|`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.html) exprs. The "probability" should be between 0 and 1 (exclusive). The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`|Computes approximate quantiles on numeric or [fixed buckets histogram](../development/extensions-core/approximate-histograms.html#fixed-buckets-histogram) exprs. The "probability" should be between 0 and 1 (exclusive). The `numBuckets`, `lowerLimit`, `upperLimit`, and `outlierHandlingMode` parameters are described in the fixed buckets histogram documentation. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
+|`DS_QUANTILES_SKETCH(expr, [k])`|Creates a [Quantiles sketch](../development/extensions-core/datasketches-quantiles.html) on the values of expr, which can be a regular column or a column containing quantiles sketches. The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positive rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
+|`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`|Builds a T-Digest sketch on values produced by `expr` and returns the value for the quantile. Compression parameter (default value 100) determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.html) documentation for additional details.|
+|`TDIGEST_GENERATE_SKETCH(expr, [compression])`|Builds a T-Digest sketch on values produced by `expr`. Compression parameter (default value 100) determines the accuracy and size of the sketch Higher compression means higher accuracy but more space to store sketches. See [t-digest extension](../development/extensions-contrib/tdigestsketch-quantiles.html) documentation for additional details.|
+|`VAR_POP(expr)`|Computes variance population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`VAR_SAMP(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`VARIANCE(expr)`|Computes variance sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`STDDEV_POP(expr)`|Computes standard deviation population of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`STDDEV_SAMP(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`STDDEV(expr)`|Computes standard deviation sample of `expr`. See [stats extension](../development/extensions-core/stats.html) documentation for additional details.|
+|`EARLIEST(expr)`|Returns the earliest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "earliest" is the value first encountered with the minimum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the first value encountered.|
+|`EARLIEST(expr, maxBytesPerString)`|Like `EARLIEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
+|`LATEST(expr)`|Returns the latest value of `expr`, which must be numeric. If `expr` comes from a relation with a timestamp column (like a Druid datasource) then "latest" is the value last encountered with the maximum overall timestamp of all values being aggregated. If `expr` does not come from a relation with a timestamp, then it is simply the last value encountered.|
+|`LATEST(expr, maxBytesPerString)`|Like `LATEST(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
+|`ANY_VALUE(expr)`|Returns any value of `expr` including null. `expr` must be numeric. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)|
+|`ANY_VALUE(expr, maxBytesPerString)`|Like `ANY_VALUE(expr)`, but for strings. The `maxBytesPerString` parameter determines how much aggregation space to allocate per string. Strings longer than this limit will be truncated. This parameter should be set as low as possible, since high values will lead to wasted memory.|
+
+
+For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.html#approx).
+
+## Druid SQL-to-native query mapping
+
+Queries without aggregations use Druid's [Scan](scan-query.html) native query type.
+
+Aggregation queries (using GROUP BY, DISTINCT, or any aggregation functions) will use one of Druid's three native
+aggregation query types. Two (Timeseries and TopN) are specialized for specific types of aggregations, whereas the other
+(GroupBy) is general-purpose.
+
+- [Timeseries](timeseriesquery.html) is used for queries that GROUP BY `FLOOR(__time TO <unit>)` or `TIME_FLOOR(__time,
+period)`, have no other grouping expressions, no HAVING or LIMIT clauses, no nesting, and either no ORDER BY, or an
+ORDER BY that orders by same expression as present in GROUP BY. It also uses Timeseries for "grand total" queries that
+have aggregation functions but no GROUP BY. This query type takes advantage of the fact that Druid segments are sorted
+by time.
+
+- [TopN](topnquery.html) is used by default for queries that group by a single expression, do have ORDER BY and LIMIT
+clauses, do not have HAVING clauses, and are not nested. However, the TopN query type will deliver approximate ranking
+and results in some cases; if you want to avoid this, set "useApproximateTopN" to "false". TopN results are always
+computed in memory. See the TopN documentation for more details.
+
+- [GroupBy](groupbyquery.html) is used for all other aggregations, including any nested aggregation queries. Druid's
+GroupBy is a traditional aggregation engine: it delivers exact results and rankings and supports a wide variety of
+features. GroupBy aggregates in memory if it can, but it may spill to disk if it doesn't have enough memory to complete
+your query. Results are streamed back from data processes through the Broker if you ORDER BY the same expressions in your
+GROUP BY clause, or if you don't have an ORDER BY at all. If your query has an ORDER BY referencing expressions that
+don't appear in the GROUP BY clause (like aggregation functions) then the Broker will materialize a list of results in
+memory, up to a max of your LIMIT, if any. See the GroupBy documentation for details about tuning performance and memory
+use.
+
+If your query does nested aggregations (an aggregation subquery in your FROM clause) then Druid will execute it as a
+[nested GroupBy](groupbyquery.html#nested-groupbys). In nested GroupBys, the innermost aggregation is distributed, but
+all outer aggregations beyond that take place locally on the query Broker.
+
+Semi-join queries containing WHERE clauses like `col IN (SELECT expr FROM ...)` are executed with a special process. The
+Broker will first translate the subquery into a GroupBy to find distinct values of `expr`. Then, the broker will rewrite
+the subquery to a literal filter, like `col IN (val1, val2, ...)` and run the outer query. The configuration parameter
+druid.sql.planner.maxSemiJoinRowsInMemory controls the maximum number of values that will be materialized for this kind
+of plan.
+
+For all native query types, filters on the `__time` column will be translated into top-level query "intervals" whenever
+possible, which allows Druid to use its global time index to quickly prune the set of data that must be scanned. In
+addition, Druid will use indexes local to each data process to further speed up WHERE evaluation. This can typically be
+done for filters that involve boolean combinations of references to and functions of single columns, like
+`WHERE col1 = 'a' AND col2 = 'b'`, but not `WHERE col1 = col2`.
+
+### Approximate algorithms
+
+Druid SQL will use approximate algorithms in some situations:
+
+- The `COUNT(DISTINCT col)` aggregation functions by default uses a variant of
+[HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf), a fast approximate distinct counting
+algorithm. Druid SQL will switch to exact distinct counts if you set "useApproximateCountDistinct" to "false", either
+through query context or through Broker configuration.
+- GROUP BY queries over a single column with ORDER BY and LIMIT may be executed using the TopN engine, which uses an
+approximate algorithm. Druid SQL will switch to an exact grouping algorithm if you set "useApproximateTopN" to "false",
+either through query context or through Broker configuration.
+- The APPROX_COUNT_DISTINCT and APPROX_QUANTILE aggregation functions always use approximate algorithms, regardless
+of configuration.
+
 ## GroupBy queries
 
 These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a

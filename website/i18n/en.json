@@ -366,6 +366,10 @@
       "operations/use_sbt_to_build_fat_jar": {
         "title": "Content for build.sbt"
       },
+      "querying/aggregationfunctions": {
+        "title": "Aggregation functions",
+        "sidebar_label": "Aggregation functions"
+      },
       "querying/aggregations": {
         "title": "Aggregations"
       },

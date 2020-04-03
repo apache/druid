@@ -59,16 +59,13 @@
       "querying/queryoverview",
       "querying/sql",
       "querying/datatypes",
-      "querying/queryfunctions",
       "querying/aggregationfunctions",
+      "querying/queryfunctions",
       {
         "type": "subcategory",
         "label": "Native query types",
         "ids": [
           "querying/querying",
-          "querying/timeseriesquery",
-          "querying/topnquery",
-          "querying/groupbyquery",
           "querying/scan-query",
           "querying/timeboundaryquery",
           "querying/segmentmetadataquery",
