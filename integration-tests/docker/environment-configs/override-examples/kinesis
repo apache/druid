@@ -16,17 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
-DRUID_SERVICE=router
-DRUID_LOG_PATH=/shared/logs/router-permissive-tls.log
-
-# JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx128m -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5001
-
-# Druid configs
-druid_plaintextPort=8889
-druid_tlsPort=9089
-druid_server_http_numThreads=100
-druid_auth_basic_common_cacheDirectory=/tmp/authCache/router-permissive-tls
-druid_sql_avatica_enable=true
-druid_server_https_validateHostnames=false
+druid_kinesis_accessKey=<OVERRIDE_THIS>
+druid_kinesis_secretKey=<OVERRIDE_THIS>
+AWS_REGION=<OVERRIDE_THIS>
+druid_extensions_loadList=["druid-kinesis-indexing-service"]
