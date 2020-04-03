@@ -28,7 +28,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.retry.RetryOneTime;
+import org.apache.curator.test.TestingCluster;
+import org.apache.curator.test.Timing;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
@@ -39,11 +45,15 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
+import org.easymock.Capture;
+import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -55,9 +65,15 @@ import org.junit.rules.TestRule;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.newCapture;
 
 public class RemoteTaskRunnerTest
 {
@@ -943,5 +959,36 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteSuccessfulTask(task2);
     Assert.assertTrue(taskFuture2.get().isSuccess());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+  }
+
+  @Test
+  public void testStatusListenerEventDataNullShouldNotThrowException() throws Exception
+  {
+    // Set up mock emitter to verify log alert when exception is thrown inside the status listener
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    Capture<EmittingLogger.EmittingAlertBuilder> capturedArgument = Capture.newInstance();
+    emitter.emit(capture(capturedArgument));
+    expectLastCall().atLeastOnce();
+    EmittingLogger.registerEmitter(emitter);
+    EasyMock.replay(emitter);
+
+    PathChildrenCache cache = new PathChildrenCache(cf, "/test", true);
+    testStartWithNoWorker();
+    cache.getListenable().addListener(remoteTaskRunner.getStatusListener(worker, null, SettableFuture.create()));
+    cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+
+    // Status listener will recieve event with null data
+    Assert.assertTrue(
+        TestUtils.conditionValid(() -> cache.getCurrentData().size() == 1)
+    );
+
+    // Verify that the log emitter was called
+    EasyMock.verify(emitter);
+    Map<String, Object> alertDataMap = capturedArgument.getValue().build(null).getDataMap();
+    Assert.assertTrue(alertDataMap.containsKey("worker"));
+    Assert.assertTrue(alertDataMap.containsKey("znode"));
+    Assert.assertNull(alertDataMap.get("worker"));
+    Assert.assertNull(alertDataMap.get("znode"));
+    // Status listener should successfully completes without throwing exception
   }
 }

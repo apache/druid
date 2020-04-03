@@ -45,6 +45,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.curator.CuratorUtils;
@@ -969,116 +970,127 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       );
 
       // Add status listener to the watcher for status changes
-      zkWorker.addListener(
-          (client, event) -> {
-            final String taskId;
-            final RemoteTaskRunnerWorkItem taskRunnerWorkItem;
-            synchronized (statusLock) {
-              try {
-                switch (event.getType()) {
-                  case CHILD_ADDED:
-                  case CHILD_UPDATED:
-                    taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
-                    final TaskAnnouncement announcement = jsonMapper.readValue(
-                        event.getData().getData(), TaskAnnouncement.class
-                    );
-
-                    log.info(
-                        "Worker[%s] wrote %s status for task [%s] on [%s]",
-                        zkWorker.getWorker().getHost(),
-                        announcement.getTaskStatus().getStatusCode(),
-                        taskId,
-                        announcement.getTaskLocation()
-                    );
-
-                    // Synchronizing state with ZK
-                    statusLock.notifyAll();
-
-                    final RemoteTaskRunnerWorkItem tmp;
-                    if ((tmp = runningTasks.get(taskId)) != null) {
-                      taskRunnerWorkItem = tmp;
-                    } else {
-                      final RemoteTaskRunnerWorkItem newTaskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
-                          taskId,
-                          announcement.getTaskType(),
-                          zkWorker.getWorker(),
-                          TaskLocation.unknown(),
-                          announcement.getTaskDataSource()
-                      );
-                      final RemoteTaskRunnerWorkItem existingItem = runningTasks.putIfAbsent(
-                          taskId,
-                          newTaskRunnerWorkItem
-                      );
-                      if (existingItem == null) {
-                        log.warn(
-                            "Worker[%s] announced a status for a task I didn't know about, adding to runningTasks: %s",
-                            zkWorker.getWorker().getHost(),
-                            taskId
-                        );
-                        taskRunnerWorkItem = newTaskRunnerWorkItem;
-                      } else {
-                        taskRunnerWorkItem = existingItem;
-                      }
-                    }
-
-                    if (!announcement.getTaskLocation().equals(taskRunnerWorkItem.getLocation())) {
-                      taskRunnerWorkItem.setLocation(announcement.getTaskLocation());
-                      TaskRunnerUtils.notifyLocationChanged(listeners, taskId, announcement.getTaskLocation());
-                    }
-
-                    if (announcement.getTaskStatus().isComplete()) {
-                      taskComplete(taskRunnerWorkItem, zkWorker, announcement.getTaskStatus());
-                      runPendingTasks();
-                    }
-                    break;
-                  case CHILD_REMOVED:
-                    taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
-                    taskRunnerWorkItem = runningTasks.remove(taskId);
-                    if (taskRunnerWorkItem != null) {
-                      log.info("Task[%s] just disappeared!", taskId);
-                      taskRunnerWorkItem.setResult(TaskStatus.failure(taskId));
-                      TaskRunnerUtils.notifyStatusChanged(listeners, taskId, TaskStatus.failure(taskId));
-                    } else {
-                      log.info("Task[%s] went bye bye.", taskId);
-                    }
-                    break;
-                  case INITIALIZED:
-                    if (zkWorkers.putIfAbsent(worker.getHost(), zkWorker) == null) {
-                      retVal.set(zkWorker);
-                    } else {
-                      final String message = StringUtils.format(
-                          "WTF?! Tried to add already-existing worker[%s]",
-                          worker.getHost()
-                      );
-                      log.makeAlert(message)
-                         .addData("workerHost", worker.getHost())
-                         .addData("workerIp", worker.getIp())
-                         .emit();
-                      retVal.setException(new IllegalStateException(message));
-                    }
-                    runPendingTasks();
-                    break;
-                  case CONNECTION_SUSPENDED:
-                  case CONNECTION_RECONNECTED:
-                  case CONNECTION_LOST:
-                    // do nothing
-                }
-              }
-              catch (Exception e) {
-                log.makeAlert(e, "Failed to handle new worker status")
-                   .addData("worker", zkWorker.getWorker().getHost())
-                   .addData("znode", event.getData().getPath())
-                   .emit();
-              }
-            }
-          }
-      );
+      zkWorker.addListener(getStatusListener(worker, zkWorker, retVal));
       zkWorker.start();
       return retVal;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @VisibleForTesting
+  PathChildrenCacheListener getStatusListener(final Worker worker, final ZkWorker zkWorker, final SettableFuture<ZkWorker> retVal) {
+    return (client, event) -> {
+      final String taskId;
+      final RemoteTaskRunnerWorkItem taskRunnerWorkItem;
+      synchronized (statusLock) {
+        try {
+          switch (event.getType()) {
+            case CHILD_ADDED:
+            case CHILD_UPDATED:
+              taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
+              final TaskAnnouncement announcement = jsonMapper.readValue(
+                  event.getData().getData(), TaskAnnouncement.class
+              );
+
+              log.info(
+                  "Worker[%s] wrote %s status for task [%s] on [%s]",
+                  zkWorker.getWorker().getHost(),
+                  announcement.getTaskStatus().getStatusCode(),
+                  taskId,
+                  announcement.getTaskLocation()
+              );
+
+              // Synchronizing state with ZK
+              statusLock.notifyAll();
+
+              final RemoteTaskRunnerWorkItem tmp;
+              if ((tmp = runningTasks.get(taskId)) != null) {
+                taskRunnerWorkItem = tmp;
+              } else {
+                final RemoteTaskRunnerWorkItem newTaskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
+                    taskId,
+                    announcement.getTaskType(),
+                    zkWorker.getWorker(),
+                    TaskLocation.unknown(),
+                    announcement.getTaskDataSource()
+                );
+                final RemoteTaskRunnerWorkItem existingItem = runningTasks.putIfAbsent(
+                    taskId,
+                    newTaskRunnerWorkItem
+                );
+                if (existingItem == null) {
+                  log.warn(
+                      "Worker[%s] announced a status for a task I didn't know about, adding to runningTasks: %s",
+                      zkWorker.getWorker().getHost(),
+                      taskId
+                  );
+                  taskRunnerWorkItem = newTaskRunnerWorkItem;
+                } else {
+                  taskRunnerWorkItem = existingItem;
+                }
+              }
+
+              if (!announcement.getTaskLocation().equals(taskRunnerWorkItem.getLocation())) {
+                taskRunnerWorkItem.setLocation(announcement.getTaskLocation());
+                TaskRunnerUtils.notifyLocationChanged(listeners, taskId, announcement.getTaskLocation());
+              }
+
+              if (announcement.getTaskStatus().isComplete()) {
+                taskComplete(taskRunnerWorkItem, zkWorker, announcement.getTaskStatus());
+                runPendingTasks();
+              }
+              break;
+            case CHILD_REMOVED:
+              taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
+              taskRunnerWorkItem = runningTasks.remove(taskId);
+              if (taskRunnerWorkItem != null) {
+                log.info("Task[%s] just disappeared!", taskId);
+                taskRunnerWorkItem.setResult(TaskStatus.failure(taskId));
+                TaskRunnerUtils.notifyStatusChanged(listeners, taskId, TaskStatus.failure(taskId));
+              } else {
+                log.info("Task[%s] went bye bye.", taskId);
+              }
+              break;
+            case INITIALIZED:
+              if (zkWorkers.putIfAbsent(worker.getHost(), zkWorker) == null) {
+                retVal.set(zkWorker);
+              } else {
+                final String message = StringUtils.format(
+                    "WTF?! Tried to add already-existing worker[%s]",
+                    worker.getHost()
+                );
+                log.makeAlert(message)
+                   .addData("workerHost", worker.getHost())
+                   .addData("workerIp", worker.getIp())
+                   .emit();
+                retVal.setException(new IllegalStateException(message));
+              }
+              runPendingTasks();
+              break;
+            case CONNECTION_SUSPENDED:
+            case CONNECTION_RECONNECTED:
+            case CONNECTION_LOST:
+              // do nothing
+          }
+        }
+        catch (Exception e) {
+          String workerHost = null;
+          String znode = null;
+          if (zkWorker != null && zkWorker.getWorker() != null) {
+            workerHost = zkWorker.getWorker().getHost();
+          }
+          if (event != null && event.getData() != null) {
+            znode = event.getData().getPath();
+          }
+          log.makeAlert(e, "Failed to handle new worker status")
+             .addData("worker", workerHost)
+             .addData("znode", znode)
+             .emit();
+        }
+      }
+    };
   }
 
   /**
