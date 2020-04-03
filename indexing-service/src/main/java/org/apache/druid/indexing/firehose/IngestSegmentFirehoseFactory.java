@@ -214,18 +214,11 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       }
     }
 
-    final List<String> dims;
-    if (dimensions != null) {
-      dims = dimensions;
-    } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
-      dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
-    } else {
-      dims = ReingestionTimelineUtils.getUniqueDimensions(
-        timeLineSegments,
-        inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions()
-      );
-    }
-
+    final List<String> dims = ReingestionTimelineUtils.getDimensionsToReingest(
+        dimensions,
+        inputRowParser.getParseSpec().getDimensionsSpec(),
+        timeLineSegments
+    );
     final List<String> metricsList = metrics == null
                                      ? ReingestionTimelineUtils.getUniqueMetrics(timeLineSegments)
                                      : metrics;
