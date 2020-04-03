@@ -208,7 +208,8 @@ public abstract class BaseJettyTest
 
   public static class LatchedRequestStateHolder
   {
-    private static final int timeoutMillis = 10_000;
+    private static final int TIMEOUT_MILLIS = 10_000;
+
     private CountDownLatch requestStartLatch;
     private CountDownLatch requestEndLatch;
 
@@ -225,7 +226,7 @@ public abstract class BaseJettyTest
 
     public void clientWaitForServerToStartRequest() throws InterruptedException
     {
-      requestStartLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
+      requestStartLatch.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     public void serverStartRequest()
@@ -235,7 +236,7 @@ public abstract class BaseJettyTest
 
     public void serverWaitForClientReadyToFinishRequest() throws InterruptedException
     {
-      requestEndLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
+      requestEndLatch.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     public void clientReadyToFinishRequest()
