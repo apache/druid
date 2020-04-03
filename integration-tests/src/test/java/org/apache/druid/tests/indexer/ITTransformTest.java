@@ -27,7 +27,7 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.io.IOException;
 
-@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
+@Test(groups = TestNGGroup.BATCH_INDEX)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTransformTest extends AbstractITBatchIndexTest
 {
