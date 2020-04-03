@@ -30,11 +30,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.retry.RetryOneTime;
-import org.apache.curator.test.TestingCluster;
-import org.apache.curator.test.Timing;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
@@ -45,15 +41,12 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.easymock.Capture;
-import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -69,11 +62,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import static org.easymock.EasyMock.capture;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.newCapture;
 
 public class RemoteTaskRunnerTest
 {
@@ -967,8 +955,8 @@ public class RemoteTaskRunnerTest
     // Set up mock emitter to verify log alert when exception is thrown inside the status listener
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     Capture<EmittingLogger.EmittingAlertBuilder> capturedArgument = Capture.newInstance();
-    emitter.emit(capture(capturedArgument));
-    expectLastCall().atLeastOnce();
+    emitter.emit(EasyMock.capture(capturedArgument));
+    EasyMock.expectLastCall().atLeastOnce();
     EmittingLogger.registerEmitter(emitter);
     EasyMock.replay(emitter);
 

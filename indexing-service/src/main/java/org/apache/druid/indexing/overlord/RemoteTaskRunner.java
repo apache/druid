@@ -980,7 +980,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @VisibleForTesting
-  PathChildrenCacheListener getStatusListener(final Worker worker, final ZkWorker zkWorker, final SettableFuture<ZkWorker> retVal) {
+  PathChildrenCacheListener getStatusListener(final Worker worker, final ZkWorker zkWorker, final SettableFuture<ZkWorker> retVal)
+  {
     return (client, event) -> {
       final String taskId;
       final RemoteTaskRunnerWorkItem taskRunnerWorkItem;
@@ -1058,7 +1059,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 retVal.set(zkWorker);
               } else {
                 final String message = StringUtils.format(
-                    "WTF?! Tried to add already-existing worker[%s]",
+                    "This should not happen...tried to add already-existing worker[%s]",
                     worker.getHost()
                 );
                 log.makeAlert(message)
