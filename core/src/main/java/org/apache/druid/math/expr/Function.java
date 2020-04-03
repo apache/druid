@@ -1910,16 +1910,10 @@ public interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      Long left = args.get(0).eval(bindings).asLong();
-      Long right = args.get(1).eval(bindings).asLong();
+      long left = args.get(0).eval(bindings).asLong();
+      long right = args.get(1).eval(bindings).asLong();
       DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
-
-      if (left == null || right == null) {
-        return ExprEval.of(null);
-      } else {
-        return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
-      }
-
+      return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
     }
 
     @Override

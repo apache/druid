@@ -77,7 +77,7 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
     } else if (val instanceof FixedBucketsHistogram) {
       h0.combineHistogram((FixedBucketsHistogram) val);
     } else {
-      Double x = ((Number) val).doubleValue();
+      double x = ((Number) val).doubleValue();
       h0.add(x);
     }
 
