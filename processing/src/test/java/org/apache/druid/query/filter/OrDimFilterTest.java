@@ -19,45 +19,30 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.segment.filter.FilterTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class AndDimFilterTest extends InitializedNullHandlingTest
+public class OrDimFilterTest extends InitializedNullHandlingTest
 {
-  @Test
-  public void testGetRequiredColumns()
-  {
-    AndDimFilter andDimFilter = new AndDimFilter(
-        Lists.newArrayList(
-            new SelectorDimFilter("a", "d", null),
-            new SelectorDimFilter("b", "d", null),
-            new SelectorDimFilter("c", "d", null)
-        )
-    );
-    Assert.assertEquals(andDimFilter.getRequiredColumns(), Sets.newHashSet("a", "b", "c"));
-  }
-
   @Test
   public void testToFilterWithDuplicateFilters()
   {
-    DimFilter dimFilter = DimFilterTestUtils.and(
-        DimFilterTestUtils.or(
+    DimFilter dimFilter = DimFilterTestUtils.or(
+        DimFilterTestUtils.and(
             DimFilterTestUtils.selector("col1", "1"),
             DimFilterTestUtils.selector("col2", "2")
         ),
-        DimFilterTestUtils.or(
+        DimFilterTestUtils.and(
             // duplicate but different order
             DimFilterTestUtils.selector("col2", "2"),
             DimFilterTestUtils.selector("col1", "1")
         ),
         DimFilterTestUtils.selector("col3", "3")
     );
-    Filter expected = FilterTestUtils.and(
-        FilterTestUtils.or(
+    Filter expected = FilterTestUtils.or(
+        FilterTestUtils.and(
             FilterTestUtils.selector("col1", "1"),
             FilterTestUtils.selector("col2", "2")
         ),

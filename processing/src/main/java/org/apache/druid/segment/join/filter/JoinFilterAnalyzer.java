@@ -128,17 +128,17 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Filter normalizedFilter = Filters.convertToCNF(originalFilter);
+    Filter normalizedFilter = Filters.toCNF(originalFilter);
 
     // List of candidates for pushdown
     // CNF normalization will generate either
     // - an AND filter with multiple subfilters
     // - or a single non-AND subfilter which cannot be split further
-    List<Filter> normalizedOrClauses;
+    Set<Filter> normalizedOrClauses;
     if (normalizedFilter instanceof AndFilter) {
       normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
     } else {
-      normalizedOrClauses = Collections.singletonList(normalizedFilter);
+      normalizedOrClauses = Collections.singleton(normalizedFilter);
     }
 
     List<Filter> normalizedBaseTableClauses = new ArrayList<>();
@@ -422,7 +422,7 @@ public class JoinFilterAnalyzer
   )
   {
     boolean retainRhs = false;
-    List<Filter> newFilters = new ArrayList<>();
+    Set<Filter> newFilters = new HashSet<>();
     for (Filter filter : orFilter.getFilters()) {
       if (!areSomeColumnsFromJoin(joinFilterPreAnalysis.getJoinableClauses(), filter.getRequiredColumns())) {
         newFilters.add(filter);
