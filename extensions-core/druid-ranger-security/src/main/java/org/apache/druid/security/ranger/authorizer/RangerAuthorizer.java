@@ -110,8 +110,8 @@ public class RangerAuthorizer implements Authorizer
     RangerAccessResult result = rangerPlugin.isAccessAllowed(request);
     if (log.isDebugEnabled()) {
       log.debug("==> authorize: %s, allowed: %s",
-        request.toString(),
-        result != null ? result.getIsAllowed() : null);
+          request.toString(),
+          result != null ? result.getIsAllowed() : null);
     }
 
     if (result != null && result.getIsAllowed()) {
