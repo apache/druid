@@ -73,7 +73,7 @@ druid.escalator.authorizerName=ranger
 ---
 **NOTE**
 
-Contrary to the documentation of `druid-basic-auth` Ranger does not automatically provision a highly priviliged
+Contrary to the documentation of `druid-basic-auth` Ranger does not automatically provision a highly privileged
 system system user and you will need to do this yourself. This system user in case of `druid-basic-auth` is named 
 `druid_system` and for the escalator it is configurable as shown above. Make sure to take note of these user names and 
 configure `READ` access to `state:STATE` and to `config:security` in your ranger policies, 
