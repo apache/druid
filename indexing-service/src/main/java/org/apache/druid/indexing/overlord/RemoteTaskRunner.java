@@ -1078,12 +1078,17 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
         catch (Exception e) {
           String znode = null;
-          if (event != null && event.getData() != null) {
-            znode = event.getData().getPath();
+          String eventType = null;
+          if (event != null) {
+            if (event.getData() != null) {
+              znode = event.getData().getPath();
+            }
+            eventType = event.getType().toString();
           }
           log.makeAlert(e, "Failed to handle new worker status")
              .addData("worker", zkWorker.getWorker().getHost())
              .addData("znode", znode)
+             .addData("eventType", eventType)
              .emit();
         }
       }
