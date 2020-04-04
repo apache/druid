@@ -61,6 +61,7 @@
       "querying/datatypes",
       "querying/aggregationfunctions",
       "querying/queryfunctions",
+      "querying/metadatatables",
       {
         "type": "subcategory",
         "label": "Native query types",

@@ -415,6 +415,10 @@
       "querying/lookups": {
         "title": "Lookups"
       },
+      "querying/metadatatables": {
+        "title": "Metadata tables",
+        "sidebar_label": "Metadata tables"
+      },
       "querying/multi-value-dimensions": {
         "title": "Multi-value dimensions"
       },
