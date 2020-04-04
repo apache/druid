@@ -35,8 +35,8 @@ an alias name. You can do this in Using `File` -> `Project Structure...` -> `Pla
 The Code Style is available in XML format at [druid_intellij_formatting.xml](druid_intellij_formatting.xml) and can be [imported into IntelliJ](https://www.jetbrains.com/help/idea/2017.1/copying-code-style-settings.html).
 
 ## Git Checkstyle pre-commit hook (Optional)
-Git Checkstyle pre-commit hook can be setup to automatically run maven checkstyle before committing, 
-saving cycle from avoiding the checkstyle failing later in CI environment.
+Git Checkstyle pre-commit hook can be installed to automatically run checkstyle verification before committing, 
+saving cycle from avoiding the checkstyle failing later in Travis/CI environment.
 The hook can be setup easily by running the <DRUID_HOME>/setup-hooks.sh script.
 
 ## Metadata
