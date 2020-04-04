@@ -79,6 +79,8 @@
         <apache.curator.version>4.1.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
         <apache.kafka.version>2.2.2</apache.kafka.version>
+        <apache.ranger.version>2.0.0</apache.ranger.version>
+        <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <avatica.version>1.15.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
@@ -162,6 +164,7 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
+        <module>extensions-core/druid-ranger-security</module>
         <!-- Community extensions -->
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
