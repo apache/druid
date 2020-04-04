@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.ranger.authorizer.guice.Ranger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -48,6 +49,8 @@ import java.util.Set;
 @JsonTypeName("ranger")
 public class RangerAuthorizer implements Authorizer
 {
+  private static final Logger log = new Logger(RangerAuthorizer.class);
+
   public static final String RANGER_DRUID_SERVICETYPE = "druid";
   public static final String RANGER_DRUID_APPID = "druid";
 
@@ -103,7 +106,11 @@ public class RangerAuthorizer implements Authorizer
         userGroups,
         action
     );
+
     RangerAccessResult result = rangerPlugin.isAccessAllowed(request);
+    if (log.isDebugEnabled()) {
+      log.debug("==> authorize: %s, allowed: %s", request.toString(), result.getIsAllowed());
+    }
 
     if (result != null && result.getIsAllowed()) {
       return new Access(true);

@@ -36,9 +36,9 @@ Support for Apache Ranger authorization consists of three elements: configuratio
 in Apache Druid, configuring the connection to Apache Ranger and providing the service definition for Druid to Apache Ranger.
  
 ### Enabling the extension
-Ensure that you have a valid authentication chain set in your `common.runtime.properties`. For every 
+Ensure that you have a valid authentication chain and escalator set in your `common.runtime.properties`. For every 
 authenticator your wish to use the authorizer for set `druid.auth.authenticator.<authenticatorName>.authorizerName` 
-to the name you will give the authorizer, e.g. `ranger`.
+to the name you will give the authorizer, e.g. `ranger`. 
 
 Then add the following and amend to your needs (in case you use multiple authorizers):
 
@@ -46,6 +46,39 @@ Then add the following and amend to your needs (in case you use multiple authori
 druid.auth.authorizers=["ranger"]
 druid.auth.authorizer.ranger.type=ranger
 ```
+
+The following is an example that uses `druid-basic-security` for authentication and `druid-ranger-security` for 
+authorization.
+
+```
+druid.auth.authenticatorChain=["basic"]
+druid.auth.authenticator.basic.type=basic
+druid.auth.authenticator.basic.initialAdminPassword=password1
+druid.auth.authenticator.basic.initialInternalClientPassword=password2
+druid.auth.authenticator.basic.credentialsValidator.type=metadata
+druid.auth.authenticator.basic.skipOnFailure=false
+druid.auth.authenticator.basic.enableCacheNotifications=true
+druid.auth.authenticator.basic.authorizerName=ranger
+
+druid.auth.authorizers=["ranger"]
+druid.auth.authorizer.ranger.type=ranger
+
+# Escalator
+druid.escalator.type=basic
+druid.escalator.internalClientUsername=druid_system
+druid.escalator.internalClientPassword=password2
+druid.escalator.authorizerName=ranger
+```
+
+---
+**NOTE**
+
+Contrary to the documentation of `druid-basic-auth` Ranger does not automatically provision a highly priviliged
+system system user and you will need to do this yourself. This system user in case of `druid-basic-auth` is named 
+`druid_system` and for the escalator it is configurable as shown above. Make sure to take note of these user names and 
+configure `READ` access to `state:STATE` and to `config:security` in your ranger policies, 
+otherwise system services will not work properly.
+---
 
 #### Properties to configure the extension in Apache Druid
 |Property|Description|Default|required|
@@ -74,6 +107,20 @@ You should get back `json` describing the service definition you just added. You
 interface of Apache Ranger which should now include a widget for "Druid". Click the plus sign an create
 the new service. Ensure your service name is equal to what you configured in `ranger-druid-security.xml`.
 
+#### Configuring Apache Ranger policies
+
+When installing a new Druid service inside Apache Ranger for the first time, Ranger will provision the policies
+to allow the administrative user `read/write` access to all properties and data sources. You might want to limit this.
+Do not forget to add the correct policies for the `druid_system` user and the `internalClientUserName` of the escalator.
+
+---
+**NOTE**
+
+Loading new data sources requires `write` access to the `datasource` prior to the loading itself. So if you
+want to create a datasource `wikipedia` you are required to have an `allow` policy inside Apache Ranger before
+trying to load the spec. 
+---
+
 ## Usage
 
 ### HTTP methods
@@ -95,3 +142,17 @@ Queries on the [system schema tables](../../querying/sql.html#system-schema) req
 - `servers`: The user requires STATE READ permissions.
 - `server_segments`: The user requires STATE READ permissions and segments will be filtered based on DATASOURCE READ permissions.
 - `tasks`: Tasks will be filtered based on DATASOURCE READ permissions.
+
+
+### Debugging
+
+If you face difficulty grasping why access is denied to certain elements and the `audit` section in
+Apache Ranger does not give you any detail, you can enable debug logging for `org.apache.druid.security.ranger`.
+To do so add the following in your `log4j2.xml`:
+
+```xml
+<!-- Set level="debug" to see access requests to Apache Ranger -->
+<Logger name="org.apache.druid.security" level="debug" additivity="false">
+  <Appender-ref ref="Console"/>
+</Logger>
+```
