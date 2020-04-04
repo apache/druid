@@ -54,7 +54,7 @@ import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CircularBuffer;
 
 import javax.annotation.Nullable;
@@ -206,6 +206,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
         toolbox.getQueryExecutorService(),
+        toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats()
@@ -231,7 +232,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
                 sequenceName,
                 previousSegmentId,
                 skipSegmentLineageCheck,
-                NumberedShardSpecFactory.instance(),
+                NumberedPartialShardSpec.instance(),
                 lockGranularityToUse
             )
         ),

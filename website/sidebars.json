@@ -3,6 +3,7 @@
     "Getting started": [
       "design/index",
       "tutorials/index",
+      "tutorials/docker",
       "operations/single-server",
       "tutorials/cluster"
     ],
@@ -146,6 +147,7 @@
       "design/peons",
       "development/extensions-core/approximate-histograms",
       "development/extensions-core/avro",
+      "development/extensions-core/azure",
       "development/extensions-core/bloom-filter",
       "development/extensions-core/datasketches-extension",
       "development/extensions-core/datasketches-hll",
@@ -169,7 +171,6 @@
       "development/extensions-core/stats",
       "development/extensions-core/test-stats",
       "development/extensions-contrib/ambari-metrics-emitter",
-      "development/extensions-contrib/azure",
       "development/extensions-contrib/cassandra",
       "development/extensions-contrib/cloudfiles",
       "development/extensions-contrib/distinctcount",

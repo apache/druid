@@ -27,7 +27,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.18.0-SNAPSHOT</version>
+    <version>0.19.0-SNAPSHOT</version>
   </parent>
 
   <prerequisites>
@@ -39,6 +39,7 @@
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
       <version>${jmh.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
@@ -106,6 +107,11 @@
       <type>test-jar</type>
     </dependency>
     <dependency>
+      <groupId>org.apache.calcite</groupId>
+      <artifactId>calcite-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.github.wnameless</groupId>
       <artifactId>json-flattener</artifactId>
       <version>0.1.0</version>
@@ -153,7 +159,10 @@
     <dependency>
       <groupId>org.apache.datasketches</groupId>
       <artifactId>datasketches-java</artifactId>
-      <version>1.1.0-incubating</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.datasketches</groupId>
+      <artifactId>datasketches-memory</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -183,35 +192,23 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>2.2</version>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.6</version>
         <executions>
           <execution>
             <phase>package</phase>
             <goals>
-              <goal>shade</goal>
+              <goal>single</goal>
             </goals>
             <configuration>
               <finalName>${uberjar.name}</finalName>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptor>assembly.xml</descriptor>
+              <archive>
+                <manifest>
                   <mainClass>org.openjdk.jmh.Main</mainClass>
-                </transformer>
-              </transformers>
-              <filters>
-                <filter>
-                  <!--
-                      Shading signed JARs will fail without this.
-                      http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar
-                  -->
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-              </filters>
+                </manifest>
+              </archive>
             </configuration>
           </execution>
         </executions>

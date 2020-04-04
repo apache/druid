@@ -34,7 +34,7 @@ This extension uses Oracle's MySQL JDBC driver which is not included in the Drui
 installed separately. There are a few ways to obtain this library:
 
 - It can be downloaded from the MySQL site at: https://dev.mysql.com/downloads/connector/j/
-- It can be fetched from Maven Central at: http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar
+- It can be fetched from Maven Central at: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.48/mysql-connector-java-5.1.48.jar
 - It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
 
 This should fetch a JAR file named similar to 'mysql-connector-java-x.x.xx.jar'.

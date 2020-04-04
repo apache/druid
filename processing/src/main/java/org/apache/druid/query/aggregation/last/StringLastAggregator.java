@@ -65,7 +65,7 @@ public class StringLastAggregator implements Aggregator
           valueSelector
       );
 
-      if (inPair != null && inPair.rhs != null && inPair.lhs >= lastTime) {
+      if (inPair != null && inPair.lhs >= lastTime) {
         lastTime = inPair.lhs;
         lastValue = StringUtils.fastLooseChop(inPair.rhs, maxStringBytes);
       }
@@ -74,11 +74,8 @@ public class StringLastAggregator implements Aggregator
 
       if (time >= lastTime) {
         final String value = DimensionHandlerUtils.convertObjectToString(valueSelector.getObject());
-
-        if (value != null) {
-          lastTime = time;
-          lastValue = StringUtils.fastLooseChop(value, maxStringBytes);
-        }
+        lastTime = time;
+        lastValue = StringUtils.fastLooseChop(value, maxStringBytes);
       }
     }
   }

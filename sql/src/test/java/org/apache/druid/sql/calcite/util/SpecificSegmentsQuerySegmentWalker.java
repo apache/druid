@@ -19,68 +19,145 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
-import org.apache.druid.query.Druids;
-import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.NoopQueryRunner;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
-import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
-import org.apache.druid.query.spec.SpecificSegmentSpec;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.InlineSegmentWrangler;
+import org.apache.druid.segment.LookupSegmentWrangler;
+import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.join.InlineJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.LookupJoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactoryTest;
+import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
+/**
+ * A self-contained class that executes queries similarly to the normal Druid query stack.
+ *
+ * {@link ClientQuerySegmentWalker}, the same class that Brokers use as the entry point for their query stack, is
+ * used directly. It, and the sub-walkers it needs, are created by {@link QueryStackTests}.
+ */
 public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, Closeable
 {
-  private final QueryRunnerFactoryConglomerate conglomerate;
+  private final QuerySegmentWalker walker;
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
   private final List<Closeable> closeables = new ArrayList<>();
   private final List<DataSegment> segments = new ArrayList<>();
 
-  public SpecificSegmentsQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate)
-  {
-    this.conglomerate = conglomerate;
-  }
-
-  public SpecificSegmentsQuerySegmentWalker add(
-      final DataSegment descriptor,
-      final QueryableIndex index
+  /**
+   * Create an instance using the provided query runner factory conglomerate and lookup provider.
+   * If a JoinableFactory is provided, it will be used instead of the default. If a scheduler is included,
+   * the runner will schedule queries according to the scheduling config.
+   */
+  public SpecificSegmentsQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final LookupExtractorFactoryContainerProvider lookupProvider,
+      @Nullable final JoinableFactory joinableFactory,
+      final QueryScheduler scheduler
   )
   {
+    final JoinableFactory joinableFactoryToUse;
+
+    if (joinableFactory == null) {
+      joinableFactoryToUse = MapJoinableFactoryTest.fromMap(
+          ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
+              .put(InlineDataSource.class, new InlineJoinableFactory())
+              .put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider))
+              .build()
+      );
+    } else {
+      joinableFactoryToUse = joinableFactory;
+    }
+
+    this.walker = QueryStackTests.createClientQuerySegmentWalker(
+        QueryStackTests.createClusterQuerySegmentWalker(
+            timelines,
+            joinableFactoryToUse,
+            conglomerate,
+            scheduler
+        ),
+        QueryStackTests.createLocalQuerySegmentWalker(
+            conglomerate,
+            new MapSegmentWrangler(
+                ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
+                    .put(InlineDataSource.class, new InlineSegmentWrangler())
+                    .put(LookupDataSource.class, new LookupSegmentWrangler(lookupProvider))
+                    .build()
+            ),
+            joinableFactoryToUse,
+            scheduler
+        ),
+        conglomerate,
+        new ServerConfig()
+    );
+  }
+
+  /**
+   * Create an instance without any lookups and with a default {@link JoinableFactory} that handles only inline
+   * datasources.
+   */
+  public SpecificSegmentsQuerySegmentWalker(final QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this(
+        conglomerate,
+        new LookupExtractorFactoryContainerProvider()
+        {
+          @Override
+          public Set<String> getAllLookupNames()
+          {
+            return Collections.emptySet();
+          }
+
+          @Override
+          public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+          {
+            return Optional.empty();
+          }
+        },
+        null,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+    );
+  }
+
+  public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final QueryableIndex index)
+  {
     final Segment segment = new QueryableIndexSegment(index, descriptor.getId());
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = timelines
-        .computeIfAbsent(descriptor.getDataSource(), datasource -> new VersionedIntervalTimeline<>(Ordering.natural()));
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = timelines.computeIfAbsent(
+        descriptor.getDataSource(),
+        datasource -> new VersionedIntervalTimeline<>(Ordering.natural())
+    );
     timeline.add(
         descriptor.getInterval(),
         descriptor.getVersion(),
@@ -97,100 +174,15 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(
-      final Query<T> query,
-      final Iterable<Interval> intervals
-  )
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    Query<T> newQuery = query;
-    if (query instanceof ScanQuery && ((ScanQuery) query).getOrder() != ScanQuery.Order.NONE) {
-      newQuery = (Query<T>) Druids.ScanQueryBuilder.copy((ScanQuery) query)
-                                                   .intervals(new MultipleSpecificSegmentSpec(ImmutableList.of()))
-                                                   .build();
-    }
-
-    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(newQuery);
-    if (factory == null) {
-      throw new ISE("Unknown query type[%s].", newQuery.getClass());
-    }
-
-    final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-
-    return new FinalizeResultsQueryRunner<>(
-        toolChest.postMergeQueryDecoration(
-            toolChest.mergeResults(
-                toolChest.preMergeQueryDecoration(
-                    (queryPlus, responseContext) -> {
-                      Query<T> query1 = queryPlus.getQuery();
-                      Query<T> newQuery1 = query1;
-                      if (query instanceof ScanQuery && ((ScanQuery) query).getOrder() != ScanQuery.Order.NONE) {
-                        newQuery1 = (Query<T>) Druids.ScanQueryBuilder.copy((ScanQuery) query)
-                                                                      .intervals(new MultipleSpecificSegmentSpec(
-                                                                          ImmutableList.of(new SegmentDescriptor(
-                                                                              Intervals.of("2015-04-12/2015-04-13"),
-                                                                              "4",
-                                                                              0
-                                                                          ))))
-                                                                      .context(ImmutableMap.of(
-                                                                          ScanQuery.CTX_KEY_OUTERMOST,
-                                                                          false
-                                                                      ))
-                                                                      .build();
-                      }
-                      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = getTimelineForTableDataSource(
-                          newQuery1);
-                      return makeBaseRunner(
-                          newQuery1,
-                          toolChest,
-                          factory,
-                          FunctionalIterable
-                              .create(intervals)
-                              .transformCat(
-                                  interval -> timeline.lookup(interval)
-                              )
-                              .transformCat(
-                                  holder -> FunctionalIterable
-                                      .create(holder.getObject())
-                                      .transform(
-                                          chunk -> new SegmentDescriptor(
-                                              holder.getInterval(),
-                                              holder.getVersion(),
-                                              chunk.getChunkNumber()
-                                          )
-                                      )
-                              )
-                      ).run(QueryPlus.wrap(newQuery1), responseContext);
-                    }
-                )
-            )
-        ),
-        toolChest
-    );
+    return walker.getQueryRunnerForIntervals(query, intervals);
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(
-      final Query<T> query,
-      final Iterable<SegmentDescriptor> specs
-  )
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    if (factory == null) {
-      throw new ISE("Unknown query type[%s].", query.getClass());
-    }
-
-    final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-
-    return new FinalizeResultsQueryRunner<>(
-        toolChest.postMergeQueryDecoration(
-            toolChest.mergeResults(
-                toolChest.preMergeQueryDecoration(
-                    makeBaseRunner(query, toolChest, factory, specs)
-                )
-            )
-        ),
-        toolChest
-    );
+    return walker.getQueryRunnerForSegments(query, specs);
   }
 
   @Override
@@ -199,54 +191,5 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     for (Closeable closeable : closeables) {
       Closeables.close(closeable, true);
     }
-  }
-
-  private <T> VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimelineForTableDataSource(Query<T> query)
-  {
-    if (query.getDataSource() instanceof TableDataSource) {
-      return timelines.get(((TableDataSource) query.getDataSource()).getName());
-    } else {
-      throw new UOE("DataSource type[%s] unsupported", query.getDataSource().getClass().getName());
-    }
-  }
-
-  private <T> QueryRunner<T> makeBaseRunner(
-      final Query<T> query,
-      final QueryToolChest<T, Query<T>> toolChest,
-      final QueryRunnerFactory<T, Query<T>> factory,
-      final Iterable<SegmentDescriptor> specs
-  )
-  {
-    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = getTimelineForTableDataSource(query);
-    if (timeline == null) {
-      return new NoopQueryRunner<>();
-    }
-
-    return new FinalizeResultsQueryRunner<>(
-        toolChest.mergeResults(
-            factory.mergeRunners(
-                Execs.directExecutor(),
-                FunctionalIterable
-                    .create(specs)
-                    .transformCat(
-                        descriptor -> {
-                          final PartitionHolder<ReferenceCountingSegment> holder = timeline.findEntry(
-                              descriptor.getInterval(),
-                              descriptor.getVersion()
-                          );
-
-                          return Iterables.transform(
-                              holder,
-                              chunk -> new SpecificSegmentQueryRunner<T>(
-                                  factory.createRunner(chunk.getObject()),
-                                  new SpecificSegmentSpec(descriptor)
-                              )
-                          );
-                        }
-                    )
-            )
-        ),
-        toolChest
-    );
   }
 }

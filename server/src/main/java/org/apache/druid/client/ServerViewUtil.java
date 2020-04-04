@@ -24,6 +24,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LocatedSegmentDescriptor;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -33,6 +34,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  */
@@ -55,13 +57,14 @@ public class ServerViewUtil
       int numCandidates
   )
   {
-    TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(datasource);
-    if (timeline == null) {
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(datasource);
+    final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(analysis);
+    if (!maybeTimeline.isPresent()) {
       return Collections.emptyList();
     }
     List<LocatedSegmentDescriptor> located = new ArrayList<>();
     for (Interval interval : intervals) {
-      for (TimelineObjectHolder<String, ServerSelector> holder : timeline.lookup(interval)) {
+      for (TimelineObjectHolder<String, ServerSelector> holder : maybeTimeline.get().lookup(interval)) {
         for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
           ServerSelector selector = chunk.getObject();
           final SegmentDescriptor descriptor = new SegmentDescriptor(

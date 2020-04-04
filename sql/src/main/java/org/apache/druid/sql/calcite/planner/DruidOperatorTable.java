@@ -64,11 +64,13 @@ import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
@@ -215,6 +217,12 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new StringToMultiValueStringOperatorConversion())
           .build();
 
+  private static final List<SqlOperatorConversion> REDUCTION_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+          .add(new GreatestOperatorConversion())
+          .add(new LeastOperatorConversion())
+          .build();
+
   private static final List<SqlOperatorConversion> IPV4ADDRESS_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
           .add(new IPv4AddressMatchOperatorConversion())
@@ -278,6 +286,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .addAll(VALUE_COERCION_OPERATOR_CONVERSIONS)
           .addAll(ARRAY_OPERATOR_CONVERSIONS)
           .addAll(MULTIVALUE_STRING_OPERATOR_CONVERSIONS)
+          .addAll(REDUCTION_OPERATOR_CONVERSIONS)
           .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
           .build();
 

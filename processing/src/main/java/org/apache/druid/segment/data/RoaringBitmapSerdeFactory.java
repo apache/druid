@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
  */
 public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
 {
-  private static final boolean DEFAULT_COMPRESS_RUN_ON_SERIALIZATION = true;
+  public static final boolean DEFAULT_COMPRESS_RUN_ON_SERIALIZATION = true;
   private static final ObjectStrategy<ImmutableBitmap> OBJECT_STRATEGY = new ImmutableRoaringBitmapObjectStrategy();
 
   private final boolean compressRunOnSerialization;

@@ -24,9 +24,6 @@ apt-get update
 # wget
 apt-get install -y wget
 
-# Java
-apt-get install -y openjdk-8-jdk
-
 # MySQL (Metadata store)
 apt-get install -y mysql-server
 

@@ -21,7 +21,8 @@ package org.apache.druid.timeline.partition;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.objects.AbstractObjectCollection;
 import it.unimi.dsi.fastutil.objects.ObjectCollection;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -44,7 +45,9 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -52,9 +55,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.BiPredicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * OvershadowableManager manages the state of {@link AtomicUpdateGroup}. See the below {@link State} for details.
@@ -89,33 +89,62 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
   // (start partitionId, end partitionId) -> minorVersion -> atomicUpdateGroup
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> standbyGroups;
-  private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> visibleGroup;
+  /**
+   * The values in this map must always be {@link SingleEntryShort2ObjectSortedMap}, hence there is at most one visible
+   * group per range. The same type is used as in {@link #standbyGroups} and {@link #overshadowedGroups} to reuse helper
+   * functions across all {@link State}s.
+   */
+  private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> visibleGroupPerRange;
   private final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> overshadowedGroups;
 
   OvershadowableManager()
   {
     this.knownPartitionChunks = new HashMap<>();
     this.standbyGroups = new TreeMap<>();
-    this.visibleGroup = new TreeMap<>();
+    this.visibleGroupPerRange = new TreeMap<>();
     this.overshadowedGroups = new TreeMap<>();
   }
 
-  OvershadowableManager(OvershadowableManager<T> other)
+  public static <T extends Overshadowable<T>> OvershadowableManager<T> copyVisible(OvershadowableManager<T> original)
   {
-    this.knownPartitionChunks = new HashMap<>(other.knownPartitionChunks);
-    this.standbyGroups = new TreeMap<>(other.standbyGroups);
-    this.visibleGroup = new TreeMap<>(other.visibleGroup);
-    this.overshadowedGroups = new TreeMap<>(other.overshadowedGroups);
+    final OvershadowableManager<T> copy = new OvershadowableManager<>();
+    original.visibleGroupPerRange.forEach((partitionRange, versionToGroups) -> {
+      // There should be only one group per partition range
+      final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
+      group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
+
+      copy.visibleGroupPerRange.put(
+          partitionRange,
+          new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
+      );
+    });
+    return copy;
   }
 
-  private OvershadowableManager(List<AtomicUpdateGroup<T>> groups)
+  public static <T extends Overshadowable<T>> OvershadowableManager<T> deepCopy(OvershadowableManager<T> original)
   {
-    this();
-    for (AtomicUpdateGroup<T> entry : groups) {
-      for (PartitionChunk<T> chunk : entry.getChunks()) {
-        addChunk(chunk);
-      }
-    }
+    final OvershadowableManager<T> copy = copyVisible(original);
+    original.overshadowedGroups.forEach((partitionRange, versionToGroups) -> {
+      // There should be only one group per partition range
+      final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
+      group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
+
+      copy.overshadowedGroups.put(
+          partitionRange,
+          new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
+      );
+    });
+    original.standbyGroups.forEach((partitionRange, versionToGroups) -> {
+      // There should be only one group per partition range
+      final AtomicUpdateGroup<T> group = versionToGroups.values().iterator().next();
+      group.getChunks().forEach(chunk -> copy.knownPartitionChunks.put(chunk.getChunkNumber(), chunk));
+
+      copy.standbyGroups.put(
+          partitionRange,
+          new SingleEntryShort2ObjectSortedMap<>(group.getMinorVersion(), AtomicUpdateGroup.copy(group))
+      );
+    });
+    return copy;
   }
 
   private TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> getStateMap(State state)
@@ -124,7 +153,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
       case STANDBY:
         return standbyGroups;
       case VISIBLE:
-        return visibleGroup;
+        return visibleGroupPerRange;
       case OVERSHADOWED:
         return overshadowedGroups;
       default:
@@ -163,7 +192,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
   private void replaceVisibleWith(
       Collection<AtomicUpdateGroup<T>> oldVisibleGroups,
       State newStateOfOldVisibleGroup,
-      List<AtomicUpdateGroup<T>> newVisibleGroups,
+      Collection<AtomicUpdateGroup<T>> newVisibleGroups,
       State oldStateOfNewVisibleGroups
   )
   {
@@ -258,27 +287,17 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param minorVersion the minor version to check overshadow relation. The found groups will have lower minor versions
    *                     than this.
    * @param fromState    the state to search for overshadowed groups.
-   *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
   @VisibleForTesting
   List<AtomicUpdateGroup<T>> findOvershadowedBy(RootPartitionRange rangeOfAug, short minorVersion, State fromState)
   {
     final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap = getStateMap(fromState);
-    Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = findLowestOverlappingEntry(
-        rangeOfAug,
-        stateMap,
-        true
-    );
-
-    if (current == null) {
-      return Collections.emptyList();
-    }
-
-    // Going through the map to find all entries of the RootPartitionRange contained by the given rangeOfAug.
-    // Note that RootPartitionRange of entries are always consecutive.
     final List<AtomicUpdateGroup<T>> found = new ArrayList<>();
-    while (current != null && rangeOfAug.overlaps(current.getKey())) {
+    final Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> iterator =
+        entryIteratorGreaterThan(rangeOfAug.startPartitionId, stateMap);
+    while (iterator.hasNext()) {
+      final Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = iterator.next();
       if (rangeOfAug.contains(current.getKey())) {
         // versionToGroup is sorted by minorVersion.
         // versionToGroup.headMap(minorVersion) below returns a map containing all entries of lower minorVersions
@@ -291,8 +310,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
         if (versionToGroup.firstShortKey() < minorVersion) {
           found.addAll(versionToGroup.headMap(minorVersion).values());
         }
+      } else {
+        break;
       }
-      current = stateMap.higherEntry(current.getKey());
     }
     return found;
   }
@@ -313,27 +333,23 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * @param minorVersion the minor version to check overshadow relation. The found groups will have higher minor
    *                     versions than this.
    * @param fromState    the state to search for overshadowed groups.
-   *
    * @return a list of found atomicUpdateGroups. It could be empty if no groups are found.
    */
   @VisibleForTesting
   List<AtomicUpdateGroup<T>> findOvershadows(RootPartitionRange rangeOfAug, short minorVersion, State fromState)
   {
     final TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap = getStateMap(fromState);
-    Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = findLowestOverlappingEntry(
-        rangeOfAug,
-        stateMap,
-        false
-    );
-
-    if (current == null) {
-      return Collections.emptyList();
-    }
+    final Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> iterator =
+        entryIteratorSmallerThan(rangeOfAug.endPartitionId, stateMap);
 
     // Going through the map to find all entries of the RootPartitionRange contains the given rangeOfAug.
     // Note that RootPartitionRange of entries are always consecutive.
     final List<AtomicUpdateGroup<T>> found = new ArrayList<>();
-    while (current != null && current.getKey().overlaps(rangeOfAug)) {
+    while (iterator.hasNext()) {
+      final Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = iterator.next();
+      if (!current.getKey().overlaps(rangeOfAug)) {
+        break;
+      }
       if (current.getKey().contains(rangeOfAug)) {
         // versionToGroup is sorted by minorVersion.
         // versionToGroup.tailMap(minorVersion) below returns a map containing all entries of equal to or higher
@@ -347,63 +363,62 @@ class OvershadowableManager<T extends Overshadowable<T>>
           found.addAll(versionToGroup.tailMap(minorVersion).values());
         }
       }
-      current = stateMap.higherEntry(current.getKey());
     }
     return found;
   }
 
-  /**
-   * Finds the lowest entry overlapping with the given root partition range.
-   * It first searches the entries lower than or equal to the given range.
-   * If there's no such entry lower than the given range, then it searches the entries higher than the given range.
-   *
-   * @return an entry of the lowest key overlapping with the given range. Otherwise null.
-   */
-  @Nullable
-  private Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> findLowestOverlappingEntry(
-      RootPartitionRange rangeOfAug,
-      TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap,
-      boolean strictSameStartId
-  )
+  boolean isOvershadowedByVisibleGroup(RootPartitionRange partitionRange, short minorVersion)
   {
-    // Searches the entries lower than or equal to the given range.
-    Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = stateMap.floorEntry(rangeOfAug);
+    final Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> iterator =
+        entryIteratorSmallerThan(partitionRange.endPartitionId, visibleGroupPerRange);
 
-    if (current == null) {
-      // Searches the entries higher than then given range.
-      current = stateMap.higherEntry(rangeOfAug);
-    }
-
-    if (current == null) {
-      return null;
-    }
-
-    // floorEntry() can return the greatest key less than rangeOfAug. We need to skip non-overlapping keys.
-    while (current != null && !current.getKey().overlaps(rangeOfAug)) {
-      current = stateMap.higherEntry(current.getKey());
-    }
-
-    final BiPredicate<RootPartitionRange, RootPartitionRange> predicate;
-    if (strictSameStartId) {
-      predicate = (entryRange, groupRange) -> entryRange.startPartitionId == groupRange.startPartitionId;
-    } else {
-      predicate = RootPartitionRange::overlaps;
-    }
-
-    // There could be multiple entries of the same startPartitionId but different endPartitionId.
-    // Find the first key of the same startPartitionId which has the lowest endPartitionId.
-    while (current != null) {
-      final Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> lowerEntry = stateMap.lowerEntry(
-          current.getKey()
-      );
-      if (lowerEntry != null && predicate.test(lowerEntry.getKey(), rangeOfAug)) {
-        current = lowerEntry;
-      } else {
+    // Going through the map to find all entries of the RootPartitionRange contains the given rangeOfAug.
+    // Note that RootPartitionRange of entries are always consecutive.
+    while (iterator.hasNext()) {
+      final Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> current = iterator.next();
+      if (!current.getKey().overlaps(partitionRange)) {
         break;
       }
+      if (current.getKey().contains(partitionRange)) {
+        // versionToGroup is sorted by minorVersion.
+        // versionToGroup.tailMap(minorVersion) below returns a map containing all entries of equal to or higher
+        // minorVersions than the given minorVersion.
+        final Short2ObjectSortedMap<AtomicUpdateGroup<T>> versionToGroup = current.getValue();
+        if (versionToGroup.lastShortKey() > minorVersion) {
+          return true;
+        }
+      }
     }
+    return false;
+  }
 
-    return current;
+  /**
+   * Returns an iterator of entries that has a {@link RootPartitionRange} smaller than the given partitionId.
+   * A RootPartitionRange is smaller than a partitionId if {@link RootPartitionRange#startPartitionId} < partitionId.
+   */
+  private Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> entryIteratorSmallerThan(
+      short partitionId,
+      TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
+  )
+  {
+    final RootPartitionRange lowFench = new RootPartitionRange((short) 0, (short) 0);
+    final RootPartitionRange highFence = new RootPartitionRange(partitionId, partitionId);
+    return stateMap.subMap(lowFench, false, highFence, false).descendingMap().entrySet().iterator();
+  }
+
+  /**
+   * Returns an iterator of entries that has a {@link RootPartitionRange} greater than the given partitionId.
+   * A RootPartitionRange is greater than a partitionId if {@link RootPartitionRange#startPartitionId} >= partitionId
+   * and {@link RootPartitionRange#endPartitionId} > partitionId.
+   */
+  private Iterator<Entry<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>>> entryIteratorGreaterThan(
+      short partitionId,
+      TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
+  )
+  {
+    final RootPartitionRange lowFench = new RootPartitionRange(partitionId, partitionId);
+    final RootPartitionRange highFence = new RootPartitionRange(Short.MAX_VALUE, Short.MAX_VALUE);
+    return stateMap.subMap(lowFench, false, highFence, false).entrySet().iterator();
   }
 
   /**
@@ -534,13 +549,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
       if (!isOvershadowingGroupsFull) {
         // Let's check the overshadowed groups can cover the partition range of groupsOvershadowingAug
         // and are fully available.
-        final List<AtomicUpdateGroup<T>> latestFullGroups = groupsOvershadowingAug
-            .stream()
-            .flatMap(eachFullgroup -> findLatestFullyAvailableOvershadowedAtomicUpdateGroups(
+        //noinspection ConstantConditions
+        final List<AtomicUpdateGroup<T>> latestFullGroups = FluentIterable
+            .from(groupsOvershadowingAug)
+            .transformAndConcat(eachFullgroup -> findLatestFullyAvailableOvershadowedAtomicUpdateGroups(
                 RootPartitionRange.of(eachFullgroup),
-                eachFullgroup.getMinorVersion()).stream()
-            )
-            .collect(Collectors.toList());
+                eachFullgroup.getMinorVersion()
+            ))
+            .toList();
 
         if (!latestFullGroups.isEmpty()) {
           final boolean isOvershadowedGroupsFull = doGroupsFullyCoverPartitionRange(
@@ -564,12 +580,11 @@ class OvershadowableManager<T extends Overshadowable<T>>
    * - All groups must be full.
    * - All groups must be adjacent.
    * - The lowest startPartitionId and the highest endPartitionId must be same with the given startPartitionId and
-   *   the given endPartitionId, respectively.
+   * the given endPartitionId, respectively.
    *
    * @param groups               atomicUpdateGroups sorted by their rootPartitionRange
    * @param startRootPartitionId the start partitionId of the root partition range to check the coverage
    * @param endRootPartitionId   the end partitionId of the root partition range to check the coverage
-   *
    * @return true if the given groups fully cover the given partition range.
    */
   private boolean doGroupsFullyCoverPartitionRange(
@@ -670,11 +685,10 @@ class OvershadowableManager<T extends Overshadowable<T>>
           final AtomicUpdateGroup<T> newAtomicUpdateGroup = new AtomicUpdateGroup<>(chunk);
 
           // Decide the initial state of the new atomicUpdateGroup
-          final boolean overshadowed = visibleGroup
-              .values()
-              .stream()
-              .flatMap(map -> map.values().stream())
-              .anyMatch(group -> group.overshadows(newAtomicUpdateGroup));
+          final boolean overshadowed = isOvershadowedByVisibleGroup(
+              RootPartitionRange.of(newAtomicUpdateGroup),
+              newAtomicUpdateGroup.getMinorVersion()
+          );
 
           if (overshadowed) {
             addAtomicUpdateGroupWithState(newAtomicUpdateGroup, State.OVERSHADOWED, true);
@@ -719,38 +733,35 @@ class OvershadowableManager<T extends Overshadowable<T>>
       if (!latestFullAugs.isEmpty()) {
         // The current visible atomicUpdateGroup becomes standby
         // and the fully available overshadowed atomicUpdateGroups become visible
-        final Set<AtomicUpdateGroup<T>> overshadowsLatestFullAugsInVisible = latestFullAugs
-            .stream()
-            .flatMap(group -> findOvershadows(group, State.VISIBLE).stream())
-            .collect(Collectors.toSet());
+        final Set<AtomicUpdateGroup<T>> overshadowsLatestFullAugsInVisible = FluentIterable
+            .from(latestFullAugs)
+            .transformAndConcat(group -> findOvershadows(group, State.VISIBLE))
+            .toSet();
         replaceVisibleWith(
             overshadowsLatestFullAugsInVisible,
             State.STANDBY,
             latestFullAugs,
             State.OVERSHADOWED
         );
-        latestFullAugs
-            .stream()
-            .flatMap(group -> findOvershadows(group, State.OVERSHADOWED).stream())
-            .collect(Collectors.toSet())
-            .forEach(group -> transitAtomicUpdateGroupState(group, State.OVERSHADOWED, State.STANDBY));
+        FluentIterable.from(latestFullAugs)
+                      .transformAndConcat(group -> findOvershadows(group, State.OVERSHADOWED))
+                      .forEach(group -> transitAtomicUpdateGroupState(group, State.OVERSHADOWED, State.STANDBY));
       } else {
         // Find the latest non-fully available atomicUpdateGroups
         final List<AtomicUpdateGroup<T>> latestStandby = findLatestNonFullyAvailableAtomicUpdateGroups(
             findOvershadows(rangeOfAug, minorVersion, State.STANDBY)
         );
         if (!latestStandby.isEmpty()) {
-          final List<AtomicUpdateGroup<T>> overshadowedByLatestStandby = latestStandby
-              .stream()
-              .flatMap(group -> findOvershadowedBy(group, State.VISIBLE).stream())
-              .collect(Collectors.toList());
+          final List<AtomicUpdateGroup<T>> overshadowedByLatestStandby = FluentIterable
+              .from(latestStandby)
+              .transformAndConcat(group -> findOvershadowedBy(group, State.VISIBLE))
+              .toList();
           replaceVisibleWith(overshadowedByLatestStandby, State.OVERSHADOWED, latestStandby, State.STANDBY);
 
           // All standby groups overshadowed by the new visible group should be moved to overshadowed
-          latestStandby
-              .stream()
-              .flatMap(group -> findOvershadowedBy(group, State.STANDBY).stream())
-              .collect(Collectors.toSet())
+          FluentIterable
+              .from(latestStandby)
+              .transformAndConcat(group -> findOvershadowedBy(group, State.STANDBY))
               .forEach(aug -> transitAtomicUpdateGroupState(aug, State.STANDBY, State.OVERSHADOWED));
         } else if (augOfRemovedChunk.isEmpty()) {
           // Visible is empty. Move the latest overshadowed to visible.
@@ -780,15 +791,27 @@ class OvershadowableManager<T extends Overshadowable<T>>
       return Collections.emptyList();
     }
 
-    final OvershadowableManager<T> manager = new OvershadowableManager<>(groups);
-    if (!manager.standbyGroups.isEmpty()) {
-      throw new ISE("This method should be called only when there is no fully available group in the given state.");
+    final TreeMap<RootPartitionRange, AtomicUpdateGroup<T>> rangeToGroup = new TreeMap<>();
+    for (AtomicUpdateGroup<T> group : groups) {
+      rangeToGroup.put(RootPartitionRange.of(group), group);
     }
-
     final List<AtomicUpdateGroup<T>> visibles = new ArrayList<>();
-    for (Short2ObjectSortedMap<AtomicUpdateGroup<T>> map : manager.visibleGroup.values()) {
-      visibles.addAll(map.values());
+    // rangeToGroup is sorted by RootPartitionRange which means, the groups of the wider range will appear later
+    // in the rangeToGroup map. Since the wider groups have higer minor versions than narrower groups,
+    // we iterate the rangeToGroup from the last entry in descending order.
+    Entry<RootPartitionRange, AtomicUpdateGroup<T>> currEntry = rangeToGroup.lastEntry();
+    while (currEntry != null) {
+      final Entry<RootPartitionRange, AtomicUpdateGroup<T>> lowerEntry = rangeToGroup.lowerEntry(currEntry.getKey());
+      if (lowerEntry != null) {
+        if (lowerEntry.getKey().endPartitionId != currEntry.getKey().startPartitionId) {
+          return Collections.emptyList();
+        }
+      }
+      visibles.add(currEntry.getValue());
+      currEntry = lowerEntry;
     }
+    // visibles should be sorted.
+    visibles.sort(Comparator.comparing(RootPartitionRange::of));
     return visibles;
   }
 
@@ -802,27 +825,38 @@ class OvershadowableManager<T extends Overshadowable<T>>
         minorVersion,
         State.OVERSHADOWED
     );
-    if (overshadowedGroups.isEmpty()) {
+
+    // Filter out non-fully available groups.
+    final TreeMap<RootPartitionRange, AtomicUpdateGroup<T>> fullGroups = new TreeMap<>();
+    for (AtomicUpdateGroup<T> group : FluentIterable.from(overshadowedGroups).filter(AtomicUpdateGroup::isFull)) {
+      fullGroups.put(RootPartitionRange.of(group), group);
+    }
+    if (fullGroups.isEmpty()) {
+      return Collections.emptyList();
+    }
+    if (fullGroups.firstKey().startPartitionId != rangeOfAug.startPartitionId
+        || fullGroups.lastKey().endPartitionId != rangeOfAug.endPartitionId) {
       return Collections.emptyList();
     }
 
-    final OvershadowableManager<T> manager = new OvershadowableManager<>(overshadowedGroups);
+    // Find latest fully available groups.
     final List<AtomicUpdateGroup<T>> visibles = new ArrayList<>();
-    for (Short2ObjectSortedMap<AtomicUpdateGroup<T>> map : manager.visibleGroup.values()) {
-      for (AtomicUpdateGroup<T> atomicUpdateGroup : map.values()) {
-        if (!atomicUpdateGroup.isFull()) {
+    // fullGroups is sorted by RootPartitionRange which means, the groups of the wider range will appear later
+    // in the fullGroups map. Since the wider groups have higer minor versions than narrower groups,
+    // we iterate the fullGroups from the last entry in descending order.
+    Entry<RootPartitionRange, AtomicUpdateGroup<T>> currEntry = fullGroups.lastEntry();
+    while (currEntry != null) {
+      final Entry<RootPartitionRange, AtomicUpdateGroup<T>> lowerEntry = fullGroups.lowerEntry(currEntry.getKey());
+      if (lowerEntry != null) {
+        if (lowerEntry.getKey().endPartitionId != currEntry.getKey().startPartitionId) {
           return Collections.emptyList();
         }
-        visibles.add(atomicUpdateGroup);
       }
+      visibles.add(currEntry.getValue());
+      currEntry = lowerEntry;
     }
-    final RootPartitionRange foundRange = RootPartitionRange.of(
-        visibles.get(0).getStartRootPartitionId(),
-        visibles.get(visibles.size() - 1).getEndRootPartitionId()
-    );
-    if (!rangeOfAug.equals(foundRange)) {
-      return Collections.emptyList();
-    }
+    // visibles should be sorted.
+    visibles.sort(Comparator.comparing(RootPartitionRange::of));
     return visibles;
   }
 
@@ -886,12 +920,19 @@ class OvershadowableManager<T extends Overshadowable<T>>
 
   public boolean isEmpty()
   {
-    return visibleGroup.isEmpty();
+    return visibleGroupPerRange.isEmpty();
   }
 
   public boolean isComplete()
   {
-    return visibleGroup.values().stream().allMatch(map -> Iterables.getOnlyElement(map.values()).isFull());
+    return Iterators.all(
+        visibleGroupPerRange.values().iterator(),
+        map -> {
+          SingleEntryShort2ObjectSortedMap<AtomicUpdateGroup<T>> singleMap =
+              (SingleEntryShort2ObjectSortedMap<AtomicUpdateGroup<T>>) map;
+          //noinspection ConstantConditions
+          return singleMap.val.isFull();
+        });
   }
 
   @Nullable
@@ -914,13 +955,18 @@ class OvershadowableManager<T extends Overshadowable<T>>
     }
   }
 
-  Stream<PartitionChunk<T>> createVisibleChunksStream()
+  Iterator<PartitionChunk<T>> visibleChunksIterator()
   {
-    return visibleGroup
-        .values()
-        .stream()
-        .flatMap((Short2ObjectSortedMap<AtomicUpdateGroup<T>> map) -> map.values().stream())
-        .flatMap((AtomicUpdateGroup<T> aug) -> aug.getChunks().stream());
+    final FluentIterable<Short2ObjectSortedMap<AtomicUpdateGroup<T>>> versionToGroupIterable = FluentIterable.from(
+        visibleGroupPerRange.values()
+    );
+    return versionToGroupIterable
+        .transformAndConcat(map -> {
+          SingleEntryShort2ObjectSortedMap<AtomicUpdateGroup<T>> singleMap =
+              (SingleEntryShort2ObjectSortedMap<AtomicUpdateGroup<T>>) map;
+          //noinspection ConstantConditions
+          return singleMap.val.getChunks();
+        }).iterator();
   }
 
   List<PartitionChunk<T>> getOvershadowedChunks()
@@ -959,14 +1005,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
     OvershadowableManager<?> that = (OvershadowableManager<?>) o;
     return Objects.equals(knownPartitionChunks, that.knownPartitionChunks) &&
            Objects.equals(standbyGroups, that.standbyGroups) &&
-           Objects.equals(visibleGroup, that.visibleGroup) &&
+           Objects.equals(visibleGroupPerRange, that.visibleGroupPerRange) &&
            Objects.equals(overshadowedGroups, that.overshadowedGroups);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(knownPartitionChunks, standbyGroups, visibleGroup, overshadowedGroups);
+    return Objects.hash(knownPartitionChunks, standbyGroups, visibleGroupPerRange, overshadowedGroups);
   }
 
   @Override
@@ -975,7 +1021,7 @@ class OvershadowableManager<T extends Overshadowable<T>>
     return "OvershadowableManager{" +
            "knownPartitionChunks=" + knownPartitionChunks +
            ", standbyGroups=" + standbyGroups +
-           ", visibleGroup=" + visibleGroup +
+           ", visibleGroupPerRangePerVersion=" + visibleGroupPerRange +
            ", overshadowedGroups=" + overshadowedGroups +
            '}';
   }
@@ -1017,9 +1063,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
     public boolean overlaps(RootPartitionRange that)
     {
       return Short.toUnsignedInt(startPartitionId) <= Short.toUnsignedInt(that.startPartitionId)
-          && Short.toUnsignedInt(endPartitionId) > Short.toUnsignedInt(that.startPartitionId)
-          || Short.toUnsignedInt(startPartitionId) >= Short.toUnsignedInt(that.startPartitionId)
-          && Short.toUnsignedInt(startPartitionId) < Short.toUnsignedInt(that.endPartitionId);
+             && Short.toUnsignedInt(endPartitionId) > Short.toUnsignedInt(that.startPartitionId)
+             || Short.toUnsignedInt(startPartitionId) >= Short.toUnsignedInt(that.startPartitionId)
+                && Short.toUnsignedInt(startPartitionId) < Short.toUnsignedInt(that.endPartitionId);
     }
 
     @Override
@@ -1076,6 +1122,12 @@ class OvershadowableManager<T extends Overshadowable<T>>
     {
       key = -1;
       val = null;
+    }
+
+    private SingleEntryShort2ObjectSortedMap(short key, V val)
+    {
+      this.key = key;
+      this.val = val;
     }
 
     @Override

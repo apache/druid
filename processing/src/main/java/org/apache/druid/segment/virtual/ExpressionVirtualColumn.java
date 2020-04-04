@@ -21,7 +21,9 @@ package org.apache.druid.segment.virtual;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -62,6 +64,23 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
   }
 
+  /**
+   * Constructor for creating an ExpressionVirtualColumn from a pre-parsed expression.
+   */
+  public ExpressionVirtualColumn(
+      String name,
+      Expr parsedExpression,
+      ValueType outputType
+  )
+  {
+    this.name = Preconditions.checkNotNull(name, "name");
+    // Unfortunately this string representation can't be reparsed into the same expression, might be useful
+    // if the expression system supported that
+    this.expression = parsedExpression.toString();
+    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
+    this.parsedExpression = Suppliers.ofInstance(parsedExpression);
+  }
+
   @JsonProperty("name")
   @Override
   public String getOutputName()
@@ -79,6 +98,13 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ValueType getOutputType()
   {
     return outputType;
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  public Supplier<Expr> getParsedExpression()
+  {
+    return parsedExpression;
   }
 
   @Override

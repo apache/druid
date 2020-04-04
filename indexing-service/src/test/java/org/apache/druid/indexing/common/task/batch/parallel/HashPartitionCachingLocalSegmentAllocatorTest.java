@@ -23,20 +23,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.HashPartitionCachingLocalSegmentAllocator;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.indexing.common.task.CachingSegmentAllocator;
+import org.apache.druid.indexing.common.task.NonLinearlyPartitionedSequenceNameFunction;
+import org.apache.druid.indexing.common.task.SegmentAllocators;
+import org.apache.druid.indexing.common.task.SequenceNameFunction;
+import org.apache.druid.indexing.common.task.SupervisorTaskAccessWithNullClient;
+import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpecFactory;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -47,7 +50,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 public class HashPartitionCachingLocalSegmentAllocatorTest
 {
@@ -60,28 +62,30 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
   private static final String DIMENSION = "dim";
   private static final List<String> PARTITION_DIMENSIONS = ImmutableList.of(DIMENSION);
   private static final int NUM_PARTITONS = 1;
-  private static final ShardSpecFactory SHARD_SPEC_FACTORY = new HashBasedNumberedShardSpecFactory(
-      PARTITION_DIMENSIONS,
-      NUM_PARTITONS
-  );
   private static final int PARTITION_NUM = 0;
-  private static final Map<Interval, Pair<ShardSpecFactory, Integer>> ALLOCATE_SPEC = ImmutableMap.of(
-      INTERVAL, Pair.of(SHARD_SPEC_FACTORY, NUM_PARTITONS)
+  private static final HashedPartitionsSpec PARTITIONS_SPEC = new HashedPartitionsSpec(
+      null,
+      null,
+      Collections.singletonList(DIMENSION)
   );
 
-  private HashPartitionCachingLocalSegmentAllocator target;
+  private CachingSegmentAllocator target;
+  private SequenceNameFunction sequenceNameFunction;
 
   @Before
   public void setup() throws IOException
   {
     TaskToolbox toolbox = createToolbox();
-    target = new HashPartitionCachingLocalSegmentAllocator(
+    HashPartitionAnalysis partitionAnalysis = new HashPartitionAnalysis(PARTITIONS_SPEC);
+    partitionAnalysis.updateBucket(INTERVAL, NUM_PARTITONS);
+    target = SegmentAllocators.forNonLinearPartitioning(
         toolbox,
-        TASKID,
-        SUPERVISOR_TASKID,
         DATASOURCE,
-        ALLOCATE_SPEC
+        TASKID,
+        new SupervisorTaskAccessWithNullClient(SUPERVISOR_TASKID),
+        partitionAnalysis
     );
+    sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(TASKID, target.getShardSpecs());
   }
 
   @Test
@@ -89,7 +93,7 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
   {
     InputRow row = createInputRow();
 
-    String sequenceName = target.getSequenceName(INTERVAL, row);
+    String sequenceName = sequenceNameFunction.getSequenceName(INTERVAL, row);
     SegmentIdWithShardSpec segmentIdWithShardSpec = target.allocate(row, sequenceName, null, false);
 
     Assert.assertEquals(
@@ -102,13 +106,12 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
     Assert.assertEquals(PARTITION_NUM, shardSpec.getPartitionNum());
   }
 
-
   @Test
   public void getSequenceName()
   {
     // getSequenceName_forIntervalAndRow_shouldUseISOFormatAndPartitionNumForRow
     InputRow row = createInputRow();
-    String sequenceName = target.getSequenceName(INTERVAL, row);
+    String sequenceName = sequenceNameFunction.getSequenceName(INTERVAL, row);
     String expectedSequenceName = StringUtils.format("%s_%s_%d", TASKID, INTERVAL, PARTITION_NUM);
     Assert.assertEquals(expectedSequenceName, sequenceName);
   }
@@ -148,12 +151,11 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
 
   private static InputRow createInputRow()
   {
-    long timestamp = INTERVAL.getStartMillis();
-    InputRow inputRow = EasyMock.mock(InputRow.class);
-    EasyMock.expect(inputRow.getTimestamp()).andStubReturn(DateTimes.utc(timestamp));
-    EasyMock.expect(inputRow.getTimestampFromEpoch()).andStubReturn(timestamp);
-    EasyMock.expect(inputRow.getDimension(DIMENSION)).andStubReturn(Collections.singletonList(DIMENSION));
-    EasyMock.replay(inputRow);
-    return inputRow;
+    final long timestamp = INTERVAL.getStartMillis();
+    return new MapBasedInputRow(
+        timestamp,
+        Collections.singletonList(DIMENSION),
+        ImmutableMap.of(DIMENSION, 1)
+    );
   }
 }

@@ -22,30 +22,44 @@ package org.apache.druid.sql.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.avatica.remote.TypedValue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class SqlQuery
 {
+  public static List<TypedValue> getParameterList(List<SqlParameter> parameters)
+  {
+    return parameters.stream()
+                     .map(SqlParameter::getTypedValue)
+                     .collect(Collectors.toList());
+  }
+
   private final String query;
   private final ResultFormat resultFormat;
   private final boolean header;
   private final Map<String, Object> context;
+  private final List<SqlParameter> parameters;
 
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
       @JsonProperty("resultFormat") final ResultFormat resultFormat,
       @JsonProperty("header") final boolean header,
-      @JsonProperty("context") final Map<String, Object> context
+      @JsonProperty("context") final Map<String, Object> context,
+      @JsonProperty("parameters") final List<SqlParameter> parameters
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.resultFormat = resultFormat == null ? ResultFormat.OBJECT : resultFormat;
     this.header = header;
     this.context = context == null ? ImmutableMap.of() : context;
+    this.parameters = parameters == null ? ImmutableList.of() : parameters;
   }
 
   @JsonProperty
@@ -72,6 +86,17 @@ public class SqlQuery
     return context;
   }
 
+  @JsonProperty
+  public List<SqlParameter> getParameters()
+  {
+    return parameters;
+  }
+
+  public List<TypedValue> getParameterList()
+  {
+    return getParameterList(parameters);
+  }
+
   @Override
   public boolean equals(final Object o)
   {
@@ -85,13 +110,14 @@ public class SqlQuery
     return header == sqlQuery.header &&
            Objects.equals(query, sqlQuery.query) &&
            resultFormat == sqlQuery.resultFormat &&
-           Objects.equals(context, sqlQuery.context);
+           Objects.equals(context, sqlQuery.context) &&
+           Objects.equals(parameters, sqlQuery.parameters);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, resultFormat, header, context);
+    return Objects.hash(query, resultFormat, header, context, parameters);
   }
 
   @Override
@@ -102,6 +128,7 @@ public class SqlQuery
            ", resultFormat=" + resultFormat +
            ", header=" + header +
            ", context=" + context +
+           ", parameters=" + parameters +
            '}';
   }
 }

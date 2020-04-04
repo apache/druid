@@ -141,11 +141,11 @@ public class Utils
       TaskCompletionEvent[] completionEvents = failedJob.getTaskCompletionEvents(0, 100);
       for (TaskCompletionEvent tce : completionEvents) {
         String[] taskDiags = failedJob.getTaskDiagnostics(tce.getTaskAttemptId());
-        String combinedTaskDiags = "";
+        StringBuilder combinedTaskDiags = new StringBuilder();
         for (String taskDiag : taskDiags) {
-          combinedTaskDiags += taskDiag;
+          combinedTaskDiags.append(taskDiag);
         }
-        taskDiagsMap.put(tce.getTaskAttemptId().toString(), combinedTaskDiags);
+        taskDiagsMap.put(tce.getTaskAttemptId().toString(), combinedTaskDiags.toString());
       }
       return jsonMapper.writeValueAsString(taskDiagsMap);
     }

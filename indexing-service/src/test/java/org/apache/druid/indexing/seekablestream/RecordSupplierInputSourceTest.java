@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,7 +47,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -54,8 +55,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class RecordSupplierInputSourceTest
+public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
 {
+
   private static final int NUM_COLS = 16;
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";
@@ -106,7 +108,7 @@ public class RecordSupplierInputSourceTest
 
     private RandomCsvSupplier()
     {
-      partitionToOffset = new HashMap<>(3);
+      partitionToOffset = Maps.newHashMapWithExpectedSize(3);
       for (int i = 0; i < 3; i++) {
         partitionToOffset.put(i, 0);
       }

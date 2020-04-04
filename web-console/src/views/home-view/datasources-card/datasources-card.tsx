@@ -94,7 +94,7 @@ export class DatasourcesCard extends React.PureComponent<
         loading={datasourceCountLoading}
         error={datasourceCountError}
       >
-        {pluralIfNeeded(datasourceCount, 'datasource')}
+        <p>{pluralIfNeeded(datasourceCount, 'datasource')}</p>
       </HomeViewCard>
     );
   }

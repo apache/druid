@@ -23,10 +23,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
- * {@link SplitHintSpec} for IngestSegmentFirehoseFactory.
+ * {@link SplitHintSpec} for IngestSegmentFirehoseFactory and DruidInputSource.
+ *
+ * In DruidInputSource, this spec is converted into {@link MaxSizeSplitHintSpec}. As a result, its {@link #split}
+ * method is never called (IngestSegmentFirehoseFactory creates splits on its own instead of calling the
+ * {@code split()} method). This doesn't necessarily mean this class is deprecated in favor of the MaxSizeSplitHintSpec.
+ * We may want to create more optimized splits in the future. For example, segments can be split to maximize the rollup
+ * ratio if the segments have different sets of columns or even different value ranges of columns.
  */
 public class SegmentsSplitHintSpec implements SplitHintSpec
 {
@@ -41,9 +50,7 @@ public class SegmentsSplitHintSpec implements SplitHintSpec
   private final long maxInputSegmentBytesPerTask;
 
   @JsonCreator
-  public SegmentsSplitHintSpec(
-      @JsonProperty("maxInputSegmentBytesPerTask") @Nullable Long maxInputSegmentBytesPerTask
-  )
+  public SegmentsSplitHintSpec(@JsonProperty("maxInputSegmentBytesPerTask") @Nullable Long maxInputSegmentBytesPerTask)
   {
     this.maxInputSegmentBytesPerTask = maxInputSegmentBytesPerTask == null
                                        ? DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK
@@ -54,6 +61,13 @@ public class SegmentsSplitHintSpec implements SplitHintSpec
   public long getMaxInputSegmentBytesPerTask()
   {
     return maxInputSegmentBytesPerTask;
+  }
+
+  @Override
+  public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputFileAttribute> inputAttributeExtractor)
+  {
+    // This method is not supported currently, but we may want to implement in the future to create optimized splits.
+    throw new UnsupportedOperationException();
   }
 
   @Override

@@ -21,6 +21,7 @@ package org.apache.druid.utils;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -29,7 +30,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.TreeSet;
@@ -39,6 +40,8 @@ import java.util.stream.Stream;
 
 public final class CollectionUtils
 {
+  private static final int MAX_EXPECTED_SIZE = (1 << 30);
+
   /**
    * Returns a lazy collection from a stream supplier and a size. {@link Collection#iterator()} of the returned
    * collection delegates to {@link Stream#iterator()} on the stream returned from the supplier.
@@ -118,7 +121,29 @@ public final class CollectionUtils
     return result;
   }
 
-  public static boolean isNullOrEmpty(@Nullable List<?> list)
+  /**
+   * Returns a LinkedHashMap with an appropriate size based on the callers expectedSize. This methods functionality
+   * mirrors that of com.google.common.collect.Maps#newLinkedHashMapWithExpectedSize in Guava 19+. Thus, this method
+   * can be replaced with Guava's implementation once Druid has upgraded its Guava dependency to a sufficient version.
+   *
+   * @param expectedSize the expected size of the LinkedHashMap
+   * @return LinkedHashMap object with appropriate size based on callers expectedSize
+   */
+  @SuppressForbidden(reason = "java.util.LinkedHashMap#<init>(int)")
+  public static <K, V> LinkedHashMap<K, V> newLinkedHashMapWithExpectedSize(int expectedSize)
+  {
+    // Gracefully handle negative paramaters.
+    expectedSize = Math.max(0, expectedSize);
+    if (expectedSize < 3) {
+      return new LinkedHashMap<>(expectedSize + 1);
+    }
+    if (expectedSize < MAX_EXPECTED_SIZE) {
+      return new LinkedHashMap<>((int) ((float) expectedSize / 0.75f + 1.0f));
+    }
+    return new LinkedHashMap<>(Integer.MAX_VALUE);
+  }
+
+  public static boolean isNullOrEmpty(@Nullable Collection<?> list)
   {
     return list == null || list.isEmpty();
   }

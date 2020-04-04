@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.collect.ImmutableSet;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -26,7 +28,9 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class IndexedTableJoinable implements Joinable
 {
@@ -40,13 +44,13 @@ public class IndexedTableJoinable implements Joinable
   @Override
   public List<String> getAvailableColumns()
   {
-    return table.allColumns();
+    return table.rowSignature().getColumnNames();
   }
 
   @Override
   public int getCardinality(String columnName)
   {
-    if (table.allColumns().contains(columnName)) {
+    if (table.rowSignature().contains(columnName)) {
       return table.numRows();
     } else {
       // NullDimensionSelector has cardinality = 1 (one null, nothing else).
@@ -74,5 +78,55 @@ public class IndexedTableJoinable implements Joinable
         condition,
         remainderNeeded
     );
+  }
+
+  @Override
+  public Set<String> getCorrelatedColumnValues(
+      String searchColumnName,
+      String searchColumnValue,
+      String retrievalColumnName,
+      long maxCorrelationSetSize,
+      boolean allowNonKeyColumnSearch
+  )
+  {
+    int filterColumnPosition = table.rowSignature().indexOf(searchColumnName);
+    int correlatedColumnPosition = table.rowSignature().indexOf(retrievalColumnName);
+
+    if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
+      return ImmutableSet.of();
+    }
+
+    Set<String> correlatedValues = new HashSet<>();
+    if (table.keyColumns().contains(searchColumnName)) {
+      IndexedTable.Index index = table.columnIndex(filterColumnPosition);
+      IndexedTable.Reader reader = table.columnReader(correlatedColumnPosition);
+      IntList rowIndex = index.find(searchColumnValue);
+      for (int i = 0; i < rowIndex.size(); i++) {
+        int rowNum = rowIndex.getInt(i);
+        correlatedValues.add(reader.read(rowNum).toString());
+
+        if (correlatedValues.size() > maxCorrelationSetSize) {
+          return ImmutableSet.of();
+        }
+      }
+      return correlatedValues;
+    } else {
+      if (!allowNonKeyColumnSearch) {
+        return ImmutableSet.of();
+      }
+
+      IndexedTable.Reader dimNameReader = table.columnReader(filterColumnPosition);
+      IndexedTable.Reader correlatedColumnReader = table.columnReader(correlatedColumnPosition);
+      for (int i = 0; i < table.numRows(); i++) {
+        if (searchColumnValue.equals(dimNameReader.read(i).toString())) {
+          correlatedValues.add(correlatedColumnReader.read(i).toString());
+        }
+        if (correlatedValues.size() > maxCorrelationSetSize) {
+          return ImmutableSet.of();
+        }
+      }
+
+      return correlatedValues;
+    }
   }
 }

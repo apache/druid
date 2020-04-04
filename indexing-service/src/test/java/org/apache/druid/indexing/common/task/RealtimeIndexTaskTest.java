@@ -100,6 +100,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -908,7 +909,7 @@ public class RealtimeIndexTaskTest
                 new QueryWatcher()
                 {
                   @Override
-                  public void registerQuery(Query query, ListenableFuture future)
+                  public void registerQueryFuture(Query query, ListenableFuture future)
                   {
                     // do nothing
                   }
@@ -973,6 +974,7 @@ public class RealtimeIndexTaskTest
         handoffNotifierFactory,
         () -> conglomerate,
         Execs.directExecutor(), // queryExecutorService
+        NoopJoinableFactory.INSTANCE,
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),

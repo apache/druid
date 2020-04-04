@@ -32,6 +32,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -158,6 +159,19 @@ public class SelectQuery implements Query<Object>
 
   @Override
   public String getId()
+  {
+    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
+  }
+
+  @Override
+  public Query<Object> withSubQueryId(String subQueryId)
+  {
+    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
+  }
+
+  @Nullable
+  @Override
+  public String getSubQueryId()
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);
   }

@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -38,6 +39,7 @@ public class InlineInputSource extends AbstractInputSource
   @JsonCreator
   public InlineInputSource(@JsonProperty("data") String data)
   {
+    Preconditions.checkArgument(data != null && !data.isEmpty(), "empty data");
     this.data = data;
   }
 
@@ -69,7 +71,7 @@ public class InlineInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Stream.of(new ByteEntity(StringUtils.toUtf8(data))),
+        Stream.of(new ByteEntity(StringUtils.toUtf8(data))).iterator(),
         temporaryDirectory
     );
   }

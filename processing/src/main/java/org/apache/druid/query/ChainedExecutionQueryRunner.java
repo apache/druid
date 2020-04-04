@@ -144,7 +144,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                 )
             );
 
-            queryWatcher.registerQuery(query, futures);
+            queryWatcher.registerQueryFuture(query, futures);
 
             try {
               return new MergeIterable<>(

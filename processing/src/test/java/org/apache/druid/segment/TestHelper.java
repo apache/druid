@@ -62,17 +62,13 @@ public class TestHelper
 
   public static IndexIO getTestIndexIO()
   {
-    return new IndexIO(
-        JSON_MAPPER,
-        new ColumnConfig()
-        {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
-        }
-    );
+    ColumnConfig noCacheColumnConfig = () -> 0;
+    return getTestIndexIO(noCacheColumnConfig);
+  }
+
+  public static IndexIO getTestIndexIO(ColumnConfig columnConfig)
+  {
+    return new IndexIO(JSON_MAPPER, columnConfig);
   }
 
   public static ObjectMapper makeJsonMapper()

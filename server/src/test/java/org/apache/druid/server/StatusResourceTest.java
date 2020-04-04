@@ -54,6 +54,7 @@ public class StatusResourceTest
       for (StatusResource.ModuleVersion version : statusResourceModuleList) {
         if (version.getName().equals(moduleName)) {
           contains = Boolean.TRUE;
+          break;
         }
       }
       Assert.assertTrue("Status resource should contain module " + moduleName, contains);

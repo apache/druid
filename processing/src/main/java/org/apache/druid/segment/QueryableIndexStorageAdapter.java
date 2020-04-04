@@ -41,6 +41,7 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -430,15 +431,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       }
     }
 
-    final Filter postFilter;
-    if (postFilters.size() == 0) {
-      postFilter = null;
-    } else if (postFilters.size() == 1) {
-      postFilter = postFilters.get(0);
-    } else {
-      postFilter = new AndFilter(postFilters);
-    }
-
     if (queryMetrics != null) {
       queryMetrics.preFilters(preFilters);
       queryMetrics.postFilters(postFilters);
@@ -446,7 +438,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       queryMetrics.reportPreFilteredRows(preFilteredRows);
     }
 
-    return new FilterAnalysis(preFilterBitmap, postFilter);
+    return new FilterAnalysis(preFilterBitmap, Filters.and(postFilters));
   }
 
   @VisibleForTesting

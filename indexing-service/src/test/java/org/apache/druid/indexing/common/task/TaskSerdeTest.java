@@ -21,9 +21,10 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientKillQuery;
+import org.apache.druid.client.indexing.ClientKillUnusedSegmentsTaskQuery;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
@@ -38,6 +39,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -78,6 +80,10 @@ public class TaskSerdeTest
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
+    jsonMapper.registerSubtypes(
+        new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
+        new NamedType(IndexTuningConfig.class, "index")
+    );
   }
 
   @Test
@@ -338,7 +344,7 @@ public class TaskSerdeTest
   @Test
   public void testKillTaskSerde() throws Exception
   {
-    final KillTask task = new KillTask(
+    final KillUnusedSegmentsTask task = new KillUnusedSegmentsTask(
         null,
         "foo",
         Intervals.of("2010-01-01/P1D"),
@@ -348,7 +354,7 @@ public class TaskSerdeTest
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final KillTask task2 = (KillTask) jsonMapper.readValue(json, Task.class);
+    final KillUnusedSegmentsTask task2 = (KillUnusedSegmentsTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
@@ -358,9 +364,9 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
 
-    final KillTask task3 = (KillTask) jsonMapper.readValue(
+    final KillUnusedSegmentsTask task3 = (KillUnusedSegmentsTask) jsonMapper.readValue(
         jsonMapper.writeValueAsString(
-            new ClientKillQuery(
+            new ClientKillUnusedSegmentsTaskQuery(
                 "foo",
                 Intervals.of("2010-01-01/P1D")
             )

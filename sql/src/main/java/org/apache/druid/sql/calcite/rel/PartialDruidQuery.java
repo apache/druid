@@ -32,11 +32,12 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import java.util.List;
 import java.util.Objects;
@@ -103,7 +104,7 @@ public class PartialDruidQuery
   {
     final Supplier<RelBuilder> builderSupplier = () -> RelFactories.LOGICAL_BUILDER.create(
         scanRel.getCluster(),
-        scanRel.getTable().getRelOptSchema()
+        scanRel.getTable() != null ? scanRel.getTable().getRelOptSchema() : null
     );
     return new PartialDruidQuery(builderSupplier, scanRel, null, null, null, null, null, null, null);
   }
@@ -303,7 +304,14 @@ public class PartialDruidQuery
       final boolean finalizeAggregations
   )
   {
-    return new DruidQuery(this, dataSource, sourceRowSignature, plannerContext, rexBuilder, finalizeAggregations);
+    return DruidQuery.fromPartialQuery(
+        this,
+        dataSource,
+        sourceRowSignature,
+        plannerContext,
+        rexBuilder,
+        finalizeAggregations
+    );
   }
 
   public boolean canAccept(final Stage stage)
@@ -387,6 +395,61 @@ public class PartialDruidQuery
       default:
         throw new ISE("WTF?! Unknown stage: %s", currentStage);
     }
+  }
+
+  /**
+   * Estimates the per-row cost of running this query.
+   */
+  public double estimateCost()
+  {
+    double cost = CostEstimates.COST_BASE;
+
+    if (getSelectProject() != null) {
+      for (final RexNode rexNode : getSelectProject().getChildExps()) {
+        if (rexNode.isA(SqlKind.INPUT_REF)) {
+          cost += CostEstimates.COST_COLUMN_READ;
+        } else {
+          cost += CostEstimates.COST_EXPRESSION;
+        }
+      }
+    }
+
+    if (getWhereFilter() != null) {
+      // We assume filters are free and have a selectivity of CostEstimates.MULTIPLIER_FILTER. They aren't actually
+      // free, but we want to encourage filters, so let's go with it.
+      cost *= CostEstimates.MULTIPLIER_FILTER;
+    }
+
+    if (getAggregate() != null) {
+      if (getSelectProject() == null) {
+        // No projection before aggregation, that means the aggregate operator is reading things directly.
+        // Account for the costs.
+        cost += CostEstimates.COST_COLUMN_READ * getAggregate().getGroupSet().size();
+      }
+
+      cost += CostEstimates.COST_DIMENSION * getAggregate().getGroupSet().size();
+      cost += CostEstimates.COST_AGGREGATION * getAggregate().getAggCallList().size();
+    }
+
+    if (getSort() != null) {
+      if (!getSort().collation.getFieldCollations().isEmpty()) {
+        cost *= CostEstimates.MULTIPLIER_ORDER_BY;
+      }
+
+      if (getSort().fetch != null) {
+        cost *= CostEstimates.MULTIPLIER_LIMIT;
+      }
+    }
+
+    if (getAggregateProject() != null) {
+      cost += CostEstimates.COST_EXPRESSION * getAggregateProject().getChildExps().size();
+    }
+
+    if (getSortProject() != null) {
+      cost += CostEstimates.COST_EXPRESSION * getSortProject().getChildExps().size();
+    }
+
+    return cost;
   }
 
   private void validateStage(final Stage stage)

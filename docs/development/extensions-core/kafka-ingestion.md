@@ -162,18 +162,12 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
+|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Roaring)|
 |dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
 |metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
 |longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
 
 ##### Bitmap types
-
-For Concise bitmaps:
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|`type`|String|Must be `concise`.|yes|
 
 For Roaring bitmaps:
 
@@ -181,6 +175,12 @@ For Roaring bitmaps:
 |-----|----|-----------|--------|
 |`type`|String|Must be `roaring`.|yes|
 |`compressRunOnSerialization`|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
+
+For Concise bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|Must be `concise`.|yes|
 
 #### SegmentWriteOutMediumFactory
 
@@ -308,26 +308,30 @@ it will just ensure that no indexing tasks are running until the supervisor is r
 
 ### Resetting Supervisors
 
-To reset a running supervisor, you can use `POST /druid/indexer/v1/supervisor/<supervisorId>/reset`.
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/reset` operation clears stored 
+offsets, causing the supervisor to start reading offsets from either the earliest or latest 
+offsets in Kafka (depending on the value of `useEarliestOffset`). After clearing stored 
+offsets, the supervisor kills and recreates any active tasks, so that tasks begin reading 
+from valid offsets. 
 
-The indexing service keeps track of the latest persisted Kafka offsets in order to provide exactly-once ingestion
-guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
-generated segments to be accepted. If the messages at the expected starting offsets are no longer available in Kafka
-(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
-refuse to start and in-flight tasks will fail.
+Use care when using this operation! Resetting the supervisor may cause Kafka messages 
+to be skipped or read twice, resulting in missing or duplicate data. 
 
-This endpoint can be used to clear the stored offsets which will cause the supervisor to start reading from
-either the earliest or latest offsets in Kafka (depending on the value of `useEarliestOffset`). The supervisor must be
-running for this endpoint to be available. After the stored offsets are cleared, the supervisor will automatically kill
-and re-create any active tasks so that tasks begin reading from valid offsets.
+The reason for using this operation is to recover from a state in which the supervisor 
+ceases operating due to missing offsets. The indexing service keeps track of the latest 
+persisted Kafka offsets in order to provide exactly-once ingestion guarantees across 
+tasks. Subsequent tasks must start reading from where the previous task completed in 
+order for the generated segments to be accepted. If the messages at the expected 
+starting offsets are no longer available in Kafka (typically because the message retention 
+period has elapsed or the topic was removed and re-created) the supervisor will refuse 
+to start and in flight tasks will fail. This operation enables you to recover from this condition. 
 
-Note that since the stored offsets are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
-may cause some Kafka messages to be skipped or to be read twice.
+Note that the supervisor must be running for this endpoint to be available.
 
 ### Terminating Supervisors
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` terminates a supervisor and causes all associated indexing
-tasks managed by this supervisor to immediately stop and begin
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` operation terminates a supervisor and causes all 
+associated indexing tasks managed by this supervisor to immediately stop and begin
 publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved
 with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can it's configuration
 or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor

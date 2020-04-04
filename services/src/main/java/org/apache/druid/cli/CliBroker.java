@@ -38,11 +38,13 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
@@ -62,8 +64,6 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 
-/**
- */
 @Command(
     name = "broker",
     description = "Runs a broker node, see https://druid.apache.org/docs/latest/Broker.html for a description"
@@ -84,6 +84,8 @@ public class CliBroker extends ServerRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new SegmentWranglerModule(),
+        new JoinableFactoryModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
               TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME

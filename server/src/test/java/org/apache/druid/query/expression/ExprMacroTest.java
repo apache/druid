@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -51,6 +52,12 @@ public class ExprMacroTest
           .build()
   );
 
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -75,7 +82,7 @@ public class ExprMacroTest
   @Test
   public void testLookupNotFound()
   {
-    expectedException.expect(NullPointerException.class);
+    expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Lookup [lookylook] not found");
     assertExpr("lookup(x, 'lookylook')", null);
   }
@@ -225,5 +232,13 @@ public class ExprMacroTest
   {
     final Expr expr = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE);
     Assert.assertEquals(expression, expectedResult, expr.eval(BINDINGS).value());
+
+    final Expr exprNotFlattened = Parser.parse(expression, LookupEnabledTestExprMacroTable.INSTANCE, false);
+    final Expr roundTripNotFlattened =
+        Parser.parse(exprNotFlattened.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTripNotFlattened.eval(BINDINGS).value());
+
+    final Expr roundTrip = Parser.parse(expr.stringify(), LookupEnabledTestExprMacroTable.INSTANCE);
+    Assert.assertEquals(exprNotFlattened.stringify(), expectedResult, roundTrip.eval(BINDINGS).value());
   }
 }

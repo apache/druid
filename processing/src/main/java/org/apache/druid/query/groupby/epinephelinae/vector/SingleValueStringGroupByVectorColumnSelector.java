@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
-
-import java.nio.ByteBuffer;
 
 public class SingleValueStringGroupByVectorColumnSelector implements GroupByVectorColumnSelector
 {
@@ -36,34 +36,38 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
   @Override
   public int getGroupingKeySize()
   {
-    return 1;
+    return Integer.BYTES;
   }
 
   @Override
   public void writeKeys(
-      final int[] keySpace,
+      final WritableMemory keySpace,
       final int keySize,
       final int keyOffset,
       final int startRow,
       final int endRow
   )
   {
-    final int[] rowVector = selector.getRowVector();
+    final int[] vector = selector.getRowVector();
 
-    for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
-      keySpace[j] = rowVector[i];
+    if (keySize == Integer.BYTES) {
+      keySpace.putIntArray(keyOffset, vector, startRow, endRow - startRow);
+    } else {
+      for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
+        keySpace.putInt(j, vector[i]);
+      }
     }
   }
 
   @Override
   public void writeKeyToResultRow(
-      final ByteBuffer keyBuffer,
+      final Memory keyMemory,
       final int keyOffset,
       final ResultRow resultRow,
       final int resultRowPosition
   )
   {
-    final int id = keyBuffer.getInt(keyOffset * Integer.BYTES);
+    final int id = keyMemory.getInt(keyOffset);
     resultRow.set(resultRowPosition, selector.lookupName(id));
   }
 }

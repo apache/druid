@@ -1,5 +1,6 @@
 ---
 id: moving-average-query
+title: "Moving Average Query"
 ---
 
 <!--

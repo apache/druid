@@ -113,6 +113,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -1591,6 +1592,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         handoffNotifierFactory,
         () -> conglomerate,
         Execs.directExecutor(), // queryExecutorService
+        NoopJoinableFactory.INSTANCE,
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),

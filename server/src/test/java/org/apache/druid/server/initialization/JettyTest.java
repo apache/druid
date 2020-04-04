@@ -34,26 +34,35 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.HttpClientConfig;
+import org.apache.druid.java.util.http.client.HttpClientInit;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.initialization.jetty.ServletFilterHolder;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
@@ -61,6 +70,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Map;
@@ -74,10 +85,109 @@ import java.util.zip.GZIPOutputStream;
 
 public class JettyTest extends BaseJettyTest
 {
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
+  private HttpClientConfig sslConfig;
+
+  private Injector injector;
+
+  private LatchedRequestStateHolder latchedRequestState;
+
   @Override
   protected Injector setupInjector()
   {
-    return Initialization.makeInjectorWithModules(
+    TLSServerConfig tlsConfig;
+    try {
+      File keyStore = new File(JettyTest.class.getClassLoader().getResource("server.jks").getFile());
+      Path tmpKeyStore = Files.copy(keyStore.toPath(), new File(folder.newFolder(), "server.jks").toPath());
+      File trustStore = new File(JettyTest.class.getClassLoader().getResource("truststore.jks").getFile());
+      Path tmpTrustStore = Files.copy(trustStore.toPath(), new File(folder.newFolder(), "truststore.jks").toPath());
+      PasswordProvider pp = () -> "druid123";
+      tlsConfig = new TLSServerConfig()
+      {
+        @Override
+        public String getKeyStorePath()
+        {
+          return tmpKeyStore.toString();
+        }
+
+        @Override
+        public String getKeyStoreType()
+        {
+          return "jks";
+        }
+
+        @Override
+        public PasswordProvider getKeyStorePasswordProvider()
+        {
+          return pp;
+        }
+
+        @Override
+        public PasswordProvider getKeyManagerPasswordProvider()
+        {
+          return pp;
+        }
+
+        @Override
+        public String getTrustStorePath()
+        {
+          return tmpTrustStore.toString();
+        }
+
+        @Override
+        public String getTrustStoreAlgorithm()
+        {
+          return "PKIX";
+        }
+
+        @Override
+        public PasswordProvider getTrustStorePasswordProvider()
+        {
+          return pp;
+        }
+
+        @Override
+        public String getCertAlias()
+        {
+          return "druid";
+        }
+
+        @Override
+        public boolean isRequireClientCertificate()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean isRequestClientCertificate()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean isValidateHostnames()
+        {
+          return false;
+        }
+      };
+
+      sslConfig =
+          HttpClientConfig.builder()
+                          .withSslContext(
+                              HttpClientInit.sslContextWithTrustedKeyStore(tmpTrustStore.toString(), pp.getPassword())
+                          )
+                          .withWorkerCount(1)
+                          .withReadTimeout(Duration.ZERO)
+                          .build();
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    latchedRequestState = new LatchedRequestStateHolder();
+    injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.<Module>of(
             new Module()
@@ -88,9 +198,11 @@ public class JettyTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", false, null, null, true, false)
+                    new DruidNode("test", "localhost", false, 9988, 9999, true, true)
                 );
+                binder.bind(TLSServerConfig.class).toInstance(tlsConfig);
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
+                binder.bind(LatchedRequestStateHolder.class).toInstance(latchedRequestState);
 
                 Multibinder<ServletFilterHolder> multibinder = Multibinder.newSetBinder(
                     binder,
@@ -132,7 +244,9 @@ public class JettyTest extends BaseJettyTest
                     }
                 );
 
+
                 Jerseys.addResource(binder, SlowResource.class);
+                Jerseys.addResource(binder, LatchedResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
                 Jerseys.addResource(binder, DirectlyReturnResource.class);
@@ -143,6 +257,7 @@ public class JettyTest extends BaseJettyTest
         )
     );
 
+    return injector;
   }
 
   @Test
@@ -209,13 +324,19 @@ public class JettyTest extends BaseJettyTest
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty("Accept-Encoding", "gzip");
     Assert.assertEquals("gzip", get.getContentEncoding());
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(new GZIPInputStream(get.getInputStream()), StandardCharsets.UTF_8));
+    Assert.assertEquals(
+        DEFAULT_RESPONSE_CONTENT,
+        IOUtils.toString(new GZIPInputStream(get.getInputStream()), StandardCharsets.UTF_8)
+    );
 
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestProperty("Accept-Encoding", "gzip");
     post.setRequestMethod("POST");
     Assert.assertEquals("gzip", post.getContentEncoding());
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(new GZIPInputStream(post.getInputStream()), StandardCharsets.UTF_8));
+    Assert.assertEquals(
+        DEFAULT_RESPONSE_CONTENT,
+        IOUtils.toString(new GZIPInputStream(post.getInputStream()), StandardCharsets.UTF_8)
+    );
 
     final HttpURLConnection getNoGzip = (HttpURLConnection) url.openConnection();
     Assert.assertNotEquals("gzip", getNoGzip.getContentEncoding());
@@ -224,7 +345,10 @@ public class JettyTest extends BaseJettyTest
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(postNoGzip.getInputStream(), StandardCharsets.UTF_8));
+    Assert.assertEquals(
+        DEFAULT_RESPONSE_CONTENT,
+        IOUtils.toString(postNoGzip.getInputStream(), StandardCharsets.UTF_8)
+    );
   }
 
   // Tests that threads are not stuck when partial chunk is not finalized
@@ -310,5 +434,82 @@ public class JettyTest extends BaseJettyTest
         request,
         new InputStreamResponseHandler()
     ).get()), Charset.defaultCharset()));
+  }
+
+  @Test
+  public void testNumConnectionsMetricHttp() throws Exception
+  {
+    String text = "hello";
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(out)) {
+      gzipOutputStream.write(text.getBytes(Charset.defaultCharset()));
+    }
+    Request request = new Request(HttpMethod.GET, new URL("http://localhost:" + port + "/latched/hello"));
+    request.setHeader("Content-Encoding", "gzip");
+    request.setContent(MediaType.TEXT_PLAIN, out.toByteArray());
+
+    JettyServerModule jsm = injector.getInstance(JettyServerModule.class);
+    latchedRequestState.reset();
+
+    Assert.assertEquals(0, jsm.getActiveConnections());
+    ListenableFuture<InputStream> go = client.go(
+        request,
+        new InputStreamResponseHandler()
+    );
+    latchedRequestState.clientWaitForServerToStartRequest();
+    Assert.assertEquals(1, jsm.getActiveConnections());
+    latchedRequestState.clientReadyToFinishRequest();
+    go.get();
+    waitForJettyServerModuleActiveConnectionsZero(jsm);
+    Assert.assertEquals(0, jsm.getActiveConnections());
+  }
+
+  @Test
+  public void testNumConnectionsMetricHttps() throws Exception
+  {
+    String text = "hello";
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(out)) {
+      gzipOutputStream.write(text.getBytes(Charset.defaultCharset()));
+    }
+    Request request = new Request(HttpMethod.GET, new URL("https://localhost:" + tlsPort + "/latched/hello"));
+    request.setHeader("Content-Encoding", "gzip");
+    request.setContent(MediaType.TEXT_PLAIN, out.toByteArray());
+    HttpClient client;
+    try {
+      client = HttpClientInit.createClient(
+          sslConfig,
+          lifecycle
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    JettyServerModule jsm = injector.getInstance(JettyServerModule.class);
+    latchedRequestState.reset();
+
+    Assert.assertEquals(0, jsm.getActiveConnections());
+    ListenableFuture<InputStream> go = client.go(
+        request,
+        new InputStreamResponseHandler()
+    );
+    latchedRequestState.clientWaitForServerToStartRequest();
+    Assert.assertEquals(1, jsm.getActiveConnections());
+    latchedRequestState.clientReadyToFinishRequest();
+    go.get();
+    waitForJettyServerModuleActiveConnectionsZero(jsm);
+    Assert.assertEquals(0, jsm.getActiveConnections());
+  }
+
+  private void waitForJettyServerModuleActiveConnectionsZero(JettyServerModule jsm) throws InterruptedException
+  {
+    // it can take a bit to close the connection, so maybe sleep for a while and hope it closes
+    final int sleepTimeMills = 10;
+    final int totalSleeps = 5_000 / sleepTimeMills;
+    int count = 0;
+    while (jsm.getActiveConnections() > 0 && count++ < totalSleeps) {
+      Thread.sleep(sleepTimeMills);
+    }
   }
 }

@@ -25,8 +25,14 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -58,22 +64,28 @@ public class CompressedLongsSerdeTest
     return data;
   }
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   protected final CompressionFactory.LongEncodingStrategy encodingStrategy;
   protected final CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
-  private final long values0[] = {};
-  private final long values1[] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
-  private final long values2[] = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
-  private final long values3[] = {1, 1, 1, 1, 1, 11, 11, 11, 11};
-  private final long values4[] = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
-  private final long values5[] = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
-  private final long values6[] = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
-  private final long values7[] = {
+  private final long[] values0 = {};
+  private final long[] values1 = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
+  private final long[] values2 = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
+  private final long[] values3 = {1, 1, 1, 1, 1, 11, 11, 11, 11};
+  private final long[] values4 = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
+  private final long[] values5 = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
+  private final long[] values6 = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
+  private final long[] values7 = {
       Long.MAX_VALUE, Long.MIN_VALUE, 12378, -12718243, -1236213, 12743153, 21364375452L,
       65487435436632L, -43734526234564L
   };
-  private final long values8[] = {Long.MAX_VALUE, 0, 321, 15248425, 13523212136L, 63822, 3426, 96};
+  private final long[] values8 = {Long.MAX_VALUE, 0, 321, 15248425, 13523212136L, 63822, 3426, 96};
 
   // built test value with enough unique values to not use table encoding for auto strategy
   private static long[] addUniques(long[] val)
@@ -114,11 +126,43 @@ public class CompressedLongsSerdeTest
   @Test
   public void testChunkSerde() throws Exception
   {
-    long chunk[] = new long[10000];
+    long[] chunk = new long[10000];
     for (int i = 0; i < 10000; i++) {
       chunk[i] = i;
     }
     testWithValues(chunk);
+  }
+
+  // this test takes ~50 minutes to run (even skipping 'auto')
+  @Ignore
+  @Test
+  public void testTooManyValues() throws IOException
+  {
+    // uncomment this if 'auto' encoded long unbounded heap usage gets put in check and this can actually pass
+    if (encodingStrategy.equals(CompressionFactory.LongEncodingStrategy.AUTO)) {
+      return;
+    }
+    expectedException.expect(ColumnCapacityExceededException.class);
+    expectedException.expectMessage(ColumnCapacityExceededException.formatMessage("test"));
+    try (
+        SegmentWriteOutMedium segmentWriteOutMedium =
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
+    ) {
+      ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+          "test",
+          segmentWriteOutMedium,
+          "test",
+          order,
+          encodingStrategy,
+          compressionStrategy
+      );
+      serializer.open();
+
+      final long numRows = Integer.MAX_VALUE + 100L;
+      for (long i = 0L; i < numRows; i++) {
+        serializer.add(ThreadLocalRandom.current().nextLong());
+      }
+    }
   }
 
   public void testWithValues(long[] values) throws Exception
@@ -130,6 +174,7 @@ public class CompressedLongsSerdeTest
   public void testValues(long[] values) throws Exception
   {
     ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+        "test",
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,

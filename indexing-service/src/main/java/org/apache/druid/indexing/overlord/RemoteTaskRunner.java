@@ -1302,7 +1302,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     for (Map.Entry<String, RemoteTaskRunnerWorkItem> entry : runningTasks.entrySet()) {
       if (entry.getValue() == null) {
         log.error(
-            "Huh? null work item for [%s]", entry.getKey()
+            "Huh? null work item for [%s]",
+            entry.getKey()
         );
       } else if (entry.getValue().getWorker() == null) {
         log.error("Huh? no worker for [%s]", entry.getKey());

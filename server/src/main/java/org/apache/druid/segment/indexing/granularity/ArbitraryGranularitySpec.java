@@ -61,9 +61,7 @@ public class ArbitraryGranularitySpec implements GranularitySpec
     }
 
     // Insert all intervals
-    for (final Interval inputInterval : inputIntervals) {
-      intervals.add(inputInterval);
-    }
+    intervals.addAll(inputIntervals);
 
     // Ensure intervals are non-overlapping (but they may abut each other)
     final PeekingIterator<Interval> intervalIterator = Iterators.peekingIterator(intervals.iterator());

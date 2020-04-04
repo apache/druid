@@ -36,6 +36,7 @@ import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -44,7 +45,6 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -100,13 +100,16 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
       virtualColumns.add(virtualColumn);
     }
 
-    if (inputType == ValueType.LONG) {
-      inputTypeName = "long";
-    } else if (inputType == ValueType.FLOAT || inputType == ValueType.DOUBLE) {
-      inputTypeName = "float";
-    } else {
-      throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
+    switch (inputType) {
+      case LONG:
+      case DOUBLE:
+      case FLOAT:
+        inputTypeName = StringUtils.toLowerCase(inputType.name());
+        break;
+      default:
+        throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType);
     }
+
 
     if (func == SqlStdOperatorTable.VAR_POP || func == SqlStdOperatorTable.STDDEV_POP) {
       estimator = "population";

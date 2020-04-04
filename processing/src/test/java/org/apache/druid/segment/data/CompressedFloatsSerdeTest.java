@@ -25,8 +25,14 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -58,17 +64,23 @@ public class CompressedFloatsSerdeTest
 
   private static final double DELTA = 0.00001;
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   protected final CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
-  private final float values0[] = {};
-  private final float values1[] = {0f, 1f, 1f, 0f, 1f, 1f, 1f, 1f, 0f, 0f, 1f, 1f};
-  private final float values2[] = {13.2f, 6.1f, 0.001f, 123f, 12572f, 123.1f, 784.4f, 6892.8634f, 8.341111f};
-  private final float values3[] = {0.001f, 0.001f, 0.001f, 0.001f, 0.001f, 100f, 100f, 100f, 100f, 100f};
-  private final float values4[] = {0f, 0f, 0f, 0f, 0.01f, 0f, 0f, 0f, 21.22f, 0f, 0f, 0f, 0f, 0f, 0f};
-  private final float values5[] = {123.16f, 1.12f, 62.00f, 462.12f, 517.71f, 56.54f, 971.32f, 824.22f, 472.12f, 625.26f};
-  private final float values6[] = {1000000f, 1000001f, 1000002f, 1000003f, 1000004f, 1000005f, 1000006f, 1000007f, 1000008f};
-  private final float values7[] = {
+  private final float[] values0 = {};
+  private final float[] values1 = {0f, 1f, 1f, 0f, 1f, 1f, 1f, 1f, 0f, 0f, 1f, 1f};
+  private final float[] values2 = {13.2f, 6.1f, 0.001f, 123f, 12572f, 123.1f, 784.4f, 6892.8634f, 8.341111f};
+  private final float[] values3 = {0.001f, 0.001f, 0.001f, 0.001f, 0.001f, 100f, 100f, 100f, 100f, 100f};
+  private final float[] values4 = {0f, 0f, 0f, 0f, 0.01f, 0f, 0f, 0f, 21.22f, 0f, 0f, 0f, 0f, 0f, 0f};
+  private final float[] values5 = {123.16f, 1.12f, 62.00f, 462.12f, 517.71f, 56.54f, 971.32f, 824.22f, 472.12f, 625.26f};
+  private final float[] values6 = {1000000f, 1000001f, 1000002f, 1000003f, 1000004f, 1000005f, 1000006f, 1000007f, 1000008f};
+  private final float[] values7 = {
       Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, 12378.5734f, -12718243.7496f, -93653653.1f, 12743153.385534f,
       21431.414538f, 65487435436632.123f, -43734526234564.65f
   };
@@ -98,16 +110,44 @@ public class CompressedFloatsSerdeTest
   @Test
   public void testChunkSerde() throws Exception
   {
-    float chunk[] = new float[10000];
+    float[] chunk = new float[10000];
     for (int i = 0; i < 10000; i++) {
       chunk[i] = i;
     }
     testWithValues(chunk);
   }
 
+  // this test takes ~30 minutes to run
+  @Ignore
+  @Test
+  public void testTooManyValues() throws IOException
+  {
+    expectedException.expect(ColumnCapacityExceededException.class);
+    expectedException.expectMessage(ColumnCapacityExceededException.formatMessage("test"));
+    try (
+        SegmentWriteOutMedium segmentWriteOutMedium =
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
+    ) {
+      ColumnarFloatsSerializer serializer = CompressionFactory.getFloatSerializer(
+          "test",
+          segmentWriteOutMedium,
+          "test",
+          order,
+          compressionStrategy
+      );
+      serializer.open();
+
+      final long numRows = Integer.MAX_VALUE + 100L;
+      for (long i = 0L; i < numRows; i++) {
+        serializer.add(ThreadLocalRandom.current().nextFloat());
+      }
+    }
+  }
+
   public void testWithValues(float[] values) throws Exception
   {
     ColumnarFloatsSerializer serializer = CompressionFactory.getFloatSerializer(
+        "test",
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,

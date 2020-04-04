@@ -184,7 +184,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   @Override
   public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws ParseException
   {
-    log.info(
+    log.debug(
         "Connecting firehose: dataSource[%s], interval[%s], segmentIds[%s]",
         dataSource,
         interval,
@@ -214,18 +214,11 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       }
     }
 
-    final List<String> dims;
-    if (dimensions != null) {
-      dims = dimensions;
-    } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
-      dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
-    } else {
-      dims = ReingestionTimelineUtils.getUniqueDimensions(
-        timeLineSegments,
-        inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions()
-      );
-    }
-
+    final List<String> dims = ReingestionTimelineUtils.getDimensionsToReingest(
+        dimensions,
+        inputRowParser.getParseSpec().getDimensionsSpec(),
+        timeLineSegments
+    );
     final List<String> metricsList = metrics == null
                                      ? ReingestionTimelineUtils.getUniqueMetrics(timeLineSegments)
                                      : metrics;
@@ -290,12 +283,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       return;
     }
 
-    splits = DruidInputSource.createSplits(
-        coordinatorClient,
-        retryPolicyFactory,
-        dataSource,
-        interval,
-        splitHintSpec == null ? new SegmentsSplitHintSpec(maxInputSegmentBytesPerTask) : splitHintSpec
+    splits = Lists.newArrayList(
+        DruidInputSource.createSplits(
+            coordinatorClient,
+            retryPolicyFactory,
+            dataSource,
+            interval,
+            splitHintSpec == null ? new SegmentsSplitHintSpec(maxInputSegmentBytesPerTask) : splitHintSpec
+        )
     );
   }
 

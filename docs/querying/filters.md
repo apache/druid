@@ -231,6 +231,8 @@ The grammar for a IN filter is as follows:
 The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
 If an empty `values` array is passed to the IN filter, it will simply return an empty result.
+If the `dimension` is a multi-valued dimension, the IN filter will return true if one of the dimension values is
+in the `values` array.
 
 ### Like filter
 

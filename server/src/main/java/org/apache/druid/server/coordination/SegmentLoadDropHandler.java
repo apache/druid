@@ -45,7 +45,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -550,9 +549,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   private void resolveWaitingFutures()
   {
-    LinkedHashSet<CustomSettableFuture> waitingFuturesCopy = new LinkedHashSet<>();
+    LinkedHashSet<CustomSettableFuture> waitingFuturesCopy;
     synchronized (waitingFutures) {
-      waitingFuturesCopy.addAll(waitingFutures);
+      waitingFuturesCopy = new LinkedHashSet<>(waitingFutures);
       waitingFutures.clear();
     }
     for (CustomSettableFuture future : waitingFuturesCopy) {

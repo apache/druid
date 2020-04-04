@@ -189,9 +189,10 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       SearchControls sc = new SearchControls();
       sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
       sc.setReturningAttributes(new String[] {ldapConfig.getUserAttribute(), "memberOf" });
+      String encodedUsername = encodeForLDAP(username, true);
       NamingEnumeration<SearchResult> results = context.search(
           ldapConfig.getBaseDn(),
-          StringUtils.format(ldapConfig.getUserSearch(), username),
+          StringUtils.format(ldapConfig.getUserSearch(), encodedUsername),
           sc);
       try {
         if (!results.hasMore()) {
@@ -293,4 +294,48 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       }
     }
   }
+
+  /**
+   * This code is adapted from DefaultEncoder from version 2.2.0.0 of ESAPI (https://github.com/ESAPI/esapi-java-legacy)
+   */
+  public static String encodeForLDAP(String input, boolean encodeWildcards)
+  {
+    if (input == null) {
+      return null;
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < input.length(); i++) {
+      char c = input.charAt(i);
+
+      switch (c) {
+        case '\\':
+          sb.append("\\5c");
+          break;
+        case '/':
+          sb.append(("\\2f"));
+          break;
+        case '*':
+          if (encodeWildcards) {
+            sb.append("\\2a");
+          } else {
+            sb.append(c);
+          }
+
+          break;
+        case '(':
+          sb.append("\\28");
+          break;
+        case ')':
+          sb.append("\\29");
+          break;
+        case '\0':
+          sb.append("\\00");
+          break;
+        default:
+          sb.append(c);
+      }
+    }
+    return sb.toString();
+  }
+
 }

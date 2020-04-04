@@ -84,7 +84,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -215,8 +215,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final AppenderatorsManager appenderatorsManager;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
-  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
-  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
 
   private final LockGranularity lockGranularityToUse;
 
@@ -856,7 +856,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // handoffFuture. handoffFuture can throw an exception if 1) the corresponding publishFuture failed or 2) it
       // failed to persist sequences. It might also return null if handoff failed, but was recoverable.
       // See publishAndRegisterHandoff() for details.
-      List<SegmentsAndMetadata> handedOffList = Collections.emptyList();
+      List<SegmentsAndCommitMetadata> handedOffList = Collections.emptyList();
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOffList = Futures.allAsList(handOffWaitList).get();
       } else {
@@ -874,7 +874,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         }
       }
 
-      for (SegmentsAndMetadata handedOff : handedOffList) {
+      for (SegmentsAndCommitMetadata handedOff : handedOffList) {
         log.info(
             "Handoff complete for segments: %s",
             String.join(", ", Lists.transform(handedOff.getSegments(), DataSegment::toString))
@@ -956,12 +956,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException
   {
     // Check if any publishFuture failed.
-    final List<ListenableFuture<SegmentsAndMetadata>> publishFinished = publishWaitList
+    final List<ListenableFuture<SegmentsAndCommitMetadata>> publishFinished = publishWaitList
         .stream()
         .filter(Future::isDone)
         .collect(Collectors.toList());
 
-    for (ListenableFuture<SegmentsAndMetadata> publishFuture : publishFinished) {
+    for (ListenableFuture<SegmentsAndCommitMetadata> publishFuture : publishFinished) {
       // If publishFuture failed, the below line will throw an exception and catched by (1), and then (2) or (3).
       publishFuture.get();
     }
@@ -969,12 +969,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     publishWaitList.removeAll(publishFinished);
 
     // Check if any handoffFuture failed.
-    final List<ListenableFuture<SegmentsAndMetadata>> handoffFinished = handOffWaitList
+    final List<ListenableFuture<SegmentsAndCommitMetadata>> handoffFinished = handOffWaitList
         .stream()
         .filter(Future::isDone)
         .collect(Collectors.toList());
 
-    for (ListenableFuture<SegmentsAndMetadata> handoffFuture : handoffFinished) {
+    for (ListenableFuture<SegmentsAndCommitMetadata> handoffFuture : handoffFinished) {
       // If handoffFuture failed, the below line will throw an exception and catched by (1), and then (2) or (3).
       handoffFuture.get();
     }
@@ -986,13 +986,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     log.debug("Publishing segments for sequence [%s].", sequenceMetadata);
 
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = Futures.transform(
+    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         driver.publish(
             sequenceMetadata.createPublisher(this, toolbox, ioConfig.isUseTransaction()),
             sequenceMetadata.getCommitterSupplier(this, stream, lastPersistedOffsets).get(),
             Collections.singletonList(sequenceMetadata.getSequenceName())
         ),
-        (Function<SegmentsAndMetadata, SegmentsAndMetadata>) publishedSegmentsAndMetadata -> {
+        (Function<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) publishedSegmentsAndMetadata -> {
           if (publishedSegmentsAndMetadata == null) {
             throw new ISE(
                 "Transaction failure publishing segments for sequence [%s]",
@@ -1006,22 +1006,23 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     publishWaitList.add(publishFuture);
 
     // Create a handoffFuture for every publishFuture. The created handoffFuture must fail if publishFuture fails.
-    final SettableFuture<SegmentsAndMetadata> handoffFuture = SettableFuture.create();
+    final SettableFuture<SegmentsAndCommitMetadata> handoffFuture = SettableFuture.create();
     handOffWaitList.add(handoffFuture);
 
     Futures.addCallback(
         publishFuture,
-        new FutureCallback<SegmentsAndMetadata>()
+        new FutureCallback<SegmentsAndCommitMetadata>()
         {
           @Override
-          public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
+          public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)
           {
             log.info(
-                "Published segments [%s] for sequence [%s] with metadata [%s].",
-                String.join(", ", Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::toString)),
+                "Published %s segments for sequence [%s] with metadata [%s].",
+                publishedSegmentsAndCommitMetadata.getSegments().size(),
                 sequenceMetadata.getSequenceName(),
-                Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
+                Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
+            log.infoSegments(publishedSegmentsAndCommitMetadata.getSegments(), "Published segments");
 
             sequences.remove(sequenceMetadata);
             publishingSequences.remove(sequenceMetadata.getSequenceName());
@@ -1036,23 +1037,24 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
 
             Futures.transform(
-                driver.registerHandoff(publishedSegmentsAndMetadata),
-                new Function<SegmentsAndMetadata, Void>()
+                driver.registerHandoff(publishedSegmentsAndCommitMetadata),
+                new Function<SegmentsAndCommitMetadata, Void>()
                 {
                   @Nullable
                   @Override
-                  public Void apply(@Nullable SegmentsAndMetadata handoffSegmentsAndMetadata)
+                  public Void apply(@Nullable SegmentsAndCommitMetadata handoffSegmentsAndCommitMetadata)
                   {
-                    if (handoffSegmentsAndMetadata == null) {
+                    if (handoffSegmentsAndCommitMetadata == null) {
                       log.warn(
-                          "Failed to hand off segments: %s",
-                          String.join(
-                              ", ",
-                              Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::toString)
-                          )
+                          "Failed to hand off %s segments",
+                          publishedSegmentsAndCommitMetadata.getSegments().size()
+                      );
+                      log.warnSegments(
+                          publishedSegmentsAndCommitMetadata.getSegments(),
+                          "Failed to hand off segments"
                       );
                     }
-                    handoffFuture.set(handoffSegmentsAndMetadata);
+                    handoffFuture.set(handoffSegmentsAndCommitMetadata);
                     return null;
                   }
                 }

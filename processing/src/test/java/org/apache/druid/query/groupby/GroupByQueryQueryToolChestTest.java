@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -62,6 +64,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.Assert;
@@ -664,7 +667,7 @@ public class GroupByQueryQueryToolChestTest
   }
 
   @Test
-  public void testResultArrayFieldsAllGran()
+  public void testResultArraySignatureAllGran()
   {
     final GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -676,13 +679,19 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     Assert.assertEquals(
-        ImmutableList.of("dim", "rows", "index", "uniques", "const"),
-        new GroupByQueryQueryToolChest(null, null).resultArrayFields(query)
+        RowSignature.builder()
+                    .add("dim", ValueType.STRING)
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
   }
 
   @Test
-  public void testResultArrayFieldsDayGran()
+  public void testResultArraySignatureDayGran()
   {
     final GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -694,8 +703,15 @@ public class GroupByQueryQueryToolChestTest
         .build();
 
     Assert.assertEquals(
-        ImmutableList.of("__time", "dim", "rows", "index", "uniques", "const"),
-        new GroupByQueryQueryToolChest(null, null).resultArrayFields(query)
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("dim", ValueType.STRING)
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
   }
 
@@ -753,6 +769,64 @@ public class GroupByQueryQueryToolChestTest
                     makeRow(query, "2000-01-02", "dim", "bar", "rows", 4L, "index", 5L, "uniques", 6L, "const", 1L)
                 )
             )
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnGroupBys()
+  {
+    Assert.assertTrue(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        new GroupByQuery.Builder()
+                            .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                            .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                            .setGranularity(Granularities.ALL)
+                            .build()
+                    )
+                )
+                .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                .setGranularity(Granularities.ALL)
+                .build()
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnTimeseries()
+  {
+    Assert.assertFalse(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                  .granularity(Granularities.ALL)
+                  .build()
+        )
+    );
+  }
+
+  @Test
+  public void testCanPerformSubqueryOnGroupByOfTimeseries()
+  {
+    Assert.assertFalse(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
+            new GroupByQuery.Builder()
+                .setDataSource(
+                    new QueryDataSource(
+                        Druids.newTimeseriesQueryBuilder()
+                              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                              .granularity(Granularities.ALL)
+                              .build()
+                    )
+                )
+                .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                .setGranularity(Granularities.ALL)
+                .build()
         )
     );
   }

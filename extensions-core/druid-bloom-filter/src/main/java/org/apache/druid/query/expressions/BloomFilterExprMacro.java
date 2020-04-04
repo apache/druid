@@ -71,7 +71,7 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
     {
       private BloomExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull

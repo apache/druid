@@ -22,7 +22,11 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
@@ -31,18 +35,22 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.List;
 
 public class HashJoinSegmentTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private QueryableIndexSegment baseSegment;
-  private HashJoinSegment hashJoinSegmentNoClauses;
-  private HashJoinSegment hashJoinSegmentManyClauses;
+  private HashJoinSegment hashJoinSegment;
 
   @BeforeClass
   public static void setUpStatic()
@@ -58,80 +66,86 @@ public class HashJoinSegmentTest
         SegmentId.dummy("facts")
     );
 
-    hashJoinSegmentNoClauses = new HashJoinSegment(
-        baseSegment,
-        ImmutableList.of()
-    );
-
-    hashJoinSegmentManyClauses = new HashJoinSegment(
-        baseSegment,
-        ImmutableList.of(
-            new JoinableClause(
-                "j0.",
-                new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression("1", "j0.", ExprMacroTable.nil())
-            ),
-            new JoinableClause(
-                "j1.",
-                new IndexedTableJoinable(JoinTestHelper.createRegionsIndexedTable()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression("1", "j1.", ExprMacroTable.nil())
-            )
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        new JoinableClause(
+            "j0.",
+            new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression("1", "j0.", ExprMacroTable.nil())
+        ),
+        new JoinableClause(
+            "j1.",
+            new IndexedTableJoinable(JoinTestHelper.createRegionsIndexedTable()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression("1", "j1.", ExprMacroTable.nil())
         )
     );
-  }
 
-  @Test
-  public void test_getId_noClauses()
-  {
-    Assert.assertEquals(baseSegment.getId(), hashJoinSegmentNoClauses.getId());
-  }
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
 
-  @Test
-  public void test_getId_manyClauses()
-  {
-    Assert.assertEquals(baseSegment.getId(), hashJoinSegmentManyClauses.getId());
-  }
-
-  @Test
-  public void test_getDataInterval_noClauses()
-  {
-    Assert.assertEquals(baseSegment.getDataInterval(), hashJoinSegmentNoClauses.getDataInterval());
-  }
-
-  @Test
-  public void test_getDataInterval_manyClauses()
-  {
-    Assert.assertEquals(baseSegment.getDataInterval(), hashJoinSegmentManyClauses.getDataInterval());
-  }
-
-  @Test
-  public void test_asQueryableIndex_noClauses()
-  {
-    Assert.assertNull(hashJoinSegmentNoClauses.asQueryableIndex());
-  }
-
-  @Test
-  public void test_asQueryableIndex_manyClauses()
-  {
-    Assert.assertNull(hashJoinSegmentManyClauses.asQueryableIndex());
-  }
-
-  @Test
-  public void test_asStorageAdapter_noClauses()
-  {
-    Assert.assertThat(
-        hashJoinSegmentNoClauses.asStorageAdapter(),
-        CoreMatchers.instanceOf(HashJoinSegmentStorageAdapter.class)
+    hashJoinSegment = new HashJoinSegment(
+        baseSegment,
+        joinableClauses,
+        joinFilterPreAnalysis
     );
   }
 
   @Test
-  public void test_asStorageAdapter_manyClauses()
+  public void test_constructor_noClauses()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("'clauses' is empty, no need to create HashJoinSegment");
+
+    List<JoinableClause> joinableClauses = ImmutableList.of();
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+    );
+
+    final HashJoinSegment ignored = new HashJoinSegment(
+        baseSegment,
+        joinableClauses,
+        joinFilterPreAnalysis
+    );
+  }
+
+  @Test
+  public void test_getId()
+  {
+    Assert.assertEquals(baseSegment.getId(), hashJoinSegment.getId());
+  }
+
+  @Test
+  public void test_getDataInterval()
+  {
+    Assert.assertEquals(baseSegment.getDataInterval(), hashJoinSegment.getDataInterval());
+  }
+
+  @Test
+  public void test_asQueryableIndex()
+  {
+    Assert.assertNull(hashJoinSegment.asQueryableIndex());
+  }
+
+  @Test
+  public void test_asStorageAdapter()
   {
     Assert.assertThat(
-        hashJoinSegmentManyClauses.asStorageAdapter(),
+        hashJoinSegment.asStorageAdapter(),
         CoreMatchers.instanceOf(HashJoinSegmentStorageAdapter.class)
     );
   }

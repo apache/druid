@@ -24,11 +24,16 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 public class BitmapSerde
 {
 
-  // default bitmap indices for Druid >= 0.7.x
+  // default bitmap indices for Druid
+  // concise was default from 0.7+, roaring is default 0.18+
   // annotation required so Jackson doesn't get confused
-  @JsonTypeName("concise")
-  public static class DefaultBitmapSerdeFactory extends ConciseBitmapSerdeFactory
+  @JsonTypeName("roaring")
+  public static class DefaultBitmapSerdeFactory extends RoaringBitmapSerdeFactory
   {
+    public DefaultBitmapSerdeFactory()
+    {
+      super(RoaringBitmapSerdeFactory.DEFAULT_COMPRESS_RUN_ON_SERIALIZATION);
+    }
   }
 
   // default bitmap indices in Druid <= 0.6.x

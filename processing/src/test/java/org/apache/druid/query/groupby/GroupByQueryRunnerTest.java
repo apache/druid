@@ -412,6 +412,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
+    NullHandling.initializeForTests();
+
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : testConfigs()) {
       final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = makeQueryRunnerFactory(config);
@@ -2983,11 +2985,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -3294,8 +3300,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(baseQuery, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    final int idxPosition = baseQuery.getResultRowPositionLookup().getInt("idx");
-    final int rowsPosition = baseQuery.getResultRowPositionLookup().getInt("rows");
+    final int idxPosition = baseQuery.getResultRowSignature().indexOf("idx");
+    final int rowsPosition = baseQuery.getResultRowSignature().indexOf("rows");
 
     Comparator<ResultRow> idxComparator = Comparator.comparing(row -> ((Number) row.get(idxPosition)).floatValue());
     Comparator<ResultRow> rowsComparator = Comparator.comparing(row -> ((Number) row.get(rowsPosition)).floatValue());
@@ -3326,11 +3332,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4083,11 +4093,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4349,11 +4363,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -4426,11 +4444,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
             return new MergeSequence(
                 queryPlus.getQuery().getResultOrdering(),
@@ -5334,8 +5356,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
               public boolean eval(ResultRow row)
               {
                 final String field = "idx_subpostagg";
-                final int p = query.getResultRowPositionLookup().getInt(field);
-                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
+                final int p = query.getResultRowSignature().indexOf(field);
+                return (Rows.objectToNumber(field, row.get(p), true).floatValue() < 3800);
               }
             }
         )
@@ -5628,8 +5650,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
               public boolean eval(ResultRow row)
               {
                 final String field = "idx_subpostagg";
-                final int p = query.getResultRowPositionLookup().getInt(field);
-                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
+                final int p = query.getResultRowSignature().indexOf(field);
+                return (Rows.objectToNumber(field, row.get(p), true).floatValue() < 3800);
               }
             }
         )
@@ -7176,38 +7198,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .addOrderByColumn("idx")
         .addOrderByColumn("alias")
         .addOrderByColumn("market")
-        .setLimit(1)
+        .setLimit(3)
         .build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(
-            query,
-            "2011-04-01",
-            "alias",
-            "technology",
-            "rows",
-            1L,
-            "idx",
-            78L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "market",
-            "spot",
-            "rows",
-            9L,
-            "idx",
-            1102L
-        ),
-        makeRow(
-            query,
-            "2011-04-01T00:00:00.000Z",
-            "rows",
-            13L,
-            "idx",
-            6619L
-        )
+        makeRow(query, "2011-04-01", "alias", "technology", "rows", 1L, "idx", 78L),
+        makeRow(query, "2011-04-01", "alias", "business", "rows", 1L, "idx", 118L),
+        makeRow(query, "2011-04-01", "alias", "travel", "rows", 1L, "idx", 119L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -9968,11 +9965,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
 
             return factory.getToolchest().mergeResults(
@@ -10034,11 +10035,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
 
             return factory.getToolchest().mergeResults(
@@ -10102,11 +10107,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
 
             return factory.getToolchest().mergeResults(
@@ -10183,11 +10192,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             // simulate two daily segments
-            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+            final QueryPlus<ResultRow> queryPlus1 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-02/2011-04-03")))
+                )
             );
-            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuerySegmentSpec(
-                new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+            final QueryPlus<ResultRow> queryPlus2 = queryPlus.withQuery(
+                queryPlus.getQuery().withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2011-04-03/2011-04-04")))
+                )
             );
 
             return factory.getToolchest().mergeResults(

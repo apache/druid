@@ -346,7 +346,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
   {
     try {
       if (queryWatcher != null) {
-        queryWatcher.registerQuery(query, future);
+        queryWatcher.registerQueryFuture(query, future);
       }
 
       if (hasTimeout && timeout <= 0) {

@@ -31,6 +31,7 @@ import java.util.Set;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "tmpFile", value = TmpFileSegmentWriteOutMediumFactory.class),
     @JsonSubTypes.Type(name = "offHeapMemory", value = OffHeapMemorySegmentWriteOutMediumFactory.class),
+    @JsonSubTypes.Type(name = "onHeapMemory", value = OnHeapMemorySegmentWriteOutMediumFactory.class),
 })
 public interface SegmentWriteOutMediumFactory
 {
@@ -38,7 +39,8 @@ public interface SegmentWriteOutMediumFactory
   {
     return ImmutableSet.of(
         TmpFileSegmentWriteOutMediumFactory.instance(),
-        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        OnHeapMemorySegmentWriteOutMediumFactory.instance()
     );
   }
 

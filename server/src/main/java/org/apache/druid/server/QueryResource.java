@@ -99,7 +99,7 @@ public class QueryResource implements QueryCountStatsProvider
   protected final ObjectMapper smileMapper;
   protected final ObjectMapper serializeDateTimeAsLongJsonMapper;
   protected final ObjectMapper serializeDateTimeAsLongSmileMapper;
-  protected final QueryManager queryManager;
+  protected final QueryScheduler queryScheduler;
   protected final AuthConfig authConfig;
   protected final AuthorizerMapper authorizerMapper;
 
@@ -113,7 +113,7 @@ public class QueryResource implements QueryCountStatsProvider
       QueryLifecycleFactory queryLifecycleFactory,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
-      QueryManager queryManager,
+      QueryScheduler queryScheduler,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
       GenericQueryMetricsFactory queryMetricsFactory
@@ -124,7 +124,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.smileMapper = smileMapper;
     this.serializeDateTimeAsLongJsonMapper = serializeDataTimeAsLong(jsonMapper);
     this.serializeDateTimeAsLongSmileMapper = serializeDataTimeAsLong(smileMapper);
-    this.queryManager = queryManager;
+    this.queryScheduler = queryScheduler;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
     this.queryMetricsFactory = queryMetricsFactory;
@@ -138,9 +138,9 @@ public class QueryResource implements QueryCountStatsProvider
     if (log.isDebugEnabled()) {
       log.debug("Received cancel request for query [%s]", queryId);
     }
-    Set<String> datasources = queryManager.getQueryDatasources(queryId);
+    Set<String> datasources = queryScheduler.getQueryDatasources(queryId);
     if (datasources == null) {
-      log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
+      log.warn("QueryId [%s] not registered with QueryScheduler, cannot cancel", queryId);
       datasources = new TreeSet<>();
     }
 
@@ -154,7 +154,7 @@ public class QueryResource implements QueryCountStatsProvider
       throw new ForbiddenException(authResult.toString());
     }
 
-    queryManager.cancelQuery(queryId);
+    queryScheduler.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
   }
 
@@ -190,7 +190,7 @@ public class QueryResource implements QueryCountStatsProvider
           "%s[%s_%s_%s]",
           currThreadName,
           query.getType(),
-          query.getDataSource().getNames(),
+          query.getDataSource().getTableNames(),
           queryId
       );
 
@@ -309,6 +309,11 @@ public class QueryResource implements QueryCountStatsProvider
       interruptedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
       return ioReaderWriter.gotError(e);
+    }
+    catch (QueryCapacityExceededException cap) {
+      failedQueryCount.incrementAndGet();
+      queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr(), -1);
+      return ioReaderWriter.gotLimited(cap);
     }
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
@@ -432,6 +437,13 @@ public class QueryResource implements QueryCountStatsProvider
                          newOutputWriter(null, null, false)
                              .writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e))
                      )
+                     .build();
+    }
+
+    Response gotLimited(QueryCapacityExceededException e) throws IOException
+    {
+      return Response.status(QueryCapacityExceededException.STATUS_CODE)
+                     .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
                      .build();
     }
   }

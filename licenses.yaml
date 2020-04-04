@@ -136,6 +136,27 @@ source_paths:
 
 ---
 
+name: code adapted from Apache Knox KnoxSessionStore and ConfigurableEncryptor
+license_category: source
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+source_paths:
+  - extensions-core/druid-pac4j/src/main/java/org/apache/druid/security/pac4j/Pac4jSessionStore.java
+  - core/src/main/java/org/apache/druid/crypto/CryptoService.java
+
+---
+
+name: LDAP string encoding function from OWASP ESAPI
+license_category: source
+module: extensions/druid-basic-security
+license_name: BSD-3-Clause License
+copyright: The OWASP Foundation (https://github.com/ESAPI/esapi-java-legacy)
+license_file_path: licenses/src/esapi.BSD3
+source_paths:
+  - extensions-core/druid-basic-security/src/main/java/org/apache/druid/security/basic/authentication/validator/LDAPCredentialsValidator.java
+
+---
+
 name: AWS SDK for Java
 license_category: binary
 module: java-core
@@ -296,6 +317,7 @@ libraries:
   - com.google.inject: guice
   - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
+  - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
@@ -305,6 +327,9 @@ notices:
       Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
+      Copyright 2006-2016 Google, Inc.
+  - guice-assistedinject: |
+      Google Guice - Extensions - AssistedInject
       Copyright 2006-2016 Google, Inc.
 
 ---
@@ -650,6 +675,116 @@ libraries:
 
 ---
 
+name: pac4j-oidc java security library
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 3.8.3
+libraries:
+  - org.pac4j: pac4j-oidc
+
+---
+
+name: pac4j-core java security library
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 3.8.3
+libraries:
+  - org.pac4j: pac4j-core
+
+---
+
+name: org.objenesis objenesis
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 3.0.1
+libraries:
+  - org.objenesis: objenesis
+
+---
+
+name: com.nimbusds lang-tag
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 1.4.4
+libraries:
+  - com.nimbusds: lang-tag
+
+---
+
+name: com.nimbusds nimbus-jose-jwt
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 7.9
+libraries:
+  - com.nimbusds: nimbus-jose-jwt
+
+---
+
+name: com.nimbusds oauth2-oidc-sdk
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 6.5
+libraries:
+  - com.nimbusds: oauth2-oidc-sdk
+
+---
+
+name: net.bytebuddy byte-buddy
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 1.9.10
+libraries:
+  - net.bytebuddy: byte-buddy
+
+---
+
+name: net.bytebuddy byte-buddy-agent
+license_category: binary
+module: extensions/druid-pac4j
+license_name: Apache License version 2.0
+version: 1.9.10
+libraries:
+  - net.bytebuddy: byte-buddy-agent
+
+---
+
+name: org.mockito mockito-core
+license_category: binary
+module: extensions/druid-pac4j
+license_name: MIT License
+version: 2.28.2
+libraries:
+  - org.mockito: mockito-core
+
+---
+
+name: javax.activation activation
+license_category: binary
+module: extensions/druid-pac4j
+license_name: COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
+version: 1.1.1
+libraries:
+  - javax.activation: activation
+
+---
+
+name: com.sun.mail javax.mail
+license_category: binary
+module: extensions/druid-pac4j
+license_name: CDDL 1.1
+version: 1.6.1
+libraries:
+  - com.sun.mail: javax.mail
+
+---
+
 name: Netty
 license_category: binary
 module: java-core
@@ -782,7 +917,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.42.Final
+version: 4.1.45.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1865,6 +2000,17 @@ libraries:
 
 ---
 
+name: Resilience4j
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - io.github.resilience4j: resilience4j-core
+  - io.github.resilience4j: resilience4j-bulkhead
+
+---
+
 name: RoaringBitmap
 license_category: binary
 module: java-core
@@ -1873,6 +2019,17 @@ version: 0.8.11
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
+
+---
+
+name: vavr
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 0.10.2
+libraries:
+  - io.vavr: vavr
+  - io.vavr: vavr-match
 
 ---
 
@@ -2933,7 +3090,7 @@ libraries:
 ---
 
 name: Apache Velocity Engine
-version: 2.0
+version: 2.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2951,7 +3108,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.9.1
+version: 1.9.2
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -3053,7 +3210,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.0-incubating
+version: 1.2.0-incubating
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3093,7 +3250,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.2.1
+version: 2.2.2
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3102,7 +3259,7 @@ libraries:
 notices:
   - kafka-clients: |
       Apache Kafka
-      Copyright 2018 The Apache Software Foundation.
+      Copyright 2019 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -3460,6 +3617,30 @@ copyright: The ANTLR Project
 license_file_path: licenses/bin/antlr.BSD3
 libraries:
   - antlr: antlr
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
+module: extensions/druid-lookups-cached-single
+license_name: BSD-2-Clause License
+version: 42.2.8
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD2
+libraries:
+  - org.postgresql: postgresql
+
+---
+
+name: PostgreSQL JDBC Driver
+license_category: binary
+module: extensions/druid-lookups-cached-global
+license_name: BSD-2-Clause License
+version: 42.2.8
+copyright: PostgreSQL Global Development Group
+license_file_path: licenses/bin/postgresql.BSD2
+libraries:
+  - org.postgresql: postgresql
 
 ---
 
@@ -3967,14 +4148,14 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.1.1
+version: 2.2.2
 libraries:
   - org.apache.kafka: kafka_2.12
   - org.apache.kafka: kafka-clients
 notices:
   - kafka-clients:
       Apache Kafka
-      Copyright 2018 The Apache Software Foundation.
+      Copyright 2019 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -4016,6 +4197,28 @@ copyright: LAMP/EPFL and Lightbend, Inc.
 version: 2.12.7
 libraries:
   - org.scala-lang: scala-library
+
+---
+
+name: Microsoft Azure SDK For Key Vault Core
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: MIT License
+copyright: Microsoft
+version: 1.0.0
+libraries:
+  - com.microsoft.azure: azure-keyvault-core
+
+---
+
+name: Microsoft Azure Storage Client SDK
+license_category: binary
+module: extensions/druid-azure-extensions
+license_name: Apache License version 2.0
+copyright: Microsoft
+version: 8.6.0
+libraries:
+  - com.microsoft.azure: azure-storage
 
 ---
 

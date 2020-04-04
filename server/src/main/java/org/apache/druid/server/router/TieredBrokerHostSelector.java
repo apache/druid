@@ -201,7 +201,7 @@ public class TieredBrokerHostSelector<T>
 
     if (brokerServiceName == null) {
       // For Union Queries tier will be selected on the rules for first dataSource.
-      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getNames(), null));
+      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getTableNames(), null));
 
       // find the rule that can apply to the entire set of intervals
       DateTime now = DateTimes.nowUtc();
@@ -235,7 +235,7 @@ public class TieredBrokerHostSelector<T>
 
     if (brokerServiceName == null) {
       log.error(
-          "WTF?! No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
+          "No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
           query.getDataSource(),
           query.getIntervals(),
           tierConfig.getDefaultBrokerServiceName()
@@ -247,7 +247,7 @@ public class TieredBrokerHostSelector<T>
 
     if (nodesHolder == null) {
       log.error(
-          "WTF?! No nodesHolder found for brokerServiceName[%s]. Using default selector for[%s]",
+          "No nodesHolder found for brokerServiceName[%s]. Using default selector for[%s]",
           brokerServiceName,
           tierConfig.getDefaultBrokerServiceName()
       );
