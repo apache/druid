@@ -44,7 +44,7 @@ public class KafkaEmitterConfigTest
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", "metricTest",
                                                                    "alertTest", "clusterNameTest",
-                                                                   ImmutableMap.<String, String>builder()
+                                                                   ImmutableMap.<String, Object>builder()
                                                                        .put("testKey", "testValue").build()
     );
     String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);

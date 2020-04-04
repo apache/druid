@@ -70,7 +70,7 @@ public class KafkaEmitter implements Emitter
     this.producerCallback = setProducerCallback();
     // same with kafka producer's buffer.memory
     long queueMemoryBound = Long.parseLong(this.config.getKafkaProducerConfig()
-                                                      .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432"));
+                                                      .getOrDefault(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432").toString());
     this.metricQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.alertQueue = new MemoryBoundLinkedBlockingQueue<>(queueMemoryBound);
     this.scheduler = Executors.newScheduledThreadPool(3);

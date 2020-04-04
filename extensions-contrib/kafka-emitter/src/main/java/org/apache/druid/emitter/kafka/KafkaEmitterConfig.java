@@ -21,15 +21,24 @@ package org.apache.druid.emitter.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.producer.ProducerConfig;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 
 public class KafkaEmitterConfig
 {
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
+  public static final String TRUST_STORE_PASSWORD_KEY = "ssl.truststore.password";
+  public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
+  public static final String KEY_PASSWORD_KEY = "ssl.key.password";
 
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   private final String bootstrapServers;
@@ -40,22 +49,30 @@ public class KafkaEmitterConfig
   @JsonProperty
   private final String clusterName;
   @JsonProperty("producer.config")
-  private Map<String, String> kafkaProducerConfig;
+  private final Map<String, Object> kafkaProducerConfig;
 
   @JsonCreator
   public KafkaEmitterConfig(
-      @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) String bootstrapServers,
-      @JsonProperty("metric.topic") String metricTopic,
-      @JsonProperty("alert.topic") String alertTopic,
-      @JsonProperty("clusterName") String clusterName,
-      @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig
+          @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG) String bootstrapServers,
+          @JsonProperty("metric.topic") String metricTopic,
+          @JsonProperty("alert.topic") String alertTopic,
+          @JsonProperty("clusterName") String clusterName,
+          @JsonProperty("producer.config") @Nullable Map<String, Object> kafkaProducerConfig
   )
   {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
     this.metricTopic = Preconditions.checkNotNull(metricTopic, "metric.topic can not be null");
     this.alertTopic = Preconditions.checkNotNull(alertTopic, "alert.topic can not be null");
     this.clusterName = clusterName;
-    this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
+
+    Map<String, Object> properties = new HashMap<>();
+
+    if (kafkaProducerConfig != null) {
+      addProducerPropertiesFromConfig(properties, kafkaProducerConfig);
+      this.kafkaProducerConfig = properties;
+    } else {
+      this.kafkaProducerConfig = ImmutableMap.of();
+    }
   }
 
   @JsonProperty
@@ -83,7 +100,7 @@ public class KafkaEmitterConfig
   }
 
   @JsonProperty
-  public Map<String, String> getKafkaProducerConfig()
+  public Map<String, Object> getKafkaProducerConfig()
   {
     return kafkaProducerConfig;
   }
@@ -130,11 +147,33 @@ public class KafkaEmitterConfig
   public String toString()
   {
     return "KafkaEmitterConfig{" +
-           "bootstrap.servers='" + bootstrapServers + '\'' +
-           ", metric.topic='" + metricTopic + '\'' +
-           ", alert.topic='" + alertTopic + '\'' +
-           ", clusterName='" + clusterName + '\'' +
-           ", Producer.config=" + kafkaProducerConfig +
-           '}';
+            "bootstrap.servers='" + bootstrapServers + '\'' +
+            ", metric.topic='" + metricTopic + '\'' +
+            ", alert.topic='" + alertTopic + '\'' +
+            ", clusterName='" + clusterName + '\'' +
+            ", Producer.config=" + kafkaProducerConfig +
+            '}';
+  }
+
+  public static void addProducerPropertiesFromConfig(
+          Map<String, Object> properties,
+          Map<String, Object> producerConfig
+  )
+  {
+    // Extract passwords before SSL connection to Kafka
+    for (Map.Entry<String, Object> entry : producerConfig.entrySet()) {
+      String propertyKey = entry.getKey();
+      if ((TRUST_STORE_PASSWORD_KEY).equals(propertyKey)
+              || (KEY_STORE_PASSWORD_KEY).equals(propertyKey)
+              || (KEY_PASSWORD_KEY).equals(propertyKey)) {
+        PasswordProvider configPasswordProvider = MAPPER.convertValue(
+                entry.getValue(),
+                PasswordProvider.class
+        );
+        properties.put(propertyKey, configPasswordProvider.getPassword());
+      } else {
+        properties.put(propertyKey, String.valueOf(entry.getValue()));
+      }
+    }
   }
 }
