@@ -28,7 +28,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.druid.indexer.TaskState;
@@ -953,6 +952,9 @@ public class RemoteTaskRunnerTest
   public void testStatusListenerEventDataNullShouldNotThrowException() throws Exception
   {
     // Set up mock emitter to verify log alert when exception is thrown inside the status listener
+    Worker worker = EasyMock.createMock(Worker.class);
+    EasyMock.expect(worker.getHost()).andReturn("host").atLeastOnce();
+    EasyMock.replay(worker);
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     Capture<EmittingLogger.EmittingAlertBuilder> capturedArgument = Capture.newInstance();
     emitter.emit(EasyMock.capture(capturedArgument));
@@ -962,7 +964,7 @@ public class RemoteTaskRunnerTest
 
     PathChildrenCache cache = new PathChildrenCache(cf, "/test", true);
     testStartWithNoWorker();
-    cache.getListenable().addListener(remoteTaskRunner.getStatusListener(worker, null, SettableFuture.create()));
+    cache.getListenable().addListener(remoteTaskRunner.getStatusListener(worker, new ZkWorker(worker, cache, jsonMapper), null));
     cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
 
     // Status listener will recieve event with null data
@@ -971,11 +973,10 @@ public class RemoteTaskRunnerTest
     );
 
     // Verify that the log emitter was called
+    EasyMock.verify(worker);
     EasyMock.verify(emitter);
     Map<String, Object> alertDataMap = capturedArgument.getValue().build(null).getDataMap();
-    Assert.assertTrue(alertDataMap.containsKey("worker"));
     Assert.assertTrue(alertDataMap.containsKey("znode"));
-    Assert.assertNull(alertDataMap.get("worker"));
     Assert.assertNull(alertDataMap.get("znode"));
     // Status listener should successfully completes without throwing exception
   }
