@@ -400,7 +400,7 @@ def main():
   parser_fmt.add_argument('--format', type=str, default='table', choices=('csv', 'tsv', 'json', 'table'), help='Result format')
   parser_fmt.add_argument('--header', action='store_true', help='Include header row for formats "csv" and "tsv"')
   parser_fmt.add_argument('--tsv-delimiter', type=str, default='\t', help='Delimiter for format "tsv"')
-  parser_oth.add_argument('--context-option', '-c', type=str, action='append', help='Set context option for this connection, see https://docs.imply.io/on-prem/query-data/sql for options')
+  parser_oth.add_argument('--context-option', '-c', type=str, action='append', help='Set context option for this connection, see https://druid.apache.org/docs/latest/querying/sql.html#connection-context for options')
   parser_oth.add_argument('--execute', '-e', type=str, help='Execute single SQL query')
   args = parser.parse_args()
 
