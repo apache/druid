@@ -47,6 +47,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       .writeByte(x -> x.compression.getId());
 
   public static CompressedVSizeColumnarIntsSerializer create(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
@@ -54,6 +55,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   )
   {
     return new CompressedVSizeColumnarIntsSerializer(
+        columnName,
         segmentWriteOutMedium,
         filenameBase,
         maxValue,
@@ -63,6 +65,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
     );
   }
 
+  private final String columnName;
   private final int numBytes;
   private final int chunkFactor;
   private final boolean isBigEndian;
@@ -75,6 +78,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   private ByteBuffer endBuffer;
 
   CompressedVSizeColumnarIntsSerializer(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
@@ -84,6 +88,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   )
   {
     this(
+        columnName,
         segmentWriteOutMedium,
         maxValue,
         chunkFactor,
@@ -99,6 +104,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
   }
 
   CompressedVSizeColumnarIntsSerializer(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final int maxValue,
       final int chunkFactor,
@@ -107,6 +113,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       final GenericIndexedWriter<ByteBuffer> flattener
   )
   {
+    this.columnName = columnName;
     this.numBytes = VSizeColumnarInts.getNumBytesForMax(maxValue);
     this.chunkFactor = chunkFactor;
     int chunkBytes = chunkFactor * numBytes;
@@ -149,6 +156,9 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       endBuffer.put(intBuffer.array(), 0, numBytes);
     }
     numInserted++;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

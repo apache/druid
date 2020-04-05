@@ -25,8 +25,14 @@ import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -57,6 +63,12 @@ public class CompressedFloatsSerdeTest
   }
 
   private static final double DELTA = 0.00001;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   protected final CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
@@ -105,9 +117,37 @@ public class CompressedFloatsSerdeTest
     testWithValues(chunk);
   }
 
+  // this test takes ~30 minutes to run
+  @Ignore
+  @Test
+  public void testTooManyValues() throws IOException
+  {
+    expectedException.expect(ColumnCapacityExceededException.class);
+    expectedException.expectMessage(ColumnCapacityExceededException.formatMessage("test"));
+    try (
+        SegmentWriteOutMedium segmentWriteOutMedium =
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
+    ) {
+      ColumnarFloatsSerializer serializer = CompressionFactory.getFloatSerializer(
+          "test",
+          segmentWriteOutMedium,
+          "test",
+          order,
+          compressionStrategy
+      );
+      serializer.open();
+
+      final long numRows = Integer.MAX_VALUE + 100L;
+      for (long i = 0L; i < numRows; i++) {
+        serializer.add(ThreadLocalRandom.current().nextFloat());
+      }
+    }
+  }
+
   public void testWithValues(float[] values) throws Exception
   {
     ColumnarFloatsSerializer serializer = CompressionFactory.getFloatSerializer(
+        "test",
         new OffHeapMemorySegmentWriteOutMedium(),
         "test",
         order,

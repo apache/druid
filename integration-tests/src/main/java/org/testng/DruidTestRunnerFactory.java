@@ -20,25 +20,15 @@
 package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
 import com.google.inject.Injector;
-import com.google.inject.Key;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.ITRetryUtil;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.testng.internal.IConfiguration;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlTest;
 
-import java.net.URL;
 import java.util.List;
 
 /**
@@ -87,14 +77,14 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
     {
       Injector injector = DruidTestModuleFactory.getInjector();
       IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
-      HttpClient client = injector.getInstance(Key.get(HttpClient.class, TestClient.class));
+      DruidClusterAdminClient druidClusterAdminClient = injector.getInstance(DruidClusterAdminClient.class);
 
-      waitUntilInstanceReady(client, config.getCoordinatorUrl());
-      waitUntilInstanceReady(client, config.getIndexerUrl());
-      waitUntilInstanceReady(client, config.getBrokerUrl());
+      druidClusterAdminClient.waitUntilCoordinatorReady();
+      druidClusterAdminClient.waitUntilIndexerReady();
+      druidClusterAdminClient.waitUntilBrokerReady();
       String routerHost = config.getRouterUrl();
       if (null != routerHost) {
-        waitUntilInstanceReady(client, config.getRouterUrl());
+        druidClusterAdminClient.waitUntilRouterReady();
       }
       Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       try {
@@ -114,28 +104,6 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
     private void runTests()
     {
       super.run();
-    }
-
-    public void waitUntilInstanceReady(final HttpClient client, final String host)
-    {
-      ITRetryUtil.retryUntilTrue(
-          () -> {
-            try {
-              StatusResponseHolder response = client.go(
-                  new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status/health", host))),
-                  StatusResponseHandler.getInstance()
-              ).get();
-
-              LOG.info("%s %s", response.getStatus(), response.getContent());
-              return response.getStatus().equals(HttpResponseStatus.OK);
-            }
-            catch (Throwable e) {
-              LOG.error(e, "");
-              return false;
-            }
-          },
-          "Waiting for instance to be ready: [" + host + "]"
-      );
     }
   }
 }
