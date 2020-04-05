@@ -79,6 +79,13 @@ public class Pac4jFilter implements Filter
   public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
       throws IOException, ServletException
   {
+    // If there's already an auth result, then we have authenticated already, skip this or else caller
+    // could get HTTP redirect even if one of the druid authenticators in chain has successfully authenticated.
+    if (servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) != null) {
+      filterChain.doFilter(servletRequest, servletResponse);
+      return;
+    }
+
     HttpServletRequest httpServletRequest = (HttpServletRequest) servletRequest;
     HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
     J2EContext context = new J2EContext(httpServletRequest, httpServletResponse, sessionStore);
