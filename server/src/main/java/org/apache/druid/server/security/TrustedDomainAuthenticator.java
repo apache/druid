@@ -39,6 +39,8 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Map;
 
+import static org.apache.druid.server.security.AuthenticationContextEnricher.enrichContext;
+
 /**
  * Authenticates requests coming from a specific domain and directs them to an authorizer.
  */
@@ -124,6 +126,7 @@ public class TrustedDomainAuthenticator implements Authenticator
           }
         }
         if (remoteAddr.endsWith(domain)) {
+          authenticationResult.setContext(enrichContext(request));
           request.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         }
         chain.doFilter(request, response);

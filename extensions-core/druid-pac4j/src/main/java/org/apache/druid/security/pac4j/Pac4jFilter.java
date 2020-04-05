@@ -43,6 +43,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collection;
 
+import static org.apache.druid.server.security.AuthenticationContextEnricher.enrichContext;
+
 public class Pac4jFilter implements Filter
 {
   private static final Logger LOGGER = new Logger(Pac4jFilter.class);
@@ -106,7 +108,12 @@ public class Pac4jFilter implements Filter
           null, null, null, null);
 
       if (uid != null) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+        AuthenticationResult authenticationResult = new AuthenticationResult(
+            uid,
+            authorizerName,
+            name,
+            enrichContext(servletRequest)
+        );
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       }

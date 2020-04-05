@@ -78,6 +78,8 @@ import java.util.TimeZone;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.server.security.AuthenticationContextEnricher.enrichContext;
+
 
 @JsonTypeName("kerberos")
 public class KerberosAuthenticator implements Authenticator
@@ -315,7 +317,7 @@ public class KerberosAuthenticator implements Authenticator
               // Since this request is validated also set DRUID_AUTHENTICATION_RESULT
               request.setAttribute(
                   AuthConfig.DRUID_AUTHENTICATION_RESULT,
-                  new AuthenticationResult(token.getName(), authorizerName, name, null)
+                  new AuthenticationResult(token.getName(), authorizerName, name, enrichContext(request))
               );
               doFilter(filterChain, httpRequest, httpResponse);
             }

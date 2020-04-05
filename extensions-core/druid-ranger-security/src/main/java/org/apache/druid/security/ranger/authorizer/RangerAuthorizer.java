@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.ranger.authorizer.guice.Ranger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthenticationContextEnricher;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.Resource;
@@ -43,7 +44,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @JsonTypeName("ranger")
@@ -104,7 +107,8 @@ public class RangerAuthorizer implements Authorizer
         rangerDruidResource,
         authenticationResult.getIdentity(),
         userGroups,
-        action
+        action,
+        authenticationResult.getContext()
     );
 
     RangerAccessResult result = rangerPlugin.isAccessAllowed(request);
@@ -132,9 +136,23 @@ class RangerDruidResource extends RangerAccessResourceImpl
 
 class RangerDruidAccessRequest extends RangerAccessRequestImpl
 {
-  public RangerDruidAccessRequest(RangerDruidResource resource, String user, Set<String> userGroups, Action action)
+  public RangerDruidAccessRequest(
+      RangerDruidResource resource,
+      String user, Set<String> userGroups,
+      Action action,
+      Map<String, Object> context
+  )
   {
     super(resource, action.name().toLowerCase(Locale.ENGLISH), user, userGroups);
     setAccessTime(new Date());
+    if (context != null) {
+      Object forwardedIpAddresses = context.get(AuthenticationContextEnricher.CONTEXT_FORWARDED_ADDRESSES);
+      Class<List<String>> type = null;
+      if (type.isInstance(forwardedIpAddresses)) {
+        setForwardedAddresses(type.cast(forwardedIpAddresses));
+      }
+      setClientIPAddress((String) context.get(AuthenticationContextEnricher.CONTEXT_CLIENT_IPADDRESS));
+      setRemoteIPAddress((String) context.get(AuthenticationContextEnricher.CONTEXT_REMOTE_ADDRESS));
+    }
   }
 }

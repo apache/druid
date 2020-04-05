@@ -33,6 +33,7 @@ import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticato
 import org.apache.druid.security.basic.authentication.validator.CredentialsValidator;
 import org.apache.druid.security.basic.authentication.validator.MetadataStoreCredentialsValidator;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationContextEnricher;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 
@@ -204,6 +205,8 @@ public class BasicHTTPAuthenticator implements Authenticator
             user,
             password
         );
+        authenticationResult.setContext(AuthenticationContextEnricher.enrichContext(servletRequest));
+
         if (authenticationResult != null) {
           servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
           filterChain.doFilter(servletRequest, servletResponse);

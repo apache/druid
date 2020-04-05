@@ -34,6 +34,8 @@ import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Map;
 
+import static org.apache.druid.server.security.AuthenticationContextEnricher.enrichContext;
+
 /**
  * Authenticates all requests and directs them to an authorizer.
  */
@@ -97,6 +99,7 @@ public class AnonymousAuthenticator implements Authenticator
       public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
           throws IOException, ServletException
       {
+        anonymousResult.setContext(enrichContext(request));
         request.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, anonymousResult);
         chain.doFilter(request, response);
       }

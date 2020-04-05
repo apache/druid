@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -51,7 +52,7 @@ public class AuthenticationResult
    * parameter containing additional context information from an Authenticator
    */
   @Nullable
-  private final Map<String, Object> context;
+  private Map<String, Object> context;
 
   public AuthenticationResult(
       final String identity,
@@ -88,6 +89,11 @@ public class AuthenticationResult
     return authenticatedBy;
   }
 
+  public void setContext(final Map<String, Object> context)
+  {
+    this.context = context;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -109,4 +115,5 @@ public class AuthenticationResult
   {
     return Objects.hash(getIdentity(), getAuthorizerName(), getAuthenticatedBy(), getContext());
   }
+
 }
