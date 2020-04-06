@@ -25,7 +25,8 @@ import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -59,16 +60,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class DataSchemaTest
+public class DataSchemaTest extends NullHandlingTest
 {
 
   private static final String VALID_DATASOURCE_CHARS_NAME = "alpha123..*~!@#&%^&*()-+ Россия\\ 한국 中国!";
-  private static final String VALID_DATASOURCE_CHARS_FOR_SERIALIZER = "alpha123..*~!@#&%^&*()-+ Россия\\\\ 한국 中国!";
-
-  static {
-    // testTransformSpec needs NullHandling initialized.
-    NullHandling.initializeForTests();
-  }
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -274,7 +269,7 @@ public class DataSchemaTest
   public void testSerdeWithInvalidParserMap() throws Exception
   {
     String jsonStr = "{"
-                     + "\"dataSource\":\"" + VALID_DATASOURCE_CHARS_FOR_SERIALIZER + "\","
+                     + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(VALID_DATASOURCE_CHARS_NAME) + "\","
                      + "\"parser\":{\"type\":\"invalid\"},"
                      + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
                      + "\"granularitySpec\":{"
@@ -377,7 +372,7 @@ public class DataSchemaTest
   public void testSerde() throws Exception
   {
     String jsonStr = "{"
-                     + "\"dataSource\":\"" + VALID_DATASOURCE_CHARS_FOR_SERIALIZER + "\","
+                     + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(VALID_DATASOURCE_CHARS_NAME) + "\","
                      + "\"parser\":{"
                      + "\"type\":\"string\","
                      + "\"parseSpec\":{"
@@ -430,10 +425,10 @@ public class DataSchemaTest
   public void testSerializeWithInvalidDataSourceName() throws Exception
   {
     // Escape backslashes to insert a tab character in the datasource name.
-    List<String> datasources = ImmutableList.of("", "../invalid", "\\tname", "name\\t invalid");
+    List<String> datasources = ImmutableList.of("", "../invalid", "\tname", "name\t invalid");
     for (String datasource : datasources) {
       String jsonStr = "{"
-                       + "\"dataSource\":\"" + datasource + "\","
+                       + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(datasource) + "\","
                        + "\"parser\":{"
                        + "\"type\":\"string\","
                        + "\"parseSpec\":{"
