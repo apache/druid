@@ -31,7 +31,7 @@ public class PrometheusEmitterTest
   @Test
   public void testEmitter() 
   {
-    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, null, 0);
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, null, null, 0, null);
     PrometheusEmitter emitter = new PrometheusEmitter(config);
     ServiceMetricEvent build = ServiceMetricEvent.builder()
                                                  .setDimension("server", "druid-data01.vpc.region")
