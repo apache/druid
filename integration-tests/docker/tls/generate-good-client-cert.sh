@@ -58,5 +58,5 @@ openssl x509 -req -days 3650 -in client.csr -CA root.pem -CAkey root.key -set_se
 openssl pkcs12 -export -in client.pem -inkey client.key -out client.p12 -name druid -CAfile root.pem -caname druid-it-root -password pass:druid123
 keytool -importkeystore -srckeystore client.p12 -srcstoretype PKCS12 -destkeystore client.jks -deststoretype JKS -srcstorepass druid123 -deststorepass druid123
 
-# Create a Java truststore with the imply test cluster root CA
+# Create a Java truststore with the druid test cluster root CA
 keytool -import -alias druid-it-root -keystore truststore.jks -file root.pem -storepass druid123 -noprompt

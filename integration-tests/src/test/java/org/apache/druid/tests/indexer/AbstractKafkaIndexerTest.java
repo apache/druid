@@ -55,9 +55,9 @@ import java.util.Properties;
 abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
-  protected static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/kafka_supervisor_spec_legacy_parser.json";
-  protected static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/kafka_supervisor_spec_input_format.json";
-  private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
+  protected static final String INDEXER_FILE_LEGACY_PARSER = "/indexer/stream_supervisor_spec_legacy_parser.json";
+  protected static final String INDEXER_FILE_INPUT_FORMAT = "/indexer/stream_supervisor_spec_input_format.json";
+  private static final String QUERIES_FILE = "/indexer/stream_index_queries.json";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
 
   private static final int NUM_EVENTS_TO_SEND = 60;
@@ -137,8 +137,12 @@ abstract class AbstractKafkaIndexerTest extends AbstractIndexerTest
 
       spec = getResourceAsString(supervisorSpecPath);
       spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
-      spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
-      spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
+      spec = StringUtils.replace(spec, "%%STREAM_TYPE%%", "kafka");
+      spec = StringUtils.replace(spec, "%%TOPIC_KEY%%", "topic");
+      spec = StringUtils.replace(spec, "%%TOPIC_VALUE%%", TOPIC_NAME);
+      spec = StringUtils.replace(spec, "%%USE_EARLIEST_KEY%%", "useEarliestOffset");
+      spec = StringUtils.replace(spec, "%%STREAM_PROPERTIES_KEY%%", "consumerProperties");
+      spec = StringUtils.replace(spec, "%%STREAM_PROPERTIES_VALUE%%", jsonMapper.writeValueAsString(consumerProperties));
       LOG.info("supervisorSpec: [%s]\n", spec);
     }
     catch (Exception e) {
