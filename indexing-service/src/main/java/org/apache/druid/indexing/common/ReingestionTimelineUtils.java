@@ -22,11 +22,13 @@ package org.apache.druid.indexing.common;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -100,5 +102,35 @@ public class ReingestionTimelineUtils
     return IntStream.range(0, orderedMetrics.size())
                     .mapToObj(orderedMetrics::get)
                     .collect(Collectors.toList());
+  }
+
+  /**
+   * Utility function to get dimensions that should be ingested. The preferred order is
+   * - Explicit dimensions if they are provided.
+   * - Custom dimensions are provided in the inputSpec.
+   * - Calculate dimensions from the timeline but exclude any dimension exclusions.
+   *
+   * @param explicitDimensions sent as part of the re-ingestion InputSource.
+   * @param dimensionsSpec from the provided ingestion spec.
+   * @param timeLineSegments for the datasource that is being read.
+   * @return
+   */
+  public static List<String> getDimensionsToReingest(
+      @Nullable List<String> explicitDimensions,
+      @NotNull DimensionsSpec dimensionsSpec,
+      @NotNull List<TimelineObjectHolder<String, DataSegment>> timeLineSegments)
+  {
+    final List<String> dims;
+    if (explicitDimensions != null) {
+      dims = explicitDimensions;
+    } else if (dimensionsSpec.hasCustomDimensions()) {
+      dims = dimensionsSpec.getDimensionNames();
+    } else {
+      dims = ReingestionTimelineUtils.getUniqueDimensions(
+          timeLineSegments,
+          dimensionsSpec.getDimensionExclusions()
+      );
+    }
+    return dims;
   }
 }

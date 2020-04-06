@@ -66,21 +66,26 @@ public class LongCompressionBenchmarkFileGenerator
       dirPath = args[0];
     }
 
-    BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated("", ValueType.LONG, true, 1, 0d,
-                                                                                  ImmutableList.of(
-                                                                                      0,
-                                                                                      1,
-                                                                                      2,
-                                                                                      3,
-                                                                                      4
-                                                                                  ),
-                                                                                  ImmutableList.of(
-                                                                                      0.95,
-                                                                                      0.001,
-                                                                                      0.0189,
-                                                                                      0.03,
-                                                                                      0.0001
-                                                                                  )
+    BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated(
+        "",
+        ValueType.LONG,
+        true,
+        1,
+        0d,
+        ImmutableList.of(
+            0,
+            1,
+            2,
+            3,
+            4
+        ),
+        ImmutableList.of(
+            0.95,
+            0.001,
+            0.0189,
+            0.03,
+            0.0001
+        )
     );
     BenchmarkColumnSchema zipfLowSchema = BenchmarkColumnSchema.makeZipf("", ValueType.LONG, true, 1, 0d, -1, 1000, 1d);
     BenchmarkColumnSchema zipfHighSchema = BenchmarkColumnSchema.makeZipf(
@@ -144,6 +149,7 @@ public class LongCompressionBenchmarkFileGenerator
           File dataFile = new File(dir, entry.getKey());
 
           ColumnarLongsSerializer writer = CompressionFactory.getLongSerializer(
+              "long-benchmark",
               new OffHeapMemorySegmentWriteOutMedium(),
               "long",
               ByteOrder.nativeOrder(),

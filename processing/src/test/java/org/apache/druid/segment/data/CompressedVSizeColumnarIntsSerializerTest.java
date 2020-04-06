@@ -32,22 +32,27 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 @RunWith(Parameterized.class)
 public class CompressedVSizeColumnarIntsSerializerTest
@@ -61,6 +66,9 @@ public class CompressedVSizeColumnarIntsSerializerTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   public CompressedVSizeColumnarIntsSerializerTest(
       CompressionStrategy compressionStrategy,
@@ -108,8 +116,9 @@ public class CompressedVSizeColumnarIntsSerializerTest
   private void checkSerializedSizeAndData(int chunkSize) throws Exception
   {
     FileSmoosher smoosher = new FileSmoosher(temporaryFolder.newFolder());
-
+    final String columnName = "test";
     CompressedVSizeColumnarIntsSerializer writer = new CompressedVSizeColumnarIntsSerializer(
+        columnName,
         segmentWriteOutMedium,
         "test",
         vals.length > 0 ? Ints.max(vals) : 0,
@@ -170,6 +179,44 @@ public class CompressedVSizeColumnarIntsSerializerTest
     }
   }
 
+
+  // this test takes ~18 minutes to run
+  @Ignore
+  @Test
+  public void testTooManyValues() throws IOException
+  {
+    final int maxValue = 0x0FFFFFFF;
+    final int maxChunkSize = CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue);
+    expectedException.expect(ColumnCapacityExceededException.class);
+    expectedException.expectMessage(ColumnCapacityExceededException.formatMessage("test"));
+    try (
+        SegmentWriteOutMedium segmentWriteOutMedium =
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
+    ) {
+      GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
+          segmentWriteOutMedium,
+          "test",
+          compressionStrategy,
+          Long.BYTES * 10000
+      );
+      CompressedVSizeColumnarIntsSerializer serializer = new CompressedVSizeColumnarIntsSerializer(
+          "test",
+          segmentWriteOutMedium,
+          maxValue,
+          maxChunkSize,
+          byteOrder,
+          compressionStrategy,
+          genericIndexed
+      );
+      serializer.open();
+
+      final long numRows = Integer.MAX_VALUE + 100L;
+      for (long i = 0L; i < numRows; i++) {
+        serializer.addValue(ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE));
+      }
+    }
+  }
+
   @Test
   public void testEmpty() throws Exception
   {
@@ -181,7 +228,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
   {
     File tmpDirectory = temporaryFolder.newFolder();
     FileSmoosher smoosher = new FileSmoosher(tmpDirectory);
-
+    final String columnName = "test";
     GenericIndexedWriter genericIndexed = GenericIndexedWriter.ofCompressedByteBuffers(
         segmentWriteOutMedium,
         "test",
@@ -189,6 +236,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
         Long.BYTES * 10000
     );
     CompressedVSizeColumnarIntsSerializer writer = new CompressedVSizeColumnarIntsSerializer(
+        columnName,
         segmentWriteOutMedium,
         vals.length > 0 ? Ints.max(vals) : 0,
         chunkSize,
