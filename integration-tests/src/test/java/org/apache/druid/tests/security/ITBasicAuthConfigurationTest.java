@@ -38,6 +38,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorC
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -133,7 +134,7 @@ public class ITBasicAuthConfigurationTest
     // create a new user+role that can only read 'auth_test'
     List<ResourceAction> readDatasourceOnlyPermissions = Collections.singletonList(
         new ResourceAction(
-            new Resource("auth_test", ResourceType.DATASOURCE),
+            new Resource(new ResourceName("auth_test"), ResourceType.DATASOURCE),
             Action.READ
         )
     );
@@ -152,11 +153,11 @@ public class ITBasicAuthConfigurationTest
     // create a new user+role that can only read 'auth_test' + STATE read access
     List<ResourceAction> readDatasourceWithStatePermissions = ImmutableList.of(
         new ResourceAction(
-            new Resource("auth_test", ResourceType.DATASOURCE),
+            new Resource(new ResourceName("auth_test"), ResourceType.DATASOURCE),
             Action.READ
         ),
         new ResourceAction(
-            new Resource(".*", ResourceType.STATE),
+            new Resource(ResourceName.SUPERUSER, ResourceType.STATE),
             Action.READ
         )
     );
@@ -175,7 +176,7 @@ public class ITBasicAuthConfigurationTest
     // create a new user+role with only STATE read access
     List<ResourceAction> stateOnlyPermissions = ImmutableList.of(
         new ResourceAction(
-            new Resource(".*", ResourceType.STATE),
+            new Resource(ResourceName.SUPERUSER, ResourceType.STATE),
             Action.READ
         )
     );
@@ -392,7 +393,7 @@ public class ITBasicAuthConfigurationTest
     // create a new user+role that can read /status
     List<ResourceAction> permissions = Collections.singletonList(
         new ResourceAction(
-            new Resource(".*", ResourceType.STATE),
+            new Resource(ResourceName.SUPERUSER, ResourceType.STATE),
             Action.READ
         )
     );
