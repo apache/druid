@@ -123,6 +123,10 @@ public class Metrics
     }
   }
 
+  public Map<String, DimensionsAndCollector> getMap(){
+    return map;
+  }
+
   public static class Metric
   {
     public final SortedSet<String> dimensions;

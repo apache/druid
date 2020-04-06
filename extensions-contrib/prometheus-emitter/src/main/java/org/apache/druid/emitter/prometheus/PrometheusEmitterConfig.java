@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.Null;
 import java.util.regex.Pattern;
 
 /**
@@ -35,6 +36,9 @@ public class PrometheusEmitterConfig
   Pattern pattern = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
 
   @JsonProperty
+  private final Strategy strategy;
+
+  @JsonProperty
   @Nullable
   private final String namespace;
 
@@ -43,19 +47,29 @@ public class PrometheusEmitterConfig
   private final String dimensionMapPath;
 
   @JsonProperty
+  @Nullable
   private final Integer port;
+
+  @JsonProperty
+  @Nullable
+  private final String pushGatewayAddress;
 
   @JsonCreator
   public PrometheusEmitterConfig(
+      @JsonProperty("strategy") Strategy strategy,
       @JsonProperty("namespace") @Nullable String namespace,
       @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath,
-      @JsonProperty("port") Integer port
+      @JsonProperty("port") @Nullable  Integer port,
+      @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress
   )
   {
+
+    this.strategy = Preconditions.checkNotNull(strategy, "Prometheus metrics expose strategy cannot be null");
     this.namespace = namespace != null ? namespace : "druid";
     Preconditions.checkArgument(pattern.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
-    this.port = Preconditions.checkNotNull(port, "Prometheus server port cannot be null.");
+    this.port = port;
+    this.pushGatewayAddress = pushGatewayAddress;
   }
 
   public String getNamespace()
@@ -71,5 +85,18 @@ public class PrometheusEmitterConfig
   public int getPort()
   {
     return port;
+  }
+
+  public String getPushGatewayAddress() {
+    return pushGatewayAddress;
+  }
+
+  public Strategy getStrategy(){
+    return strategy;
+  }
+
+  public enum Strategy
+  {
+    exporter, pushgateway
   }
 }
