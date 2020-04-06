@@ -23,45 +23,46 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
+import org.joda.time.Duration;
 
-public class OIDCConfig
+public class Pac4jCommonConfig
 {
   @JsonProperty
-  private final String clientID;
+  private final boolean enableCustomSslContext;
 
   @JsonProperty
-  private final PasswordProvider clientSecret;
+  private final PasswordProvider cookiePassphrase;
 
   @JsonProperty
-  private final String discoveryURI;
+  private final Duration readTimeout;
 
   @JsonCreator
-  public OIDCConfig(
-      @JsonProperty("clientID") String clientID,
-      @JsonProperty("clientSecret") PasswordProvider clientSecret,
-      @JsonProperty("discoveryURI") String discoveryURI
+  public Pac4jCommonConfig(
+      @JsonProperty("enableCustomSslContext") boolean enableCustomSslContext,
+      @JsonProperty("cookiePassphrase") PasswordProvider cookiePassphrase,
+      @JsonProperty("readTimeout") Duration readTimeout
   )
   {
-    this.clientID = Preconditions.checkNotNull(clientID, "null clientID");
-    this.clientSecret = Preconditions.checkNotNull(clientSecret, "null clientSecret");
-    this.discoveryURI = Preconditions.checkNotNull(discoveryURI, "null discoveryURI");
+    this.enableCustomSslContext = enableCustomSslContext;
+    this.cookiePassphrase = Preconditions.checkNotNull(cookiePassphrase, "null cookiePassphrase");
+    this.readTimeout = readTimeout == null ? Duration.millis(5000) : readTimeout;
   }
 
   @JsonProperty
-  public String getClientID()
+  public boolean isEnableCustomSslContext()
   {
-    return clientID;
+    return enableCustomSslContext;
   }
 
   @JsonProperty
-  public PasswordProvider getClientSecret()
+  public PasswordProvider getCookiePassphrase()
   {
-    return clientSecret;
+    return cookiePassphrase;
   }
 
   @JsonProperty
-  public String getDiscoveryURI()
+  public Duration getReadTimeout()
   {
-    return discoveryURI;
+    return readTimeout;
   }
 }

@@ -345,6 +345,7 @@ runtime
 schemas
 searchable
 servlet
+simple-client-sslcontext
 sharded
 sharding
 skipHeaderRows
@@ -829,7 +830,6 @@ jvm-global
 kafka-emitter
 org.apache.druid.extensions.contrib.
 pull-deps
-simple-client-sslcontext
 sqlserver-metadata-storage
 statsd-emitter
  - ../docs/development/geo.md
