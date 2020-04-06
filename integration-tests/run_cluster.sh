@@ -68,7 +68,7 @@
   # For druid-google-extensions
   mkdir -p $SHARED_DIR/docker/extensions/druid-google-extensions
   mv $SHARED_DIR/docker/lib/druid-google-extensions-* $SHARED_DIR/docker/extensions/druid-google-extensions
-  $ For druid-hdfs-storage
+  # For druid-hdfs-storage
   mkdir -p $SHARED_DIR/docker/extensions/druid-hdfs-storage
   mv $SHARED_DIR/docker/lib/druid-hdfs-storage-* $SHARED_DIR/docker/extensions/druid-hdfs-storage
 
