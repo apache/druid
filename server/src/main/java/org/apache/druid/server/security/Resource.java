@@ -61,7 +61,7 @@ public class Resource
 
     Resource resource = (Resource) o;
 
-    if (!name.equals(resource.name)) {
+    if (!name.toString().equals(resource.name.toString())) {
       return false;
     }
     return type == resource.type;
@@ -71,7 +71,7 @@ public class Resource
   @Override
   public int hashCode()
   {
-    int result = name.hashCode();
+    int result = name.toString().hashCode();
     result = 31 * result + type.hashCode();
     return result;
   }
