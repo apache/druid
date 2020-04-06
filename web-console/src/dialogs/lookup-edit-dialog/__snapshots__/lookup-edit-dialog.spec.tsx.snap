@@ -58,7 +58,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
           <label
             class="bp3-label"
           >
-            Name: 
+            Name
              
             <span
               class="bp3-text-muted"
@@ -86,7 +86,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
           <label
             class="bp3-label"
           >
-            Tier:
+            Tier
              
             <span
               class="bp3-text-muted"
@@ -178,7 +178,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
           <label
             class="bp3-label"
           >
-            Version:
+            Version
              
             <span
               class="bp3-text-muted"
@@ -223,7 +223,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
             <label
               class="bp3-label"
             >
-              Type :
+              Type
                
               <span
                 class="bp3-text-muted"
@@ -238,10 +238,47 @@ exports[`lookup edit dialog matches snapshot 1`] = `
                 <input
                   class="bp3-input"
                   placeholder=""
-                  style="padding-right: 10px;"
+                  style="padding-right: 0px;"
+                  suggestions="map,cachedNamespace"
                   type="text"
-                  value="test"
+                  value="map"
                 />
+                <span
+                  class="bp3-input-action"
+                >
+                  <span
+                    class="bp3-popover-wrapper"
+                  >
+                    <span
+                      class="bp3-popover-target"
+                    >
+                      <button
+                        class="bp3-button bp3-minimal"
+                        type="button"
+                      >
+                        <span
+                          class="bp3-icon bp3-icon-caret-down"
+                          icon="caret-down"
+                        >
+                          <svg
+                            data-icon="caret-down"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            width="16"
+                          >
+                            <desc>
+                              caret-down
+                            </desc>
+                            <path
+                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                              fill-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  </span>
+                </span>
               </div>
             </div>
           </div>
@@ -251,7 +288,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
             <label
               class="bp3-label"
             >
-              Map :
+              Map
                
               <span
                 class="bp3-text-muted"
