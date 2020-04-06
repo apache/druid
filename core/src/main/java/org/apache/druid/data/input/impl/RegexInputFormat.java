@@ -22,6 +22,8 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -38,7 +40,7 @@ public class RegexInputFormat implements InputFormat
   private final String listDelimiter;
   private final List<String> columns;
   @JsonIgnore
-  private final Pattern compiledPattern;
+  private final Supplier<Pattern> compiledPatternSupplier;
 
   @JsonCreator
   public RegexInputFormat(
@@ -50,7 +52,7 @@ public class RegexInputFormat implements InputFormat
     this.pattern = pattern;
     this.listDelimiter = listDelimiter;
     this.columns = columns;
-    this.compiledPattern = Pattern.compile(pattern);
+    this.compiledPatternSupplier = Suppliers.memoize(() -> Pattern.compile(pattern));
   }
 
   @JsonProperty
@@ -82,6 +84,6 @@ public class RegexInputFormat implements InputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new RegexReader(inputRowSchema, source, pattern, compiledPattern, listDelimiter, columns);
+    return new RegexReader(inputRowSchema, source, pattern, compiledPatternSupplier.get(), listDelimiter, columns);
   }
 }
