@@ -4222,6 +4222,238 @@ libraries:
 
 ---
 
+name: org.apache.ranger ranger-plugins-audit
+license_category: binary
+version: 2.0.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.ranger: ranger-plugins-audit
+
+---
+
+name: org.apache.ranger ranger-plugins-common
+license_category: binary
+version: 2.0.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.ranger: ranger-plugins-common
+
+---
+
+name: com.101tec zkclient
+license_category: binary
+version: '0.10'
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - com.101tec: zkclient
+
+---
+
+name: com.kstruct gethostname4j
+license_category: binary
+version: 0.0.2
+module: druid-ranger-security
+license_name: MIT License
+libraries:
+  - com.kstruct: gethostname4j
+
+---
+
+name: com.sun.jersey jersey-bundle
+license_category: binary
+version: 1.19.3
+module: druid-ranger-security
+license_name: CDDL 1.1
+libraries:
+  - com.sun.jersey: jersey-bundle
+
+---
+
+name: net.java.dev.jna jna-platform
+license_category: binary
+version: 5.2.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - net.java.dev.jna: jna-platform
+
+---
+
+name: JOpt Simple
+license_category: binary
+version: 5.0.4
+module: druid-ranger-security
+license_name: MIT License
+libraries:
+  - net.sf.jopt-simple: jopt-simple
+copyright: Paul R. Holser, Jr.
+
+---
+
+name: org.apache.httpcomponents httpmime
+license_category: binary
+version: 4.5.3
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.httpcomponents: httpmime
+
+---
+
+name: Apache Kafka
+license_category: binary
+version: 2.0.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
+notices:
+  - kafka-clients: 'Apache Kafka Copyright 2019 The Apache Software Foundation.
+
+This distribution has a binary dependency on jersey, which is available under
+the CDDL License. The source code of jersey can be found at https://github.com/jersey/jersey/.'
+
+---
+
+name: org.apache.kafka kafka_2.11
+license_category: binary
+version: 2.0.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka_2.11
+
+---
+
+name: org.apache.ranger ranger-plugins-cred
+license_category: binary
+version: 2.0.0
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.ranger: ranger-plugins-cred
+
+---
+
+name: org.apache.solr solr-solrj
+license_category: binary
+version: 7.7.1
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.solr: solr-solrj
+
+---
+
+name: org.codehaus.woodstox stax2-api
+license_category: binary
+version: 3.1.4
+module: druid-ranger-security
+license_name: BSD-3-Clause License
+libraries:
+  - org.codehaus.woodstox: stax2-api
+
+---
+
+name: org.codehaus.woodstox woodstox-core-asl
+license_category: binary
+version: 4.4.1
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.codehaus.woodstox: woodstox-core-asl
+
+---
+
+name: org.eclipse.persistence commonj.sdo
+license_category: binary
+version: 2.1.1
+module: druid-ranger-security
+license_name: Eclipse Distribution License 1.0
+libraries:
+  - org.eclipse.persistence: commonj.sdo
+
+---
+
+name: org.eclipse.persistence eclipselink
+license_category: binary
+version: 2.5.2
+module: druid-ranger-security
+license_name: Eclipse Distribution License 1.0
+libraries:
+  - org.eclipse.persistence: eclipselink
+
+---
+
+name: org.eclipse.persistence javax.persistence
+license_category: binary
+version: 2.1.0
+module: druid-ranger-security
+license_name: Eclipse Distribution License 1.0
+libraries:
+  - org.eclipse.persistence: javax.persistence
+
+---
+
+name: org.noggit noggit
+license_category: binary
+version: '0.8'
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.noggit: noggit
+
+---
+
+name: Scala Library
+license_category: binary
+version: 2.11.12
+module: druid-ranger-security
+license_name: BSD-3-Clause License
+libraries:
+  - org.scala-lang: scala-library
+copyright: LAMP/EPFL and Lightbend, Inc.
+
+---
+
+name: org.scala-lang scala-reflect
+license_category: binary
+version: 2.11.12
+module: druid-ranger-security
+license_name: BSD-3-Clause License
+libraries:
+  - org.scala-lang: scala-reflect
+
+---
+
+name: snappy-java
+license_category: binary
+version: 1.1.7.1
+module: druid-ranger-security
+license_name: Apache License version 2.0
+libraries:
+  - org.xerial.snappy: snappy-java
+notices:
+  - snappy-java: |
+      This product includes software developed by Google
+       Snappy: http://code.google.com/p/snappy/ (New BSD License)
+
+
+      This library containd statically linked libstdc++. This inclusion is allowed by
+      "GCC RUntime Library Exception"
+      http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
+
+      == Contributors ==
+        * Tatu Saloranta
+          * Providing benchmark suite
+        * Alec Wysoker
+          * Performance and memory usage improvement
+
+---
+
 # Web console modules start
 name: "@babel/runtime"
 license_category: binary

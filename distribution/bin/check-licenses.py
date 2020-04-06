@@ -224,6 +224,7 @@ def build_compatible_license_names():
     compatible_licenses['Apache License Version 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License v2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache License, version 2.0'] = 'Apache License version 2.0'
+    compatible_licenses['Apache 2.0 License'] = 'Apache License version 2.0'
 
     compatible_licenses['Public Domain'] = 'Public Domain'
 
@@ -241,6 +242,7 @@ def build_compatible_license_names():
     compatible_licenses['Revised BSD'] = 'BSD-3-Clause License'
     compatible_licenses['New BSD License'] = 'BSD-3-Clause License'
     compatible_licenses['3-Clause BSD License'] = 'BSD-3-Clause License'
+    compatible_licenses['BSD 3-Clause'] = 'BSD-3-Clause License'
 
     compatible_licenses['ICU License'] = 'ICU License'
 
@@ -256,9 +258,11 @@ def build_compatible_license_names():
     compatible_licenses['The Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License - Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
+    compatible_licenses['Eclipse Public License v1.0'] = 'Eclipse Public License 1.0'
 
     compatible_licenses['Eclipse Distribution License 1.0'] = 'Eclipse Distribution License 1.0'
     compatible_licenses['Eclipse Distribution License - v 1.0'] = 'Eclipse Distribution License 1.0'
+    compatible_licenses['Eclipse Distribution License v. 1.0'] = 'Eclipse Distribution License 1.0'
     compatible_licenses['EDL 1.0'] = 'Eclipse Distribution License 1.0'
 
     compatible_licenses['Mozilla Public License Version 2.0'] = 'Mozilla Public License Version 2.0'
