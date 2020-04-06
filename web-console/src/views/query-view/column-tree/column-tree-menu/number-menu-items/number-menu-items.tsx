@@ -18,19 +18,10 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  SqlAliasRef,
-  SqlFunction,
-  SqlLiteral,
-  SqlMulti,
-  SqlQuery,
-  SqlRef,
-} from 'druid-query-toolkit';
+import { SqlAliasRef, SqlFunction, SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 
 export interface NumberMenuItemsProps {
-  schema: string;
-  table: string;
   columnName: string;
   parsedQuery: SqlQuery;
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
@@ -184,62 +175,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
     );
   }
 
-  function renderJoinMenu(): JSX.Element | undefined {
-    const { parsedQuery, schema, table, onQueryChange } = props;
-    if (parsedQuery && schema !== 'lookup') return;
-    return (
-      <>
-        <MenuItem
-          icon={IconNames.LEFT_JOIN}
-          text={parsedQuery.onExpression ? 'Replace Join' : `Join: ${table}`}
-        >
-          <MenuItem
-            text={'Left Join'}
-            onClick={() =>
-              onQueryChange(
-                parsedQuery.addJoin(
-                  'LEFT',
-                  SqlRef.fromName(table, schema),
-                  SqlMulti.sqlMultiFactory('=', [
-                    SqlRef.fromName(SqlRef.fromName('v', table), schema),
-                    SqlRef.fromName('XXX', parsedQuery.getTableName()),
-                  ]),
-                ),
-                false,
-              )
-            }
-          />
-          <MenuItem
-            text={'Inner Join'}
-            onClick={() =>
-              onQueryChange(
-                parsedQuery.addJoin(
-                  'INNER',
-                  SqlRef.fromName(table, schema),
-                  SqlMulti.sqlMultiFactory('=', [
-                    SqlRef.fromName(SqlRef.fromName('v', table), schema),
-                    SqlRef.fromName('XXX', parsedQuery.getTableName()),
-                  ]),
-                ),
-                false,
-              )
-            }
-          />
-        </MenuItem>
-        {parsedQuery.onExpression instanceof SqlMulti &&
-          parsedQuery.onExpression.containsColumn(table) && (
-            <MenuItem
-              icon={IconNames.CROSS}
-              text="Remove Join"
-              onClick={() => {
-                onQueryChange(parsedQuery.removeJoin(), true);
-              }}
-            />
-          )}
-      </>
-    );
-  }
-
   return (
     <>
       {renderFilterMenu()}
@@ -247,7 +182,6 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
       {renderGroupByMenu()}
       {renderRemoveGroupBy()}
       {renderAggregateMenu()}
-      {renderJoinMenu()}
     </>
   );
 });

@@ -91,8 +91,6 @@ function nextYear(dt: Date): Date {
 }
 
 export interface TimeMenuItemsProps {
-  schema: string;
-  table: string;
   columnName: string;
   parsedQuery: SqlQuery;
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
@@ -410,62 +408,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     );
   }
 
-  function renderJoinMenu(): JSX.Element | undefined {
-    const { parsedQuery, schema, table, onQueryChange } = props;
-    if (parsedQuery && schema !== 'lookup') return;
-    return (
-      <>
-        <MenuItem
-          icon={IconNames.LEFT_JOIN}
-          text={parsedQuery.onExpression ? 'Replace Join' : `Join: ${table}`}
-        >
-          <MenuItem
-            text={'Left Join'}
-            onClick={() =>
-              onQueryChange(
-                parsedQuery.addJoin(
-                  'LEFT',
-                  SqlRef.fromName(table, schema),
-                  SqlMulti.sqlMultiFactory('=', [
-                    SqlRef.fromName(SqlRef.fromName('v', table), schema),
-                    SqlRef.fromName('XXX', parsedQuery.getTableName()),
-                  ]),
-                ),
-                false,
-              )
-            }
-          />
-          <MenuItem
-            text={'Inner Join'}
-            onClick={() =>
-              onQueryChange(
-                parsedQuery.addJoin(
-                  'INNER',
-                  SqlRef.fromName(table, schema),
-                  SqlMulti.sqlMultiFactory('=', [
-                    SqlRef.fromName(SqlRef.fromName('v', table), schema),
-                    SqlRef.fromName('XXX', parsedQuery.getTableName()),
-                  ]),
-                ),
-                false,
-              )
-            }
-          />
-        </MenuItem>
-        {parsedQuery.onExpression instanceof SqlMulti &&
-          parsedQuery.onExpression.containsColumn(table) && (
-            <MenuItem
-              icon={IconNames.CROSS}
-              text="Remove Join"
-              onClick={() => {
-                onQueryChange(parsedQuery.removeJoin(), true);
-              }}
-            />
-          )}
-      </>
-    );
-  }
-
   return (
     <>
       {renderFilterMenu()}
@@ -473,7 +415,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
       {renderGroupByMenu()}
       {renderRemoveGroupBy()}
       {renderAggregateMenu()}
-      {renderJoinMenu()}
     </>
   );
 });

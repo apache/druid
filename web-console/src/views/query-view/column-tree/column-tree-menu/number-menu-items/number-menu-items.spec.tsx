@@ -28,8 +28,6 @@ describe('number menu', () => {
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const numberMenu = (
       <NumberMenuItems
-        table={'table'}
-        schema={'schema'}
         columnName={'added'}
         parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
@@ -43,8 +41,6 @@ describe('number menu', () => {
   it('matches snapshot when menu is opened for column inside group by', () => {
     const numberMenu = (
       <NumberMenuItems
-        table={'table'}
-        schema={'schema'}
         columnName={'added'}
         parsedQuery={parser(`SELECT added, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}

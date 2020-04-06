@@ -27,7 +27,7 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlMulti, SqlQuery, SqlRef } from 'druid-query-toolkit';
+import { SqlQuery } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -179,57 +179,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 copyAndAlert(table, `${table} query copied to clipboard`);
                               }}
                             />
-                            {parsedQuery && schema === 'lookup' && (
-                              <MenuItem
-                                icon={IconNames.LEFT_JOIN}
-                                text={parsedQuery.onExpression ? 'Replace Join' : `Join: ${table}`}
-                              >
-                                <MenuItem
-                                  text={'Left Join'}
-                                  onClick={() =>
-                                    props.onQueryStringChange(
-                                      parsedQuery.addJoin(
-                                        'LEFT',
-                                        SqlRef.fromName(table, schema),
-                                        SqlMulti.sqlMultiFactory('=', [
-                                          SqlRef.fromName(SqlRef.fromName('v', table), schema),
-                                          SqlRef.fromName('XXX', parsedQuery.getTableName()),
-                                        ]),
-                                      ),
-                                      false,
-                                    )
-                                  }
-                                />
-                                <MenuItem
-                                  text={'Inner Join'}
-                                  onClick={() =>
-                                    props.onQueryStringChange(
-                                      parsedQuery.addJoin(
-                                        'INNER',
-                                        SqlRef.fromName(table, schema),
-                                        SqlMulti.sqlMultiFactory('=', [
-                                          SqlRef.fromName(SqlRef.fromName('v', table), schema),
-                                          SqlRef.fromName('XXX', parsedQuery.getTableName()),
-                                        ]),
-                                      ),
-                                      false,
-                                    )
-                                  }
-                                />
-                              </MenuItem>
-                            )}
-                            {parsedQuery &&
-                              schema === 'lookup' &&
-                              parsedQuery.onExpression instanceof SqlMulti &&
-                              parsedQuery.onExpression.containsColumn(table) && (
-                                <MenuItem
-                                  icon={IconNames.CROSS}
-                                  text="Remove Join"
-                                  onClick={() => {
-                                    props.onQueryStringChange(parsedQuery.removeJoin(), true);
-                                  }}
-                                />
-                              )}
                             {parsedQuery && (
                               <MenuItem
                                 icon={IconNames.EXCHANGE}
@@ -285,8 +234,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     (columnData.DATA_TYPE === 'BIGINT' ||
                                       columnData.DATA_TYPE === 'FLOAT') && (
                                       <NumberMenuItems
-                                        schema={schema}
-                                        table={table}
                                         columnName={columnData.COLUMN_NAME}
                                         parsedQuery={parsedQuery}
                                         onQueryChange={props.onQueryStringChange}
@@ -294,8 +241,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     )}
                                   {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
                                     <StringMenuItems
-                                      schema={schema}
-                                      table={table}
                                       columnName={columnData.COLUMN_NAME}
                                       parsedQuery={parsedQuery}
                                       onQueryChange={props.onQueryStringChange}
@@ -303,8 +248,6 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   )}
                                   {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
                                     <TimeMenuItems
-                                      schema={schema}
-                                      table={table}
                                       columnName={columnData.COLUMN_NAME}
                                       parsedQuery={parsedQuery}
                                       onQueryChange={props.onQueryStringChange}
