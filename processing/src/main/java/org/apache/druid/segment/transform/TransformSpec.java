@@ -22,7 +22,6 @@ package org.apache.druid.segment.transform;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
@@ -116,11 +115,6 @@ public class TransformSpec
   public InputSourceReader decorate(InputSourceReader reader)
   {
     return new TransformingInputSourceReader(reader, toTransformer());
-  }
-
-  public InputEntityReader decorate(InputEntityReader reader)
-  {
-    return new TransformingInputEntityReader(reader, toTransformer());
   }
 
   /**
