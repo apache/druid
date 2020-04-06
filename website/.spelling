@@ -1723,3 +1723,7 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+ - ../docs/development/extensions-core/druid-ranger-security.md
+json
+metastore
+UserGroupInformation
