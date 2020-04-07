@@ -987,12 +987,20 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       final RemoteTaskRunnerWorkItem taskRunnerWorkItem;
       synchronized (statusLock) {
         try {
-          switch (event.getType()) { // lgtm [java/dereferenced-value-may-be-null]
+          switch (event.getType()) {
             case CHILD_ADDED:
             case CHILD_UPDATED:
-              taskId = ZKPaths.getNodeFromPath(event.getData().getPath()); // lgtm [java/dereferenced-value-may-be-null]
+              if (event.getData() == null) {
+                log.error("Unexpected null for event.getData() in handle new worker status for [%s]", event.getType().toString());
+                log.makeAlert("Unexpected null for event.getData() in handle new worker status")
+                   .addData("worker", zkWorker.getWorker().getHost())
+                   .addData("eventType", event.getType().toString())
+                   .emit();
+                return;
+              }
+              taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
               final TaskAnnouncement announcement = jsonMapper.readValue(
-                  event.getData().getData(), TaskAnnouncement.class // lgtm [java/dereferenced-value-may-be-null]
+                  event.getData().getData(), TaskAnnouncement.class
               );
 
               log.info(
@@ -1044,7 +1052,15 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               }
               break;
             case CHILD_REMOVED:
-              taskId = ZKPaths.getNodeFromPath(event.getData().getPath()); // lgtm [java/dereferenced-value-may-be-null]
+              if (event.getData() == null) {
+                log.error("Unexpected null for event.getData() in handle new worker status for [%s]", event.getType().toString());
+                log.makeAlert("Unexpected null for event.getData() in handle new worker status")
+                   .addData("worker", zkWorker.getWorker().getHost())
+                   .addData("eventType", event.getType().toString())
+                   .emit();
+                return;
+              }
+              taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
               taskRunnerWorkItem = runningTasks.remove(taskId);
               if (taskRunnerWorkItem != null) {
                 log.info("Task[%s] just disappeared!", taskId);
@@ -1078,17 +1094,13 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         }
         catch (Exception e) {
           String znode = null;
-          String eventType = null;
-          if (event != null) {
-            if (event.getData() != null) {
-              znode = event.getData().getPath();
-            }
-            eventType = event.getType().toString();
+          if (event.getData() != null) {
+            znode = event.getData().getPath();
           }
           log.makeAlert(e, "Failed to handle new worker status")
              .addData("worker", zkWorker.getWorker().getHost())
              .addData("znode", znode)
-             .addData("eventType", eventType)
+             .addData("eventType", event.getType().toString())
              .emit();
         }
       }
