@@ -52,9 +52,9 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   public ExpectedException expectedException = ExpectedException.none();
 
   private IntermediaryDataManager intermediaryDataManager;
-
   private File intermediarySegmentsLocation;
   private File siblingLocation;
+
   @Before
   public void setup() throws IOException
   {
