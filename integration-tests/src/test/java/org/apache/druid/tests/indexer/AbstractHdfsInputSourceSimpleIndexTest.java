@@ -49,9 +49,9 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
         )},
         {new Pair<>(INPUT_SOURCE_PATHS_KEY,
                     ImmutableList.of(
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data1%%FILE_EXTENSION%%",
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data2%%FILE_EXTENSION%%",
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data3%%FILE_EXTENSION%%"
+                        "hdfs://druid-it-hadoop:9000/batch_index%%FOLDER_SUFFIX%%/wikipedia_index_data1%%FILE_EXTENSION%%",
+                        "hdfs://druid-it-hadoop:9000/batch_index%%FOLDER_SUFFIX%%/wikipedia_index_data2%%FILE_EXTENSION%%",
+                        "hdfs://druid-it-hadoop:9000/batch_index%%FOLDER_SUFFIX%%/wikipedia_index_data3%%FILE_EXTENSION%%"
                     )
         )}
     };
