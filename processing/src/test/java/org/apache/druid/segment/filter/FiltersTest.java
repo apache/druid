@@ -25,7 +25,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -36,10 +35,6 @@ import java.util.List;
 
 public class FiltersTest extends InitializedNullHandlingTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void testEstimateSelectivityOfBitmapList()
   {
