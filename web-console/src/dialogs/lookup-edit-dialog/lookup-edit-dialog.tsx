@@ -27,27 +27,29 @@ import {
 } from '@blueprintjs/core';
 import React from 'react';
 
-import { AutoForm } from '../../components';
-// import { validJson } from '../../utils';
+import { AutoForm, Field } from '../../components';
 
 import './lookup-edit-dialog.scss';
-// import AceEditor from 'react-ace';
-
-// import {SnitchDialog} from "..";
 
 export interface ExtractionNamespaceSpec {
   type?: string;
   uri?: string;
   uriPrefix?: string;
-  namespaceParseSpec: NamespaceParseSpec;
+  fileRegex?: string;
+  namespaceParseSpec?: NamespaceParseSpec;
   namespace?: string;
-  connectorConfig?: string;
+  connectorConfig?: {
+    createTables: boolean;
+    connectURI: string;
+    user: string;
+    password: string;
+  };
   table?: string;
   keyColumn?: string;
   valueColumn?: string;
   filter?: any;
   tsColumn?: string;
-  pollPeriod?: string;
+  pollPeriod?: number | string;
 }
 
 export interface NamespaceParseSpec {
@@ -64,7 +66,7 @@ export interface NamespaceParseSpec {
 }
 
 export interface LookupSpec {
-  type: string;
+  type?: string;
   map?: {};
   extractionNamespace?: ExtractionNamespaceSpec;
   firstCacheTimeout?: number;
@@ -82,6 +84,62 @@ export interface LookupEditDialogProps {
   allLookupTiers: string[];
 }
 
+export function isDisabled(
+  lookupName?: string,
+  lookupVersion?: string,
+  lookupTier?: string,
+  lookupSpec?: LookupSpec,
+) {
+  let disableSubmit =
+    !lookupName ||
+    !lookupVersion ||
+    !lookupTier ||
+    !lookupSpec ||
+    !lookupName ||
+    lookupName === '' ||
+    lookupVersion === '' ||
+    lookupTier === '' ||
+    lookupSpec.type === '' ||
+    lookupSpec.type === undefined ||
+    (lookupSpec.type === 'map' && lookupSpec.map === undefined) ||
+    (lookupSpec.type === 'cachedNamespace' && lookupSpec.extractionNamespace === undefined);
+
+  if (
+    !disableSubmit &&
+    lookupSpec &&
+    lookupSpec.type === 'cachedNamespace' &&
+    lookupSpec.extractionNamespace
+  ) {
+    switch (lookupSpec.extractionNamespace.type) {
+      case 'uri':
+        const namespaceParseSpec = lookupSpec.extractionNamespace.namespaceParseSpec;
+        disableSubmit = !namespaceParseSpec;
+        if (!namespaceParseSpec) break;
+        switch (namespaceParseSpec.format) {
+          case 'csv':
+            disableSubmit = !namespaceParseSpec.columns && !namespaceParseSpec.skipHeaderRows;
+            break;
+          case 'tsv':
+            disableSubmit = !namespaceParseSpec.columns;
+            break;
+          case 'customJson':
+            disableSubmit = !namespaceParseSpec.keyFieldName || !namespaceParseSpec.valueFieldName;
+            break;
+        }
+        break;
+      case 'jdbc':
+        const extractionNamespace = lookupSpec.extractionNamespace;
+        disableSubmit =
+          !extractionNamespace.namespace ||
+          !extractionNamespace.connectorConfig ||
+          !extractionNamespace.table ||
+          !extractionNamespace.keyColumn ||
+          !extractionNamespace.valueColumn;
+        break;
+    }
+  }
+  return disableSubmit;
+}
 export const LookupEditDialog = React.memo(function LookupEditDialog(props: LookupEditDialogProps) {
   const {
     onClose,
@@ -136,45 +194,324 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
     }
   }
 
-  let disableSubmit =
-    lookupName === '' ||
-    lookupVersion === '' ||
-    lookupTier === '' ||
-    lookupSpec.type === '' ||
-    lookupSpec.type === undefined ||
-    (lookupSpec.type === 'map' && lookupSpec.map === undefined) ||
-    (lookupSpec.type === 'cachedNamespace' && lookupSpec.extractionNamespace === undefined);
-
-  if (!disableSubmit && lookupSpec.type === 'cachedNamespace' && lookupSpec.extractionNamespace) {
-    const namespaceParseSpec = lookupSpec.extractionNamespace.namespaceParseSpec;
-
-    switch (lookupSpec.extractionNamespace.type) {
-      case 'uri':
-        disableSubmit = !lookupSpec.extractionNamespace.namespaceParseSpec;
-        if (!disableSubmit) break;
-        switch (namespaceParseSpec.format) {
-          case 'csv':
-            disableSubmit = !namespaceParseSpec.columns && !namespaceParseSpec.skipHeaderRows;
-            break;
-          case 'tsv':
-            disableSubmit = !namespaceParseSpec.columns;
-            break;
-          case 'customJson':
-            disableSubmit = !namespaceParseSpec.keyFieldName && !namespaceParseSpec.valueFieldName;
-            break;
+  const fields = [
+    {
+      name: 'type',
+      type: 'string',
+      suggestions: ['map', 'cachedNamespace'],
+      adjustment: (model: LookupSpec) => {
+        if (model.type === 'map' && model.extractionNamespace && model.extractionNamespace.type) {
+          return model;
         }
-        break;
-      case 'jdbc':
-        const extractionNamespace = lookupSpec.extractionNamespace;
-        disableSubmit =
-          !extractionNamespace.namespace ||
-          !extractionNamespace.connectorConfig ||
-          !extractionNamespace.table ||
-          !extractionNamespace.keyColumn ||
-          !extractionNamespace.valueColumn;
-        break;
-    }
-  }
+        model.extractionNamespace = { type: 'uri', namespaceParseSpec: { format: 'csv' } };
+        return model;
+      },
+    },
+    {
+      name: 'map',
+      type: 'json',
+      defined: (model: LookupSpec) => {
+        return model.type === 'map';
+      },
+    },
+    {
+      name: 'extractionNamespace.type',
+      type: 'string',
+      label: 'Globally cached lookup type',
+      placeholder: 'uri',
+      suggestions: ['uri', 'jdbc'],
+      defined: (model: LookupSpec) => model.type === 'cachedNamespace',
+    },
+    {
+      name: 'extractionNamespace.uriPrefix',
+      type: 'string',
+      label: 'URI prefix',
+      info:
+        'A URI which specifies a directory (or other searchable resource) in which to search for files',
+      placeholder: 's3://bucket/some/key/prefix/',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri',
+    },
+    {
+      name: 'extractionNamespace.fileRegex',
+      type: 'string',
+      label: 'File regex',
+      placeholder: 'renames-[0-9]*\\.gz',
+      info:
+        'Optional regex for matching the file name under uriPrefix. Only used if uriPrefix is used',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri',
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.format',
+      type: 'string',
+      label: 'Format',
+      defaultValue: 'csv',
+      suggestions: ['csv', 'tsv', 'customJson', 'simpleJson'],
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri',
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.columns',
+      type: 'string-array',
+      label: 'Columns',
+      placeholder: `["key", "value"]`,
+      info: 'The list of columns in the csv file',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
+          model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.keyColumn',
+      type: 'string',
+      label: 'Key column',
+      placeholder: 'Key',
+      info: 'The name of the column containing the key',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
+          model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.valueColumn',
+      type: 'string',
+      label: 'Value column',
+      placeholder: 'Value',
+      info: 'The name of the column containing the value',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
+          model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.hasHeaderRow',
+      type: 'boolean',
+      label: 'Has header row',
+      defaultValue: false,
+      info: `A flag to indicate that column information can be extracted from the input files' header row`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
+          model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.skipHeaderRows',
+      type: 'number',
+      label: 'Skip header rows',
+      placeholder: '0',
+      info: `Number of header rows to be skipped. The default number of header rows to be skipped is 0.`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
+          model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.delimiter',
+      type: 'string',
+      label: 'Delimiter',
+      placeholder: `\t`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        model.extractionNamespace.namespaceParseSpec.format === 'tsv',
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.listDelimiter',
+      type: 'string',
+      label: 'List delimiter',
+      placeholder: `\u0001`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        model.extractionNamespace.namespaceParseSpec.format === 'tsv',
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.keyFieldName',
+      type: 'string',
+      label: 'Key field name',
+      placeholder: `key`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        model.extractionNamespace.namespaceParseSpec.format === 'customJson',
+    },
+    {
+      name: 'extractionNamespace.namespaceParseSpec.valueFieldName',
+      type: 'string',
+      label: 'Value field name',
+      placeholder: `value`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri' &&
+        model.extractionNamespace.namespaceParseSpec &&
+        model.extractionNamespace.namespaceParseSpec.format === 'customJson',
+    },
+    {
+      name: 'extractionNamespace.namespace',
+      type: 'string',
+      label: 'Namespace',
+      placeholder: 'some_lookup',
+      info: `The namespace value in the SLQ query:
+      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE filter`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.connectorConfig.createTables',
+      type: 'boolean',
+      label: 'CreateTables',
+      info: 'Defines the connectURI value on the The connector config to used',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.connectorConfig.connectURI',
+      type: 'string',
+      label: 'ConnectURI',
+      info: 'Defines the connectURI value on the The connector config to used',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.connectorConfig.user',
+      type: 'string',
+      label: 'User',
+      info: 'Defines the user too be used by the connector config',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.connectorConfig.password',
+      type: 'string',
+      label: 'Password',
+      info: 'Defines the password too be used by the connector config',
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.table',
+      type: 'string',
+      label: 'Table',
+      placeholder: 'some_lookup_table',
+      info: `The table which contains the key value pairs. This will become the table value in the SLQ query:
+      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE filter\``,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.keyColumn',
+      type: 'string',
+      label: 'Key column',
+      placeholder: 'my_key_value',
+      info: `The column in table which contains the keys. This will become the keyColumn value in the sql query: 
+      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE filter`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.valueColumn',
+      type: 'string',
+      label: 'Value column',
+      placeholder: 'my_column_value',
+      info: `The column in table which contains the values. This will become the valueColumn value in the sql query: 
+      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE filter`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.filter',
+      type: 'string',
+      label: 'Filter',
+      info: `The filter to use when selecting lookups, this is used to create a where clause on lookup population. This will become the expression filter  in the sql query: 
+      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE filter\``,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.tsColumn',
+      type: 'string',
+      label: 'TsColumn',
+      info: `The column in table which contains when the key was updated. This is become the TsColumn Value in the SQL query: 
+      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE filter`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'jdbc',
+    },
+    {
+      name: 'extractionNamespace.pollPeriod',
+      type: 'string',
+      label: 'Poll period',
+      placeholder: 'PT5M',
+      info: `Period between polling for updates`,
+      defined: (model: LookupSpec) =>
+        model.type === 'cachedNamespace' &&
+        !!model.extractionNamespace &&
+        model.extractionNamespace.type === 'uri',
+    },
+    {
+      name: 'firstCacheTimeout',
+      type: 'number',
+      label: 'First cache timeout',
+      placeholder: '0',
+      info: `How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait`,
+      defined: (model: LookupSpec) => model.type === 'cachedNamespace',
+    },
+    {
+      name: 'injective',
+      type: 'boolean',
+      defaultValue: false,
+      info: `If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to true`,
+      defined: (model: LookupSpec) => model.type === 'cachedNamespace',
+    },
+  ];
 
   return (
     <Dialog
@@ -203,287 +540,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
         />
       </FormGroup>
       <AutoForm
-        fields={[
-          {
-            name: 'type',
-            type: 'string',
-            suggestions: ['map', 'cachedNamespace'],
-            adjustment: model => {
-              if (
-                model.type === 'map' &&
-                model.extractionNamespace &&
-                model.extractionNamespace.type
-              ) {
-                return model;
-              }
-              model.extractionNamespace = { type: 'uri', namespaceParseSpec: { format: 'csv' } };
-              return model;
-            },
-          },
-          {
-            name: 'map',
-            type: 'json',
-            defined: model => {
-              return model.type === 'map';
-            },
-          },
-          {
-            name: 'extractionNamespace.type',
-            type: 'string',
-            label: 'Globally cached lookup type',
-            placeholder: 'uri',
-            suggestions: ['uri', 'jdbc'],
-            defined: model => model.type === 'cachedNamespace',
-          },
-          {
-            name: 'extractionNamespace.uriPrefix',
-            type: 'string',
-            label: 'URI prefix',
-            info:
-              'A URI which specifies a directory (or other searchable resource) in which to search for files',
-            placeholder: 's3://bucket/some/key/prefix/',
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri',
-          },
-          {
-            name: 'extractionNamespace.fileRegex',
-            type: 'string',
-            label: 'File regex',
-            placeholder: 'renames-[0-9]*\\.gz',
-            info:
-              'Optional regex for matching the file name under uriPrefix. Only used if uriPrefix is used',
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri',
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.format',
-            type: 'string',
-            label: 'Format',
-            defaultValue: 'csv',
-            suggestions: ['csv', 'tsv', 'customJson', 'simpleJson'],
-            // todo needs info
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri',
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.columns',
-            type: 'string-array',
-            label: 'Columns',
-            placeholder: `["key", "value"]`,
-            info: 'The list of columns in the csv file',
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
-                model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.keyColumn',
-            type: 'string',
-            label: 'Key column',
-            placeholder: 'Key',
-            info: 'The name of the column containing the key',
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
-                model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.valueColumn',
-            type: 'string',
-            label: 'Value column',
-            placeholder: 'Value',
-            info: 'The name of the column containing the value',
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
-                model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.hasHeaderRow',
-            type: 'boolean',
-            label: 'Has header row',
-            defaultValue: false,
-            info: `A flag to indicate that column information can be extracted from the input files' header row`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
-                model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.skipHeaderRows',
-            type: 'number',
-            label: 'Skip header rows',
-            placeholder: '0',
-            info: `Number of header rows to be skipped`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              (model.extractionNamespace.namespaceParseSpec.format === 'csv' ||
-                model.extractionNamespace.namespaceParseSpec.format === 'tsv'),
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.delimiter',
-            type: 'string',
-            label: 'Delimiter',
-            placeholder: `\t`,
-            info: `The delimiter in the file`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              model.extractionNamespace.namespaceParseSpec.format === 'tsv',
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.listDelimiter',
-            type: 'string',
-            label: 'List delimiter',
-            placeholder: `\u0001`,
-            info: `The list delimiter in the file\t`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              model.extractionNamespace.namespaceParseSpec.format === 'tsv',
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.keyFieldName',
-            type: 'string',
-            label: 'Key field name',
-            placeholder: `key`,
-            info: `The field name of the key`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              model.extractionNamespace.namespaceParseSpec.format === 'customJson',
-          },
-          {
-            name: 'extractionNamespace.namespaceParseSpec.valueFieldName',
-            type: 'string',
-            label: 'Value field name',
-            placeholder: `value`,
-            info: `The field name of the value`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri' &&
-              model.extractionNamespace.namespaceParseSpec &&
-              model.extractionNamespace.namespaceParseSpec.format === 'customJson',
-          },
-          {
-            name: 'extractionNamespace.namespace',
-            type: 'string',
-            label: 'Namespace',
-            placeholder: 'some_lookup',
-            info: `The namespace to define`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'jdbc',
-          },
-          {
-            name: 'extractionNamespace.table',
-            type: 'string',
-            label: 'Table',
-            placeholder: 'some_lookup_table',
-            info: `The table which contains the key value pairs`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'jdbc',
-          },
-          {
-            name: 'extractionNamespace.keyColumn',
-            type: 'string',
-            label: 'Key column',
-            placeholder: 'the_old_dim_value',
-            info: `The column in table which contains the keys`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'jdbc',
-          },
-          {
-            name: 'extractionNamespace.valueColumn',
-            type: 'string',
-            label: 'Value column',
-            placeholder: 'the_new_dim_value',
-            info: `The column in table which contains the values`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'jdbc',
-          },
-          {
-            name: 'extractionNamespace.filter',
-            type: 'json',
-            label: 'Filter',
-            info: `The filter to use when selecting lookups, this is used to create a where clause on lookup population`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'jdbc',
-          },
-          {
-            name: 'extractionNamespace.tsColumn',
-            type: 'string',
-            label: 'TsColumn',
-            info: `The column in table which contains when the key was updated`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'jdbc',
-          },
-          {
-            name: 'extractionNamespace.pollPeriod',
-            type: 'string',
-            label: 'Poll Period',
-            placeholder: 'PT5M',
-            info: `Period between polling for updates`,
-            defined: model =>
-              model.type === 'cachedNamespace' &&
-              !!model.extractionNamespace &&
-              model.extractionNamespace.type === 'uri',
-          },
-          {
-            name: 'firstCacheTimeout',
-            type: 'number',
-            label: 'First cache timeout',
-            placeholder: '0',
-            info: `How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait`,
-            defined: model => model.type === 'cachedNamespace',
-          },
-          {
-            name: 'injective',
-            type: 'boolean',
-            defaultValue: false,
-            info: `If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to true`,
-            defined: model => model.type === 'cachedNamespace',
-          },
-        ]}
+        fields={fields as Field<LookupSpec>[]}
         model={lookupSpec}
         onChange={m => {
           onChange('lookupEditSpec', m);
@@ -498,7 +555,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
             onClick={() => {
               onSubmit(updateVersionOnSubmit && isEdit);
             }}
-            disabled={disableSubmit}
+            disabled={isDisabled(lookupName, lookupVersion, lookupTier, lookupSpec)}
           />
         </div>
       </div>
