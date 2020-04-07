@@ -64,6 +64,12 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
   }
 
   @Override
+  public String getTypeName()
+  {
+    return "histogram";
+  }
+
+  @Override
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
     return this;

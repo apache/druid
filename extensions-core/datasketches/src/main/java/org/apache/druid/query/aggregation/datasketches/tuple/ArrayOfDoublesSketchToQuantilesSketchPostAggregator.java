@@ -82,6 +82,12 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
     return qs;
   }
 
+  @Override
+  public String getTypeName()
+  {
+    return "doublesSketch";
+  }
+
   @JsonProperty
   public int getColumn()
   {

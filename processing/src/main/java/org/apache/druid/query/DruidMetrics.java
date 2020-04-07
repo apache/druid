@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
 
@@ -45,9 +46,7 @@ public class DruidMetrics
   {
     int retVal = 0;
     for (AggregatorFactory agg : aggs) {
-      // This needs to change when we have support column types better
-      if (!"float".equals(agg.getTypeName()) && !"long".equals(agg.getTypeName()) && !"double"
-          .equals(agg.getTypeName())) {
+      if (ValueType.COMPLEX.equals(agg.getType())) {
         retVal++;
       }
     }

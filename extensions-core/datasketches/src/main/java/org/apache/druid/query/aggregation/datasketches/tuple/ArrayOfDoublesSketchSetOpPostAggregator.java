@@ -81,6 +81,12 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
     return operation.apply(nominalEntries, numberOfValues, sketches);
   }
 
+  @Override
+  public String getTypeName()
+  {
+    return "arrayOfDoublesSketch";
+  }
+
   @JsonProperty
   public String getOperation()
   {

@@ -32,6 +32,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -185,7 +186,7 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "long";
+    return ValueType.LONG.toString();
   }
 
   @Override

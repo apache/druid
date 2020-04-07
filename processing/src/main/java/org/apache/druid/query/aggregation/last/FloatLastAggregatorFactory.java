@@ -38,6 +38,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -271,7 +272,13 @@ public class FloatLastAggregatorFactory extends AggregatorFactory
   public String getTypeName()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return "float";
+    return ValueType.FLOAT.toString();
+  }
+
+  @Override
+  public String getFinalizedTypeName()
+  {
+    return ValueType.FLOAT.toString();
   }
 
   @Override

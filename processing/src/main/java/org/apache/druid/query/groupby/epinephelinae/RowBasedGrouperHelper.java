@@ -860,8 +860,7 @@ public class RowBasedGrouperHelper
             fieldIndices.add(aggIndex);
             needsReverses.add(needsReverse);
             aggFlags.add(true);
-            final String typeName = aggregatorFactories[aggIndex].getTypeName();
-            isNumericField.add(ValueType.isNumeric(ValueType.fromString(typeName)));
+            isNumericField.add(aggregatorFactories[aggIndex].getType().isNumeric());
             comparators.add(orderSpec.getDimensionComparator());
           }
         }

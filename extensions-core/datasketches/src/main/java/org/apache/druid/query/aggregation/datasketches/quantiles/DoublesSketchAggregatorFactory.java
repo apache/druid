@@ -254,6 +254,12 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getFinalizedTypeName()
+  {
+    return ValueType.LONG.toString();
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(cacheTypeId).appendString(name).appendString(fieldName).appendInt(k).build();

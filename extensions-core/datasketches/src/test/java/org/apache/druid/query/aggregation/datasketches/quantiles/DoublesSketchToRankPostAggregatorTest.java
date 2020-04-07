@@ -19,10 +19,16 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -74,5 +80,35 @@ public class DoublesSketchToRankPostAggregatorTest
 
     final double rank = (double) postAgg.compute(fields);
     Assert.assertEquals(0.5, rank, 0);
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new DoublesSketchAggregatorFactory("sketch", "col", 8)
+              )
+              .postAggregators(
+                  new DoublesSketchToRankPostAggregator(
+                      "a",
+                      new FieldAccessPostAggregator("field", "sketch"),
+                      4
+                  )
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("sketch", null)
+                    .add("a", ValueType.DOUBLE)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

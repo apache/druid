@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -149,7 +150,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "string";
+    return ValueType.STRING.toString();
   }
 
   @Override

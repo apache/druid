@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -214,18 +216,36 @@ public abstract class AggregatorFactory implements Cacheable
    * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
    * returned by {@link #finalizeComputation}.
    *
-   * If the type is complex (i.e. not a simple, numeric {@link org.apache.druid.segment.column.ValueType}) then there
+   * If the type is complex (i.e. not a simple, numeric {@link ValueType}) then there
    * must be a corresponding {@link org.apache.druid.segment.serde.ComplexMetricSerde} which was registered with
    * {@link org.apache.druid.segment.serde.ComplexMetrics#registerSerde} using this type name.
    *
-   * If you need a ValueType enum corresponding to this aggregator, a good way to do that is:
-   *
-   * <pre>
-   *   Optional.ofNullable(GuavaUtils.getEnumIfPresent(ValueType.class, aggregator.getTypeName()))
-   *           .orElse(ValueType.COMPLEX);
-   * </pre>
+   * If you need a ValueType enum corresponding to this aggregator, use {@link #getTypeName} instead.
    */
   public abstract String getTypeName();
+
+  /**
+   * Get the type name for the 'finalized' type for this aggregator, i.e. the type of the value returned by
+   * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
+   * and {@link #combine}.
+   *
+   * If you need a ValueType enum corresponding to this aggregator, use {@link #getFinalizedType} instead.
+   */
+  //public abstract String getFinalizedTypeName();
+  public String getFinalizedTypeName()
+  {
+    return getTypeName();
+  }
+
+  public ValueType getType()
+  {
+    return ValueTypes.aggregatorTypeNameToType(getTypeName());
+  }
+
+  public ValueType getFinalizedType()
+  {
+    return ValueTypes.aggregatorTypeNameToType(getFinalizedTypeName());
+  }
 
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.

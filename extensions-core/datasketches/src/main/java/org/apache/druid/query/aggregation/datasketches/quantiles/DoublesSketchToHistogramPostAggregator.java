@@ -75,6 +75,12 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
     return name;
   }
 
+  @Override
+  public String getTypeName()
+  {
+    return "doublesSketch";
+  }
+
   @JsonProperty
   public PostAggregator getField()
   {

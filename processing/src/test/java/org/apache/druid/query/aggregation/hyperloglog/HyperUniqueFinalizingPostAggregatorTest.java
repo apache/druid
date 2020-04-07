@@ -23,8 +23,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -86,5 +93,37 @@ public class HyperUniqueFinalizingPostAggregatorTest
 
     Assert.assertThat(cardinality, CoreMatchers.instanceOf(Long.class));
     Assert.assertEquals(99L, cardinality);
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count"),
+                  new HyperUniquesAggregatorFactory("approxCount", "col"),
+                  new HyperUniquesAggregatorFactory("approxCountRound", "col", false, true)
+              )
+              .postAggregators(
+                  new HyperUniqueFinalizingPostAggregator("a", "approxCount"),
+                  new HyperUniqueFinalizingPostAggregator("b", "approxCountRound")
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ValueType.LONG)
+                    .add("approxCount", null)
+                    .add("approxCountRound", null)
+                    .add("a", ValueType.DOUBLE)
+                    .add("b", ValueType.LONG)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

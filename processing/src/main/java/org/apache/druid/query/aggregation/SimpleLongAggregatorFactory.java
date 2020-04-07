@@ -125,7 +125,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
   @Override
   public String getTypeName()
   {
-    return "long";
+    return ValueType.LONG.toString();
   }
 
   @Override

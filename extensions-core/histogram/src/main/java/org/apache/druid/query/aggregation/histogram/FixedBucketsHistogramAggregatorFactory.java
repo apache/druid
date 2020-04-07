@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -249,6 +250,12 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   public String getTypeName()
   {
     return FixedBucketsHistogramAggregator.TYPE_NAME;
+  }
+
+  @Override
+  public String getFinalizedTypeName()
+  {
+    return ValueType.STRING.toString();
   }
 
   @Override

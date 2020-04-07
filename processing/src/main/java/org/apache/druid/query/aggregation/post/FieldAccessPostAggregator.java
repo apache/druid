@@ -26,9 +26,9 @@ import com.google.common.collect.Sets;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +40,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Nullable
   private final String name;
   private final String fieldName;
+  private final String typeName;
 
   @JsonCreator
   public FieldAccessPostAggregator(
@@ -47,9 +48,15 @@ public class FieldAccessPostAggregator implements PostAggregator
       @JsonProperty("fieldName") String fieldName
   )
   {
+    this(name, fieldName, ValueTypes.defaultAggregationTypeName());
+  }
+
+  private FieldAccessPostAggregator(@Nullable String name, String fieldName, String typeName)
+  {
     Preconditions.checkNotNull(fieldName);
     this.name = name;
     this.fieldName = fieldName;
+    this.typeName = typeName;
   }
 
   @Override
@@ -79,9 +86,27 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
+  public String getTypeName()
+  {
+    return typeName;
+  }
+
+  @Override
   public FieldAccessPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    return this;
+    final String typeName;
+
+    if (aggregators != null && aggregators.containsKey(fieldName)) {
+      typeName = aggregators.get(fieldName).getTypeName();
+    } else {
+      typeName = ValueTypes.defaultAggregationTypeName();
+    }
+
+    return new FieldAccessPostAggregator(
+        name,
+        fieldName,
+        typeName
+    );
   }
 
   @Override

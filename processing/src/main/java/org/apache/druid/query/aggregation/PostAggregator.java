@@ -21,6 +21,8 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -42,6 +44,13 @@ public interface PostAggregator extends Cacheable
 
   @Nullable
   String getName();
+
+  String getTypeName();
+
+  default ValueType getType()
+  {
+    return ValueTypes.aggregatorTypeNameToType(getTypeName());
+  }
 
   /**
    * Returns a richer post aggregator which are built from the given aggregators with their names and some accessible

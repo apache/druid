@@ -93,6 +93,12 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getFinalizedTypeName()
+  {
+    return ValueType.DOUBLE.toString();
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return VarianceAggregatorCollector.getMaxIntermediateSize();

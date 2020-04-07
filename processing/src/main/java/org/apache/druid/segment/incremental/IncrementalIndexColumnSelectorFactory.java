@@ -29,6 +29,7 @@ import org.apache.druid.segment.SingleScanTimeDimensionSelector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
 
@@ -85,7 +86,8 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory
         return DimensionSelector.constant(null, extractionFn);
       }
       if (capabilities.getType().isNumeric()) {
-        return capabilities.getType().makeNumericWrappingDimensionSelector(
+        return ValueTypes.makeNumericWrappingDimensionSelector(
+            capabilities.getType(),
             makeColumnValueSelector(dimension),
             extractionFn
         );

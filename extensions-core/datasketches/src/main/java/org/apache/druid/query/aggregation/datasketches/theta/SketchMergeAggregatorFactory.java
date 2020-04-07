@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -145,6 +146,18 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     } else {
       return SketchModule.THETA_SKETCH_BUILD_AGG;
     }
+  }
+
+  @Override
+  public String getFinalizedTypeName()
+  {
+    if (shouldFinalize) {
+      if (errorBoundsStdDev != null) {
+        return "estimateWithErrorBounds";
+      }
+      return ValueType.DOUBLE.toString();
+    }
+    return getTypeName();
   }
 
   @Override

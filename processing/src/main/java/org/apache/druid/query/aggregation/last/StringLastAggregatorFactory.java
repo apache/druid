@@ -38,6 +38,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -217,6 +218,12 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   public String getTypeName()
   {
     return "serializablePairLongString";
+  }
+
+  @Override
+  public String getFinalizedTypeName()
+  {
+    return ValueType.STRING.name();
   }
 
   @Override

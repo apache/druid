@@ -23,10 +23,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -206,7 +204,7 @@ public class RowSignature
     public Builder add(final String columnName, @Nullable final ValueType columnType)
     {
       // Name must be nonnull, but type can be null (if the type is unknown)
-      Preconditions.checkNotNull(columnName, "'columnName' must be nonnull");
+      Preconditions.checkNotNull(columnName, "'columnName' must be non-null");
       columnTypeList.add(Pair.of(columnName, columnType));
       return this;
     }
@@ -237,21 +235,14 @@ public class RowSignature
     public Builder addAggregators(final List<AggregatorFactory> aggregators)
     {
       for (final AggregatorFactory aggregator : aggregators) {
-        final ValueType type = GuavaUtils.getEnumIfPresent(
-            ValueType.class,
-            StringUtils.toUpperCase(aggregator.getTypeName())
-        );
+        final ValueType type = aggregator.getType();
 
-        // Use null instead of COMPLEX for nonnumeric types, since in that case, the type depends on whether or not
-        // the aggregator is finalized, and we don't know (a) if it will be finalized, or even (b) what the type would
-        // be if it were finalized. So null (i.e. unknown) is the proper thing to do.
-        //
-        // Another note: technically, we don't know what the finalized type will be even if the type here is numeric,
-        // but we're assuming that it doesn't change upon finalization. All builtin aggregators work this way.
-
-        if (type != null && type.isNumeric()) {
+        // Use null instead of COMPLEX for non-primitive and non-scalar types, since in that case, the type depends on
+        // whether or not the aggregator is finalized, and we don't know if it will be finalized
+        if (type.isPrimitiveScalar() && type.equals(aggregator.getFinalizedType())) {
           add(aggregator.getName(), type);
         } else {
+          // either complex type or finalized to a different type
           add(aggregator.getName(), null);
         }
       }
@@ -268,8 +259,8 @@ public class RowSignature
             "postAggregators must have nonnull names"
         );
 
-        // PostAggregators don't have known types; use null for the type.
-        add(name, null);
+        // unlike aggregators, the type we see here is what we get, no further finalization will occur
+        add(name, postAggregator.getType());
       }
 
       return this;

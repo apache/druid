@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -36,6 +37,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
 {
   private final String name;
   private final String fieldName;
+  private final String finalizedTypeName;
   private final Comparator<Object> comparator;
   private final Function<Object, Object> finalizer;
 
@@ -45,18 +47,20 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
       @JsonProperty("fieldName") String fieldName
   )
   {
-    this(name, fieldName, null, null);
+    this(name, fieldName, null, null, null);
   }
 
   private FinalizingFieldAccessPostAggregator(
       final String name,
       final String fieldName,
+      final String finalizedTypeName,
       final Comparator<Object> comparator,
       final Function<Object, Object> finalizer
   )
   {
     this.name = name;
     this.fieldName = fieldName;
+    this.finalizedTypeName = finalizedTypeName;
     this.comparator = comparator;
     this.finalizer = finalizer;
   }
@@ -95,28 +99,34 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
+  public String getTypeName()
+  {
+    return finalizedTypeName;
+  }
+
+  @Override
   public FinalizingFieldAccessPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
     final Comparator<Object> theComparator;
     final Function<Object, Object> theFinalizer;
+    final String finalizedTypeName;
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {
       //noinspection unchecked
       theComparator = aggregators.get(fieldName).getComparator();
+      theFinalizer = aggregators.get(fieldName)::finalizeComputation;
+      finalizedTypeName = aggregators.get(fieldName).getFinalizedTypeName();
     } else {
       //noinspection unchecked
       theComparator = (Comparator) Comparators.naturalNullsFirst();
-    }
-
-    if (aggregators != null && aggregators.containsKey(fieldName)) {
-      theFinalizer = aggregators.get(fieldName)::finalizeComputation;
-    } else {
       theFinalizer = Function.identity();
+      finalizedTypeName = ValueType.DOUBLE.toString();
     }
 
     return new FinalizingFieldAccessPostAggregator(
         name,
         fieldName,
+        finalizedTypeName,
         theComparator,
         theFinalizer
     );

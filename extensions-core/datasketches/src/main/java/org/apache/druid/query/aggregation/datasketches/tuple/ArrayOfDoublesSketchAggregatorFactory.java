@@ -41,6 +41,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -299,6 +300,12 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
       return ArrayOfDoublesSketchModule.ARRAY_OF_DOUBLES_SKETCH_MERGE_AGG;
     }
     return ArrayOfDoublesSketchModule.ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG;
+  }
+
+  @Override
+  public String getFinalizedTypeName()
+  {
+    return ValueType.DOUBLE.toString();
   }
 
   @Override

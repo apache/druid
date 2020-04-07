@@ -93,6 +93,12 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
   }
 
   @Override
+  public String getTypeName()
+  {
+    return "quantiles";
+  }
+
+  @Override
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
     return this;

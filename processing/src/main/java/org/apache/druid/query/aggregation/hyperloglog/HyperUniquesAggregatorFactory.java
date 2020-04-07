@@ -273,6 +273,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getFinalizedTypeName()
+  {
+    return round ? ValueType.LONG.toString() : ValueType.DOUBLE.toString();
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return HyperLogLogCollector.getLatestNumBytesForDenseStorage();

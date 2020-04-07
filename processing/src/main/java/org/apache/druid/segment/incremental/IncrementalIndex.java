@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
@@ -32,7 +31,6 @@ import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -42,7 +40,6 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -103,19 +100,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 {
   private volatile DateTime maxIngestedEventTime;
 
-  // Used to discover ValueType based on the class of values in a row
-  // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
-  public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
-      .put(Long.class, ValueType.LONG)
-      .put(Double.class, ValueType.DOUBLE)
-      .put(Float.class, ValueType.FLOAT)
-      .put(String.class, ValueType.STRING)
-      .put(DimensionSchema.ValueType.LONG, ValueType.LONG)
-      .put(DimensionSchema.ValueType.FLOAT, ValueType.FLOAT)
-      .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
-      .put(DimensionSchema.ValueType.DOUBLE, ValueType.DOUBLE)
-      .build();
-
   /**
    * Column selector used at ingestion time for inputs to aggregators.
    *
@@ -145,9 +129,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
         final String typeName = agg.getTypeName();
-        final boolean isComplexMetric =
-            GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)) == null ||
-            typeName.equalsIgnoreCase(ValueType.COMPLEX.name());
+        final boolean isComplexMetric = ValueType.COMPLEX.equals(agg.getType());
 
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
 
@@ -308,7 +290,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
-      ValueType type = TYPE_MAP.get(dimSchema.getValueType());
+      ValueType type = dimSchema.getValueType();
       String dimName = dimSchema.getName();
       ColumnCapabilitiesImpl capabilities = makeCapabilitiesFromValueType(type);
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
@@ -1116,21 +1098,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       this.index = index;
       this.name = factory.getName();
+      this.capabilities = new ColumnCapabilitiesImpl().setIsComplete(true);
+      capabilities.setType(factory.getType());
 
       String typeInfo = factory.getTypeName();
-      this.capabilities = new ColumnCapabilitiesImpl().setIsComplete(true);
-      if ("float".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.FLOAT);
-        this.type = typeInfo;
-      } else if ("long".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.LONG);
-        this.type = typeInfo;
-      } else if ("double".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.DOUBLE);
+      if (factory.getType().isPrimitiveScalar()) {
         this.type = typeInfo;
       } else {
-        capabilities.setType(ValueType.COMPLEX);
-        this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
+        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeInfo);
+        if (serde != null) {
+          this.type = serde.getTypeName();
+        } else {
+          throw new ISE("Don't know how to handle type[%s]", typeInfo);
+        }
       }
     }
 

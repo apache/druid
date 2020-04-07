@@ -85,6 +85,6 @@ class SimpleColumnHolder implements ColumnHolder
   @Override
   public SettableColumnValueSelector makeNewSettableColumnValueSelector()
   {
-    return getCapabilities().getType().makeNewSettableColumnValueSelector();
+    return ValueTypes.makeNewSettableColumnValueSelector(getCapabilities().getType());
   }
 }

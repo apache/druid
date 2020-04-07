@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -79,6 +80,12 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   public String getTypeName()
   {
     return "doubleMean";
+  }
+
+  @Override
+  public String getFinalizedTypeName()
+  {
+    return ValueType.DOUBLE.toString();
   }
 
   @Override

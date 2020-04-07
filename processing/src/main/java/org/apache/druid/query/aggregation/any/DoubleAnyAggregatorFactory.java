@@ -33,6 +33,7 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -189,7 +190,7 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return storeDoubleAsFloat ? "float" : "double";
+    return storeDoubleAsFloat ? ValueType.FLOAT.toString() : ValueType.DOUBLE.toString();
   }
 
   @Override

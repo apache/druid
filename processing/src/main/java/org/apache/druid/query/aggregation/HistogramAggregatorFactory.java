@@ -207,6 +207,12 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getFinalizedTypeName()
+  {
+    return "histogramVisual";
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return Long.BYTES * (breaks.length + 1) + Float.BYTES * 2;

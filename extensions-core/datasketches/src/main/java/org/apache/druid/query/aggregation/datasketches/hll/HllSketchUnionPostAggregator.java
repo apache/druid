@@ -70,6 +70,12 @@ public class HllSketchUnionPostAggregator implements PostAggregator
     return name;
   }
 
+  @Override
+  public String getTypeName()
+  {
+    return "hllSketch";
+  }
+
   @JsonProperty
   public List<PostAggregator> getFields()
   {

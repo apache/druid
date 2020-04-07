@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -82,6 +83,12 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
       float x = fbh.percentilesFloat(new double[]{probability * 100.0})[0];
       return x;
     }
+  }
+
+  @Override
+  public String getTypeName()
+  {
+    return ValueType.FLOAT.toString();
   }
 
   @Override

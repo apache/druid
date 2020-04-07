@@ -95,6 +95,12 @@ public class SketchSetPostAggregator implements PostAggregator
   }
 
   @Override
+  public String getTypeName()
+  {
+    return SketchModule.THETA_SKETCH;
+  }
+
+  @Override
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
     return this;

@@ -78,6 +78,12 @@ public class SketchConstantPostAggregator implements PostAggregator
   }
 
   @Override
+  public String getTypeName()
+  {
+    return SketchModule.THETA_SKETCH;
+  }
+
+  @Override
   public SketchConstantPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
     return this;

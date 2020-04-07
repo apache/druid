@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -103,6 +104,12 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public String getTypeName()
+  {
+    return ValueType.DOUBLE.toString();
   }
 
   @Override

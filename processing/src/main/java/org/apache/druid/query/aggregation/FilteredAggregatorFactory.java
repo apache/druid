@@ -186,6 +186,12 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getFinalizedTypeName()
+  {
+    return delegate.getFinalizedTypeName();
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return delegate.getMaxIntermediateSizeWithNulls();

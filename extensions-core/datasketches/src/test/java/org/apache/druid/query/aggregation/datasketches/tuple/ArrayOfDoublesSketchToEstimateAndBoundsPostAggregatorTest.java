@@ -75,5 +75,4 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregatorTest
     );
     Assert.assertFalse(postAgg1.equals(postAgg5));
   }
-
 }
