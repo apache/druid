@@ -87,7 +87,11 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
               "%%PATH%%",
               config.getCloudPath()
           );
-
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT_TYPE%%",
+              InputFormatDetails.JSON.getInputFormatType()
+          );
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",

@@ -71,7 +71,7 @@
         "%%INPUT_SOURCE_PROPERTY_KEY%%": %%INPUT_SOURCE_PROPERTY_VALUE%%
       },
       "inputFormat": {
-        "type": "json"
+        "type": "%%INPUT_FORMAT_TYPE%%"
       }
     },
     "tuningConfig": {

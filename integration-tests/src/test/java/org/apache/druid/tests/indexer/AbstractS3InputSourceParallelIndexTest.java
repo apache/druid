@@ -87,7 +87,11 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractITB
               "%%PATH%%",
               config.getCloudPath()
           );
-
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT_TYPE%%",
+              InputFormatDetails.JSON.getInputFormatType()
+          );
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
