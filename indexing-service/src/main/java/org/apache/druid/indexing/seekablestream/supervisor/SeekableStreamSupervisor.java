@@ -430,13 +430,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  // Map<{group RandomIdUtils}, {actively reading task group}>; see documentation for TaskGroup class
+  // Map<{group id}, {actively reading task group}>; see documentation for TaskGroup class
   private final ConcurrentHashMap<Integer, TaskGroup> activelyReadingTaskGroups = new ConcurrentHashMap<>();
 
   // After telling a taskGroup to stop reading and begin publishing a segment, it is moved from [activelyReadingTaskGroups] to here so
   // we can monitor its status while we queue new tasks to read the next range of sequences. This is a list since we could
   // have multiple sets of tasks publishing at once if time-to-publish > taskDuration.
-  // Map<{group RandomIdUtils}, List<{pending completion task groups}>>
+  // Map<{group id}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
 
   // We keep two separate maps for tracking the current state of partition->task group mappings [partitionGroups] and partition->offset
@@ -998,7 +998,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
     if (activelyReadingTaskGroups.putIfAbsent(taskGroupId, group) != null) {
       throw new ISE(
-          "trying to add taskGroup with RandomIdUtils [%s] to actively reading task groups, but group already exists.",
+          "trying to add taskGroup with id [%s] to actively reading task groups, but group already exists.",
           taskGroupId
       );
     }
