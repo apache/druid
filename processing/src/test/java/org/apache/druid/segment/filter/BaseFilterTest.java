@@ -336,7 +336,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final DimFilter maybeOptimized = optimize ? dimFilter.optimize() : dimFilter;
     final Filter filter = maybeOptimized.toFilter();
-    return cnf ? Filters.toCNF(filter) : filter;
+    return cnf ? CnfHelper.toCnf(filter) : filter;
   }
 
   private DimFilter maybeOptimize(final DimFilter dimFilter)
