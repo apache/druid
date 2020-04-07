@@ -31,13 +31,12 @@ import java.util.List;
  * IMPORTANT:
  * To run this test, you must:
  * 1) Run the test with -Dstart.hadoop.docker=true in the mvn command
- * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with s3 credentials/configs set. See
- *    integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
- *    You will also need to include "druid-hdfs-storage" to druid_extensions_loadList in this file.
+ * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with hdfs configs set. See
+ *    integration-tests/docker/environment-configs/override-examples/hdfs for env vars to provide.
  */
-@Test(groups = TestNGGroup.S3_DEEP_STORAGE)
+@Test(groups = TestNGGroup.HDFS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITHdfsToS3SimpleIndexTest extends AbstractHdfsInputSourceSimpleIndexTest
+public class ITHdfsToHdfsParallelIndexTest extends AbstractHdfsInputSourceParallelIndexTest
 {
   @Test(dataProvider = "resources")
   public void testHdfsIndexData(Pair<String, List> hdfsInputSource) throws Exception
