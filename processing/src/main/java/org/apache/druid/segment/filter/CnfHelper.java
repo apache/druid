@@ -211,7 +211,8 @@ public class CnfHelper
   // See https://github.com/apache/calcite/blob/branch-1.21/core/src/main/java/org/apache/calcite/rex/RexUtil.java#L1615
   // for original implementations.
   @VisibleForTesting
-  static Filter pull(Filter rex) {
+  static Filter pull(Filter rex)
+  {
     final Set<Filter> operands;
     if (rex instanceof AndFilter) {
       operands = ((AndFilter) rex).getFilters();
@@ -241,7 +242,8 @@ public class CnfHelper
     }
   }
 
-  private static List<Filter> pullList(Set<Filter> nodes) {
+  private static List<Filter> pullList(Set<Filter> nodes)
+  {
     final List<Filter> list = new ArrayList<>();
     for (Filter node : nodes) {
       Filter pulled = pull(node);
@@ -254,7 +256,8 @@ public class CnfHelper
     return list;
   }
 
-  private static Map<Filter, Filter> commonFactors(Set<Filter> nodes) {
+  private static Map<Filter, Filter> commonFactors(Set<Filter> nodes)
+  {
     final Map<Filter, Filter> map = new HashMap<>();
     int i = 0;
     for (Filter node : nodes) {
@@ -269,7 +272,8 @@ public class CnfHelper
     return map;
   }
 
-  private static Filter removeFactor(Map<Filter, Filter> factors, Filter node) {
+  private static Filter removeFactor(Map<Filter, Filter> factors, Filter node)
+  {
     List<Filter> list = new ArrayList<>();
     for (Filter operand : conjunctions(node)) {
       if (!factors.containsKey(operand)) {
@@ -279,18 +283,20 @@ public class CnfHelper
     return and(list);
   }
 
-  private static Filter and(Iterable<? extends Filter> nodes) {
+  private static Filter and(Iterable<? extends Filter> nodes)
+  {
     return composeConjunction(nodes);
   }
 
-  private static Filter or(Iterable<? extends Filter> nodes) {
+  private static Filter or(Iterable<? extends Filter> nodes)
+  {
     return composeDisjunction(nodes);
   }
 
   /** As {@link #composeConjunction(Iterable, boolean)} but never
    * returns null. */
-  public static @Nonnull
-  Filter composeConjunction(Iterable<? extends Filter> nodes) {
+  public static @Nonnull Filter composeConjunction(Iterable<? extends Filter> nodes)
+  {
     final Filter e = composeConjunction(nodes, false);
     return Objects.requireNonNull(e);
   }
@@ -303,7 +309,8 @@ public class CnfHelper
    * Removes expressions that always evaluate to TRUE.
    * Returns null only if {@code nullOnEmpty} and expression is TRUE.
    */
-  public static Filter composeConjunction(Iterable<? extends Filter> nodes, boolean nullOnEmpty) {
+  public static Filter composeConjunction(Iterable<? extends Filter> nodes, boolean nullOnEmpty)
+  {
     ImmutableList<Filter> list = flattenAnd(nodes);
     switch (list.size()) {
       case 0:
@@ -320,7 +327,8 @@ public class CnfHelper
   /** Flattens a list of AND nodes.
    *
    * <p>Treats null nodes as literal TRUE (i.e. ignores them). */
-  public static ImmutableList<Filter> flattenAnd(Iterable<? extends Filter> nodes) {
+  public static ImmutableList<Filter> flattenAnd(Iterable<? extends Filter> nodes)
+  {
     if (nodes instanceof Collection && ((Collection) nodes).isEmpty()) {
       // Optimize common case
       return ImmutableList.of();
@@ -335,7 +343,8 @@ public class CnfHelper
     return builder.build();
   }
 
-  private static void addAnd(ImmutableList.Builder<Filter> builder, Set<Filter> digests, Filter node) {
+  private static void addAnd(ImmutableList.Builder<Filter> builder, Set<Filter> digests, Filter node)
+  {
     if (node instanceof AndFilter) {
       for (Filter operand : ((AndFilter) node).getFilters()) {
         addAnd(builder, digests, operand);
@@ -355,7 +364,8 @@ public class CnfHelper
    * Removes expressions that always evaluate to FALSE.
    * Flattens expressions that are ORs.
    */
-  @Nonnull public static Filter composeDisjunction(Iterable<? extends Filter> nodes) {
+  @Nonnull public static Filter composeDisjunction(Iterable<? extends Filter> nodes)
+  {
     final Filter e = composeDisjunction(nodes, false);
     return Objects.requireNonNull(e);
   }
@@ -364,7 +374,8 @@ public class CnfHelper
    * Converts a collection of expressions into an OR,
    * optionally returning null if the list is empty.
    */
-  public static Filter composeDisjunction(Iterable<? extends Filter> nodes, boolean nullOnEmpty) {
+  public static Filter composeDisjunction(Iterable<? extends Filter> nodes, boolean nullOnEmpty)
+  {
     ImmutableList<Filter> list = flattenOr(nodes);
     switch (list.size()) {
       case 0:
@@ -380,7 +391,8 @@ public class CnfHelper
   }
 
   /** Flattens a list of OR nodes. */
-  public static ImmutableList<Filter> flattenOr(Iterable<? extends Filter> nodes) {
+  public static ImmutableList<Filter> flattenOr(Iterable<? extends Filter> nodes)
+  {
     if (nodes instanceof Collection && ((Collection) nodes).isEmpty()) {
       // Optimize common case
       return ImmutableList.of();
@@ -393,7 +405,8 @@ public class CnfHelper
     return builder.build();
   }
 
-  private static void addOr(ImmutableList.Builder<Filter> builder, Set<Filter> set, Filter node) {
+  private static void addOr(ImmutableList.Builder<Filter> builder, Set<Filter> set, Filter node)
+  {
     if (node instanceof OrFilter) {
       for (Filter operand : ((OrFilter) node).getFilters()) {
         addOr(builder, set, operand);
@@ -411,7 +424,8 @@ public class CnfHelper
    * <p>For example, {@code conjunctions(TRUE)} returns the empty list;
    * {@code conjunctions(FALSE)} returns list {@code {FALSE}}.</p>
    */
-  public static List<Filter> conjunctions(Filter rexPredicate) {
+  public static List<Filter> conjunctions(Filter rexPredicate)
+  {
     final List<Filter> list = new ArrayList<>();
     decomposeConjunction(rexPredicate, list);
     return list;
@@ -424,9 +438,8 @@ public class CnfHelper
    * @param rexPredicate predicate to be analyzed
    * @param rexList      list of decomposed RexNodes
    */
-  public static void decomposeConjunction(
-      Filter rexPredicate,
-      List<Filter> rexList) {
+  public static void decomposeConjunction(Filter rexPredicate, List<Filter> rexList)
+  {
     if (rexPredicate == null || rexPredicate instanceof TrueFilter) {
       return;
     }
@@ -439,7 +452,8 @@ public class CnfHelper
     }
   }
 
-  private static boolean containsTrue(Iterable<Filter> nodes) {
+  private static boolean containsTrue(Iterable<Filter> nodes)
+  {
     for (Filter node : nodes) {
       if (node instanceof TrueFilter) {
         return true;
