@@ -231,17 +231,22 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * If you need a ValueType enum corresponding to this aggregator, use {@link #getFinalizedType} instead.
    */
-  //public abstract String getFinalizedTypeName();
   public String getFinalizedTypeName()
   {
     return getTypeName();
   }
 
+  /**
+   * Get the "intermediate" {@link ValueType} for this aggregator. See {@link #getTypeName}.
+   */
   public ValueType getType()
   {
     return ValueTypes.aggregatorTypeNameToType(getTypeName());
   }
 
+  /**
+   * Get the "finalized" {@link ValueType} for this aggregator. See {@link #getFinalizedTypeName}
+   */
   public ValueType getFinalizedType()
   {
     return ValueTypes.aggregatorTypeNameToType(getFinalizedTypeName());
