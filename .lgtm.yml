@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+queries:
+  # Exclude stack trace exposure warnings because this project is open source.
+  - exclude: java/stack-trace-exposure
 extraction:
   java:
     index:
