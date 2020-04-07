@@ -19,16 +19,14 @@
 
 package org.apache.druid.segment.filter;
 
-import com.google.common.base.Function;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -51,9 +49,12 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -69,22 +70,9 @@ public class Filters
    *
    * @return list of Filters
    */
-  public static List<Filter> toFilters(List<DimFilter> dimFilters)
+  public static Set<Filter> toFilters(List<DimFilter> dimFilters)
   {
-    return ImmutableList.copyOf(
-        FunctionalIterable
-            .create(dimFilters)
-            .transform(
-                new Function<DimFilter, Filter>()
-                {
-                  @Override
-                  public Filter apply(DimFilter input)
-                  {
-                    return input.toFilter();
-                  }
-                }
-            )
-    );
+    return dimFilters.stream().map(DimFilter::toFilter).collect(Collectors.toSet());
   }
 
   /**
@@ -438,10 +426,10 @@ public class Filters
       return null;
     }
     boolean useCNF = query.getContextBoolean(CTX_KEY_USE_FILTER_CNF, false);
-    return useCNF ? convertToCNF(filter) : filter;
+    return useCNF ? toCNF(filter) : filter;
   }
 
-  public static Filter convertToCNF(Filter current)
+  public static Filter toCNF(Filter current)
   {
     current = pushDownNot(current);
     current = flatten(current);
@@ -452,7 +440,8 @@ public class Filters
 
   // CNF conversion functions were adapted from Apache Hive, see:
   // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static Filter pushDownNot(Filter current)
+  @VisibleForTesting
+  static Filter pushDownNot(Filter current)
   {
     if (current instanceof NotFilter) {
       Filter child = ((NotFilter) current).getBaseFilter();
@@ -460,14 +449,14 @@ public class Filters
         return pushDownNot(((NotFilter) child).getBaseFilter());
       }
       if (child instanceof AndFilter) {
-        List<Filter> children = new ArrayList<>();
+        Set<Filter> children = new HashSet<>();
         for (Filter grandChild : ((AndFilter) child).getFilters()) {
           children.add(pushDownNot(new NotFilter(grandChild)));
         }
         return new OrFilter(children);
       }
       if (child instanceof OrFilter) {
-        List<Filter> children = new ArrayList<>();
+        Set<Filter> children = new HashSet<>();
         for (Filter grandChild : ((OrFilter) child).getFilters()) {
           children.add(pushDownNot(new NotFilter(grandChild)));
         }
@@ -477,7 +466,7 @@ public class Filters
 
 
     if (current instanceof AndFilter) {
-      List<Filter> children = new ArrayList<>();
+      Set<Filter> children = new HashSet<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
         children.add(pushDownNot(child));
       }
@@ -486,7 +475,7 @@ public class Filters
 
 
     if (current instanceof OrFilter) {
-      List<Filter> children = new ArrayList<>();
+      Set<Filter> children = new HashSet<>();
       for (Filter child : ((OrFilter) current).getFilters()) {
         children.add(pushDownNot(child));
       }
@@ -503,7 +492,7 @@ public class Filters
       return new NotFilter(convertToCNFInternal(((NotFilter) current).getBaseFilter()));
     }
     if (current instanceof AndFilter) {
-      List<Filter> children = new ArrayList<>();
+      Set<Filter> children = new HashSet<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
         children.add(convertToCNFInternal(child));
       }
@@ -525,7 +514,7 @@ public class Filters
         }
       }
       if (!andList.isEmpty()) {
-        List<Filter> result = new ArrayList<>();
+        Set<Filter> result = new HashSet<>();
         generateAllCombinations(result, andList, nonAndList);
         return new AndFilter(result);
       }
@@ -535,7 +524,8 @@ public class Filters
 
   // CNF conversion functions were adapted from Apache Hive, see:
   // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
-  private static Filter flatten(Filter root)
+  @VisibleForTesting
+  static Filter flatten(Filter root)
   {
     if (root instanceof BooleanFilter) {
       List<Filter> children = new ArrayList<>(((BooleanFilter) root).getFilters());
@@ -546,7 +536,7 @@ public class Filters
         // do we need to flatten?
         if (child.getClass() == root.getClass() && !(child instanceof NotFilter)) {
           boolean first = true;
-          List<Filter> grandKids = ((BooleanFilter) child).getFilters();
+          Set<Filter> grandKids = ((BooleanFilter) child).getFilters();
           for (Filter grandkid : grandKids) {
             // for the first grandkid replace the original parent
             if (first) {
@@ -577,15 +567,15 @@ public class Filters
   // CNF conversion functions were adapted from Apache Hive, see:
   // https://github.com/apache/hive/blob/branch-2.0/storage-api/src/java/org/apache/hadoop/hive/ql/io/sarg/SearchArgumentImpl.java
   private static void generateAllCombinations(
-      List<Filter> result,
+      Set<Filter> result,
       List<Filter> andList,
       List<Filter> nonAndList
   )
   {
-    List<Filter> children = ((AndFilter) andList.get(0)).getFilters();
+    Set<Filter> children = ((AndFilter) andList.get(0)).getFilters();
     if (result.isEmpty()) {
       for (Filter child : children) {
-        List<Filter> a = Lists.newArrayList(nonAndList);
+        Set<Filter> a = new HashSet<>(nonAndList);
         a.add(child);
         result.add(new OrFilter(a));
       }
@@ -594,7 +584,7 @@ public class Filters
       result.clear();
       for (Filter child : children) {
         for (Filter or : work) {
-          List<Filter> a = Lists.newArrayList((((OrFilter) or).getFilters()));
+          Set<Filter> a = new HashSet<>((((OrFilter) or).getFilters()));
           a.add(child);
           result.add(new OrFilter(a));
         }

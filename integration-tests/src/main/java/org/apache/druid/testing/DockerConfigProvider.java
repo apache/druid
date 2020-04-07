@@ -46,6 +46,9 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   @JsonProperty
   private String cloudBucket;
 
+  @JsonProperty
+  private String streamEndpoint;
+
   @Override
   public IntegrationTestingConfig get()
   {
@@ -228,6 +231,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getCloudPath()
       {
         return cloudPath;
+      }
+
+      @Override
+      public String getStreamEndpoint()
+      {
+        return streamEndpoint;
       }
     };
   }
