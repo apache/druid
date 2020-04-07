@@ -54,7 +54,6 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
   private static final String INDEX_TASK_WITH_OVERRIDE = "/indexer/wikipedia_override_credentials_index_task.json";
   private static final String INDEX_TASK_WITHOUT_OVERRIDE = "/indexer/wikipedia_cloud_simple_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static final String INDEX_DATASOURCE = "wikipedia_index_test_" + UUID.randomUUID();
   private static final String INPUT_SOURCE_OBJECTS_KEY = "objects";
   private static final String WIKIPEDIA_DATA_1 = "wikipedia_index_data1.json";
   private static final String WIKIPEDIA_DATA_2 = "wikipedia_index_data2.json";
@@ -69,8 +68,9 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
   @Test
   public void testS3WithValidOverrideCredentialsIndexDataShouldSucceed() throws Exception
   {
+    final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
-        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       final Function<String, String> s3PropsTransform = spec -> {
         try {
@@ -123,7 +123,7 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
       };
 
       doIndexTest(
-          INDEX_DATASOURCE,
+          indexDatasource,
           INDEX_TASK_WITH_OVERRIDE,
           s3PropsTransform,
           INDEX_QUERIES_RESOURCE,
@@ -137,6 +137,7 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
   @Test
   public void testS3WithoutOverrideCredentialsIndexDataShouldFailed() throws Exception
   {
+    final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try {
       final Function<String, String> s3PropsTransform = spec -> {
         try {
@@ -172,7 +173,7 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
           throw new RuntimeException(e);
         }
       };
-      final String fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix();
+      final String fullDatasourceName = indexDatasource + config.getExtraDatasourceNameSuffix();
       final String taskSpec = s3PropsTransform.apply(
           StringUtils.replace(
               getResourceAsString(INDEX_TASK_WITHOUT_OVERRIDE),
@@ -194,13 +195,14 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
     }
     finally {
       // If the test pass, then there is no datasource to unload
-      closeQuietly(unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()));
+      closeQuietly(unloader(indexDatasource + config.getExtraDatasourceNameSuffix()));
     }
   }
 
   @Test
   public void testS3WithInvalidOverrideCredentialsIndexDataShouldFailed() throws Exception
   {
+    final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try {
       final Function<String, String> s3PropsTransform = spec -> {
         try {
@@ -252,7 +254,7 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
         }
       };
 
-      final String fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix();
+      final String fullDatasourceName = indexDatasource + config.getExtraDatasourceNameSuffix();
       final String taskSpec = s3PropsTransform.apply(
           StringUtils.replace(
               getResourceAsString(INDEX_TASK_WITH_OVERRIDE),
@@ -272,7 +274,7 @@ public class ITS3OverrideCredentialsIndexTest extends AbstractITBatchIndexTest
     }
     finally {
       // If the test pass, then there is no datasource to unload
-      closeQuietly(unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()));
+      closeQuietly(unloader(indexDatasource + config.getExtraDatasourceNameSuffix()));
     }
   }
 

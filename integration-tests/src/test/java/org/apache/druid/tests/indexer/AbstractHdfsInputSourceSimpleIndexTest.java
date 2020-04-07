@@ -33,7 +33,6 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_simple_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static final String INDEX_DATASOURCE = "wikipedia_index_test_" + UUID.randomUUID();
   private static final String INPUT_SOURCE_PATHS_KEY = "paths";
 
   @DataProvider
@@ -60,8 +59,9 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
 
   void doTest(Pair<String, List> hdfsInputSource, InputFormatDetails inputFormatDetails) throws Exception
   {
+    final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
-        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       final Function<String, String> hdfsPropsTransform = spec -> {
         try {
@@ -103,7 +103,7 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
       };
 
       doIndexTest(
-          INDEX_DATASOURCE,
+          indexDatasource,
           INDEX_TASK,
           hdfsPropsTransform,
           INDEX_QUERIES_RESOURCE,
