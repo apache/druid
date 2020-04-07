@@ -215,7 +215,7 @@ Apache License version 2.0
 SOURCE/JAVA-CORE
     This product contains conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter
      adapted from Apache Hive.
-      * processing/src/main/java/org/apache/druid/segment/filter/Filters.java
+      * processing/src/main/java/org/apache/druid/segment/filter/CnfHelper.java
       * extensions-core/stats/src/main/java/io/druid/query/aggregation/variance/VarianceAggregatorCollector.java
       * extensions-core/druid-bloom-filter/src/main/java/org/apache/druid/query/filter/BloomKFilter.java
 
@@ -224,6 +224,7 @@ SOURCE/JAVA-CORE
 
     This product contains SQL query planning code adapted from Apache Calcite.
       * sql/src/main/java/org/apache/druid/sql/calcite/
+      * processing/src/main/java/org/apache/druid/segment/filter/CnfHelper.java
 
     This product contains Kerberos authentication code adapted from Apache Hadoop.
       * extensions-core/druid-kerberos/src/main/java/org/apache/druid/security/kerberos/
