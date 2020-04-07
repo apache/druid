@@ -52,9 +52,9 @@ public class DimFilterUtils
   static final byte COLUMN_COMPARISON_CACHE_ID = 0xD;
   static final byte EXPRESSION_CACHE_ID = 0xE;
   static final byte TRUE_CACHE_ID = 0xF;
-  public static byte BLOOM_DIM_FILTER_CACHE_ID = 0x10;
-  public static final byte STRING_SEPARATOR = (byte) 0xFF;
+  public static final byte BLOOM_DIM_FILTER_CACHE_ID = 0x10;
 
+  public static final byte STRING_SEPARATOR = (byte) 0xFF;
 
   static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)
   {

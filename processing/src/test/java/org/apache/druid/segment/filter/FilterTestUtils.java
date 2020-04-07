@@ -17,46 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter;
+package org.apache.druid.segment.filter;
 
-import com.google.common.collect.RangeSet;
-import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.filter.TrueFilter;
+import org.apache.druid.query.filter.Filter;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.Arrays;
 
-/**
- */
-public class TrueDimFilter implements DimFilter
+public class FilterTestUtils
 {
-  @Override
-  public byte[] getCacheKey()
+  public static AndFilter and(Filter... filters)
   {
-    return new CacheKeyBuilder(DimFilterUtils.TRUE_CACHE_ID).build();
+    return new AndFilter(Arrays.asList(filters));
   }
 
-  @Override
-  public DimFilter optimize()
+  public static OrFilter or(Filter... filters)
   {
-    return this;
+    return new OrFilter(Arrays.asList(filters));
   }
 
-  @Override
-  public Filter toFilter()
+  public static NotFilter not(Filter filter)
   {
-    return TrueFilter.instance();
+    return new NotFilter(filter);
   }
 
-  @Override
-  public RangeSet<String> getDimensionRangeSet(String dimension)
+  public static SelectorFilter selector(final String fieldName, final String value)
   {
-    return null;
-  }
-
-  @Override
-  public Set<String> getRequiredColumns()
-  {
-    return Collections.emptySet();
+    return new SelectorFilter(fieldName, value, null);
   }
 }
