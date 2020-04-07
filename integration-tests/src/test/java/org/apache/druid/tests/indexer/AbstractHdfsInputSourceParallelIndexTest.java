@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.testng.annotations.DataProvider;
@@ -29,9 +30,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITBatchIndexTest
+public abstract class AbstractHdfsInputSourceParallelIndexTest extends AbstractITBatchIndexTest
 {
-  private static final String INDEX_TASK = "/indexer/wikipedia_cloud_simple_index_task.json";
+  private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INPUT_SOURCE_PATHS_KEY = "paths";
 
@@ -69,6 +70,11 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
               spec,
               "%%INPUT_SOURCE_TYPE%%",
               "hdfs"
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARTITIONS_SPEC%%",
+              jsonMapper.writeValueAsString(new DynamicPartitionsSpec(null, null))
           );
           spec = StringUtils.replace(
               spec,

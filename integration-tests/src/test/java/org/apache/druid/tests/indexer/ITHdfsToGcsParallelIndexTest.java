@@ -31,28 +31,18 @@ import java.util.List;
  * IMPORTANT:
  * To run this test, you must:
  * 1) Run the test with -Dstart.hadoop.docker=true in the mvn command
- * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with hdfs configs set. See
- *    integration-tests/docker/environment-configs/override-examples/hdfs for env vars to provide.
+ * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
+ *    integration-tests/docker/environment-configs/override-examples/gcs for env vars to provide.
+ *    You will also need to include "druid-hdfs-storage" to druid_extensions_loadList in this file.
+ * 3) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
  */
-@Test(groups = TestNGGroup.HDFS_DEEP_STORAGE)
+@Test(groups = TestNGGroup.GCS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITHdfsToHdfsSimpleIndexTest extends AbstractHdfsInputSourceSimpleIndexTest
+public class ITHdfsToGcsParallelIndexTest extends AbstractHdfsInputSourceParallelIndexTest
 {
   @Test(dataProvider = "resources")
-  public void testHdfsIndexJsonData(Pair<String, List> hdfsInputSource) throws Exception
+  public void testHdfsIndexData(Pair<String, List> hdfsInputSource) throws Exception
   {
     doTest(hdfsInputSource, InputFormatDetails.JSON);
-  }
-
-  @Test(dataProvider = "resources")
-  public void testHdfsIndexOrcData(Pair<String, List> hdfsInputSource) throws Exception
-  {
-    doTest(hdfsInputSource, InputFormatDetails.ORC);
-  }
-
-  @Test(dataProvider = "resources")
-  public void testHdfsIndexParquetData(Pair<String, List> hdfsInputSource) throws Exception
-  {
-    doTest(hdfsInputSource, InputFormatDetails.PARQUET);
   }
 }

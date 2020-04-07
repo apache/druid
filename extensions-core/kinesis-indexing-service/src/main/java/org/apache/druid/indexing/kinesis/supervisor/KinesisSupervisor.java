@@ -25,10 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
+import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
 import org.apache.druid.indexing.kinesis.KinesisIndexTask;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
@@ -169,7 +169,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
     List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
-      String taskId = Joiner.on("_").join(baseSequenceName, RandomIdUtils.getRandomId());
+      String taskId = Joiner.on("_").join(baseSequenceName, TaskIdUtils.getRandomId());
       taskList.add(new KinesisIndexTask(
           taskId,
           new TaskResource(baseSequenceName, 1),
