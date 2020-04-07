@@ -86,7 +86,7 @@
             "type" : "index",
             "inputSource" : {
                 "type" : "local",
-                "baseDir" : "/resources/data/batch_index",
+                "baseDir" : "/resources/data/batch_index/json",
                 "filter" : "wikipedia_index_data*"
             },
             "inputFormat" : {

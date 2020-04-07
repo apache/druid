@@ -42,6 +42,6 @@ public class ITHdfsToS3SimpleIndexTest extends AbstractHdfsInputSourceSimpleInde
   @Test(dataProvider = "resources")
   public void testHdfsIndexData(Pair<String, List> hdfsInputSource) throws Exception
   {
-    doTest(hdfsInputSource);
+    doTest(hdfsInputSource, InputFormatDetails.JSON);
   }
 }

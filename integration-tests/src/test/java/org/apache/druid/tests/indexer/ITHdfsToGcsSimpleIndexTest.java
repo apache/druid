@@ -43,6 +43,6 @@ public class ITHdfsToGcsSimpleIndexTest extends AbstractHdfsInputSourceSimpleInd
   @Test(dataProvider = "resources")
   public void testHdfsIndexData(Pair<String, List> hdfsInputSource) throws Exception
   {
-    doTest(hdfsInputSource);
+    doTest(hdfsInputSource, InputFormatDetails.JSON);
   }
 }

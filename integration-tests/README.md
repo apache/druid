@@ -184,7 +184,7 @@ For Google Cloud Storage, Amazon S3, and Microsoft Azure, the following will als
 1) Set the bucket and path for your test data. This can be done by setting -Ddruid.test.config.cloudBucket and 
 -Ddruid.test.config.cloudPath in the mvn command or setting "cloud_bucket" and "cloud_path" in the config file.
 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json 
-located in integration-tests/src/test/resources/data/batch_index to your Cloud storage at the location set in step 1.
+located in integration-tests/src/test/resources/data/batch_index/json to your Cloud storage at the location set in step 1.
 
 For Google Cloud Storage, in addition to the above, you will also have to:
 1) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file

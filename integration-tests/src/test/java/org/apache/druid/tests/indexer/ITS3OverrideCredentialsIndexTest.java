@@ -40,7 +40,7 @@ import java.util.function.Function;
  * 1) Set the bucket and path for your data. This can be done by setting -Ddruid.test.config.cloudBucket and
  *    -Ddruid.test.config.cloudPath or setting "cloud_bucket" and "cloud_path" in the config file.
  * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
- *    located in integration-tests/src/test/resources/data/batch_index to your S3 at the location set in step 1.
+ *    located in integration-tests/src/test/resources/data/batch_index/json to your S3 at the location set in step 1.
  * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with s3 credentials/configs set. See
  *    integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
  *    Note that druid_s3_accessKey and druid_s3_secretKey should be unset or set to credentials that does not have

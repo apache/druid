@@ -41,24 +41,24 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
   {
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_PATHS_KEY,
-                    "hdfs://druid-it-hadoop:9000/batch_index"
+                    "hdfs://druid-it-hadoop:9000/batch_index%%FOLDER_SUFFIX%%"
         )},
         {new Pair<>(INPUT_SOURCE_PATHS_KEY,
                     ImmutableList.of(
-                        "hdfs://druid-it-hadoop:9000/batch_index"
+                        "hdfs://druid-it-hadoop:9000/batch_index%%FOLDER_SUFFIX%%"
                     )
         )},
         {new Pair<>(INPUT_SOURCE_PATHS_KEY,
                     ImmutableList.of(
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data1.json",
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data2.json",
-                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data3.json"
+                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data1%%FILE_EXTENSION%%",
+                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data2%%FILE_EXTENSION%%",
+                        "hdfs://druid-it-hadoop:9000/batch_index/wikipedia_index_data3%%FILE_EXTENSION%%"
                     )
         )}
     };
   }
 
-  void doTest(Pair<String, List> hdfsInputSource) throws Exception
+  void doTest(Pair<String, List> hdfsInputSource, InputFormatDetails inputFormatDetails) throws Exception
   {
     try (
         final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
@@ -75,11 +75,27 @@ public abstract class AbstractHdfsInputSourceSimpleIndexTest extends AbstractITB
               "%%INPUT_SOURCE_PROPERTY_KEY%%",
               hdfsInputSource.lhs
           );
-          return StringUtils.replace(
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT_TYPE%%",
+              inputFormatDetails.getInputFormatType()
+          );
+          spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_PROPERTY_VALUE%%",
               jsonMapper.writeValueAsString(hdfsInputSource.rhs)
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%FOLDER_SUFFIX%%",
+              inputFormatDetails.getFolderSuffix()
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%FILE_EXTENSION%%",
+              inputFormatDetails.getFileExtension()
+          );
+          return spec;
         }
         catch (Exception e) {
           throw new RuntimeException(e);
