@@ -72,6 +72,7 @@ import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.http.ClusterResource;
+import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
@@ -196,6 +197,7 @@ public class CliCoordinator extends ServerRunnable
                   .to(CoordinatorJettyServerInitializer.class);
 
             Jerseys.addResource(binder, CoordinatorResource.class);
+            Jerseys.addResource(binder, CompactionResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);

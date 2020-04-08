@@ -513,6 +513,12 @@ public class DruidCoordinator
     }
   }
 
+  public DutiesRunnable getCompactSegmentDutiesRunnable()
+  {
+    final int startingLeaderCounter = coordLeaderSelector.localTerm();
+    return new DutiesRunnable(makeCompactSegmentsDuty(), startingLeaderCounter);
+  }
+
   private void becomeLeader()
   {
     synchronized (lock) {
@@ -611,13 +617,20 @@ public class DruidCoordinator
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new LogUsedSegments());
-    duties.add(compactSegments);
+    duties.addAll(makeCompactSegmentsDuty());
     duties.addAll(indexingServiceDuties);
 
     log.debug(
         "Done making indexing service duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
+    return ImmutableList.copyOf(duties);
+  }
+
+  private List<CoordinatorDuty> makeCompactSegmentsDuty()
+  {
+    List<CoordinatorDuty> duties = new ArrayList<>();
+    duties.add(compactSegments);
     return ImmutableList.copyOf(duties);
   }
 
