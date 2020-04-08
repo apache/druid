@@ -380,8 +380,14 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       type: 'string',
       label: 'Namespace',
       placeholder: 'some_lookup',
-      info: `The namespace value in the SQl query:
-      SELECT keyColumn, valueColumn, tsColumn? FROM <strong>namespace</strong>.table WHERE filter`,
+      info: (
+        <p>
+          The namespace value in the SQl query:
+          <br />
+          SELECT keyColumn, valueColumn, tsColumn? FROM <strong>namespace</strong>.table WHERE
+          filter
+        </p>
+      ),
       defined: (model: LookupSpec) =>
         model.type === 'cachedNamespace' &&
         !!model.extractionNamespace &&
@@ -432,8 +438,15 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       type: 'string',
       label: 'Table',
       placeholder: 'some_lookup_table',
-      info: `The table which contains the key value pairs. This will become the table value in the SQL query:
-      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.<strong>table</strong> WHERE filter\``,
+      info: (
+        <p>
+          The table which contains the key value pairs. This will become the table value in the SQL
+          query:
+          <br />
+          SELECT keyColumn, valueColumn, tsColumn? FROM namespace.<strong>table</strong> WHERE
+          filter
+        </p>
+      ),
       defined: (model: LookupSpec) =>
         model.type === 'cachedNamespace' &&
         !!model.extractionNamespace &&
@@ -444,8 +457,15 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       type: 'string',
       label: 'Key column',
       placeholder: 'my_key_value',
-      info: `The column in table which contains the keys. This will become the keyColumn value in the SQL query: 
-      SELECT <strong>keyColumn</strong>, valueColumn, tsColumn? FROM namespace.table WHERE filter`,
+      info: (
+        <p>
+          The column in the table which contains the keys. This will become the keyColumn value in
+          the SQL query:
+          <br />
+          SELECT <strong>keyColumn</strong>, valueColumn, tsColumn? FROM namespace.table WHERE
+          filter
+        </p>
+      ),
       defined: (model: LookupSpec) =>
         model.type === 'cachedNamespace' &&
         !!model.extractionNamespace &&
@@ -456,8 +476,15 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       type: 'string',
       label: 'Value column',
       placeholder: 'my_column_value',
-      info: `The column in table which contains the values. This will become the valueColumn value in the SQL query: 
-      SELECT keyColumn, <strong>valueColumn</strong>, tsColumn? FROM namespace.table WHERE filter`,
+      info: (
+        <p>
+          The column in table which contains the values. This will become the valueColumn value in
+          the SQL query:
+          <br />
+          SELECT keyColumn, <strong>valueColumn</strong>, tsColumn? FROM namespace.table WHERE
+          filter
+        </p>
+      ),
       defined: (model: LookupSpec) =>
         model.type === 'cachedNamespace' &&
         !!model.extractionNamespace &&
@@ -467,8 +494,15 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       name: 'extractionNamespace.filter',
       type: 'string',
       label: 'Filter',
-      info: `The filter to use when selecting lookups, this is used to create a where clause on lookup population. This will become the expression filter in the SQL query: 
-      SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE <strong>filter</strong>`,
+      info: (
+        <p>
+          The filter to be used when selecting lookups, this is used to create a where clause on
+          lookup population. This will become the expression filter in the SQL query:
+          <br />
+          SELECT keyColumn, valueColumn, tsColumn? FROM namespace.table WHERE{' '}
+          <strong>filter</strong>
+        </p>
+      ),
       defined: (model: LookupSpec) =>
         model.type === 'cachedNamespace' &&
         !!model.extractionNamespace &&
@@ -478,8 +512,15 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       name: 'extractionNamespace.tsColumn',
       type: 'string',
       label: 'TsColumn',
-      info: `The column in table which contains when the key was updated. This is become the TsColumn Value in the SQL query: 
-      SELECT keyColumn, valueColumn, <strong>tsColumn</strong>? FROM namespace.table WHERE filter`,
+      info: (
+        <p>
+          The column in table which contains when the key was updated. This will become the TsColumn
+          Value in the SQL query:
+          <br />
+          SELECT keyColumn, valueColumn, <strong>tsColumn</strong>? FROM namespace.table WHERE
+          filter
+        </p>
+      ),
       defined: (model: LookupSpec) =>
         model.type === 'cachedNamespace' &&
         !!model.extractionNamespace &&
