@@ -44,7 +44,7 @@ public class TestNullableLongColumnSelector extends TestLongColumnSelector
     } else if (NullHandling.replaceWithDefault()) {
       return NullHandling.ZERO_LONG;
     } else {
-      throw new UnsupportedOperationException();
+      throw new IllegalStateException("Should never be invoked when current value is null && SQL-compatible null handling is enabled!");
     }
   }
 

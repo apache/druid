@@ -44,7 +44,7 @@ public class TestNullableDoubleColumnSelector extends TestDoubleColumnSelector
     } else if (NullHandling.replaceWithDefault()) {
       return NullHandling.ZERO_DOUBLE;
     } else {
-      throw new UnsupportedOperationException();
+      throw new IllegalStateException("Should never be invoked when current value is null && SQL-compatible null handling is enabled!");
     }
   }
 
