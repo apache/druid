@@ -39,13 +39,19 @@ public class TestNullableLongColumnSelector extends TestLongColumnSelector
   @Override
   public long getLong()
   {
-    return longs[index] == null ? NullHandling.ZERO_LONG : longs[index];
+    if (longs[index] != null) {
+      return longs[index];
+    } else if (NullHandling.replaceWithDefault()) {
+      return NullHandling.ZERO_LONG;
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
   @Override
   public boolean isNull()
   {
-    return longs[index] == null;
+    return !NullHandling.replaceWithDefault() && longs[index] == null;
   }
 
   public void increment()

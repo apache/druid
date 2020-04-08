@@ -40,13 +40,17 @@ public class TestNullableFloatColumnSelector extends TestFloatColumnSelector
   @Override
   public float getFloat()
   {
-    return floats[index] == null ? NullHandling.ZERO_FLOAT : floats[index];
+    if (floats[index] != null) {
+      return floats[index];
+    } else {
+      return NullHandling.ZERO_FLOAT;
+    }
   }
 
   @Override
   public boolean isNull()
   {
-    return floats[index] == null;
+    return !NullHandling.replaceWithDefault() && floats[index] == null;
   }
 
   public void increment()

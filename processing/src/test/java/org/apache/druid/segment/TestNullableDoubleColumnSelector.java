@@ -39,13 +39,19 @@ public class TestNullableDoubleColumnSelector extends TestDoubleColumnSelector
   @Override
   public double getDouble()
   {
-    return doubles[index] == null ? NullHandling.ZERO_DOUBLE : doubles[index];
+    if (doubles[index] != null) {
+      return doubles[index];
+    } else if (NullHandling.replaceWithDefault()) {
+      return NullHandling.ZERO_DOUBLE;
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
   @Override
   public boolean isNull()
   {
-    return doubles[index] == null;
+    return !NullHandling.replaceWithDefault() && doubles[index] == null;
   }
 
   public void increment()

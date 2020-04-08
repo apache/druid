@@ -19,10 +19,11 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestWrappingDimensionSelector
+public class WrappingDimensionSelectorTest
 {
   @Test
   public void testLongWrappingDimensionSelector()
@@ -35,8 +36,11 @@ public class TestWrappingDimensionSelector
     Assert.assertEquals("24", lngWrapSelector.getValue());
 
     lngSelector.increment();
-    Assert.assertEquals(0L, lngSelector.getLong());
-    Assert.assertNull("must be the canonical null value", lngWrapSelector.getValue());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertTrue(lngSelector.isNull());
+    } else {
+      Assert.assertEquals(0L, lngSelector.getLong());
+    }
 
     lngSelector.increment();
     Assert.assertEquals(50L, lngSelector.getLong());
@@ -55,26 +59,29 @@ public class TestWrappingDimensionSelector
   public void testDoubleWrappingDimensionSelector()
   {
     Double[] vals = new Double[]{32.0d, null, 5.0d, 0.0d, -45.0d};
-    TestNullableDoubleColumnSelector dblColSelector = new TestNullableDoubleColumnSelector(vals);
+    TestNullableDoubleColumnSelector dblSelector = new TestNullableDoubleColumnSelector(vals);
 
-    DoubleWrappingDimensionSelector dblWrapSelector = new DoubleWrappingDimensionSelector(dblColSelector, null);
-    Assert.assertEquals(32.0d, dblColSelector.getDouble(), 0);
+    DoubleWrappingDimensionSelector dblWrapSelector = new DoubleWrappingDimensionSelector(dblSelector, null);
+    Assert.assertEquals(32.0d, dblSelector.getDouble(), 0);
     Assert.assertEquals("32.0", dblWrapSelector.getValue());
 
-    dblColSelector.increment();
-    Assert.assertEquals(0d, dblColSelector.getDouble(), 0);
-    Assert.assertNull("must be the canonical null value", dblWrapSelector.getValue());
+    dblSelector.increment();
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertTrue(dblSelector.isNull());
+    } else {
+      Assert.assertEquals(0d, dblSelector.getDouble(), 0);
+    }
 
-    dblColSelector.increment();
-    Assert.assertEquals(5.0d, dblColSelector.getDouble(), 0);
+    dblSelector.increment();
+    Assert.assertEquals(5.0d, dblSelector.getDouble(), 0);
     Assert.assertEquals("5.0", dblWrapSelector.getValue());
 
-    dblColSelector.increment();
-    Assert.assertEquals(0.0d, dblColSelector.getDouble(), 0);
+    dblSelector.increment();
+    Assert.assertEquals(0.0d, dblSelector.getDouble(), 0);
     Assert.assertEquals("0.0", dblWrapSelector.getValue());
 
-    dblColSelector.increment();
-    Assert.assertEquals(-45.0d, dblColSelector.getDouble(), 0);
+    dblSelector.increment();
+    Assert.assertEquals(-45.0d, dblSelector.getDouble(), 0);
     Assert.assertEquals("-45.0", dblWrapSelector.getValue());
   }
 
@@ -89,8 +96,13 @@ public class TestWrappingDimensionSelector
     Assert.assertEquals("32.0", flWrapSelector.getValue());
 
     flSelector.increment();
-    Assert.assertEquals(0f, flSelector.getFloat(), 0);
-    Assert.assertNull("must be the canonical null value", flWrapSelector.getValue());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertTrue(flSelector.isNull());
+      Assert.assertNull(flWrapSelector.getValue());
+    } else {
+      Assert.assertEquals(0f, flSelector.getFloat(), 0);
+      Assert.assertNotNull(flWrapSelector.getValue());
+    }
 
     flSelector.increment();
     Assert.assertEquals(5.0f, flSelector.getFloat(), 0);
