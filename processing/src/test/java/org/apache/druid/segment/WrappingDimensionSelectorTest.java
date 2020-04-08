@@ -98,10 +98,8 @@ public class WrappingDimensionSelectorTest
     flSelector.increment();
     if (NullHandling.sqlCompatible()) {
       Assert.assertTrue(flSelector.isNull());
-      Assert.assertNull(flWrapSelector.getValue());
     } else {
       Assert.assertEquals(0f, flSelector.getFloat(), 0);
-      Assert.assertNotNull(flWrapSelector.getValue());
     }
 
     flSelector.increment();

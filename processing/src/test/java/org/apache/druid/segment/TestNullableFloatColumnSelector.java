@@ -42,8 +42,10 @@ public class TestNullableFloatColumnSelector extends TestFloatColumnSelector
   {
     if (floats[index] != null) {
       return floats[index];
-    } else {
+    } else if (NullHandling.replaceWithDefault()) {
       return NullHandling.ZERO_FLOAT;
+    } else {
+      throw new IllegalStateException("Should never be invoked when current value is null && SQL-compatible null handling is enabled!");
     }
   }
 
