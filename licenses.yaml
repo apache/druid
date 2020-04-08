@@ -1315,7 +1315,7 @@ name: Apache Curator
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.0
+version: 4.3.0
 libraries:
   - org.apache.curator: curator-client
   - org.apache.curator: curator-framework

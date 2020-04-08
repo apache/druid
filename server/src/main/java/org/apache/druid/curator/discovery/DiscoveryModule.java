@@ -482,6 +482,18 @@ public class DiscoveryModule implements Module
     {
       return this;
     }
+
+    @Override
+    public ServiceProviderBuilder<T> executorService(ExecutorService executorService)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> executorService(CloseableExecutorService closeableExecutorService)
+    {
+      return this;
+    }
   }
 
   private static class NoopServiceProvider<T> implements ServiceProvider<T>
