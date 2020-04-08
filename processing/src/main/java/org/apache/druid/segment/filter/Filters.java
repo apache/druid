@@ -29,6 +29,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -61,7 +62,6 @@ import java.util.stream.Collectors;
  */
 public class Filters
 {
-  private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
   /**
    * Convert a list of DimFilters to a list of Filters.
@@ -425,7 +425,7 @@ public class Filters
     if (filter == null) {
       return null;
     }
-    boolean useCNF = query.getContextBoolean(CTX_KEY_USE_FILTER_CNF, false);
+    boolean useCNF = query.getContextBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
     return useCNF ? toCNF(filter) : filter;
   }
 
