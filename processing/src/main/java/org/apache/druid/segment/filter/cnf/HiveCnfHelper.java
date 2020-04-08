@@ -78,15 +78,15 @@ public class HiveCnfHelper
     return current;
   }
 
-  public static Filter convertToCNFInternal(Filter current)
+  public static Filter convertToCnf(Filter current)
   {
     if (current instanceof NotFilter) {
-      return new NotFilter(convertToCNFInternal(((NotFilter) current).getBaseFilter()));
+      return new NotFilter(convertToCnf(((NotFilter) current).getBaseFilter()));
     }
     if (current instanceof AndFilter) {
       Set<Filter> children = new HashSet<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
-        children.add(convertToCNFInternal(child));
+        children.add(convertToCnf(child));
       }
       return new AndFilter(children);
     }

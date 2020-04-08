@@ -429,12 +429,20 @@ public class Filters
 
   public static Filter toCnf(Filter current)
   {
+    // Push down NOT filters to leaves if possible to remove NOT on NOT filters and reduce hierarchy.
+    // ex) ~(a OR ~b) => ~a AND b
     current = HiveCnfHelper.pushDownNot(current);
+    // Flatten nested AND and OR filters if possible.
+    // ex) a AND (b AND c) => a AND b AND c
     current = HiveCnfHelper.flatten(current);
-    // Pull out AND filters first to convert the filter into a conjunctive form.
-    // This is important to not create a huge CNF.
+    // Pull up AND filters first to convert the filter into a conjunctive form.
+    // It is important to pull before CNF conversion to not create a huge CNF.
+    // ex) (a AND b) OR (a AND c AND d) => a AND (b OR (c AND d))
     current = CalciteCnfHelper.pull(current);
-    current = HiveCnfHelper.convertToCNFInternal(current);
+    // Convert filter to CNF.
+    // a AND (b OR (c AND d)) => a AND (b OR c) AND (b OR d)
+    current = HiveCnfHelper.convertToCnf(current);
+    // Flatten again to remove any flattenable nested AND or OR filters created during CNF conversion.
     current = HiveCnfHelper.flatten(current);
     return current;
   }
