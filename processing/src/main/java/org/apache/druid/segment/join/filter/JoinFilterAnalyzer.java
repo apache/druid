@@ -30,7 +30,6 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
-import org.apache.druid.segment.filter.CnfHelper;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -129,7 +128,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Filter normalizedFilter = CnfHelper.toCnf(originalFilter);
+    Filter normalizedFilter = Filters.toCnf(originalFilter);
 
     // List of candidates for pushdown
     // CNF normalization will generate either

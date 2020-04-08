@@ -27,6 +27,8 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
+import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,7 +41,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-public class CnfHelperTest
+public class FilterCnfConversionTest
 {
   @Test
   public void testPushDownNot()
@@ -56,7 +58,7 @@ public class CnfHelperTest
         FilterTestUtils.not(FilterTestUtils.selector("col2", "2")),
         FilterTestUtils.selector("col3", "3")
     );
-    final Filter pushedDown = CnfHelper.pushDownNot(filter);
+    final Filter pushedDown = HiveCnfHelper.pushDownNot(filter);
     assertFilter(filter, expected, pushedDown);
   }
 
@@ -68,7 +70,7 @@ public class CnfHelperTest
         FilterTestUtils.selector("col2", "2"),
         FilterTestUtils.not(FilterTestUtils.selector("col3", "3"))
     );
-    final Filter pushedDown = CnfHelper.pushDownNot(filter);
+    final Filter pushedDown = HiveCnfHelper.pushDownNot(filter);
     assertFilter(filter, filter, pushedDown);
   }
 
@@ -89,7 +91,7 @@ public class CnfHelperTest
         FilterTestUtils.selector("col2", "2"),
         FilterTestUtils.selector("col3", "3")
     );
-    final Filter flattened = CnfHelper.flatten(filter);
+    final Filter flattened = HiveCnfHelper.flatten(filter);
     assertFilter(filter, expected, flattened);
   }
 
@@ -103,7 +105,7 @@ public class CnfHelperTest
         ),
         FilterTestUtils.selector("col3", "3")
     );
-    final Filter flattened = CnfHelper.flatten(filter);
+    final Filter flattened = HiveCnfHelper.flatten(filter);
     assertFilter(filter, filter, flattened);
   }
 
@@ -148,7 +150,7 @@ public class CnfHelperTest
         FilterTestUtils.selector("col1", "val1"),
         FilterTestUtils.selector("col2", "val2")
     );
-    final Filter cnf = CnfHelper.toCnf(muchReducible);
+    final Filter cnf = Filters.toCnf(muchReducible);
     assertFilter(muchReducible, expected, cnf);
   }
 
@@ -252,7 +254,7 @@ public class CnfHelperTest
             FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
         )
     );
-    final Filter cnf = CnfHelper.toCnf(filter);
+    final Filter cnf = Filters.toCnf(filter);
     assertFilter(filter, expected, cnf);
   }
 
@@ -284,7 +286,7 @@ public class CnfHelperTest
         FilterTestUtils.selector("col4", "val4"),
         new OrFilter(ors)
     );
-    final Filter cnf = CnfHelper.toCnf(bigFilter);
+    final Filter cnf = Filters.toCnf(bigFilter);
     assertFilter(bigFilter, expectedCnf, cnf);
   }
 
@@ -297,7 +299,7 @@ public class CnfHelperTest
         FilterTestUtils.selector("col3", "val3")
     );
 
-    assertFilter(filter, filter, CnfHelper.pull(filter));
+    assertFilter(filter, filter, CalciteCnfHelper.pull(filter));
   }
 
   @Test
@@ -319,7 +321,7 @@ public class CnfHelperTest
         FilterTestUtils.selector("col7", "val7")
     );
 
-    assertFilter(filter, filter, CnfHelper.pull(filter));
+    assertFilter(filter, filter, CalciteCnfHelper.pull(filter));
   }
 
   @Test
@@ -349,7 +351,7 @@ public class CnfHelperTest
         )
     );
 
-    assertFilter(filter, expectedCnf, CnfHelper.toCnf(filter));
+    assertFilter(filter, expectedCnf, Filters.toCnf(filter));
   }
 
   private void assertFilter(Filter original, Filter expectedConverted, Filter actualConverted)

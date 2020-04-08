@@ -65,8 +65,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
-import org.apache.druid.segment.filter.CnfHelper;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -377,7 +377,7 @@ public class FilterPartitionBenchmark
     Filter orFilter = new OrFilter(Arrays.asList(filter, filter2));
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, CnfHelper.toCnf(orFilter));
+    Sequence<Cursor> cursors = makeCursors(sa, Filters.toCnf(orFilter));
     readCursors(cursors, blackhole);
   }
 
@@ -451,7 +451,7 @@ public class FilterPartitionBenchmark
     );
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, CnfHelper.toCnf(dimFilter3.toFilter()));
+    Sequence<Cursor> cursors = makeCursors(sa, Filters.toCnf(dimFilter3.toFilter()));
     readCursors(cursors, blackhole);
   }
 

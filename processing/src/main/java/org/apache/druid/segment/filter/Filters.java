@@ -42,6 +42,8 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
+import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -422,7 +424,19 @@ public class Filters
       return null;
     }
     boolean useCNF = query.getContextBoolean(CTX_KEY_USE_FILTER_CNF, false);
-    return useCNF ? CnfHelper.toCnf(filter) : filter;
+    return useCNF ? Filters.toCnf(filter) : filter;
+  }
+
+  public static Filter toCnf(Filter current)
+  {
+    current = HiveCnfHelper.pushDownNot(current);
+    current = HiveCnfHelper.flatten(current);
+    // Pull out AND filters first to convert the filter into a conjunctive form.
+    // This is important to not create a huge CNF.
+    current = CalciteCnfHelper.pull(current);
+    current = HiveCnfHelper.convertToCNFInternal(current);
+    current = HiveCnfHelper.flatten(current);
+    return current;
   }
 
   /**
