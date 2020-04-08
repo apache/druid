@@ -55,7 +55,7 @@ public class TDigestSketchAggregatorFactoryTest
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ValueType.LONG)
-                    .add("tdigest", null)
+                    .add("tdigest", ValueType.COMPLEX)
                     .add("tdigest-access", ValueType.COMPLEX)
                     .add("tdigest-finalize", ValueType.COMPLEX)
                     .build(),

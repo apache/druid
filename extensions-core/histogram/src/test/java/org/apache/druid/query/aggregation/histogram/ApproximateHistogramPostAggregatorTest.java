@@ -93,7 +93,7 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("approxHisto", null)
+                    .add("approxHisto", ValueType.COMPLEX)
                     .add("bucket", ValueType.COMPLEX)
                     .add("equal", ValueType.COMPLEX)
                     .add("custom", ValueType.COMPLEX)

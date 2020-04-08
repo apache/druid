@@ -255,7 +255,7 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public String getFinalizedTypeName()
   {
-    return ValueType.STRING.toString();
+    return finalizeAsBase64Binary ? getTypeName() : ValueType.STRING.toString();
   }
 
   @Override

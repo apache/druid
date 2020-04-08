@@ -230,7 +230,7 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
                     .add("stringAny", ValueType.STRING)
                     .add("cardinality", null)
                     .add("hyperUnique", null)
-                    .add("histogram", null)
+                    .add("histogram", ValueType.COMPLEX)
                     .add("filtered", null)
                     .add("suppressed", null)
                     // postaggs

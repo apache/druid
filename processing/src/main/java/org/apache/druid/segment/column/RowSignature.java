@@ -237,12 +237,12 @@ public class RowSignature
       for (final AggregatorFactory aggregator : aggregators) {
         final ValueType type = aggregator.getType();
 
-        // Use null instead of COMPLEX for non-primitive and non-scalar types, since in that case, the type depends on
-        // whether or not the aggregator is finalized, and we don't know if it will be finalized
-        if (type.isPrimitiveScalar() && type.equals(aggregator.getFinalizedType())) {
+        if (type.equals(aggregator.getFinalizedType())) {
           add(aggregator.getName(), type);
         } else {
-          // either complex type or finalized to a different type
+          // Use null if the type depends on whether or not the aggregator is finalized, since
+          // we don't know if it will be finalized or not. So null (i.e. unknown) is the proper
+          // thing to do.
           add(aggregator.getName(), null);
         }
       }

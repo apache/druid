@@ -20,8 +20,16 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -132,6 +140,40 @@ public class FixedBucketsHistogramBufferAggregatorTest
     Assert.assertEquals(
         "\"AQIAAAAAAAAAAEBJAAAAAAAAAAAABQEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA3AAAAAAAAQDcAAAAAAAAAAAABAAAAAgAAAAAAAAAB\"",
         finalStringBinary
+    );
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new FixedBucketsHistogramAggregatorFactory("fixedHisto", "col", null, 0, 100, null, false),
+                  new FixedBucketsHistogramAggregatorFactory("fixedHistoBin", "col", null, 0, 100, null, true)
+              )
+              .postAggregators(
+                  new FieldAccessPostAggregator("fixedHisto-access", "fixedHisto"),
+                  new FinalizingFieldAccessPostAggregator("fixedHisto-finalize", "fixedHisto"),
+                  new FieldAccessPostAggregator("fixedHistoBin-access", "fixedHistoBin"),
+                  new FinalizingFieldAccessPostAggregator("fixedHistoBin-finalize", "fixedHistoBin")
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("fixedHisto", null)
+                    .add("fixedHistoBin", ValueType.COMPLEX)
+                    .add("fixedHisto-access", ValueType.COMPLEX)
+                    .add("fixedHisto-finalize", ValueType.STRING)
+                    .add("fixedHistoBin-access", ValueType.COMPLEX)
+                    .add("fixedHistoBin-finalize", ValueType.COMPLEX)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
 }

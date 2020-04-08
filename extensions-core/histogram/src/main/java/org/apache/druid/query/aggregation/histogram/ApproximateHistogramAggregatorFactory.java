@@ -35,7 +35,6 @@ import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -308,7 +307,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public String getFinalizedTypeName()
   {
-    return finalizeAsBase64Binary ? ValueType.STRING.toString() : "histogram";
+    return finalizeAsBase64Binary ? getTypeName() : "histogram";
   }
 
   @Override
