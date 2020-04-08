@@ -137,7 +137,7 @@ public class KafkaEmitter implements Emitter
         producer.send(new ProducerRecord<>(topic, objectToSend.getData()), callback);
       }
     }
-    catch (InterruptedException e) {
+    catch (Throwable e) {
       log.warn(e, "Failed to take record from queue!");
     }
   }
