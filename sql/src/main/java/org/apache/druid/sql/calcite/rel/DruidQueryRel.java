@@ -137,12 +137,6 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  public int getQueryCount()
-  {
-    return 1;
-  }
-
-  @Override
   public Sequence<Object[]> runQuery()
   {
     // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this

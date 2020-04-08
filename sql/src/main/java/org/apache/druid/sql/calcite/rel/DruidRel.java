@@ -45,13 +45,6 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   @Nullable
   public abstract PartialDruidQuery getPartialDruidQuery();
 
-  /**
-   * Return the number of Druid queries this rel involves, including sub-queries. Simple queries will return 1.
-   *
-   * @return number of nested queries
-   */
-  public abstract int getQueryCount();
-
   public abstract Sequence<Object[]> runQuery();
 
   public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);
