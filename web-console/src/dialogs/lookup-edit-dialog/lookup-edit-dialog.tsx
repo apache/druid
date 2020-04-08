@@ -382,7 +382,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
       placeholder: 'some_lookup',
       info: (
         <p>
-          The namespace value in the SQl query:
+          The namespace value in the SQL query:
           <br />
           SELECT keyColumn, valueColumn, tsColumn? FROM <strong>namespace</strong>.table WHERE
           filter
