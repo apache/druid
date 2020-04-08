@@ -407,7 +407,7 @@ export const LookupEditDialog = React.memo(function LookupEditDialog(props: Look
     {
       name: 'extractionNamespace.connectorConfig.connectURI',
       type: 'string',
-      label: 'ConnectURI',
+      label: 'Connect URI',
       info: 'Defines the connectURI value on the The connector config to used',
       defined: (model: LookupSpec) =>
         model.type === 'cachedNamespace' &&
