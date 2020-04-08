@@ -92,6 +92,7 @@ public class DruidJoinRule extends RelOptRule
     final List<RexNode> newProjectExprs = new ArrayList<>();
 
     // Already verified to be present in "matches", so just call "get".
+    // Can't be final, because we're going to reassign it up to a couple of times.
     ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType()).get();
 
     if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
@@ -144,7 +145,7 @@ public class DruidJoinRule extends RelOptRule
       newRight = right;
     }
 
-    // Druid join rewritten to be on top of the left scan. Right side is unchanged.
+    // Druid join written on top of the new left and right sides.
     final DruidJoinQueryRel druidJoin = DruidJoinQueryRel.create(
         join.copy(
             join.getTraitSet(),
