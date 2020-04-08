@@ -128,8 +128,7 @@ public class CalciteCnfHelper
 
   /** As {@link #composeConjunction(Iterable, boolean)} but never
    * returns null. */
-  public static @Nonnull
-  Filter composeConjunction(Iterable<? extends Filter> nodes)
+  public static @Nonnull Filter composeConjunction(Iterable<? extends Filter> nodes)
   {
     final Filter e = composeConjunction(nodes, false);
     return Objects.requireNonNull(e);
