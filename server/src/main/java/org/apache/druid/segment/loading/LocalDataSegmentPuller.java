@@ -151,7 +151,7 @@ public class LocalDataSegmentPuller implements URIDataPuller
         );
       }
       log.info(
-          "Coppied %d bytes from [%s] to [%s]",
+          "Copied %d bytes from [%s] to [%s]",
           result.size(),
           sourceFile.getAbsolutePath(),
           dir.getAbsolutePath()
