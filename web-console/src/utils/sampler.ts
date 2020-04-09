@@ -256,6 +256,7 @@ export async function sampleForConnect(
     });
   }
 
+  const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec') || {};
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
@@ -264,7 +265,7 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: getDummyTimestampSpec(),
-        dimensionsSpec: {},
+        dimensionsSpec: dimensionsSpec,
       },
     } as any,
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -400,9 +401,10 @@ export async function sampleForTransform(
   const inputFormatColumns: string[] = deepGet(spec, 'spec.ioConfig.inputFormat.columns') || [];
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
+  const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec') || {};
 
   // Extra step to simulate auto detecting dimension with transforms
-  const specialDimensionSpec: DimensionsSpec = {};
+  const specialDimensionSpec: DimensionsSpec = dimensionsSpec;
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -459,9 +461,10 @@ export async function sampleForFilter(
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   const filter: any = deepGet(spec, 'spec.dataSchema.transformSpec.filter');
+  const dimensionsSpec: any = deepGet(spec, 'spec.dataSchema.dimensionsSpec') || {};
 
   // Extra step to simulate auto detecting dimension with transforms
-  const specialDimensionSpec: DimensionsSpec = {};
+  const specialDimensionSpec: DimensionsSpec = dimensionsSpec;
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -470,7 +473,7 @@ export async function sampleForFilter(
         dataSchema: {
           dataSource: 'sample',
           timestampSpec,
-          dimensionsSpec: {},
+          dimensionsSpec: dimensionsSpec,
         },
       },
       samplerConfig: BASE_SAMPLER_CONFIG,
