@@ -37,7 +37,7 @@ import java.util.List;
  */
 @Test(groups = TestNGGroup.AZURE_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITHdfsToAzureSimpleIndexTest extends AbstractHdfsInputSourceSimpleIndexTest
+public class ITHdfsToAzureParallelIndexTest extends AbstractHdfsInputSourceParallelIndexTest
 {
   @Test(dataProvider = "resources")
   public void testHdfsIndexData(Pair<String, List> hdfsInputSource) throws Exception
