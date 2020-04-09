@@ -244,7 +244,7 @@ public abstract class ExprEval<T>
   {
     private DoubleExprEval(@Nullable Number value)
     {
-      super(value == null ? NullHandling.defaultDoubleValue() : value);
+      super(value == null ? NullHandling.defaultDoubleValue() : (Double) value.doubleValue());
     }
 
     @Override
@@ -304,7 +304,7 @@ public abstract class ExprEval<T>
   {
     private LongExprEval(@Nullable Number value)
     {
-      super(value == null ? NullHandling.defaultLongValue() : value);
+      super(value == null ? NullHandling.defaultLongValue() : (Long) value.longValue());
     }
 
     @Override

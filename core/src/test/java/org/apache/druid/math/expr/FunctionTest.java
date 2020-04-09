@@ -175,7 +175,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayLength()
   {
     assertExpr("array_length([1,2,3])", 3L);
-    assertExpr("array_length(a)", 4);
+    assertExpr("array_length(a)", 4L);
   }
 
   @Test
@@ -199,7 +199,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("array_offset_of([1, 2, 3], 3)", 2L);
     assertExpr("array_offset_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
-    assertExpr("array_offset_of(a, 'baz')", 2);
+    assertExpr("array_offset_of(a, 'baz')", 2L);
   }
 
   @Test
@@ -207,7 +207,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("array_ordinal_of([1, 2, 3], 3)", 3L);
     assertExpr("array_ordinal_of([1, 2, 3], 4)", NullHandling.replaceWithDefault() ? -1L : null);
-    assertExpr("array_ordinal_of(a, 'baz')", 3);
+    assertExpr("array_ordinal_of(a, 'baz')", 3L);
   }
 
   @Test
