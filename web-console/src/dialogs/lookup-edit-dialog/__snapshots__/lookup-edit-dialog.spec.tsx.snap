@@ -58,7 +58,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
           <label
             class="bp3-label"
           >
-            Name: 
+            Name
              
             <span
               class="bp3-text-muted"
@@ -86,7 +86,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
           <label
             class="bp3-label"
           >
-            Tier:
+            Tier
              
             <span
               class="bp3-text-muted"
@@ -178,7 +178,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
           <label
             class="bp3-label"
           >
-            Version:
+            Version
              
             <span
               class="bp3-text-muted"
@@ -215,107 +215,177 @@ exports[`lookup edit dialog matches snapshot 1`] = `
           </div>
         </div>
         <div
-          class="bp3-form-group lookup-label"
+          class="auto-form"
         >
-          <label
-            class="bp3-label"
-          >
-            Spec:
-             
-            <span
-              class="bp3-text-muted"
-            />
-          </label>
           <div
-            class="bp3-form-content"
-          />
-        </div>
-        <div
-          class=" ace_editor ace-tm lookup-edit-dialog-textarea"
-          id="brace-editor"
-          style="width: auto; height: 40vh;"
-        >
-          <textarea
-            autocapitalize="off"
-            autocorrect="off"
-            class="ace_text-input"
-            spellcheck="false"
-            style="opacity: 0;"
-            wrap="off"
-          />
-          <div
-            aria-hidden="true"
-            class="ace_gutter"
-            style="display: none;"
+            class="bp3-form-group form-group-with-info"
           >
+            <label
+              class="bp3-label"
+            >
+              Type
+               
+              <span
+                class="bp3-text-muted"
+              />
+            </label>
             <div
-              class="ace_layer ace_gutter-layer ace_folding-enabled"
-            />
-            <div
-              class="ace_gutter-active-line"
-            />
-          </div>
-          <div
-            class="ace_scroller"
-          >
-            <div
-              class="ace_content"
+              class="bp3-form-content"
             >
               <div
-                class="ace_layer ace_print-margin-layer"
+                class="bp3-input-group suggestible-input"
               >
-                <div
-                  class="ace_print-margin"
-                  style="left: 4px; visibility: hidden;"
+                <input
+                  class="bp3-input"
+                  placeholder=""
+                  style="padding-right: 0px;"
+                  suggestions="map,cachedNamespace"
+                  type="text"
+                  value="map"
                 />
-              </div>
-              <div
-                class="ace_layer ace_marker-layer"
-              />
-              <div
-                class="ace_layer ace_text-layer"
-                style="padding: 0px 4px;"
-              />
-              <div
-                class="ace_layer ace_marker-layer"
-              />
-              <div
-                class="ace_layer ace_cursor-layer ace_hidden-cursors"
-              >
-                <div
-                  class="ace_cursor"
-                />
+                <span
+                  class="bp3-input-action"
+                >
+                  <span
+                    class="bp3-popover-wrapper"
+                  >
+                    <span
+                      class="bp3-popover-target"
+                    >
+                      <button
+                        class="bp3-button bp3-minimal"
+                        type="button"
+                      >
+                        <span
+                          class="bp3-icon bp3-icon-caret-down"
+                          icon="caret-down"
+                        >
+                          <svg
+                            data-icon="caret-down"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            width="16"
+                          >
+                            <desc>
+                              caret-down
+                            </desc>
+                            <path
+                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                              fill-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      </button>
+                    </span>
+                  </span>
+                </span>
               </div>
             </div>
           </div>
           <div
-            class="ace_scrollbar ace_scrollbar-v"
-            style="display: none; width: 20px;"
+            class="bp3-form-group form-group-with-info"
           >
-            <div
-              class="ace_scrollbar-inner"
-              style="width: 20px;"
-            />
-          </div>
-          <div
-            class="ace_scrollbar ace_scrollbar-h"
-            style="display: none; height: 20px;"
-          >
-            <div
-              class="ace_scrollbar-inner"
-              style="height: 20px;"
-            />
-          </div>
-          <div
-            style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
-          >
-            <div
-              style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
-            />
-            <div
-              style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+            <label
+              class="bp3-label"
             >
-              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+              Map
+               
+              <span
+                class="bp3-text-muted"
+              />
+            </label>
+            <div
+              class="bp3-form-content"
+            >
+              <div
+                class=" ace_editor ace-tm json-input"
+                id="brace-editor"
+                style="width: 100%; height: 8vh;"
+              >
+                <textarea
+                  autocapitalize="off"
+                  autocorrect="off"
+                  class="ace_text-input"
+                  spellcheck="false"
+                  style="opacity: 0;"
+                  wrap="off"
+                />
+                <div
+                  aria-hidden="true"
+                  class="ace_gutter"
+                  style="display: none;"
+                >
+                  <div
+                    class="ace_layer ace_gutter-layer ace_folding-enabled"
+                  />
+                  <div
+                    class="ace_gutter-active-line"
+                  />
+                </div>
+                <div
+                  class="ace_scroller"
+                >
+                  <div
+                    class="ace_content"
+                  >
+                    <div
+                      class="ace_layer ace_print-margin-layer"
+                    >
+                      <div
+                        class="ace_print-margin"
+                        style="left: 4px; visibility: hidden;"
+                      />
+                    </div>
+                    <div
+                      class="ace_layer ace_marker-layer"
+                    />
+                    <div
+                      class="ace_layer ace_text-layer"
+                      style="padding: 0px 4px;"
+                    />
+                    <div
+                      class="ace_layer ace_marker-layer"
+                    />
+                    <div
+                      class="ace_layer ace_cursor-layer ace_hidden-cursors"
+                    >
+                      <div
+                        class="ace_cursor"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="ace_scrollbar ace_scrollbar-v"
+                  style="display: none; width: 20px;"
+                >
+                  <div
+                    class="ace_scrollbar-inner"
+                    style="width: 20px;"
+                  />
+                </div>
+                <div
+                  class="ace_scrollbar ace_scrollbar-h"
+                  style="display: none; height: 20px;"
+                >
+                  <div
+                    class="ace_scrollbar-inner"
+                    style="height: 20px;"
+                  />
+                </div>
+                <div
+                  style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
+                >
+                  <div
+                    style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+                  />
+                  <div
+                    style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
+                  >
+                    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -336,9 +406,7 @@ exports[`lookup edit dialog matches snapshot 1`] = `
               </span>
             </button>
             <button
-              class="bp3-button bp3-disabled bp3-intent-primary"
-              disabled=""
-              tabindex="-1"
+              class="bp3-button bp3-intent-primary"
               type="button"
             >
               <span
