@@ -21,8 +21,12 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.StateResourceFilter;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -46,17 +50,18 @@ public class CompactionResource
 
   @POST
   @Path("/compact")
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response forceTriggerCompaction()
   {
-    DruidCoordinator.DutiesRunnable compactSegmentDutiesRunnable = coordinator.getCompactSegmentDutiesRunnable();
-    compactSegmentDutiesRunnable.run();
+    coordinator.runCompactSegmentsDuty();
     return Response.ok().build();
   }
 
   @GET
-  @Path("/remainingSegmentSize")
+  @Path("/progress")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getTotalSizeOfSegmentsAwaitingCompaction(
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getCompactionProgress(
       @QueryParam("dataSource") String dataSource
   )
   {
