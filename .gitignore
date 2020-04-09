@@ -11,6 +11,7 @@ target
 .project
 .PVS-Studio
 .settings/
+.vscode
 *.log
 *.DS_Store
 _site

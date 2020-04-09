@@ -28,14 +28,8 @@ WORKDIR /src
 RUN mvn -B -ff -q dependency:go-offline \
       install \
       -Pdist,bundle-contrib-exts \
-      -DskipTests \
-      -Danimal.sniffer.skip=true \
-      -Dcheckstyle.skip=true \
-      -Denforcer.skip=true \
-      -Dforbiddenapis.skip=true \
-      -Dmaven.javadoc.skip=true \
-      -Dpmd.skip=true \
-      -Dspotbugs.skip=true
+      -Pskip-static-checks,skip-tests \
+      -Dmaven.javadoc.skip=true
 
 RUN VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate \
       -Dexpression=project.version -DforceStdout=true \
