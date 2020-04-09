@@ -621,7 +621,7 @@ public class FilterPartitionTest extends BaseFilterTest
     );
 
     Filter filter1 = dimFilter1.toFilter();
-    Filter filter1CNF = Filters.toCNF(filter1);
+    Filter filter1CNF = Filters.toCnf(filter1);
 
     Assert.assertEquals(AndFilter.class, filter1CNF.getClass());
     Assert.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());
@@ -675,7 +675,7 @@ public class FilterPartitionTest extends BaseFilterTest
     );
 
     Filter filter1 = dimFilter1.toFilter();
-    Filter filter1CNF = Filters.toCNF(filter1);
+    Filter filter1CNF = Filters.toCnf(filter1);
 
     Assert.assertEquals(AndFilter.class, filter1CNF.getClass());
     Assert.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());
