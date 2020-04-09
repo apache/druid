@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
@@ -44,6 +45,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -55,6 +57,7 @@ import org.junit.rules.TestRule;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -943,5 +946,38 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteSuccessfulTask(task2);
     Assert.assertTrue(taskFuture2.get().isSuccess());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+  }
+
+  @Test
+  public void testStatusListenerEventDataNullShouldNotThrowException() throws Exception
+  {
+    // Set up mock emitter to verify log alert when exception is thrown inside the status listener
+    Worker worker = EasyMock.createMock(Worker.class);
+    EasyMock.expect(worker.getHost()).andReturn("host").atLeastOnce();
+    EasyMock.replay(worker);
+    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
+    Capture<EmittingLogger.EmittingAlertBuilder> capturedArgument = Capture.newInstance();
+    emitter.emit(EasyMock.capture(capturedArgument));
+    EasyMock.expectLastCall().atLeastOnce();
+    EmittingLogger.registerEmitter(emitter);
+    EasyMock.replay(emitter);
+
+    PathChildrenCache cache = new PathChildrenCache(cf, "/test", true);
+    testStartWithNoWorker();
+    cache.getListenable().addListener(remoteTaskRunner.getStatusListener(worker, new ZkWorker(worker, cache, jsonMapper), null));
+    cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+
+    // Status listener will recieve event with null data
+    Assert.assertTrue(
+        TestUtils.conditionValid(() -> cache.getCurrentData().size() == 1)
+    );
+
+    // Verify that the log emitter was called
+    EasyMock.verify(worker);
+    EasyMock.verify(emitter);
+    Map<String, Object> alertDataMap = capturedArgument.getValue().build(null).getDataMap();
+    Assert.assertTrue(alertDataMap.containsKey("znode"));
+    Assert.assertNull(alertDataMap.get("znode"));
+    // Status listener should successfully completes without throwing exception
   }
 }
