@@ -69,12 +69,20 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   @Nullable
   private int[] vAggregationRows = null;
 
-  static long requiredBufferCapacity(
-      int cardinality,
-      AggregatorFactory[] aggregatorFactories
-  )
+  /**
+   * Computes required buffer capacity for a grouping key of the given cardinaltiy and aggregatorFactories.
+   * This method assumes that the given cardinality doesn't count nulls.
+   *
+   * Returns -1 if it cardinality + 1 (for null) = Integer.MAX_VALUE. Returns computed required buffer capacity
+   * otherwise.
+   */
+  static long requiredBufferCapacity(int cardinality, AggregatorFactory[] aggregatorFactories)
   {
     final long cardinalityWithMissingValue = computeCardinalityWithMissingValue(cardinality);
+    // Cardinality should be in the integer range. See DimensionDictionarySelector.
+    if (cardinalityWithMissingValue > Integer.MAX_VALUE) {
+      return -1;
+    }
     final long recordSize = Arrays.stream(aggregatorFactories)
                                   .mapToLong(AggregatorFactory::getMaxIntermediateSizeWithNulls)
                                   .sum();

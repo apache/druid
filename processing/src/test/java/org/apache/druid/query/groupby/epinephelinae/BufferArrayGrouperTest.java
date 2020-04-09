@@ -110,20 +110,17 @@ public class BufferArrayGrouperTest
     final long[] requiredSizes;
 
     if (NullHandling.sqlCompatible()) {
-      // We need additional size to store nullability information.
-      requiredSizes = new long[]{19, 101, 19595788279L, 19595788288L};
+      // We need additional space to store nulls.
+      requiredSizes = new long[]{19, 101, 19595788279L, -1};
     } else {
-      requiredSizes = new long[]{17, 90, 17448304632L, 17448304640L};
+      requiredSizes = new long[]{17, 90, 17448304632L, -1};
     }
 
     for (int i = 0; i < cardinalityArray.length; i++) {
       Assert.assertEquals(
           StringUtils.format("cardinality[%d]", cardinalityArray[i]),
           requiredSizes[i],
-          BufferArrayGrouper.requiredBufferCapacity(
-              cardinalityArray[i],
-              aggregatorFactories
-          )
+          BufferArrayGrouper.requiredBufferCapacity(cardinalityArray[i], aggregatorFactories)
       );
     }
   }

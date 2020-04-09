@@ -300,7 +300,11 @@ public class GroupByQueryEngineV2
       );
 
       // Check that all keys and aggregated values can be contained in the buffer
-      return requiredBufferCapacity <= buffer.capacity() ? cardinality : -1;
+      if (requiredBufferCapacity < 0 || requiredBufferCapacity > buffer.capacity()) {
+        return -1;
+      } else {
+        return cardinality;
+      }
     } else {
       return -1;
     }
