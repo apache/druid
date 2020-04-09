@@ -256,7 +256,6 @@ export async function sampleForConnect(
     });
   }
 
-  const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec') || {};
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
@@ -265,7 +264,7 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: getDummyTimestampSpec(),
-        dimensionsSpec: dimensionsSpec,
+        dimensionsSpec: {},
       },
     } as any,
     samplerConfig: BASE_SAMPLER_CONFIG,
@@ -403,9 +402,17 @@ export async function sampleForTransform(
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec') || {};
 
-  // Extra step to simulate auto detecting dimension with transforms
-  const specialDimensionSpec: DimensionsSpec = dimensionsSpec;
-  if (transforms && transforms.length) {
+  const specialDimensionSpec: DimensionsSpec = {};
+
+  // Hack to get around https://github.com/apache/druid/issues/9658
+  // Get all dimensions when re-indexing from druid
+  if (dimensionsSpec.dimensions && isDruidSource(spec)) {
+    const dimensions = dimensionsSpec.dimensions.map(dimension =>
+      typeof dimension === 'string' ? dimension : dimension.name,
+    );
+    specialDimensionSpec.dimensions = dedupe(dimensions.concat(transforms.map(t => t.name)));
+  } else if (transforms && transforms.length) {
+    // Extra step to simulate auto detecting dimension with transforms
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
       spec: {
@@ -461,11 +468,18 @@ export async function sampleForFilter(
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   const filter: any = deepGet(spec, 'spec.dataSchema.transformSpec.filter');
-  const dimensionsSpec: any = deepGet(spec, 'spec.dataSchema.dimensionsSpec') || {};
+  const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec') || {};
 
-  // Extra step to simulate auto detecting dimension with transforms
-  const specialDimensionSpec: DimensionsSpec = dimensionsSpec;
-  if (transforms && transforms.length) {
+  const specialDimensionSpec: DimensionsSpec = {};
+
+  // Hack to get around https://github.com/apache/druid/issues/9658
+  // Get all dimensions when re-indexing from druid
+  if (dimensionsSpec.dimensions && isDruidSource(spec)) {
+    const dimensions = dimensionsSpec.dimensions.map(dimension =>
+      typeof dimension === 'string' ? dimension : dimension.name,
+    );
+    specialDimensionSpec.dimensions = dedupe(dimensions.concat(transforms.map(t => t.name)));
+  } else if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
       spec: {
@@ -521,10 +535,20 @@ export async function sampleForSchema(
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transformSpec: TransformSpec =
     deepGet(spec, 'spec.dataSchema.transformSpec') || ({} as TransformSpec);
+  const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec');
   const metricsSpec: MetricSpec[] = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
   const queryGranularity: string =
     deepGet(spec, 'spec.dataSchema.granularitySpec.queryGranularity') || 'NONE';
+
+  // Hack to get around transform specs being ignored if dimension auto detection is used
+  // https://github.com/apache/druid/issues/7952
+  if (transforms && transforms.length && dimensionsSpec.dimensions) {
+    const dimensions = dimensionsSpec.dimensions.map(dimension =>
+      typeof dimension === 'string' ? dimension : dimension.name,
+    );
+    dimensionsSpec.dimensions = dedupe(dimensions.concat(transforms.map(t => t.name)));
+  }
 
   const sampleSpec: SampleSpec = {
     type: samplerType,
