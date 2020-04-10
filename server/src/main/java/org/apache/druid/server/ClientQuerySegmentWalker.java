@@ -274,6 +274,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           current = Iterables.getOnlyElement(current.getChildren());
         }
 
+        assert !(current instanceof QueryDataSource); // lgtm [java/contradictory-type-checks]
+        
         current = inlineIfNecessary(current, null, subqueryRowLimitAccumulator, maxSubqueryRows, dryRun);
 
         while (!stack.isEmpty()) {
