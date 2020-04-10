@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
