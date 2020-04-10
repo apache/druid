@@ -67,6 +67,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -76,7 +77,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class GroupByQueryQueryToolChestTest
+public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
   @BeforeClass
   public static void setUpClass()
@@ -177,6 +178,20 @@ public class GroupByQueryQueryToolChestTest
         )
         .build();
 
+    final GroupByQuery queryNoLimit = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setPostAggregatorSpecs(
+            ImmutableList.of(
+                new ExpressionPostAggregator("post", "alias - 'x'", null, TestExprMacroTable.INSTANCE)
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null
     ).getCacheStrategy(query1);
@@ -189,6 +204,10 @@ public class GroupByQueryQueryToolChestTest
     Assert.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
+    ));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeCacheKey(query1),
+        strategy2.computeCacheKey(queryNoLimit)
     ));
   }
 

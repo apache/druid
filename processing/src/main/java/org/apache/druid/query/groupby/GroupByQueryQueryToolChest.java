@@ -524,6 +524,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheables(query.getDimensions())
             .appendCacheable(query.getVirtualColumns())
+            .appendCacheable(query.getLimitSpec())
             .build();
       }
 
