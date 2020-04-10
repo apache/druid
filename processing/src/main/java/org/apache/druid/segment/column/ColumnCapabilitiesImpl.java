@@ -51,9 +51,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   // These capabilities are computed at query time and not persisted in the segment files.
   @JsonIgnore
-  private IsCapable dictionaryValuesSorted = IsCapable.UNKNOWN;
+  private Capable dictionaryValuesSorted = Capable.UNKNOWN;
   @JsonIgnore
-  private IsCapable dictionaryValuesUnique = IsCapable.UNKNOWN;
+  private Capable dictionaryValuesUnique = Capable.UNKNOWN;
   @JsonIgnore
   private boolean filterable;
   @JsonIgnore
@@ -86,26 +86,26 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
-  public IsCapable areDictionaryValuesSorted()
+  public Capable areDictionaryValuesSorted()
   {
     return dictionaryValuesSorted;
   }
 
   public ColumnCapabilitiesImpl setDictionaryValuesSorted(boolean dictionaryValuesSorted)
   {
-    this.dictionaryValuesSorted = IsCapable.of(dictionaryValuesSorted);
+    this.dictionaryValuesSorted = Capable.of(dictionaryValuesSorted);
     return this;
   }
 
   @Override
-  public IsCapable areDictionaryValuesUnique()
+  public Capable areDictionaryValuesUnique()
   {
     return dictionaryValuesUnique;
   }
 
   public ColumnCapabilitiesImpl setDictionaryValuesUnique(boolean dictionaryValuesUnique)
   {
-    this.dictionaryValuesUnique = IsCapable.of(dictionaryValuesUnique);
+    this.dictionaryValuesUnique = Capable.of(dictionaryValuesUnique);
     return this;
   }
 
