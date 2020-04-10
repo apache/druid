@@ -196,12 +196,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_getCapabilities_factToCountry()
-  {
-    Assert.assertFalse(makeFactToCountrySegment().getColumnCapabilities("countryIsoCode").areDictionaryValuesSorted().isTrue());
-  }
-
-  @Test
   public void test_getColumnCapabilities_factToCountryFactColumn()
   {
     final ColumnCapabilities capabilities = makeFactToCountrySegment().getColumnCapabilities("countryIsoCode");
@@ -209,6 +203,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.hasBitmapIndexes());
     Assert.assertTrue(capabilities.isDictionaryEncoded());
+    Assert.assertTrue(capabilities.areDictionaryValuesSorted().isTrue());
+    Assert.assertTrue(capabilities.areDictionaryValuesUnique().isTrue());
   }
 
   @Test
@@ -220,7 +216,9 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
 
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
+    Assert.assertFalse(capabilities.areDictionaryValuesUnique().isTrue());
     Assert.assertTrue(capabilities.isDictionaryEncoded());
+    Assert.assertTrue(capabilities.areDictionaryValuesSorted().isTrue());
   }
 
   @Test
