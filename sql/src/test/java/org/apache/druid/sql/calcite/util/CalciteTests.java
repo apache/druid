@@ -396,7 +396,7 @@ public class CalciteTests
               .put("d2", 1.7)
               .put("f1", 0.1f)
               .put("f2", 0.1f)
-              .put("l1", 7L)
+              .put("l1", 325323L)
               .put("l2", 325323L)
               .put("dim1", "10.1")
               .put("dim2", ImmutableList.of())
