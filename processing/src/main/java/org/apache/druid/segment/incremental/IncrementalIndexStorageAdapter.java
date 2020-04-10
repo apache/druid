@@ -140,13 +140,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     return indexer.getMaxValue();
   }
 
-
-  @Override
-  public Capabilities getCapabilities()
-  {
-    return Capabilities.builder().dimensionValuesSorted(false).build();
-  }
-
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {

@@ -26,6 +26,8 @@ public interface ColumnCapabilities
   ValueType getType();
 
   boolean isDictionaryEncoded();
+  IsCapable areDictionaryValuesSorted();
+  IsCapable areDictionaryValuesUnique();
   boolean isRunLengthEncoded();
   boolean hasBitmapIndexes();
   boolean hasSpatialIndexes();
@@ -38,6 +40,34 @@ public interface ColumnCapabilities
    * fail to set {@link #hasMultipleValues()} even when the associated column really could have multiple values.
    * Until this situation is sorted out, if this method returns false, callers are encouraged to ignore
    * {@link #hasMultipleValues()} and treat that property as if it were unknown.
+   *
+   * todo: replace all booleans with {@link IsCapable} and this method can be dropped
    */
   boolean isComplete();
+
+
+  enum IsCapable
+  {
+    FALSE,
+    TRUE,
+    UNKNOWN;
+
+    public boolean isTrue()
+    {
+      return this == TRUE;
+    }
+
+    public IsCapable and(IsCapable other)
+    {
+      if (this == UNKNOWN || other == UNKNOWN) {
+        return UNKNOWN;
+      }
+      return this == TRUE && other == TRUE ? TRUE : FALSE;
+    }
+
+    public static IsCapable of(boolean bool)
+    {
+      return bool ? TRUE : FALSE;
+    }
+  }
 }

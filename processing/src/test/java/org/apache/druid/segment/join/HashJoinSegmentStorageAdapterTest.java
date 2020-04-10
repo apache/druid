@@ -198,7 +198,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   @Test
   public void test_getCapabilities_factToCountry()
   {
-    Assert.assertFalse(makeFactToCountrySegment().getCapabilities().dimensionValuesSorted());
+    Assert.assertFalse(makeFactToCountrySegment().getColumnCapabilities("countryIsoCode").areDictionaryValuesSorted().isTrue());
   }
 
   @Test

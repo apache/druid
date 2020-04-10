@@ -146,16 +146,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     }
   }
 
-  @Override
-  public Capabilities getCapabilities()
-  {
-    // Dictionaries in the joinables may not be sorted. Unfortunately this API does not let us be granular about what
-    // is and isn't sorted, so return false globally. At the time of this writing, the only query affected by this
-    // is a topN with lexicographic sort and 'previousStop' set (it will not be able to skip values based on
-    // dictionary code).
-    return Capabilities.builder().dimensionValuesSorted(false).build();
-  }
-
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)

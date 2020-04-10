@@ -52,6 +52,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupB
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -74,6 +75,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * Class that knows how to process a groupBy query on a single {@link StorageAdapter}. It returns a {@link Sequence}
@@ -555,7 +557,17 @@ public class GroupByQueryEngineV2
       final DefaultLimitSpec limitSpec = query.isApplyLimitPushDown() &&
                                          querySpecificConfig.isApplyLimitPushDownToSegment() ?
                                          (DefaultLimitSpec) query.getLimitSpec() : null;
+
+
+      boolean canDoPushdown = false;
       if (limitSpec != null) {
+        // there is perhaps a more graceful way this could be handled a bit more selectively, but for now just avoid
+        // pushdown if it will prove problematic by checking grouping and ordering columns
+        canDoPushdown = canPushdownLimit(query.getDimensions().stream().map(DimensionSpec::getDimension));
+        canDoPushdown &= canPushdownLimit(limitSpec.getColumns().stream().map(OrderByColumnSpec::getDimension));
+      }
+
+      if (canDoPushdown) {
         LimitedBufferHashGrouper limitGrouper = new LimitedBufferHashGrouper<>(
             Suppliers.ofInstance(buffer),
             keySerde,
@@ -706,6 +718,33 @@ public class GroupByQueryEngineV2
             selectorPlus.getKeyBufferPosition()
         );
       }
+    }
+
+    /**
+     * check if a collection of columns will operate correctly with {@link LimitedBufferHashGrouper} for query limit
+     * pushdown
+     */
+    private boolean canPushdownLimit(Stream<String> columnNames)
+    {
+      return columnNames.allMatch(this::canPushdownLimit);
+    }
+
+    /**
+     * check if a column will operate correctly with {@link LimitedBufferHashGrouper} for query limit pushdown
+     */
+    private boolean canPushdownLimit(String columnName)
+    {
+      ColumnCapabilities capabilities = cursor.getColumnSelectorFactory().getColumnCapabilities(columnName);
+      if (capabilities != null) {
+        // strings can be pushed down if dictionaries are sorted and unique per id
+        if (capabilities.getType() == ValueType.STRING) {
+          return capabilities.areDictionaryValuesSorted().and(capabilities.areDictionaryValuesUnique()).isTrue();
+        }
+        // party on
+        return true;
+      }
+      // we don't know what we don't know, don't assume otherwise
+      return false;
     }
   }
 

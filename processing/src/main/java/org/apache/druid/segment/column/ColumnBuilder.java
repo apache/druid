@@ -114,6 +114,8 @@ public class ColumnBuilder
             .setType(type)
             .setDictionaryEncoded(dictionaryEncoded)
             .setHasBitmapIndexes(bitmapIndex != null)
+            .setDictionaryValuesSorted(true)
+            .setDictionaryValuesUnique(true)
             .setHasSpatialIndexes(spatialIndex != null)
             .setHasMultipleValues(hasMultipleValues)
             .setIsComplete(true)
