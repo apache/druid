@@ -1727,3 +1727,6 @@ regionName
 json
 metastore
 UserGroupInformation
+CVE-2019-17571
+CVE-2019-12399
+CVE-2018-17196

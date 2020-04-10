@@ -191,6 +191,10 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       throw new ISE("keySpace too large to handle");
     }
 
+    if (vAggregationPositions == null || vAggregationRows == null) {
+      throw new ISE("Grouper was not initialized for vectorization");
+    }
+
     if (keySpace.getCapacity() == 0) {
       // Empty key space, assume keys are all zeroes.
       final int dimIndex = 1;
@@ -206,7 +210,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
     } else {
       for (int i = 0; i < numRows; i++) {
         // +1 matches what hashFunction() would do.
-        final int dimIndex = keySpace.getInt(i * Integer.BYTES) + 1;
+        final int dimIndex = keySpace.getInt(((long) i) * Integer.BYTES) + 1;
 
         if (dimIndex < 0 || dimIndex >= cardinalityWithMissingValue) {
           throw new IAE("Invalid dimIndex[%s]", dimIndex);
