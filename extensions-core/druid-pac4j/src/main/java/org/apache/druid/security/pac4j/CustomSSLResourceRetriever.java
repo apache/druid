@@ -32,7 +32,7 @@ import java.net.URL;
 
 /**
  * This class exists only to enable use of custom SSLSocketFactory on top of builtin class. This could be removed
- * when same functionality has been added to original class com.nimbusds.jose.util.CustomSSLResourceRetriever.
+ * when same functionality has been added to original class com.nimbusds.jose.util.DefaultResourceRetriever.
  */
 public class CustomSSLResourceRetriever extends DefaultResourceRetriever
 {
