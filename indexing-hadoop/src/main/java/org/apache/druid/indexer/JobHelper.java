@@ -49,7 +49,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
 import javax.annotation.Nullable;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -63,7 +62,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -553,13 +551,15 @@ public class JobHelper
   {
     long size = 0L;
     try (ZipOutputStream outputStream = new ZipOutputStream(baseOutputStream)) {
-      List<String> filesToCopy = Arrays.asList(baseDir.list());
-      for (String fileName : filesToCopy) {
-        final File fileToCopy = new File(baseDir, fileName);
-        if (Files.isRegularFile(fileToCopy.toPath())) {
-          size += copyFileToZipStream(fileToCopy, outputStream, progressable);
-        } else {
-          log.warn("File at [%s] is not a regular file! skipping as part of zip", fileToCopy.getPath());
+      String[] filesToCopy = baseDir.list();
+      if (filesToCopy != null) {
+        for (String fileName : filesToCopy) {
+          final File fileToCopy = new File(baseDir, fileName);
+          if (Files.isRegularFile(fileToCopy.toPath())) {
+            size += copyFileToZipStream(fileToCopy, outputStream, progressable);
+          } else {
+            log.warn("File at [%s] is not a regular file! skipping as part of zip", fileToCopy.getPath());
+          }
         }
       }
       outputStream.flush();

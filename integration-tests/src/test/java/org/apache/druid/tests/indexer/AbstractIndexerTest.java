@@ -35,6 +35,7 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -116,7 +117,7 @@ public abstract class AbstractIndexerTest
   {
     final InputStream inputStream = ITRealtimeIndexTaskTest.class.getResourceAsStream(file);
     try {
-      return IOUtils.toString(inputStream, "UTF-8");
+      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
     }
     finally {
       IOUtils.closeQuietly(inputStream);
