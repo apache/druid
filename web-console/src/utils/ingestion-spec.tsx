@@ -310,7 +310,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'type',
     label: 'Input format',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf'],
     info: (
       <>
         <p>The parser used to parse the data.</p>
@@ -383,7 +383,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc',
+    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc' || p.type === 'avro_ocf',
     info: (
       <>
         Specifies if the bytes parquet column which is not logically marked as a string or enum type
@@ -414,7 +414,12 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
   const inputFormatType = inputFormat.type;
-  return inputFormatType === 'json' || inputFormatType === 'parquet' || inputFormatType === 'orc';
+  return (
+    inputFormatType === 'json' ||
+    inputFormatType === 'parquet' ||
+    inputFormatType === 'orc' ||
+    inputFormatType === 'avro_ocf'
+  );
 }
 
 export interface TimestampSpec {
@@ -1087,7 +1092,16 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'File filter',
           type: 'string',
           required: true,
-          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv', '*.parquet', '*.orc'],
+          suggestions: [
+            '*',
+            '*.json',
+            '*.json.gz',
+            '*.csv',
+            '*.tsv',
+            '*.parquet',
+            '*.orc',
+            '*.avro',
+          ],
           info: (
             <>
               <ExternalLink
@@ -2679,6 +2693,10 @@ function guessInputFormat(sampleData: string[]): InputFormat {
 
     if (sampleDatum.startsWith('ORC')) {
       return inputFormatFromType('orc');
+    }
+
+    if (sampleDatum.startsWith('Obj1')) {
+      return inputFormatFromType('avro_ocf');
     }
   }
 
