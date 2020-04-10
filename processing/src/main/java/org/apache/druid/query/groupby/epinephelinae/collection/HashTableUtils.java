@@ -65,19 +65,19 @@ public class HashTableUtils
 
       case 9:
         return 31 * (31 * (31 + memory.getInt(position)) + memory.getInt(position + Integer.BYTES))
-               + memory.getByte(position + 2 * Integer.BYTES);
+               + memory.getByte(position + 2L * Integer.BYTES);
 
       case 12:
         return 31 * (31 * (31 + memory.getInt(position)) + memory.getInt(position + Integer.BYTES))
-               + memory.getInt(position + 2 * Integer.BYTES);
+               + memory.getInt(position + 2L * Integer.BYTES);
 
       case 13:
         return 31 * (31 * (31 * (31 + memory.getInt(position)) + memory.getInt(position + Integer.BYTES))
-                     + memory.getInt(position + 2 * Integer.BYTES)) + memory.getByte(position + 3 * Integer.BYTES);
+                     + memory.getInt(position + 2L * Integer.BYTES)) + memory.getByte(position + 3L * Integer.BYTES);
 
       case 16:
         return 31 * (31 * (31 * (31 + memory.getInt(position)) + memory.getInt(position + Integer.BYTES))
-                     + memory.getInt(position + 2 * Integer.BYTES)) + memory.getInt(position + 3 * Integer.BYTES);
+                     + memory.getInt(position + 2L * Integer.BYTES)) + memory.getInt(position + 3L * Integer.BYTES);
 
       default:
         int hashCode = 1;
