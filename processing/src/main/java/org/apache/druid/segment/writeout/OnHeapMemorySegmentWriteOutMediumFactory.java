@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 import java.io.File;
 
-
 public class OnHeapMemorySegmentWriteOutMediumFactory implements SegmentWriteOutMediumFactory
 {
   private static final OnHeapMemorySegmentWriteOutMediumFactory INSTANCE =
