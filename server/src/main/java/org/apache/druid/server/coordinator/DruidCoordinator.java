@@ -630,9 +630,7 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
-    List<CoordinatorDuty> duties = new ArrayList<>();
-    duties.add(compactSegments);
-    return ImmutableList.copyOf(duties);
+    return ImmutableList.of(compactSegments);
   }
 
   private class DutiesRunnable implements Runnable

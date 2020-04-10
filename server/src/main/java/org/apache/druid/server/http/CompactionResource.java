@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -47,9 +48,13 @@ public class CompactionResource
     this.coordinator = coordinator;
   }
 
+  /**
+   * This API is meant to only be used by Druid's integration tests.
+   */
   @POST
   @Path("/compact")
   @ResourceFilters(ConfigResourceFilter.class)
+  @VisibleForTesting
   public Response forceTriggerCompaction()
   {
     coordinator.runCompactSegmentsDuty();

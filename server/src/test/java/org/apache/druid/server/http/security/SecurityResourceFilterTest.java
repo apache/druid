@@ -75,7 +75,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
             getRequestPathsWithAuthorizer(BrokerQueryResource.class),
             getRequestPathsWithAuthorizer(RouterResource.class),
             getRequestPathsWithAuthorizer(CompactionResource.class)
-            )
+        )
     );
   }
 
