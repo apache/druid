@@ -138,7 +138,7 @@ public class KafkaEmitter implements Emitter
       }
     }
     catch (Throwable e) {
-      log.warn(e, "Failed to take record from queue!");
+      log.warn(e, "Exception while getting record from queue or producer send, Events would not be emitted anymore.");
     }
   }
 
