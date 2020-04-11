@@ -814,9 +814,9 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
+    Assert.assertFalse(caps.isComplete());
 
     caps = Z_CONCAT_X.capabilities("expr");
     Assert.assertEquals(ValueType.STRING, caps.getType());
