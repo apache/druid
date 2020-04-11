@@ -29,7 +29,6 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -138,13 +137,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     DimensionIndexer indexer = desc.getIndexer();
     return indexer.getMaxValue();
-  }
-
-
-  @Override
-  public Capabilities getCapabilities()
-  {
-    return Capabilities.builder().dimensionValuesSorted(false).build();
   }
 
   @Override
