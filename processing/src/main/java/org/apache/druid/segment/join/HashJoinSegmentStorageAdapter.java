@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
@@ -144,16 +143,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     } else {
       return null;
     }
-  }
-
-  @Override
-  public Capabilities getCapabilities()
-  {
-    // Dictionaries in the joinables may not be sorted. Unfortunately this API does not let us be granular about what
-    // is and isn't sorted, so return false globally. At the time of this writing, the only query affected by this
-    // is a topN with lexicographic sort and 'previousStop' set (it will not be able to skip values based on
-    // dictionary code).
-    return Capabilities.builder().dimensionValuesSorted(false).build();
   }
 
   @Nullable

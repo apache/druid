@@ -112,12 +112,6 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
     return null;
   }
 
-  @Override
-  public Capabilities getCapabilities()
-  {
-    return Capabilities.builder().dimensionValuesSorted(false).build();
-  }
-
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
