@@ -42,6 +42,7 @@ public class RowBasedColumnSelectorFactoryTest
                                                                 .add(DOUBLE_COLUMN_NAME, ValueType.DOUBLE)
                                                                 .add(COMPLEX_COLUMN_NAME, ValueType.COMPLEX)
                                                                 .build();
+
   @Test
   public void testCapabilitiesTime()
   {
