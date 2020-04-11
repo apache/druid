@@ -86,8 +86,7 @@ public class IndexedTableDimensionSelector implements DimensionSelector
   @Override
   public int getValueCardinality()
   {
-    // +1 for nulls.
-    return table.numRows() + 1;
+    return computeDimensionSelectorCardinality(table);
   }
 
   @Nullable
@@ -140,5 +139,21 @@ public class IndexedTableDimensionSelector implements DimensionSelector
   {
     inspector.visit("table", table);
     inspector.visit("extractionFn", extractionFn);
+  }
+
+  /**
+   * Returns the value that {@link #getValueCardinality()} would return for a particular {@link IndexedTable}.
+   *
+   * The value will be one higher than {@link IndexedTable#numRows()}, to account for the possibility of phantom nulls.
+   *
+   * @throws IllegalArgumentException if the table's row count is {@link Integer#MAX_VALUE}
+   */
+  static int computeDimensionSelectorCardinality(final IndexedTable table)
+  {
+    if (table.numRows() == Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("Table is too large");
+    }
+
+    return table.numRows() + 1;
   }
 }
