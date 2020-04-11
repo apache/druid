@@ -99,52 +99,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  public void testAutoCompactionDutySubmitAndVerifyCompactionSkipFirstDay() throws Exception
-  {
-    loadData(INDEX_TASK);
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      intervalsBeforeCompaction.sort(null);
-      // 4 segments across 2 days (4 total)...
-      verifySegmentsCount(4);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
-      forceTriggerAutoCompaction();
-
-      // One day compacted (1 new segment) and one day remains uncompacted. (5 total)
-      verifySegmentsCount(5);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
-
-      checkCompactionIntervals(intervalsBeforeCompaction);
-    }
-  }
-
-  @Test
-  public void testAutoCompactionDutySubmitAndVerifySplit() throws Exception
-  {
-    loadData(INDEX_TASK);
-    try (final Closeable ignored = unloader(fullDatasourceName)) {
-      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
-      intervalsBeforeCompaction.sort(null);
-      // 4 segments across 2 days (4 total)...
-      verifySegmentsCount(4);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-
-      submitCompactionConfig(1, SKIP_OFFSET_FROM_LATEST);
-      forceTriggerAutoCompaction();
-
-      //...compacted into 10 new segments across 2 days. 5 new segments each day (14 total)
-      verifySegmentsCount(14);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(10, 1);
-
-      checkCompactionIntervals(intervalsBeforeCompaction);
-    }
-  }
-
-  @Test
   public void testAutoCompactionDutyCanUpdateCompactionConfig() throws Exception
   {
     loadData(INDEX_TASK);
@@ -158,13 +112,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       // Dummy compaction config which will be overwritten
       submitCompactionConfig(10000, SKIP_OFFSET_FROM_LATEST);
       // New compaction config should overwrites the existing compaction config
-      submitCompactionConfig(2, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(1, SKIP_OFFSET_FROM_LATEST);
       forceTriggerAutoCompaction();
 
-      //...compacted into 6 new segments across 2 days. 3 new segments each day (10 total)
-      verifySegmentsCount(10);
+      // Instead of merging segments, the updated config will split segments!
+      //...compacted into 10 new segments across 2 days. 5 new segments each day (14 total)
+      verifySegmentsCount(14);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(6, 2);
+      verifySegmentsCompacted(10, 2);
 
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
@@ -205,7 +160,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
+      // Skips first day. Should only compact one out of two days.
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
 
       // Set compactionTaskSlotRatio to 0 to prevent any compaction
       updateCompactionTaskSlot(0, 100);
@@ -223,6 +179,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(0, null);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
+      // Update compaction slots to be > 0
+      updateCompactionTaskSlot(1, 5);
+      // One day compacted (1 new segment) and one day remains uncompacted. (5 total)
+      verifySegmentsCount(5);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
@@ -302,9 +266,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         foundDataSourceCompactionConfig = dataSourceCompactionConfig;
       }
     }
-    Assert.assertNull(foundDataSourceCompactionConfig);
-
-    foundDataSourceCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
     Assert.assertNull(foundDataSourceCompactionConfig);
   }
 
