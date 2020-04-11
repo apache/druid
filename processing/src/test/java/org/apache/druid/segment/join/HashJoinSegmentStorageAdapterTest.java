@@ -103,7 +103,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_getDimensionCardinality_factToCountryJoinColumn()
   {
     Assert.assertEquals(
-        18,
+        19,
         makeFactToCountrySegment().getDimensionCardinality(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
     );
   }

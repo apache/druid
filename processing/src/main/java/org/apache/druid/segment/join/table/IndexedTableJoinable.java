@@ -51,7 +51,7 @@ public class IndexedTableJoinable implements Joinable
   public int getCardinality(String columnName)
   {
     if (table.rowSignature().contains(columnName)) {
-      return table.numRows();
+      return IndexedTableDimensionSelector.computeDimensionSelectorCardinality(table);
     } else {
       // NullDimensionSelector has cardinality = 1 (one null, nothing else).
       return 1;
