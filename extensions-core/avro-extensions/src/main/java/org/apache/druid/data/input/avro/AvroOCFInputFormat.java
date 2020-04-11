@@ -19,29 +19,48 @@
 
 package org.apache.druid.data.input.avro;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.avro.Schema;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Map;
 import java.util.Objects;
 
 public class AvroOCFInputFormat extends NestedInputFormat
 {
+  private static final Logger LOGGER = new Logger(AvroOCFInputFormat.class);
+
   private final boolean binaryAsString;
+  private final Schema readerSchema;
 
   @JsonCreator
   public AvroOCFInputFormat(
+      @JacksonInject @Json ObjectMapper mapper,
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
+      @JsonProperty("schema") Map<String, Object> schema,
       @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
-  )
+  ) throws Exception
   {
     super(flattenSpec);
+    // If a reader schema is supplied create the datum reader with said schema, otherwise use the writer schema
+    if (schema != null) {
+      String schemaStr = mapper.writeValueAsString(schema);
+      LOGGER.debug("Initialising with reader schema: [%s]", schemaStr);
+      this.readerSchema = new Schema.Parser().parse(schemaStr);
+    } else {
+      this.readerSchema = null;
+    }
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
   }
 
@@ -54,7 +73,14 @@ public class AvroOCFInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new AvroOCFReader(inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
+    return new AvroOCFReader(
+        inputRowSchema,
+        source,
+        temporaryDirectory,
+        readerSchema,
+        getFlattenSpec(),
+        binaryAsString
+    );
   }
 
   @Override
@@ -70,12 +96,13 @@ public class AvroOCFInputFormat extends NestedInputFormat
       return false;
     }
     AvroOCFInputFormat that = (AvroOCFInputFormat) o;
-    return binaryAsString == that.binaryAsString;
+    return binaryAsString == that.binaryAsString &&
+           Objects.equals(readerSchema, that.readerSchema);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), binaryAsString);
+    return Objects.hash(super.hashCode(), binaryAsString, readerSchema);
   }
 }

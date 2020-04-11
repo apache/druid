@@ -19,10 +19,10 @@
 
 package org.apache.druid.data.input.avro;
 
+import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumReader;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -47,11 +47,13 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
   private final InputEntity source;
   private final File temporaryDirectory;
   private final ObjectFlattener<GenericRecord> recordFlattener;
+  private Schema readerSchema;
 
   AvroOCFReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
+      Schema readerSchema,
       JSONPathSpec flattenSpec,
       boolean binaryAsString
   )
@@ -59,7 +61,13 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.temporaryDirectory = temporaryDirectory;
+    this.readerSchema = readerSchema;
     this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString));
+  }
+
+  private static Schema dataFileSchema(File file) throws IOException
+  {
+    return new DataFileReader<GenericRecord>(file, new GenericDatumReader<>()).getSchema();
   }
 
   @Override
@@ -69,8 +77,12 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
 
     final byte[] buffer = new byte[InputEntity.DEFAULT_FETCH_BUFFER_SIZE];
     final InputEntity.CleanableFile file = closer.register(source.fetch(temporaryDirectory, buffer));
-    DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-    DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(file.file(), datumReader);
+    final Schema writerSchema = dataFileSchema(file.file());
+    if (readerSchema == null) {
+      readerSchema = writerSchema;
+    }
+    final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>(writerSchema, readerSchema);
+    final DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(file.file(), datumReader);
 
     return new CloseableIterator<GenericRecord>()
     {
