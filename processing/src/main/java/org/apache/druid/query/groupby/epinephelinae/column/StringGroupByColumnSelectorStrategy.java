@@ -27,6 +27,7 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -36,11 +37,15 @@ import java.util.function.IntFunction;
 public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelectorStrategy
 {
   @Nullable
+  private final ColumnCapabilities capabilities;
+
+  @Nullable
   private final IntFunction<String> dictionaryLookup;
 
-  public StringGroupByColumnSelectorStrategy(IntFunction<String> dictionaryLookup)
+  public StringGroupByColumnSelectorStrategy(IntFunction<String> dictionaryLookup, ColumnCapabilities capabilities)
   {
     this.dictionaryLookup = dictionaryLookup;
+    this.capabilities = capabilities;
   }
 
   @Override
@@ -148,7 +153,12 @@ public class StringGroupByColumnSelectorStrategy implements GroupByColumnSelecto
   @Override
   public Grouper.BufferComparator bufferComparator(int keyBufferPosition, @Nullable StringComparator stringComparator)
   {
-    if (stringComparator == null || StringComparators.LEXICOGRAPHIC.equals(stringComparator)) {
+    final boolean canCompareInts =
+        capabilities != null &&
+        capabilities.hasBitmapIndexes() &&
+        capabilities.areDictionaryValuesSorted().and(capabilities.areDictionaryValuesUnique()).isTrue();
+
+    if (canCompareInts && (stringComparator == null || StringComparators.LEXICOGRAPHIC.equals(stringComparator))) {
       return (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> Integer.compare(
           lhsBuffer.getInt(lhsPosition + keyBufferPosition),
           rhsBuffer.getInt(rhsPosition + keyBufferPosition)
