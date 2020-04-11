@@ -52,6 +52,7 @@ import org.apache.druid.query.groupby.epinephelinae.column.NullableNumericGroupB
 import org.apache.druid.query.groupby.epinephelinae.column.StringGroupByColumnSelectorStrategy;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -74,6 +75,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * Class that knows how to process a groupBy query on a single {@link StorageAdapter}. It returns a {@link Sequence}
@@ -335,6 +337,42 @@ public class GroupByQueryEngineV2
             });
   }
 
+  public static void convertRowTypesToOutputTypes(
+      final List<DimensionSpec> dimensionSpecs,
+      final ResultRow resultRow,
+      final int resultRowDimensionStart
+  )
+  {
+    for (int i = 0; i < dimensionSpecs.size(); i++) {
+      DimensionSpec dimSpec = dimensionSpecs.get(i);
+      final int resultRowIndex = resultRowDimensionStart + i;
+      final ValueType outputType = dimSpec.getOutputType();
+
+      resultRow.set(
+          resultRowIndex,
+          DimensionHandlerUtils.convertObjectToType(resultRow.get(resultRowIndex), outputType)
+      );
+    }
+  }
+
+  /**
+   * check if a column will operate correctly with {@link LimitedBufferHashGrouper} for query limit pushdown
+   */
+  public static boolean canPushDownLimit(ColumnSelectorFactory columnSelectorFactory, String columnName)
+  {
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+    if (capabilities != null) {
+      // strings can be pushed down if dictionaries are sorted and unique per id
+      if (capabilities.getType() == ValueType.STRING) {
+        return capabilities.areDictionaryValuesSorted().and(capabilities.areDictionaryValuesUnique()).isTrue();
+      }
+      // party on
+      return true;
+    }
+    // we don't know what we don't know, don't assume otherwise
+    return false;
+  }
+
   private static class GroupByStrategyFactory
       implements ColumnSelectorStrategyFactory<GroupByColumnSelectorStrategy>
   {
@@ -349,7 +387,7 @@ public class GroupByQueryEngineV2
         case STRING:
           DimensionSelector dimSelector = (DimensionSelector) selector;
           if (dimSelector.getValueCardinality() >= 0) {
-            return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName);
+            return new StringGroupByColumnSelectorStrategy(dimSelector::lookupName, capabilities);
           } else {
             return new DictionaryBuildingStringGroupByColumnSelectorStrategy();
           }
@@ -555,16 +593,31 @@ public class GroupByQueryEngineV2
     @Override
     protected Grouper<ByteBuffer> newGrouper()
     {
-      Grouper grouper = null;
+      Grouper<ByteBuffer> grouper = null;
+      final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
       final DefaultLimitSpec limitSpec = query.isApplyLimitPushDown() &&
                                          querySpecificConfig.isApplyLimitPushDownToSegment() ?
                                          (DefaultLimitSpec) query.getLimitSpec() : null;
+
+      final boolean canDoLimitPushdown;
       if (limitSpec != null) {
-        LimitedBufferHashGrouper limitGrouper = new LimitedBufferHashGrouper<>(
+        // there is perhaps a more graceful way this could be handled a bit more selectively, but for now just avoid
+        // pushdown if it will prove problematic by checking grouping and ordering columns
+
+        canDoLimitPushdown = Stream.concat(
+            query.getDimensions().stream().map(DimensionSpec::getDimension),
+            limitSpec.getColumns().stream().map(OrderByColumnSpec::getDimension)
+        ).allMatch(col -> GroupByQueryEngineV2.canPushDownLimit(selectorFactory, col));
+      } else {
+        canDoLimitPushdown = false;
+      }
+
+      if (canDoLimitPushdown) {
+        LimitedBufferHashGrouper<ByteBuffer> limitGrouper = new LimitedBufferHashGrouper<>(
             Suppliers.ofInstance(buffer),
             keySerde,
             AggregatorAdapters.factorizeBuffered(
-                cursor.getColumnSelectorFactory(),
+                selectorFactory,
                 query.getAggregatorSpecs()
             ),
             querySpecificConfig.getBufferGrouperMaxSize(),
@@ -592,7 +645,7 @@ public class GroupByQueryEngineV2
             Suppliers.ofInstance(buffer),
             keySerde,
             AggregatorAdapters.factorizeBuffered(
-                cursor.getColumnSelectorFactory(),
+                selectorFactory,
                 query.getAggregatorSpecs()
             ),
             querySpecificConfig.getBufferGrouperMaxSize(),
@@ -831,24 +884,6 @@ public class GroupByQueryEngineV2
           resultRow.set(dim.getResultRowPosition(), NullHandling.defaultStringValue());
         }
       }
-    }
-  }
-
-  public static void convertRowTypesToOutputTypes(
-      final List<DimensionSpec> dimensionSpecs,
-      final ResultRow resultRow,
-      final int resultRowDimensionStart
-  )
-  {
-    for (int i = 0; i < dimensionSpecs.size(); i++) {
-      DimensionSpec dimSpec = dimensionSpecs.get(i);
-      final int resultRowIndex = resultRowDimensionStart + i;
-      final ValueType outputType = dimSpec.getOutputType();
-
-      resultRow.set(
-          resultRowIndex,
-          DimensionHandlerUtils.convertObjectToType(resultRow.get(resultRowIndex), outputType)
-      );
     }
   }
 
