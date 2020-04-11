@@ -30,6 +30,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -387,14 +388,23 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       String prefix
   ) throws Exception
   {
-    Request req = druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedUserMap", prefix)
-    );
+    String requestPath = StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedUserMap", prefix);
+    Request req = druidLeaderClient.makeRequest(HttpMethod.GET, requestPath);
+
     BytesFullResponseHolder responseHolder = druidLeaderClient.go(
         req,
         new BytesFullResponseHandler()
     );
+
+    if (responseHolder.getStatus() != HttpResponseStatus.OK) {
+      throw new RE(
+          "Failed to GET %s from coordinator. Http Status[%d], Error [%s].",
+          requestPath,
+          responseHolder.getStatus().getCode(),
+          StringUtils.fromUtf8(responseHolder.getContent())
+      );
+    }
+
     byte[] userRoleMapBytes = responseHolder.getContent();
 
     UserAndRoleMap userAndRoleMap = objectMapper.readValue(
@@ -411,10 +421,8 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
       String prefix
   ) throws Exception
   {
-    Request req = druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedGroupMappingMap", prefix)
-    );
+    String requestPath = StringUtils.format("/druid-ext/basic-security/authorization/db/%s/cachedSerializedGroupMappingMap", prefix);
+    Request req = druidLeaderClient.makeRequest(HttpMethod.GET, requestPath);
     BytesFullResponseHolder responseHolder = druidLeaderClient.go(
         req,
         new BytesFullResponseHandler()
@@ -426,6 +434,15 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     if (responseHolder.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
       LOG.warn("cachedSerializedGroupMappingMap is not available from the coordinator, skipping fetch of group mappings for now.");
       return null;
+    }
+
+    if (responseHolder.getStatus() != HttpResponseStatus.OK) {
+      throw new RE(
+          "Failed to GET %s from coordinator. Http Status[%d], Error [%s].",
+          requestPath,
+          responseHolder.getStatus().getCode(),
+          StringUtils.fromUtf8(responseHolder.getContent())
+      );
     }
 
     byte[] groupRoleMapBytes = responseHolder.getContent();

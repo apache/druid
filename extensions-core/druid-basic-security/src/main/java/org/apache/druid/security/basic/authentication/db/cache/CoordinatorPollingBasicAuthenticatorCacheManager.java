@@ -31,6 +31,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -48,6 +49,7 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorU
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -249,14 +251,22 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
   private Map<String, BasicAuthenticatorUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception
   {
     Map<String, BasicAuthenticatorUser> userMap = null;
-    Request req = druidLeaderClient.makeRequest(
-        HttpMethod.GET,
-        StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedUserMap", prefix)
-    );
+    String requestPath = StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedUserMap", prefix);
+    Request req = druidLeaderClient.makeRequest(HttpMethod.GET, requestPath);
     BytesFullResponseHolder responseHolder = druidLeaderClient.go(
         req,
         new BytesFullResponseHandler()
     );
+
+    if (responseHolder.getStatus() != HttpResponseStatus.OK) {
+      throw new RE(
+          "Failed to GET %s from coordinator. Http Status[%d], Error [%s].",
+          requestPath,
+          responseHolder.getStatus().getCode(),
+          StringUtils.fromUtf8(responseHolder.getContent())
+      );
+    }
+
     byte[] userMapBytes = responseHolder.getContent();
     if (ArrayUtils.isNotEmpty(userMapBytes)) {
       userMap = objectMapper.readValue(
