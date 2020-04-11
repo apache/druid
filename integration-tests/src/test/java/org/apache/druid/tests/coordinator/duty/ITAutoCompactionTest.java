@@ -86,14 +86,20 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
+      forceTriggerAutoCompaction();
+      //...compacted into 1 new segment for 1 day. 1 day compacted and 1 day skipped/remains uncompacted. (5 total)
+      verifySegmentsCount(5);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
       forceTriggerAutoCompaction();
-
-      //...compacted into 2 new segments across 2 days. 1 new segment each day (6 total)
+      //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (6 total)
       verifySegmentsCount(6);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
-
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
@@ -161,7 +167,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       // Skips first day. Should only compact one out of two days.
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
 
       // Set compactionTaskSlotRatio to 0 to prevent any compaction
       updateCompactionTaskSlot(0, 100);
@@ -181,13 +187,23 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(0, null);
       checkCompactionIntervals(intervalsBeforeCompaction);
 
-      // Update compaction slots to be > 0
-      updateCompactionTaskSlot(1, 5);
+      // Update compaction slots to be 1
+      updateCompactionTaskSlot(1, 1);
+      forceTriggerAutoCompaction();
       // One day compacted (1 new segment) and one day remains uncompacted. (5 total)
       verifySegmentsCount(5);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
+      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14312");
+      // Run compaction again to compact the remaining day
+      forceTriggerAutoCompaction();
+      // Remaining day compacted (1 new segment). Now both days compacted (6 total)
+      verifySegmentsCount(6);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+//      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "0");
     }
   }
 

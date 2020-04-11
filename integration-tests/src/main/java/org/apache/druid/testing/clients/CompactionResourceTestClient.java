@@ -37,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.ws.rs.QueryParam;
 import java.net.URL;
+import java.util.Map;
 
 public class CompactionResourceTestClient
 {
@@ -158,5 +159,21 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
+  }
+
+  public Map<String, String> getCompactionProgress(String dataSource) throws Exception
+  {
+    String url = StringUtils.format("%scompaction/progress?dataSource=%s", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.GET, new URL(url)), responseHandler
+    ).get();
+    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+      throw new ISE(
+          "Error while getting compaction progress status[%s] content[%s]",
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+    return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, String>>() {});
   }
 }
