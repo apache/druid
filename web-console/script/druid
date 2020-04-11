@@ -56,7 +56,8 @@ function _get_zookeeper_version() {
 
 function _download_zookeeper() {
   local dest="$1"
-  local zk_version="$(_get_zookeeper_version)"
+  local zk_version
+  zk_version="$(_get_zookeeper_version)"
 
   _log "Downloading zookeeper"
   curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/zookeeper-${zk_version}.tar.gz" \
@@ -85,13 +86,13 @@ function _wait_for_200_response() {
 
   _log "Waiting for 200 response from ${url}"
 
-  until $(curl --output /dev/null --silent --head --fail "${url}"); do
-    if [ ${counter} -eq ${tries} ];then
+  until curl --output /dev/null --silent --head --fail "${url}"; do
+    if [ "${counter}" -eq "${tries}" ];then
       _error "Max of ${tries} tries exceeded"
     fi
 
     printf '.'
-    counter=$(($counter+1))
+    counter=$((counter+1))
     sleep "$delay"
   done
 
@@ -127,7 +128,8 @@ function start() {
 function stop() {
   _log "Stopping druid"
   if [ -f "${DRUID_PID_FILE}" ]; then
-    local pid="$(<${DRUID_PID_FILE})"
+    local pid
+    pid="$(<${DRUID_PID_FILE})"
     kill "$pid"
     rm "${DRUID_PID_FILE}"
     _log "Stopped pid ${pid}"
@@ -136,4 +138,5 @@ function stop() {
   fi
 }
 
-$@
+# Execute public method (passed as script argument)
+"$@"
