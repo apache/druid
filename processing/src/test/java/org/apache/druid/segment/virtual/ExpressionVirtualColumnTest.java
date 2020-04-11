@@ -804,4 +804,28 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       Assert.assertTrue(selector.getObject().isNumericNull());
     }
   }
+
+  @Test
+  public void testCapabilities()
+  {
+    ColumnCapabilities caps = X_PLUS_Y.capabilities("expr");
+    Assert.assertEquals(ValueType.FLOAT, caps.getType());
+    Assert.assertFalse(caps.hasBitmapIndexes());
+    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertTrue(caps.isComplete());
+
+    caps = Z_CONCAT_X.capabilities("expr");
+    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertFalse(caps.hasBitmapIndexes());
+    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertFalse(caps.isComplete());
+  }
 }

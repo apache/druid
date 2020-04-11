@@ -34,7 +34,7 @@ public class GroupByQueryEngineV2Test
   ColumnSelectorFactory factory;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     factory = EasyMock.createMock(ColumnSelectorFactory.class);
   }

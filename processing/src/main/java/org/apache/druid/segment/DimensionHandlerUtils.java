@@ -224,10 +224,14 @@ public final class DimensionHandlerUtils
     if (dimSpec.getExtractionFn() != null) {
       ExtractionFn fn = dimSpec.getExtractionFn();
       capabilities = ColumnCapabilitiesImpl.copyOf(capabilities)
+                                           .setType(ValueType.STRING)
                                            .setDictionaryValuesUnique(
+                                               capabilities.isDictionaryEncoded() &&
                                                fn.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
                                            )
-                                           .setDictionaryValuesSorted(fn.preservesOrdering());
+                                           .setDictionaryValuesSorted(
+                                               capabilities.isDictionaryEncoded() && fn.preservesOrdering()
+                                           );
     }
 
     // DimensionSpec's decorate only operates on DimensionSelectors, so if a spec mustDecorate(),
