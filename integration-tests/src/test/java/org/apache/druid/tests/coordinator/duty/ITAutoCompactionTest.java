@@ -224,15 +224,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(0, null);
       checkCompactionIntervals(intervalsBeforeCompaction);
-
-      // Set compactionTaskSlotRatio and maxCompactionTaskSlots to allows only one task slot for compaction
-      updateCompactionTaskSlot(0.5, 1);
-      forceTriggerAutoCompaction();
-      // One day compacted (1 new segment) and one day remains uncompacted. (5 total)
-      verifySegmentsCount(5);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
-      checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
 
