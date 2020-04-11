@@ -79,6 +79,11 @@ public class CoordinatorResourceTestClient
     return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
+  private String getFullSegmentsMetadataURL(String dataSource)
+  {
+    return StringUtils.format("%smetadata/datasources/%s/segments?full", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
+  }
+
   private String getIntervalsURL(String dataSource)
   {
     return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
@@ -113,42 +118,22 @@ public class CoordinatorResourceTestClient
     return segments;
   }
 
-  public void submitCompactionConfig(final String dataSource) throws Exception
+  public List<DataSegment> getFullSegmentsMetadata(final String dataSource)
   {
-    Map<String, String> compactionConfig = ImmutableMap.<String, String>builder()
-                                                       .put("dataSource", dataSource)
-                                                       .put("maxRowsPerSegment", "1000000")
-                                                       .put("skipOffsetFromLatest", "PT0S")
-                                                       .build();
+    List<DataSegment> segments;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsMetadataURL(dataSource));
 
-    String url = StringUtils.format("%sconfig/compaction", getCoordinatorURL());
-    StatusResponseHolder response = httpClient.go(
-        new Request(HttpMethod.POST, new URL(url)).setContent(
-            "application/json",
-            jsonMapper.writeValueAsBytes(compactionConfig)
-        ), responseHandler
-    ).get();
-
-    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE(
-          "Error while submiting compaction config status[%s] content[%s]",
-          response.getStatus(),
-          response.getContent()
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<DataSegment>>()
+          {
+          }
       );
     }
-  }
-
-  public void forceTriggerAutoCompaction() throws Exception
-  {
-    String url = StringUtils.format("%scompaction/compact", getCoordinatorURL());
-    StatusResponseHolder response = httpClient.go(new Request(HttpMethod.POST, new URL(url)), responseHandler).get();
-    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-      throw new ISE(
-          "Error while force trigger auto compaction status[%s] content[%s]",
-          response.getStatus(),
-          response.getContent()
-      );
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
+    return segments;
   }
 
   // return a list of the segment dates for the specified datasource

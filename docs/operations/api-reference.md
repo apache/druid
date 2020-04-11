@@ -362,7 +362,7 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
-#### Compaction Duty
+#### Compaction Status
 
 ##### GET
 
