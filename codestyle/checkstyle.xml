@@ -325,5 +325,11 @@ codestyle/checkstyle.xml.&#10;"/>
 
     <module name="StringLiteralEquality"/>
 
+    <module name="Regexp">
+      <property name="format" value="Collections\.(EMPTY_LIST|EMPTY_MAP|EMPTY_SET)"/>
+      <property name="message" value="Use Collections.empty*() method instead of Collection.EMPTY_* field"/>
+      <property name="illegalPattern" value="true"/>
+    </module>
+
   </module>
 </module>
