@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.18.0</version>
+        <version>0.18.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -291,8 +291,8 @@
             <id>integration-tests</id>
             <properties>
                 <start.hadoop.docker>false</start.hadoop.docker>
-                <override.config.path />
-                <resource.file.dir.path />
+                <override.config.path></override.config.path>
+                <resource.file.dir.path></resource.file.dir.path>
             </properties>
             <build>
                 <plugins>
@@ -312,7 +312,7 @@
                                     <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
                                     <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                     <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
-                                    <DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>${resource.file.dir.path}</DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>&gt;
+                                    <DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>${resource.file.dir.path}</DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>>
                                     </environmentVariables>
                                     <executable>${project.basedir}/run_cluster.sh</executable>
                                 </configuration>
