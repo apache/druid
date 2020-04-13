@@ -25,7 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.primitives.Ints;
 import com.google.inject.Provider;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.pac4j.core.config.Config;
@@ -130,13 +132,21 @@ public class Pac4jAuthenticator implements Authenticator
     oidcConf.setDiscoveryURI(oidcConfig.getDiscoveryURI());
     oidcConf.setExpireSessionWithToken(true);
     oidcConf.setUseNonce(true);
+    oidcConf.setReadTimeout(Ints.checkedCast(pac4jCommonConfig.getReadTimeout().getMillis()));
+
     oidcConf.setResourceRetriever(
+        // ResourceRetriever is used to get Auth server configuration from "discoveryURI"
         new CustomSSLResourceRetriever(pac4jCommonConfig.getReadTimeout().getMillis(), sslSocketFactory)
     );
 
     OidcClient oidcClient = new OidcClient(oidcConf);
     oidcClient.setUrlResolver(new DefaultUrlResolver(true));
     oidcClient.setCallbackUrlResolver(new NoParameterCallbackUrlResolver());
+
+    // This is used by OidcClient in various places to make HTTPrequests.
+    if (sslSocketFactory != null) {
+      HTTPRequest.setDefaultSSLSocketFactory(sslSocketFactory);
+    }
 
     return new Config(Pac4jCallbackResource.SELF_URL, oidcClient);
   }
