@@ -333,7 +333,7 @@ public class GroupByQueryEngineV2
 
               // Now check column capabilities.
               final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return columnCapabilities == null || !columnCapabilities.hasMultipleValues();
+              return columnCapabilities != null && !columnCapabilities.hasMultipleValues();
             });
   }
 

@@ -132,7 +132,7 @@ public class TopNQueryEngine
       topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isHasExtractionFn()) {
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
-    } else if (columnCapabilities != null && !(columnCapabilities.getType() == ValueType.STRING
+    } else if (columnCapabilities == null || !(columnCapabilities.getType() == ValueType.STRING
                                                && columnCapabilities.isDictionaryEncoded())) {
       // Use HeapBasedTopNAlgorithm for non-Strings and for non-dictionary-encoded Strings.
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
