@@ -1,0 +1,5 @@
+{
+  "type" : "compact",
+  "dataSource" : "%%DATASOURCE%%",
+  "interval" : "2013-08-31/2013-09-02"
+}

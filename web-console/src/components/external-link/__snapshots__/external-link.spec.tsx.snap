@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`external link matches snapshot 1`] = `
+<a
+  href="http://test/"
+  rel="noopener noreferrer"
+  target="_blank"
+>
+  <div>
+    hello world
+  </div>
+</a>
+`;

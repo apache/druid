@@ -1,0 +1,18 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`menu checkbox matches snapshot 1`] = `
+<li
+  class="menu-checkbox"
+>
+  <label
+    class="bp3-control bp3-checkbox"
+  >
+    <input
+      type="checkbox"
+    />
+    <span
+      class="bp3-control-indicator"
+    />
+  </label>
+</li>
+`;

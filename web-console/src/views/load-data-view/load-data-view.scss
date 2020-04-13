@@ -1,0 +1,286 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@import '../../variables';
+
+.load-data-view {
+  height: 100%;
+  display: grid;
+  grid-gap: 15px 5px;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: 55px 1fr 28px;
+  grid-template-areas:
+    'navi navi'
+    'main ctrl'
+    'main next';
+
+  &.load-data-continue-view {
+    display: block;
+    text-align: center;
+
+    .spec-card {
+      display: inline-block;
+      width: 480px;
+      height: 100px;
+      margin: 10px;
+      text-align: left;
+
+      .spec-card-icon {
+        vertical-align: top;
+      }
+
+      .spec-card-header {
+        font-size: 25px;
+        line-height: 30px;
+        display: inline-block;
+        vertical-align: top;
+        padding-left: 10px;
+
+        .spec-card-caption {
+          font-size: 15px;
+          line-height: 20px;
+        }
+      }
+    }
+  }
+
+  &.welcome {
+    .main {
+      height: 100%;
+      padding: 0;
+      overflow: auto;
+
+      .bp3-card {
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+        width: 220px;
+        height: 140px;
+        margin-top: 10px;
+        margin-left: 10px;
+        font-size: 16px;
+        text-align: center;
+
+        & > * {
+          user-select: none;
+          pointer-events: none;
+        }
+
+        &.active::after {
+          position: absolute;
+          top: 0;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          content: '';
+          border: 2px solid #48aff0;
+          border-radius: 2px;
+        }
+
+        &.disabled {
+          opacity: 0.4;
+        }
+
+        img {
+          width: 100px;
+          display: inline-block;
+        }
+      }
+    }
+  }
+
+  &.partition,
+  &.tuning,
+  &.publish {
+    grid-gap: 20px 40px;
+    grid-template-columns: 1fr 1fr 280px;
+    grid-template-areas:
+      'navi navi navi'
+      'main othr ctrl'
+      'main othr next';
+
+    .main,
+    .other {
+      overflow: auto;
+      padding: 0 5px;
+      margin: 0;
+    }
+  }
+
+  .step-nav {
+    grid-area: navi;
+    white-space: nowrap;
+    overflow: auto;
+    padding: 0 5px;
+
+    .step-section {
+      display: inline-block;
+      vertical-align: top;
+      margin-right: 15px;
+    }
+
+    .step-nav-l1 {
+      height: 25px;
+      font-weight: bold;
+      color: #eeeeee;
+    }
+
+    .step-nav-l2 {
+      height: 30px;
+    }
+  }
+
+  .main {
+    grid-area: main;
+    position: relative;
+    margin: 0 5px;
+
+    .inline-data,
+    .raw-lines {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      white-space: pre;
+    }
+
+    .table-with-control {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+
+      .table-control {
+        position: absolute;
+        width: 100%;
+        top: 0;
+        height: 30px;
+
+        & > * {
+          display: inline-block;
+          margin-right: 15px;
+        }
+
+        .clearable-input {
+          width: 250px;
+        }
+      }
+
+      .ReactTable {
+        position: absolute;
+        width: 100%;
+        top: 45px;
+        bottom: 0;
+
+        .rt-th {
+          position: relative;
+
+          &.selected::after {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            content: '';
+            border: 2px solid #ff5d10;
+            border-radius: 2px;
+          }
+
+          .clickable {
+            cursor: pointer;
+          }
+
+          &.timestamp {
+            background: rgba(19, 129, 201, 0.5);
+          }
+
+          &.used {
+            background: rgba(99, 129, 137, 0.5);
+          }
+        }
+
+        .rt-td {
+          &.timestamp {
+            background: rgba(19, 129, 201, 0.15);
+          }
+
+          &.used {
+            background: rgba(99, 129, 137, 0.15);
+          }
+        }
+      }
+    }
+  }
+
+  .other {
+    grid-area: othr;
+  }
+
+  .control {
+    grid-area: ctrl;
+    overflow: auto;
+    padding: 0 5px;
+
+    .intro {
+      margin-bottom: 15px;
+
+      .optional {
+        font-style: italic;
+      }
+    }
+  }
+
+  .next-bar {
+    grid-area: next;
+    text-align: right;
+    padding: 0 5px;
+
+    .left {
+      float: left;
+    }
+  }
+
+  .column-name {
+    font-weight: bold;
+  }
+
+  .edit-controls {
+    background: #30404c;
+    padding: 10px;
+    border-radius: 2px;
+    margin-bottom: 15px;
+  }
+
+  .control-buttons {
+    position: relative;
+
+    .bp3-button {
+      margin-right: 15px;
+    }
+
+    .right {
+      position: absolute;
+      right: 0;
+      margin-right: 0;
+    }
+  }
+
+  .center-message {
+    position: absolute;
+    width: 100%;
+    height: 100% !important;
+  }
+}

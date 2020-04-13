@@ -1,0 +1,219 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Lookup table action dialog matches snapshot 1`] = `
+<div
+  class="bp3-portal"
+>
+  <div
+    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+  >
+    <div
+      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    >
+      <div
+        class="bp3-dialog table-action-dialog"
+      >
+        <div
+          class="bp3-dialog-header"
+        >
+          <h4
+            class="bp3-heading"
+          >
+            Lookup: test
+          </h4>
+          <button
+            aria-label="Close"
+            class="bp3-button bp3-minimal bp3-dialog-close-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-small-cross"
+              icon="small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+                height="20"
+                viewBox="0 0 20 20"
+                width="20"
+              >
+                <desc>
+                  small-cross
+                </desc>
+                <path
+                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+        <div
+          class="bp3-dialog-body"
+        >
+          <div
+            class="side-bar"
+          >
+            <button
+              class="bp3-button bp3-intent-primary tab-button"
+              type="button"
+            >
+              <span
+                class="bp3-icon bp3-icon-list-columns"
+                icon="list-columns"
+              >
+                <svg
+                  data-icon="list-columns"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  width="20"
+                >
+                  <desc>
+                    list-columns
+                  </desc>
+                  <path
+                    d="M0 2.973v-.936C0 1.468.46 1.01 1.029 1H7.97C8.541 1 9 1.468 9 2.027v.946C9 3.542 8.53 4 7.971 4H1.03C.459 4 0 3.542 0 2.973zm0 5v-.936C0 6.468.46 6.01 1.029 6H7.97C8.541 6 9 6.468 9 7.027v.946C9 8.542 8.53 9 7.971 9H1.03C.459 9 0 8.542 0 7.973zm0 5v-.936C0 11.468.46 11.01 1.029 11H7.97C8.541 11 9 11.468 9 12.027v.946C9 13.542 8.53 14 7.971 14H1.03C.459 14 0 13.542 0 12.973zm0 5v-.936C0 16.468.46 16.01 1.029 16H7.97C8.541 16 9 16.468 9 17.027v.946C9 18.542 8.53 19 7.971 19H1.03C.459 19 0 18.542 0 17.973zm11-15v-.936c0-.569.46-1.027 1.029-1.037h6.942C19.541 1 20 1.468 20 2.027v.946C20 3.542 19.53 4 18.971 4H12.03C11.459 4 11 3.542 11 2.973zm0 5v-.936c0-.569.46-1.027 1.029-1.037h6.942C19.541 6 20 6.468 20 7.027v.946C20 8.542 19.53 9 18.971 9H12.03C11.459 9 11 8.542 11 7.973zm0 5v-.936c0-.569.46-1.027 1.029-1.037h6.942c.57 0 1.029.468 1.029 1.027v.946c0 .569-.47 1.027-1.029 1.027H12.03c-.57 0-1.029-.458-1.029-1.027zm0 5v-.936c0-.569.46-1.027 1.029-1.037h6.942c.57 0 1.029.468 1.029 1.027v.946c0 .569-.47 1.027-1.029 1.027H12.03c-.57 0-1.029-.458-1.029-1.027z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </span>
+              <span
+                class="bp3-button-text"
+              >
+                Values
+              </span>
+            </button>
+          </div>
+          <div
+            class="main-section"
+          >
+            <div
+              class="lookup-columns-table"
+            >
+              <div
+                class="main-area"
+              >
+                <div
+                  class="loader"
+                >
+                  <div
+                    class="loader-logo"
+                  >
+                    <svg
+                      viewBox="0 0 100 100"
+                    >
+                      <path
+                        class="one"
+                        d="M54.2,69.8h-2.7c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h2.7c11.5,0,23.8-7.4,23.8-23.7
+          c0-9.1-6.9-15.8-16.4-15.8H38c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h23.6c5.3,0,10.1,1.9,13.6,5.3c3.5,3.4,5.4,8,5.4,13.1
+          c0,6.6-2.3,13-6.3,17.7C69.5,66.8,62.5,69.8,54.2,69.8z"
+                      />
+                      <path
+                        class="two"
+                        d="M55.7,59.5h-26c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h26c7.5,0,11.5-5.8,11.5-11.5
+            c0-4.2-3.2-7.3-7.7-7.3h-26c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h26c5.9,0,10.3,4.3,10.3,9.9c0,3.7-1.3,7.2-3.7,9.8
+            C63.5,58,59.9,59.5,55.7,59.5z"
+                      />
+                      <path
+                        class="three"
+                        d="M27.2,38h-6.3c-0.7,0-1.3-0.6-1.3-1.3s0.6-1.3,1.3-1.3h6.3c0.7,0,1.3,0.6,1.3,1.3S27.9,38,27.2,38z"
+                      />
+                      <path
+                        class="four"
+                        d="M45.1,69.8h-5.8c-0.7,0-1.3-0.6-1.3-1.3c0-0.7,0.6-1.3,1.3-1.3h5.8c0.7,0,1.3,0.6,1.3,1.3
+            C46.4,69.2,45.8,69.8,45.1,69.8z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bp3-dialog-footer"
+        >
+          <div
+            class="footer-actions-left"
+          >
+            <span
+              class="bp3-popover-wrapper"
+            >
+              <span
+                class="bp3-popover-target"
+              >
+                <button
+                  class="bp3-button"
+                  type="button"
+                >
+                  <span
+                    class="bp3-icon bp3-icon-wrench"
+                    icon="wrench"
+                  >
+                    <svg
+                      data-icon="wrench"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        wrench
+                      </desc>
+                      <path
+                        d="M15.83 3.7l-3.06 3.05-2.84-.7-.7-2.83L12.29.17a5.004 5.004 0 00-4.83 1.29 4.967 4.967 0 00-1.12 5.36L.58 12.58c-.36.36-.58.86-.58 1.41 0 1.1.9 2 2 2 .55 0 1.05-.22 1.41-.59l5.77-5.77c1.79.69 3.91.33 5.35-1.12 1.32-1.3 1.74-3.15 1.3-4.81z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    class="bp3-button-text"
+                  >
+                    Actions
+                  </span>
+                  <span
+                    class="bp3-icon bp3-icon-caret-down"
+                    icon="caret-down"
+                  >
+                    <svg
+                      data-icon="caret-down"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      width="16"
+                    >
+                      <desc>
+                        caret-down
+                      </desc>
+                      <path
+                        d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                        fill-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </button>
+              </span>
+            </span>
+          </div>
+          <div
+            class="bp3-dialog-footer-actions"
+          >
+            <button
+              class="bp3-button bp3-intent-primary"
+              type="button"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                Close
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

@@ -1,0 +1,50 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`form group with info matches snapshot 1`] = `
+<div
+  class="bp3-form-group form-group-with-info"
+>
+  <label
+    class="bp3-label"
+  >
+    Goodies
+     
+    <span
+      class="bp3-text-muted"
+    >
+      <span
+        class="bp3-popover-wrapper"
+      >
+        <span
+          class="bp3-popover-target"
+        >
+          <span
+            class="bp3-icon bp3-icon-info-sign"
+            icon="info-sign"
+          >
+            <svg
+              data-icon="info-sign"
+              height="14"
+              viewBox="0 0 16 16"
+              width="14"
+            >
+              <desc>
+                info-sign
+              </desc>
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM7 3h2v2H7V3zm3 10H6v-1h1V7H6V6h3v6h1v1z"
+                fill-rule="evenodd"
+              />
+            </svg>
+          </span>
+        </span>
+      </span>
+    </span>
+  </label>
+  <div
+    class="bp3-form-content"
+  >
+    Some buttons and stuff
+  </div>
+</div>
+`;

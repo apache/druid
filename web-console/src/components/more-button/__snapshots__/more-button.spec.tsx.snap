@@ -1,0 +1,73 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`more button matches snapshot (empty) 1`] = `
+<span
+  class="bp3-popover-wrapper more-button"
+>
+  <span
+    class="bp3-popover-target"
+  >
+    <button
+      class="bp3-button bp3-disabled"
+      disabled=""
+      tabindex="-1"
+      type="button"
+    >
+      <span
+        class="bp3-icon bp3-icon-more"
+        icon="more"
+      >
+        <svg
+          data-icon="more"
+          height="16"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <desc>
+            more
+          </desc>
+          <path
+            d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </span>
+    </button>
+  </span>
+</span>
+`;
+
+exports[`more button matches snapshot (full) 1`] = `
+<span
+  class="bp3-popover-wrapper more-button"
+>
+  <span
+    class="bp3-popover-target"
+  >
+    <button
+      class="bp3-button"
+      type="button"
+    >
+      <span
+        class="bp3-icon bp3-icon-more"
+        icon="more"
+      >
+        <svg
+          data-icon="more"
+          height="16"
+          viewBox="0 0 16 16"
+          width="16"
+        >
+          <desc>
+            more
+          </desc>
+          <path
+            d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </span>
+    </button>
+  </span>
+</span>
+`;

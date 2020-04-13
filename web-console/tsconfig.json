@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "noEmitOnError": true,
+    "declaration": false,
+    "removeComments": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "importHelpers": true,
+    "esModuleInterop": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "target": "es5",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["dom", "es2016", "esnext"],
+    "jsx": "react",
+    "rootDirs": ["lib", "src"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "e2e-tests/**/*.ts"]
+}

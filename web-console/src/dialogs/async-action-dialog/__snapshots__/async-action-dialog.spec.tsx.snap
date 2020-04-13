@@ -1,0 +1,56 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`async action dialog matches snapshot 1`] = `
+<div
+  class="bp3-portal"
+>
+  <div
+    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+  >
+    <div
+      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    >
+      <div
+        class="bp3-dialog bp3-alert async-action-dialog"
+      >
+        <div
+          class="bp3-alert-body"
+        >
+          <div
+            class="bp3-alert-contents"
+          />
+        </div>
+        <div
+          class="bp3-alert-footer"
+        >
+          <button
+            class="bp3-button"
+            type="button"
+          >
+            <span
+              class="bp3-button-text"
+            >
+              test
+            </span>
+          </button>
+          <button
+            class="bp3-button"
+            type="button"
+          >
+            <span
+              class="bp3-button-text"
+            >
+              Cancel
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

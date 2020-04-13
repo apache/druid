@@ -1,0 +1,55 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`rule editor matches snapshot 1`] = `
+<div
+  class="show-json"
+>
+  <div
+    class="top-actions"
+  >
+    <div
+      class="bp3-button-group right-buttons"
+    >
+      <button
+        class="bp3-button bp3-disabled bp3-minimal"
+        disabled=""
+        tabindex="-1"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          Save
+        </span>
+      </button>
+      <button
+        class="bp3-button bp3-disabled bp3-minimal"
+        disabled=""
+        tabindex="-1"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          Copy
+        </span>
+      </button>
+      <button
+        class="bp3-button bp3-disabled bp3-minimal"
+        disabled=""
+        tabindex="-1"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          View raw
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="main-area"
+  />
+</div>
+`;

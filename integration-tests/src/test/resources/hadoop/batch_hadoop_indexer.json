@@ -1,0 +1,72 @@
+{
+  "type": "index_hadoop",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "batchHadoop",
+      "parser": {
+        "type": "string",
+        "parseSpec": {
+          "format": "tsv",
+          "timestampSpec": {
+            "column": "timestamp",
+            "format": "yyyyMMddHH"
+          },
+          "dimensionsSpec": {
+            "dimensions": [
+              "location",
+              "product"
+            ]
+          },
+          "columns": [
+            "timestamp",
+            "location",
+            "product",
+            "other_metric",
+            "user_id_sketch"
+          ]
+        }
+      },
+      "metricsSpec": [
+        {
+          "type": "thetaSketch",
+          "name": "other_metric",
+          "fieldName": "other_metric",
+          "size": 16384
+        },
+        {
+          "type": "thetaSketch",
+          "name": "user_id_sketch",
+          "fieldName": "user_id_sketch",
+          "size": 16384
+        }
+      ],
+      "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "DAY",
+        "queryGranularity": "DAY",
+        "intervals": [
+          "2014-10-20T00:00:00Z/P2W"
+        ]
+      }
+    },
+    "ioConfig": {
+      "type": "hadoop",
+      "inputSpec": {
+        "type": "static",
+        "paths": "%%HADOOP_TEST_PATH%%"
+      }
+    },
+    "tuningConfig": {
+      "type": "hadoop",
+      "partitionsSpec": {
+        "assumeGrouped": true,
+        "targetPartitionSize": 75000,
+        "type": "hashed"
+      },
+      "jobProperties": {
+        "fs.permissions.umask-mode": "022"
+      },
+      "rowFlushBoundary": 10000
+    }
+  }
+}

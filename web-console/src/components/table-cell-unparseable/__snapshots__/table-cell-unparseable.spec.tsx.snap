@@ -1,0 +1,17 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`table cell unparseable matches snapshot not timestamp 1`] = `
+<div
+  class="table-cell-unparseable"
+>
+  unparseable
+</div>
+`;
+
+exports[`table cell unparseable matches snapshot timestamp 1`] = `
+<div
+  class="table-cell-unparseable"
+>
+  unparseable timestamp
+</div>
+`;

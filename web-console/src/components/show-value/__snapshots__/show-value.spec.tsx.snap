@@ -1,0 +1,44 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`rule editor matches snapshot 1`] = `
+<div
+  class="show-json"
+>
+  <div
+    class="top-actions"
+  >
+    <div
+      class="bp3-button-group right-buttons"
+    >
+      <button
+        class="bp3-button bp3-minimal"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          Save
+        </span>
+      </button>
+      <button
+        class="bp3-button bp3-minimal"
+        type="button"
+      >
+        <span
+          class="bp3-button-text"
+        >
+          View raw
+        </span>
+      </button>
+    </div>
+  </div>
+  <div
+    class="main-area"
+  >
+    <textarea
+      class="bp3-input"
+      readonly=""
+    />
+  </div>
+</div>
+`;

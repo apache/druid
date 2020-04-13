@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`decribe center-message matches snapshot 1`] = `
+<div
+  class="center-message bp3-input"
+>
+  <div
+    class="center-message-inner"
+  >
+    <div>
+      Hello World
+    </div>
+  </div>
+</div>
+`;

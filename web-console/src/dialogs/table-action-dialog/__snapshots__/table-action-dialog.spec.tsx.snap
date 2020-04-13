@@ -1,0 +1,117 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`table action dialog matches snapshot 1`] = `
+<div
+  class="bp3-portal"
+>
+  <div
+    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+  >
+    <div
+      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
+      tabindex="0"
+    >
+      <div
+        class="bp3-dialog table-action-dialog"
+      >
+        <div
+          class="bp3-dialog-header"
+        >
+          <h4
+            class="bp3-heading"
+          >
+            Table dummy actions
+          </h4>
+          <button
+            aria-label="Close"
+            class="bp3-button bp3-minimal bp3-dialog-close-button"
+            type="button"
+          >
+            <span
+              class="bp3-icon bp3-icon-small-cross"
+              icon="small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+                height="20"
+                viewBox="0 0 20 20"
+                width="20"
+              >
+                <desc>
+                  small-cross
+                </desc>
+                <path
+                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
+        <div
+          class="bp3-dialog-body"
+        >
+          <div
+            class="side-bar"
+          >
+            <button
+              class="bp3-button bp3-minimal tab-button"
+              type="button"
+            >
+              <span
+                class="bp3-icon bp3-icon-badge"
+                icon="badge"
+              >
+                <svg
+                  data-icon="badge"
+                  height="20"
+                  viewBox="0 0 20 20"
+                  width="20"
+                >
+                  <desc>
+                    badge
+                  </desc>
+                  <path
+                    d="M16.94 5.73c-.19-1.41.62-2.52 1.38-3.59L17.03.65C14.89 1.76 11.88 1.48 10 0 8.12 1.48 5.11 1.76 2.97.65L1.68 2.14c.76 1.07 1.57 2.18 1.38 3.59C2.68 8.59 0 10.94 1.4 14.08c.56 1.43 1.81 2.37 3.4 2.75 1.95.46 4.4.91 5.2 3.17.8-2.26 3.25-2.71 5.2-3.17 1.6-.38 2.84-1.32 3.4-2.75 1.4-3.14-1.28-5.49-1.66-8.35z"
+                    fill-rule="evenodd"
+                  />
+                </svg>
+              </span>
+              <span
+                class="bp3-button-text"
+              >
+                test
+              </span>
+            </button>
+          </div>
+          <div
+            class="main-section"
+          />
+        </div>
+        <div
+          class="bp3-dialog-footer"
+        >
+          <div
+            class="bp3-dialog-footer-actions"
+          >
+            <button
+              class="bp3-button bp3-intent-primary"
+              type="button"
+            >
+              <span
+                class="bp3-button-text"
+              >
+                Close
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

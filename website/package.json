@@ -1,0 +1,26 @@
+{
+  "license": "Apache-2.0",
+  "scripts": {
+    "examples": "docusaurus-examples",
+    "start": "docusaurus-start",
+    "build": "docusaurus-build && node script/do-redirects.js",
+    "publish-gh-pages": "docusaurus-publish",
+    "write-translations": "docusaurus-write-translations",
+    "version": "docusaurus-version",
+    "rename-version": "docusaurus-rename-version",
+    "compile-scss": "node-sass scss/custom.scss > static/css/custom.css",
+    "link-lint": "docusaurus-build && node script/link-lint.js",
+    "lint": "npm run link-lint",
+    "spellcheck": "mdspell --en-us --ignore-numbers --report '../docs/**/*.md'"
+  },
+  "devDependencies": {
+    "docusaurus": "^1.12.0",
+    "markdown-spellcheck": "^1.3.1",
+    "node-sass": "^4.12.0"
+  },
+  "dependencies": {
+    "fast-glob": "^3.0.4",
+    "fs-extra": "^8.1.0",
+    "replace-in-file": "^4.1.3"
+  }
+}
