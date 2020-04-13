@@ -194,7 +194,8 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       String propertyKey = entry.getKey();
       if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
           || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
-          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.BOOTSTRAP_SERVERS_KEY)) {
         PasswordProvider configPasswordProvider = configMapper.convertValue(
             entry.getValue(),
             PasswordProvider.class

@@ -171,7 +171,7 @@ public class KafkaSupervisorIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"kafka\",\n"
                      + "  \"topic\": \"my-topic\",\n"
-                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\",\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":{\"type\": \"default\", \"password\": \"localhost:9092\"},\n"
                      + "   \"ssl.truststore.password\":{\"type\": \"default\", \"password\": \"mytruststorepassword\"},\n"
                      + "   \"ssl.keystore.password\":{\"type\": \"default\", \"password\": \"mykeystorepassword\"},\n"
                      + "   \"ssl.key.password\":\"mykeypassword\"}\n"
