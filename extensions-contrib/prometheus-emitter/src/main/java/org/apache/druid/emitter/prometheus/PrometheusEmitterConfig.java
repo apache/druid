@@ -52,7 +52,7 @@ public class PrometheusEmitterConfig
   )
   {
     this.host = Preconditions.checkNotNull(host, "host can not be null.");
-    this.port = Preconditions.checkNotNull(port, "port can not be null");
+    this.port = port == null ? 0 : port;
     this.metricMapPath = metricMapPath;
     this.nameSpace = nameSpace != null ? nameSpace : "druid";
     Preconditions.checkArgument(pattern.matcher(this.nameSpace).matches(), "Invalid namespace " + this.nameSpace);

@@ -53,7 +53,9 @@ public class PrometheusReporter
                             String nameSpace)
   {
     metrics = new Metrics(nameSpace, metricMapPath);
-    pushGateway = new PushGateway(host + ":" + port);
+    String address = port == 0 ? host : (host + ":" + port);
+    log.info("prometheus address:[%$]", address);
+    pushGateway = new PushGateway(address);
   }
 
   public void emitMetric(ServiceMetricEvent metricEvent)
