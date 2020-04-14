@@ -4551,8 +4551,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithNonexistentDimension()
   {
-    // column capabilities are null so is treated as potentially multi-value
-    cannotVectorize();
     GroupByQuery.Builder builder = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04")
@@ -8081,8 +8079,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithExtractionDimFilterKeyisNull()
   {
-    // column capabilities are null so is treated as potentially multi-value
-    cannotVectorize();
     Map<String, String> extractionMap = new HashMap<>();
 
 
@@ -8349,8 +8345,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithExtractionDimFilterNullDims()
   {
-    // column capabilities are null so is treated as potentially multi-value
-    cannotVectorize();
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("", "EMPTY");
 
@@ -8479,8 +8473,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByWithAllFiltersOnNullDimsWithExtractionFns()
   {
-    // column capabilities are null so is treated as potentially multi-value
-    cannotVectorize();
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("", "EMPTY");
     extractionMap.put(null, "EMPTY");
