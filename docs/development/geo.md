@@ -22,6 +22,10 @@ title: "Spatial filters"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes functionality
+> that is only available in the native language.
+
 Apache Druid supports filtering specially spatially indexed columns based on an origin and a bound.
 
 ## Spatial indexing

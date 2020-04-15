@@ -1,6 +1,7 @@
 ---
 id: query-context
 title: "Query context"
+sidebar_label: "Context parameters"
 ---
 
 <!--
@@ -22,8 +23,16 @@ title: "Query context"
   ~ under the License.
   -->
 
+## General parameters
 
-The query context is used for various query configuration parameters. The following parameters apply to all queries.
+The query context is used for various query configuration parameters. Query context parameters can be specified in
+the following ways:
+
+- For [Druid SQL](sql.md#client-apis), context parameters are provided either as a JSON object named `context` to the
+HTTP POST API, or as properties to the JDBC connection.
+- For [native queries](querying.md), context parameters are provided as a JSON object named `context`.
+
+These parameters apply to all query types.
 
 |property         |default                                 | description          |
 |-----------------|----------------------------------------|----------------------|
@@ -46,26 +55,28 @@ The query context is used for various query configuration parameters. The follow
 |parallelMergeInitialYieldRows|`druid.processing.merge.task.initialYieldNumRows`|Number of rows to yield per ForkJoinPool merge task for parallel result merging on the Broker, before forking off a new task to continue merging sequences. See [Broker configuration](../configuration/index.html#broker) for more details.|
 |parallelMergeSmallBatchRows|`druid.processing.merge.task.smallBatchNumRows`|Size of result batches to operate on in ForkJoinPool merge tasks for parallel result merging on the Broker. See [Broker configuration](../configuration/index.html#broker) for more details.|
 
+## Query-type-specific parameters
 
 In addition, some query types offer context parameters specific to that query type.
 
-### TopN queries
+### TopN
 
 |property         |default              | description          |
 |-----------------|---------------------|----------------------|
 |minTopNThreshold | `1000`              | The top minTopNThreshold local results from each segment are returned for merging to determine the global topN. |
 
-### Timeseries queries
+### Timeseries
 
 |property         |default              | description          |
 |-----------------|---------------------|----------------------|
 |skipEmptyBuckets | `false`             | Disable timeseries zero-filling behavior, so only buckets with results will be returned. |
 
-### GroupBy queries
+### GroupBy
 
-See [GroupBy query context](groupbyquery.md#advanced-configurations).
+See the list of [GroupBy query context](groupbyquery.md#advanced-configurations) parameters available on the groupBy
+query page.
 
-### Vectorizable queries
+## Vectorization parameters
 
 The GroupBy and Timeseries query types can run in _vectorized_ mode, which speeds up query execution by processing
 batches of rows at a time. Not all queries can be vectorized. In particular, vectorization currently has the following
@@ -81,11 +92,12 @@ include "selector", "bound", "in", "like", "regex", "search", "and", "or", and "
 - For GroupBy: No multi-value dimensions.
 - For Timeseries: No "descending" order.
 - Only immutable segments (not real-time).
+- Only [table datasources](datasource.html#table) (not joins, subqueries, lookups, or inline datasources).
 
 Other query types (like TopN, Scan, Select, and Search) ignore the "vectorize" parameter, and will execute without
 vectorization. These query types will ignore the "vectorize" parameter even if it is set to `"force"`.
 
-Vectorization is an alpha-quality feature as of Druid {{DRUIDVERSION}}. We heartily welcome any feedback and testing
+Vectorization is a beta-quality feature as of Druid {{DRUIDVERSION}}. We heartily welcome any feedback and testing
 from the community as we work to battle-test it.
 
 |property|default| description|

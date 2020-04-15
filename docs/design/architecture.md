@@ -233,3 +233,6 @@ So Druid uses three different techniques to maximize query performance:
 - Pruning which segments are accessed for each query.
 - Within each segment, using indexes to identify which rows must be accessed.
 - Within each segment, only reading the specific rows and columns that are relevant to a particular query.
+
+For more details about how Druid executes queries, refer to the [Query execution](../querying/query-execution.md)
+documentation.
