@@ -460,7 +460,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
           parsedQuery.onExpression.containsColumn(columnName) && (
             <MenuItem
               icon={IconNames.EXCHANGE}
-              text={`Remove join`}
+              text={`Remove Join`}
               onClick={() => onQueryChange(parsedQuery.removeJoin())}
             />
           )}

@@ -235,7 +235,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               parsedQuery.joinTable.table === table && (
                                 <MenuItem
                                   icon={IconNames.EXCHANGE}
-                                  text={`Remove join`}
+                                  text={`Remove Join`}
                                   onClick={() =>
                                     props.onQueryStringChange(parsedQuery.removeJoin())
                                   }

@@ -215,7 +215,7 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
           parsedQuery.onExpression.containsColumn(columnName) && (
             <MenuItem
               icon={IconNames.EXCHANGE}
-              text={`Remove join`}
+              text={`Remove Join`}
               onClick={() => onQueryChange(parsedQuery.removeJoin())}
             />
           )}
