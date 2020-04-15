@@ -1591,6 +1591,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+ANDed
 array_mod
 batch_index_task
 cgroup
@@ -1618,6 +1619,7 @@ druid_supervisors
 druid_taskLock
 druid_taskLog
 druid_tasks
+DruidQueryRel
 ec2
 equalDistribution
 extractionFn
@@ -1634,6 +1636,7 @@ hdfs
 httpRemote
 indexTask
 info_dir
+inlining
 java.class.path
 java.io.tmpdir
 javaOpts
@@ -1650,6 +1653,7 @@ middlemanager
 minTimeMs
 minmax
 mins
+nullable
 orderby
 orderbys
 org.apache.druid
@@ -1658,6 +1662,7 @@ org.apache.hadoop
 overlord.html
 pendingSegments
 pre-flight
+preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
@@ -1679,6 +1684,7 @@ tmp
 tmpfs
 truststore
 tuningConfig
+unioning
 useIndexes
 user.timezone
 v0.12.0
