@@ -773,7 +773,10 @@ public class CalciteTests
         new FakeHttpClient(),
         provider,
         NodeRole.COORDINATOR,
-        "/simple/leader"
+        "/simple/leader",
+        () -> {
+          throw new UnsupportedOperationException();
+        }
     );
 
     return new SystemSchema(
