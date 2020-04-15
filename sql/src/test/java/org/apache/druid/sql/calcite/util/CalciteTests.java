@@ -78,7 +78,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
-import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -784,7 +783,6 @@ public class CalciteTests
         new MetadataSegmentView(
             druidLeaderClient,
             getJsonMapper(),
-            new BytesAccumulatingResponseHandler(),
             new BrokerSegmentWatcherConfig(),
             plannerConfig
         ),

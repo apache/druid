@@ -19,34 +19,44 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import java.nio.charset.Charset;
+import java.io.InputStream;
 
-public class StringFullResponseHolder extends FullResponseHolder<String>
+public class InputStreamFullResponseHolder extends FullResponseHolder<InputStream>
 {
-  private final StringBuilder builder;
+  private final AppendableByteArrayInputStream is;
 
-  public StringFullResponseHolder(
+  public InputStreamFullResponseHolder(
       HttpResponseStatus status,
-      HttpResponse response,
-      Charset charset
+      HttpResponse response
   )
   {
     super(status, response);
-    this.builder = new StringBuilder(response.getContent().toString(charset));
+    is = new AppendableByteArrayInputStream();
   }
 
-  public StringFullResponseHolder addChunk(String chunk)
+  public InputStreamFullResponseHolder addChunk(byte[] chunk)
   {
-    builder.append(chunk);
+    is.add(chunk);
     return this;
   }
 
   @Override
-  public String getContent()
+  public InputStream getContent()
   {
-    return builder.toString();
+    return is;
+  }
+
+  public void done()
+  {
+    is.done();
+  }
+
+  public void exceptionCaught(Throwable t)
+  {
+    is.exceptionCaught(t);
   }
 }

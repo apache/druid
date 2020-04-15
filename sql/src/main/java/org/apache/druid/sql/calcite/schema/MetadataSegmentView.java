@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -35,22 +35,24 @@ import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -74,7 +76,6 @@ public class MetadataSegmentView
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
   private final ObjectMapper jsonMapper;
-  private final BytesAccumulatingResponseHandler responseHandler;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
@@ -96,7 +97,6 @@ public class MetadataSegmentView
   public MetadataSegmentView(
       final @Coordinator DruidLeaderClient druidLeaderClient,
       final ObjectMapper jsonMapper,
-      final BytesAccumulatingResponseHandler responseHandler,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
       final PlannerConfig plannerConfig
   )
@@ -104,7 +104,6 @@ public class MetadataSegmentView
     Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.coordinatorDruidLeaderClient = druidLeaderClient;
     this.jsonMapper = jsonMapper;
-    this.responseHandler = responseHandler;
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.isCacheEnabled = plannerConfig.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = plannerConfig.getMetadataSegmentPollPeriod();
@@ -148,7 +147,6 @@ public class MetadataSegmentView
     final JsonParserIterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
-        responseHandler,
         segmentWatcherConfig.getWatchedDataSources()
     );
 
@@ -175,7 +173,6 @@ public class MetadataSegmentView
       return getMetadataSegments(
           coordinatorDruidLeaderClient,
           jsonMapper,
-          responseHandler,
           segmentWatcherConfig.getWatchedDataSources()
       );
     }
@@ -185,7 +182,6 @@ public class MetadataSegmentView
   private JsonParserIterator<SegmentWithOvershadowedStatus> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
-      BytesAccumulatingResponseHandler responseHandler,
       Set<String> watchedDataSources
   )
   {
@@ -201,32 +197,41 @@ public class MetadataSegmentView
       query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
     }
     Request request;
+    InputStreamFullResponseHolder responseHolder;
     try {
       request = coordinatorClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format(query),
-          false
+          StringUtils.format(query)
       );
+
+      responseHolder = coordinatorClient.go(
+          request,
+          new InputStreamFullResponseHandler()
+      );
+      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
+        throw new RE(
+            "Failed to talk to coordinator leader at [%s]. Error code[%d], description[%s].",
+            query,
+            responseHolder.getStatus().getCode(),
+            responseHolder.getStatus().getReasonPhrase()
+        );
+      }
     }
-    catch (IOException e) {
+    catch (IOException | InterruptedException e) {
       throw new RuntimeException(e);
     }
-    ListenableFuture<InputStream> future = coordinatorClient.goAsync(
-        request,
-        responseHandler
-    );
 
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<SegmentWithOvershadowedStatus>()
     {
     });
     return new JsonParserIterator<>(
         typeRef,
-        future,
+        Futures.immediateFuture(responseHolder.getContent()),
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
         jsonMapper,
-        responseHandler
+        null
     );
   }
 

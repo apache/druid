@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.SettableFuture;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
@@ -53,8 +52,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -89,8 +89,11 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -99,10 +102,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -1010,17 +1011,18 @@ public class SystemSchemaTest extends CalciteTestBase
   {
 
     SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class)
-                                                 .withConstructor(client, mapper, responseHandler, authMapper)
+                                                 .withConstructor(client, mapper, authMapper)
                                                  .createMock();
-    EasyMock.replay(tasksTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks", false)).andReturn(request).anyTimes();
-    SettableFuture<InputStream> future = SettableFuture.create();
-    EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
-    final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
-    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
-    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
+    EasyMock.replay(tasksTable);
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks")).andReturn(request).anyTimes();
+
+
+    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
 
     String json = "[{\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
@@ -1056,9 +1058,8 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "\t\"errorMsg\": null\n"
                   + "}]";
     byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
-    in.add(bytesToWrite);
-    in.done();
-    future.set(in);
+    responseHolder.addChunk(bytesToWrite);
+    responseHolder.done();
 
     EasyMock.replay(client, request, responseHandler);
     DataContext dataContext = new DataContext()
@@ -1133,23 +1134,23 @@ public class SystemSchemaTest extends CalciteTestBase
                                                             .withConstructor(
                                                                 client,
                                                                 mapper,
-                                                                responseHandler,
                                                                 authMapper
                                                             )
                                                             .createMock();
     EasyMock.replay(supervisorTable);
-    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system", false))
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system"))
             .andReturn(request)
             .anyTimes();
-    SettableFuture<InputStream> future = SettableFuture.create();
-    EasyMock.expect(client.goAsync(request, responseHandler)).andReturn(future).once();
-    final int ok = HttpServletResponse.SC_OK;
-    EasyMock.expect(responseHandler.getStatus()).andReturn(ok).anyTimes();
+
+    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp.getStatus(), httpResp);
+
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+
+    EasyMock.expect(responseHandler.getStatus()).andReturn(httpResp.getStatus().getCode()).anyTimes();
     EasyMock.expect(request.getUrl())
             .andReturn(new URL("http://test-host:1234/druid/indexer/v1/supervisor?system"))
             .anyTimes();
-
-    AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
 
     String json = "[{\n"
                   + "\t\"id\": \"wikipedia\",\n"
@@ -1164,9 +1165,8 @@ public class SystemSchemaTest extends CalciteTestBase
                   + "}]";
 
     byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
-    in.add(bytesToWrite);
-    in.done();
-    future.set(in);
+    responseHolder.addChunk(bytesToWrite);
+    responseHolder.done();
 
     EasyMock.replay(client, request, responseHandler);
     DataContext dataContext = new DataContext()

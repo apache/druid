@@ -21,7 +21,6 @@ package org.apache.druid.discovery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.selector.DiscoverySelector;
 import org.apache.druid.client.selector.Server;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -123,38 +122,16 @@ public class DruidLeaderClient
 
   /**
    * Make a Request object aimed at the leader. Throws IOException if the leader cannot be located.
-   *
-   * @param cached Uses cached leader if true, else uses the current leader
-   */
-  public Request makeRequest(HttpMethod httpMethod, String urlPath, boolean cached) throws IOException
-  {
-    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(cached), urlPath)));
-  }
-
-  /**
-   * Make a Request object aimed at the leader. Throws IOException if the leader cannot be located.
    */
   public Request makeRequest(HttpMethod httpMethod, String urlPath) throws IOException
   {
-    return makeRequest(httpMethod, urlPath, true);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
   }
 
   public StringFullResponseHolder go(Request request) throws IOException, InterruptedException
   {
     return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8));
-  }
-
-  /**
-   * Executes the request object aimed at the leader and process the response with given handler
-   * Note: this method doesn't do retrying on errors or handle leader changes occurred during communication
-   */
-  public <Intermediate, Final> ListenableFuture<Final> goAsync(
-      final Request request,
-      final HttpResponseHandler<Intermediate, Final> handler
-  )
-  {
-    return httpClient.go(request, handler);
   }
 
   /**
