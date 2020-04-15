@@ -261,14 +261,13 @@ Joins are a feature that can significantly affect performance of your queries. S
 1. Joins are especially useful with [lookup datasources](#lookup), but in most cases, the
 [`LOOKUP` function](sql.html#string-functions) performs better than a join. Consider using the `LOOKUP` function if
 it is appropriate for your use case.
-2.
-3. When using joins in Druid SQL, keep in mind that it can generate subqueries that you did not explicitly include in
+2. When using joins in Druid SQL, keep in mind that it can generate subqueries that you did not explicitly include in
 your queries. Refer to the [Druid SQL](sql.md#query-translation) documentation for more details about when this happens
 and how to detect it.
-4. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
+3. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
 For example, since lookup keys are always strings, the condition `druid.d JOIN lookup.l ON d.field = l.field` will
 perform best if `d.field` is a string.
-5. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
+4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
 to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
 common use cases.
 
