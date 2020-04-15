@@ -18,10 +18,19 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlAliasRef, SqlFunction, SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
+import {
+  SqlAliasRef,
+  SqlFunction,
+  SqlLiteral,
+  SqlMulti,
+  SqlQuery,
+  SqlRef,
+} from 'druid-query-toolkit';
 import React from 'react';
 
 export interface NumberMenuItemsProps {
+  table: string;
+  schema: string;
   columnName: string;
   parsedQuery: SqlQuery;
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
@@ -38,7 +47,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           onClick={() => {
             onQueryChange(
               parsedQuery.addWhereFilter(
-                SqlRef.fromNameWithDoubleQuotes(columnName),
+                SqlRef.fromStringWithDoubleQuotes(columnName),
                 '>',
                 SqlLiteral.fromInput(100),
               ),
@@ -50,7 +59,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           onClick={() => {
             onQueryChange(
               parsedQuery.addWhereFilter(
-                SqlRef.fromNameWithDoubleQuotes(columnName),
+                SqlRef.fromStringWithDoubleQuotes(columnName),
                 '<=',
                 SqlLiteral.fromInput(100),
               ),
@@ -100,7 +109,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           text={`"${columnName}"`}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addToGroupBy(SqlRef.fromNameWithDoubleQuotes(columnName)),
+              parsedQuery.addToGroupBy(SqlRef.fromStringWithDoubleQuotes(columnName)),
               true,
             );
           }}
@@ -112,7 +121,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
               parsedQuery.addToGroupBy(
                 SqlAliasRef.sqlAliasFactory(
                   SqlFunction.sqlFunctionFactory('TRUNC', [
-                    SqlRef.fromNameWithDoubleQuotes(columnName),
+                    SqlRef.fromStringWithDoubleQuotes(columnName),
                     SqlLiteral.fromInput(-1),
                   ]),
                   `${columnName}_truncated`,
@@ -137,7 +146,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           onClick={() => {
             onQueryChange(
               parsedQuery.addAggregateColumn(
-                [SqlRef.fromName(columnName)],
+                [SqlRef.fromString(columnName)],
                 'SUM',
                 `sum_${columnName}`,
               ),
@@ -150,7 +159,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           onClick={() => {
             onQueryChange(
               parsedQuery.addAggregateColumn(
-                [SqlRef.fromName(columnName)],
+                [SqlRef.fromString(columnName)],
                 'MAX',
                 `max_${columnName}`,
               ),
@@ -163,7 +172,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           onClick={() => {
             onQueryChange(
               parsedQuery.addAggregateColumn(
-                [SqlRef.fromName(columnName)],
+                [SqlRef.fromString(columnName)],
                 'MIN',
                 `min_${columnName}`,
               ),
@@ -175,6 +184,64 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
     );
   }
 
+  function renderJoinMenu(): JSX.Element | undefined {
+    const { schema, table, columnName, parsedQuery, onQueryChange } = props;
+    if (schema !== 'lookup' || !parsedQuery) return;
+
+    return (
+      <>
+        <MenuItem
+          icon={IconNames.JOIN_TABLE}
+          text={parsedQuery.joinTable ? `Replace Join` : `Join`}
+        >
+          <MenuItem
+            icon={IconNames.LEFT_JOIN}
+            text={`Left Join`}
+            onClick={() => {
+              onQueryChange(
+                parsedQuery.addJoin(
+                  'LEFT',
+                  SqlRef.fromString(table, schema).upgrade(),
+                  SqlMulti.sqlMultiFactory('=', [
+                    SqlRef.fromString(columnName, table, 'lookup'),
+                    SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                  ]),
+                ),
+                false,
+              );
+            }}
+          />
+          <MenuItem
+            icon={IconNames.INNER_JOIN}
+            text={`Inner Join`}
+            onClick={() => {
+              onQueryChange(
+                parsedQuery.addJoin(
+                  'INNER',
+                  SqlRef.fromString(table, schema).upgrade(),
+                  SqlMulti.sqlMultiFactory('=', [
+                    SqlRef.fromString(columnName, table, 'lookup'),
+                    SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                  ]),
+                ),
+                false,
+              );
+            }}
+          />
+        </MenuItem>
+        {parsedQuery.onExpression &&
+          parsedQuery.onExpression instanceof SqlMulti &&
+          parsedQuery.onExpression.containsColumn(columnName) && (
+            <MenuItem
+              icon={IconNames.EXCHANGE}
+              text={`Remove join`}
+              onClick={() => onQueryChange(parsedQuery.removeJoin())}
+            />
+          )}
+      </>
+    );
+  }
+
   return (
     <>
       {renderFilterMenu()}
@@ -182,6 +249,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
       {renderGroupByMenu()}
       {renderRemoveGroupBy()}
       {renderAggregateMenu()}
+      {renderJoinMenu()}
     </>
   );
 });
