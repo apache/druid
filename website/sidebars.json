@@ -29,7 +29,7 @@
       "dependencies/metadata-storage",
       "dependencies/zookeeper"
     ],
-    "Data ingestion": [
+    "Ingestion": [
       "ingestion/index",
       "ingestion/data-formats",
       "ingestion/schema-design",
@@ -57,28 +57,53 @@
     ],
     "Querying": [
       "querying/sql",
+      "querying/querying",
+      "querying/query-execution",
+      {
+        "type": "subcategory",
+        "label": "Concepts",
+        "ids": [
+          "querying/datasource",
+          "querying/joins",
+          "querying/lookups",
+          "querying/multi-value-dimensions",
+          "querying/multitenancy",
+          "querying/caching",
+          "querying/query-context"
+        ]
+      },
       {
         "type": "subcategory",
         "label": "Native query types",
         "ids": [
-          "querying/querying",
           "querying/timeseriesquery",
           "querying/topnquery",
           "querying/groupbyquery",
           "querying/scan-query",
+          "querying/searchquery",
           "querying/timeboundaryquery",
           "querying/segmentmetadataquery",
-          "querying/datasourcemetadataquery",
-          "querying/searchquery",
-          "querying/select-query"
+          "querying/datasourcemetadataquery"
         ]
       },
-      "querying/multi-value-dimensions",
-      "querying/lookups",
-      "querying/joins",
-      "querying/multitenancy",
-      "querying/caching",
-      "development/geo"
+      {
+        "type": "subcategory",
+        "label": "Native query components",
+        "ids": [
+          "querying/filters",
+          "querying/granularities",
+          "querying/dimensionspecs",
+          "querying/aggregations",
+          "querying/post-aggregations",
+          "misc/math-expr",
+          "querying/having",
+          "querying/limitspec",
+          "querying/topnmetricspec",
+          "querying/sorting-orders",
+          "querying/virtual-columns",
+          "development/geo"
+        ]
+      }
     ],
     "Configuration": [
       "configuration/index",
@@ -125,7 +150,6 @@
       "development/experimental"
     ],
     "Misc": [
-      "misc/math-expr",
       "misc/papers-and-talks"
     ],
     "Hidden": [
@@ -175,20 +199,8 @@
       "development/extensions-contrib/cloudfiles",
       "development/extensions-contrib/distinctcount",
       "development/extensions-contrib/graphite",
-      "querying/aggregations",
-      "querying/datasource",
-      "querying/dimensionspecs",
-      "querying/filters",
-      "querying/granularities",
-      "querying/having",
       "querying/hll-old",
-      "querying/limitspec",
-      "querying/post-aggregations",
-      "querying/query-context",
-      "querying/searchqueryspec",
-      "querying/sorting-orders",
-      "querying/topnmetricspec",
-      "querying/virtual-columns",
+      "querying/select-query",
       "development/extensions-contrib/influx",
       "development/extensions-contrib/influxdb-emitter",
       "development/extensions-contrib/kafka-emitter",
