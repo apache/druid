@@ -125,7 +125,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       //...compacted into 10 new segments across 2 days. 5 new segments each day (14 total)
       verifySegmentsCount(14);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(10, 2);
+      verifySegmentsCompacted(10, 1);
 
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
@@ -203,7 +203,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
-//      Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "0");
     }
   }
 

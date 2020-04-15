@@ -35,7 +35,6 @@ import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.ws.rs.QueryParam;
 import java.net.URL;
 import java.util.Map;
 
@@ -154,7 +153,7 @@ public class CompactionResourceTestClient
     StatusResponseHolder response = httpClient.go(new Request(HttpMethod.POST, new URL(url)), responseHandler).get();
     if (!response.getStatus().equals(HttpResponseStatus.OK)) {
       throw new ISE(
-          "Error while force trigger auto compaction status[%s] content[%s]",
+          "Error while updating compaction task slot status[%s] content[%s]",
           response.getStatus(),
           response.getContent()
       );
