@@ -84,7 +84,7 @@ as a join on the subquery, described below in the [Query translation](#subquerie
 ### GROUP BY
 
 The GROUP BY clause refers to columns in the FROM table. Using GROUP BY, DISTINCT, or any aggregation functions will
-trigger an aggregation query using one of Druid's [three native aggregation query types](#query-execution). GROUP BY
+trigger an aggregation query using one of Druid's [three native aggregation query types](#query-types). GROUP BY
 can refer to an expression or a select clause ordinal position (like `GROUP BY 2` to group by the second selected
 column).
 

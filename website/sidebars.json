@@ -99,7 +99,6 @@
           "querying/having",
           "querying/limitspec",
           "querying/topnmetricspec",
-          "querying/searchqueryspec",
           "querying/sorting-orders",
           "querying/virtual-columns",
           "development/geo"

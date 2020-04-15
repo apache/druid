@@ -1769,8 +1769,8 @@ The following configurations are to set the default behavior for query vectoriza
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.vectorize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorize` in the query contexts.|`false`|
-|`druid.query.vectorSize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
+|`druid.query.vectorize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorize` in the query contexts.|`false`|
+|`druid.query.vectorSize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
 
 ### TopN query config
 
