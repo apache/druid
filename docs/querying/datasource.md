@@ -27,8 +27,6 @@ and in many contexts the word "datasource" implicitly refers to table datasource
 [during data ingestion](../ingestion/index.html), where ingestion is always creating or writing into a table
 datasource. But at query time, there are many other types of datasources available.
 
-In the [Druid SQL](sql.html) language, datasources are provided in the [`FROM` clause](sql.html#from).
-
 The word "datasource" is generally spelled `dataSource` (with a capital S) when it appears in API requests and
 responses.
 

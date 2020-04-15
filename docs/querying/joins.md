@@ -32,4 +32,9 @@ in queries and can be accessed with or without an explicit join operator. Refer 
 documentation for more details.
 
 Whenever possible, for best performance it is good to avoid joins at query time. Often this can be accomplished by
-joining data before it is loaded into Druid.
+joining data before it is loaded into Druid. However, there are situations where joins or lookups are the best solution
+available despite the performance overhead, including
+
+- The fact-to-dimension (star and snowflake schema) case: you need to change dimension values after initial ingestion,
+and aren't able to reingest to do this. In this case, you can use lookups for your dimension tables.
+- Your workload requires joins or filters on subqueries.

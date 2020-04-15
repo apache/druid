@@ -1,6 +1,6 @@
 ---
 id: post-aggregations
-title: "Postaggregations"
+title: "Post-aggregations"
 ---
 
 <!--
