@@ -24,6 +24,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorSelectorConfig;
+import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
+import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -43,16 +45,29 @@ public class CoordinatorDiscoveryModule implements Module
   @Provides
   @Coordinator
   @ManageLifecycle
+  public ServerDiscoverySelector getServiceProvider(
+      CoordinatorSelectorConfig config,
+      ServerDiscoveryFactory serverDiscoveryFactory
+  )
+  {
+    return serverDiscoveryFactory.createSelector(config.getServiceName());
+  }
+
+  @Provides
+  @Coordinator
+  @ManageLifecycle
   public DruidLeaderClient getLeaderHttpClient(
       @EscalatedGlobal HttpClient httpClient,
-      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider
+      DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
+      @Coordinator ServerDiscoverySelector serverDiscoverySelector
   )
   {
     return new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
         NodeRole.COORDINATOR,
-        "/druid/coordinator/v1/leader"
+        "/druid/coordinator/v1/leader",
+        serverDiscoverySelector
     );
   }
 }
