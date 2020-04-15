@@ -157,10 +157,10 @@ Query datasources allow you to issue subqueries. In native queries, they can app
 - As inputs to a JOIN: `<table-or-subquery-1> t1 INNER JOIN <table-or-subquery-2> t2 ON t1.<col1> = t2.<col2>`.
 - In the WHERE clause: `WHERE <column> { IN | NOT IN } (<subquery>)`. These are translated to joins by the SQL planner.
 
-> Performance tip: Subquery results need to be fully transferred to the Broker as part of query execution.
-> This means that subqueries with large result sets can cause performance bottlenecks or run into memory usage limits.
-> See the [Query execution](query-execution.md) documentation for more details on how subqueries are executed and what
-> limits will apply.
+> Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
+> processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
+> bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md) documentation
+> for more details on how subqueries are executed and what limits will apply.
 
 ### `join`
 
@@ -169,7 +169,7 @@ Query datasources allow you to issue subqueries. In native queries, they can app
 ```sql
 -- Joins "sales" with "countries" (using "store" as the join key) to get sales by country.
 SELECT
-  countries.v AS country,
+  store_to_country.v AS country,
   SUM(sales.revenue) AS country_revenue
 FROM
   sales
@@ -291,7 +291,7 @@ always be correct.
   "queryType": "scan",
   "dataSource": {
     "type": "union",
-    "dataSources": ["<dataSourceName1>", "<dataSourceName2>", "<dataSourceName3>"]
+    "dataSources": ["<tableDataSourceName1>", "<tableDataSourceName2>", "<tableDataSourceName3>"]
   },
   "columns": ["column1", "column2"],
   "intervals": ["0000/3000"]
@@ -304,6 +304,9 @@ do not need to have identical schemas. If they do not fully match up, then colum
 another will be treated as if they contained all null values in the tables where they do not exist.
 
 Union datasources are not available in Druid SQL.
+
+Refer to the [Query execution](query-execution.md#union) documentation for more details on how union datasources
+are executed.
 
 ### `inline`
 

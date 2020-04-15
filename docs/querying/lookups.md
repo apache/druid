@@ -70,7 +70,7 @@ They can also be queried using the [JOIN operator](datasource.md#join):
 
 ```sql
 SELECT
-  countries.v AS country,
+  store_to_country.v AS country,
   SUM(sales.revenue) AS country_revenue
 FROM
   sales
