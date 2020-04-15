@@ -209,20 +209,13 @@ you to join arbitrarily many datasources.
 
 In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all tables
 other than the leftmost "base" table must fit in memory. It also means that the join condition must be an equality. This
-feature is intended mainly to allow star and snowflake schemas, and to allow joining tables with the results of
-subqueries. It is not able to join two large tables with each other.
+feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
+[query](#query) datasources.
 
-[Druid SQL](sql.html) supports INNER and LEFT joins where the condition is an equality between expressions from the
-left- and right-hand side of the join. In some cases, the SQL layer will generate a subquery to deal with situations
-that the native language cannot directly support. This includes situations where the types of expressions involved in
-an equality condition do not match, and situations where the condition refers to the right-hand side using an expression
-that is not a direct column access. For more information about how Druid translates SQL to native queries, refer to the
-[Druid SQL](sql.md#query-translation) documentation.
+For information about how Druid executes queries involving joins, refer to the
+[Query execution](query-execution.html#join) page.
 
-For information about how Druid executes native queries involving joins, refer to the
-[Query execution](query-execution.html#join) documentation.
-
-#### SQL join syntax
+#### Joins in SQL
 
 SQL joins take the form:
 
@@ -234,7 +227,22 @@ The condition must involve only equalities, but functions are okay, and there ca
 Conditions like `t1.x = t2.x`, or `LOWER(t1.x) = t2.x`, or `t1.x = t2.x AND t1.y = t2.y` can all be handled. Conditions
 like `t1.x <> t2.x` cannot currently be handled.
 
-#### Native join datasource syntax
+Note that Druid SQL is less rigid than what native join datasources can handle. In cases where a SQL query does
+something that is not allowed as-is with a native join datasource, Druid SQL will generate a subquery. This can have
+a substantial effect on performance and scalability, so it is something to watch out for. Some examples of when the
+SQL layer will generate subqueries include:
+
+- Joining a regular Druid table to itself, or to another regular Druid table. The native join datasource can accept
+a table on the left-hand side, but not the right, so a subquery is needed.
+
+- Join conditions where the expressions on either side are of different types.
+
+- Join conditions where the right-hand expression is not a direct column access.
+
+For more information about how Druid translates SQL to native queries, refer to the
+[Druid SQL](sql.md#query-translation) documentation.
+
+#### Joins in native queries
 
 Native join datasources have the following properties. All are required.
 
@@ -253,13 +261,14 @@ Joins are a feature that can significantly affect performance of your queries. S
 1. Joins are especially useful with [lookup datasources](#lookup), but in most cases, the
 [`LOOKUP` function](sql.html#string-functions) performs better than a join. Consider using the `LOOKUP` function if
 it is appropriate for your use case.
-2. When using joins in Druid SQL, keep in mind that it can generate subqueries that you did not explicitly include in
+2.
+3. When using joins in Druid SQL, keep in mind that it can generate subqueries that you did not explicitly include in
 your queries. Refer to the [Druid SQL](sql.md#query-translation) documentation for more details about when this happens
 and how to detect it.
-3. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
+4. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
 For example, since lookup keys are always strings, the condition `druid.d JOIN lookup.l ON d.field = l.field` will
 perform best if `d.field` is a string.
-4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
+5. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
 to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
 common use cases.
 

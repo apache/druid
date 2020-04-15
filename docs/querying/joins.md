@@ -29,3 +29,6 @@ queries, or using the [JOIN operator](sql.md#query-syntax) in Druid SQL. Refer t
 [join datasource](datasource.md#join) documentation for information about how joins work in Druid.
 2. [Query-time lookups](lookups.md), simple key-to-value mappings. These are preloaded on all servers and can be
 accessed with or without an explicit join operator. Refer to the [lookups](lookups.md) documentation for more details.
+
+Whenever possible, for best performance it is good to avoid joins at query time. Often this can be accomplished by
+joining data before it is loaded into Druid.
