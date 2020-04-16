@@ -196,11 +196,11 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
       <>
         <MenuItem
           icon={IconNames.JOIN_TABLE}
-          text={parsedQuery.joinTable ? `Replace Join` : `Join`}
+          text={parsedQuery.joinTable ? `Replace join` : `Join`}
         >
           <MenuItem
             icon={IconNames.LEFT_JOIN}
-            text={`Left Join`}
+            text={`Left join`}
             onClick={() => {
               onQueryChange(
                 parsedQuery.addJoin(
@@ -220,7 +220,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           />
           <MenuItem
             icon={IconNames.INNER_JOIN}
-            text={`Inner Join`}
+            text={`Inner join`}
             onClick={() => {
               onQueryChange(
                 parsedQuery.addJoin(
@@ -244,7 +244,7 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           parsedQuery.onExpression.containsColumn(columnName) && (
             <MenuItem
               icon={IconNames.EXCHANGE}
-              text={`Remove Join`}
+              text={`Remove join`}
               onClick={() => onQueryChange(parsedQuery.removeJoin())}
             />
           )}

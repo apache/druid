@@ -218,11 +218,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               <MenuItem
                                 popoverProps={{ openOnTargetFocus: false }}
                                 icon={IconNames.JOIN_TABLE}
-                                text={parsedQuery.joinTable ? `Replace Join` : `Join`}
+                                text={parsedQuery.joinTable ? `Replace join` : `Join`}
                               >
                                 <MenuItem
                                   icon={IconNames.LEFT_JOIN}
-                                  text={`Left Join`}
+                                  text={`Left join`}
                                   onClick={() => {
                                     const { lookupColumn, originalTableColumn } = getCurrentColumns(
                                       parsedQuery,
@@ -246,7 +246,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 />
                                 <MenuItem
                                   icon={IconNames.INNER_JOIN}
-                                  text={`Inner Join`}
+                                  text={`Inner join`}
                                   onClick={() => {
                                     const { lookupColumn, originalTableColumn } = getCurrentColumns(
                                       parsedQuery,
@@ -275,7 +275,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                               parsedQuery.joinTable.table === table && (
                                 <MenuItem
                                   icon={IconNames.EXCHANGE}
-                                  text={`Remove Join`}
+                                  text={`Remove join`}
                                   onClick={() =>
                                     props.onQueryStringChange(parsedQuery.removeJoin())
                                   }
