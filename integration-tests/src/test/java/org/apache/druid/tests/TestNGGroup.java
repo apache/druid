@@ -78,6 +78,12 @@ public class TestNGGroup
    */
   public static final String HDFS_DEEP_STORAGE = "hdfs-deep-storage";
 
+  public static final String HADOOP_S3 = "hadoop-s3";
+
+  public static final String HADOOP_AZURE = "hadoop-azure";
+
+  public static final String HADOOP_GCS = "hadoop-gcs";
+
   /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
    * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>

@@ -46,7 +46,7 @@ DNS.1 = thisisprobablywrongtoo
 
 EOT
 
-openssl genrsa -out invalid_hostname_client.key 1024 -sha256
+openssl genrsa -out invalid_hostname_client.key 1024
 openssl req -new -out invalid_hostname_client.csr -key invalid_hostname_client.key -reqexts req_ext -config invalid_hostname_csr.conf
 openssl x509 -req -days 3650 -in invalid_hostname_client.csr -CA root.pem -CAkey root.key -set_serial 0x11111112 -out invalid_hostname_client.pem -sha256 -extfile invalid_hostname_csr.conf -extensions req_ext
 

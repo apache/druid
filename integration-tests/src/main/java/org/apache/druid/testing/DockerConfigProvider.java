@@ -47,6 +47,15 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   private String cloudBucket;
 
   @JsonProperty
+  private String cloudRegion;
+
+  @JsonProperty
+  private String hadoopGcsCredentialsPath;
+
+  @JsonProperty
+  private String azureKey;
+
+  @JsonProperty
   private String streamEndpoint;
 
   @Override
@@ -231,6 +240,24 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getCloudPath()
       {
         return cloudPath;
+      }
+
+      @Override
+      public String getCloudRegion()
+      {
+        return cloudRegion;
+      }
+
+      @Override
+      public String getAzureKey()
+      {
+        return azureKey;
+      }
+
+      @Override
+      public String getHadoopGcsCredentialsPath()
+      {
+        return hadoopGcsCredentialsPath;
       }
 
       @Override
