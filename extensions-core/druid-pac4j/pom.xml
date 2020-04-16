@@ -35,6 +35,10 @@
 
   <properties>
     <pac4j.version>3.8.3</pac4j.version>
+
+    <!-- Following must be updated along with any updates to pac4j version -->
+    <nimbus.jose.jwt.version>7.9</nimbus.jose.jwt.version>
+    <oauth2.oidc.sdk.version>6.5</oauth2.oidc.sdk.version>
   </properties>
 
   <dependencies>
@@ -60,10 +64,16 @@
       <artifactId>pac4j-oidc</artifactId>
       <version>${pac4j.version}</version>
     </dependency>
+
     <dependency>
       <groupId>com.nimbusds</groupId>
       <artifactId>nimbus-jose-jwt</artifactId>
-      <version>7.9</version>
+      <version>${nimbus.jose.jwt.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.nimbusds</groupId>
+      <artifactId>oauth2-oidc-sdk</artifactId>
+      <version>${oauth2.oidc.sdk.version}</version>
     </dependency>
 
     <dependency>
