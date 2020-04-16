@@ -30,11 +30,12 @@ import org.testng.annotations.Test;
  * 1) Set the bucket, path, and region for your data.
  *    This can be done by setting -Ddruid.test.config.cloudBucket, -Ddruid.test.config.cloudPath
  *    and -Ddruid.test.config.cloudRegion or setting "cloud_bucket","cloud_path", and "cloud_region" in the config file.
- * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
+ * 2) Set -Ddruid.s3.accessKey and -Ddruid.s3.secretKey when running the tests to your access/secret keys.
+ * 3) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
  *    located in integration-tests/src/test/resources/data/batch_index/json to your S3 at the location set in step 1.
- * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with s3 credentials and hdfs deep storage configs set. See
+ * 4) Provide -Doverride.config.path=<PATH_TO_FILE> with s3 credentials and hdfs deep storage configs set. See
  *    integration-tests/docker/environment-configs/override-examples/hadoop/s3_to_s3 for env vars to provide.
- * 4) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
+ * 5) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
  */
 @Test(groups = TestNGGroup.HADOOP_S3)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
