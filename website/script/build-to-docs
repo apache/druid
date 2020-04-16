@@ -52,6 +52,9 @@ mkdir -p $WEBSRC/docs/$URL_VERSION/
 cp -r ./build/ApacheDruid/docs/* $WEBSRC/docs/$URL_VERSION/
 
 mkdir -p $WEBSRC/css
+# 'npm run build' command is supposed to copy these files to build/ApacheDruid/css as well,
+# but somehow they are missing. We maunally copy them for now.
+cp ./static/css/* ./build/ApacheDruid/css
 cp ./build/ApacheDruid/css/* $WEBSRC/css
 
 mkdir -p $WEBSRC/js
