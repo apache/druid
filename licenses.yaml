@@ -21,7 +21,7 @@ license_category: source
 module: java-core
 license_name: Apache License version 2.0
 source_paths:
-  - processing/src/main/java/org/apache/druid/segment/filter/Filters.java
+  - processing/src/main/java/org/apache/druid/segment/filter/cnf/HiveCnfHelper.java
   - extensions-core/stats/src/main/java/io/druid/query/aggregation/variance/VarianceAggregatorCollector.java
   - extensions-core/druid-bloom-filter/src/main/java/org/apache/druid/query/filter/BloomKFilter.java
 
@@ -42,6 +42,7 @@ module: java-core
 license_name: Apache License version 2.0
 source_paths:
   - sql/src/main/java/org/apache/druid/sql/calcite/
+  - processing/src/main/java/org/apache/druid/segment/filter/cnf/CalciteCnfHelper.java
 
 ---
 
@@ -917,7 +918,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.45.Final
+version: 4.1.48.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec

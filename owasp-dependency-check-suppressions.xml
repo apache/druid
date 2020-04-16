@@ -187,4 +187,36 @@
      <packageUrl regex="true">^pkg:npm/node\-sass@.*$</packageUrl>
      <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
   </suppress>
+  <suppress>
+    <!--
+      ~ TODO: Fix when Apache Ranger 2.1 is released
+      -->
+    <notes><![CDATA[
+    file name: kafka_2.11-2.0.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka_2.11@2.0.0$</packageUrl>
+    <cve>CVE-2019-12399</cve>
+    <cve>CVE-2018-17196</cve>
+  </suppress>
+  <suppress>
+    <!--
+      ~ TODO: Fix when Apache Ranger 2.1 is released
+      -->
+    <notes><![CDATA[
+    file name: kafka-clients-2.0.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka-clients@2.0.0$</packageUrl>
+    <cve>CVE-2019-12399</cve>
+    <cve>CVE-2018-17196</cve>
+  </suppress>
+  <suppress>
+    <!--
+      ~ TODO: Fix when Apache Ranger is released with updated log4j
+      -->
+    <notes><![CDATA[
+    file name: log4j-1.2.17.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/log4j/log4j@1.2.17$</packageUrl>
+    <cve>CVE-2019-17571</cve>
+  </suppress>
 </suppressions>

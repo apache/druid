@@ -241,7 +241,7 @@ public class CalciteTests
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
               ImmutableList.<DimensionSchema>builder()
-                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
+                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4", "dim5")))
                   .add(new DoubleDimensionSchema("d1"))
                   .add(new DoubleDimensionSchema("d2"))
                   .add(new FloatDimensionSchema("f1"))
@@ -382,6 +382,8 @@ public class CalciteTests
               .put("dim1", "")
               .put("dim2", ImmutableList.of("a"))
               .put("dim3", ImmutableList.of("a", "b"))
+              .put("dim4", "a")
+              .put("dim5", "aa")
               .build(),
           PARSER_NUMERIC_DIMS
       ),
@@ -399,6 +401,8 @@ public class CalciteTests
               .put("dim1", "10.1")
               .put("dim2", ImmutableList.of())
               .put("dim3", ImmutableList.of("b", "c"))
+              .put("dim4", "a")
+              .put("dim5", "ab")
               .build(),
           PARSER_NUMERIC_DIMS
       ),
@@ -416,6 +420,8 @@ public class CalciteTests
               .put("dim1", "2")
               .put("dim2", ImmutableList.of(""))
               .put("dim3", ImmutableList.of("d"))
+              .put("dim4", "a")
+              .put("dim5", "ba")
               .build(),
           PARSER_NUMERIC_DIMS
       ),
@@ -427,6 +433,8 @@ public class CalciteTests
               .put("dim1", "1")
               .put("dim2", ImmutableList.of("a"))
               .put("dim3", ImmutableList.of(""))
+              .put("dim4", "b")
+              .put("dim5", "ad")
               .build(),
           PARSER_NUMERIC_DIMS
       ),
@@ -438,6 +446,8 @@ public class CalciteTests
               .put("dim1", "def")
               .put("dim2", ImmutableList.of("abc"))
               .put("dim3", ImmutableList.of())
+              .put("dim4", "b")
+              .put("dim5", "aa")
               .build(),
           PARSER_NUMERIC_DIMS
       ),
@@ -447,6 +457,8 @@ public class CalciteTests
               .put("m1", "6.0")
               .put("m2", "6.0")
               .put("dim1", "abc")
+              .put("dim4", "b")
+              .put("dim5", "ab")
               .build(),
           PARSER_NUMERIC_DIMS
       )
@@ -761,7 +773,10 @@ public class CalciteTests
         new FakeHttpClient(),
         provider,
         NodeRole.COORDINATOR,
-        "/simple/leader"
+        "/simple/leader",
+        () -> {
+          throw new UnsupportedOperationException();
+        }
     );
 
     return new SystemSchema(

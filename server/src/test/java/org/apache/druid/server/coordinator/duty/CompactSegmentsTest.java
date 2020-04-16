@@ -360,7 +360,7 @@ public class CompactSegmentsTest
 
     private TestDruidLeaderClient(ObjectMapper jsonMapper)
     {
-      super(null, new TestNodeDiscoveryProvider(), null, null);
+      super(null, new TestNodeDiscoveryProvider(), null, null, null);
       this.jsonMapper = jsonMapper;
     }
 

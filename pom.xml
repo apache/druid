@@ -99,7 +99,7 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
-        <netty4.version>4.1.45.Final</netty4.version>
+        <netty4.version>4.1.48.Final</netty4.version>
         <node.version>v10.14.2</node.version>
         <npm.version>6.5.0</npm.version>
         <postgresql.version>42.2.8</postgresql.version>
@@ -1525,12 +1525,15 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>5.3.0</version>
+                <version>5.3.2</version>
                 <configuration>
                     <cveValidForHours>24</cveValidForHours>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
+                    <!-- For node analysis info, see https://github.com/jeremylong/DependencyCheck/issues/2482#issuecomment-603755623 -->
+                    <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>  <!-- plugin author (jeremylong) recommends to disable, since this analyzer is retired -->
+                    <nodeAuditSkipDevDependencies>true</nodeAuditSkipDevDependencies>
                     <suppressionFile>owasp-dependency-check-suppressions.xml</suppressionFile>
                 </configuration>
                 <executions>
@@ -1905,6 +1908,7 @@
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
+                                <exclude>**/dependency-reduced-pom.xml</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -1946,6 +1950,25 @@
           <modules>
             <module>website</module>
           </modules>
+        </profile>
+        <profile>
+          <id>skip-static-checks</id>
+          <properties>
+            <animal.sniffer.skip>true</animal.sniffer.skip>
+            <checkstyle.skip>true</checkstyle.skip>
+            <enforcer.skip>true</enforcer.skip>
+            <forbiddenapis.skip>true</forbiddenapis.skip>
+            <maven.javadoc.skip>true</maven.javadoc.skip>
+            <pmd.skip>true</pmd.skip>
+            <spotbugs.skip>true</spotbugs.skip>
+          </properties>
+        </profile>
+        <profile>
+          <id>skip-tests</id>
+          <properties>
+            <skipTests>true</skipTests>
+            <jacoco.skip>true</jacoco.skip>
+          </properties>
         </profile>
     </profiles>
 </project>

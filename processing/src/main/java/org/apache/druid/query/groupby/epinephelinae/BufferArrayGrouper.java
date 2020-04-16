@@ -69,12 +69,20 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   @Nullable
   private int[] vAggregationRows = null;
 
-  static long requiredBufferCapacity(
-      int cardinality,
-      AggregatorFactory[] aggregatorFactories
-  )
+  /**
+   * Computes required buffer capacity for a grouping key of the given cardinaltiy and aggregatorFactories.
+   * This method assumes that the given cardinality doesn't count nulls.
+   *
+   * Returns -1 if cardinality + 1 (for null) > Integer.MAX_VALUE. Returns computed required buffer capacity
+   * otherwise.
+   */
+  static long requiredBufferCapacity(int cardinality, AggregatorFactory[] aggregatorFactories)
   {
     final long cardinalityWithMissingValue = computeCardinalityWithMissingValue(cardinality);
+    // Cardinality should be in the integer range. See DimensionDictionarySelector.
+    if (cardinalityWithMissingValue > Integer.MAX_VALUE) {
+      return -1;
+    }
     final long recordSize = Arrays.stream(aggregatorFactories)
                                   .mapToLong(AggregatorFactory::getMaxIntermediateSizeWithNulls)
                                   .sum();
@@ -191,6 +199,10 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       throw new ISE("keySpace too large to handle");
     }
 
+    if (vAggregationPositions == null || vAggregationRows == null) {
+      throw new ISE("Grouper was not initialized for vectorization");
+    }
+
     if (keySpace.getCapacity() == 0) {
       // Empty key space, assume keys are all zeroes.
       final int dimIndex = 1;
@@ -206,7 +218,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
     } else {
       for (int i = 0; i < numRows; i++) {
         // +1 matches what hashFunction() would do.
-        final int dimIndex = keySpace.getInt(i * Integer.BYTES) + 1;
+        final int dimIndex = keySpace.getInt(((long) i) * Integer.BYTES) + 1;
 
         if (dimIndex < 0 || dimIndex >= cardinalityWithMissingValue) {
           throw new IAE("Invalid dimIndex[%s]", dimIndex);
