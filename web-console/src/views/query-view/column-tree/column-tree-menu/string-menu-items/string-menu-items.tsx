@@ -28,6 +28,8 @@ import {
 } from 'druid-query-toolkit';
 import React from 'react';
 
+import { getCurrentColumns } from '../../column-tree';
+
 export interface StringMenuItemsProps {
   schema: string;
   table: string;
@@ -169,6 +171,8 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
     const { schema, table, columnName, parsedQuery, onQueryChange } = props;
     if (schema !== 'lookup' || !parsedQuery) return;
 
+    const { originalTableColumn, lookupColumn } = getCurrentColumns(parsedQuery, table);
+
     return (
       <>
         <MenuItem
@@ -185,7 +189,10 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
                   SqlRef.fromString(table, schema).upgrade(),
                   SqlMulti.sqlMultiFactory('=', [
                     SqlRef.fromString(columnName, table, 'lookup'),
-                    SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                    SqlRef.fromString(
+                      lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      parsedQuery.getTableName(),
+                    ),
                   ]),
                 ),
                 false,
@@ -202,7 +209,10 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
                   SqlRef.fromString(table, schema).upgrade(),
                   SqlMulti.sqlMultiFactory('=', [
                     SqlRef.fromString(columnName, table, 'lookup'),
-                    SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                    SqlRef.fromString(
+                      lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      parsedQuery.getTableName(),
+                    ),
                   ]),
                 ),
                 false,

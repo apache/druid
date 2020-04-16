@@ -30,6 +30,8 @@ import {
 } from 'druid-query-toolkit';
 import React from 'react';
 
+import { getCurrentColumns } from '../../column-tree';
+
 function dateToTimestamp(date: Date): SqlTimestamp {
   return SqlTimestamp.sqlTimestampFactory(
     date
@@ -414,6 +416,8 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     const { schema, table, columnName, parsedQuery, onQueryChange } = props;
     if (schema !== 'lookup' || !parsedQuery) return;
 
+    const { originalTableColumn, lookupColumn } = getCurrentColumns(parsedQuery, table);
+
     return (
       <>
         <MenuItem
@@ -430,7 +434,10 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
                   SqlRef.fromString(table, schema).upgrade(),
                   SqlMulti.sqlMultiFactory('=', [
                     SqlRef.fromString(columnName, table, 'lookup'),
-                    SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                    SqlRef.fromString(
+                      lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      parsedQuery.getTableName(),
+                    ),
                   ]),
                 ),
                 false,
@@ -447,7 +454,10 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
                   SqlRef.fromString(table, schema).upgrade(),
                   SqlMulti.sqlMultiFactory('=', [
                     SqlRef.fromString(columnName, table, 'lookup'),
-                    SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                    SqlRef.fromString(
+                      lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      parsedQuery.getTableName(),
+                    ),
                   ]),
                 ),
                 false,

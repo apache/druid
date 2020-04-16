@@ -125,6 +125,32 @@ export interface ColumnTreeState {
   selectedTreeIndex: number;
 }
 
+export function getCurrentColumns(parsedQuery: SqlQuery, table: string) {
+  let lookupColumn;
+  let originalTableColumn;
+  if (
+    parsedQuery.joinTable &&
+    parsedQuery.joinTable.table === table &&
+    parsedQuery.onExpression &&
+    parsedQuery.onExpression instanceof SqlMulti
+  ) {
+    parsedQuery.onExpression.arguments.map(argument => {
+      if (argument instanceof SqlRef) {
+        if (argument.namespace === 'lookup') {
+          lookupColumn = argument.column;
+        } else {
+          originalTableColumn = argument.column;
+        }
+      }
+    });
+  }
+
+  return {
+    lookupColumn: lookupColumn || 'XXX',
+    originalTableColumn: originalTableColumn || 'XXX',
+  };
+}
+
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
@@ -198,13 +224,20 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   icon={IconNames.LEFT_JOIN}
                                   text={`Left Join`}
                                   onClick={() => {
+                                    const { lookupColumn, originalTableColumn } = getCurrentColumns(
+                                      parsedQuery,
+                                      table,
+                                    );
                                     props.onQueryStringChange(
                                       parsedQuery.addJoin(
                                         'LEFT',
                                         SqlRef.fromString(table, schema).upgrade(),
                                         SqlMulti.sqlMultiFactory('=', [
-                                          SqlRef.fromString('XXX', table, 'lookup'),
-                                          SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                                          SqlRef.fromString(lookupColumn, table, 'lookup'),
+                                          SqlRef.fromString(
+                                            originalTableColumn,
+                                            parsedQuery.getTableName(),
+                                          ),
                                         ]),
                                       ),
                                       false,
@@ -215,13 +248,20 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   icon={IconNames.INNER_JOIN}
                                   text={`Inner Join`}
                                   onClick={() => {
+                                    const { lookupColumn, originalTableColumn } = getCurrentColumns(
+                                      parsedQuery,
+                                      table,
+                                    );
                                     props.onQueryStringChange(
                                       parsedQuery.addJoin(
                                         'INNER',
                                         SqlRef.fromString(table, schema).upgrade(),
                                         SqlMulti.sqlMultiFactory('=', [
-                                          SqlRef.fromString('XXX', table, 'lookup'),
-                                          SqlRef.fromString('XXX', parsedQuery.getTableName()),
+                                          SqlRef.fromString(lookupColumn, table, 'lookup'),
+                                          SqlRef.fromString(
+                                            originalTableColumn,
+                                            parsedQuery.getTableName(),
+                                          ),
                                         ]),
                                       ),
                                       false,
