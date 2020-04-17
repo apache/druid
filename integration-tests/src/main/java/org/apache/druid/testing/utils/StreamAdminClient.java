@@ -19,15 +19,17 @@
 
 package org.apache.druid.testing.utils;
 
-import java.util.List;
+import java.util.Map;
 
-public interface StreamEventWriter
+public interface StreamAdminClient
 {
-  void write(String topic, List<String> events) throws Exception;
+  void createStream(String streamName, int partitionCount, Map<String, String> tags) throws Exception;
 
-  void write(String topic, String event) throws Exception;
+  void deleteStream(String streamName) throws Exception;
 
-  void shutdown();
+  void updateShardCount(String streamName, int newPartitionCount, boolean blocksUntilStarted) throws Exception;
 
-  void flush() throws Exception;
+  boolean isStreamActive(String streamName) throws Exception;
+
+  int getStreamShardCount(String streamName) throws Exception;
 }

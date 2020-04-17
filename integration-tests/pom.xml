@@ -304,21 +304,6 @@
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.12</artifactId>
-            <version>${apache.kafka.version}</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>log4j</artifactId>
-                    <groupId>log4j</groupId>
-                </exclusion>
-                <exclusion>
-                    <artifactId>slf4j-log4j12</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
     </dependencies>
 
     <build>
@@ -367,6 +352,8 @@
             <id>integration-tests</id>
             <properties>
                 <start.hadoop.docker>false</start.hadoop.docker>
+                <skip.start.docker>false</skip.start.docker>
+                <skip.stop.docker>false</skip.stop.docker>
                 <override.config.path></override.config.path>
                 <resource.file.dir.path></resource.file.dir.path>
             </properties>
@@ -385,6 +372,7 @@
                                 <configuration>
                                     <environmentVariables>
                                     <DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>${start.hadoop.docker}</DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>
+                                    <DRUID_INTEGRATION_TEST_SKIP_START_DOCKER>${skip.start.docker}</DRUID_INTEGRATION_TEST_SKIP_START_DOCKER>
                                     <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
                                     <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                     <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
@@ -400,6 +388,9 @@
                                 </goals>
                                 <phase>post-integration-test</phase>
                                 <configuration>
+                                    <environmentVariables>
+                                        <DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>${skip.stop.docker}</DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>
+                                    </environmentVariables>
                                     <executable>${project.basedir}/stop_cluster.sh</executable>
                                 </configuration>
                             </execution>

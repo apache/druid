@@ -42,7 +42,7 @@ import java.io.FileInputStream;
 import java.util.Map;
 import java.util.Properties;
 
-public class KinesisAdminClient
+public class KinesisAdminClient implements StreamAdminClient
 {
   private AmazonKinesis amazonKinesis;
 
@@ -70,6 +70,7 @@ public class KinesisAdminClient
                               )).build();
   }
 
+  @Override
   public void createStream(String streamName, int shardCount, Map<String, String> tags)
   {
     CreateStreamResult createStreamResult = amazonKinesis.createStream(streamName, shardCount);
@@ -88,6 +89,7 @@ public class KinesisAdminClient
 
   }
 
+  @Override
   public void deleteStream(String streamName)
   {
     DeleteStreamResult deleteStreamResult = amazonKinesis.deleteStream(streamName);
@@ -101,6 +103,7 @@ public class KinesisAdminClient
    * If {@param blocksUntilStarted} is set to true, then this method will blocks until the resharding
    * started (but not nessesary finished), otherwise, the method will returns right after issue the reshard command
    */
+  @Override
   public void updateShardCount(String streamName, int newShardCount, boolean blocksUntilStarted)
   {
     int originalShardCount = getStreamShardCount(streamName);
@@ -129,12 +132,14 @@ public class KinesisAdminClient
     }
   }
 
+  @Override
   public boolean isStreamActive(String streamName)
   {
     StreamDescription streamDescription = getStreamDescription(streamName);
     return verifyStreamStatus(streamDescription, StreamStatus.ACTIVE);
   }
 
+  @Override
   public int getStreamShardCount(String streamName)
   {
     StreamDescription streamDescription = getStreamDescription(streamName);

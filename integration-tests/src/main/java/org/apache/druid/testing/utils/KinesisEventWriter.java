@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Properties;
 
 public class KinesisEventWriter implements StreamEventWriter
@@ -61,6 +62,14 @@ public class KinesisEventWriter implements StreamEventWriter
         .setAggregationEnabled(aggregate);
 
     this.kinesisProducer = new KinesisProducer(kinesisProducerConfiguration);
+  }
+
+  @Override
+  public void write(String streamName, List<String> events)
+  {
+    for (String event : events) {
+      write(streamName, event);
+    }
   }
 
   @Override

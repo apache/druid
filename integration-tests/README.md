@@ -68,7 +68,18 @@ can either be 8 or 11.
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
 
-## Debugging Druid while running tests
+## Tips & tricks for debugging and developing integration tests
+
+### Useful mvn command flags
+
+- -Dskip.start.docker=true to skip starting docker containers. This can save ~6 minutes by skipping building and bringing 
+up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
+these containers already running if using this flag. Additionally, please make sure that the running containers
+are in the same state that the setup script (run_cluster.sh) would have brought it up in. 
+- -Dskip.stop.docker=true to skip stopping and teardowning down the docker containers. This can be useful in further
+debugging after the integration tests have finish running. 
+
+### Debugging Druid while running tests
 
 For your convenience, Druid processes running inside Docker have debugging enabled and the following ports have 
 been made available to attach your remote debugger (such as via IntelliJ IDEA's Remote Configuration):
