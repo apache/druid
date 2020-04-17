@@ -30,6 +30,8 @@ import {
 } from 'druid-query-toolkit';
 import React from 'react';
 
+import { getCurrentColumns } from '../../column-tree';
+
 function dateToTimestamp(date: Date): SqlTimestamp {
   return SqlTimestamp.sqlTimestampFactory(
     date
@@ -91,6 +93,8 @@ function nextYear(dt: Date): Date {
 }
 
 export interface TimeMenuItemsProps {
+  table: string;
+  schema: string;
   columnName: string;
   parsedQuery: SqlQuery;
   onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
@@ -113,7 +117,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
                   columnName,
                   '>=',
                   SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromName('CURRENT_TIMESTAMP'),
+                    SqlRef.fromString('CURRENT_TIMESTAMP'),
                     SqlInterval.sqlIntervalFactory('HOUR', 1),
                   ]),
                 ),
@@ -131,7 +135,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
                   columnName,
                   '>=',
                   SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromName('CURRENT_TIMESTAMP'),
+                    SqlRef.fromString('CURRENT_TIMESTAMP'),
                     SqlInterval.sqlIntervalFactory('Day', 1),
                   ]),
                 ),
@@ -149,7 +153,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
                   columnName,
                   '>=',
                   SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromName('CURRENT_TIMESTAMP'),
+                    SqlRef.fromString('CURRENT_TIMESTAMP'),
                     SqlInterval.sqlIntervalFactory('Day', 7),
                   ]),
                 ),
@@ -167,7 +171,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
                   columnName,
                   '>=',
                   SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromName('CURRENT_TIMESTAMP'),
+                    SqlRef.fromString('CURRENT_TIMESTAMP'),
                     SqlInterval.sqlIntervalFactory('MONTH', 1),
                   ]),
                 ),
@@ -185,7 +189,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
                   columnName,
                   '>=',
                   SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromName('CURRENT_TIMESTAMP'),
+                    SqlRef.fromString('CURRENT_TIMESTAMP'),
                     SqlInterval.sqlIntervalFactory('YEAR', 1),
                   ]),
                 ),
@@ -202,12 +206,12 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
               parsedQuery
                 .removeFilter(columnName)
                 .addWhereFilter(
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlRef.fromStringWithDoubleQuotes(columnName),
                   '>=',
                   dateToTimestamp(hourStart),
                 )
                 .addWhereFilter(
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlRef.fromStringWithDoubleQuotes(columnName),
                   '<',
                   dateToTimestamp(nextHour(hourStart)),
                 ),
@@ -223,12 +227,12 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
               parsedQuery
                 .removeFilter(columnName)
                 .addWhereFilter(
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlRef.fromStringWithDoubleQuotes(columnName),
                   '>=',
                   dateToTimestamp(dayStart),
                 )
                 .addWhereFilter(
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlRef.fromStringWithDoubleQuotes(columnName),
                   '<',
                   dateToTimestamp(nextDay(dayStart)),
                 ),
@@ -244,12 +248,12 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
               parsedQuery
                 .removeFilter(columnName)
                 .addWhereFilter(
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlRef.fromStringWithDoubleQuotes(columnName),
                   '>=',
                   dateToTimestamp(monthStart),
                 )
                 .addWhereFilter(
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlRef.fromStringWithDoubleQuotes(columnName),
                   '<',
                   dateToTimestamp(nextMonth(monthStart)),
                 ),
@@ -265,7 +269,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
               parsedQuery
                 .removeFilter(columnName)
                 .addWhereFilter(
-                  SqlRef.fromNameWithDoubleQuotes(columnName),
+                  SqlRef.fromStringWithDoubleQuotes(columnName),
                   '<=',
                   dateToTimestamp(yearStart),
                 )
@@ -324,7 +328,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
               parsedQuery.addToGroupBy(
                 SqlAliasRef.sqlAliasFactory(
                   SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
-                    SqlRef.fromName(columnName),
+                    SqlRef.fromString(columnName),
                     SqlLiteral.fromInput('PT1h'),
                   ]),
                   `${columnName}_time_floor`,
@@ -341,7 +345,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
               parsedQuery.addToGroupBy(
                 SqlAliasRef.sqlAliasFactory(
                   SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
-                    SqlRef.fromName(columnName),
+                    SqlRef.fromString(columnName),
                     SqlLiteral.fromInput('P1D'),
                   ]),
                   `${columnName}_time_floor`,
@@ -358,7 +362,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
               parsedQuery.addToGroupBy(
                 SqlAliasRef.sqlAliasFactory(
                   SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
-                    SqlRef.fromName(columnName),
+                    SqlRef.fromString(columnName),
                     SqlLiteral.fromInput('P7D'),
                   ]),
                   `${columnName}_time_floor`,
@@ -383,7 +387,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
           onClick={() => {
             onQueryChange(
               parsedQuery.addAggregateColumn(
-                [SqlRef.fromNameWithDoubleQuotes(columnName)],
+                [SqlRef.fromStringWithDoubleQuotes(columnName)],
                 'MAX',
                 `max_${columnName}`,
               ),
@@ -396,7 +400,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
           onClick={() => {
             onQueryChange(
               parsedQuery.addAggregateColumn(
-                [SqlRef.fromNameWithDoubleQuotes(columnName)],
+                [SqlRef.fromStringWithDoubleQuotes(columnName)],
                 'MIN',
                 `min_${columnName}`,
               ),
@@ -408,6 +412,72 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     );
   }
 
+  function renderJoinMenu(): JSX.Element | undefined {
+    const { schema, table, columnName, parsedQuery, onQueryChange } = props;
+    if (schema !== 'lookup' || !parsedQuery) return;
+
+    const { originalTableColumn, lookupColumn } = getCurrentColumns(parsedQuery, table);
+
+    return (
+      <>
+        <MenuItem
+          icon={IconNames.JOIN_TABLE}
+          text={parsedQuery.joinTable ? `Replace join` : `Join`}
+        >
+          <MenuItem
+            icon={IconNames.LEFT_JOIN}
+            text={`Left join`}
+            onClick={() => {
+              onQueryChange(
+                parsedQuery.addJoin(
+                  'LEFT',
+                  SqlRef.fromString(table, schema).upgrade(),
+                  SqlMulti.sqlMultiFactory('=', [
+                    SqlRef.fromString(columnName, table, 'lookup'),
+                    SqlRef.fromString(
+                      lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      parsedQuery.getTableName(),
+                    ),
+                  ]),
+                ),
+                false,
+              );
+            }}
+          />
+          <MenuItem
+            icon={IconNames.INNER_JOIN}
+            text={`Inner join`}
+            onClick={() => {
+              onQueryChange(
+                parsedQuery.addJoin(
+                  'INNER',
+                  SqlRef.fromString(table, schema).upgrade(),
+                  SqlMulti.sqlMultiFactory('=', [
+                    SqlRef.fromString(columnName, table, 'lookup'),
+                    SqlRef.fromString(
+                      lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      parsedQuery.getTableName(),
+                    ),
+                  ]),
+                ),
+                false,
+              );
+            }}
+          />
+        </MenuItem>
+        {parsedQuery.onExpression &&
+          parsedQuery.onExpression instanceof SqlMulti &&
+          parsedQuery.onExpression.containsColumn(columnName) && (
+            <MenuItem
+              icon={IconNames.EXCHANGE}
+              text={`Remove join`}
+              onClick={() => onQueryChange(parsedQuery.removeJoin())}
+            />
+          )}
+      </>
+    );
+  }
+
   return (
     <>
       {renderFilterMenu()}
@@ -415,6 +485,7 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
       {renderGroupByMenu()}
       {renderRemoveGroupBy()}
       {renderAggregateMenu()}
+      {renderJoinMenu()}
     </>
   );
 });
