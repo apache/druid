@@ -363,7 +363,6 @@ public class CostBalancerStrategy implements BalancerStrategy
       final boolean includeCurrentServer
   )
   {
-    long time = System.currentTimeMillis();
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
 
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
@@ -395,7 +394,6 @@ public class CostBalancerStrategy implements BalancerStrategy
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
     }
-    log.info("Time it took to figure out best server: " + (System.currentTimeMillis() - time));
     return bestServer;
   }
 }
