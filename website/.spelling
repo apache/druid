@@ -40,6 +40,7 @@ CORS
 CPUs
 CSVs
 Ceph
+CNF
 ColumnDescriptor
 Corretto
 DDL
@@ -307,6 +308,8 @@ pre-computation
 pre-compute
 pre-computing
 pre-configured
+pre-filtered
+pre-filtering
 pre-generated
 pre-made
 pre-processing
@@ -380,6 +383,7 @@ unmergeable
 unmerged
 unparseable
 unparsed
+useFilterCNF
 uptime
 uris
 useFieldDiscovery
