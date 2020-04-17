@@ -51,8 +51,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
   static final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
   static final int EVENTS_PER_SECOND = 6;
   static final int TOTAL_NUMBER_OF_SECOND = 10;
-
-  private static final Logger LOG = new Logger(AbstractStreamIndexingTest.class);
+  static final Logger LOG = new Logger(AbstractStreamIndexingTest.class);
   // Since this integration test can terminates or be killed un-expectedly, this tag is added to all streams created
   // to help make stream clean up easier. (Normally, streams should be cleanup automattically by the teardown method)
   // The value to this tag is a timestamp that can be used by a lambda function to remove unused stream.
@@ -230,13 +229,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     }
   }
 
-  void doTestIndexDataWithKinesisReshardSplit() throws Exception
+  void doTestIndexDataWithStreamReshardSplit() throws Exception
   {
     // Reshard the stream from STREAM_SHARD_COUNT to STREAM_SHARD_COUNT * 2
     testIndexWithStreamReshardHelper(STREAM_SHARD_COUNT * 2);
   }
 
-  void doTestIndexDataWithKinesisReshardMerge() throws Exception
+  void doTestIndexDataWithStreamReshardMerge() throws Exception
   {
     // Reshard the stream from STREAM_SHARD_COUNT to STREAM_SHARD_COUNT / 2
     testIndexWithStreamReshardHelper(STREAM_SHARD_COUNT / 2);
@@ -319,20 +318,20 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
       wikipediaStreamEventGenerator.start(streamName, streamEventWriter, secondsToGenerateSecondRound, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound));
-      // Wait for kinesis stream to finish resharding
+      // Wait for stream to finish resharding
       ITRetryUtil.retryUntil(
           () -> streamAdminClient.isStreamActive(streamName),
           true,
           10000,
           30,
-          "Waiting for Kinesis stream to finish resharding"
+          "Waiting for stream to finish resharding"
       );
       ITRetryUtil.retryUntil(
           () -> streamAdminClient.getStreamShardCount(streamName) == newShardCount,
           true,
           10000,
           30,
-          "Waiting for Kinesis stream to finish resharding"
+          "Waiting for stream to finish resharding"
       );
       // Start generating remainding data (after resharding)
       wikipediaStreamEventGenerator.start(streamName, streamEventWriter, secondsToGenerateRemaining, FIRST_EVENT_TIME.plusSeconds(secondsToGenerateFirstRound + secondsToGenerateSecondRound));
@@ -352,7 +351,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
   private void verifyIngestedData(String supervisorId) throws Exception
   {
     // Wait for supervisor to consume events
-    LOG.info("Waiting for [%s] millis for Kinesis indexing tasks to consume events", WAIT_TIME_MILLIS);
+    LOG.info("Waiting for [%s] millis for stream indexing tasks to consume events", WAIT_TIME_MILLIS);
     Thread.sleep(WAIT_TIME_MILLIS);
     // Query data
     final String querySpec = streamQueryPropsTransform.apply(getResourceAsString(QUERIES_FILE));

@@ -191,12 +191,12 @@ public class ITKinesisIndexingServiceTest extends AbstractStreamIndexingTest
   @Test
   public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
   {
-    doTestIndexDataWithKinesisReshardSplit();
+    doTestIndexDataWithStreamReshardSplit();
   }
 
   @Test
   public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
   {
-    doTestIndexDataWithKinesisReshardMerge();
+    doTestIndexDataWithStreamReshardMerge();
   }
 }
