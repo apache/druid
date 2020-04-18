@@ -32,4 +32,6 @@ public interface StreamAdminClient
   boolean isStreamActive(String streamName) throws Exception;
 
   int getStreamShardCount(String streamName) throws Exception;
+
+  boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount) throws Exception;
 }

@@ -20,21 +20,20 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.KinesisAdminClient;
 import org.apache.druid.testing.utils.KinesisEventWriter;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
-import org.apache.druid.tests.TestNGGroup;
-import org.testng.annotations.Guice;
-import org.testng.annotations.Test;
 
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.KINESIS_INDEX)
-@Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITKinesisIndexingServiceTest extends AbstractStreamIndexingTest
+public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamIndexingTest
 {
+  @Override
+  String getTestNamePrefix()
+  {
+    return "kinesis";
+  }
 
   @Override
   StreamAdminClient getStreamAdminClient() throws Exception
@@ -150,53 +149,5 @@ public class ITKinesisIndexingServiceTest extends AbstractStreamIndexingTest
         throw new RuntimeException(e);
       }
     };
-  }
-
-  @Test
-  public void testKinesisIndexDataWithLegacyParserStableState() throws Exception
-  {
-    doTestIndexDataWithLegacyParserStableState();
-  }
-
-  @Test
-  public void testKinesisIndexDataWithInputFormatStableState() throws Exception
-  {
-    doTestIndexDataWithInputFormatStableState();
-  }
-
-  @Test
-  public void testKinesisIndexDataWithLosingCoordinator() throws Exception
-  {
-    doTestIndexDataWithLosingCoordinator();
-  }
-
-  @Test
-  public void testKinesisIndexDataWithLosingOverlord() throws Exception
-  {
-    doTestIndexDataWithLosingOverlord();
-  }
-
-  @Test
-  public void testKinesisIndexDataWithLosingHistorical() throws Exception
-  {
-    doTestIndexDataWithLosingHistorical();
-  }
-
-  @Test
-  public void testKinesisIndexDataWithStartStopSupervisor() throws Exception
-  {
-    doTestIndexDataWithStartStopSupervisor();
-  }
-
-  @Test
-  public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
-  {
-    doTestIndexDataWithStreamReshardSplit();
-  }
-
-  @Test
-  public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
-  {
-    doTestIndexDataWithStreamReshardMerge();
   }
 }

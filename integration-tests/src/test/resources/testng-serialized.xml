@@ -20,15 +20,16 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 
 
-<suite name="IntegrationTestSuite">
-<listeners>
-  <listener class-name="org.apache.druid.testing.utils.LoggerListener" />
-</listeners>
-<test name="AllTests">
-<packages>
-  <package name="org.apache.druid.tests.*">
-    <exclude name="org.apache.druid.tests.hadoop"/>
-  </package>
-</packages>
-</test>
+<suite name="SerializedIntegrationTestSuite">
+  <listeners>
+    <listener class-name="org.apache.druid.testing.utils.LoggerListener" />
+  </listeners>
+  <test name="AllSerializedTests">
+    <packages>
+      <package name="org.apache.druid.tests.*">
+        <exclude name="org.apache.druid.tests.hadoop"/>
+        <exclude name="org.apache.druid.tests.parallelized"/>
+      </package>
+    </packages>
+  </test>
 </suite>

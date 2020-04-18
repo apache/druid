@@ -146,6 +146,14 @@ public class KinesisAdminClient implements StreamAdminClient
     return getStreamShardCount(streamDescription);
   }
 
+  @Override
+  public boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount)
+  {
+    int actualShardCount = getStreamShardCount(streamName);
+    return actualShardCount == oldShardCount + newShardCount;
+  }
+
+
   private boolean verifyStreamStatus(StreamDescription streamDescription, StreamStatus streamStatusToCheck)
   {
     return streamStatusToCheck.toString().equals(streamDescription.getStreamStatus());

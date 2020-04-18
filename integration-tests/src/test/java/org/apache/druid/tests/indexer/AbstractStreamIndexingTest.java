@@ -32,10 +32,6 @@ import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 
 import java.io.Closeable;
 import java.util.Map;
@@ -81,27 +77,25 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
   abstract StreamEventWriter getStreamEventWriter() throws Exception;
   abstract Function<String, String> getStreamIngestionPropsTransform();
   abstract Function<String, String> getStreamQueryPropsTransform();
+  abstract String getTestNamePrefix();
 
-  @BeforeClass
-  public void beforeClass() throws Exception
+  protected void doBeforeClass() throws Exception
   {
     streamAdminClient = getStreamAdminClient();
     streamEventWriter = getStreamEventWriter();
     wikipediaStreamEventGenerator = new WikipediaStreamEventStreamGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS);
   }
 
-  @AfterClass
-  public void tearDown()
+  protected void doClassTeardown()
   {
     wikipediaStreamEventGenerator.shutdown();
     streamEventWriter.shutdown();
   }
 
-  @BeforeMethod
-  public void before() throws Exception
+  protected void doBefore() throws Exception
   {
-    streamName = "kinesis_index_test_" + UUID.randomUUID();
-    String datasource = "kinesis_indexing_service_test_" + UUID.randomUUID();
+    streamName = getTestNamePrefix() + "_index_test_" + UUID.randomUUID();
+    String datasource = getTestNamePrefix() + "_indexing_service_test_" + UUID.randomUUID();
     Map<String, String> tags = ImmutableMap.of(STREAM_EXPIRE_TAG, Long.toString(DateTimes.nowUtc().plusMinutes(30).getMillis()));
     streamAdminClient.createStream(streamName, STREAM_SHARD_COUNT, tags);
     ITRetryUtil.retryUntil(
@@ -117,8 +111,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     streamQueryPropsTransform = getStreamQueryPropsTransform();
   }
 
-  @AfterMethod
-  public void teardown()
+  protected void doMethodTeardown()
   {
     try {
       streamEventWriter.flush();
@@ -141,7 +134,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     }
   }
 
-  void doTestIndexDataWithLegacyParserStableState() throws Exception
+  protected void doTestIndexDataWithLegacyParserStableState() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
@@ -157,7 +150,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     }
   }
 
-  void doTestIndexDataWithInputFormatStableState() throws Exception
+  protected void doTestIndexDataWithInputFormatStableState() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
@@ -188,7 +181,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     testIndexWithLosingNodeHelper(() -> druidClusterAdminClient.restartHistoricalContainer(), () -> druidClusterAdminClient.waitUntilHistoricalReady());
   }
 
-  void doTestIndexDataWithStartStopSupervisor() throws Exception
+  protected void doTestIndexDataWithStartStopSupervisor() throws Exception
   {
     try (
         final Closeable ignored1 = unloader(fullDatasourceName)
@@ -229,13 +222,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     }
   }
 
-  void doTestIndexDataWithStreamReshardSplit() throws Exception
+  protected void doTestIndexDataWithStreamReshardSplit() throws Exception
   {
     // Reshard the stream from STREAM_SHARD_COUNT to STREAM_SHARD_COUNT * 2
     testIndexWithStreamReshardHelper(STREAM_SHARD_COUNT * 2);
   }
 
-  void doTestIndexDataWithStreamReshardMerge() throws Exception
+  protected void doTestIndexDataWithStreamReshardMerge() throws Exception
   {
     // Reshard the stream from STREAM_SHARD_COUNT to STREAM_SHARD_COUNT / 2
     testIndexWithStreamReshardHelper(STREAM_SHARD_COUNT / 2);
@@ -327,7 +320,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
           "Waiting for stream to finish resharding"
       );
       ITRetryUtil.retryUntil(
-          () -> streamAdminClient.getStreamShardCount(streamName) == newShardCount,
+          () -> streamAdminClient.verfiyShardCountUpdated(streamName, STREAM_SHARD_COUNT, newShardCount),
           true,
           10000,
           30,

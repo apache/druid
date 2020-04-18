@@ -95,4 +95,9 @@ public class KafkaAdminClient implements StreamAdminClient
     TopicDescription topicDescription = result.values().get(streamName).get();
     return topicDescription.partitions().size();
   }
+
+  @Override
+  public boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount) throws Exception {
+    return getStreamShardCount(streamName) == newShardCount;
+  }
 }

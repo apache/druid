@@ -432,7 +432,8 @@
                             </argLine>
                             <reportFormat>plain</reportFormat>  <!-- show elapsed time for each test -->
                             <suiteXmlFiles>
-                                <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                                <suiteXmlFile>src/test/resources/testng-serialized.xml</suiteXmlFile>
+                                <suiteXmlFile>src/test/resources/testng-parallelized.xml</suiteXmlFile>
                             </suiteXmlFiles>
                         </configuration>
                     </plugin>
@@ -487,7 +488,8 @@
                                 -Ddruid.client.https.keyStorePassword=druid123
                             </argLine>
                             <suiteXmlFiles>
-                                <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                                <suiteXmlFile>src/test/resources/testng-serialized.xml</suiteXmlFile>
+                                <suiteXmlFile>src/test/resources/testng-parallelized.xml</suiteXmlFile>
                             </suiteXmlFiles>
                         </configuration>
                     </plugin>
