@@ -45,7 +45,7 @@ public abstract class WriteOutBytes extends OutputStream implements WritableByte
   /**
    * Returns the number of bytes written to this WriteOutBytes so far.
    */
-  public abstract long size();
+  public abstract long size() throws IOException;
 
   /**
    * Takes all bytes that are written to this WriteOutBytes so far and writes them into the given channel.
