@@ -30,12 +30,6 @@ import java.util.function.Function;
 public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamIndexingTest
 {
   @Override
-  String getTestNamePrefix()
-  {
-    return "kinesis";
-  }
-
-  @Override
   StreamAdminClient getStreamAdminClient() throws Exception
   {
     return new KinesisAdminClient(config.getStreamEndpoint());

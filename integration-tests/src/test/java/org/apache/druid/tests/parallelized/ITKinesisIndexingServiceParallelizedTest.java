@@ -33,6 +33,12 @@ import org.testng.annotations.Test;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisIndexingServiceTest
 {
+  @Override
+  public String getTestNamePrefix()
+  {
+    return "kinesis_parallelized";
+  }
+
   @BeforeClass
   public void beforeClass() throws Exception
   {

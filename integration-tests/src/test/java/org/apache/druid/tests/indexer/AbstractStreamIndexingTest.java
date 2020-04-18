@@ -77,7 +77,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
   abstract StreamEventWriter getStreamEventWriter() throws Exception;
   abstract Function<String, String> getStreamIngestionPropsTransform();
   abstract Function<String, String> getStreamQueryPropsTransform();
-  abstract String getTestNamePrefix();
+  public abstract String getTestNamePrefix();
 
   protected void doBeforeClass() throws Exception
   {

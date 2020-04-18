@@ -72,7 +72,7 @@ The file must contain one property per line, the key must start with `druid_` an
 
 ### Useful mvn command flags
 
-- -Dskip.start.docker=true to skip starting docker containers. This can save ~6 minutes by skipping building and bringing 
+- -Dskip.start.docker=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
 up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
 these containers already running if using this flag. Additionally, please make sure that the running containers
 are in the same state that the setup script (run_cluster.sh) would have brought it up in. 

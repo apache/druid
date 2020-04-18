@@ -32,6 +32,12 @@ import org.testng.annotations.Test;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndexingServiceTest
 {
+  @Override
+  public String getTestNamePrefix()
+  {
+    return "kinesis_serialized";
+  }
+
   @BeforeClass
   public void beforeClass() throws Exception
   {
