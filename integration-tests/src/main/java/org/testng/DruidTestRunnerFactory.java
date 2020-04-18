@@ -19,12 +19,6 @@
 
 package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
-import com.google.inject.Injector;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.testng.internal.IConfiguration;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlTest;
@@ -36,8 +30,6 @@ import java.util.List;
  */
 public class DruidTestRunnerFactory implements ITestRunnerFactory
 {
-  private static final Logger LOG = new Logger(DruidTestRunnerFactory.class);
-
   @Override
   public TestRunner newTestRunner(ISuite suite, XmlTest test, List<IInvokedMethodListener> listeners)
   {
@@ -70,40 +62,6 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
     )
     {
       super(configuration, suite, test, outputDirectory, finder, skipFailedInvocationCounts, invokedMethodListeners);
-    }
-
-    @Override
-    public void run()
-    {
-      Injector injector = DruidTestModuleFactory.getInjector();
-      IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
-      DruidClusterAdminClient druidClusterAdminClient = injector.getInstance(DruidClusterAdminClient.class);
-
-      druidClusterAdminClient.waitUntilCoordinatorReady();
-      druidClusterAdminClient.waitUntilIndexerReady();
-      druidClusterAdminClient.waitUntilBrokerReady();
-      String routerHost = config.getRouterUrl();
-      if (null != routerHost) {
-        druidClusterAdminClient.waitUntilRouterReady();
-      }
-      Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
-      try {
-        lifecycle.start();
-        runTests();
-      }
-      catch (Exception e) {
-        LOG.error(e, "");
-        throw new RuntimeException(e);
-      }
-      finally {
-        lifecycle.stop();
-      }
-
-    }
-
-    private void runTests()
-    {
-      super.run();
     }
   }
 }
