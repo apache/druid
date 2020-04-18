@@ -108,7 +108,7 @@ final class FileWriteOutBytes extends WriteOutBytes
   }
 
   @Override
-  public long size() throws IOException
+  public long size()
   {
     return writeOutBytes;
   }
