@@ -36,6 +36,7 @@ final class FileWriteOutBytes extends WriteOutBytes
 {
   private final File file;
   private final FileChannel ch;
+  private long writeOutBytes;
 
   /** Purposely big-endian, for {@link #writeInt(int)} implementation */
   private final ByteBuffer buffer = ByteBuffer.allocate(4096); // 4K page sized buffer
@@ -44,6 +45,7 @@ final class FileWriteOutBytes extends WriteOutBytes
   {
     this.file = file;
     this.ch = ch;
+    this.writeOutBytes = 0L;
   }
   
   private void flushIfNeeded(int bytesNeeded) throws IOException
@@ -66,13 +68,15 @@ final class FileWriteOutBytes extends WriteOutBytes
   {
     flushIfNeeded(1);
     buffer.put((byte) b);
+    writeOutBytes++;
   }
 
   @Override
   public void writeInt(int v) throws IOException
   {
-    flushIfNeeded(Integer.SIZE);
+    flushIfNeeded(Integer.BYTES);
     buffer.putInt(v);
+    writeOutBytes += Integer.BYTES;
   }
 
   @Override
@@ -93,6 +97,7 @@ final class FileWriteOutBytes extends WriteOutBytes
       }
     }
     buffer.put(src);
+    writeOutBytes += len;
     return len;
   }
 
@@ -105,8 +110,7 @@ final class FileWriteOutBytes extends WriteOutBytes
   @Override
   public long size() throws IOException
   {
-    flush();
-    return ch.size();
+    return writeOutBytes;
   }
 
   @Override
