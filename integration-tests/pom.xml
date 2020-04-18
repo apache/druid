@@ -410,12 +410,6 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <properties>
-                                <property>
-                                    <name>testrunfactory</name>
-                                    <value>org.testng.DruidTestRunnerFactory</value>
-                                </property>
-                            </properties>
                             <argLine>
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
@@ -468,12 +462,6 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <properties>
-                                <property>
-                                    <name>testrunfactory</name>
-                                    <value>org.testng.DruidTestRunnerFactory</value>
-                                </property>
-                            </properties>
                             <argLine>
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8

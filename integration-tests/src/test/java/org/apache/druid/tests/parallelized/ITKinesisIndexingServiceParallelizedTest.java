@@ -51,18 +51,6 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
     doClassTeardown();
   }
 
-  @BeforeMethod
-  public void before() throws Exception
-  {
-    doBefore();
-  }
-
-  @AfterMethod
-  public void teardown()
-  {
-    doMethodTeardown();
-  }
-
   @Test
   public void testKinesisIndexDataWithLegacyParserStableState() throws Exception
   {

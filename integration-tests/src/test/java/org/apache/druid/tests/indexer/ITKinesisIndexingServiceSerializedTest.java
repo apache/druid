@@ -50,18 +50,6 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
     doClassTeardown();
   }
 
-  @BeforeMethod
-  public void before() throws Exception
-  {
-    doBefore();
-  }
-
-  @AfterMethod
-  public void teardown()
-  {
-    doMethodTeardown();
-  }
-
   @Test
   public void testKinesisIndexDataWithLosingCoordinator() throws Exception
   {

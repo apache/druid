@@ -42,7 +42,7 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
   }
 
   @Override
-  Function<String, String> getStreamIngestionPropsTransform()
+  Function<String, String> generateStreamIngestionPropsTransform(String streamName, String fullDatasourceName)
   {
     return spec -> {
       try {
@@ -89,7 +89,7 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
   }
 
   @Override
-  Function<String, String> getStreamQueryPropsTransform()
+  Function<String, String> generateStreamQueryPropsTransform(String streamName, String fullDatasourceName)
   {
     return spec -> {
       try {

@@ -1196,7 +1196,7 @@
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>6.8.7</version>
+                <version>6.14.3</version>
             </dependency>
             <dependency>
                 <groupId>org.hamcrest</groupId>
@@ -1253,7 +1253,6 @@
                         <!-- Ignore non-production code -->
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
-                        <exclude>org/testng/DruidTestRunnerFactory*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
                     </excludes>
                 </configuration>
