@@ -269,16 +269,16 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return ValueType.LONG.toString();
+    return ValueType.LONG;
   }
 
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getFinalizedType()
   {
-    return ValueType.LONG.toString();
+    return ValueType.LONG;
   }
 
   @Override

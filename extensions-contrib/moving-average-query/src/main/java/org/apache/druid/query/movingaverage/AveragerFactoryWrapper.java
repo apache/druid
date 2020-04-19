@@ -172,6 +172,12 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
     return ValueType.COMPLEX.name();
   }
 
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
   /**
    * Not implemented. Throws UnsupportedOperationException.
    */

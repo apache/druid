@@ -104,14 +104,12 @@ public class InputRowSerdeTest
 
     final AggregatorFactory mockedAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(mockedAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedAggregator);
-    EasyMock.expect(mockedAggregatorFactory.getTypeName()).andReturn("double").anyTimes();
     EasyMock.expect(mockedAggregatorFactory.getType()).andReturn(ValueType.DOUBLE).anyTimes();
     EasyMock.expect(mockedAggregatorFactory.getName()).andReturn("mockedAggregator").anyTimes();
 
     final AggregatorFactory mockedNullAggregatorFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(mockedNullAggregatorFactory.factorize(EasyMock.anyObject(ColumnSelectorFactory.class))).andReturn(mockedNullAggregator);
     EasyMock.expect(mockedNullAggregatorFactory.getName()).andReturn("mockedNullAggregator").anyTimes();
-    EasyMock.expect(mockedNullAggregatorFactory.getTypeName()).andReturn("double").anyTimes();
     EasyMock.expect(mockedNullAggregatorFactory.getType()).andReturn(ValueType.DOUBLE).anyTimes();
 
     EasyMock.replay(mockedAggregatorFactory, mockedNullAggregatorFactory);

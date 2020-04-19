@@ -57,9 +57,9 @@ public class DoublesSketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.STRING.toString();
+    return ValueType.STRING;
   }
 
   @JsonProperty

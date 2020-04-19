@@ -220,10 +220,19 @@ public class StringLastAggregatorFactory extends AggregatorFactory
     return "serializablePairLongString";
   }
 
+  /**
+   * actual type is {@link SerializablePairLongString}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getType()
   {
-    return ValueType.STRING.name();
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.STRING;
   }
 
   @Override

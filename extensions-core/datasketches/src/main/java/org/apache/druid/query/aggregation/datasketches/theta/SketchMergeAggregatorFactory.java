@@ -34,6 +34,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 {
   private final boolean shouldFinalize;
   private final boolean isInputThetaSketch;
+  @Nullable
   private final Integer errorBoundsStdDev;
 
   @JsonCreator
@@ -47,8 +48,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   )
   {
     super(name, fieldName, size, AggregatorUtil.SKETCH_MERGE_CACHE_TYPE_ID);
-    this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize.booleanValue();
-    this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch.booleanValue();
+    this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize;
+    this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch;
     this.errorBoundsStdDev = errorBoundsStdDev;
   }
 
@@ -104,6 +105,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     return isInputThetaSketch;
   }
 
+  @Nullable
   @JsonProperty
   public Integer getErrorBoundsStdDev()
   {
@@ -148,16 +150,28 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     }
   }
 
+  /**
+   * actual type is {@link SketchHolder}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getType()
   {
-    if (shouldFinalize) {
-      if (errorBoundsStdDev != null) {
-        return "estimateWithErrorBounds";
-      }
-      return ValueType.DOUBLE.toString();
+    return ValueType.COMPLEX;
+  }
+
+  /**
+   * if {@link #shouldFinalize} is set, actual type is {@link SketchEstimateWithErrorBounds} if
+   * {@link #errorBoundsStdDev} is set.
+   *
+   * if {@link #shouldFinalize} is NOT set, type is {@link SketchHolder}
+   */
+  @Override
+  public ValueType getFinalizedType()
+  {
+    if (shouldFinalize && errorBoundsStdDev == null) {
+      return ValueType.DOUBLE;
     }
-    return getTypeName();
+    return ValueType.COMPLEX;
   }
 
   @Override

@@ -272,18 +272,18 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
     // if we don't pretend to be a primitive, group by v1 gets sad and doesn't work because no complex type serde
-    return storeDoubleAsFloat ? ValueType.FLOAT.toString() : ValueType.DOUBLE.toString();
+    return storeDoubleAsFloat ? ValueType.FLOAT : ValueType.DOUBLE;
   }
 
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getFinalizedType()
   {
     // this is a copy of getTypeName in the hopes that someday groupby v1 is no more and it will report it's actual
     // type
-    return storeDoubleAsFloat ? ValueType.FLOAT.toString() : ValueType.DOUBLE.toString();
+    return storeDoubleAsFloat ? ValueType.FLOAT : ValueType.DOUBLE;
   }
 
   @Override

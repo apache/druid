@@ -272,10 +272,19 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
     }
   }
 
+  /**
+   * actual type is {@link HyperLogLogCollector}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getType()
   {
-    return round ? ValueType.LONG.toString() : ValueType.DOUBLE.toString();
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return round ? ValueType.LONG : ValueType.DOUBLE;
   }
 
   @Override

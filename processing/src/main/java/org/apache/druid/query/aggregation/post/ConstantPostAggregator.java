@@ -76,9 +76,9 @@ public class ConstantPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return constantValue instanceof Long ? ValueType.LONG.toString() : ValueType.DOUBLE.toString();
+    return constantValue instanceof Long ? ValueType.LONG : ValueType.DOUBLE;
   }
 
   @Override

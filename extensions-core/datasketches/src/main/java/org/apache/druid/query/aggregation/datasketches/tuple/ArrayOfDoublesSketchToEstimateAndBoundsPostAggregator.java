@@ -70,9 +70,9 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator extends Array
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.DOUBLE_ARRAY.toString();
+    return ValueType.DOUBLE_ARRAY;
   }
 
   @Override

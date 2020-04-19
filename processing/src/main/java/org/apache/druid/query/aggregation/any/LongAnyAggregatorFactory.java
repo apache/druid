@@ -184,9 +184,9 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.LONG.toString();
+    return ValueType.LONG;
   }
 
   @Override

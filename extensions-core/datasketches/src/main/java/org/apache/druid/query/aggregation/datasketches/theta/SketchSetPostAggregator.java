@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -94,10 +95,13 @@ public class SketchSetPostAggregator implements PostAggregator
     return name;
   }
 
+  /**
+   * actual type is {@link SketchHolder}
+   */
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return SketchModule.THETA_SKETCH;
+    return ValueType.COMPLEX;
   }
 
   @Override

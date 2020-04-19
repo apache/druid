@@ -188,9 +188,9 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return storeDoubleAsFloat ? ValueType.FLOAT.toString() : ValueType.DOUBLE.toString();
+    return storeDoubleAsFloat ? ValueType.FLOAT : ValueType.DOUBLE;
   }
 
   @Override

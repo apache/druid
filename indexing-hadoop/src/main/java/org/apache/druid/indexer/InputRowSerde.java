@@ -341,7 +341,6 @@ public class InputRowSerde
           }
 
           final ValueType type = aggFactory.getType();
-          final String typeName = aggFactory.getTypeName();
 
           if (agg.isNull()) {
             out.writeByte(NullHandling.IS_NULL_BYTE);
@@ -355,7 +354,7 @@ public class InputRowSerde
               out.writeDouble(agg.getDouble());
             } else if (ValueType.COMPLEX.equals(type)) {
               Object val = agg.get();
-              ComplexMetricSerde serde = getComplexMetricSerde(typeName);
+              ComplexMetricSerde serde = getComplexMetricSerde(aggFactory.getTypeName());
               writeBytes(serde.toBytes(val), out);
             } else {
               throw new IAE("Unable to serialize type[%s]", type);
@@ -473,7 +472,6 @@ public class InputRowSerde
         final String metric = readString(in);
         final AggregatorFactory agg = getAggregator(metric, aggs, i);
         final ValueType type = agg.getType();
-        final String typeName = agg.getTypeName();
         final byte metricNullability = in.readByte();
 
         if (metricNullability == NullHandling.IS_NULL_BYTE) {
@@ -487,7 +485,7 @@ public class InputRowSerde
         } else if (ValueType.DOUBLE.equals(type)) {
           event.put(metric, in.readDouble());
         } else {
-          ComplexMetricSerde serde = getComplexMetricSerde(typeName);
+          ComplexMetricSerde serde = getComplexMetricSerde(agg.getTypeName());
           byte[] value = readBytes(in);
           event.put(metric, serde.fromBytes(value, 0, value.length));
         }

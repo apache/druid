@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
@@ -40,7 +41,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Nullable
   private final String name;
   private final String fieldName;
-  private final String typeName;
+  private final ValueType type;
 
   @JsonCreator
   public FieldAccessPostAggregator(
@@ -48,15 +49,15 @@ public class FieldAccessPostAggregator implements PostAggregator
       @JsonProperty("fieldName") String fieldName
   )
   {
-    this(name, fieldName, ValueTypes.defaultAggregationTypeName());
+    this(name, fieldName, ValueTypes.defaultAggregationType());
   }
 
-  private FieldAccessPostAggregator(@Nullable String name, String fieldName, String typeName)
+  private FieldAccessPostAggregator(@Nullable String name, String fieldName, ValueType type)
   {
     Preconditions.checkNotNull(fieldName);
     this.name = name;
     this.fieldName = fieldName;
-    this.typeName = typeName;
+    this.type = type;
   }
 
   @Override
@@ -86,26 +87,26 @@ public class FieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return typeName;
+    return type;
   }
 
   @Override
   public FieldAccessPostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
-    final String typeName;
+    final ValueType type;
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {
-      typeName = aggregators.get(fieldName).getTypeName();
+      type = aggregators.get(fieldName).getType();
     } else {
-      typeName = ValueTypes.defaultAggregationTypeName();
+      type = ValueTypes.defaultAggregationType();
     }
 
     return new FieldAccessPostAggregator(
         name,
         fieldName,
-        typeName
+        type
     );
   }
 

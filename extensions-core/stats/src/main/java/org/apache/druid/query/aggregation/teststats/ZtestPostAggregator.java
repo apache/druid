@@ -116,9 +116,9 @@ public class ZtestPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.DOUBLE.toString();
+    return ValueType.DOUBLE;
   }
 
   @Override

@@ -1431,7 +1431,7 @@ public class CompactionTaskTest
 
   private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
-    return new TestColumn(ValueType.fromString(aggregatorFactory.getTypeName()));
+    return new TestColumn(aggregatorFactory.getType());
   }
 
   private static class TestColumn implements ColumnHolder

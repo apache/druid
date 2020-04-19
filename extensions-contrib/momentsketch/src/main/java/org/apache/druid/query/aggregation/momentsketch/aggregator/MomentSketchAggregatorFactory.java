@@ -245,6 +245,15 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
     return TYPE_NAME;
   }
 
+  /**
+   * actual type is {@link MomentSketchWrapper}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
   @Override
   public int getMaxIntermediateSize()
   {

@@ -201,15 +201,18 @@ public class TimestampAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.LONG.toString();
+    return ValueType.LONG;
   }
 
+  /**
+   * actual type is {@link DateTime}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getFinalizedType()
   {
-    return "dateTime";
+    return ValueType.COMPLEX;
   }
 
   @Override

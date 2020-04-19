@@ -69,9 +69,9 @@ public class TDigestSketchToQuantilesPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.DOUBLE_ARRAY.toString();
+    return ValueType.DOUBLE_ARRAY;
   }
 
   @JsonProperty

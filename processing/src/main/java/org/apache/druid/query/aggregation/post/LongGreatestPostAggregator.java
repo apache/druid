@@ -101,9 +101,9 @@ public class LongGreatestPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.LONG.toString();
+    return ValueType.LONG;
   }
 
   @Override

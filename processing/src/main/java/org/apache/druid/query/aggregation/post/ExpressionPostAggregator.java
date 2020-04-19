@@ -170,11 +170,11 @@ public class ExpressionPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
     // this is wrong, replace with Expr output type based on the input types once it is available
     // but treat as string for now
-    return ValueType.STRING.toString();
+    return ValueType.STRING;
   }
 
   @Override

@@ -253,10 +253,19 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     return DoublesSketchModule.DOUBLES_SKETCH;
   }
 
+  /**
+   * actual type is {@link DoublesSketch}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getType()
   {
-    return ValueType.LONG.toString();
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.LONG;
   }
 
   @Override

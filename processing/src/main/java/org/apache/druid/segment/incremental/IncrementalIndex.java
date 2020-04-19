@@ -128,7 +128,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
-        final String typeName = agg.getTypeName();
         final boolean isComplexMetric = ValueType.COMPLEX.equals(agg.getType());
 
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
@@ -139,10 +138,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
-
-          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+          final String complexTypeName = agg.getTypeName();
+          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
           if (serde == null) {
-            throw new ISE("Don't know how to handle type[%s]", typeName);
+            throw new ISE("Don't know how to handle type[%s]", complexTypeName);
           }
 
           final ComplexMetricExtractor extractor = serde.getExtractor();
@@ -1105,18 +1104,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.index = index;
       this.name = factory.getName();
       this.capabilities = new ColumnCapabilitiesImpl().setIsComplete(true);
-      capabilities.setType(factory.getType());
+      ValueType valueType = factory.getType();
+      capabilities.setType(valueType);
 
-      String typeInfo = factory.getTypeName();
-      if (factory.getType().isPrimitiveScalar()) {
-        this.type = typeInfo;
-      } else {
-        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeInfo);
+      if (valueType.isComplex()) {
+        String complexTypeName = factory.getTypeName();
+        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
         if (serde != null) {
           this.type = serde.getTypeName();
         } else {
-          throw new ISE("Don't know how to handle type[%s]", typeInfo);
+          throw new ISE("Don't know how to handle type[%s]", complexTypeName);
         }
+      } else {
+        this.type = valueType.toString();
       }
     }
 

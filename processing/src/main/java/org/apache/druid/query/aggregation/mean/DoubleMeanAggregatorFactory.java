@@ -82,10 +82,19 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
     return "doubleMean";
   }
 
+  /**
+   * actual type is {@link DoubleMeanHolder}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getType()
   {
-    return ValueType.DOUBLE.toString();
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.DOUBLE;
   }
 
   @Override

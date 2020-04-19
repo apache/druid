@@ -302,10 +302,19 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     return ArrayOfDoublesSketchModule.ARRAY_OF_DOUBLES_SKETCH_BUILD_AGG;
   }
 
+  /**
+   * actual type is {@link ArrayOfDoublesSketch}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getType()
   {
-    return ValueType.DOUBLE.toString();
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.DOUBLE;
   }
 
   @Override

@@ -21,12 +21,12 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -212,44 +212,36 @@ public abstract class AggregatorFactory implements Cacheable
   public abstract List<String> requiredFields();
 
   /**
-   * Get the type name of the intermediate type for this aggregator. This is the same as the type returned by
+   * Get the "intermediate" {@link ValueType} for this aggregator. This is the same as the type returned by
    * {@link #deserialize} and the type accepted by {@link #combine}. However, it is *not* necessarily the same type
    * returned by {@link #finalizeComputation}.
+   */
+  public abstract ValueType getType();
+
+  /**
+   * Get the type for the final form of this this aggregator, i.e. the type of the value returned by
+   * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
+   * and {@link #combine}.
+   * @return
+   */
+  public ValueType getFinalizedType()
+  {
+    return getType();
+  }
+
+  /**
+   * Get the complex type name of the intermediate type for this aggregator.
    *
-   * If the type is complex (i.e. not a simple, numeric {@link ValueType}) then there
+   * This should ONLY be implemented if the type is complex (i.e. not a simple, numeric {@link ValueType}), and there
    * must be a corresponding {@link org.apache.druid.segment.serde.ComplexMetricSerde} which was registered with
    * {@link org.apache.druid.segment.serde.ComplexMetrics#registerSerde} using this type name.
    *
    * If you need a ValueType enum corresponding to this aggregator, use {@link #getTypeName} instead.
    */
-  public abstract String getTypeName();
-
-  /**
-   * Get the type name for the 'finalized' type for this aggregator, i.e. the type of the value returned by
-   * {@link #finalizeComputation}. This may be the same as or different than the types expected in {@link #deserialize}
-   * and {@link #combine}.
-   *
-   * If you need a ValueType enum corresponding to this aggregator, use {@link #getFinalizedType} instead.
-   */
-  public String getFinalizedTypeName()
+  @Nullable
+  public String getTypeName()
   {
-    return getTypeName();
-  }
-
-  /**
-   * Get the "intermediate" {@link ValueType} for this aggregator. See {@link #getTypeName}.
-   */
-  public ValueType getType()
-  {
-    return ValueTypes.aggregatorTypeNameToType(getTypeName());
-  }
-
-  /**
-   * Get the "finalized" {@link ValueType} for this aggregator. See {@link #getFinalizedTypeName}
-   */
-  public ValueType getFinalizedType()
-  {
-    return ValueTypes.aggregatorTypeNameToType(getFinalizedTypeName());
+    throw new ISE("Complex type name not is not available for %s of type %s", getName(), getType());
   }
 
   /**

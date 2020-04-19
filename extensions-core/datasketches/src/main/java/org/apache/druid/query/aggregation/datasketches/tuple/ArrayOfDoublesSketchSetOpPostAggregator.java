@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -81,10 +82,13 @@ public class ArrayOfDoublesSketchSetOpPostAggregator extends ArrayOfDoublesSketc
     return operation.apply(nominalEntries, numberOfValues, sketches);
   }
 
+  /**
+   * actual type is {@link ArrayOfDoublesSketch}
+   */
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return "arrayOfDoublesSketch";
+    return ValueType.COMPLEX;
   }
 
   @JsonProperty

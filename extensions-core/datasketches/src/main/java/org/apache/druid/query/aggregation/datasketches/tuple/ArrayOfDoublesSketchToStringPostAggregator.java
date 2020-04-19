@@ -56,9 +56,9 @@ public class ArrayOfDoublesSketchToStringPostAggregator extends ArrayOfDoublesSk
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.STRING.toString();
+    return ValueType.STRING;
   }
 
   @Override

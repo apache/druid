@@ -82,9 +82,9 @@ public class ValueTypes
     return v == null ? ValueType.COMPLEX : v;
   }
 
-  public static String defaultAggregationTypeName()
+  public static ValueType defaultAggregationType()
   {
-    return ValueType.DOUBLE.toString();
+    return ValueType.DOUBLE;
   }
 
   private ValueTypes()

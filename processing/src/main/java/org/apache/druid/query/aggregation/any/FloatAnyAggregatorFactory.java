@@ -186,9 +186,9 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.FLOAT.toString();
+    return ValueType.FLOAT;
   }
 
   @Override

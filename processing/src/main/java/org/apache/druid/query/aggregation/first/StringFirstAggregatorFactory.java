@@ -263,10 +263,19 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     return "serializablePairLongString";
   }
 
+  /**
+   * actual type is {@link SerializablePairLongString}
+   */
   @Override
-  public String getFinalizedTypeName()
+  public ValueType getType()
   {
-    return ValueType.STRING.toString();
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.STRING;
   }
 
   @Override

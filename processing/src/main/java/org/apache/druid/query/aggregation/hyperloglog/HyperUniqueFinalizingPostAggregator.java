@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
@@ -104,11 +105,11 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
     return aggregatorFactory != null
-           ? aggregatorFactory.getFinalizedTypeName()
-           : ValueTypes.defaultAggregationTypeName();
+           ? aggregatorFactory.getFinalizedType()
+           : ValueTypes.defaultAggregationType();
   }
 
   @Override

@@ -76,9 +76,9 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return ValueType.DOUBLE.toString();
+    return ValueType.DOUBLE;
   }
 
   @Override
