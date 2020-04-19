@@ -23,11 +23,15 @@ import java.util.List;
 
 public interface StreamEventWriter
 {
-  void write(String topic, List<String> events) throws Exception;
-
   void write(String topic, String event) throws Exception;
 
   void shutdown();
 
   void flush() throws Exception;
+
+  boolean isTransactionEnabled();
+
+  void initTransaction();
+
+  void commitTransaction();
 }

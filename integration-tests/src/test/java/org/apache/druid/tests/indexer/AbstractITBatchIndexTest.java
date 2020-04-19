@@ -85,7 +85,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
-  IntegrationTestingConfig config;
+  public IntegrationTestingConfig config;
   @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
 

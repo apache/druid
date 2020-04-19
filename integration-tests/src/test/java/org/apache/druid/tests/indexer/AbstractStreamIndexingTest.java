@@ -66,7 +66,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
   private DruidClusterAdminClient druidClusterAdminClient;
 
   private StreamAdminClient streamAdminClient;
-  private StreamEventWriter streamEventWriter;
   private WikipediaStreamEventStreamGenerator wikipediaStreamEventGenerator;
 
   abstract StreamAdminClient getStreamAdminClient() throws Exception;
@@ -78,18 +77,17 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
   protected void doBeforeClass() throws Exception
   {
     streamAdminClient = getStreamAdminClient();
-    streamEventWriter = getStreamEventWriter();
     wikipediaStreamEventGenerator = new WikipediaStreamEventStreamGenerator(EVENTS_PER_SECOND, CYCLE_PADDING_MS);
   }
 
   protected void doClassTeardown()
   {
     wikipediaStreamEventGenerator.shutdown();
-    streamEventWriter.shutdown();
   }
 
   protected void doTestIndexDataWithLegacyParserStableState() throws Exception
   {
+    StreamEventWriter streamEventWriter = getStreamEventWriter();
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig();
     try (
         final Closeable ignored1 = unloader(generatedTestConfig.getFullDatasourceName())
@@ -104,12 +102,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
       verifyIngestedData(generatedTestConfig);
     }
     finally {
-      doMethodTeardown(generatedTestConfig);
+      doMethodTeardown(generatedTestConfig, streamEventWriter);
     }
   }
 
   protected void doTestIndexDataWithInputFormatStableState() throws Exception
   {
+    StreamEventWriter streamEventWriter = getStreamEventWriter();
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig();
     try (
         final Closeable ignored1 = unloader(generatedTestConfig.getFullDatasourceName())
@@ -124,7 +123,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
       verifyIngestedData(generatedTestConfig);
     }
     finally {
-      doMethodTeardown(generatedTestConfig);
+      doMethodTeardown(generatedTestConfig, streamEventWriter);
     }
   }
 
@@ -145,6 +144,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
 
   protected void doTestIndexDataWithStartStopSupervisor() throws Exception
   {
+    StreamEventWriter streamEventWriter = getStreamEventWriter();
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig();
     try (
         final Closeable ignored1 = unloader(generatedTestConfig.getFullDatasourceName())
@@ -185,7 +185,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
       verifyIngestedData(generatedTestConfig);
     }
     finally {
-      doMethodTeardown(generatedTestConfig);
+      doMethodTeardown(generatedTestConfig, streamEventWriter);
     }
   }
 
@@ -203,6 +203,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
 
   private void testIndexWithLosingNodeHelper(Runnable restartRunnable, Runnable waitForReadyRunnable) throws Exception
   {
+    StreamEventWriter streamEventWriter = getStreamEventWriter();
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig();
     try (
         final Closeable ignored1 = unloader(generatedTestConfig.getFullDatasourceName())
@@ -251,12 +252,13 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
       verifyIngestedData(generatedTestConfig);
     }
     finally {
-      doMethodTeardown(generatedTestConfig);
+      doMethodTeardown(generatedTestConfig, streamEventWriter);
     }
   }
 
   private void testIndexWithStreamReshardHelper(int newShardCount) throws Exception
   {
+    StreamEventWriter streamEventWriter = getStreamEventWriter();
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig();
     try (
         final Closeable ignored1 = unloader(generatedTestConfig.getFullDatasourceName())
@@ -314,7 +316,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
       verifyIngestedData(generatedTestConfig);
     }
     finally {
-      doMethodTeardown(generatedTestConfig);
+      doMethodTeardown(generatedTestConfig, streamEventWriter);
     }
   }
 
@@ -353,10 +355,15 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     return (numEvents * (1 + numEvents)) / 2;
   }
 
-  private void doMethodTeardown(GeneratedTestConfig generatedTestConfig)
+  private void doMethodTeardown(GeneratedTestConfig generatedTestConfig, StreamEventWriter streamEventWriter)
   {
     try {
       streamEventWriter.flush();
+    }
+    catch (Exception e) {
+      // Best effort cleanup as the writer may have already went Bye-Bye
+    }
+    try {
       indexer.shutdownSupervisor(generatedTestConfig.getSupervisorId());
     }
     catch (Exception e) {

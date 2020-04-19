@@ -59,32 +59,39 @@ public class KafkaEventWriter implements StreamEventWriter
         new StringSerializer(),
         new StringSerializer()
     );
-  }
-
-  @Override
-  public void write(String topic, List<String> events) throws Exception
-  {
     if (txnEnabled) {
       producer.initTransactions();
-      producer.beginTransaction();
-    }
-
-    for (String event : events)
-    {
-      write(topic, event);
-    }
-
-    if (txnEnabled) {
-      producer.commitTransaction();
     }
   }
 
-  /**
-   * This method does not handle transaction. For transaction functionality use
-   * {@link #write(String, List<String) write} method
-   */
   @Override
-  public void write(String topic, String event) throws Exception
+  public boolean isTransactionEnabled()
+  {
+    return txnEnabled;
+  }
+
+  @Override
+  public void initTransaction()
+  {
+    if (txnEnabled) {
+      producer.beginTransaction();
+    } else {
+      throw new IllegalStateException("Kafka writer was initialized with transaction disabled");
+    }
+  }
+
+  @Override
+  public void commitTransaction()
+  {
+    if (txnEnabled) {
+      producer.commitTransaction();
+    } else {
+      throw new IllegalStateException("Kafka writer was initialized with transaction disabled");
+    }
+  }
+
+  @Override
+  public void write(String topic, String event)
   {
     Future<RecordMetadata> future = producer.send(new ProducerRecord<>(topic, event));
     pendingWriteRecords.add(future);

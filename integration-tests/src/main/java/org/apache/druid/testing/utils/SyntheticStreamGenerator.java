@@ -94,6 +94,10 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
             nowCeilingToSecond.plusSeconds(1).minus(cyclePaddingMs)
         );
 
+        if (streamEventWriter.isTransactionEnabled()) {
+          streamEventWriter.initTransaction();
+        }
+
         for (int i = 1; i <= eventsPerSecond; i++) {
           streamEventWriter.write(streamTopic, MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
 
@@ -105,6 +109,10 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
           if (sleepTime > 0) {
             Thread.sleep(sleepTime);
           }
+        }
+
+        if (streamEventWriter.isTransactionEnabled()) {
+          streamEventWriter.commitTransaction();
         }
 
         nowCeilingToSecond = nowCeilingToSecond.plusSeconds(1);
