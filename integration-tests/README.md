@@ -314,3 +314,13 @@ This will tell the test framework that the test class needs to be constructed us
 2) FromFileTestQueryHelper - reads queries with expected results from file and executes them and verifies the results using ResultVerifier
 
 Refer ITIndexerTest as an example on how to use dependency Injection
+
+### Running test methods in parallel
+By default, test methods in a test class will be run in sequential order one at a time. Test methods for a given test 
+class can be set to run in parallel (multiple test methods of the given class running at the same time) by excluding
+the given class/package from the "AllSerializedTests" test tag section and including it in the "AllParallelizedTests" 
+test tag section in integration-tests/src/test/resources/testng.xml  
+Please be mindful when adding tests to the "AllParallelizedTests" test tag that the tests can run in parallel with
+other tests at the same time. i.e. test does not modify/restart/stop the druid cluster or other dependecy containers,
+test does not use excessive memory straving other concurent task, test does not modify and/or use other task, 
+supervisor, datasource it did not create. 
