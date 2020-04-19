@@ -238,7 +238,6 @@ public abstract class AggregatorFactory implements Cacheable
    *
    * If you need a ValueType enum corresponding to this aggregator, use {@link #getTypeName} instead.
    */
-  @Nullable
   public String getTypeName()
   {
     throw new ISE("Complex type name not is not available for %s of type %s", getName(), getType());
@@ -330,8 +329,6 @@ public abstract class AggregatorFactory implements Cacheable
       }
     }
 
-    return mergedAggregators == null
-           ? null
-           : mergedAggregators.values().toArray(new AggregatorFactory[0]);
+    return mergedAggregators == null ? null : mergedAggregators.values().toArray(new AggregatorFactory[0]);
   }
 }
