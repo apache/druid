@@ -41,6 +41,7 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Nullable
   private final String name;
   private final String fieldName;
+  @Nullable
   private final ValueType type;
 
   @JsonCreator

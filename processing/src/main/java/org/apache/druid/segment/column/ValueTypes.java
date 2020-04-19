@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment.column;
 
-import org.apache.druid.common.guava.GuavaUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -70,16 +68,6 @@ public class ValueTypes
       default:
         throw new UnsupportedOperationException("Not a numeric value type: " + valueType.name());
     }
-  }
-
-  public static ValueType aggregatorTypeNameToType(String name)
-  {
-    ValueType v = GuavaUtils.getEnumIfPresent(
-        ValueType.class,
-        StringUtils.toUpperCase(name)
-    );
-
-    return v == null ? ValueType.COMPLEX : v;
   }
 
   public static ValueType defaultAggregationType()
