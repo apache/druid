@@ -31,17 +31,18 @@ import java.util.List;
  * IMPORTANT:
  * To run this test, you must:
  * 1) Run the test with -Dstart.hadoop.docker=true in the mvn command
- * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with s3 credentials/configs set. See
- *    integration-tests/docker/environment-configs/override-examples/s3 for env vars to provide.
+ * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
+ *    integration-tests/docker/environment-configs/override-examples/gcs for env vars to provide.
  *    You will also need to include "druid-hdfs-storage" to druid_extensions_loadList in this file.
+ * 3) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
  */
-@Test(groups = TestNGGroup.S3_DEEP_STORAGE)
+@Test(groups = TestNGGroup.GCS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITHdfsToS3SimpleIndexTest extends AbstractHdfsInputSourceSimpleIndexTest
+public class ITHdfsToGcsParallelIndexTest extends AbstractHdfsInputSourceParallelIndexTest
 {
   @Test(dataProvider = "resources")
   public void testHdfsIndexData(Pair<String, List> hdfsInputSource) throws Exception
   {
-    doTest(hdfsInputSource);
+    doTest(hdfsInputSource, InputFormatDetails.JSON);
   }
 }

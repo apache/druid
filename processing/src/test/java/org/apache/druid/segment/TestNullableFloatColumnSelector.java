@@ -19,53 +19,44 @@
 
 package org.apache.druid.segment;
 
-/**
- */
+import org.apache.druid.common.config.NullHandling;
 
-public class Capabilities
+public class TestNullableFloatColumnSelector extends TestFloatColumnSelector
 {
-  private final boolean dimensionValuesSorted;
 
-  public static CapabilitiesBuilder builder()
-  {
-    return new CapabilitiesBuilder();
+  private final Float[] floats;
+
+  static {
+    NullHandling.initializeForTests();
   }
 
-  private Capabilities(
-      boolean dimensionValuesSorted
-  )
+  private int index = 0;
+
+  public TestNullableFloatColumnSelector(Float[] floats)
   {
-    this.dimensionValuesSorted = dimensionValuesSorted;
+    this.floats = floats;
   }
 
-  /**
-   * Is dimension value dictionary sorted?
-   * @return
-   */
-  public boolean dimensionValuesSorted()
+  @Override
+  public float getFloat()
   {
-    return dimensionValuesSorted;
+    if (floats[index] != null) {
+      return floats[index];
+    } else if (NullHandling.replaceWithDefault()) {
+      return NullHandling.ZERO_FLOAT;
+    } else {
+      throw new IllegalStateException("Should never be invoked when current value is null && SQL-compatible null handling is enabled!");
+    }
   }
 
-  public static class CapabilitiesBuilder
+  @Override
+  public boolean isNull()
   {
-    private boolean dimensionValuesSorted = false;
+    return !NullHandling.replaceWithDefault() && floats[index] == null;
+  }
 
-    private CapabilitiesBuilder()
-    {
-    }
-
-    public CapabilitiesBuilder dimensionValuesSorted(boolean value)
-    {
-      dimensionValuesSorted = value;
-      return this;
-    }
-
-    public Capabilities build()
-    {
-      return new Capabilities(
-          dimensionValuesSorted
-      );
-    }
+  public void increment()
+  {
+    ++index;
   }
 }

@@ -377,7 +377,7 @@ public class FilterPartitionBenchmark
     Filter orFilter = new OrFilter(Arrays.asList(filter, filter2));
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, Filters.toCNF(orFilter));
+    Sequence<Cursor> cursors = makeCursors(sa, Filters.toCnf(orFilter));
     readCursors(cursors, blackhole);
   }
 
@@ -451,7 +451,7 @@ public class FilterPartitionBenchmark
     );
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, Filters.toCNF(dimFilter3.toFilter()));
+    Sequence<Cursor> cursors = makeCursors(sa, Filters.toCnf(dimFilter3.toFilter()));
     readCursors(cursors, blackhole);
   }
 

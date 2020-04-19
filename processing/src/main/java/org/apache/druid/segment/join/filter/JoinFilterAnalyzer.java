@@ -128,7 +128,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Filter normalizedFilter = Filters.toCNF(originalFilter);
+    Filter normalizedFilter = Filters.toCnf(originalFilter);
 
     // List of candidates for pushdown
     // CNF normalization will generate either

@@ -44,6 +44,7 @@ public class Pac4jDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
+    JsonConfigProvider.bind(binder, "druid.auth.pac4j", Pac4jCommonConfig.class);
     JsonConfigProvider.bind(binder, "druid.auth.pac4j.oidc", OIDCConfig.class);
 
     Jerseys.addResource(binder, Pac4jCallbackResource.class);

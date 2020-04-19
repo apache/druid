@@ -83,11 +83,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES2.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES2[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{2.5f, 20.0f, 46.76f},
@@ -164,11 +159,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES2.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES2[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{3.0f, 20.0f, 47.52f},
@@ -189,11 +179,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES3.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES3[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{14.857142f, 20.0f, 28.4f},
@@ -214,11 +199,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES4.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES4[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{-8.5f, 20.0f, 67.6f},
@@ -239,11 +219,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES5.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES5[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{2.125f, 5.5f, 9.82f},
@@ -264,11 +239,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES6.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES6[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{2.125f, 5.5f, 9.82f},
@@ -289,11 +259,6 @@ public class FixedBucketsHistogramTest
     );
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 50.0f, 98f});
-    double[] doubles = new double[VALUES7.length];
-
-    for (int i = 0; i < doubles.length; i++) {
-      doubles[i] = VALUES7[i];
-    }
 
     Assert.assertArrayEquals(
         new float[]{3.25f, 10f, 25.88f},

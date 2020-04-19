@@ -444,7 +444,7 @@ public class SearchBenchmark
     List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      String segmentName = "qIndex " + i;
       final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           SegmentId.dummy(segmentName),

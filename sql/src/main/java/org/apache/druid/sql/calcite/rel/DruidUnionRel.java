@@ -88,12 +88,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  public int getQueryCount()
-  {
-    return rels.stream().mapToInt(rel -> ((DruidRel) rel).getQueryCount()).sum();
-  }
-
-  @Override
   @SuppressWarnings("unchecked")
   public Sequence<Object[]> runQuery()
   {

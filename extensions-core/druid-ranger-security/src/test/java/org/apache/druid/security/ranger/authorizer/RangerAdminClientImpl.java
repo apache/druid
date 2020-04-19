@@ -26,6 +26,7 @@ import org.apache.ranger.admin.client.AbstractRangerAdminClient;
 import org.apache.ranger.plugin.util.ServicePolicies;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -62,7 +63,7 @@ public class RangerAdminClientImpl extends AbstractRangerAdminClient
     Path cachePath = FileSystems.getDefault().getPath(basedir, "/src/test/resources/" + CACHE_FILE_NAME);
     byte[] cacheBytes = Files.readAllBytes(cachePath);
 
-    return gson.fromJson(new String(cacheBytes, "UTF8"), ServicePolicies.class);
+    return gson.fromJson(new String(cacheBytes, StandardCharsets.UTF_8), ServicePolicies.class);
   }
 
 }

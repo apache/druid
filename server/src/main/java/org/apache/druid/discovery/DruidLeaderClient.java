@@ -22,6 +22,8 @@ package org.apache.druid.discovery;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.selector.DiscoverySelector;
+import org.apache.druid.client.selector.Server;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -70,6 +72,9 @@ public class DruidLeaderClient
 
   private final String leaderRequestPath;
 
+  //Note: This is kept for back compatibility with pre 0.11.0 releases and should be removed in future.
+  private final DiscoverySelector<Server> serverDiscoverySelector;
+
   private LifecycleLock lifecycleLock = new LifecycleLock();
   private DruidNodeDiscovery druidNodeDiscovery;
   private AtomicReference<String> currentKnownLeader = new AtomicReference<>();
@@ -78,13 +83,15 @@ public class DruidLeaderClient
       HttpClient httpClient,
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       NodeRole nodeRoleToWatch,
-      String leaderRequestPath
+      String leaderRequestPath,
+      DiscoverySelector<Server> serverDiscoverySelector
   )
   {
     this.httpClient = httpClient;
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.nodeRoleToWatch = nodeRoleToWatch;
     this.leaderRequestPath = leaderRequestPath;
+    this.serverDiscoverySelector = serverDiscoverySelector;
   }
 
   @LifecycleStart
@@ -296,6 +303,16 @@ public class DruidLeaderClient
   @Nullable
   private String pickOneHost()
   {
+    Server server = serverDiscoverySelector.pick();
+    if (server != null) {
+      return StringUtils.format(
+          "%s://%s:%s",
+          server.getScheme(),
+          server.getAddress(),
+          server.getPort()
+      );
+    }
+
     Iterator<DiscoveryDruidNode> iter = druidNodeDiscovery.getAllNodes().iterator();
     if (iter.hasNext()) {
       DiscoveryDruidNode node = iter.next();
