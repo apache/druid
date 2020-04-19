@@ -89,9 +89,9 @@ Select `Apache Kafka` and click `Connect data`.
 
 Enter `localhost:9092` as the bootstrap server and `wikipedia` as the topic.
 
-Click `Preview` and make sure that the data you are seeing is correct.
+Click `Apply` and make sure that the data you are seeing is correct.
 
-Once the data is located, you can click "Next: Parse data" to go to the next step.
+Once the data is located, you can click `Next: Parse data` to go to the next step.
 
 ![Data loader parse data](../assets/tutorial-kafka-data-loader-03.png "Data loader parse data")
 
@@ -144,11 +144,11 @@ Once you are satisfied with the spec, click `Submit` and an ingestion task will 
 
 ![Tasks view](../assets/tutorial-kafka-data-loader-10.png "Tasks view")
 
-You will be taken to the task view with the focus on the newly created supervisor.
+You will be taken to the ingestion view with the focus on the newly created supervisor.
 
-The task view is set to auto refresh, wait until your supervisor launches a task.
+The ingestion view is set to auto refresh, wait until your supervisor launches a task.
 
-When a tasks starts running, it will also start serving the data that it is ingesting.
+When a task starts running, it will also start serving the data that it is ingesting.
 
 Navigate to the `Datasources` view from the header.
 
@@ -169,7 +169,7 @@ Check out the [query tutorial](../tutorials/tutorial-query.md) to run some examp
 
 ### Submit a supervisor via the console
 
-In the console, click `Submit supervisor` to open the submit supervisor dialog.
+In the ingestion view, click `...` and `Submit JSON supervisor` to open the submit supervisor dialog.
 
 ![Submit supervisor](../assets/tutorial-kafka-submit-supervisor-01.png "Submit supervisor")
 
