@@ -68,7 +68,6 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   private final GceEnvironmentConfig envConfig;
   private final int minNumWorkers;
   private final int maxNumWorkers;
-  private final SimpleWorkerProvisioningConfig config;  // For future use
 
   private Compute cachedComputeService = null;
 
@@ -93,7 +92,6 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
                                 "maxNumWorkers must be greater than minNumWorkers");
     this.maxNumWorkers = maxNumWorkers;
     this.envConfig = envConfig;
-    this.config = config;
   }
 
   /**
