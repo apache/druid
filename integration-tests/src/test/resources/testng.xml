@@ -33,7 +33,7 @@
       </package>
     </packages>
   </test>
-  <test name="AllParallelizedTests" parallel="methods" thread-count="4">
+  <test name="AllParallelizedTests" parallel="methods" thread-count="2">
     <packages>
       <package name="org.apache.druid.tests.parallelized.*"/>
     </packages>

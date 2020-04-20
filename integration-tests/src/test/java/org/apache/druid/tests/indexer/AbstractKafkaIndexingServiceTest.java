@@ -35,13 +35,13 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   public abstract boolean isKafkaWriterTransactionalEnabled();
 
   @Override
-  StreamAdminClient getStreamAdminClient() throws Exception
+  StreamAdminClient getStreamAdminClient()
   {
     return new KafkaAdminClient(config.getKafkaHost());
   }
 
   @Override
-  public StreamEventWriter getStreamEventWriter() throws Exception
+  public StreamEventWriter getStreamEventWriter()
   {
     return new KafkaEventWriter(config, isKafkaWriterTransactionalEnabled());
   }
