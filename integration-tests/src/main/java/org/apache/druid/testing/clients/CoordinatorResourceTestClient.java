@@ -79,6 +79,11 @@ public class CoordinatorResourceTestClient
     return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
+  private String getFullSegmentsMetadataURL(String dataSource)
+  {
+    return StringUtils.format("%smetadata/datasources/%s/segments?full", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
+  }
+
   private String getIntervalsURL(String dataSource)
   {
     return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
@@ -103,6 +108,24 @@ public class CoordinatorResourceTestClient
 
       segments = jsonMapper.readValue(
           response.getContent(), new TypeReference<List<String>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return segments;
+  }
+
+  public List<DataSegment> getFullSegmentsMetadata(final String dataSource)
+  {
+    List<DataSegment> segments;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsMetadataURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<DataSegment>>()
           {
           }
       );

@@ -34,6 +34,13 @@ exports.SQL_KEYWORDS = [
   'DESC',
   'LIMIT',
   'UNION ALL',
+  'JOIN',
+  'LEFT',
+  'INNER',
+  'ON',
+  'RIGHT',
+  'OUTER',
+  'FULL'
 ];
 
 exports.SQL_EXPRESSION_PARTS = [

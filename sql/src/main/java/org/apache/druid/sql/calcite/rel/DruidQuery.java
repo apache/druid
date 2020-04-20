@@ -112,7 +112,6 @@ public class DruidQuery
   private final Sorting sorting;
 
   private final Query query;
-  private final RowSignature sourceRowSignature;
   private final RowSignature outputRowSignature;
   private final RelDataType outputRowType;
   private final VirtualColumnRegistry virtualColumnRegistry;
@@ -135,7 +134,6 @@ public class DruidQuery
     this.selectProjection = selectProjection;
     this.grouping = grouping;
     this.sorting = sorting;
-    this.sourceRowSignature = Preconditions.checkNotNull(sourceRowSignature, "sourceRowSignature");
     this.outputRowSignature = computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, sorting);
     this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
     this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
@@ -976,6 +974,7 @@ public class DruidQuery
 
     // Compute the list of columns to select.
     final Set<String> columns = new HashSet<>(outputRowSignature.getColumnNames());
+
     if (order != ScanQuery.Order.NONE) {
       columns.add(ColumnHolder.TIME_COLUMN_NAME);
     }

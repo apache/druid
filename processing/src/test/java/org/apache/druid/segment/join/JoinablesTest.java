@@ -102,7 +102,7 @@ public class JoinablesTest
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
         null,
         VirtualColumns.EMPTY
     );
@@ -131,7 +131,7 @@ public class JoinablesTest
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
         null,
         VirtualColumns.EMPTY
     );
@@ -168,7 +168,7 @@ public class JoinablesTest
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
         null,
         VirtualColumns.EMPTY
     );

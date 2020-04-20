@@ -385,7 +385,7 @@ public class TimeseriesBenchmark
     List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
+      SegmentId segmentId = SegmentId.dummy("qIndex " + i);
       QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           segmentId,

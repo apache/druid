@@ -23,6 +23,9 @@ sidebar_label: "Search"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes a query
+> type that is only available in the native language.
 
 A search query returns dimension values that match the search specification.
 
@@ -59,7 +62,7 @@ There are several main parts to a search query:
 |limit| Defines the maximum number per Historical process (parsed as int) of search results to return. |no (default to 1000)|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |searchDimensions|The dimensions to run the search over. Excluding this means the search is run over all dimensions.|no|
-|query|See [SearchQuerySpec](../querying/searchqueryspec.md).|yes|
+|query|See [SearchQuerySpec](#searchqueryspec).|yes|
 |sort|An object specifying how the results of the search should be sorted.<br/>Possible types are "lexicographic" (the default sort), "alphanumeric", "strlen", and "numeric".<br/>See [Sorting Orders](./sorting-orders.md) for more details.|no|
 |context|See [Context](../querying/query-context.md)|no|
 
@@ -139,3 +142,51 @@ The following query context parameters apply:
 |Property|Description|
 |--------|-----------|
 |`searchStrategy`|Overrides the value of `druid.query.search.searchStrategy` for this query.|
+
+## SearchQuerySpec
+
+### `insensitive_contains`
+
+If any part of a dimension value contains the value specified in this search query spec, regardless of case, a "match" occurs. The grammar is:
+
+```json
+{
+  "type"  : "insensitive_contains",
+  "value" : "some_value"
+}
+```
+
+### `fragment`
+
+If any part of a dimension value contains all of the values specified in this search query spec, regardless of case by default, a "match" occurs. The grammar is:
+
+```json
+{
+  "type" : "fragment",
+  "case_sensitive" : false,
+  "values" : ["fragment1", "fragment2"]
+}
+```
+
+### `contains`
+
+If any part of a dimension value contains the value specified in this search query spec, a "match" occurs. The grammar is:
+
+```json
+{
+  "type"  : "contains",
+  "case_sensitive" : true,
+  "value" : "some_value"
+}
+```
+
+### `regex`
+
+If any part of a dimension value contains the pattern specified in this search query spec, a "match" occurs. The grammar is:
+
+```json
+{
+  "type"  : "regex",
+  "pattern" : "some_pattern"
+}
+```

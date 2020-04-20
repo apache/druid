@@ -25,6 +25,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
+import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.java.util.common.StringUtils;
@@ -82,6 +83,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
                ).getPath()
     );
     taskId = StringUtils.urlDecode(taskId);
+    TaskIdUtils.validateId("taskId", taskId);
 
     Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
     if (!taskOptional.isPresent()) {

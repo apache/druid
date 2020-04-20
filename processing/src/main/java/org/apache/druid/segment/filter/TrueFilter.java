@@ -33,7 +33,14 @@ import java.util.Set;
  */
 public class TrueFilter implements Filter
 {
-  public TrueFilter()
+  private static final TrueFilter INSTANCE = new TrueFilter();
+
+  public static TrueFilter instance()
+  {
+    return INSTANCE;
+  }
+
+  private TrueFilter()
   {
   }
 

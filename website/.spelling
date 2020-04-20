@@ -40,6 +40,7 @@ CORS
 CPUs
 CSVs
 Ceph
+CNF
 ColumnDescriptor
 Corretto
 DDL
@@ -307,6 +308,8 @@ pre-computation
 pre-compute
 pre-computing
 pre-configured
+pre-filtered
+pre-filtering
 pre-generated
 pre-made
 pre-processing
@@ -345,6 +348,7 @@ runtime
 schemas
 searchable
 servlet
+simple-client-sslcontext
 sharded
 sharding
 skipHeaderRows
@@ -379,6 +383,7 @@ unmergeable
 unmerged
 unparseable
 unparsed
+useFilterCNF
 uptime
 uris
 useFieldDiscovery
@@ -829,7 +834,6 @@ jvm-global
 kafka-emitter
 org.apache.druid.extensions.contrib.
 pull-deps
-simple-client-sslcontext
 sqlserver-metadata-storage
 statsd-emitter
  - ../docs/development/geo.md
@@ -1591,6 +1595,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+ANDed
 array_mod
 batch_index_task
 cgroup
@@ -1618,6 +1623,7 @@ druid_supervisors
 druid_taskLock
 druid_taskLog
 druid_tasks
+DruidQueryRel
 ec2
 equalDistribution
 extractionFn
@@ -1634,6 +1640,7 @@ hdfs
 httpRemote
 indexTask
 info_dir
+inlining
 java.class.path
 java.io.tmpdir
 javaOpts
@@ -1650,6 +1657,7 @@ middlemanager
 minTimeMs
 minmax
 mins
+nullable
 orderby
 orderbys
 org.apache.druid
@@ -1658,6 +1666,7 @@ org.apache.hadoop
 overlord.html
 pendingSegments
 pre-flight
+preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
@@ -1679,6 +1688,7 @@ tmp
 tmpfs
 truststore
 tuningConfig
+unioning
 useIndexes
 user.timezone
 v0.12.0
@@ -1723,3 +1733,10 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+ - ../docs/development/extensions-core/druid-ranger-security.md
+json
+metastore
+UserGroupInformation
+CVE-2019-17571
+CVE-2019-12399
+CVE-2018-17196

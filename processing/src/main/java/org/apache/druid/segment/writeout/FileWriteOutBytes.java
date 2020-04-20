@@ -71,7 +71,7 @@ final class FileWriteOutBytes extends WriteOutBytes
   @Override
   public void writeInt(int v) throws IOException
   {
-    flushIfNeeded(Integer.SIZE);
+    flushIfNeeded(Integer.BYTES);
     buffer.putInt(v);
   }
 
