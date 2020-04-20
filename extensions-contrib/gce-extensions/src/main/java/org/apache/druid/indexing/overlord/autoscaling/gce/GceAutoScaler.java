@@ -274,9 +274,7 @@ public final class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 
     List<String> nodeIds = ipToIdLookup(ips); // if they are not IPs, they will be unchanged
     try {
-      return new AutoScalingData(idToIpLookup(
-          terminateWithIds(nodeIds != null ? nodeIds : new ArrayList<>()).getNodeIds())
-      );
+      return terminateWithIds(nodeIds != null ? nodeIds : new ArrayList<>());
     }
     catch (Exception e) {
       log.error(e, "Unable to terminate any instances.");

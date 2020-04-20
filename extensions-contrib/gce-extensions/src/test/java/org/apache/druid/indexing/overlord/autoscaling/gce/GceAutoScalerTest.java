@@ -155,7 +155,7 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void test_config_equals()
+  public void testConfigEquals()
   {
     EqualsVerifier.forClass(GceEnvironmentConfig.class).withNonnullFields(
         "projectId", "zoneName", "managedInstanceGroupName", "numInstances"
@@ -355,6 +355,100 @@ public class GceAutoScalerTest
     Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
 
     EasyMock.verify(mockCompute);
+    EasyMock.verify(mockInstanceGroupManagers);
+    EasyMock.verify(mockDeleteRequest);
+    EasyMock.verify(mockInstancesRequest);
+  }
+
+  @Test
+  public void testTerminate() throws IOException // for the mock calls, not really throwing
+  {
+    GceAutoScaler autoScaler = new GceAutoScaler(
+        2,
+        4,
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
+        mockCompute // <-- I pretend to be Google
+    );
+
+    // testing the ip --> id part
+    Instance i0 = makeInstance("baz", "1.2.3.6");
+    InstanceList mockInstanceListResponse = new InstanceList();
+    mockInstanceListResponse.setNextPageToken(null);
+    mockInstanceListResponse.setItems(Collections.singletonList(i0));
+
+    EasyMock.expect(mockIpToIdRequest.execute()).andReturn(mockInstanceListResponse);
+    EasyMock.expect(mockIpToIdRequest.setPageToken(EasyMock.anyString())).andReturn(
+        mockIpToIdRequest // the method needs to return something, what is actually irrelevant here
+    );
+    EasyMock.replay(mockIpToIdRequest);
+
+    EasyMock.expect(mockInstances.list("proj-x", "us-central-1")).andReturn(mockIpToIdRequest);
+
+    EasyMock.expect(mockCompute.instances()).andReturn(mockInstances);
+    EasyMock.replay(mockInstances);
+
+    // testing the delete part
+    InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar",
+            "http://xyz/baz"
+        ));
+    InstanceGroupManagersListManagedInstancesResponse afterRunningInstance =
+        createRunningInstances(Arrays.asList(
+            "http://xyz/foo",
+            "http://xyz/bar"
+        ));
+
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(beforeRunningInstance); // 1st call
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.expect(mockInstancesRequest.execute()).andReturn(afterRunningInstance);  // 2nd call
+    EasyMock.expect(mockInstancesRequest.setMaxResults(500L)).andReturn(mockInstancesRequest);
+    EasyMock.replay(mockInstancesRequest);
+
+    EasyMock.expect(mockInstanceGroupManagers.listManagedInstances(
+        "proj-x",
+        "us-central-1",
+        "druid-mig"
+    )).andReturn(mockInstancesRequest).times(2);
+
+    // set up the delete operation
+    Operation mockResponse = new Operation();
+    mockResponse.setStatus("DONE");
+    mockResponse.setError(new Operation.Error());
+
+    EasyMock.expect(mockDeleteRequest.execute()).andReturn(mockResponse);
+    EasyMock.replay(mockDeleteRequest);
+
+    InstanceGroupManagersDeleteInstancesRequest requestBody =
+        new InstanceGroupManagersDeleteInstancesRequest();
+    requestBody.setInstances(Collections.singletonList("zones/us-central-1/instances/baz"));
+
+    EasyMock.expect(mockInstanceGroupManagers.deleteInstances(
+        "proj-x",
+        "us-central-1",
+        "druid-mig",
+        requestBody
+    )).andReturn(mockDeleteRequest);
+
+    EasyMock.replay(mockInstanceGroupManagers);
+
+    // called twice in getRunningInstances...
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+    // ...and once in terminateWithIds
+    EasyMock.expect(mockCompute.instanceGroupManagers()).andReturn(mockInstanceGroupManagers);
+
+    // and that's all folks!
+    EasyMock.replay(mockCompute);
+
+    AutoScalingData autoScalingData =
+        autoScaler.terminate(Collections.singletonList("1.2.3.6"));
+    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+
+    EasyMock.verify(mockCompute);
+    EasyMock.verify(mockIpToIdRequest);
     EasyMock.verify(mockInstanceGroupManagers);
     EasyMock.verify(mockDeleteRequest);
     EasyMock.verify(mockInstancesRequest);
@@ -640,7 +734,7 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void test_equals()
+  public void testEquals()
   {
     EqualsVerifier.forClass(GceAutoScaler.class).withNonnullFields(
         "envConfig", "maxNumWorkers", "minNumWorkers"
