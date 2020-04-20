@@ -27,7 +27,7 @@ import java.util.Objects;
 
 /**
  */
-public class GceEnvironmentConfig
+public final class GceEnvironmentConfig
 {
   /**
    * numInstances: the number of workers to try to spawn at each call to provision

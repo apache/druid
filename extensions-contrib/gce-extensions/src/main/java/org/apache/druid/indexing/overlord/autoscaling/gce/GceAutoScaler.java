@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord.autoscaling.gce;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -42,7 +41,6 @@ import com.google.common.net.InetAddresses;
 import org.apache.curator.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
-import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -61,7 +59,7 @@ import java.util.Objects;
  *   where the prefix is chosen by you and abcd is a suffix assigned by GCE
  */
 @JsonTypeName("gce")
-public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
+public final class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 {
   private static final EmittingLogger log = new EmittingLogger(GceAutoScaler.class);
 
@@ -79,8 +77,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   public GceAutoScaler(
           @JsonProperty("minNumWorkers") int minNumWorkers,
           @JsonProperty("maxNumWorkers") int maxNumWorkers,
-          @JsonProperty("envConfig") GceEnvironmentConfig envConfig,
-          @JacksonInject SimpleWorkerProvisioningConfig config
+          @JsonProperty("envConfig") GceEnvironmentConfig envConfig
   )
   {
     Preconditions.checkArgument(minNumWorkers > 0,
@@ -102,11 +99,10 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
           int minNumWorkers,
           int maxNumWorkers,
           GceEnvironmentConfig envConfig,
-          SimpleWorkerProvisioningConfig config,
           Compute compute
   )
   {
-    this(minNumWorkers, maxNumWorkers, envConfig, config);
+    this(minNumWorkers, maxNumWorkers, envConfig);
     this.cachedComputeService = compute;
   }
 

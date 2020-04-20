@@ -32,6 +32,7 @@ import com.google.api.services.compute.model.InstanceList;
 import com.google.api.services.compute.model.ManagedInstance;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -153,6 +154,14 @@ public class GceAutoScalerTest
     }
   }
 
+  @Test
+  public void test_config_equals()
+  {
+    EqualsVerifier.forClass(GceEnvironmentConfig.class).withNonnullFields(
+        "projectId", "zoneName", "managedInstanceGroupName", "numInstances"
+    ).verify();
+  }
+
   private Instance makeInstance(String name, String ip)
   {
     Instance instance = new Instance();
@@ -170,7 +179,6 @@ public class GceAutoScalerTest
         2,
         4,
         new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        null,
         mockCompute // <-- I pretend to be Google
     );
 
@@ -220,7 +228,6 @@ public class GceAutoScalerTest
         2,
         4,
         new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        null,
         mockCompute // <-- I pretend to be Google
     );
 
@@ -283,7 +290,6 @@ public class GceAutoScalerTest
         2,
         4,
         new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        null,
         mockCompute // <-- I pretend to be Google
     );
 
@@ -361,7 +367,6 @@ public class GceAutoScalerTest
         2,
         4,
         new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        null,
         mockCompute // <-- I pretend to be Google
     );
 
@@ -448,7 +453,6 @@ public class GceAutoScalerTest
             2,
             4,
             new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-            null,
             mockCompute // <-- I pretend to be Google
     );
 
@@ -520,7 +524,6 @@ public class GceAutoScalerTest
             2,
             4,
             new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-            null,
             mockCompute // <-- I pretend to be Google
     );
 
@@ -564,7 +567,6 @@ public class GceAutoScalerTest
         2,
         4,
         new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        null,
         mockCompute // <-- I pretend to be Google
     );
 
@@ -635,5 +637,13 @@ public class GceAutoScalerTest
     EasyMock.verify(mockInstanceGroupManagers);
     EasyMock.verify(mockResizeRequest);
     EasyMock.verify(mockInstancesRequest);
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(GceAutoScaler.class).withNonnullFields(
+        "envConfig", "maxNumWorkers", "minNumWorkers"
+    ).withIgnoredFields("cachedComputeService").verify();
   }
 }
