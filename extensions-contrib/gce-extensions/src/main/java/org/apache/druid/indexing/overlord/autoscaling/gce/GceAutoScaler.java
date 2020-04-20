@@ -44,6 +44,7 @@ import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -173,6 +174,7 @@ public final class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   }
 
   // Used to wait for an operation to finish
+  @Nullable
   private Operation.Error waitForOperationEnd(
       Compute compute,
       Operation operation) throws Exception
