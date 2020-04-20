@@ -22,6 +22,7 @@ package org.apache.druid.storage.azure;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -88,6 +89,10 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
+    if (segmentConfig.getContainer() == null || segmentConfig.getPrefix() == null) {
+      throw new ISE(
+          "Cannot delete all segment files since Azure Deep Storage since druid.azure.container and druid.azure.prefix are not both set.");
+    }
     log.info(
         "Deleting all segment files from Azure storage location [bucket: '%s' prefix: '%s']",
         segmentConfig.getContainer(),
@@ -109,5 +114,4 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
       throw new IOException(e);
     }
   }
-
 }

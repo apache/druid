@@ -90,6 +90,27 @@ public class IndexedTableJoinableTest
   }
 
   @Test
+  public void test_getCardinality_string()
+  {
+    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
+    Assert.assertEquals(indexedTable.numRows() + 1, joinable.getCardinality("str"));
+  }
+
+  @Test
+  public void test_getCardinality_long()
+  {
+    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
+    Assert.assertEquals(indexedTable.numRows() + 1, joinable.getCardinality("long"));
+  }
+
+  @Test
+  public void test_getCardinality_nonexistent()
+  {
+    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
+    Assert.assertEquals(1, joinable.getCardinality("nonexistent"));
+  }
+
+  @Test
   public void test_getColumnCapabilities_string()
   {
     final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);

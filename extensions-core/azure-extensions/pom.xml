@@ -190,7 +190,7 @@
                                 <limit>
                                     <counter>BRANCH</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.89</minimum>
+                                    <minimum>0.88</minimum>
                                 </limit>
                                 <limit>
                                     <counter>COMPLEXITY</counter>

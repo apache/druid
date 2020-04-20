@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  *
@@ -163,12 +164,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return bitmap.getCardinality() > 0 ? bitmap.getValue(bitmap.getCardinality() - 1) : null;
     }
     return null;
-  }
-
-  @Override
-  public Capabilities getCapabilities()
-  {
-    return Capabilities.builder().dimensionValuesSorted(true).build();
   }
 
   @Override
@@ -384,13 +379,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
      *
      * Any subfilters that cannot be processed entirely with bitmap indexes will be moved to the post-filtering stage.
      */
-    final List<Filter> preFilters;
+    final Set<Filter> preFilters;
     final List<Filter> postFilters = new ArrayList<>();
     int preFilteredRows = totalRows;
     if (filter == null) {
-      preFilters = Collections.emptyList();
+      preFilters = Collections.emptySet();
     } else {
-      preFilters = new ArrayList<>();
+      preFilters = new HashSet<>();
 
       if (filter instanceof AndFilter) {
         // If we get an AndFilter, we can split the subfilters across both filtering stages
@@ -432,7 +427,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     if (queryMetrics != null) {
-      queryMetrics.preFilters(preFilters);
+      queryMetrics.preFilters(new ArrayList<>(preFilters));
       queryMetrics.postFilters(postFilters);
       queryMetrics.reportSegmentRows(totalRows);
       queryMetrics.reportPreFilteredRows(preFilteredRows);

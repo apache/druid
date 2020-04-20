@@ -54,7 +54,7 @@ public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexe
                                       ? INDEXER_FILE_LEGACY_PARSER
                                       : INDEXER_FILE_INPUT_FORMAT;
     LOG.info("Starting test: ITKafkaIndexingServiceTransactionalTest");
-    doKafkaIndexTest(StringUtils.format("%s_%s", DATASOURCE, param), supervisorSpecPath, false);
+    doKafkaIndexTest(StringUtils.format("%s_%s", DATASOURCE, param), supervisorSpecPath, true);
   }
 
   @AfterMethod

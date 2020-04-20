@@ -21,4 +21,4 @@ druid_storage_storageDirectory=/druid/segments
 # Depending on the test, additional extension(s) may be required.
 # Please refer to the other integration-tests/docker/environment-configs/override-examples/ files and Druid docs for
 # additional env vars to provide for each extension.
-druid_extensions_loadList=["druid-hdfs-storage"]
+druid_extensions_loadList=["druid-hdfs-storage", "druid-parquet-extensions", "druid-orc-extensions"]

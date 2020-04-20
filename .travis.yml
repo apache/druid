@@ -30,17 +30,8 @@ env:
     - DOCKER_IP=127.0.0.1  # for integration tests
     - MVN="mvn -B"
     - > # Various options to make execution of maven goals faster (e.g., mvn install)
-      MAVEN_SKIP="
-      -Danimal.sniffer.skip=true
-      -Dcheckstyle.skip=true
-      -Ddruid.console.skip=true
-      -Denforcer.skip=true
-      -Dforbiddenapis.skip=true
-      -Dmaven.javadoc.skip=true
-      -Dpmd.skip=true
-      -Dspotbugs.skip=true
-      "
-    - MAVEN_SKIP_TESTS="-DskipTests -Djacoco.skip=true"
+      MAVEN_SKIP="-Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true"
+    - MAVEN_SKIP_TESTS="-Pskip-tests"
 
 # Add various options to make 'mvn install' fast and skip javascript compile (-Ddruid.console.skip=true) since it is not
 # needed. Depending on network speeds, "mvn -q install" may take longer than the default 10 minute timeout to print any
@@ -136,7 +127,7 @@ jobs:
       install: skip
       before_script: *setup_generate_license
       script: >
-        MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Pdist -Pbundle-contrib-exts --fail-at-end
+        MAVEN_OPTS='-Xmx3000m' ${MVN} clean install -Prat -Pdist -Pbundle-contrib-exts --fail-at-end
         -pl '!benchmarks' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -Ddruid.console.skip=false -T1C
 
     - <<: *package
@@ -254,13 +245,19 @@ jobs:
       name: "(openjdk11) other modules test (SQL Compatibility)"
       jdk: openjdk11
 
-    - &test_webconsole
-      name: "web console"
+    - name: "web console"
       install: skip
       script:
         - ${MVN} test -pl 'web-console'
       after_success:
         - (cd web-console && travis_retry npm run codecov)  # retry in case of network error
+
+    - name: "web console end-to-end test"
+      before_install: *setup_generate_license
+      install: web-console/script/druid build
+      before_script: web-console/script/druid start
+      script: (cd web-console && npm run test-e2e)
+      after_script:  web-console/script/druid stop
 
     - name: "docs"
       install: (cd website && npm install)
@@ -344,7 +341,7 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk8) other integration test"
       jdk: openjdk8
       services: *integration_test_services
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion' JVM_RUNTIME='-Djvm.runtime=8'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index' JVM_RUNTIME='-Djvm.runtime=8'
       script: *run_integration_test
       after_failure: *integration_test_diags
     # END - Integration tests for Compile with Java 8 and Run with Java 8
@@ -383,7 +380,7 @@ jobs:
     - <<: *integration_tests
       name: "(Compile=openjdk8, Run=openjdk11) other integration test"
       jdk: openjdk8
-      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion' JVM_RUNTIME='-Djvm.runtime=11'
+      env: TESTNG_GROUPS='-DexcludedGroups=batch-index,perfect-rollup-parallel-batch-index,kafka-index,query,realtime-index,security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index' JVM_RUNTIME='-Djvm.runtime=11'
     # END - Integration tests for Compile with Java 8 and Run with Java 11
 
     - name: "security vulnerabilities"

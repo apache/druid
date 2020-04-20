@@ -362,6 +362,15 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
+#### Compaction Status
+
+##### GET
+
+* `/druid/coordinator/v1/compaction/progress?dataSource={dataSource}`
+
+Returns the total size of segments awaiting compaction for the given dataSource. 
+This is only valid for dataSource which has compaction enabled. 
+
 #### Compaction Configuration
 
 ##### GET
