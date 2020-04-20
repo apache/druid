@@ -25,7 +25,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.StateResourceFilter;
+import org.apache.druid.server.http.security.StateStatusResourceFilter;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -64,7 +64,7 @@ public class CompactionResource
   @GET
   @Path("/progress")
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
+  @ResourceFilters(StateStatusResourceFilter.class)
   public Response getCompactionProgress(
       @QueryParam("dataSource") String dataSource
   )
