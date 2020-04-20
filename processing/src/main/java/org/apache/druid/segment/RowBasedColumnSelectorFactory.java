@@ -107,7 +107,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       if (valueType != null) {
         return new ColumnCapabilitiesImpl()
             .setType(valueType)
-
+            .setDictionaryValuesUnique(false)
+            .setDictionaryValuesSorted(false)
             // Numeric types should be reported as complete, but not STRING or COMPLEX (because we don't have full info)
             .setIsComplete(valueType.isNumeric());
       } else {

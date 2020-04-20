@@ -114,12 +114,6 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   }
 
   @Override
-  public int getQueryCount()
-  {
-    return 1 + ((DruidRel) sourceRel).getQueryCount();
-  }
-
-  @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     // Must finalize aggregations on subqueries.

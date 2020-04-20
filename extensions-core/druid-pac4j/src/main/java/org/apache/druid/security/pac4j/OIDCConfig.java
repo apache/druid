@@ -35,21 +35,16 @@ public class OIDCConfig
   @JsonProperty
   private final String discoveryURI;
 
-  @JsonProperty
-  private final PasswordProvider cookiePassphrase;
-
   @JsonCreator
   public OIDCConfig(
       @JsonProperty("clientID") String clientID,
       @JsonProperty("clientSecret") PasswordProvider clientSecret,
-      @JsonProperty("discoveryURI") String discoveryURI,
-      @JsonProperty("cookiePassphrase") PasswordProvider cookiePassphrase
+      @JsonProperty("discoveryURI") String discoveryURI
   )
   {
     this.clientID = Preconditions.checkNotNull(clientID, "null clientID");
     this.clientSecret = Preconditions.checkNotNull(clientSecret, "null clientSecret");
     this.discoveryURI = Preconditions.checkNotNull(discoveryURI, "null discoveryURI");
-    this.cookiePassphrase = Preconditions.checkNotNull(cookiePassphrase, "null cookiePassphrase");
   }
 
   @JsonProperty
@@ -68,11 +63,5 @@ public class OIDCConfig
   public String getDiscoveryURI()
   {
     return discoveryURI;
-  }
-
-  @JsonProperty
-  public PasswordProvider getCookiePassphrase()
-  {
-    return cookiePassphrase;
   }
 }

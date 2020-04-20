@@ -35,7 +35,6 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
 {
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static final String INDEX_DATASOURCE = "wikipedia_index_test_" + UUID.randomUUID();
   private static final String INPUT_SOURCE_URIS_KEY = "uris";
   private static final String INPUT_SOURCE_PREFIXES_KEY = "prefixes";
   private static final String INPUT_SOURCE_OBJECTS_KEY = "objects";
@@ -71,8 +70,9 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
 
   void doTest(Pair<String, List> azureInputSource) throws Exception
   {
+    final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
-        final Closeable ignored1 = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       final Function<String, String> azurePropsTransform = spec -> {
         try {
@@ -87,7 +87,11 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
               "%%PATH%%",
               config.getCloudPath()
           );
-
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT_TYPE%%",
+              InputFormatDetails.JSON.getInputFormatType()
+          );
           spec = StringUtils.replace(
               spec,
               "%%PARTITIONS_SPEC%%",
@@ -115,7 +119,7 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
       };
 
       doIndexTest(
-          INDEX_DATASOURCE,
+          indexDatasource,
           INDEX_TASK,
           azurePropsTransform,
           INDEX_QUERIES_RESOURCE,

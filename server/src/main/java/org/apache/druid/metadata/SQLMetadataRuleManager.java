@@ -408,7 +408,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         );
       }
       catch (Exception e) {
-        log.error(e, StringUtils.format("Exception while overriding rule for %s", dataSource));
+        log.error(e, "Exception while overriding rule for %s", dataSource);
         return false;
       }
     }
@@ -416,7 +416,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       poll();
     }
     catch (Exception e) {
-      log.error(e, StringUtils.format("Exception while polling for rules after overriding the rule for %s", dataSource));
+      log.error(e, "Exception while polling for rules after overriding the rule for %s", dataSource);
     }
     return true;
   }

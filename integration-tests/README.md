@@ -68,6 +68,21 @@ can either be 8 or 11.
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
 
+## Debugging Druid while running tests
+
+For your convenience, Druid processes running inside Docker have debugging enabled and the following ports have 
+been made available to attach your remote debugger (such as via IntelliJ IDEA's Remote Configuration):
+
+- Overlord process at port 5009
+- Middlemanager process at port 5008
+- Historical process at port 5007
+- Coordinator process at port 5006
+- Broker process at port 5005
+- Router process at port 5004
+- Router with custom check tls process at port 5003
+- Router with no client auth tls process at port 5002
+- Router with permissive tls process at port 5001
+
 Running Tests Using A Quickstart Cluster
 -------------------
 
@@ -152,20 +167,26 @@ The integration test that indexes from Cloud or uses Cloud as deep storage is no
 of the integration test run discussed above. Running these tests requires the user to provide
 their own Cloud. 
 
-Currently, the integration test supports Google Cloud Storage, Amazon S3, and Microsoft Azure.
-These can be run by providing "gcs-deep-storage", "s3-deep-storage", or "azure-deep-storage" 
-to -Dgroups for Google Cloud Storage, Amazon S3, and Microsoft Azure respectively. Note that only
+Currently, the integration test supports Amazon Kinesis, Google Cloud Storage, Amazon S3, and Microsoft Azure.
+These can be run by providing "kinesis-index", "gcs-deep-storage", "s3-deep-storage", or "azure-deep-storage" 
+to -Dgroups for Amazon Kinesis, Google Cloud Storage, Amazon S3, and Microsoft Azure respectively. Note that only
 one group should be run per mvn command.
 
-In addition to specifying the -Dgroups to mvn command, the following will need to be provided:
+For all of the Cloud Integration tests, the following will also need to be provided:
+1) Provide -Doverride.config.path=<PATH_TO_FILE> with your Cloud credentials/configs set. See
+integration-tests/docker/environment-configs/override-examples/ directory for env vars to provide for each Cloud.
+
+For Amazon Kinesis, the following will also need to be provided:
+1) Provide -Ddruid.test.config.streamEndpoint=<STREAM_ENDPOINT> with the endpoint of your stream set. 
+For example, kinesis.us-east-1.amazonaws.com
+
+For Google Cloud Storage, Amazon S3, and Microsoft Azure, the following will also need to be provided:
 1) Set the bucket and path for your test data. This can be done by setting -Ddruid.test.config.cloudBucket and 
 -Ddruid.test.config.cloudPath in the mvn command or setting "cloud_bucket" and "cloud_path" in the config file.
 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json 
-located in integration-tests/src/test/resources/data/batch_index to your Cloud storage at the location set in step 1.
-3) Provide -Doverride.config.path=<PATH_TO_FILE> with your Cloud credentials/configs set. See
-integration-tests/docker/environment-configs/override-examples/ directory for env vars to provide for each Cloud storage.
+located in integration-tests/src/test/resources/data/batch_index/json to your Cloud storage at the location set in step 1.
 
-For running Google Cloud Storage, in addition to the above, you will also have to:
+For Google Cloud Storage, in addition to the above, you will also have to:
 1) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
 
 For example, to run integration test for Google Cloud Storage:
@@ -182,7 +203,7 @@ of the integration test run discussed above.  This is because druid
 test clusters might not, in general, have access to hadoop.
 This also applies to integration test that uses Hadoop HDFS as an inputSource or as a deep storage. 
 To run integration test that uses Hadoop, you will have to run a Hadoop cluster. This can be done in two ways:
-1) Run your own Druid + Haddop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
+1) Run your own Druid + Hadoop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
 2) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. 
 
 Currently, hdfs-deep-storage and other <cloud>-deep-storage integration test groups can only be run with 
@@ -192,7 +213,7 @@ See integration-tests/docker/environment-configs/override-examples/hdfs director
 Note that if the integration test you are running also uses other cloud extension (S3, Azure, GCS), additional
 credentials/configs may need to be set in the same file as your Druid's Hadoop configs set. 
 
-Currently, ITHadoopIndexTest can only be run with your own Druid + Haddop cluster by following the below steps:
+Currently, ITHadoopIndexTest can only be run with your own Druid + Hadoop cluster by following the below steps:
 Create a directory called batchHadoop1 in the hadoop file system
 (anywhere you want) and put batch_hadoop.data (integration-tests/src/test/resources/hadoop/batch_hadoop.data) 
 into that directory (as its only file).

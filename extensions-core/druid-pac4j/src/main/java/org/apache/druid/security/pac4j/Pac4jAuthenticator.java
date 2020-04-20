@@ -25,6 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.primitives.Ints;
+import com.google.inject.Provider;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.pac4j.core.config.Config;
@@ -34,6 +37,8 @@ import org.pac4j.oidc.client.OidcClient;
 import org.pac4j.oidc.config.OidcConfiguration;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import java.util.EnumSet;
@@ -45,18 +50,28 @@ public class Pac4jAuthenticator implements Authenticator
   private final String name;
   private final String authorizerName;
   private final Supplier<Config> pac4jConfigSupplier;
-  private final OIDCConfig oidcConfig;
+  private final Pac4jCommonConfig pac4jCommonConfig;
+  private final SSLSocketFactory sslSocketFactory;
 
   @JsonCreator
   public Pac4jAuthenticator(
       @JsonProperty("name") String name,
       @JsonProperty("authorizerName") String authorizerName,
-      @JacksonInject OIDCConfig oidcConfig
+      @JacksonInject Pac4jCommonConfig pac4jCommonConfig,
+      @JacksonInject OIDCConfig oidcConfig,
+      @JacksonInject Provider<SSLContext> sslContextSupplier
   )
   {
     this.name = name;
     this.authorizerName = authorizerName;
-    this.oidcConfig = oidcConfig;
+    this.pac4jCommonConfig = pac4jCommonConfig;
+
+    if (pac4jCommonConfig.isEnableCustomSslContext()) {
+      this.sslSocketFactory = sslContextSupplier.get().getSocketFactory();
+    } else {
+      this.sslSocketFactory = null;
+    }
+
     this.pac4jConfigSupplier = Suppliers.memoize(() -> createPac4jConfig(oidcConfig));
   }
 
@@ -67,7 +82,7 @@ public class Pac4jAuthenticator implements Authenticator
         name,
         authorizerName,
         pac4jConfigSupplier.get(),
-        oidcConfig.getCookiePassphrase().getPassword()
+        pac4jCommonConfig.getCookiePassphrase().getPassword()
     );
   }
 
@@ -117,10 +132,21 @@ public class Pac4jAuthenticator implements Authenticator
     oidcConf.setDiscoveryURI(oidcConfig.getDiscoveryURI());
     oidcConf.setExpireSessionWithToken(true);
     oidcConf.setUseNonce(true);
+    oidcConf.setReadTimeout(Ints.checkedCast(pac4jCommonConfig.getReadTimeout().getMillis()));
+
+    oidcConf.setResourceRetriever(
+        // ResourceRetriever is used to get Auth server configuration from "discoveryURI"
+        new CustomSSLResourceRetriever(pac4jCommonConfig.getReadTimeout().getMillis(), sslSocketFactory)
+    );
 
     OidcClient oidcClient = new OidcClient(oidcConf);
     oidcClient.setUrlResolver(new DefaultUrlResolver(true));
     oidcClient.setCallbackUrlResolver(new NoParameterCallbackUrlResolver());
+
+    // This is used by OidcClient in various places to make HTTPrequests.
+    if (sslSocketFactory != null) {
+      HTTPRequest.setDefaultSSLSocketFactory(sslSocketFactory);
+    }
 
     return new Config(Pac4jCallbackResource.SELF_URL, oidcClient);
   }

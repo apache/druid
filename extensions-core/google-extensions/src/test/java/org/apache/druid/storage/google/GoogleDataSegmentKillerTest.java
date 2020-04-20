@@ -28,6 +28,7 @@ import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.DataSegmentKiller;
@@ -140,6 +141,29 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
     killer.kill(DATA_SEGMENT);
 
     verifyAll();
+  }
+
+  @Test
+  public void test_killAll_accountConfigWithNullBucketAndPrefix_throwsISEException() throws IOException
+  {
+
+    EasyMock.expect(accountConfig.getBucket()).andReturn(null).atLeastOnce();
+    EasyMock.expect(accountConfig.getPrefix()).andReturn(null).anyTimes();
+
+    boolean thrownISEException = false;
+
+    try {
+      GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+      EasyMock.replay(storage, inputDataConfig, accountConfig);
+
+      killer.killAll();
+    }
+    catch (ISE e) {
+      thrownISEException = true;
+    }
+
+    Assert.assertTrue(thrownISEException);
+    EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
 
   @Test

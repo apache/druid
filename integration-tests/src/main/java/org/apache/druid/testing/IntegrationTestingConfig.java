@@ -88,4 +88,6 @@ public interface IntegrationTestingConfig
   String getCloudBucket();
 
   String getCloudPath();
+
+  String getStreamEndpoint();
 }

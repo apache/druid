@@ -346,7 +346,7 @@ public class TimeCompareBenchmark
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = topNFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
+      SegmentId segmentId = SegmentId.dummy("qIndex " + i);
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           topNFactory,
           segmentId,
@@ -372,7 +372,7 @@ public class TimeCompareBenchmark
     List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunnersT = new ArrayList<>();
     QueryToolChest toolChestT = timeseriesFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
+      SegmentId segmentId = SegmentId.dummy("qIndex " + i);
       QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           timeseriesFactory,
           segmentId,

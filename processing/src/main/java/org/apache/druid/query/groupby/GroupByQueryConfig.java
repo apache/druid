@@ -80,7 +80,7 @@ public class GroupByQueryConfig
   private boolean forcePushDownLimit = false;
 
   @JsonProperty
-  private boolean applyLimitPushDownToSegment = true;
+  private boolean applyLimitPushDownToSegment = false;
 
   @JsonProperty
   private boolean forcePushDownNestedQuery = false;

@@ -90,7 +90,11 @@ export class LookupValuesTable extends React.PureComponent<
             accessor: 'v',
           },
         ]}
-        noDataText={error ? error : 'No data found'}
+        noDataText={
+          error
+            ? error
+            : 'Lookup data not found. If this is a new lookup it might not have propagated yet.'
+        }
       />
     );
   }
