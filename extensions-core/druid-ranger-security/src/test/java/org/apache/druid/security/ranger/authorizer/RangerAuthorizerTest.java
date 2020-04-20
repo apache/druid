@@ -22,6 +22,7 @@ package org.apache.druid.security.ranger.authorizer;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceName;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
@@ -35,9 +36,9 @@ public class RangerAuthorizerTest
   private static final AuthenticationResult alice = new AuthenticationResult("alice", null, null, null);
   private static final AuthenticationResult bob = new AuthenticationResult("bob", null, null, null);
 
-  private static final Resource aliceDatasource = new Resource("alice-datasource", ResourceType.DATASOURCE);
-  private static final Resource aliceConfig = new Resource("config", ResourceType.CONFIG);
-  private static final Resource aliceState = new Resource("state", ResourceType.STATE);
+  private static final Resource aliceDatasource = new Resource(new ResourceName("alice-datasource"), ResourceType.DATASOURCE);
+  private static final Resource aliceConfig = new Resource(ResourceName.CONFIG, ResourceType.CONFIG);
+  private static final Resource aliceState = new Resource(ResourceName.STATUS, ResourceType.STATE);
 
   @BeforeClass
   public static void setupBeforeClass()

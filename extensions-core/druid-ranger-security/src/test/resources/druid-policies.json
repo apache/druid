@@ -116,7 +116,7 @@
       "resources": {
         "state": {
           "values": [
-            "STATE"
+            "STATUS"
           ],
           "isExcludes": false,
           "isRecursive": false
