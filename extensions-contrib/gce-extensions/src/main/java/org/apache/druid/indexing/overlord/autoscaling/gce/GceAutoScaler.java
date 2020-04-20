@@ -38,7 +38,6 @@ import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
-import org.apache.curator.shaded.com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.java.util.common.StringUtils;
@@ -60,7 +59,7 @@ import java.util.Objects;
  *   where the prefix is chosen by you and abcd is a suffix assigned by GCE
  */
 @JsonTypeName("gce")
-public final class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
+public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
 {
   private static final EmittingLogger log = new EmittingLogger(GceAutoScaler.class);
 
@@ -92,21 +91,6 @@ public final class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
     this.envConfig = envConfig;
   }
 
-  /**
-   * CAVEAT: this is meant to be used only for testing passing a mock version of Compute
-   */
-  @VisibleForTesting
-  public GceAutoScaler(
-          int minNumWorkers,
-          int maxNumWorkers,
-          GceEnvironmentConfig envConfig,
-          Compute compute
-  )
-  {
-    this(minNumWorkers, maxNumWorkers, envConfig);
-    this.cachedComputeService = compute;
-  }
-
   @Override
   @JsonProperty
   public int getMinNumWorkers()
@@ -128,6 +112,32 @@ public final class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
     return envConfig;
   }
 
+  @Nullable
+  Compute createComputeServiceImpl()
+      throws IOException, GeneralSecurityException, GceServiceException
+  {
+    HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+    JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+    GoogleCredential credential = GoogleCredential.getApplicationDefault(
+        httpTransport,
+        jsonFactory
+    );
+    if (credential.createScopedRequired()) {
+      List<String> scopes = new ArrayList<>();
+      scopes.add(ComputeScopes.CLOUD_PLATFORM);
+      scopes.add(ComputeScopes.COMPUTE);
+      credential = credential.createScoped(scopes);
+    }
+
+    if (credential.getClientAuthentication() != null) {
+      throw new GceServiceException("Not using a service account");
+    }
+
+    return new Compute.Builder(httpTransport, jsonFactory, credential)
+        .setApplicationName("DruidAutoscaler")
+        .build();
+  }
+
   private synchronized Compute createComputeService()
       throws IOException, GeneralSecurityException, InterruptedException, GceServiceException
   {
@@ -142,27 +152,7 @@ public final class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
       log.info("Creating new ComputeService [%d/%d]", retries + 1, maxRetries);
 
       try {
-        HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-        JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
-        GoogleCredential credential = GoogleCredential.getApplicationDefault(
-                httpTransport,
-                jsonFactory
-        );
-        if (credential.createScopedRequired()) {
-          List<String> scopes = new ArrayList<>();
-          scopes.add(ComputeScopes.CLOUD_PLATFORM);
-          scopes.add(ComputeScopes.COMPUTE);
-          credential = credential.createScoped(scopes);
-        }
-
-        if (credential.getClientAuthentication() != null) {
-          throw new GceServiceException("Not using a service account");
-        }
-
-        cachedComputeService = new Compute.Builder(httpTransport, jsonFactory, credential)
-                .setApplicationName("DruidAutoscaler")
-                .build();
-
+        cachedComputeService = createComputeServiceImpl();
         retries++;
       }
       catch (Throwable e) {

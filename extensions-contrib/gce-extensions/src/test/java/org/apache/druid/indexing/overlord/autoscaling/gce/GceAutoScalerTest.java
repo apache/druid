@@ -44,6 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -159,7 +160,7 @@ public class GceAutoScalerTest
   {
     EqualsVerifier.forClass(GceEnvironmentConfig.class).withNonnullFields(
         "projectId", "zoneName", "managedInstanceGroupName", "numInstances"
-    ).verify();
+    ).usingGetClass().verify();
   }
 
   private Instance makeInstance(String name, String ip)
@@ -173,14 +174,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testIpToId() throws IOException // for the mock calls, not really throwing
+  public void testIpToId()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
         2,
         4,
-        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        mockCompute // <-- I pretend to be Google
-    );
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // empty IPs
     List<String> ips1 = Collections.emptyList();
@@ -222,14 +233,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testIdToIp() throws IOException // for the mock calls, not really throwing
+  public void testIdToIp()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
         2,
         4,
-        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        mockCompute // <-- I pretend to be Google
-    );
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // empty IPs
     List<String> ids1 = Collections.emptyList();
@@ -284,14 +305,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testTerminateWithIds() throws IOException // for the mock calls, not really throwing
+  public void testTerminateWithIds()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
         2,
         4,
-        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        mockCompute // <-- I pretend to be Google
-    );
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // set up getRunningInstances results
     InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
@@ -361,14 +392,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testTerminate() throws IOException // for the mock calls, not really throwing
+  public void testTerminate()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
         2,
         4,
-        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        mockCompute // <-- I pretend to be Google
-    );
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // testing the ip --> id part
     Instance i0 = makeInstance("baz", "1.2.3.6");
@@ -455,14 +496,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testTerminateWithIdsWithMissingRemoval() throws IOException // for the mock calls, not really throwing
+  public void testTerminateWithIdsWithMissingRemoval()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
         2,
         4,
-        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        mockCompute // <-- I pretend to be Google
-    );
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // set up getRunningInstances results
     InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
@@ -541,14 +592,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testProvision() throws IOException // for the mock calls, not really throwing
+  public void testProvision()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
-            2,
-            4,
-            new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-            mockCompute // <-- I pretend to be Google
-    );
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
+        2,
+        4,
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // set up getRunningInstances results
     InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
@@ -612,14 +673,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testProvisionSkipped() throws IOException // for the mock calls, not really throwing
+  public void testProvisionSkipped()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
-            2,
-            4,
-            new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-            mockCompute // <-- I pretend to be Google
-    );
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
+        2,
+        4,
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // set up getRunningInstances results
     InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
@@ -655,14 +726,24 @@ public class GceAutoScalerTest
   }
 
   @Test
-  public void testProvisionWithMissingNewInstances() throws IOException // for the mock calls, not really throwing
+  public void testProvisionWithMissingNewInstances()
+      throws IOException, GeneralSecurityException, GceServiceException
   {
-    GceAutoScaler autoScaler = new GceAutoScaler(
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
         2,
         4,
-        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig"),
-        mockCompute // <-- I pretend to be Google
-    );
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(mockCompute);
+    EasyMock.replay(autoScaler);
 
     // set up getRunningInstances results
     InstanceGroupManagersListManagedInstancesResponse beforeRunningInstance =
@@ -738,6 +819,35 @@ public class GceAutoScalerTest
   {
     EqualsVerifier.forClass(GceAutoScaler.class).withNonnullFields(
         "envConfig", "maxNumWorkers", "minNumWorkers"
-    ).withIgnoredFields("cachedComputeService").verify();
+    ).withIgnoredFields("cachedComputeService").usingGetClass().verify();
   }
+
+  @Test
+  public void testFailedComputeCreation()
+      throws IOException, GeneralSecurityException, GceServiceException
+  {
+    GceAutoScaler autoScaler = EasyMock.createMockBuilder(GceAutoScaler.class).withConstructor(
+        int.class,
+        int.class,
+        GceEnvironmentConfig.class
+    ).withArgs(
+        2,
+        4,
+        new GceEnvironmentConfig(1, "proj-x", "us-central-1", "druid-mig")
+    ).addMockedMethod(
+        "createComputeServiceImpl"
+    ).createMock();
+
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.expect(autoScaler.createComputeServiceImpl()).andReturn(null);
+    EasyMock.replay(autoScaler);
+
+    List<String> ips = Collections.singletonList("1.2.3.4");
+    List<String> ids = autoScaler.ipToIdLookup(ips);
+    Assert.assertEquals(0, ids.size());  // Exception caught in execution results in empty result
+  }
+
 }
