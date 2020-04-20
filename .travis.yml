@@ -313,6 +313,14 @@ jobs:
       script: *run_integration_test
       after_failure: *integration_test_diags
 
+    - &integration_kafka_transactional_index
+      name: "(Compile=openjdk8, Run=openjdk8) transactional kafka index integration test"
+      jdk: openjdk8
+      services: *integration_test_services
+      env: TESTNG_GROUPS='-Dgroups=kafka-transactional_index' JVM_RUNTIME='-Djvm.runtime=8'
+      script: *run_integration_test
+      after_failure: *integration_test_diags
+
     - &integration_query
       name: "(Compile=openjdk8, Run=openjdk8) query integration test"
       jdk: openjdk8
@@ -361,6 +369,11 @@ jobs:
       name: "(Compile=openjdk8, Run=openjdk11) kafka index integration test"
       jdk: openjdk8
       env: TESTNG_GROUPS='-Dgroups=kafka-index' JVM_RUNTIME='-Djvm.runtime=11'
+
+    - <<: *integration_kafka_transactional_index
+      name: "(Compile=openjdk8, Run=openjdk11) transactional kafka index integration test"
+      jdk: openjdk8
+      env: TESTNG_GROUPS='-Dgroups=kafka-transactional_index' JVM_RUNTIME='-Djvm.runtime=11'
 
     - <<: *integration_query
       name: "(Compile=openjdk8, Run=openjdk11) query integration test"

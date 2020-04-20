@@ -19,11 +19,9 @@
 
 package org.apache.druid.testing.utils;
 
-import java.util.List;
-
 public interface StreamEventWriter
 {
-  void write(String topic, String event) throws Exception;
+  void write(String topic, String event);
 
   void shutdown();
 

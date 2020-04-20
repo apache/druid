@@ -32,7 +32,7 @@ import java.util.function.Function;
 
 public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamIndexingTest
 {
-  public abstract boolean isKafkaWriterTransactionalEnabled() throws Exception;
+  public abstract boolean isKafkaWriterTransactionalEnabled();
 
   @Override
   StreamAdminClient getStreamAdminClient() throws Exception

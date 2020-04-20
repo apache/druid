@@ -39,7 +39,7 @@ public class KafkaAdminClient implements StreamAdminClient
 {
   AdminClient adminClient;
 
-  public KafkaAdminClient(String kafkaInternalHost) throws Exception
+  public KafkaAdminClient(String kafkaInternalHost)
   {
     Properties config = new Properties();
     config.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaInternalHost);
@@ -50,7 +50,6 @@ public class KafkaAdminClient implements StreamAdminClient
   public void createStream(String streamName, int partitionCount, Map<String, String> tags) throws Exception
   {
     final short replicationFactor = 1;
-    Map<String, String> configs = new HashMap<>();
     final NewTopic newTopic = new NewTopic(streamName, partitionCount, replicationFactor);
     final CreateTopicsResult createTopicsResult = adminClient.createTopics(Collections.singleton(newTopic));
     // Wait for create topic to compelte
@@ -83,7 +82,7 @@ public class KafkaAdminClient implements StreamAdminClient
   }
 
   @Override
-  public boolean isStreamActive(String streamName) throws Exception
+  public boolean isStreamActive(String streamName)
   {
     return true;
   }
@@ -97,7 +96,8 @@ public class KafkaAdminClient implements StreamAdminClient
   }
 
   @Override
-  public boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount) throws Exception {
+  public boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount) throws Exception
+  {
     return getStreamShardCount(streamName) == newShardCount;
   }
 }

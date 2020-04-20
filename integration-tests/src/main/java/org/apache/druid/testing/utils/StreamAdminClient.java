@@ -29,7 +29,7 @@ public interface StreamAdminClient
 
   void updateShardCount(String streamName, int newPartitionCount, boolean blocksUntilStarted) throws Exception;
 
-  boolean isStreamActive(String streamName) throws Exception;
+  boolean isStreamActive(String streamName);
 
   int getStreamShardCount(String streamName) throws Exception;
 

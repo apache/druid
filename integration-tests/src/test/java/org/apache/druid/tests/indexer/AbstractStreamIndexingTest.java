@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.StreamAdminClient;
@@ -35,8 +34,6 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.io.Closeable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
@@ -438,6 +435,5 @@ public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTes
     {
       return streamQueryPropsTransform;
     }
-
   }
 }

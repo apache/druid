@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Properties;
 
 public class KinesisEventWriter implements StreamEventWriter

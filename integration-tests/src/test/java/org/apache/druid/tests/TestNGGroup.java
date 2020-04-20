@@ -31,6 +31,8 @@ public class TestNGGroup
 
   public static final String KAFKA_INDEX = "kafka-index";
 
+  public static final String TRANSACTIONAL_KAFKA_INDEX = "kafka-transactional_index";
+
   public static final String OTHER_INDEX = "other-index";
 
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
