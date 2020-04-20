@@ -27,7 +27,6 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
-import org.apache.druid.server.http.security.StateInternalResourceFilter;
 import org.apache.druid.server.http.security.StateStatusResourceFilter;
 import org.apache.druid.timeline.DataSegment;
 
