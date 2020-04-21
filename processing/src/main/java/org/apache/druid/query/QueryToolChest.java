@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 
 import javax.annotation.Nullable;
@@ -272,23 +273,37 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
-   * Returns a list of field names in the order that {@link #resultsAsArrays} would return them. The returned list will
+   * Returns whether this toolchest is able to handle the provided subquery.
+   *
+   * When this method returns true, the core query stack will pass subquery datasources over to the toolchest and will
+   * assume they are properly handled.
+   *
+   * When this method returns false, the core query stack will throw an error if subqueries are present. In the future,
+   * instead of throwing an error, the core query stack will handle the subqueries on its own.
+   */
+  public boolean canPerformSubquery(final Query<?> subquery)
+  {
+    return false;
+  }
+
+  /**
+   * Returns a {@link RowSignature} for the arrays returned by {@link #resultsAsArrays}. The returned signature will
    * be the same length as each array returned by {@link #resultsAsArrays}.
    *
    * @param query same query passed to {@link #resultsAsArrays}
    *
-   * @return list of field names
+   * @return row signature
    *
    * @throws UnsupportedOperationException if this query type does not support returning results as arrays
    */
-  public List<String> resultArrayFields(QueryType query)
+  public RowSignature resultArraySignature(QueryType query)
   {
     throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
   }
 
   /**
-   * Converts a sequence of this query's ResultType into arrays. The array schema is given by
-   * {@link #resultArrayFields}. This functionality is useful because it allows higher-level processors to operate on
+   * Converts a sequence of this query's ResultType into arrays. The array signature is given by
+   * {@link #resultArraySignature}. This functionality is useful because it allows higher-level processors to operate on
    * the results of any query in a consistent way. This is useful for the SQL layer and for any algorithm that might
    * operate on the results of an inner query.
    *

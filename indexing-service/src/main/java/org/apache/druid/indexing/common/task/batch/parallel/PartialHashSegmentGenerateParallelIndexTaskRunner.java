@@ -19,12 +19,9 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 
 import java.util.Map;
 
@@ -38,10 +35,6 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
 {
   private static final String PHASE_NAME = "partial segment generation";
 
-  // For tests
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
-  private final AppenderatorsManager appenderatorsManager;
-
   PartialHashSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
@@ -51,24 +44,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
       IndexingServiceClient indexingServiceClient
   )
   {
-    this(toolbox, taskId, groupId, ingestionSchema, context, indexingServiceClient, null, null);
-  }
-
-  @VisibleForTesting
-  PartialHashSegmentGenerateParallelIndexTaskRunner(
-      TaskToolbox toolbox,
-      String taskId,
-      String groupId,
-      ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      AppenderatorsManager appenderatorsManager
-  )
-  {
     super(toolbox, taskId, groupId, ingestionSchema, context, indexingServiceClient);
-    this.taskClientFactory = taskClientFactory;
-    this.appenderatorsManager = appenderatorsManager;
   }
 
   @Override
@@ -84,8 +60,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
       String supervisorTaskId,
       Map<String, Object> context,
       InputSplit split,
-      ParallelIndexIngestionSpec subTaskIngestionSpec,
-      IndexingServiceClient indexingServiceClient
+      ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
     return new SubTaskSpec<PartialHashSegmentGenerateTask>(
@@ -107,9 +82,9 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
             numAttempts,
             subTaskIngestionSpec,
             context,
-            indexingServiceClient,
-            taskClientFactory,
-            appenderatorsManager
+            null,
+            null,
+            null
         );
       }
     };

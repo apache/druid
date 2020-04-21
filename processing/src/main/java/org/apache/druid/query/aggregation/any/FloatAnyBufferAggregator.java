@@ -19,81 +19,57 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-/**
- * This Aggregator is created by the {@link FloatAnyAggregatorFactory} which extends from
- * {@link NullableNumericAggregatorFactory}. If null needs to be handle, then {@link NullableNumericAggregatorFactory}
- * will wrap this aggregator in {@link NullableNumericAggregator} and can handle all null in that class.
- * Hence, no null will ever be pass into this aggregator from the valueSelector.
- */
-public class FloatAnyBufferAggregator implements BufferAggregator
+public class FloatAnyBufferAggregator extends NumericAnyBufferAggregator<BaseFloatColumnValueSelector>
 {
-  private static final byte BYTE_FLAG_IS_NOT_SET = 0;
-  private static final byte BYTE_FLAG_IS_SET = 1;
-  private static final float NULL_VALUE = 0;
-  private final BaseFloatColumnValueSelector valueSelector;
-
-  public FloatAnyBufferAggregator(BaseFloatColumnValueSelector valueSelector)
+  public FloatAnyBufferAggregator(
+      BaseFloatColumnValueSelector valueSelector
+  )
   {
-    this.valueSelector = valueSelector;
+    super(valueSelector);
+  }
+
+
+  @Override
+  void initValue(ByteBuffer buf, int position)
+  {
+    buf.putFloat(position + FOUND_VALUE_OFFSET, 0);
   }
 
   @Override
-  public void init(ByteBuffer buf, int position)
+  void putValue(ByteBuffer buf, int position)
   {
-    buf.put(position, BYTE_FLAG_IS_NOT_SET);
-    buf.putFloat(position + Byte.BYTES, NULL_VALUE);
+    buf.putFloat(position + FOUND_VALUE_OFFSET, valueSelector.getFloat());
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
-  {
-    if (buf.get(position) == BYTE_FLAG_IS_NOT_SET) {
-      buf.put(position, BYTE_FLAG_IS_SET);
-      buf.putFloat(position + Byte.BYTES, valueSelector.getFloat());
-    }
-  }
-
-  @Override
+  @Nullable
   public Object get(ByteBuffer buf, int position)
   {
-    return buf.getFloat(position + Byte.BYTES);
+    final boolean isNull = isValueNull(buf, position);
+    return isNull ? null : buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return buf.getFloat(position + Byte.BYTES);
+    return buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return (long) buf.getFloat(position + Byte.BYTES);
+    return (long) buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    return (double) buf.getFloat(position + Byte.BYTES);
+    return (double) buf.getFloat(position + FOUND_VALUE_OFFSET);
   }
 
-  @Override
-  public void close()
-  {
-    // no-op
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    inspector.visit("valueSelector", valueSelector);
-  }
 }

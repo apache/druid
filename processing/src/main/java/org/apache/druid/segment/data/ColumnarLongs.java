@@ -121,6 +121,7 @@ public interface ColumnarLongs extends Closeable
         @Override
         public long getLong()
         {
+          //noinspection AssertWithSideEffects (ignore null handling test initialization check side effect)
           assert NullHandling.replaceWithDefault() || !isNull();
           return ColumnarLongs.this.get(offset.getOffset());
         }

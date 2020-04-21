@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
@@ -159,6 +160,34 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
           sizePer,
           numBytes,
           GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression)),
+          compression
+      );
+
+    }
+
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      SmooshedFileMapper mapper
+  )
+  {
+    byte versionFromBuffer = buffer.get();
+
+    if (versionFromBuffer == VERSION) {
+      final int numBytes = buffer.get();
+      final int totalSize = buffer.getInt();
+      final int sizePer = buffer.getInt();
+
+      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
+
+      return new CompressedVSizeColumnarIntsSupplier(
+          totalSize,
+          sizePer,
+          numBytes,
+          GenericIndexed.read(buffer, new DecompressingByteBufferObjectStrategy(order, compression), mapper),
           compression
       );
 

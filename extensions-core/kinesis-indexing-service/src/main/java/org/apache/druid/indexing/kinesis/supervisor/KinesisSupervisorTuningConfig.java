@@ -39,10 +39,12 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Duration httpTimeout;
   private final Duration shutdownTimeout;
   private final Duration repartitionTransitionDuration;
+  private final Duration offsetFetchPeriod;
 
   public static KinesisSupervisorTuningConfig defaultConfig()
   {
     return new KinesisSupervisorTuningConfig(
+        null,
         null,
         null,
         null,
@@ -108,7 +110,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
-      @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration
+      @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
+      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod
   )
   {
     super(
@@ -151,6 +154,10 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         repartitionTransitionDuration,
         DEFAULT_REPARTITION_TRANSITION_DURATION
     );
+    this.offsetFetchPeriod = SeekableStreamSupervisorTuningConfig.defaultDuration(
+        offsetFetchPeriod,
+        DEFAULT_OFFSET_FETCH_PERIOD
+    );
   }
 
   @Override
@@ -192,6 +199,13 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public Duration getRepartitionTransitionDuration()
   {
     return repartitionTransitionDuration;
+  }
+
+  @Override
+  @JsonProperty
+  public Duration getOffsetFetchPeriod()
+  {
+    return offsetFetchPeriod;
   }
 
   @Override
@@ -261,5 +275,4 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getIntermediateHandoffPeriod()
     );
   }
-
 }

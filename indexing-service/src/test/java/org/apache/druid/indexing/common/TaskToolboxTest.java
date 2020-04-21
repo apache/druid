@@ -34,6 +34,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
@@ -109,6 +110,7 @@ public class TaskToolboxTest
         mockHandoffNotifierFactory,
         () -> mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
+        NoopJoinableFactory.INSTANCE,
         mockMonitorScheduler,
         mockSegmentLoaderFactory,
         ObjectMapper,

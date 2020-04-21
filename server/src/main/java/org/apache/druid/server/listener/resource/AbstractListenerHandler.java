@@ -205,9 +205,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
    * @param inputObject A list of the objects which were POSTed
    *
    * @return An object to be returned in the entity of the response.
-   *
-   * @throws Exception
    */
   @Nullable
-  public abstract Object post(Map<String, ObjType> inputObject) throws Exception;
+  public abstract Object post(Map<String, ObjType> inputObject);
 }

@@ -289,7 +289,7 @@ public class InputRowSerde
     }
   }
 
-  public static final SerializeResult toBytes(
+  public static SerializeResult toBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       final InputRow row,
       AggregatorFactory[] aggs
@@ -422,7 +422,7 @@ public class InputRowSerde
     return values;
   }
 
-  public static final InputRow fromBytes(
+  public static InputRow fromBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       byte[] data,
       AggregatorFactory[] aggs

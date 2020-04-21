@@ -105,7 +105,7 @@ public class IndexGeneratorJob implements Jobby
 
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
-    final Configuration conf = JobHelper.injectSystemProperties(new Configuration());
+    final Configuration conf = JobHelper.injectSystemProperties(new Configuration(), config);
     config.addJobProperties(conf);
 
     final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
@@ -167,10 +167,10 @@ public class IndexGeneratorJob implements Jobby
 
       job.getConfiguration().set("io.sort.record.percent", "0.23");
 
-      JobHelper.injectSystemProperties(job);
+      JobHelper.injectSystemProperties(job.getConfiguration(), config);
       config.addJobProperties(job);
       // inject druid properties like deep storage bindings
-      JobHelper.injectDruidProperties(job.getConfiguration(), config.getAllowedHadoopPrefix());
+      JobHelper.injectDruidProperties(job.getConfiguration(), config);
 
       job.setMapperClass(IndexGeneratorMapper.class);
       job.setMapOutputValueClass(BytesWritable.class);
@@ -281,7 +281,7 @@ public class IndexGeneratorJob implements Jobby
       return null;
     }
 
-    return Utils.getFailureMessage(job, config.JSON_MAPPER);
+    return Utils.getFailureMessage(job, HadoopDruidIndexerConfig.JSON_MAPPER);
   }
 
   private static IncrementalIndex makeIncrementalIndex(
@@ -823,16 +823,16 @@ public class IndexGeneratorJob implements Jobby
                 outputFS,
                 segmentTemplate,
                 JobHelper.INDEX_ZIP,
-                config.DATA_SEGMENT_PUSHER
+                HadoopDruidIndexerConfig.DATA_SEGMENT_PUSHER
             ),
             JobHelper.makeTmpPath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
                 segmentTemplate,
                 context.getTaskAttemptID(),
-                config.DATA_SEGMENT_PUSHER
+                HadoopDruidIndexerConfig.DATA_SEGMENT_PUSHER
             ),
-            config.DATA_SEGMENT_PUSHER
+            HadoopDruidIndexerConfig.DATA_SEGMENT_PUSHER
         );
 
         Path descriptorPath = config.makeDescriptorInfoPath(segment);

@@ -29,7 +29,7 @@ public class DoubleSumAveragerTest
 {
 
   @Test
-  public void testComputeResult() throws Exception
+  public void testComputeResult()
   {
     BaseAverager<Number, Double> avg = new DoubleSumAverager(3, "test", "field", 1);
 

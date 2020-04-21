@@ -19,79 +19,159 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.math.expr.ExprMacroTable;
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.NilColumnValueSelector;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
-public class LongAnyAggregatorFactory extends SimpleLongAggregatorFactory
+public class LongAnyAggregatorFactory extends AggregatorFactory
 {
+  private static final Comparator<Long> VALUE_COMPARATOR = Comparator.nullsFirst(Long::compare);
+
+  private static final Aggregator NIL_AGGREGATOR = new LongAnyAggregator(
+      NilColumnValueSelector.instance()
+  )
+  {
+    @Override
+    public void aggregate()
+    {
+      // no-op
+    }
+  };
+
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new LongAnyBufferAggregator(
+      NilColumnValueSelector.instance()
+  )
+  {
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      // no-op
+    }
+  };
+
+  private final String fieldName;
+  private final String name;
+
   @JsonCreator
   public LongAnyAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("expression") @Nullable String expression,
-      @JacksonInject ExprMacroTable macroTable
+      @JsonProperty("fieldName") final String fieldName
   )
   {
-    super(macroTable, name, fieldName, expression);
-  }
+    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
+    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
 
-  public LongAnyAggregatorFactory(String name, String fieldName)
-  {
-    this(name, fieldName, null, ExprMacroTable.nil());
-  }
-
-  @Override
-  protected long nullValue()
-  {
-    return 0;
+    this.name = name;
+    this.fieldName = fieldName;
   }
 
   @Override
-  protected Aggregator buildAggregator(BaseLongColumnValueSelector selector)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongAnyAggregator(selector);
+    final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_AGGREGATOR;
+    } else {
+      return new LongAnyAggregator(
+          valueSelector
+      );
+    }
   }
 
   @Override
-  protected BufferAggregator buildBufferAggregator(BaseLongColumnValueSelector selector)
+  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongAnyBufferAggregator(selector);
+    final BaseLongColumnValueSelector valueSelector = metricFactory.makeColumnValueSelector(fieldName);
+    if (valueSelector instanceof NilColumnValueSelector) {
+      return NIL_BUFFER_AGGREGATOR;
+    } else {
+      return new LongAnyBufferAggregator(
+          valueSelector
+      );
+    }
+  }
+
+  @Override
+  public Comparator getComparator()
+  {
+    return VALUE_COMPARATOR;
   }
 
   @Override
   @Nullable
   public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
-    if (lhs != null) {
-      return lhs;
-    } else {
-      return rhs;
-    }
+    return lhs;
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    throw new UOE("LongAnyAggregatorFactory is not supported during ingestion for rollup");
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongAnyAggregatorFactory(name, name, null, macroTable);
+    return new LongAnyAggregatorFactory(name, name);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.singletonList(new LongAnyAggregatorFactory(fieldName, fieldName, expression, macroTable));
+    return Collections.singletonList(new LongAnyAggregatorFactory(fieldName, fieldName));
+  }
+
+  @Override
+  public Object deserialize(Object object)
+  {
+    // handle "NaN" / "Infinity" values serialized as strings in JSON
+    if (object instanceof String) {
+      return Float.parseFloat((String) object);
+    }
+    return object;
+  }
+
+  @Override
+  @Nullable
+  public Object finalizeComputation(@Nullable Object object)
+  {
+    return object;
+  }
+
+  @Override
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public String getFieldName()
+  {
+    return fieldName;
+  }
+
+  @Override
+  public List<String> requiredFields()
+  {
+    return Collections.singletonList(fieldName);
   }
 
   @Override
@@ -99,8 +179,13 @@ public class LongAnyAggregatorFactory extends SimpleLongAggregatorFactory
   {
     return new CacheKeyBuilder(AggregatorUtil.LONG_ANY_CACHE_TYPE_ID)
         .appendString(fieldName)
-        .appendString(expression)
         .build();
+  }
+
+  @Override
+  public String getTypeName()
+  {
+    return "long";
   }
 
   @Override
@@ -109,13 +194,36 @@ public class LongAnyAggregatorFactory extends SimpleLongAggregatorFactory
     return Long.BYTES + Byte.BYTES;
   }
 
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    LongAnyAggregatorFactory that = (LongAnyAggregatorFactory) o;
+
+    return fieldName.equals(that.fieldName) && name.equals(that.name);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = name.hashCode();
+    result = 31 * result + fieldName.hashCode();
+    return result;
+  }
+
   @Override
   public String toString()
   {
     return "LongAnyAggregatorFactory{" +
-           "fieldName='" + fieldName + '\'' +
-           ", expression='" + expression + '\'' +
-           ", name='" + name + '\'' +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
            '}';
   }
 }

@@ -14,7 +14,12 @@ exports[`table column matches snapshot 1`] = `
       <span
         class="bp3-button-text"
       >
-        Columns
+        Columns 
+        <span
+          class="counter"
+        >
+          (2/3)
+        </span>
       </span>
       <span
         class="bp3-icon bp3-icon-caret-down"

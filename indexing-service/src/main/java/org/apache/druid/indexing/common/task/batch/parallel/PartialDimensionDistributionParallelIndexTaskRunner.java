@@ -94,8 +94,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       String supervisorTaskId,
       Map<String, Object> context,
       InputSplit split,
-      ParallelIndexIngestionSpec subTaskIngestionSpec,
-      IndexingServiceClient indexingServiceClient
+      ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
     return new SubTaskSpec<PartialDimensionDistributionTask>(

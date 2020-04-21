@@ -20,12 +20,8 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
-import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -34,22 +30,22 @@ import java.util.Objects;
 
 public class DataSourceCompactionConfig
 {
-  public static final long DEFAULT_TARGET_COMPACTION_SIZE_BYTES = 400 * 1024 * 1024; // 400MB
-
-  // should be synchronized with Tasks.DEFAULT_MERGE_TASK_PRIORITY
-  private static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
+  /** Must be synced with Tasks.DEFAULT_MERGE_TASK_PRIORITY */
+  public static final int DEFAULT_COMPACTION_TASK_PRIORITY = 25;
   private static final long DEFAULT_INPUT_SEGMENT_SIZE_BYTES = 400 * 1024 * 1024;
   private static final Period DEFAULT_SKIP_OFFSET_FROM_LATEST = new Period("P1D");
 
   private final String dataSource;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
-  // The number of input segments is limited because the byte size of a serialized task spec is limited by
-  // RemoteTaskRunnerConfig.maxZnodeBytes.
+  /**
+   * The number of input segments is limited because the byte size of a serialized task spec is limited by
+   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
+   */
   @Nullable
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
-  private final UserCompactTuningConfig tuningConfig;
+  private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -59,7 +55,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
-      @JsonProperty("tuningConfig") @Nullable UserCompactTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -109,7 +105,7 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public UserCompactTuningConfig getTuningConfig()
+  public UserCompactionTaskQueryTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
@@ -150,41 +146,5 @@ public class DataSourceCompactionConfig
         tuningConfig,
         taskContext
     );
-  }
-
-  public static class UserCompactTuningConfig extends ClientCompactQueryTuningConfig
-  {
-    @JsonCreator
-    public UserCompactTuningConfig(
-        @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-        @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-        @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
-        @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
-        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
-        @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-        @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks
-    )
-    {
-      super(
-          null,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          maxTotalRows,
-          splitHintSpec,
-          indexSpec,
-          maxPendingPersists,
-          pushTimeout,
-          maxNumConcurrentSubTasks
-      );
-    }
-
-    @Override
-    @Nullable
-    @JsonIgnore
-    public Integer getMaxRowsPerSegment()
-    {
-      throw new UnsupportedOperationException();
-    }
   }
 }

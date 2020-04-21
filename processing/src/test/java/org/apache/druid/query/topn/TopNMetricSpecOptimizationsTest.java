@@ -35,7 +35,6 @@ import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
@@ -294,12 +293,6 @@ public class TopNMetricSpecOptimizationsTest
       public Comparable getMaxValue(String column)
       {
         return null;
-      }
-
-      @Override
-      public Capabilities getCapabilities()
-      {
-        return Capabilities.builder().dimensionValuesSorted(true).build();
       }
 
       @Nullable

@@ -47,6 +47,7 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.Set;
 
 public class BoundFilter implements Filter
@@ -305,5 +306,27 @@ public class BoundFilter implements Filter
       return (lowerComparing >= 0) && (upperComparing > 0);
     }
     return (lowerComparing >= 0) && (upperComparing >= 0);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BoundFilter that = (BoundFilter) o;
+    return Objects.equals(boundDimFilter, that.boundDimFilter) &&
+           Objects.equals(comparator, that.comparator) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(boundDimFilter, comparator, extractionFn, filterTuning);
   }
 }

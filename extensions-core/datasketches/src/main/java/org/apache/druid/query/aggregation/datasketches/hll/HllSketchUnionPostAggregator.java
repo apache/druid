@@ -127,8 +127,8 @@ public class HllSketchUnionPostAggregator implements PostAggregator
     return getClass().getSimpleName() + "{" +
         "name='" + name + '\'' +
         ", fields=" + fields +
-        "lgK=" + lgK +
-        "tgtHllType=" + tgtHllType +
+        ", lgK=" + lgK +
+        ", tgtHllType=" + tgtHllType +
         "}";
   }
 

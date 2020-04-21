@@ -48,7 +48,7 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
   }
 
   @Override
-  protected String getQueryURL(String schemeAndHost)
+  public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2/sql", schemeAndHost);
   }

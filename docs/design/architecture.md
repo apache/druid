@@ -69,8 +69,8 @@ if every single data server is lost and re-provisioned.
 For more details, please see the [Deep storage](../dependencies/deep-storage.md) page.
 
 ### Metadata storage
-The metadata storage holds various shared system metadata such as segment availability information and task information.
-In a clustered deployment, this is typically going to be a traditional RDBMS like PostgreSQL or MySQL. In a single-server
+The metadata storage holds various shared system metadata such as segment usage information and task information. In a
+clustered deployment, this is typically going to be a traditional RDBMS like PostgreSQL or MySQL. In a single-server
 deployment, it is typically going to be a locally-stored Apache Derby database.
 
 For more details, please see the [Metadata storage](../dependencies/metadata-storage.md) page.
@@ -233,3 +233,6 @@ So Druid uses three different techniques to maximize query performance:
 - Pruning which segments are accessed for each query.
 - Within each segment, using indexes to identify which rows must be accessed.
 - Within each segment, only reading the specific rows and columns that are relevant to a particular query.
+
+For more details about how Druid executes queries, refer to the [Query execution](../querying/query-execution.md)
+documentation.

@@ -61,7 +61,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -101,7 +100,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             int count = 0;
 
             @Override
-            public boolean processLine(String line) throws IOException
+            public boolean processLine(String line)
             {
               if (count >= startLineNum && count < endLineNum) {
                 lines.add(line);

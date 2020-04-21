@@ -25,6 +25,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
@@ -41,9 +42,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class EventReceiverFirehoseTestClient
 {
+  private static final Logger LOG = new Logger(EventReceiverFirehoseTestClient.class);
+
+  static final int NUM_RETRIES = 30;
+  static final long DELAY_FOR_RETRIES_MS = 10000;
+
   private final String host;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
@@ -82,31 +89,45 @@ public class EventReceiverFirehoseTestClient
    * @return
    */
   public int postEvents(Collection<Map<String, Object>> events, ObjectMapper objectMapper, String mediaType)
+      throws InterruptedException
   {
-    try {
-      StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(getURL()))
-              .setContent(mediaType, objectMapper.writeValueAsBytes(events)),
-          StatusResponseHandler.getInstance()
-      ).get();
+    int retryCount = 0;
+    while (true) {
+      try {
+        StatusResponseHolder response = httpClient.go(
+            new Request(HttpMethod.POST, new URL(getURL()))
+                .setContent(mediaType, objectMapper.writeValueAsBytes(events)),
+            StatusResponseHandler.getInstance()
+        ).get();
 
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while posting events to url[%s] status[%s] content[%s]",
-            getURL(),
-            response.getStatus(),
-            response.getContent()
+        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+          throw new ISE(
+              "Error while posting events to url[%s] status[%s] content[%s]",
+              getURL(),
+              response.getStatus(),
+              response.getContent()
+          );
+        }
+        Map<String, Integer> responseData = objectMapper.readValue(
+            response.getContent(), new TypeReference<Map<String, Integer>>()
+            {
+            }
         );
+        return responseData.get("eventCount");
       }
-      Map<String, Integer> responseData = objectMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, Integer>>()
-          {
-          }
-      );
-      return responseData.get("eventCount");
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+      // adding retries to flaky tests using channels
+      catch (ExecutionException e) {
+        if (retryCount > NUM_RETRIES) {
+          throw new RuntimeException(e); //giving up now
+        } else {
+          LOG.info(e, "received exception, sleeping and retrying");
+          retryCount++;
+          Thread.sleep(DELAY_FOR_RETRIES_MS);
+        }
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 

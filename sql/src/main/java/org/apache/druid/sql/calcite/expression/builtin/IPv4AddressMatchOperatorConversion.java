@@ -41,7 +41,7 @@ public class IPv4AddressMatchOperatorConversion extends DirectOperatorConversion
   private static final SqlSingleOperandTypeChecker SUBNET_OPERAND = OperandTypes.family(SqlTypeFamily.STRING);
 
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(IPv4AddressMatchExprMacro.NAME))
+      .operatorBuilder(StringUtils.toUpperCase(IPv4AddressMatchExprMacro.FN_NAME))
       .operandTypeChecker(OperandTypes.sequence("(expr,string)", ADDRESS_OPERAND, SUBNET_OPERAND))
       .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
@@ -49,7 +49,7 @@ public class IPv4AddressMatchOperatorConversion extends DirectOperatorConversion
 
   public IPv4AddressMatchOperatorConversion()
   {
-    super(SQL_FUNCTION, IPv4AddressMatchExprMacro.NAME);
+    super(SQL_FUNCTION, IPv4AddressMatchExprMacro.FN_NAME);
   }
 
   @Override

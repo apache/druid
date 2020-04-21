@@ -676,7 +676,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
   public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
   {
     @Override
-    public void registerQuery(Query query, ListenableFuture future)
+    public void registerQueryFuture(Query query, ListenableFuture future)
     {
 
     }

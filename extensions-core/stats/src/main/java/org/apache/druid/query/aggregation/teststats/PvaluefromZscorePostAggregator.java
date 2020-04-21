@@ -65,9 +65,7 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    Set<String> dependentFields = new HashSet<>();
-
-    dependentFields.addAll(zScore.getDependentFields());
+    Set<String> dependentFields = new HashSet<>(zScore.getDependentFields());
 
     return dependentFields;
   }

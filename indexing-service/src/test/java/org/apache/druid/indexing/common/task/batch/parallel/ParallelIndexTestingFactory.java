@@ -37,8 +37,8 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -50,6 +50,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +71,18 @@ class ParallelIndexTestingFactory
   static final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> TASK_CLIENT_FACTORY =
       TestUtils.TASK_CLIENT_FACTORY;
   static final AppenderatorsManager APPENDERATORS_MANAGER = TestUtils.APPENDERATORS_MANAGER;
-  static final HttpClient SHUFFLE_CLIENT = TestUtils.SHUFFLE_CLIENT;
+  static final ShuffleClient SHUFFLE_CLIENT = new ShuffleClient()
+  {
+    @Override
+    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+        File partitionDir,
+        String supervisorTaskId,
+        P location
+    )
+    {
+      return null;
+    }
+  };
   static final List<Interval> INPUT_INTERVALS = Collections.singletonList(Intervals.ETERNITY);
   static final String TASK_EXECUTOR_HOST = "task-executor-host";
   static final int TASK_EXECUTOR_PORT = 1;
@@ -98,6 +110,11 @@ class ParallelIndexTestingFactory
   static ObjectMapper createObjectMapper()
   {
     return TEST_UTILS.getTestObjectMapper();
+  }
+
+  static IndexIO getIndexIO()
+  {
+    return TEST_UTILS.getTestIndexIO();
   }
 
   @SuppressWarnings("SameParameterValue")

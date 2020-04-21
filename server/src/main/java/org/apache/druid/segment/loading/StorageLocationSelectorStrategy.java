@@ -39,7 +39,8 @@ import java.util.Iterator;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "leastBytesUsed", value = LeastBytesUsedStorageLocationSelectorStrategy.class),
     @JsonSubTypes.Type(name = "roundRobin", value = RoundRobinStorageLocationSelectorStrategy.class),
-    @JsonSubTypes.Type(name = "random", value = RandomStorageLocationSelectorStrategy.class)
+    @JsonSubTypes.Type(name = "random", value = RandomStorageLocationSelectorStrategy.class),
+    @JsonSubTypes.Type(name = "mostAvailableSize", value = MostAvailableSizeStorageLocationSelectorStrategy.class)
 })
 public interface StorageLocationSelectorStrategy
 {

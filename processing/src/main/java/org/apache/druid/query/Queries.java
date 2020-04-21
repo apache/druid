@@ -23,8 +23,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- */
 @PublicApi
 public class Queries
 {
@@ -96,8 +97,7 @@ public class Queries
     Preconditions.checkNotNull(otherOutputNames, "otherOutputNames cannot be null");
     Preconditions.checkNotNull(aggFactories, "aggregations cannot be null");
 
-    final Set<String> combinedOutputNames = new HashSet<>();
-    combinedOutputNames.addAll(otherOutputNames);
+    final Set<String> combinedOutputNames = new HashSet<>(otherOutputNames);
 
     final Map<String, AggregatorFactory> aggsFactoryMap = new HashMap<>();
     for (AggregatorFactory aggFactory : aggFactories) {
@@ -129,5 +129,47 @@ public class Queries
     }
 
     return postAggs;
+  }
+
+  /**
+   * Rewrite "query" to refer to some specific segment descriptors.
+   *
+   * The dataSource for "query" must be based on a single table for this operation to be valid. Otherwise, this
+   * function will throw an exception.
+   *
+   * Unlike the seemingly-similar {@code query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(descriptors))},
+   * this this method will walk down subqueries found within the query datasource, if any, and modify the lowest-level
+   * subquery. The effect is that
+   * {@code DataSourceAnalysis.forDataSource(query.getDataSource()).getBaseQuerySegmentSpec()} is guaranteed to return
+   * either {@code new MultipleSpecificSegmentSpec(descriptors)} or empty.
+   *
+   * Because {@link BaseQuery#getRunner} is implemented using {@link DataSourceAnalysis#getBaseQuerySegmentSpec}, this
+   * method will cause the runner to be a specific-segments runner.
+   */
+  public static <T> Query<T> withSpecificSegments(final Query<T> query, final List<SegmentDescriptor> descriptors)
+  {
+    final Query<T> retVal;
+
+    if (query.getDataSource() instanceof QueryDataSource) {
+      final Query<?> subQuery = ((QueryDataSource) query.getDataSource()).getQuery();
+      retVal = query.withDataSource(new QueryDataSource(withSpecificSegments(subQuery, descriptors)));
+    } else {
+      retVal = query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(descriptors));
+    }
+
+    // Verify preconditions and invariants, just in case.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
+
+    if (!analysis.getBaseTableDataSource().isPresent()) {
+      throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
+    }
+
+    if (analysis.getBaseQuerySegmentSpec().isPresent()
+        && !analysis.getBaseQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
+      // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
+      throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
+    }
+
+    return retVal;
   }
 }

@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit;
 public class DruidCoordinatorRuntimeParams
 {
   /**
+   * Creates a Set to be assigned into {@link Builder#usedSegments} from the given {@link Iterable} of segments.
+   *
    * Creates a TreeSet sorted in {@link DruidCoordinator#SEGMENT_COMPARATOR_RECENT_FIRST} order and populates it with
    * the segments from the given iterable. The given iterable is iterated exactly once. No special action is taken if
    * duplicate segments are encountered in the iterable.
@@ -189,6 +191,7 @@ public class DruidCoordinatorRuntimeParams
 
   public DataSourcesSnapshot getDataSourcesSnapshot()
   {
+    Preconditions.checkState(dataSourcesSnapshot != null, "usedSegments or dataSourcesSnapshot must be set");
     return dataSourcesSnapshot;
   }
 

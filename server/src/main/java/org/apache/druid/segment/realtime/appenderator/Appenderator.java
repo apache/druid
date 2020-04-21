@@ -193,7 +193,7 @@ public interface Appenderator extends QuerySegmentWalker
    * @return future that resolves when all segments have been pushed. The segment list will be the list of segments
    * that have been pushed and the commit metadata from the Committer.
    */
-  ListenableFuture<SegmentsAndMetadata> push(
+  ListenableFuture<SegmentsAndCommitMetadata> push(
       Collection<SegmentIdWithShardSpec> identifiers,
       @Nullable Committer committer,
       boolean useUniquePath

@@ -90,19 +90,58 @@ public class DimensionPredicateFilter implements Filter
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
 
         @Override
         public DruidFloatPredicate makeFloatPredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidFloatPredicate()
+          {
+            @Override
+            public boolean applyFloat(float input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
 
         @Override
         public DruidDoublePredicate makeDoublePredicate()
         {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
+          return new DruidDoublePredicate()
+          {
+            @Override
+            public boolean applyDouble(double input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+
+            @Override
+            public boolean applyNull()
+            {
+              return baseStringPredicate.apply(extractionFn.apply(null));
+            }
+          };
         }
       };
     }

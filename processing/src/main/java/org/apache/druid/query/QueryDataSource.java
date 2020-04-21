@@ -22,8 +22,13 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+import org.apache.druid.java.util.common.IAE;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 @JsonTypeName("query")
 public class QueryDataSource implements DataSource
@@ -34,19 +39,53 @@ public class QueryDataSource implements DataSource
   @JsonCreator
   public QueryDataSource(@JsonProperty("query") Query query)
   {
-    this.query = query;
+    this.query = Preconditions.checkNotNull(query, "'query' must be nonnull");
   }
 
   @Override
-  public List<String> getNames()
+  public Set<String> getTableNames()
   {
-    return query.getDataSource().getNames();
+    return query.getDataSource().getTableNames();
   }
 
   @JsonProperty
   public Query getQuery()
   {
     return query;
+  }
+
+  @Override
+  public List<DataSource> getChildren()
+  {
+    return Collections.singletonList(query.getDataSource());
+  }
+
+  @Override
+  public DataSource withChildren(List<DataSource> children)
+  {
+    if (children.size() != 1) {
+      throw new IAE("Must have exactly one child");
+    }
+
+    return new QueryDataSource(query.withDataSource(Iterables.getOnlyElement(children)));
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean isGlobal()
+  {
+    return query.getDataSource().isGlobal();
+  }
+
+  @Override
+  public boolean isConcrete()
+  {
+    return false;
   }
 
   @Override

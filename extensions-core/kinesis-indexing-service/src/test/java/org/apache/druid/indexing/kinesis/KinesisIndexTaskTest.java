@@ -97,6 +97,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -372,7 +373,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -439,8 +440,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
+  }
+
+  DataSourceMetadata newDataSchemaMetadata()
+  {
+    return metadataStorageCoordinator.retrieveDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource());
   }
 
   @Test(timeout = 120_000L)
@@ -509,7 +515,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID0, "1"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -621,7 +627,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
                 ImmutableMap.of(SHARD_ID1, "9", SHARD_ID0, "1")
             )
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -756,7 +762,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "10"))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -826,7 +832,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -898,7 +904,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -971,7 +977,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
 
     // Check segments in deep storage
@@ -1102,7 +1108,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1172,7 +1178,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1235,7 +1241,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
   }
 
 
@@ -1306,7 +1312,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "12"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
@@ -1398,7 +1404,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Check published metadata
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
@@ -1512,7 +1518,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1604,7 +1610,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1677,7 +1683,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     SegmentDescriptorAndExpectedDim1Values desc1 = sdd("2010/P1D", 0, ImmutableList.of("c"));
     SegmentDescriptorAndExpectedDim1Values desc2 = sdd("2011/P1D", 0, ImmutableList.of("d", "e"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
 
     // Run second task
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
@@ -1697,7 +1703,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     SegmentDescriptorAndExpectedDim1Values desc3 = sdd("2011/P1D", 1, ImmutableList.of("d", "e"));
     SegmentDescriptorAndExpectedDim1Values desc4 = sdd("2013/P1D", 0, ImmutableList.of("f"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
-    Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource()));
+    Assert.assertNull(newDataSchemaMetadata());
   }
 
 
@@ -1773,7 +1779,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4", SHARD_ID0, "1"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1869,7 +1875,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4", SHARD_ID0, "1"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -1994,7 +2000,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "5"))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2028,7 +2034,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             .andReturn(Collections.emptyList())
             .anyTimes();
 
+    EasyMock.expect(recordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
+            .andReturn(null)
+            .anyTimes();
+
     replayAll();
+
 
     final KinesisIndexTask task1 = createTask(
         "task1",
@@ -2143,7 +2154,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "6"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2247,7 +2258,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             STREAM,
             ImmutableMap.of(SHARD_ID1, currentOffsets.get(SHARD_ID1))
         )),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2326,7 +2337,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2483,7 +2494,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "9"))
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2639,7 +2650,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
                 ImmutableMap.of(SHARD_ID1, KinesisSequenceNumber.END_OF_SHARD_MARKER)
             )
         ),
-        metadataStorageCoordinator.getDataSourceMetadata(NEW_DATA_SCHEMA.getDataSource())
+        newDataSchemaMetadata()
     );
   }
 
@@ -2888,6 +2899,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         handoffNotifierFactory,
         this::makeTimeseriesOnlyConglomerate,
         Execs.directExecutor(), // queryExecutorService
+        NoopJoinableFactory.INSTANCE,
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),

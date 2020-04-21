@@ -46,7 +46,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -85,7 +85,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CuratorDruidCoordinatorTest extends CuratorTestBase
 {
   private DruidCoordinator coordinator;
-  private MetadataSegmentManager segmentsMetadata;
+  private SegmentsMetadataManager segmentsMetadataManager;
   private DataSourcesSnapshot dataSourcesSnapshot;
   private DruidCoordinatorRuntimeParams coordinatorRuntimeParams;
 
@@ -133,7 +133,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   @Before
   public void setUp() throws Exception
   {
-    segmentsMetadata = EasyMock.createNiceMock(MetadataSegmentManager.class);
+    segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     coordinatorRuntimeParams = EasyMock.createNiceMock(DruidCoordinatorRuntimeParams.class);
 
@@ -220,7 +220,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
           }
         },
         configManager,
-        segmentsMetadata,
+        segmentsMetadataManager,
         baseView,
         metadataRuleManager,
         curator,
@@ -383,10 +383,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
     EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(sourceSegments.get(2));
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(segmentsMetadata.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
+    EasyMock.expect(segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(EasyMock.anyString()))
             .andReturn(druidDataSource);
     EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot()).andReturn(dataSourcesSnapshot).anyTimes();
-    EasyMock.replay(segmentsMetadata, coordinatorRuntimeParams);
+    EasyMock.replay(segmentsMetadataManager, coordinatorRuntimeParams);
 
     EasyMock.expect(dataSourcesSnapshot.getDataSource(EasyMock.anyString())).andReturn(druidDataSource).anyTimes();
     EasyMock.replay(dataSourcesSnapshot);
@@ -518,7 +518,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
           }
         },
         configManager,
-        segmentsMetadata,
+        segmentsMetadataManager,
         baseView,
         metadataRuleManager,
         curator,

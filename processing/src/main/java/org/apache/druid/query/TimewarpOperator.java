@@ -92,8 +92,11 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
         );
         return Sequences.map(
             baseRunner.run(
-                queryPlus.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(
-                    Collections.singletonList(modifiedInterval))),
+                queryPlus.withQuery(
+                    queryPlus.getQuery().withQuerySegmentSpec(
+                        new MultipleIntervalSegmentSpec(Collections.singletonList(modifiedInterval))
+                    )
+                ),
                 responseContext
             ),
             new Function<T, T>()

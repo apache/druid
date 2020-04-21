@@ -98,11 +98,10 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Co
     while (!cursor.isDone()) {
       final Comparable<?> key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-      Aggregator[] theAggregators = aggregatesStore.get(key);
-      if (theAggregators == null) {
-        theAggregators = makeAggregators(cursor, query.getAggregatorSpecs());
-        aggregatesStore.put(key, theAggregators);
-      }
+      Aggregator[] theAggregators = aggregatesStore.computeIfAbsent(
+          key,
+          k -> makeAggregators(cursor, query.getAggregatorSpecs())
+      );
 
       for (Aggregator aggregator : theAggregators) {
         aggregator.aggregate();

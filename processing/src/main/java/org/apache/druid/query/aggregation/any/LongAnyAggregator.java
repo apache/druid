@@ -19,44 +19,31 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.query.aggregation.Aggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregator;
-import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
-/**
- * This Aggregator is created by the {@link LongAnyAggregatorFactory} which extends from
- * {@link NullableNumericAggregatorFactory}. If null needs to be handle, then {@link NullableNumericAggregatorFactory}
- * will wrap this aggregator in {@link NullableNumericAggregator} and can handle all null in that class.
- * Hence, no null will ever be pass into this aggregator from the valueSelector.
- */
-public class LongAnyAggregator implements Aggregator
-{
-  private final BaseLongColumnValueSelector valueSelector;
+import javax.annotation.Nullable;
 
+public class LongAnyAggregator extends NumericAnyAggregator<BaseLongColumnValueSelector>
+{
   private long foundValue;
-  private boolean isFound;
 
   public LongAnyAggregator(BaseLongColumnValueSelector valueSelector)
   {
-    this.valueSelector = valueSelector;
+    super(valueSelector);
     this.foundValue = 0;
-    this.isFound = false;
   }
 
   @Override
-  public void aggregate()
+  void setFoundValue()
   {
-    if (!isFound) {
-      foundValue = valueSelector.getLong();
-      isFound = true;
-    }
+    foundValue = valueSelector.getLong();
   }
 
   @Override
+  @Nullable
   public Object get()
   {
-    return foundValue;
+    return isNull ? null : foundValue;
   }
 
   @Override
@@ -75,11 +62,5 @@ public class LongAnyAggregator implements Aggregator
   public double getDouble()
   {
     return (double) foundValue;
-  }
-
-  @Override
-  public void close()
-  {
-    // no-op
   }
 }

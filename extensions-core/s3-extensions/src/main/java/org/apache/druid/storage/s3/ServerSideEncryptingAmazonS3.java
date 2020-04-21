@@ -20,9 +20,12 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
@@ -31,6 +34,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.ByteArrayInputStream;
@@ -47,6 +51,11 @@ import java.io.InputStream;
  */
 public class ServerSideEncryptingAmazonS3
 {
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
   private final AmazonS3 amazonS3;
   private final ServerSideEncryption serverSideEncryption;
 
@@ -118,5 +127,50 @@ public class ServerSideEncryptingAmazonS3
   public void deleteObject(String bucket, String key)
   {
     amazonS3.deleteObject(bucket, key);
+  }
+
+  public void deleteObjects(DeleteObjectsRequest request)
+  {
+    amazonS3.deleteObjects(request);
+  }
+
+  public static class Builder
+  {
+    private AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3Client.builder();
+    private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption());
+
+    public Builder setAmazonS3ClientBuilder(AmazonS3ClientBuilder amazonS3ClientBuilder)
+    {
+      this.amazonS3ClientBuilder = amazonS3ClientBuilder;
+      return this;
+    }
+
+    public Builder setS3StorageConfig(S3StorageConfig s3StorageConfig)
+    {
+      this.s3StorageConfig = s3StorageConfig;
+      return this;
+    }
+
+    public AmazonS3ClientBuilder getAmazonS3ClientBuilder()
+    {
+      return this.amazonS3ClientBuilder;
+    }
+
+    public S3StorageConfig getS3StorageConfig()
+    {
+      return this.s3StorageConfig;
+    }
+
+    public ServerSideEncryptingAmazonS3 build()
+    {
+      if (amazonS3ClientBuilder == null) {
+        throw new ISE("AmazonS3ClientBuilder cannot be null!");
+      }
+      if (s3StorageConfig == null) {
+        throw new ISE("S3StorageConfig cannot be null!");
+      }
+
+      return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), s3StorageConfig.getServerSideEncryption());
+    }
   }
 }

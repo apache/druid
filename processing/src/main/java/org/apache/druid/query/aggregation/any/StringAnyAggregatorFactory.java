@@ -85,11 +85,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    if (lhs != null) {
-      return lhs;
-    } else {
-      return rhs;
-    }
+    return lhs;
   }
 
   @Override

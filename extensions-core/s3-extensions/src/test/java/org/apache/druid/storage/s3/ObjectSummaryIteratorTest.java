@@ -37,13 +37,15 @@ public class ObjectSummaryIteratorTest
   private static final ImmutableList<S3ObjectSummary> TEST_OBJECTS =
       ImmutableList.of(
           makeObjectSummary("b", "foo", 10L),
-          makeObjectSummary("b", "foo/", 0L),
+          makeObjectSummary("b", "foo/", 0L), // directory
           makeObjectSummary("b", "foo/bar1", 10L),
           makeObjectSummary("b", "foo/bar2", 10L),
           makeObjectSummary("b", "foo/bar3", 10L),
           makeObjectSummary("b", "foo/bar4", 10L),
+          makeObjectSummary("b", "foo/bar5", 0L), // empty object
           makeObjectSummary("b", "foo/baz", 10L),
-          makeObjectSummary("bucketnotmine", "a/different/bucket", 10L)
+          makeObjectSummary("bucketnotmine", "a/different/bucket", 10L),
+          makeObjectSummary("b", "foo/bar/", 0L) // another directory at the end of list
       );
 
   @Test
@@ -136,6 +138,16 @@ public class ObjectSummaryIteratorTest
     test(
         ImmutableList.of(),
         ImmutableList.of("s3://bx/foo/"),
+        10
+    );
+  }
+
+  @Test
+  public void testWithMultiplePrefixesReturningAllNonEmptyObjectsStartingWithOneOfPrefixes()
+  {
+    test(
+        ImmutableList.of("s3://b/foo/bar1", "s3://b/foo/bar2", "s3://b/foo/bar3", "s3://b/foo/bar4", "s3://b/foo/baz"),
+        ImmutableList.of("s3://b/foo/bar", "s3://b/foo/baz"),
         10
     );
   }

@@ -46,12 +46,12 @@ import java.util.List;
  */
 public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
 {
-  public static final String NAME = "ipv4_stringify";
+  public static final String FN_NAME = "ipv4_stringify";
 
   @Override
   public String name()
   {
-    return NAME;
+    return FN_NAME;
   }
 
   @Override
@@ -67,7 +67,7 @@ public class IPv4AddressStringifyExprMacro implements ExprMacroTable.ExprMacro
     {
       private IPv4AddressStringifyExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull

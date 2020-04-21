@@ -56,7 +56,7 @@ public class DoubleMeanAggregationTest
 
   private final List<Segment> segments;
 
-  public DoubleMeanAggregationTest() throws Exception
+  public DoubleMeanAggregationTest()
   {
 
     groupByQueryTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(

@@ -40,7 +40,7 @@ public class ExecutorLifecycleConfig
   private File statusFile = null;
 
   @JsonProperty
-  @Pattern(regexp = "\\{stdin\\}")
+  @Pattern(regexp = "\\{stdin}")
   private String parentStreamName = "stdin";
   @JsonProperty
   private boolean parentStreamDefined = true;

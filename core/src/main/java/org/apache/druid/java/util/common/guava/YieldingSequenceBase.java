@@ -32,6 +32,9 @@ public abstract class YieldingSequenceBase<T> implements Sequence<T>
     Yielder<OutType> yielder = toYielder(initValue, YieldingAccumulators.fromAccumulator(accumulator));
 
     try {
+      while (!yielder.isDone()) {
+        yielder = yielder.next(yielder.get());
+      }
       return yielder.get();
     }
     finally {

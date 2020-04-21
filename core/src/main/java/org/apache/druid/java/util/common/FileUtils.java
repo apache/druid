@@ -255,7 +255,7 @@ public class FileUtils
       // Default implementation of this method in FilterOutputStream converts single write operation to
       // multiple write operations of 1 byte each, which is terribly inefficient.
       @Override
-      public void write(byte b[], int off, int len) throws IOException
+      public void write(byte[] b, int off, int len) throws IOException
       {
         out.write(b, off, len);
       }

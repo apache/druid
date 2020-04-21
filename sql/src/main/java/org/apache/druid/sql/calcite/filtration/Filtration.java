@@ -28,10 +28,11 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Objects;
 
 public class Filtration
 {
@@ -162,10 +163,10 @@ public class Filtration
 
     Filtration that = (Filtration) o;
 
-    if (intervals != null ? !intervals.equals(that.intervals) : that.intervals != null) {
+    if (!Objects.equals(intervals, that.intervals)) {
       return false;
     }
-    return dimFilter != null ? dimFilter.equals(that.dimFilter) : that.dimFilter == null;
+    return Objects.equals(dimFilter, that.dimFilter);
 
   }
 

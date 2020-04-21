@@ -20,9 +20,9 @@
 package org.apache.druid.query.filter;
 
 import com.google.common.collect.RangeSet;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.filter.TrueFilter;
 
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 
@@ -32,8 +32,8 @@ public class TrueDimFilter implements DimFilter
 {
   @Override
   public byte[] getCacheKey()
-  {        
-    return ByteBuffer.allocate(1).put(DimFilterUtils.TRUE_CACHE_ID).array();
+  {
+    return new CacheKeyBuilder(DimFilterUtils.TRUE_CACHE_ID).build();
   }
 
   @Override
@@ -45,7 +45,7 @@ public class TrueDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new TrueFilter();
+    return TrueFilter.instance();
   }
 
   @Override

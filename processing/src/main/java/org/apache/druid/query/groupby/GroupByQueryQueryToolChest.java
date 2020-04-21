@@ -62,6 +62,7 @@ import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.groupby.strategy.GroupByStrategy;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
@@ -664,9 +665,29 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   }
 
   @Override
-  public List<String> resultArrayFields(final GroupByQuery query)
+  public boolean canPerformSubquery(Query<?> subquery)
   {
-    return query.getResultRowOrder();
+    Query<?> current = subquery;
+
+    while (current != null) {
+      if (!(current instanceof GroupByQuery)) {
+        return false;
+      }
+
+      if (current.getDataSource() instanceof QueryDataSource) {
+        current = ((QueryDataSource) current.getDataSource()).getQuery();
+      } else {
+        current = null;
+      }
+    }
+
+    return true;
+  }
+
+  @Override
+  public RowSignature resultArraySignature(GroupByQuery query)
+  {
+    return query.getResultRowSignature();
   }
 
   @Override

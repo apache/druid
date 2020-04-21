@@ -80,19 +80,19 @@ public class CliHadoopIndexer implements Runnable
 
       final List<URL> extensionURLs = new ArrayList<>();
       for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
-        final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
-        extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
+        final URLClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension, false);
+        extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
       }
 
-      final List<URL> nonHadoopURLs = new ArrayList<>();
-      nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()));
+      final List<URL> nonHadoopURLs = Arrays.asList(
+          ((URLClassLoader) CliHadoopIndexer.class.getClassLoader()).getURLs()
+      );
 
-      final List<URL> driverURLs = new ArrayList<>();
-      driverURLs.addAll(nonHadoopURLs);
+      final List<URL> driverURLs = new ArrayList<>(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
       for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extensionsConfig)) {
-        final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
-        driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+        final URLClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency, false);
+        driverURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
       }
 
       final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[0]), null);

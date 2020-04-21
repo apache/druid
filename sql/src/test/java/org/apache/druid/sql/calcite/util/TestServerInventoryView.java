@@ -26,8 +26,8 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.ServerSelector;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 
 /**
@@ -77,7 +78,7 @@ public class TestServerInventoryView implements TimelineServerView
   }
 
   @Override
-  public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
+  public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
   {
     throw new UnsupportedOperationException();
   }

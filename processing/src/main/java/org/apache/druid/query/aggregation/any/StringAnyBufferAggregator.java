@@ -28,7 +28,10 @@ import java.nio.ByteBuffer;
 
 public class StringAnyBufferAggregator implements BufferAggregator
 {
-  private static final int NULL_STRING_LENGTH = -1;
+  private static final int FOUND_AND_NULL_FLAG_VALUE = -1;
+  private static final int NOT_FOUND_FLAG_VALUE = -2;
+  private static final int FOUND_VALUE_OFFSET = Integer.BYTES;
+
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
 
@@ -41,22 +44,23 @@ public class StringAnyBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putInt(position, NULL_STRING_LENGTH);
+    buf.putInt(position, NOT_FOUND_FLAG_VALUE);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    int stringSizeBytes = buf.getInt(position);
-    if (stringSizeBytes < 0) {
+    if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
       final Object object = valueSelector.getObject();
       String foundValue = DimensionHandlerUtils.convertObjectToString(object);
       if (foundValue != null) {
         ByteBuffer mutationBuffer = buf.duplicate();
-        mutationBuffer.position(position + Integer.BYTES);
-        mutationBuffer.limit(position + Integer.BYTES + maxStringBytes);
+        mutationBuffer.position(position + FOUND_VALUE_OFFSET);
+        mutationBuffer.limit(position + FOUND_VALUE_OFFSET + maxStringBytes);
         final int len = StringUtils.toUtf8WithLimit(foundValue, mutationBuffer);
         mutationBuffer.putInt(position, len);
+      } else {
+        buf.putInt(position, FOUND_AND_NULL_FLAG_VALUE);
       }
     }
   }

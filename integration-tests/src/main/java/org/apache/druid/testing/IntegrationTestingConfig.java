@@ -84,4 +84,10 @@ public interface IntegrationTestingConfig
   boolean manageKafkaTopic();
 
   String getExtraDatasourceNameSuffix();
+
+  String getCloudBucket();
+
+  String getCloudPath();
+
+  String getStreamEndpoint();
 }

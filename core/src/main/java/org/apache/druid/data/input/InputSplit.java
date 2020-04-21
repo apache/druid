@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Input unit for distributed batch ingestion. Used in {@link FiniteFirehoseFactory}.
+ * Input unit for distributed batch ingestion. Used in {@link org.apache.druid.data.input.impl.SplittableInputSource}.
  * An {@link InputSplit} represents the input data processed by a {@code org.apache.druid.indexing.common.task.Task}.
  */
 public class InputSplit<T>

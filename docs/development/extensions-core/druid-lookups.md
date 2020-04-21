@@ -34,10 +34,9 @@ This module can be used side to side with other lookup module like the global ca
 To use this extension please make sure to  [include](../../development/extensions.md#loading-extensions) `druid-lookups-cached-single` as an extension.
 
 > If using JDBC, you will need to add your database's client JAR files to the extension's directory.
-> For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/, and for Postgres, from
-> https://jdbc.postgresql.org/download.html or from `extensions/postgresql-metadata-storage/`.
-> Copy or symlink the downloaded file to
-> `extensions/druid-lookups-cached-single` under the distribution root directory.
+> For Postgres, the connector JAR is already included.
+> For MySQL, you can get it from https://dev.mysql.com/downloads/connector/j/.
+> Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.
 
 ## Architecture
 Generally speaking this module can be divided into two main component, namely, the data fetcher layer and caching layer.

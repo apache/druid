@@ -44,9 +44,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -113,9 +115,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     private volatile boolean started;
     private volatile boolean stopRequested;
 
-    PartitionResource(
-        StreamPartition<String> streamPartition
-    )
+    private volatile long currentLagMillis;
+
+    PartitionResource(StreamPartition<String> streamPartition)
     {
       this.streamPartition = streamPartition;
     }
@@ -148,6 +150,53 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       stopRequested = true;
     }
 
+    long getPartitionTimeLag()
+    {
+      return currentLagMillis;
+    }
+
+    long getPartitionTimeLag(String offset)
+    {
+      // if not started (fetching records in background), fetch lag ourself with a throw-away iterator
+      if (!started) {
+        try {
+          final String iteratorType;
+          final String offsetToUse;
+          if (offset == null || KinesisSupervisor.NOT_SET.equals(offset)) {
+            // this should probably check if will start processing earliest or latest rather than assuming earliest
+            // if latest we could skip this because latest will not be behind latest so lag is 0.
+            iteratorType = ShardIteratorType.TRIM_HORIZON.toString();
+            offsetToUse = null;
+          } else {
+            iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER.toString();
+            offsetToUse = offset;
+          }
+          String shardIterator = kinesis.getShardIterator(
+              streamPartition.getStream(),
+              streamPartition.getPartitionId(),
+              iteratorType,
+              offsetToUse
+          ).getShardIterator();
+
+          GetRecordsResult recordsResult = kinesis.getRecords(
+              new GetRecordsRequest().withShardIterator(shardIterator).withLimit(recordsPerFetch)
+          );
+
+          currentLagMillis = recordsResult.getMillisBehindLatest();
+          return currentLagMillis;
+        }
+        catch (Exception ex) {
+          // eat it
+          log.warn(
+              ex,
+              "Failed to determine partition lag for partition %s of stream %s",
+              streamPartition.getPartitionId(),
+              streamPartition.getStream()
+          );
+        }
+      }
+      return currentLagMillis;
+    }
 
     private Runnable getRecordRunnable()
     {
@@ -191,10 +240,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(
               shardIterator).withLimit(recordsPerFetch));
 
+          currentLagMillis = recordsResult.getMillisBehindLatest();
+
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
 
             final List<byte[]> data;
+
 
             if (deaggregate) {
               if (deaggregateHandle == null || getDataHandle == null) {
@@ -635,6 +687,27 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
 
     this.closed = true;
+  }
+
+  // this is only used for tests
+  @VisibleForTesting
+  Map<String, Long> getPartitionTimeLag()
+  {
+    return partitionResources.entrySet()
+                             .stream()
+                             .collect(
+                                 Collectors.toMap(k -> k.getKey().getPartitionId(), k -> k.getValue().getPartitionTimeLag())
+                             );
+  }
+
+  public Map<String, Long> getPartitionTimeLag(Map<String, String> currentOffsets)
+  {
+    Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
+    for (Map.Entry<StreamPartition<String>, PartitionResource> partition : partitionResources.entrySet()) {
+      final String partitionId = partition.getKey().getPartitionId();
+      partitionLag.put(partitionId, partition.getValue().getPartitionTimeLag(currentOffsets.get(partitionId)));
+    }
+    return partitionLag;
   }
 
   private void seekInternal(StreamPartition<String> partition, String sequenceNumber, ShardIteratorType iteratorEnum)

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.timeline.partition.ImmutablePartitionHolder;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.OvershadowableInteger;
 import org.apache.druid.timeline.partition.PartitionHolder;
@@ -225,22 +224,22 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   public void testFindEntry()
   {
     Assert.assertEquals(
-        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle("1", 1))),
+        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
         timeline.findEntry(Intervals.of("2011-10-01/2011-10-02"), "1")
     );
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle("1", 1))),
+        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
         timeline.findEntry(Intervals.of("2011-10-01/2011-10-01T10"), "1")
     );
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle("1", 1))),
+        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
         timeline.findEntry(Intervals.of("2011-10-01T02/2011-10-02"), "1")
     );
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle("1", 1))),
+        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
         timeline.findEntry(Intervals.of("2011-10-01T04/2011-10-01T17"), "1")
     );
 

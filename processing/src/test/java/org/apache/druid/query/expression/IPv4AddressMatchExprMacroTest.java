@@ -193,7 +193,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   {
     NotLiteralExpr(Expr arg)
     {
-      super(arg);
+      super("not", arg);
     }
 
     @Override

@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.view;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.druid.java.util.common.ISE;
@@ -37,20 +38,25 @@ public class InProcessViewManager implements ViewManager
 {
   private final ConcurrentMap<String, DruidViewMacro> views;
   private final Escalator escalator;
+  private final DruidViewMacroFactory druidViewMacroFactory;
 
   @Inject
+  @VisibleForTesting
   public InProcessViewManager(
-      final Escalator escalator
+      final Escalator escalator,
+      final DruidViewMacroFactory druidViewMacroFactory
   )
   {
     this.views = new ConcurrentHashMap<>();
     this.escalator = escalator;
+    this.druidViewMacroFactory = druidViewMacroFactory;
   }
 
   @Override
   public void createView(final PlannerFactory plannerFactory, final String viewName, final String viewSql)
   {
-    final TableMacro oldValue = views.putIfAbsent(viewName, new DruidViewMacro(plannerFactory, escalator, viewSql));
+    final TableMacro oldValue =
+        views.putIfAbsent(viewName, druidViewMacroFactory.create(plannerFactory, escalator, viewSql));
     if (oldValue != null) {
       throw new ISE("View[%s] already exists", viewName);
     }
@@ -59,7 +65,8 @@ public class InProcessViewManager implements ViewManager
   @Override
   public void alterView(final PlannerFactory plannerFactory, final String viewName, final String viewSql)
   {
-    final TableMacro oldValue = views.replace(viewName, new DruidViewMacro(plannerFactory, escalator, viewSql));
+    final TableMacro oldValue =
+        views.replace(viewName, druidViewMacroFactory.create(plannerFactory, escalator, viewSql));
     if (oldValue != null) {
       throw new ISE("View[%s] does not exist", viewName);
     }

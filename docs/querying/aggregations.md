@@ -22,6 +22,10 @@ title: "Aggregations"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the native
+> language. For information about aggregators available in SQL, refer to the
+> [SQL documentation](sql.md#aggregation-functions).
 
 Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Apache Druid.
 Aggregations can also be specified as part of many queries at query time.
@@ -238,7 +242,7 @@ Note that queries with first/last aggregators on a segment created with rollup e
 
 (Double/Float/Long/String) ANY aggregator cannot be used in ingestion spec, and should only be specified as part of queries.
 
-If `druid.generic.useDefaultValueForNull=true` aggregation can returns the default value for null and does not prefer "non-null" values over the default value for null. If `druid.generic.useDefaultValueForNull=false`, then aggregation will returns any non-null value.
+Returns any value including null. This aggregator can simplify and optimize the performance by returning the first encountered value (including null)
 
 #### `doubleAny` aggregator
 

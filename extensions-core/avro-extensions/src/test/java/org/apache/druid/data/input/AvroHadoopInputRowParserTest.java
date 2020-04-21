@@ -49,26 +49,26 @@ public class AvroHadoopInputRowParserTest
   }
 
   @Test
-  public void testParseNotFromSpark() throws IOException
+  public void testParseNotFromPigAvroStorage() throws IOException
   {
-    testParse(AvroStreamInputRowParserTest.buildSomeAvroDatum());
+    testParse(AvroStreamInputRowParserTest.buildSomeAvroDatum(), false);
   }
 
   @Test
-  public void testParseFromSpark() throws IOException
+  public void testParseFromPigAvroStorage() throws IOException
   {
-    testParse(buildAvroFromFile());
+    testParse(buildAvroFromFile(), true);
   }
 
-  private void testParse(GenericRecord record) throws IOException
+  private void testParse(GenericRecord record, boolean fromPigAvroStorage) throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(AvroStreamInputRowParserTest.PARSE_SPEC, fromPigAvroStorage);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
     );
     InputRow inputRow = parser2.parseBatch(record).get(0);
-    AvroStreamInputRowParserTest.assertInputRowCorrect(inputRow, AvroStreamInputRowParserTest.DIMENSIONS);
+    AvroStreamInputRowParserTest.assertInputRowCorrect(inputRow, AvroStreamInputRowParserTest.DIMENSIONS, fromPigAvroStorage);
   }
 
   private static GenericRecord buildAvroFromFile() throws IOException

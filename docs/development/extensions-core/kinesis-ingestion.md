@@ -137,7 +137,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 | `indexSpecForIntermediatePersists`    |                | Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. This can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | no (default = same as indexSpec)                                                                             |
 | `reportParseExceptions`               | Boolean        | If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | no (default == false)                                                                                        |
 | `handoffConditionTimeout`             | Long           | Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | no (default == 0)                                                                                            |
-| `resetOffsetAutomatically`            | Boolean        | Controls behavior when Druid needs to read Kinesis messages that are no longer available.<br/><br/>If false, the exception will bubble up, which will cause your tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation; potentially using the [Reset Supervisor API](../../operations/api-reference.html#supervisors). This mode is useful for production, since it will make you aware of issues with ingestion.<br/><br/>If true, Druid will automatically reset to the earlier or latest sequence number available in Kinesis, based on the value of the `useEarliestOffset` property (earliest if true, latest if false). Please note that this can lead to data being _DROPPED_ (if `useEarliestOffset` is false) or _DUPLICATED_ (if `useEarliestOffset` is true) without your knowledge. Messages will be logged indicating that a reset has occurred, but ingestion will continue. This mode is useful for non-production situations, since it will make Druid attempt to recover from problems automatically, even if they lead to quiet dropping or duplicating of data. | no (default == false) |
+| `resetOffsetAutomatically`            | Boolean        | Controls behavior when Druid needs to read Kinesis messages that are no longer available.<br/><br/>If false, the exception will bubble up, which will cause your tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation; potentially using the [Reset Supervisor API](../../operations/api-reference.html#supervisors). This mode is useful for production, since it will make you aware of issues with ingestion.<br/><br/>If true, Druid will automatically reset to the earlier or latest sequence number available in Kinesis, based on the value of the `useEarliestSequenceNumber` property (earliest if true, latest if false). Please note that this can lead to data being _DROPPED_ (if `useEarliestSequenceNumber` is false) or _DUPLICATED_ (if `useEarliestSequenceNumber` is true) without your knowledge. Messages will be logged indicating that a reset has occurred, but ingestion will continue. This mode is useful for non-production situations, since it will make Druid attempt to recover from problems automatically, even if they lead to quiet dropping or duplicating of data. | no (default == false) |
 | `skipSequenceNumberAvailabilityCheck` | Boolean        | Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If set to false, the indexing task will attempt to reset the current sequence number (or not), depending on the value of `resetOffsetAutomatically`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | no (default == false)                                                                                        |
 | `workerThreads`                       | Integer        | The number of threads that will be used by the supervisor for asynchronous operations.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | no (default == min(10, taskCount))                                                                           |
 | `chatThreads`                         | Integer        | The number of threads that will be used for communicating with indexing tasks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | no (default == min(10, taskCount * replicas))                                                                |
@@ -161,18 +161,12 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
+|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Roaring)|
 |dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
 |metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
 |longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using sequence number or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
 
 ##### Bitmap types
-
-For Concise bitmaps:
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|`type`|String|Must be `concise`.|yes|
 
 For Roaring bitmaps:
 
@@ -180,6 +174,12 @@ For Roaring bitmaps:
 |-----|----|-----------|--------|
 |`type`|String|Must be `roaring`.|yes|
 |`compressRunOnSerialization`|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
+
+For Concise bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|Must be `concise`.|yes|
 
 #### SegmentWriteOutMediumFactory
 
@@ -306,28 +306,34 @@ it will just ensure that no indexing tasks are running until the supervisor is r
 
 ### Resetting Supervisors
 
-To reset a running supervisor, you can use `POST /druid/indexer/v1/supervisor/<supervisorId>/reset`.
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/reset` operation clears stored 
+sequence numbers, causing the supervisor to start reading from either the earliest or 
+latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`). 
+After clearing stored sequence numbers, the supervisor kills and recreates active tasks, 
+so that tasks begin reading from valid sequence numbers. 
 
-The indexing service keeps track of the latest persisted Kinesis sequence number in order to provide exactly-once ingestion
-guarantees across tasks. Subsequent tasks must start reading from where the previous task completed in order for the
-generated segments to be accepted. If the messages at the expected starting sequence numbers are no longer available in Kinesis
-(typically because the message retention period has elapsed or the topic was removed and re-created) the supervisor will
-refuse to start and in-flight tasks will fail.
+Use care when using this operation! Resetting the supervisor may cause Kinesis messages 
+to be skipped or read twice, resulting in missing or duplicate data. 
 
-This endpoint can be used to clear the stored sequence numbers which will cause the supervisor to start reading from
-either the earliest or latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`). The supervisor must be
-running for this endpoint to be available. After the stored sequence numbers are cleared, the supervisor will automatically kill
-and re-create any active tasks so that tasks begin reading from valid sequence numbers.
+The reason for using this operation is to recover from a state in which the supervisor 
+ceases operating due to missing sequence numbers. The indexing service keeps track of the latest 
+persisted sequence number in order to provide exactly-once ingestion guarantees across 
+tasks. 
 
-Note that since the stored sequence numbers are necessary to guarantee exactly-once ingestion, resetting them with this endpoint
-may cause some Kinesis messages to be skipped or to be read twice.
+Subsequent tasks must start reading from where the previous task completed in 
+order for the generated segments to be accepted. If the messages at the expected starting sequence numbers are 
+no longer available in Kinesis (typically because the message retention period has elapsed or the topic was 
+removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This operation 
+enables you to recover from this condition. 
+
+Note that the supervisor must be running for this endpoint to be available.
 
 ### Terminating Supervisors
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` terminates a supervisor and causes all associated indexing
-tasks managed by this supervisor to immediately stop and begin
-publishing their segments. This supervisor will still exist in the metadata store and it's history may be retrieved
-with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can it's configuration
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` operation terminates a supervisor and causes
+all associated indexing tasks managed by this supervisor to immediately stop and begin
+publishing their segments. This supervisor will still exist in the metadata store and its history may be retrieved
+with the supervisor history API, but will not be listed in the 'get supervisors' API response nor can its configuration
 or status report be retrieved. The only way this supervisor can start again is by submitting a functioning supervisor
 spec to the create API.
 

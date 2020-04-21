@@ -55,7 +55,7 @@
         "baseDir" : "quickstart/tutorial",
         "filter" : "transform-data.json"
       },
-      "inpuFormat" : {
+      "inputFormat" : {
         "type" : "json"
       },
       "appendToExisting" : false

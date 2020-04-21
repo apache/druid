@@ -31,14 +31,14 @@ import java.util.Set;
 
 public interface IndexingServiceClient
 {
-  void killSegments(String dataSource, Interval interval);
+  void killUnusedSegments(String dataSource, Interval interval);
 
   int killPendingSegments(String dataSource, DateTime end);
 
   String compactSegments(
       List<DataSegment> segments,
       int compactionTaskPriority,
-      @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   );
 
@@ -46,7 +46,7 @@ public interface IndexingServiceClient
 
   String runTask(Object taskObject);
 
-  String killTask(String taskId);
+  String cancelTask(String taskId);
 
   /**
    * Gets all tasks that are waiting, pending, or running.

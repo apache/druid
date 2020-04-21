@@ -471,12 +471,14 @@ public class QueryRunnerTestHelper
                     segments
                 )) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
-                  QueryPlus queryPlusRunning = queryPlus.withQuerySegmentSpec(
-                      new SpecificSegmentSpec(
-                          new SegmentDescriptor(
-                              holder.getInterval(),
-                              holder.getVersion(),
-                              0
+                  QueryPlus queryPlusRunning = queryPlus.withQuery(
+                      queryPlus.getQuery().withQuerySegmentSpec(
+                          new SpecificSegmentSpec(
+                              new SegmentDescriptor(
+                                  holder.getInterval(),
+                                  holder.getVersion(),
+                                  0
+                              )
                           )
                       )
                   );

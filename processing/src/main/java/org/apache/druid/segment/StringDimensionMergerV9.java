@@ -224,17 +224,20 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     if (capabilities.hasMultipleValues()) {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
         encodedValueSerializer = V3CompressedVSizeColumnarMultiIntsSerializer.create(
+            dimensionName,
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
             compressionStrategy
         );
       } else {
-        encodedValueSerializer = new VSizeColumnarMultiIntsSerializer(segmentWriteOutMedium, cardinality);
+        encodedValueSerializer =
+            new VSizeColumnarMultiIntsSerializer(dimensionName, segmentWriteOutMedium, cardinality);
       }
     } else {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
         encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
+            dimensionName,
             segmentWriteOutMedium,
             filenameBase,
             cardinality,

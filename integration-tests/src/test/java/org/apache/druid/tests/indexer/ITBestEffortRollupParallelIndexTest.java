@@ -37,6 +37,7 @@ import java.util.function.Function;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTest
 {
+  // The task specs here use the MaxSizeSplitHintSpec with maxSplitSize of 1. This is to create splits per file.
   private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_parallel_index_queries.json";
   private static final String REINDEX_TASK = "/indexer/wikipedia_parallel_reindex_task.json";
@@ -89,7 +90,9 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           INDEX_TASK,
           rollupTransform,
           INDEX_QUERIES_RESOURCE,
-          false
+          false,
+          true,
+          true
       );
 
       // Index again, this time only choosing the second data file, and without explicit intervals chosen.
@@ -99,6 +102,8 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           REINDEX_TASK,
           rollupTransform,
           REINDEX_QUERIES_RESOURCE,
+          true,
+          true,
           true
       );
 

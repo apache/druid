@@ -412,8 +412,10 @@ public class BroadcastDistributionRuleTest
     Assert.assertFalse(stats.hasPerTierStats());
 
     Assert.assertTrue(
-        druidCluster.getAllServers().stream()
-                    .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
+        druidCluster
+            .getAllServers()
+            .stream()
+            .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
     );
   }
 }

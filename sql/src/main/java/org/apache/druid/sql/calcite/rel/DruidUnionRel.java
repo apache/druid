@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DruidUnionRel extends DruidRel<DruidUnionRel>
@@ -87,12 +88,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  public int getQueryCount()
-  {
-    return rels.stream().mapToInt(rel -> ((DruidRel) rel).getQueryCount()).sum();
-  }
-
-  @Override
   @SuppressWarnings("unchecked")
   public Sequence<Object[]> runQuery()
   {
@@ -114,7 +109,6 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
     throw new UnsupportedOperationException();
   }
 
-  @Nullable
   @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
@@ -166,12 +160,11 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
     return rels.stream()
                .flatMap(rel -> ((DruidRel<?>) rel).getDataSourceNames().stream())
-               .distinct()
-               .collect(Collectors.toList());
+               .collect(Collectors.toSet());
   }
 
   @Override
@@ -195,7 +188,7 @@ public class DruidUnionRel extends DruidRel<DruidUnionRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    return planner.getCostFactory().makeCost(rels.stream().mapToDouble(mq::getRowCount).sum(), 0, 0);
+    return planner.getCostFactory().makeCost(CostEstimates.COST_BASE, 0, 0);
   }
 
   public int getLimit()

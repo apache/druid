@@ -28,7 +28,7 @@ public class StringAnyAggregator implements Aggregator
 {
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
-
+  private boolean isFound;
   private String foundValue;
 
   public StringAnyAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes)
@@ -36,17 +36,19 @@ public class StringAnyAggregator implements Aggregator
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
     this.foundValue = null;
+    this.isFound = false;
   }
 
   @Override
   public void aggregate()
   {
-    if (foundValue == null) {
+    if (!isFound) {
       final Object object = valueSelector.getObject();
       foundValue = DimensionHandlerUtils.convertObjectToString(object);
       if (foundValue != null && foundValue.length() > maxStringBytes) {
         foundValue = foundValue.substring(0, maxStringBytes);
       }
+      isFound = true;
     }
   }
 

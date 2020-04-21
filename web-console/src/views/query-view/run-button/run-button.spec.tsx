@@ -22,9 +22,29 @@ import React from 'react';
 import { RunButton } from './run-button';
 
 describe('run button', () => {
-  it('matches snapshot', () => {
+  it('matches snapshot non-loading state', () => {
     const runButton = (
       <RunButton
+        loading={false}
+        onHistory={() => {}}
+        onEditContext={() => {}}
+        runeMode={false}
+        queryContext={{ f: 3 }}
+        onQueryContextChange={() => {}}
+        onRun={() => {}}
+        onExplain={() => {}}
+        onPrettier={() => {}}
+      />
+    );
+
+    const { container } = render(runButton);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot loading state', () => {
+    const runButton = (
+      <RunButton
+        loading
         onHistory={() => {}}
         onEditContext={() => {}}
         runeMode={false}

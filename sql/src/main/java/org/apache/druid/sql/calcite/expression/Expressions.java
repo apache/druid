@@ -53,6 +53,7 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
@@ -60,7 +61,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -94,7 +95,7 @@ public class Expressions
   {
     if (project == null) {
       // I don't think the factory impl matters here.
-      return RexInputRef.of(fieldNumber, rowSignature.getRelDataType(new JavaTypeFactoryImpl()));
+      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
     } else {
       return project.getChildExps().get(fieldNumber);
     }
@@ -132,9 +133,9 @@ public class Expressions
   /**
    * Translate a list of Calcite {@code RexNode} to Druid expressions, with the possibility of having postagg operands.
    *
-   * @param plannerContext SQL planner context
-   * @param rowSignature   signature of the rows to be extracted from
-   * @param rexNodes       list of Calcite expressions meant to be applied on top of the rows
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          signature of the rows to be extracted from
+   * @param rexNodes              list of Calcite expressions meant to be applied on top of the rows
    * @param postAggregatorVisitor visitor that manages postagg names and tracks postaggs that were created as
    *                              by the translation
    *
@@ -218,7 +219,7 @@ public class Expressions
   {
     // Translate field references.
     final RexInputRef ref = (RexInputRef) rexNode;
-    final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
+    final String columnName = rowSignature.getColumnName(ref.getIndex());
     if (columnName == null) {
       throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
     }
@@ -264,12 +265,7 @@ public class Expressions
           rexNode,
           postAggregatorVisitor
       );
-
-      if (expression == null) {
-        return null;
-      } else {
-        return expression;
-      }
+      return expression;
     }
   }
 
@@ -703,7 +699,7 @@ public class Expressions
     final Expr arg = expr.getArg();
     final Granularity granularity = expr.getGranularity();
 
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getIdentifierIfIdentifier())) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(arg.getBindingIfIdentifier())) {
       return granularity;
     } else {
       return null;

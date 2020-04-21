@@ -341,6 +341,7 @@ public class RealtimeIndexTask extends AbstractTask
         segmentPublisher,
         toolbox.getSegmentHandoffNotifierFactory(),
         toolbox.getQueryExecutorService(),
+        toolbox.getJoinableFactory(),
         toolbox.getIndexMergerV9(),
         toolbox.getIndexIO(),
         toolbox.getCache(),

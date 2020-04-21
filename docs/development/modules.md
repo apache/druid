@@ -46,6 +46,7 @@ Druid's extensions leverage Guice in order to add things at runtime.  Basically,
 1. Add new Jersey resources by calling `Jerseys.addResource(binder, clazz)`.
 1. Add new Jetty filters by extending `org.apache.druid.server.initialization.jetty.ServletFilterHolder`.
 1. Add new secret providers by extending `org.apache.druid.metadata.PasswordProvider`.
+1. Add new ingest transform by implementing the `org.apache.druid.segment.transform.Transform` interface from the `druid-processing` package.
 1. Bundle your extension with all the other Druid extensions
 
 Extensions are added to the system via an implementation of `org.apache.druid.initialization.DruidModule`.
@@ -238,6 +239,72 @@ In your implementation of `org.apache.druid.initialization.DruidModule`, `getJac
 ```
 
 where `SomePasswordProvider` is the implementation of `PasswordProvider` interface, you can have a look at `org.apache.druid.metadata.EnvironmentVariablePasswordProvider` for example.
+
+### Adding a Transform Extension
+
+To create a transform extension implement the `org.apache.druid.segment.transform.Transform` interface. You'll need to install the `druid-processing` package to import `org.apache.druid.segment.transform`.
+
+```java
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.transform.RowFunction;
+import org.apache.druid.segment.transform.Transform;
+
+public class MyTransform implements Transform {
+    private final String name;
+
+    @JsonCreator
+    public MyTransform(
+        @JsonProperty("name") final String name
+    ) {
+        this.name = name;
+    }
+
+    @JsonProperty
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public RowFunction getRowFunction() {
+        return new MyRowFunction();
+    }
+
+    static class MyRowFunction implements RowFunction {
+        @Override
+        public Object eval(Row row) {
+            return "transformed-value";
+        }
+    }
+}
+```
+
+Then register your transform as a Jackson module.
+
+```java
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedModule;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.inject.Binder;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.initialization.DruidModule;
+
+public class MyTransformModule implements DruidModule {
+    @Override
+    public List<? extends Module> getJacksonModules() {
+        return return ImmutableList.of(
+            new SimpleModule("MyTransformModule").registerSubtypes(
+                new NamedType(MyTransform.class, "my-transform")
+            )
+        ):
+    }
+
+    @Override
+    public void configure(Binder binder) {
+    }
+}
+```
 
 ### Bundle your extension with all the other Druid extensions
 

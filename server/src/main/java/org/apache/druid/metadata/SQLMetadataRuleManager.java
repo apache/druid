@@ -148,7 +148,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
    * the theoretical situation of two tasks scheduled in {@link #start()} calling {@link #poll()} concurrently, if
    * the sequence of {@link #start()} - {@link #stop()} - {@link #start()} actions occurs quickly.
    *
-   * {@link SQLMetadataSegmentManager} also have a similar issue.
+   * {@link SqlSegmentsMetadataManager} also have a similar issue.
    */
   private long currentStartOrder = -1;
   private ScheduledExecutorService exec = null;
@@ -408,7 +408,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         );
       }
       catch (Exception e) {
-        log.error(e, StringUtils.format("Exception while overriding rule for %s", dataSource));
+        log.error(e, "Exception while overriding rule for %s", dataSource);
         return false;
       }
     }
@@ -416,7 +416,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       poll();
     }
     catch (Exception e) {
-      log.error(e, StringUtils.format("Exception while polling for rules after overriding the rule for %s", dataSource));
+      log.error(e, "Exception while polling for rules after overriding the rule for %s", dataSource);
     }
     return true;
   }

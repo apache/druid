@@ -57,6 +57,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -281,6 +282,7 @@ public class AppenderatorTester implements AutoCloseable
         },
         emitter,
         queryExecutor,
+        NoopJoinableFactory.INSTANCE,
         MapCache.create(2048),
         new CacheConfig(),
         new CachePopulatorStats()

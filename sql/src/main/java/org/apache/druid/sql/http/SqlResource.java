@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.SqlLifecycleFactory;
@@ -88,6 +89,8 @@ public class SqlResource
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
 
+      lifecycle.setParameters(sqlQuery.getParameterList());
+      
       final PlannerContext plannerContext = lifecycle.planAndAuthorize(req);
       final DateTimeZone timeZone = plannerContext.getTimeZone();
 
@@ -151,7 +154,7 @@ public class SqlResource
                   }
                   catch (Exception ex) {
                     e = ex;
-                    log.error(ex, "Unable to send sql response [%s]", sqlQueryId);
+                    log.error(ex, "Unable to send SQL response [%s]", sqlQueryId);
                     throw new RuntimeException(ex);
                   }
                   finally {
@@ -168,6 +171,10 @@ public class SqlResource
         yielder0.close();
         throw new RuntimeException(e);
       }
+    }
+    catch (QueryCapacityExceededException cap) {
+      lifecycle.emitLogsAndMetrics(cap, remoteAddr, -1);
+      return Response.status(QueryCapacityExceededException.STATUS_CODE).entity(jsonMapper.writeValueAsBytes(cap)).build();
     }
     catch (ForbiddenException e) {
       throw e; // let ForbiddenExceptionMapper handle this

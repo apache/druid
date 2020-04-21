@@ -47,13 +47,39 @@ public interface ColumnProcessorFactory<T>
    */
   ValueType defaultType();
 
-  T makeDimensionProcessor(DimensionSelector selector);
+  /**
+   * Create a processor for a string column.
+   *
+   * @param selector   dimension selector
+   * @param multiValue whether the selector *might* have multiple values
+   */
+  T makeDimensionProcessor(DimensionSelector selector, boolean multiValue);
 
+  /**
+   * Create a processor for a float column.
+   *
+   * @param selector float selector
+   */
   T makeFloatProcessor(BaseFloatColumnValueSelector selector);
 
+  /**
+   * Create a processor for a double column.
+   *
+   * @param selector double selector
+   */
   T makeDoubleProcessor(BaseDoubleColumnValueSelector selector);
 
+  /**
+   * Create a processor for a long column.
+   *
+   * @param selector long selector
+   */
   T makeLongProcessor(BaseLongColumnValueSelector selector);
 
+  /**
+   * Create a processor for a complex column.
+   *
+   * @param selector object selector
+   */
   T makeComplexProcessor(BaseObjectColumnValueSelector<?> selector);
 }

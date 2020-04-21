@@ -23,11 +23,13 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.annotations.UsedInGeneratedCode;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.antlr.ExprBaseListener;
 import org.apache.druid.math.expr.antlr.ExprParser;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -77,7 +79,7 @@ public class ExprListenerImpl extends ExprBaseListener
         nodes.put(ctx, new UnaryNotExpr((Expr) nodes.get(ctx.getChild(1))));
         break;
       default:
-        throw new RuntimeException("Unrecognized unary operator " + ctx.getChild(0).getText());
+        throw new RE("Unrecognized unary operator %s", ctx.getChild(0).getText());
     }
   }
 
@@ -97,6 +99,7 @@ public class ExprListenerImpl extends ExprBaseListener
     );
   }
 
+
   @Override
   public void exitDoubleExpr(ExprParser.DoubleExprContext ctx)
   {
@@ -106,15 +109,6 @@ public class ExprListenerImpl extends ExprBaseListener
     );
   }
 
-  @Override
-  public void exitDoubleArray(ExprParser.DoubleArrayContext ctx)
-  {
-    Double[] values = new Double[ctx.DOUBLE().size()];
-    for (int i = 0; i < values.length; i++) {
-      values[i] = Double.parseDouble(ctx.DOUBLE(i).getText());
-    }
-    nodes.put(ctx, new DoubleArrayExpr(values));
-  }
 
   @Override
   public void exitAddSubExpr(ExprParser.AddSubExprContext ctx)
@@ -142,7 +136,7 @@ public class ExprListenerImpl extends ExprBaseListener
         );
         break;
       default:
-        throw new RuntimeException("Unrecognized binary operator " + ctx.getChild(1).getText());
+        throw new RE("Unrecognized binary operator %s", ctx.getChild(1).getText());
     }
   }
 
@@ -181,18 +175,8 @@ public class ExprListenerImpl extends ExprBaseListener
         );
         break;
       default:
-        throw new RuntimeException("Unrecognized binary operator " + ctx.getChild(1).getText());
+        throw new RE("Unrecognized binary operator %s", ctx.getChild(1).getText());
     }
-  }
-
-  @Override
-  public void exitLongArray(ExprParser.LongArrayContext ctx)
-  {
-    Long[] values = new Long[ctx.LONG().size()];
-    for (int i = 0; i < values.length; i++) {
-      values[i] = Long.parseLong(ctx.LONG(i).getText());
-    }
-    nodes.put(ctx, new LongArrayExpr(values));
   }
 
   @Override
@@ -273,7 +257,7 @@ public class ExprListenerImpl extends ExprBaseListener
         );
         break;
       default:
-        throw new RuntimeException("Unrecognized binary operator " + ctx.getChild(1).getText());
+        throw new RE("Unrecognized binary operator %s", ctx.getChild(1).getText());
     }
   }
 
@@ -313,7 +297,7 @@ public class ExprListenerImpl extends ExprBaseListener
         );
         break;
       default:
-        throw new RuntimeException("Unrecognized binary operator " + ctx.getChild(1).getText());
+        throw new RE("Unrecognized binary operator %s", ctx.getChild(1).getText());
     }
   }
 
@@ -404,19 +388,91 @@ public class ExprListenerImpl extends ExprBaseListener
   }
 
   @Override
+  public void exitDoubleArray(ExprParser.DoubleArrayContext ctx)
+  {
+    Double[] values = new Double[ctx.numericElement().size()];
+    for (int i = 0; i < values.length; i++) {
+      if (ctx.numericElement(i).NULL() != null) {
+        values[i] = null;
+      } else if (ctx.numericElement(i).LONG() != null) {
+        values[i] = Numbers.parseDoubleObject(ctx.numericElement(i).LONG().getText());
+      } else if (ctx.numericElement(i).DOUBLE() != null) {
+        values[i] = Numbers.parseDoubleObject(ctx.numericElement(i).DOUBLE().getText());
+      } else {
+        throw new RE("Failed to parse array element %s as a double", ctx.numericElement(i).getText());
+      }
+    }
+    nodes.put(ctx, new DoubleArrayExpr(values));
+  }
+
+  @Override
+  public void exitLongArray(ExprParser.LongArrayContext ctx)
+  {
+    Long[] values = new Long[ctx.longElement().size()];
+    for (int i = 0; i < values.length; i++) {
+      if (ctx.longElement(i).NULL() != null) {
+        values[i] = null;
+      } else if (ctx.longElement(i).LONG() != null) {
+        values[i] = Long.parseLong(ctx.longElement(i).LONG().getText());
+      } else {
+        throw new RE("Failed to parse array element %s as a long", ctx.longElement(i).getText());
+      }
+    }
+    nodes.put(ctx, new LongArrayExpr(values));
+  }
+
+  @Override
+  public void exitExplicitLongArray(ExprParser.ExplicitLongArrayContext ctx)
+  {
+    Long[] values = new Long[ctx.numericElement().size()];
+    for (int i = 0; i < values.length; i++) {
+      if (ctx.numericElement(i).NULL() != null) {
+        values[i] = null;
+      } else if (ctx.numericElement(i).LONG() != null) {
+        values[i] = Numbers.parseLongObject(ctx.numericElement(i).LONG().getText());
+      } else if (ctx.numericElement(i).DOUBLE() != null) {
+        values[i] = Numbers.parseLongObject(ctx.numericElement(i).DOUBLE().getText());
+      } else {
+        throw new RE("Failed to parse array element %s as a long", ctx.numericElement(i).getText());
+      }
+    }
+    nodes.put(ctx, new LongArrayExpr(values));
+  }
+
+  @Override
   public void exitStringArray(ExprParser.StringArrayContext ctx)
   {
-    String[] values = new String[ctx.STRING().size()];
+    String[] values = new String[ctx.stringElement().size()];
     for (int i = 0; i < values.length; i++) {
-      values[i] = escapeStringLiteral(ctx.STRING(i).getText());
+      if (ctx.stringElement(i).NULL() != null) {
+        values[i] = null;
+      } else if (ctx.stringElement(i).STRING() != null) {
+        values[i] = escapeStringLiteral(ctx.stringElement(i).STRING().getText());
+      } else {
+        throw new RE("Failed to parse array: element %s is not a string", ctx.stringElement(i).getText());
+      }
     }
     nodes.put(ctx, new StringArrayExpr(values));
   }
 
   @Override
-  public void exitEmptyArray(ExprParser.EmptyArrayContext ctx)
+  public void exitExplicitStringArray(ExprParser.ExplicitStringArrayContext ctx)
   {
-    nodes.put(ctx, new StringArrayExpr(new String[0]));
+    String[] values = new String[ctx.literalElement().size()];
+    for (int i = 0; i < values.length; i++) {
+      if (ctx.literalElement(i).NULL() != null) {
+        values[i] = null;
+      } else if (ctx.literalElement(i).STRING() != null) {
+        values[i] = escapeStringLiteral(ctx.literalElement(i).STRING().getText());
+      } else if (ctx.literalElement(i).DOUBLE() != null) {
+        values[i] = ctx.literalElement(i).DOUBLE().getText();
+      } else if (ctx.literalElement(i).LONG() != null) {
+        values[i] = ctx.literalElement(i).LONG().getText();
+      } else {
+        throw new RE("Failed to parse array element %s as a string", ctx.literalElement(i).getText());
+      }
+    }
+    nodes.put(ctx, new StringArrayExpr(values));
   }
 
   /**
@@ -455,8 +511,12 @@ public class ExprListenerImpl extends ExprBaseListener
   /**
    * Remove single quote from a string literal, returning unquoted string value
    */
+  @Nullable
   private static String escapeStringLiteral(String text)
   {
+    if (text.equalsIgnoreCase(Expr.NULL_LITERAL)) {
+      return null;
+    }
     String unquoted = text.substring(1, text.length() - 1);
     return unquoted.indexOf('\\') >= 0 ? StringEscapeUtils.unescapeJava(unquoted) : unquoted;
   }

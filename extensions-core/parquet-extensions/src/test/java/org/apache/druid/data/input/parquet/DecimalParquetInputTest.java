@@ -45,7 +45,7 @@ public class DecimalParquetInputTest extends BaseParquetInputTest
 
   private final String parserType;
 
-  public DecimalParquetInputTest(String parserType) throws IOException
+  public DecimalParquetInputTest(String parserType)
   {
     this.parserType = parserType;
   }

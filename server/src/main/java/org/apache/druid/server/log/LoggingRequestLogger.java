@@ -20,21 +20,16 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.server.RequestLogLine;
 import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class LoggingRequestLogger implements RequestLogger
 {
@@ -66,7 +61,7 @@ public class LoggingRequestLogger implements RequestLogger
           final Query query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
           MDC.put("sqlQueryId", StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
-          MDC.put("dataSource", findInnerDatasource(query).toString());
+          MDC.put("dataSource", String.join(",", query.getDataSource().getTableNames()));
           MDC.put("queryType", query.getType());
           MDC.put("isNested", String.valueOf(!(query.getDataSource() instanceof TableDataSource)));
           MDC.put("hasFilters", Boolean.toString(query.hasFilters()));
@@ -117,30 +112,6 @@ public class LoggingRequestLogger implements RequestLogger
   public boolean isSetContextMDC()
   {
     return setContextMDC;
-  }
-
-  private Object findInnerDatasource(Query query)
-  {
-    DataSource _ds = query.getDataSource();
-    if (_ds instanceof TableDataSource) {
-      return ((TableDataSource) _ds).getName();
-    }
-    if (_ds instanceof QueryDataSource) {
-      return findInnerDatasource(((QueryDataSource) _ds).getQuery());
-    }
-    if (_ds instanceof UnionDataSource) {
-      return Joiner.on(",")
-                   .join(
-                       ((UnionDataSource) _ds)
-                           .getDataSources()
-                           .stream()
-                           .map(TableDataSource::getName)
-                           .collect(Collectors.toList())
-                   );
-    } else {
-      // should not come here
-      return query.getDataSource();
-    }
   }
 
   @Override

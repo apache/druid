@@ -37,8 +37,9 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -48,6 +49,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -87,8 +89,7 @@ public class QueryMaker
     final Query<?> query = druidQuery.getQuery();
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()) {
-      final Query<?> innerMostQuery = findInnerMostQuery(query);
-      if (innerMostQuery.getIntervals().equals(Intervals.ONLY_ETERNITY)) {
+      if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
@@ -103,11 +104,11 @@ public class QueryMaker
       // just as fast as a timeseries query (a noble goal) we can remove timeseries queries from the SQL layer and
       // also remove this hack.
       final String timeDimension = Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions()).getOutputName();
-      rowOrder = druidQuery.getOutputRowSignature().getRowOrder().stream()
+      rowOrder = druidQuery.getOutputRowSignature().getColumnNames().stream()
                            .map(f -> timeDimension.equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
                            .collect(Collectors.toList());
     } else {
-      rowOrder = druidQuery.getOutputRowSignature().getRowOrder();
+      rowOrder = druidQuery.getOutputRowSignature().getColumnNames();
     }
 
     return execute(
@@ -121,13 +122,12 @@ public class QueryMaker
     );
   }
 
-  private Query<?> findInnerMostQuery(Query outerQuery)
+  private List<Interval> findBaseDataSourceIntervals(Query<?> query)
   {
-    Query<?> query = outerQuery;
-    while (query.getDataSource() instanceof QueryDataSource) {
-      query = ((QueryDataSource) query.getDataSource()).getQuery();
-    }
-    return query;
+    return DataSourceAnalysis.forDataSource(query.getDataSource())
+                             .getBaseQuerySegmentSpec()
+                             .map(QuerySegmentSpec::getIntervals)
+                             .orElse(query.getIntervals());
   }
 
   private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)
@@ -153,7 +153,7 @@ public class QueryMaker
 
     //noinspection unchecked
     final QueryToolChest<T, Query<T>> toolChest = queryLifecycle.getToolChest();
-    final List<String> resultArrayFields = toolChest.resultArrayFields(query);
+    final List<String> resultArrayFields = toolChest.resultArraySignature(query).getColumnNames();
     final Sequence<Object[]> resultArrays = toolChest.resultsAsArrays(query, results);
 
     return remapFields(resultArrays, resultArrayFields, newFields, newTypes);

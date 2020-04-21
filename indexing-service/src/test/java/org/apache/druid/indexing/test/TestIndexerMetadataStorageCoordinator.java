@@ -31,7 +31,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -52,7 +52,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public DataSourceMetadata getDataSourceMetadata(String dataSource)
+  public DataSourceMetadata retrieveDataSourceMetadata(String dataSource)
   {
     throw new UnsupportedOperationException();
   }
@@ -76,19 +76,29 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval)
-  {
-    return ImmutableList.of();
-  }
-  
-  @Override
-  public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals, Segments visibility)
+  public List<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
     return ImmutableList.of();
   }
 
   @Override
-  public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource)
+  {
+    return ImmutableList.of();
+  }
+
+  @Override
+  public List<DataSegment> retrieveUsedSegmentsForIntervals(
+      String dataSource,
+      List<Interval> intervals,
+      Segments visibility
+  )
+  {
+    return ImmutableList.of();
+  }
+
+  @Override
+  public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
   {
     synchronized (unusedSegments) {
       return ImmutableList.copyOf(unusedSegments);
@@ -134,7 +144,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String sequenceName,
       String previousSegmentId,
       Interval interval,
-      ShardSpecFactory shardSpecFactory,
+      PartialShardSpec partialShardSpec,
       String maxVersion,
       boolean skipSegmentLineageCheck
   )
@@ -143,12 +153,18 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
         dataSource,
         interval,
         maxVersion,
-        shardSpecFactory.create(objectMapper, 0)
+        partialShardSpec.complete(objectMapper, 0)
     );
   }
 
   @Override
-  public int deletePendingSegments(String dataSource, Interval deleteInterval)
+  public int deletePendingSegmentsCreatedInInterval(String dataSource, Interval deleteInterval)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int deletePendingSegments(String dataSource)
   {
     throw new UnsupportedOperationException();
   }

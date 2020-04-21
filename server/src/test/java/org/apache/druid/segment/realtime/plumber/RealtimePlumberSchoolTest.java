@@ -50,6 +50,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
@@ -225,6 +226,7 @@ public class RealtimePlumberSchoolTest
         segmentPublisher,
         handoffNotifierFactory,
         Execs.directExecutor(),
+        NoopJoinableFactory.INSTANCE,
         TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory),
         TestHelper.getTestIndexIO(),
         MapCache.create(0),

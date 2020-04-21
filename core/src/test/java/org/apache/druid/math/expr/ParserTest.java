@@ -22,9 +22,12 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +38,9 @@ import java.util.Set;
  */
 public class ParserTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSimple()
   {
@@ -186,11 +192,96 @@ public class ParserTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testLiteralArrays()
+  public void testLiteralArraysHomogeneousElements()
   {
     validateConstantExpression("[1.0, 2.345]", new Double[]{1.0, 2.345});
     validateConstantExpression("[1, 3]", new Long[]{1L, 3L});
-    validateConstantExpression("[\'hello\', \'world\']", new String[]{"hello", "world"});
+    validateConstantExpression("['hello', 'world']", new String[]{"hello", "world"});
+  }
+
+  @Test
+  public void testLiteralArraysHomogeneousOrNullElements()
+  {
+    validateConstantExpression("[1.0, null, 2.345]", new Double[]{1.0, null, 2.345});
+    validateConstantExpression("[null, 1, 3]", new Long[]{null, 1L, 3L});
+    validateConstantExpression("['hello', 'world', null]", new String[]{"hello", "world", null});
+  }
+
+  @Test
+  public void testLiteralArraysEmptyAndAllNullImplicitAreString()
+  {
+    validateConstantExpression("[]", new String[0]);
+    validateConstantExpression("[null, null, null]", new String[]{null, null, null});
+  }
+
+  @Test
+  public void testLiteralArraysImplicitTypedNumericMixed()
+  {
+    // implicit typed numeric arrays with mixed elements are doubles
+    validateConstantExpression("[1, null, 2000.0]", new Double[]{1.0, null, 2000.0});
+    validateConstantExpression("[1.0, null, 2000]", new Double[]{1.0, null, 2000.0});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitTypedEmpties()
+  {
+    validateConstantExpression("<STRING>[]", new String[0]);
+    validateConstantExpression("<DOUBLE>[]", new Double[0]);
+    validateConstantExpression("<LONG>[]", new Long[0]);
+  }
+
+  @Test
+  public void testLiteralArraysExplicitAllNull()
+  {
+    validateConstantExpression("<DOUBLE>[null, null, null]", new Double[]{null, null, null});
+    validateConstantExpression("<LONG>[null, null, null]", new Long[]{null, null, null});
+    validateConstantExpression("<STRING>[null, null, null]", new String[]{null, null, null});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitTypes()
+  {
+    validateConstantExpression("<DOUBLE>[1.0, null, 2000.0]", new Double[]{1.0, null, 2000.0});
+    validateConstantExpression("<LONG>[3, null, 4]", new Long[]{3L, null, 4L});
+    validateConstantExpression("<STRING>['foo', 'bar', 'baz']", new String[]{"foo", "bar", "baz"});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitTypesMixedElements()
+  {
+    // explicit typed numeric arrays mixed numeric types should coerce to the correct explicit type
+    validateConstantExpression("<DOUBLE>[3, null, 4, 2.345]", new Double[]{3.0, null, 4.0, 2.345});
+    validateConstantExpression("<LONG>[1.0, null, 2000.0]", new Long[]{1L, null, 2000L});
+
+    // explicit typed string arrays should accept any literal and convert to string
+    validateConstantExpression("<STRING>['1', null, 2000, 1.1]", new String[]{"1", null, "2000", "1.1"});
+  }
+
+  @Test
+  public void testLiteralArrayImplicitStringParseException()
+  {
+    // implicit typed string array cannot handle literals thate are not null or string
+    expectedException.expect(RE.class);
+    expectedException.expectMessage("Failed to parse array: element 2000 is not a string");
+    validateConstantExpression("['1', null, 2000, 1.1]", new String[]{"1", null, "2000", "1.1"});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitLongParseException()
+  {
+    // explicit typed long arrays only handle numeric types
+    expectedException.expect(RE.class);
+    expectedException.expectMessage("Failed to parse array element '2000' as a long");
+    validateConstantExpression("<LONG>[1, null, '2000']", new Long[]{1L, null, 2000L});
+  }
+
+  @Test
+  public void testLiteralArraysExplicitDoubleParseException()
+  {
+    // explicit typed double arrays only handle numeric types
+    expectedException.expect(RE.class);
+    expectedException.expectMessage("Failed to parse array element '2000.0' as a double");
+    validateConstantExpression("<DOUBLE>[1.0, null, '2000.0']", new Double[]{1.0, null, 2000.0});
   }
 
   @Test
@@ -454,8 +545,17 @@ public class ParserTest extends InitializedNullHandlingTest
 
   private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
   {
-    Assert.assertEquals(expression, withoutFlatten, Parser.parse(expression, ExprMacroTable.nil(), false).toString());
-    Assert.assertEquals(expression, withFlatten, Parser.parse(expression, ExprMacroTable.nil(), true).toString());
+    Expr notFlat = Parser.parse(expression, ExprMacroTable.nil(), false);
+    Expr flat = Parser.parse(expression, ExprMacroTable.nil(), true);
+    Assert.assertEquals(expression, withoutFlatten, notFlat.toString());
+    Assert.assertEquals(expression, withFlatten, flat.toString());
+
+    Expr notFlatRoundTrip = Parser.parse(notFlat.stringify(), ExprMacroTable.nil(), false);
+    Expr flatRoundTrip = Parser.parse(flat.stringify(), ExprMacroTable.nil(), true);
+    Assert.assertEquals(expression, withoutFlatten, notFlatRoundTrip.toString());
+    Assert.assertEquals(expression, withFlatten, flatRoundTrip.toString());
+    Assert.assertEquals(notFlat.stringify(), notFlatRoundTrip.stringify());
+    Assert.assertEquals(flat.stringify(), flatRoundTrip.stringify());
   }
 
   private void validateParser(String expression, String expected, List<String> identifiers)
@@ -482,6 +582,14 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(expression, identifiers, deets.getRequiredBindingsList());
     Assert.assertEquals(expression, scalars, deets.getScalarVariables());
     Assert.assertEquals(expression, arrays, deets.getArrayVariables());
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr roundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
+    final Expr.BindingDetails roundTripDeets = roundTrip.analyzeInputs();
+    Assert.assertEquals(expression, identifiers, roundTripDeets.getRequiredBindingsList());
+    Assert.assertEquals(expression, scalars, roundTripDeets.getScalarVariables());
+    Assert.assertEquals(expression, arrays, roundTripDeets.getArrayVariables());
   }
 
   private void validateApplyUnapplied(
@@ -497,23 +605,56 @@ public class ParserTest extends InitializedNullHandlingTest
     final Expr transformed = Parser.applyUnappliedBindings(parsed, deets, identifiers);
     Assert.assertEquals(expression, unapplied, parsed.toString());
     Assert.assertEquals(applied, applied, transformed.toString());
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    final Expr parsedRoundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Expr.BindingDetails roundTripDeets = parsedRoundTrip.analyzeInputs();
+    Parser.validateExpr(parsedRoundTrip, roundTripDeets);
+    final Expr transformedRoundTrip = Parser.applyUnappliedBindings(parsedRoundTrip, roundTripDeets, identifiers);
+    Assert.assertEquals(expression, unapplied, parsedRoundTrip.toString());
+    Assert.assertEquals(applied, applied, transformedRoundTrip.toString());
+
+    Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
+    Assert.assertEquals(transformed.stringify(), transformedRoundTrip.stringify());
   }
 
   private void validateConstantExpression(String expression, Object expected)
   {
+    Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(
         expression,
         expected,
-        Parser.parse(expression, ExprMacroTable.nil()).eval(Parser.withMap(ImmutableMap.of())).value()
+        parsed.eval(Parser.withMap(ImmutableMap.of())).value()
     );
+
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    Expr parsedRoundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Assert.assertEquals(
+        expression,
+        expected,
+        parsedRoundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+    );
+    Assert.assertEquals(parsed.stringify(), parsedRoundTrip.stringify());
   }
 
   private void validateConstantExpression(String expression, Object[] expected)
   {
+    Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
+    Object evaluated = parsed.eval(Parser.withMap(ImmutableMap.of())).value();
     Assert.assertArrayEquals(
         expression,
         expected,
-        (Object[]) Parser.parse(expression, ExprMacroTable.nil()).eval(Parser.withMap(ImmutableMap.of())).value()
+        (Object[]) evaluated
     );
+
+    Assert.assertEquals(expected.getClass(), evaluated.getClass());
+    final Expr parsedNoFlatten = Parser.parse(expression, ExprMacroTable.nil(), false);
+    Expr roundTrip = Parser.parse(parsedNoFlatten.stringify(), ExprMacroTable.nil());
+    Assert.assertArrayEquals(
+        expression,
+        expected,
+        (Object[]) roundTrip.eval(Parser.withMap(ImmutableMap.of())).value()
+    );
+    Assert.assertEquals(parsed.stringify(), roundTrip.stringify());
   }
 }

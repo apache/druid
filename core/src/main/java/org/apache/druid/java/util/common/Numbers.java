@@ -118,6 +118,7 @@ public final class Numbers
     }
   }
 
+
   /**
    * Try parsing the given Number or String object val as long.
    * @param val
@@ -165,6 +166,45 @@ public final class Numbers
     } else {
       throw new IAE("Unknown object type [%s]", val.getClass().getName());
     }
+  }
+
+  /**
+   * Like {@link #tryParseDouble}, but does not produce a primitive and will explode if unable to produce a Double
+   * similar to {@link Double#parseDouble}
+   */
+  @Nullable
+  public static Double parseDoubleObject(@Nullable String val)
+  {
+    if (val == null) {
+      return null;
+    }
+    Double d = Doubles.tryParse(val);
+    if (d != null) {
+      return d;
+    }
+    throw new NumberFormatException("Cannot parse string to double");
+  }
+
+  /**
+   * Like {@link #tryParseLong} but does not produce a primitive and will explode if unable to produce a Long
+   * similar to {@link Long#parseLong}
+   */
+  @Nullable
+  public static Long parseLongObject(@Nullable String val)
+  {
+    if (val == null) {
+      return null;
+    }
+    Long lobj = Longs.tryParse(val);
+    if (lobj != null) {
+      return lobj;
+    }
+    // try as a double, for "ddd.dd" , Longs.tryParse(..) returns null
+    Double dobj = Doubles.tryParse((String) val);
+    if (dobj != null) {
+      return dobj.longValue();
+    }
+    throw new NumberFormatException("Cannot parse string to long");
   }
 
   public static int toIntExact(long value, String error)

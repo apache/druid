@@ -92,9 +92,6 @@
       "development/extensions-contrib/ambari-metrics-emitter": {
         "title": "Ambari Metrics Emitter"
       },
-      "development/extensions-contrib/azure": {
-        "title": "Microsoft Azure"
-      },
       "development/extensions-contrib/cassandra": {
         "title": "Apache Cassandra"
       },
@@ -123,7 +120,7 @@
         "title": "Moment Sketches for Approximate Quantiles module"
       },
       "development/extensions-contrib/moving-average-query": {
-        "title": "development/extensions-contrib/moving-average-query"
+        "title": "Moving Average Query"
       },
       "development/extensions-contrib/opentsdb-emitter": {
         "title": "OpenTSDB Emitter"
@@ -152,6 +149,9 @@
       "development/extensions-core/avro": {
         "title": "Apache Avro"
       },
+      "development/extensions-core/azure": {
+        "title": "Microsoft Azure"
+      },
       "development/extensions-core/bloom-filter": {
         "title": "Bloom Filter"
       },
@@ -178,6 +178,12 @@
       },
       "development/extensions-core/druid-lookups": {
         "title": "Cached Lookup Module"
+      },
+      "development/extensions-core/druid-pac4j": {
+        "title": "Druid pac4j based Security extension"
+      },
+      "development/extensions-core/druid-ranger-security": {
+        "title": "Apache Ranger Security"
       },
       "development/extensions-core/examples": {
         "title": "Extension Examples"
@@ -377,20 +383,23 @@
         "sidebar_label": "DatasourceMetadata"
       },
       "querying/dimensionspecs": {
-        "title": "Transforming Dimension Values"
+        "title": "Query dimensions",
+        "sidebar_label": "Dimensions"
       },
       "querying/filters": {
-        "title": "Query Filters"
+        "title": "Query filters",
+        "sidebar_label": "Filters"
       },
       "querying/granularities": {
-        "title": "Aggregation Granularity"
+        "title": "Query granularities",
+        "sidebar_label": "Granularities"
       },
       "querying/groupbyquery": {
         "title": "GroupBy queries",
         "sidebar_label": "GroupBy"
       },
       "querying/having": {
-        "title": "Filter groupBy query results"
+        "title": "Having filters (groupBy)"
       },
       "querying/hll-old": {
         "title": "Cardinality/HyperUnique aggregators"
@@ -399,7 +408,7 @@
         "title": "Joins"
       },
       "querying/limitspec": {
-        "title": "Sort groupBy query results"
+        "title": "Sorting and limiting (groupBy)"
       },
       "querying/lookups": {
         "title": "Lookups"
@@ -408,17 +417,21 @@
         "title": "Multi-value dimensions"
       },
       "querying/multitenancy": {
-        "title": "Multitenancy considerations"
+        "title": "Multitenancy considerations",
+        "sidebar_label": "Multitenancy"
       },
       "querying/post-aggregations": {
-        "title": "Post-Aggregations"
+        "title": "Postaggregations"
       },
       "querying/query-context": {
-        "title": "Query context"
+        "title": "Query context",
+        "sidebar_label": "Context parameters"
+      },
+      "querying/query-execution": {
+        "title": "Query execution"
       },
       "querying/querying": {
-        "title": "Native queries",
-        "sidebar_label": "Making native queries"
+        "title": "Native queries"
       },
       "querying/scan-query": {
         "title": "Scan queries",
@@ -427,9 +440,6 @@
       "querying/searchquery": {
         "title": "Search queries",
         "sidebar_label": "Search"
-      },
-      "querying/searchqueryspec": {
-        "title": "Refining search queries"
       },
       "querying/segmentmetadataquery": {
         "title": "SegmentMetadata queries",
@@ -440,7 +450,7 @@
         "sidebar_label": "Select"
       },
       "querying/sorting-orders": {
-        "title": "Sorting Orders"
+        "title": "String comparators"
       },
       "querying/sql": {
         "title": "SQL",
@@ -455,17 +465,20 @@
         "sidebar_label": "Timeseries"
       },
       "querying/topnmetricspec": {
-        "title": "TopNMetricSpec"
+        "title": "Sorting (topN)"
       },
       "querying/topnquery": {
         "title": "TopN queries",
         "sidebar_label": "TopN"
       },
       "querying/virtual-columns": {
-        "title": "Virtual Columns"
+        "title": "Virtual columns"
       },
       "tutorials/cluster": {
         "title": "Clustered deployment"
+      },
+      "tutorials/docker": {
+        "title": "Docker"
       },
       "tutorials/index": {
         "title": "Quickstart"
@@ -532,7 +545,7 @@
       "Getting started": "Getting started",
       "Tutorials": "Tutorials",
       "Design": "Design",
-      "Data ingestion": "Data ingestion",
+      "Ingestion": "Ingestion",
       "Querying": "Querying",
       "Configuration": "Configuration",
       "Operations": "Operations",

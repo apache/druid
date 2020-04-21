@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -67,6 +68,26 @@ public class V3CompressedVSizeColumnarMultiIntsSupplier implements WritableSuppl
       CompressedVSizeColumnarIntsSupplier valueSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
           order
+      );
+      return new V3CompressedVSizeColumnarMultiIntsSupplier(offsetSupplier, valueSupplier);
+    }
+    throw new IAE("Unknown version[%s]", versionFromBuffer);
+  }
+
+  public static V3CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper mapper)
+  {
+    byte versionFromBuffer = buffer.get();
+
+    if (versionFromBuffer == VERSION) {
+      CompressedColumnarIntsSupplier offsetSupplier = CompressedColumnarIntsSupplier.fromByteBuffer(
+          buffer,
+          order,
+          mapper
+      );
+      CompressedVSizeColumnarIntsSupplier valueSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+          buffer,
+          order,
+          mapper
       );
       return new V3CompressedVSizeColumnarMultiIntsSupplier(offsetSupplier, valueSupplier);
     }

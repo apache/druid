@@ -146,7 +146,8 @@ Returns a list of all segments for a datasource with the full segment metadata a
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}`
 
-Returns full segment metadata for a specific segment as stored in the metadata store.
+Returns full segment metadata for a specific segment as stored in the metadata store, if the segment is used. If the
+segment is unused, or is unknown, a 404 response is returned.
 
 ##### POST
 
@@ -360,6 +361,15 @@ Returns total size and count for each interval within given isointerval.
 * `/druid/coordinator/v1/intervals/{interval}?full`
 
 Returns total size and count for each datasource for each interval within given isointerval.
+
+#### Compaction Status
+
+##### GET
+
+* `/druid/coordinator/v1/compaction/progress?dataSource={dataSource}`
+
+Returns the total size of segments awaiting compaction for the given dataSource. 
+This is only valid for dataSource which has compaction enabled. 
 
 #### Compaction Configuration
 

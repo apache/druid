@@ -33,7 +33,7 @@ import java.util.Set;
 public class NoopIndexingServiceClient implements IndexingServiceClient
 {
   @Override
-  public void killSegments(String dataSource, Interval interval)
+  public void killUnusedSegments(String dataSource, Interval interval)
   {
 
   }
@@ -48,7 +48,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   public String compactSegments(
       List<DataSegment> segments,
       int compactionTaskPriority,
-      @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   )
   {
@@ -68,7 +68,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public String killTask(String taskId)
+  public String cancelTask(String taskId)
   {
     return null;
   }

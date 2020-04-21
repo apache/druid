@@ -23,7 +23,6 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.GenericColumnSerializer;
@@ -41,8 +40,6 @@ import java.nio.ByteBuffer;
 
 public class FixedBucketsHistogramSerde extends ComplexMetricSerde
 {
-  private static final Logger LOG = new Logger(FixedBucketsHistogramSerde.class);
-
   private static Ordering<FixedBucketsHistogram> comparator = new Ordering<FixedBucketsHistogram>()
   {
     @Override
@@ -113,7 +110,7 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
         } else if (rawValue instanceof String) {
           Number numberAttempt;
           try {
-            numberAttempt = Rows.objectToNumber(metricName, rawValue);
+            numberAttempt = Rows.objectToNumber(metricName, rawValue, true);
             FixedBucketsHistogram fbh = new FixedBucketsHistogram(
                 aggregatorFactory.getLowerLimit(),
                 aggregatorFactory.getUpperLimit(),

@@ -34,7 +34,7 @@ public class TasksTest
 {
 
   @Test
-  public void testComputeCompactIntervals()
+  public void testComputeCondensedIntervals()
   {
     final SortedSet<Interval> inputIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
     for (int m = 1; m < 13; m++) {
@@ -59,23 +59,23 @@ public class TasksTest
 
     inputIntervals.add(Intervals.of("2017-12-31/2018-01-01"));
 
-    final SortedSet<Interval> compactIntervals = Tasks.computeCompactIntervals(inputIntervals);
-    final Iterator<Interval> compactIntervalIterator = compactIntervals.iterator();
-    Assert.assertTrue(compactIntervalIterator.hasNext());
+    final SortedSet<Interval> condensedIntervals = Tasks.computeCondensedIntervals(inputIntervals);
+    final Iterator<Interval> condensedIntervalIterator = condensedIntervals.iterator();
+    Assert.assertTrue(condensedIntervalIterator.hasNext());
 
-    Interval compactInterval = compactIntervalIterator.next();
+    Interval condensedInterval = condensedIntervalIterator.next();
     final SortedSet<Interval> checkedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
     for (Interval inputInterval : inputIntervals) {
-      if (!compactInterval.contains(inputInterval)) {
-        if (compactIntervalIterator.hasNext()) {
-          compactInterval = compactIntervalIterator.next();
-          Assert.assertTrue(compactInterval.contains(inputInterval));
+      if (!condensedInterval.contains(inputInterval)) {
+        if (condensedIntervalIterator.hasNext()) {
+          condensedInterval = condensedIntervalIterator.next();
+          Assert.assertTrue(condensedInterval.contains(inputInterval));
         }
       }
       checkedIntervals.add(inputInterval);
     }
 
-    Assert.assertFalse(compactIntervalIterator.hasNext());
+    Assert.assertFalse(condensedIntervalIterator.hasNext());
     Assert.assertEquals(inputIntervals, checkedIntervals);
   }
 

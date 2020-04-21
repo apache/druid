@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilterUtils;
@@ -136,13 +137,17 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public ExtractionFn getExtractionFn()
   {
-    final LookupExtractor lookupExtractor = Strings.isNullOrEmpty(name)
-                                            ? this.lookup
-                                            : Preconditions.checkNotNull(
-                                                lookupExtractorFactoryContainerProvider.get(name),
-                                                "Lookup [%s] not found",
-                                                name
-                                            ).getLookupExtractorFactory().get();
+    final LookupExtractor lookupExtractor;
+
+    if (Strings.isNullOrEmpty(name)) {
+      lookupExtractor = this.lookup;
+    } else {
+      lookupExtractor = lookupExtractorFactoryContainerProvider
+          .get(name)
+          .orElseThrow(() -> new ISE("Lookup [%s] not found", name))
+          .getLookupExtractorFactory()
+          .get();
+    }
 
     return new LookupExtractionFn(
         lookupExtractor,

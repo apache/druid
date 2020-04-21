@@ -22,6 +22,8 @@ package org.apache.druid.query.groupby;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.BaseQuery;
@@ -120,5 +122,23 @@ public class GroupByQueryTest
         .setGranularity(Granularities.DAY)
         .build();
     Assert.assertEquals(innerQuerySegmentSpec, BaseQuery.getQuerySegmentSpecForLookUp(query));
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(GroupByQuery.class)
+                  .usingGetClass()
+                  // The 'duration' field is used by equals via getDuration(), which computes it lazily in a way
+                  // that confuses EqualsVerifier.
+                  .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
+                  // Fields derived from other fields are not included in equals/hashCode
+                  .withIgnoredFields(
+                      "applyLimitPushDown",
+                      "postProcessingFn",
+                      "resultRowSignature",
+                      "universalTimestamp"
+                  )
+                  .verify();
   }
 }

@@ -194,7 +194,7 @@ public class CoordinatorServerView implements InventoryView
 
   public VersionedIntervalTimeline<String, SegmentLoadInfo> getTimeline(DataSource dataSource)
   {
-    String table = Iterables.getOnlyElement(dataSource.getNames());
+    String table = Iterables.getOnlyElement(dataSource.getTableNames());
     synchronized (lock) {
       return timelines.get(table);
     }

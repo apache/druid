@@ -917,7 +917,7 @@ public class SegmentMetadataQueryTest
 
     Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
-    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
+    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
     Assert.assertEquals(
         Intervals.of("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"),
         query.getIntervals().get(0)
@@ -937,7 +937,7 @@ public class SegmentMetadataQueryTest
                       + "}";
     Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
-    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
+    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
     Assert.assertEquals(Intervals.ETERNITY, query.getIntervals().get(0));
     Assert.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
 

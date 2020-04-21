@@ -81,7 +81,10 @@ public class IndexerMetadataStorageAdapterTest
     final Interval deleteInterval = Intervals.of("2017-01-01/2017-12-01");
     EasyMock
         .expect(
-            indexerMetadataStorageCoordinator.deletePendingSegments(EasyMock.anyString(), EasyMock.eq(deleteInterval))
+            indexerMetadataStorageCoordinator.deletePendingSegmentsCreatedInInterval(
+                EasyMock.anyString(),
+                EasyMock.eq(deleteInterval)
+            )
         )
         .andReturn(10);
     EasyMock.replay(taskStorageQueryAdapter, indexerMetadataStorageCoordinator);
@@ -114,7 +117,10 @@ public class IndexerMetadataStorageAdapterTest
     final Interval deleteInterval = Intervals.of("2017-01-01/2017-12-01");
     EasyMock
         .expect(
-            indexerMetadataStorageCoordinator.deletePendingSegments(EasyMock.anyString(), EasyMock.eq(deleteInterval))
+            indexerMetadataStorageCoordinator.deletePendingSegmentsCreatedInInterval(
+                EasyMock.anyString(),
+                EasyMock.eq(deleteInterval)
+            )
         )
         .andReturn(10);
     EasyMock.replay(taskStorageQueryAdapter, indexerMetadataStorageCoordinator);

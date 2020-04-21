@@ -31,6 +31,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
@@ -56,8 +57,6 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 
-/**
- */
 @Command(
     name = "historical",
     description = "Runs a Historical node, see https://druid.apache.org/docs/latest/Historical.html for a description"
@@ -78,6 +77,7 @@ public class CliHistorical extends ServerRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new JoinableFactoryModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);

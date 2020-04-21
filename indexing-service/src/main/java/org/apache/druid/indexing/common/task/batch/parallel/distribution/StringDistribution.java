@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 
 /**
  * Counts frequencies of {@link String}s.

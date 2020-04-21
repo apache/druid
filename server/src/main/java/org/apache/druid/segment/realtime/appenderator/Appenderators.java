@@ -29,6 +29,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -52,6 +53,7 @@ public class Appenderators
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats
@@ -75,6 +77,7 @@ public class Appenderators
             emitter,
             conglomerate,
             queryExecutorService,
+            joinableFactory,
             Preconditions.checkNotNull(cache, "cache"),
             cacheConfig,
             cachePopulatorStats

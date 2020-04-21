@@ -22,9 +22,12 @@ package org.apache.druid.inputsource.hdfs;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
@@ -34,6 +37,7 @@ import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
@@ -49,11 +53,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class HdfsInputSource extends AbstractInputSource implements SplittableInputSource<Path>
+public class HdfsInputSource extends AbstractInputSource implements SplittableInputSource<List<Path>>
 {
   private static final String PROP_PATHS = "paths";
 
@@ -112,6 +117,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
 
     return new HdfsFileInputFormat().getSplits(job)
                                     .stream()
+                                    .filter(split -> ((FileSplit) split).getLength() > 0)
                                     .map(split -> ((FileSplit) split).getPath())
                                     .collect(Collectors.toSet());
   }
@@ -137,8 +143,9 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     }
   }
 
+  @VisibleForTesting
   @JsonProperty(PROP_PATHS)
-  private List<String> getInputPaths()
+  List<String> getInputPaths()
   {
     return inputPaths;
   }
@@ -150,28 +157,38 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
       @Nullable File temporaryDirectory
   )
   {
-    final Stream<InputSplit<Path>> splits;
     try {
-      splits = createSplits(inputFormat, null);
+      cachePathsIfNeeded();
     }
     catch (IOException e) {
       throw new UncheckedIOException(e);
     }
-
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        splits.map(split -> new HdfsInputEntity(configuration, split.get())),
+        Iterators.transform(cachedPaths.iterator(), path -> new HdfsInputEntity(configuration, path)),
         temporaryDirectory
     );
   }
 
   @Override
-  public Stream<InputSplit<Path>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+  public Stream<InputSplit<List<Path>>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
       throws IOException
   {
     cachePathsIfNeeded();
-    return cachedPaths.stream().map(InputSplit::new);
+    final Iterator<List<Path>> splitIterator = getSplitHintSpecOrDefault(splitHintSpec).split(
+        cachedPaths.iterator(),
+        path -> {
+          try {
+            final long size = path.getFileSystem(configuration).getFileStatus(path).getLen();
+            return new InputFileAttribute(size);
+          }
+          catch (IOException e) {
+            throw new UncheckedIOException(e);
+          }
+        }
+    );
+    return Streams.sequentialStreamFrom(splitIterator).map(InputSplit::new);
   }
 
   @Override
@@ -182,9 +199,10 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   }
 
   @Override
-  public SplittableInputSource<Path> withSplit(InputSplit<Path> split)
+  public SplittableInputSource<List<Path>> withSplit(InputSplit<List<Path>> split)
   {
-    return new HdfsInputSource(split.get().toString(), configuration);
+    List<String> paths = split.get().stream().map(path -> path.toString()).collect(Collectors.toList());
+    return new HdfsInputSource(paths, configuration);
   }
 
   @Override

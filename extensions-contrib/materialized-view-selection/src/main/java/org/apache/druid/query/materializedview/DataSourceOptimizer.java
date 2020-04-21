@@ -23,9 +23,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.inject.Inject;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
@@ -54,24 +56,24 @@ public class DataSourceOptimizer
   private ConcurrentHashMap<String, AtomicLong> hitCount = new ConcurrentHashMap<>();
   private ConcurrentHashMap<String, AtomicLong> costTime = new ConcurrentHashMap<>();
   private ConcurrentHashMap<String, ConcurrentHashMap<Set<String>, AtomicLong>> missFields = new ConcurrentHashMap<>();
-  
+
   @Inject
-  public DataSourceOptimizer(TimelineServerView serverView) 
+  public DataSourceOptimizer(TimelineServerView serverView)
   {
     this.serverView = serverView;
   }
 
   /**
    * Do main work about materialized view selection: transform user query to one or more sub-queries.
-   * 
-   * In the sub-query, the dataSource is the derivative of dataSource in user query, and sum of all sub-queries' 
+   *
+   * In the sub-query, the dataSource is the derivative of dataSource in user query, and sum of all sub-queries'
    * intervals equals the interval in user query
-   * 
+   *
    * Derived dataSource with smallest average data size per segment granularity have highest priority to replace the
    * datasource in user query
-   * 
+   *
    * @param query only TopNQuery/TimeseriesQuery/GroupByQuery can be optimized
-   * @return a list of queries with specified derived dataSources and intervals 
+   * @return a list of queries with specified derived dataSources and intervals
    */
   public List<Query> optimize(Query query)
   {
@@ -86,20 +88,19 @@ public class DataSourceOptimizer
     // get all derivatives for datasource in query. The derivatives set is sorted by average size of 
     // per segment granularity.
     Set<DerivativeDataSource> derivatives = DerivativeDataSourceManager.getDerivatives(datasourceName);
-    
+
     if (derivatives.isEmpty()) {
       return Collections.singletonList(query);
     }
     lock.readLock().lock();
     try {
-      totalCount.putIfAbsent(datasourceName, new AtomicLong(0));
+      totalCount.computeIfAbsent(datasourceName, dsName -> new AtomicLong(0)).incrementAndGet();
       hitCount.putIfAbsent(datasourceName, new AtomicLong(0));
-      costTime.putIfAbsent(datasourceName, new AtomicLong(0));
-      totalCount.get(datasourceName).incrementAndGet();
-      
+      AtomicLong costTimeOfDataSource = costTime.computeIfAbsent(datasourceName, dsName -> new AtomicLong(0));
+
       // get all fields which the query required
       Set<String> requiredFields = MaterializedViewUtils.getRequiredFields(query);
-      
+
       Set<DerivativeDataSource> derivativesWithRequiredFields = new HashSet<>();
       for (DerivativeDataSource derivativeDataSource : derivatives) {
         derivativesHitCount.putIfAbsent(derivativeDataSource.getName(), new AtomicLong(0));
@@ -109,20 +110,22 @@ public class DataSourceOptimizer
       }
       // if no derivatives contains all required dimensions, this materialized view selection failed.
       if (derivativesWithRequiredFields.isEmpty()) {
-        missFields.putIfAbsent(datasourceName, new ConcurrentHashMap<>());
-        missFields.get(datasourceName).putIfAbsent(requiredFields, new AtomicLong(0));
-        missFields.get(datasourceName).get(requiredFields).incrementAndGet();
-        costTime.get(datasourceName).addAndGet(System.currentTimeMillis() - start);
+        missFields
+            .computeIfAbsent(datasourceName, dsName -> new ConcurrentHashMap<>())
+            .computeIfAbsent(requiredFields, rf -> new AtomicLong(0))
+            .incrementAndGet();
+        costTimeOfDataSource.addAndGet(System.currentTimeMillis() - start);
         return Collections.singletonList(query);
       }
-      
+
       List<Query> queries = new ArrayList<>();
       List<Interval> remainingQueryIntervals = (List<Interval>) query.getIntervals();
-      
+
       for (DerivativeDataSource derivativeDataSource : ImmutableSortedSet.copyOf(derivativesWithRequiredFields)) {
         final List<Interval> derivativeIntervals = remainingQueryIntervals.stream()
             .flatMap(interval -> serverView
-                .getTimeline((new TableDataSource(derivativeDataSource.getName())))
+                .getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource(derivativeDataSource.getName())))
+                .orElseThrow(() -> new ISE("No timeline for dataSource: %s", derivativeDataSource.getName()))
                 .lookup(interval)
                 .stream()
                 .map(TimelineObjectHolder::getInterval)
@@ -133,7 +136,7 @@ public class DataSourceOptimizer
         if (derivativeIntervals.isEmpty()) {
           continue;
         }
-        
+
         remainingQueryIntervals = MaterializedViewUtils.minus(remainingQueryIntervals, derivativeIntervals);
         queries.add(
             query.withDataSource(new TableDataSource(derivativeDataSource.getName()))
@@ -158,13 +161,13 @@ public class DataSourceOptimizer
       hitCount.get(datasourceName).incrementAndGet();
       costTime.get(datasourceName).addAndGet(System.currentTimeMillis() - start);
       return queries;
-    } 
+    }
     finally {
       lock.readLock().unlock();
     }
   }
 
-  public List<DataSourceOptimizerStats> getAndResetStats() 
+  public List<DataSourceOptimizerStats> getAndResetStats()
   {
     ImmutableMap<String, AtomicLong> derivativesHitCountSnapshot;
     ImmutableMap<String, AtomicLong> totalCountSnapshot;
@@ -183,7 +186,7 @@ public class DataSourceOptimizer
       hitCount.clear();
       costTime.clear();
       missFields.clear();
-    } 
+    }
     finally {
       lock.writeLock().unlock();
     }

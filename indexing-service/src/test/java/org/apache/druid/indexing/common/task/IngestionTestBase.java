@@ -28,12 +28,10 @@ import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
-import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -49,13 +47,14 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import org.apache.druid.metadata.MetadataSegmentManager;
-import org.apache.druid.metadata.MetadataSegmentManagerConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SQLMetadataSegmentManager;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -92,11 +91,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   private SegmentLoaderFactory segmentLoaderFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
-  private MetadataSegmentManager segmentManager;
+  private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
 
   @Before
-  public void setUp() throws IOException
+  public void setUpIngestionTestBase() throws IOException
   {
     temporaryFolder.create();
 
@@ -109,9 +108,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector()
     );
-    segmentManager = new SQLMetadataSegmentManager(
+    segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
-        MetadataSegmentManagerConfig::new,
+        SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector()
     );
@@ -120,7 +119,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   }
 
   @After
-  public void tearDown()
+  public void tearDownIngestionTestBase()
   {
     temporaryFolder.delete();
   }
@@ -166,9 +165,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return storageCoordinator;
   }
 
-  public MetadataSegmentManager getMetadataSegmentManager()
+  public SegmentsMetadataManager getSegmentsMetadataManager()
   {
-    return segmentManager;
+    return segmentsMetadataManager;
   }
 
   public TaskLockbox getLockbox()
@@ -208,13 +207,13 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     return testUtils.getTestIndexMergerV9();
   }
 
-  public class TestLocalTaskActionClient extends LocalTaskActionClient
+  public class TestLocalTaskActionClient extends CountingLocalTaskActionClientForTest
   {
     private final Set<DataSegment> publishedSegments = new HashSet<>();
 
     private TestLocalTaskActionClient(Task task)
     {
-      super(task, taskStorage, createTaskActionToolbox(), new TaskAuditLogConfig(false));
+      super(task, taskStorage, createTaskActionToolbox());
     }
 
     @Override
@@ -306,6 +305,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             null,
             null,
             null,
+            NoopJoinableFactory.INSTANCE,
             null,
             null,
             objectMapper,

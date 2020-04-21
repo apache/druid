@@ -22,15 +22,8 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -59,7 +52,6 @@ import org.junit.runners.Parameterized;
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 @RunWith(Parameterized.class)
@@ -159,34 +151,17 @@ public class FilterPartitionTest extends BaseFilterTest
     }
   }
 
-  private static String JS_FN = "function(str) { return 'super-' + str; }";
-  private static ExtractionFn JS_EXTRACTION_FN = new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
+  private static final String JS_FN = "function(str) { return 'super-' + str; }";
+  private static final ExtractionFn JS_EXTRACTION_FN =
+      new JavaScriptExtractionFn(JS_FN, false, JavaScriptConfig.getEnabledInstance());
 
-  private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
-              null,
-              null
-          )
-      )
-  );
-
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "B453B411", "dim2", ImmutableList.of("c", "d", "e"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "7", "dim1", "HELLO", "dim2", ImmutableList.of("foo"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "8", "dim1", "abc", "dim2", ImmutableList.of("bar"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "9", "dim1", "1", "dim2", ImmutableList.of("foo", "bar"))).get(0)
-  );
+  private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
+      .addAll(DEFAULT_ROWS)
+      .add(makeDefaultSchemaRow("6", "B453B411", ImmutableList.of("c", "d", "e"), null, null, null, null))
+      .add(makeDefaultSchemaRow("7", "HELLO", ImmutableList.of("foo"), null, null, null, null))
+      .add(makeDefaultSchemaRow("8", "abc", ImmutableList.of("bar"), null, null, null, null))
+      .add(makeDefaultSchemaRow("9", "1", ImmutableList.of("foo", "bar"), null, null, null, null))
+      .build();
 
   public FilterPartitionTest(
       String testName,
@@ -217,7 +192,7 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new SelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new SelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
     assertFilterMatches(new SelectorDimFilter("dim1", "1", null), ImmutableList.of("3", "9"));
-    assertFilterMatches(new SelectorDimFilter("dim1", "def", null), ImmutableList.of("4"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "abdef", null), ImmutableList.of("4"));
     assertFilterMatches(new SelectorDimFilter("dim1", "abc", null), ImmutableList.of("5", "8"));
     assertFilterMatches(new SelectorDimFilter("dim1", "ab", null), ImmutableList.of());
   }
@@ -234,7 +209,7 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "1", null), ImmutableList.of("3", "9"));
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "def", null), ImmutableList.of("4"));
+    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "abdef", null), ImmutableList.of("4"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "abc", null), ImmutableList.of("5", "8"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "ab", null), ImmutableList.of());
 
@@ -246,7 +221,7 @@ public class FilterPartitionTest extends BaseFilterTest
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-10", JS_EXTRACTION_FN), ImmutableList.of("1"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-2", JS_EXTRACTION_FN), ImmutableList.of("2"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-1", JS_EXTRACTION_FN), ImmutableList.of("3", "9"));
-    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-def", JS_EXTRACTION_FN), ImmutableList.of("4"));
+    assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-abdef", JS_EXTRACTION_FN), ImmutableList.of("4"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-abc", JS_EXTRACTION_FN), ImmutableList.of("5", "8"));
     assertFilterMatches(new NoBitmapSelectorDimFilter("dim1", "super-ab", JS_EXTRACTION_FN), ImmutableList.of());
   }
@@ -639,14 +614,14 @@ public class FilterPartitionTest extends BaseFilterTest
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "6", null),
         new AndDimFilter(Arrays.asList(
-            new NoBitmapSelectorDimFilter("dim1", "def", null),
+            new NoBitmapSelectorDimFilter("dim1", "abdef", null),
             new SelectorDimFilter("dim2", "c", null)
         )
         ))
     );
 
     Filter filter1 = dimFilter1.toFilter();
-    Filter filter1CNF = Filters.convertToCNF(filter1);
+    Filter filter1CNF = Filters.toCnf(filter1);
 
     Assert.assertEquals(AndFilter.class, filter1CNF.getClass());
     Assert.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());
@@ -693,14 +668,14 @@ public class FilterPartitionTest extends BaseFilterTest
     DimFilter dimFilter1 = new OrDimFilter(Arrays.asList(
         new SelectorDimFilter("dim0", "super-6", JS_EXTRACTION_FN),
         new AndDimFilter(Arrays.asList(
-            new NoBitmapSelectorDimFilter("dim1", "super-def", JS_EXTRACTION_FN),
+            new NoBitmapSelectorDimFilter("dim1", "super-abdef", JS_EXTRACTION_FN),
             new SelectorDimFilter("dim2", "super-c", JS_EXTRACTION_FN)
         )
         ))
     );
 
     Filter filter1 = dimFilter1.toFilter();
-    Filter filter1CNF = Filters.convertToCNF(filter1);
+    Filter filter1CNF = Filters.toCnf(filter1);
 
     Assert.assertEquals(AndFilter.class, filter1CNF.getClass());
     Assert.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());

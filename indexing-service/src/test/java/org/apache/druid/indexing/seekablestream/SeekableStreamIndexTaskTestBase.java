@@ -409,7 +409,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   protected List<SegmentDescriptor> publishedDescriptors()
   {
     return metadataStorageCoordinator
-        .getUsedSegmentsForInterval(OLD_DATA_SCHEMA.getDataSource(), Intervals.of("0000/3000"), Segments.ONLY_VISIBLE)
+        .retrieveAllUsedSegments(OLD_DATA_SCHEMA.getDataSource(), Segments.ONLY_VISIBLE)
         .stream()
         .map(DataSegment::toDescriptor)
         .collect(Collectors.toList());
