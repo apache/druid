@@ -411,7 +411,7 @@ public class Filters
     if (filter.supportsBitmapIndex(indexSelector)) {
       final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
       if (columnHolder != null) {
-        return !columnHolder.getCapabilities().hasMultipleValues();
+        return !columnHolder.getCapabilities().hasMultipleValues().isMaybeTrue();
       }
     }
     return false;

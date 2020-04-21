@@ -327,9 +327,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
 
     //__time capabilities
-    ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl().setIsComplete(true);
-    timeCapabilities.setType(ValueType.LONG);
-    columnCapabilities.put(ColumnHolder.TIME_COLUMN_NAME, timeCapabilities);
+    columnCapabilities.put(
+        ColumnHolder.TIME_COLUMN_NAME,
+        ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG)
+    );
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
@@ -660,14 +661,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           wasNewDim = true;
           capabilities = columnCapabilities.get(dimension);
           if (capabilities == null) {
-            capabilities = new ColumnCapabilitiesImpl();
             // For schemaless type discovery, assume everything is a String for now, can change later.
-            capabilities.setType(ValueType.STRING);
-            capabilities.setDictionaryEncoded(true);
-            capabilities.setHasBitmapIndexes(true);
-            capabilities.setDictionaryValuesSorted(false);
-            capabilities.setDictionaryValuesUnique(true);
-            capabilities.setIsComplete(true);
+            capabilities = makeCapabilitiesFromValueType(ValueType.STRING);
             columnCapabilities.put(dimension, capabilities);
           }
           DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
@@ -687,7 +682,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         }
         dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
         // Set column capabilities as data is coming in
-        if (!capabilities.hasMultipleValues() &&
+        if (!capabilities.hasMultipleValues().isTrue() &&
             dimsKey != null &&
             handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
           capabilities.setHasMultipleValues(true);
@@ -923,16 +918,17 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private ColumnCapabilitiesImpl makeCapabilitiesFromValueType(ValueType type)
   {
-    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-    capabilities.setDictionaryEncoded(type == ValueType.STRING);
-    capabilities.setHasBitmapIndexes(type == ValueType.STRING);
     if (type == ValueType.STRING) {
-      capabilities.setDictionaryValuesUnique(true);
-      capabilities.setDictionaryValuesSorted(false);
+      // we start out as not having multiple values, but this might change as we encounter them
+      return new ColumnCapabilitiesImpl().setType(type)
+                                         .setHasBitmapIndexes(true)
+                                         .setDictionaryEncoded(true)
+                                         .setDictionaryValuesUnique(true)
+                                         .setDictionaryValuesSorted(false)
+                                         .setHasMultipleValues(false);
+    } else {
+      return ColumnCapabilitiesImpl.createSimpleNumericColumn(type);
     }
-    capabilities.setType(type);
-    capabilities.setIsComplete(true);
-    return capabilities;
   }
 
   /**
@@ -1124,18 +1120,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.name = factory.getName();
 
       String typeInfo = factory.getTypeName();
-      this.capabilities = new ColumnCapabilitiesImpl().setIsComplete(true);
       if ("float".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.FLOAT);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.FLOAT);
         this.type = typeInfo;
       } else if ("long".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.LONG);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG);
         this.type = typeInfo;
       } else if ("double".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.DOUBLE);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.DOUBLE);
         this.type = typeInfo;
       } else {
-        capabilities.setType(ValueType.COMPLEX);
+        // in an ideal world complex type reports its actual column capabilities...
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.COMPLEX);
         this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
       }
     }

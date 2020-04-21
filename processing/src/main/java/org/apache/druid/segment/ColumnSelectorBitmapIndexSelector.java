@@ -160,11 +160,11 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public boolean hasMultipleValues(final String dimension)
   {
     if (isVirtualColumn(dimension)) {
-      return virtualColumns.getVirtualColumn(dimension).capabilities(dimension).hasMultipleValues();
+      return virtualColumns.getVirtualColumn(dimension).capabilities(dimension).hasMultipleValues().isMaybeTrue();
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
-    return columnHolder != null && columnHolder.getCapabilities().hasMultipleValues();
+    return columnHolder != null && columnHolder.getCapabilities().hasMultipleValues().isMaybeTrue();
   }
 
   @Override

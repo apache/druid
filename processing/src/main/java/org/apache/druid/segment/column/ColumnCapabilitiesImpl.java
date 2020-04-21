@@ -22,7 +22,6 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 
@@ -34,10 +33,42 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
   {
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-    capabilities.merge(other);
-    capabilities.setFilterable(other.isFilterable());
-    capabilities.setIsComplete(other.isComplete());
+    if (other != null) {
+      capabilities.type = other.getType();
+      capabilities.dictionaryEncoded = other.isDictionaryEncoded();
+      capabilities.runLengthEncoded = other.isRunLengthEncoded();
+      capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
+      capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
+      capabilities.hasMultipleValues = other.hasMultipleValues();
+      capabilities.dictionaryValuesSorted = other.areDictionaryValuesSorted();
+      capabilities.dictionaryValuesUnique = other.areDictionaryValuesUnique();
+      capabilities.filterable = other.isFilterable();
+    }
     return capabilities;
+  }
+
+  public static ColumnCapabilitiesImpl complete(final ColumnCapabilities capabilities, boolean convertUnknownToTrue)
+  {
+    ColumnCapabilitiesImpl copy = copyOf(capabilities);
+    copy.hasMultipleValues = copy.hasMultipleValues.complete(convertUnknownToTrue);
+    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.complete(convertUnknownToTrue);
+    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.complete(convertUnknownToTrue);
+    return copy;
+  }
+
+
+  /**
+   * Create a no frills, simple column with {@link ValueType} set and everything else false
+   */
+  public static ColumnCapabilitiesImpl createSimpleNumericColumn(ValueType valueType)
+  {
+    return new ColumnCapabilitiesImpl().setType(valueType)
+                                       .setHasMultipleValues(false)
+                                       .setHasBitmapIndexes(false)
+                                       .setDictionaryEncoded(false)
+                                       .setDictionaryValuesSorted(false)
+                                       .setDictionaryValuesUnique(false)
+                                       .setHasSpatialIndexes(false);
   }
 
   @Nullable
@@ -47,7 +78,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private boolean runLengthEncoded = false;
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
-  private boolean hasMultipleValues = false;
+  private Capable hasMultipleValues = Capable.UNKNOWN;
 
   // These capabilities are computed at query time and not persisted in the segment files.
   @JsonIgnore
@@ -56,8 +87,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private Capable dictionaryValuesUnique = Capable.UNKNOWN;
   @JsonIgnore
   private boolean filterable;
-  @JsonIgnore
-  private boolean complete = false;
 
   @Override
   @JsonProperty
@@ -144,14 +173,14 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   @Override
   @JsonProperty("hasMultipleValues")
-  public boolean hasMultipleValues()
+  public Capable hasMultipleValues()
   {
     return hasMultipleValues;
   }
 
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
-    this.hasMultipleValues = hasMultipleValues;
+    this.hasMultipleValues = Capable.of(hasMultipleValues);
     return this;
   }
 
@@ -169,42 +198,5 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   {
     this.filterable = filterable;
     return this;
-  }
-
-  @Override
-  public boolean isComplete()
-  {
-    return complete;
-  }
-
-  public ColumnCapabilitiesImpl setIsComplete(boolean complete)
-  {
-    this.complete = complete;
-    return this;
-  }
-
-  public void merge(ColumnCapabilities other)
-  {
-    if (other == null) {
-      return;
-    }
-
-    if (type == null) {
-      type = other.getType();
-    }
-
-    if (!type.equals(other.getType())) {
-      throw new ISE("Cannot merge columns of type[%s] and [%s]", type, other.getType());
-    }
-
-    this.dictionaryEncoded |= other.isDictionaryEncoded();
-    this.runLengthEncoded |= other.isRunLengthEncoded();
-    this.hasInvertedIndexes |= other.hasBitmapIndexes();
-    this.hasSpatialIndexes |= other.hasSpatialIndexes();
-    this.hasMultipleValues |= other.hasMultipleValues();
-    this.complete &= other.isComplete(); // these should always be the same?
-    this.filterable &= other.isFilterable();
-    this.dictionaryValuesSorted = this.dictionaryValuesSorted.and(other.areDictionaryValuesSorted());
-    this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
   }
 }

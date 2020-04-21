@@ -60,7 +60,8 @@ public final class DimensionHandlerUtils
                                   .setDictionaryEncoded(false)
                                   .setDictionaryValuesUnique(false)
                                   .setDictionaryValuesSorted(false)
-                                  .setHasBitmapIndexes(false);
+                                  .setHasBitmapIndexes(false)
+                                  .setHasMultipleValues(false);
 
   private DimensionHandlerUtils()
   {
@@ -297,7 +298,7 @@ public final class DimensionHandlerUtils
     final ValueType type = capabilities.getType();
 
     if (type == ValueType.STRING) {
-      if (capabilities.hasMultipleValues()) {
+      if (capabilities.hasMultipleValues().isMaybeTrue()) {
         return strategyFactory.makeMultiValueDimensionProcessor(
             selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
         );

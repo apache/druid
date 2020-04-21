@@ -96,7 +96,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return new ColumnCapabilitiesImpl().setType(ValueType.LONG).setIsComplete(true);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG);
     } else {
       final ValueType valueType = rowSignature.getColumnType(columnName).orElse(null);
 
@@ -105,12 +105,13 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       // causes expression selectors to always treat us as arrays. If we might have multiple values (i.e. if our type
       // is nonnumeric), set isComplete false to compensate.
       if (valueType != null) {
+        if (valueType.isNumeric()) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumn(valueType);
+        }
         return new ColumnCapabilitiesImpl()
             .setType(valueType)
             .setDictionaryValuesUnique(false)
-            .setDictionaryValuesSorted(false)
-            // Numeric types should be reported as complete, but not STRING or COMPLEX (because we don't have full info)
-            .setIsComplete(valueType.isNumeric());
+            .setDictionaryValuesSorted(false);
       } else {
         return null;
       }

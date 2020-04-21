@@ -138,7 +138,7 @@ public class SegmentAnalyzer
     // Add time column too
     ColumnCapabilities timeCapabilities = storageAdapter.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
     if (timeCapabilities == null) {
-      timeCapabilities = new ColumnCapabilitiesImpl().setType(ValueType.LONG).setHasMultipleValues(false);
+      timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG);
     }
     columns.put(
         ColumnHolder.TIME_COLUMN_NAME,
@@ -172,7 +172,7 @@ public class SegmentAnalyzer
     long size = 0;
 
     if (analyzingSize()) {
-      if (capabilities.hasMultipleValues()) {
+      if (capabilities.hasMultipleValues().isTrue()) {
         return ColumnAnalysis.error("multi_value");
       }
 
@@ -181,7 +181,7 @@ public class SegmentAnalyzer
 
     return new ColumnAnalysis(
         capabilities.getType().name(),
-        capabilities.hasMultipleValues(),
+        capabilities.hasMultipleValues().isTrue(),
         size,
         null,
         null,
@@ -231,7 +231,7 @@ public class SegmentAnalyzer
 
     return new ColumnAnalysis(
         capabilities.getType().name(),
-        capabilities.hasMultipleValues(),
+        capabilities.hasMultipleValues().isTrue(),
         size,
         analyzingCardinality() ? cardinality : 0,
         min,
@@ -308,7 +308,7 @@ public class SegmentAnalyzer
 
     return new ColumnAnalysis(
         capabilities.getType().name(),
-        capabilities.hasMultipleValues(),
+        capabilities.hasMultipleValues().isTrue(),
         size,
         cardinality,
         min,
@@ -324,7 +324,7 @@ public class SegmentAnalyzer
   )
   {
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
-      final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues();
+      final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {
