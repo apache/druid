@@ -17,36 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.tuple;
+package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
-public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregatorTest
+public class DoublesSketchToQuantilePostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    final PostAggregator there = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
-        null
+    final PostAggregator there = new DoublesSketchToQuantilePostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        0.5
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator andBackAgain = mapper.readValue(
+    DoublesSketchToQuantilePostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class
+        DoublesSketchToQuantilePostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);
@@ -56,37 +50,23 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregatorTest
   @Test
   public void testToString()
   {
-    PostAggregator postAgg = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
-        null
+    final PostAggregator postAgg = new DoublesSketchToQuantilePostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        0.5
     );
 
     Assert.assertEquals(
-        "ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}, numStdDevs=1}",
+        "DoublesSketchToQuantilePostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, fraction=0.5}",
         postAgg.toString()
     );
   }
 
   @Test
-  public void testComparator()
-  {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of estimates and error bounds is not supported");
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
-        null
-    );
-    postAgg.getComparator();
-  }
-
-  @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class)
-                  .withNonnullFields("name", "field")
-                  .withIgnoredFields("dependentFields")
+    EqualsVerifier.forClass(DoublesSketchToQuantilePostAggregator.class)
+                  .withNonnullFields("name", "field", "fraction")
                   .usingGetClass()
                   .verify();
   }

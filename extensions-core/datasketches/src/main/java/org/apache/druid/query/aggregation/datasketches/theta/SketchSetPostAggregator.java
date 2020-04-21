@@ -56,7 +56,7 @@ public class SketchSetPostAggregator implements PostAggregator
     Util.checkIfPowerOf2(this.maxSketchSize, "size");
 
     if (fields.size() <= 1) {
-      throw new IAE("Illegal number of fields[%s], must be > 1", fields.size());
+      throw new IAE("Illegal number of fields[%s], must be >= 1", fields.size());
     }
   }
 
