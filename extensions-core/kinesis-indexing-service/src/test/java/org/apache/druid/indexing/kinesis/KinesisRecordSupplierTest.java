@@ -644,7 +644,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void getLatestSequenceNumberWhenShardIsEmptyShouldReturnsNull() throws Exception
+  public void getLatestSequenceNumberWhenShardIsEmptyShouldReturnsNull()
   {
 
     KinesisRecordSupplier recordSupplier = getSequenceNumberWhenShardIsEmptyShouldReturnsNullHelper();
@@ -653,7 +653,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void getEarliestSequenceNumberWhenShardIsEmptyShouldReturnsNull() throws Exception
+  public void getEarliestSequenceNumberWhenShardIsEmptyShouldReturnsNull()
   {
 
     KinesisRecordSupplier recordSupplier = getSequenceNumberWhenShardIsEmptyShouldReturnsNullHelper();
