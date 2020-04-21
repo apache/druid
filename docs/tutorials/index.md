@@ -35,10 +35,10 @@ Before beginning the quickstart, it is helpful to read the [general Druid overvi
 
 You will need:
 
-* **Java 8 (8u92+) or later**
+* Java 8 (8u92+) or later
 * Linux, Mac OS X, or other Unix-like OS (Windows is not supported)
 
-> **Warning:** Druid only officially supports Java 8. Any Java version later than 8 is still experimental.
+> **Warning:** Druid officially supports Java 8 only. Support for any Java version later than 8 is experimental.
 >
 > If needed, you can specify where to find Java using the environment variables `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the verify-java script.
 
@@ -47,10 +47,10 @@ You will need:
 Druid includes several example [single-server configurations](../operations/single-server.md), along with scripts to
 start the Druid processes using these configurations.
 
-If you're running on a small machine such as a laptop for a quick evaluation, the `micro-quickstart` configuration is
-a good choice, sized for a 4CPU/16GB RAM environment.
+If you're running on a small machine, such as a laptop for a quick evaluation, the `micro-quickstart` configuration is
+a good choice. It is sized for a 4CPU/16GB RAM environment.
 
-If you plan to use the single-machine deployment for further evaluation beyond the tutorials, we recommend a larger
+If you plan to use the single-machine deployment for further evaluation, apart from following the tutorials, we recommend a larger
 configuration than `micro-quickstart`.
 
 ## Getting started
@@ -73,6 +73,7 @@ In the package, you should find:
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
+* `licenses/*` - Apache Druid and third-party license information
 * `quickstart/*` - configuration files, sample data, and other files for the quickstart tutorials
 
 ## Start up Druid services
@@ -87,7 +88,7 @@ From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 ./bin/start-micro-quickstart
 ```
 
-This will bring up instances of ZooKeeper and the Druid services, all running on the local machine, e.g.:
+This brings up instances of ZooKeeper and the Druid services, all running on the local machine, as indicated in the command response:
 
 ```bash
 $ ./bin/start-micro-quickstart
@@ -110,66 +111,10 @@ The [Druid router process](../design/router.md), which serves the [Druid console
 
 It takes a few seconds for all the Druid processes to fully start up. If you open the console immediately after starting the services, you may see some errors that you can safely ignore.
 
+## Data loading tutorials
 
-## Loading data
+After installation, the first thing you'll want to do is load data into Druid. The following tutorials demonstrate various methods of loading data, including batch and streaming methods.
 
-### Tutorial dataset
-
-For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2015-09-12.
-
-This sample data is located at `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root.
-The page edit events are stored as JSON objects in a text file.
-
-The sample data has the following columns, and an example event is shown below:
-
-  * added
-  * channel
-  * cityName
-  * comment
-  * countryIsoCode
-  * countryName
-  * deleted
-  * delta
-  * isAnonymous
-  * isMinor
-  * isNew
-  * isRobot
-  * isUnpatrolled
-  * metroCode
-  * namespace
-  * page
-  * regionIsoCode
-  * regionName
-  * user
-
-```json
-{
-  "timestamp":"2015-09-12T20:03:45.018Z",
-  "channel":"#en.wikipedia",
-  "namespace":"Main",
-  "page":"Spider-Man's powers and equipment",
-  "user":"foobar",
-  "comment":"/* Artificial web-shooters */",
-  "cityName":"New York",
-  "regionName":"New York",
-  "regionIsoCode":"NY",
-  "countryName":"United States",
-  "countryIsoCode":"US",
-  "isAnonymous":false,
-  "isNew":false,
-  "isMinor":false,
-  "isRobot":false,
-  "isUnpatrolled":false,
-  "added":99,
-  "delta":99,
-  "deleted":0,
-}
-```
-
-
-### Data loading tutorials
-
-The following tutorials demonstrate various methods of loading data into Druid, including both batch and streaming use cases.
 All tutorials assume that you are using the `micro-quickstart` single-machine configuration mentioned above.
 
 - [Loading a file](./tutorial-batch.md) - this tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
@@ -183,7 +128,7 @@ If you want a clean start after stopping the services, delete the `var` director
 
 Once every service has started, you are now ready to load data.
 
-#### Resetting Kafka
+### Resetting Kafka
 
 If you completed [Tutorial: Loading stream data from Kafka](./tutorial-kafka.md) and wish to reset the cluster state, you should additionally clear out any Kafka state.
 
