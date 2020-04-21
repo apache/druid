@@ -321,6 +321,6 @@ class can be set to run in parallel (multiple test methods of the given class ru
 the given class/package from the "AllSerializedTests" test tag section and including it in the "AllParallelizedTests" 
 test tag section in integration-tests/src/test/resources/testng.xml  
 Please be mindful when adding tests to the "AllParallelizedTests" test tag that the tests can run in parallel with
-other tests at the same time. i.e. test does not modify/restart/stop the druid cluster or other dependecy containers,
-test does not use excessive memory straving other concurent task, test does not modify and/or use other task, 
+other tests at the same time. i.e. test does not modify/restart/stop the druid cluster or other dependency containers,
+test does not use excessive memory starving other concurent task, test does not modify and/or use other task, 
 supervisor, datasource it did not create. 

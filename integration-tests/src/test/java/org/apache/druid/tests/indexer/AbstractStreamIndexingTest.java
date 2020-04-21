@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
-public abstract class AbstractStreamIndexingTest extends AbstractITBatchIndexTest
+public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 {
   static final DateTime FIRST_EVENT_TIME = DateTimes.of(1994, 4, 29, 1, 0);
   // format for the querying interval

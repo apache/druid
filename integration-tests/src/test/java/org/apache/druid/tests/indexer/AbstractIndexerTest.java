@@ -57,7 +57,7 @@ public abstract class AbstractIndexerTest
   protected TestQueryHelper queryHelper;
 
   @Inject
-  private IntegrationTestingConfig config;
+  public IntegrationTestingConfig config;
 
   protected Closeable unloader(final String dataSource)
   {

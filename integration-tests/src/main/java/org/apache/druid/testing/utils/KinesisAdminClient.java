@@ -150,6 +150,9 @@ public class KinesisAdminClient implements StreamAdminClient
   public boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount)
   {
     int actualShardCount = getStreamShardCount(streamName);
+    // Kinesis does not immediately drop the old shards after the resharding and hence,
+    // would still returns both open shards and closed shards from the API call.
+    // To verify, we sum the old count (closed shareds) and the expected new count (open shards)
     return actualShardCount == oldShardCount + newShardCount;
   }
 

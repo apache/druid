@@ -251,6 +251,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
                                                                                  null);
     compactionResource.submitCompactionConfig(compactionConfig);
 
+    // Wait for compaction config to persist
+    Thread.sleep(2000);
+
     // Verify that the compaction config is updated correctly.
     CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
     DataSourceCompactionConfig foundDataSourceCompactionConfig = null;
