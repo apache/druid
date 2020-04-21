@@ -21,39 +21,49 @@ package org.apache.druid.query.aggregation.histogram;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-public class BucketsPostAggregatorTest
+public class QuantilesPostAggregatorTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws Exception
   {
-    BucketsPostAggregator there =
-        new BucketsPostAggregator("buckets_post_aggregator", "test_field", 2f, 4f);
+    QuantilesPostAggregator there =
+        new QuantilesPostAggregator("max", "test_field", new float[]{0.2f, 0.7f});
 
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    BucketsPostAggregator andBackAgain = mapper.readValue(
+    QuantilesPostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        BucketsPostAggregator.class
+        QuantilesPostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);
-    Assert.assertEquals(there.getBucketSize(), andBackAgain.getBucketSize(), 0.0001);
-    Assert.assertEquals(there.getOffset(), andBackAgain.getOffset(), 0.0001);
     Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
     Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
+  public void testComparator()
+  {
+    expectedException.expect(UnsupportedOperationException.class);
+    QuantilesPostAggregator quantiles = new QuantilesPostAggregator("quantiles", "someAgg", new float[]{0.3f, 0.9f});
+    quantiles.getComparator();
+  }
+
+  @Test
   public void testToString()
   {
-    PostAggregator postAgg =
-        new BucketsPostAggregator("buckets_post_aggregator", "test_field", 2f, 4f);
+    QuantilesPostAggregator postAgg =
+        new QuantilesPostAggregator("post", "test_field", new float[]{0.2f, 0.7f});
 
     Assert.assertEquals(
-        "BucketsPostAggregator{name='buckets_post_aggregator', fieldName='test_field', bucketSize=2.0, offset=4.0}",
+        "QuantilesPostAggregator{name='post', fieldName='test_field', probabilities=[0.2, 0.7]}",
         postAgg.toString()
     );
   }
@@ -61,7 +71,7 @@ public class BucketsPostAggregatorTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(BucketsPostAggregator.class)
+    EqualsVerifier.forClass(QuantilesPostAggregator.class)
                   .withNonnullFields("name", "fieldName")
                   .usingGetClass()
                   .verify();

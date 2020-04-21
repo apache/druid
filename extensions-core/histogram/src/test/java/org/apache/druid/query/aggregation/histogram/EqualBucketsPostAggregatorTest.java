@@ -25,23 +25,21 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class BucketsPostAggregatorTest
+public class EqualBucketsPostAggregatorTest
 {
   @Test
   public void testSerde() throws Exception
   {
-    BucketsPostAggregator there =
-        new BucketsPostAggregator("buckets_post_aggregator", "test_field", 2f, 4f);
+    EqualBucketsPostAggregator there =
+        new EqualBucketsPostAggregator("buckets_post_aggregator", "test_field", 3);
 
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    BucketsPostAggregator andBackAgain = mapper.readValue(
+    EqualBucketsPostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        BucketsPostAggregator.class
+        EqualBucketsPostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);
-    Assert.assertEquals(there.getBucketSize(), andBackAgain.getBucketSize(), 0.0001);
-    Assert.assertEquals(there.getOffset(), andBackAgain.getOffset(), 0.0001);
     Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
     Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
@@ -50,10 +48,10 @@ public class BucketsPostAggregatorTest
   public void testToString()
   {
     PostAggregator postAgg =
-        new BucketsPostAggregator("buckets_post_aggregator", "test_field", 2f, 4f);
+        new EqualBucketsPostAggregator("buckets_post_aggregator", "test_field", 3);
 
     Assert.assertEquals(
-        "BucketsPostAggregator{name='buckets_post_aggregator', fieldName='test_field', bucketSize=2.0, offset=4.0}",
+        "EqualBucketsPostAggregator{name='buckets_post_aggregator', fieldName='test_field', numBuckets=3}",
         postAgg.toString()
     );
   }
@@ -61,7 +59,7 @@ public class BucketsPostAggregatorTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(BucketsPostAggregator.class)
+    EqualsVerifier.forClass(EqualBucketsPostAggregator.class)
                   .withNonnullFields("name", "fieldName")
                   .usingGetClass()
                   .verify();
