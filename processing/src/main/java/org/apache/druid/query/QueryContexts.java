@@ -37,6 +37,7 @@ public class QueryContexts
   public static final String FINALIZE_KEY = "finalize";
   public static final String PRIORITY_KEY = "priority";
   public static final String LANE_KEY = "lane";
+  public static final String COMPOSITE_LANE_STRATEGY_KEY = "laneStrategy";
   public static final String TIMEOUT_KEY = "timeout";
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
@@ -219,6 +220,15 @@ public class QueryContexts
   public static <T> String getLane(Query<T> query)
   {
     return (String) query.getContextValue(LANE_KEY);
+  }
+
+  /**
+   * Returns the laning strategy specified in the query context.
+   * This strategy only applies if Druid is running with CompositeQueryLaningStrategy.
+   */
+  public static <T> String getCompositeLaneStrategy(Query<T> query)
+  {
+    return (String) query.getContextValue(COMPOSITE_LANE_STRATEGY_KEY);
   }
 
   public static <T> boolean getEnableParallelMerges(Query<T> query)
