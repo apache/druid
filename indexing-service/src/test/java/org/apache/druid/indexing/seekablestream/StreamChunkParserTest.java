@@ -20,6 +20,8 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -27,7 +29,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -40,10 +41,13 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class StreamChunkParserTest
 {
@@ -103,7 +107,7 @@ public class StreamChunkParserTest
   public void testWithNullParserAndNullInputformatFailToCreateParser()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Either parser or inputFormat shouldn't be set");
+    expectedException.expectMessage("Either parser or inputFormat should be set");
     final StreamChunkParser chunkParser = new StreamChunkParser(
         null,
         null,
@@ -114,13 +118,16 @@ public class StreamChunkParserTest
   }
 
   @Test
-  public void testBothParserAndInputFormatParseProperlyUsingParser() throws IOException
+  public void testBothParserAndInputFormatParseProperlyUsingInputFormat() throws IOException
   {
-    final TrackingStringInputRowParser parser = new TrackingStringInputRowParser(
+    final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
         new NotConvertibleToInputFormatParseSpec(),
         StringUtils.UTF8_STRING
     );
-    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap());
+    final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
+        JSONPathSpec.DEFAULT,
+        Collections.emptyMap()
+    );
     final StreamChunkParser chunkParser = new StreamChunkParser(
         parser,
         inputFormat,
@@ -135,7 +142,7 @@ public class StreamChunkParserTest
     Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
     Assert.assertEquals("val", Iterables.getOnlyElement(row.getDimension("dim")));
     Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
-    Assert.assertTrue(parser.used);
+    Assert.assertTrue(inputFormat.used);
   }
 
   private static class NotConvertibleToInputFormatParseSpec extends JSONParseSpec
@@ -157,27 +164,20 @@ public class StreamChunkParserTest
     }
   }
 
-  private static class TrackingStringInputRowParser extends StringInputRowParser
+  private static class TrackingJsonInputFormat extends JsonInputFormat
   {
     private boolean used;
 
-    private TrackingStringInputRowParser(ParseSpec parseSpec, String encoding)
+    private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec, @Nullable Map<String, Boolean> featureSpec)
     {
-      super(parseSpec, encoding);
+      super(flattenSpec, featureSpec);
     }
 
     @Override
-    public List<InputRow> parseBatch(ByteBuffer input)
+    public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
     {
       used = true;
-      return super.parseBatch(input);
-    }
-
-    @Override
-    public InputRow parse(String input)
-    {
-      used = true;
-      return super.parse(input);
+      return super.createReader(inputRowSchema, source, temporaryDirectory);
     }
   }
 }

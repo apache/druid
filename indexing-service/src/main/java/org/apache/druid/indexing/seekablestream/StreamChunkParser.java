@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -45,7 +43,8 @@ class StreamChunkParser
 {
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
-  private final Supplier<SettableByteEntityReader> lazyByteEntityReaderSupplier; // lazy initializer
+  @Nullable
+  private final SettableByteEntityReader byteEntityReader;
 
   /**
    * Either parser or inputFormat shouldn't be null.
@@ -59,24 +58,27 @@ class StreamChunkParser
   )
   {
     if (parser == null && inputFormat == null) {
-      throw new IAE("Either parser or inputFormat shouldn't be set");
+      throw new IAE("Either parser or inputFormat should be set");
     }
     this.parser = parser;
-    // Create a lazy initializer since it will fail to create a SettableByteEntityReader if inputFormat is null
-    this.lazyByteEntityReaderSupplier = Suppliers.memoize(() -> new SettableByteEntityReader(
-        inputFormat,
-        inputRowSchema,
-        transformSpec,
-        indexingTmpDir
-    ));
+    if (inputFormat != null) {
+      this.byteEntityReader = new SettableByteEntityReader(
+          inputFormat,
+          inputRowSchema,
+          transformSpec,
+          indexingTmpDir
+      );
+    } else {
+      this.byteEntityReader = null;
+    }
   }
 
   List<InputRow> parse(List<byte[]> streamChunk) throws IOException
   {
-    if (parser != null) {
-      return parseWithParser(parser, streamChunk);
+    if (byteEntityReader != null) {
+      return parseWithInputFormat(byteEntityReader, streamChunk);
     } else {
-      return parseWithInputFormat(lazyByteEntityReaderSupplier.get(), streamChunk);
+      return parseWithParser(parser, streamChunk);
     }
   }
 
