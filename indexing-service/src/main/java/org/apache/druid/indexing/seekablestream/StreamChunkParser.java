@@ -19,12 +19,19 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -38,12 +45,30 @@ class StreamChunkParser
 {
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
-  private final SettableByteEntityReader byteEntityReader;
+  private final Supplier<SettableByteEntityReader> lazyByteEntityReaderSupplier; // lazy initializer
 
-  StreamChunkParser(@Nullable InputRowParser<ByteBuffer> parser, SettableByteEntityReader byteEntityReader)
+  /**
+   * Either parser or inputFormat shouldn't be null.
+   */
+  StreamChunkParser(
+      @Nullable InputRowParser<ByteBuffer> parser,
+      @Nullable InputFormat inputFormat,
+      InputRowSchema inputRowSchema,
+      TransformSpec transformSpec,
+      File indexingTmpDir
+  )
   {
+    if (parser == null && inputFormat == null) {
+      throw new IAE("Either parser or inputFormat shouldn't be set");
+    }
     this.parser = parser;
-    this.byteEntityReader = byteEntityReader;
+    // Create a lazy initializer since it will fail to create a SettableByteEntityReader if inputFormat is null
+    this.lazyByteEntityReaderSupplier = Suppliers.memoize(() -> new SettableByteEntityReader(
+        inputFormat,
+        inputRowSchema,
+        transformSpec,
+        indexingTmpDir
+    ));
   }
 
   List<InputRow> parse(List<byte[]> streamChunk) throws IOException
@@ -51,7 +76,7 @@ class StreamChunkParser
     if (parser != null) {
       return parseWithParser(parser, streamChunk);
     } else {
-      return parseWithInputFormat(byteEntityReader, streamChunk);
+      return parseWithInputFormat(lazyByteEntityReaderSupplier.get(), streamChunk);
     }
   }
 
