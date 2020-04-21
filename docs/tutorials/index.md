@@ -69,11 +69,11 @@ In the package, you should find:
 
 * `LICENSE` and `NOTICE` files
 * `bin/*` - scripts useful for this quickstart
-* `conf/*` - example configurations for single-server and clustered setup
+* `conf/*` - example configurations for single-server and cluster deployments
 * `extensions/*` - core Druid extensions
 * `hadoop-dependencies/*` - Druid Hadoop dependencies
 * `lib/*` - libraries and dependencies for core Druid
-* `licenses/*` - Apache Druid and third-party license information
+* `licenses/*` - Apache Druid and third-party library license information
 * `quickstart/*` - configuration files, sample data, and other files for the quickstart tutorials
 
 ## Start up Druid services
