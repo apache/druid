@@ -190,6 +190,14 @@ public class CoordinatorResourceTestClient
     return status;
   }
 
+  /**
+   * Warning: Since it’s expensive to read all segments from metadata store every time, this API reads and
+   * caches segments metadata in memory and periodically updates the cache. Hence, there can be a race condition
+   * when this API compares the segments metadata from cache with segments in historicals. Particularly, when
+   * number of segment changes after the first initial load of the datasource. Workaround is to verify the number
+   * of segments matches expected from {@link #getSegments(String) getSegments} before calling this method (since,
+   * that would wait until the cache is updated with expected data)
+   */
   public boolean areSegmentsLoaded(String dataSource)
   {
     final Map<String, Integer> status = getLoadStatus();
