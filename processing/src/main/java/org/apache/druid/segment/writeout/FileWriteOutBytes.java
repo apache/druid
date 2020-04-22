@@ -89,6 +89,7 @@ final class FileWriteOutBytes extends WriteOutBytes
       try {
         src.limit(src.position() + buffer.capacity());
         buffer.put(src);
+        writeOutBytes += buffer.capacity();
         flush();
       }
       finally {
@@ -96,8 +97,9 @@ final class FileWriteOutBytes extends WriteOutBytes
         src.limit(srcLimit);
       }
     }
+    int remaining = src.remaining();
     buffer.put(src);
-    writeOutBytes += len;
+    writeOutBytes += remaining;
     return len;
   }
 
@@ -108,9 +110,8 @@ final class FileWriteOutBytes extends WriteOutBytes
   }
 
   @Override
-  public long size() throws IOException
+  public long size()
   {
-    flushIfNeeded(0); // To avoid check the declared IOException never thrown error
     return writeOutBytes;
   }
 
