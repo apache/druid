@@ -2654,7 +2654,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  @Test(timeout = 120_000L)
+  @Test(timeout = 60_000L)
   public void testRunWithoutDataInserted() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
