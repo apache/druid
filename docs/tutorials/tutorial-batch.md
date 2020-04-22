@@ -24,20 +24,20 @@ sidebar_label: "Loading files natively"
   -->
 
 
-This tutorial demonstrates how to perform a batch file load, using Apache Druid's native batch ingestion.
+This tutorial demonstrates how to load data into Druid from a file, using Apache Druid's native batch ingestion feature.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in
-the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
-running on your local machine. You don't need to have loaded any data yet.
+Before starting, you should have already installed Druid using the `micro-quickstart` single-machine 
+configuration and have it
+running on your local machine. See the [Quickstart](index.html) if not. 
 
-A data load is initiated by submitting an *ingestion task* spec to the Druid Overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
+For this tutorial, we'll load sample JSON data that represents Wikipedia page edits on a particular day. This 
+data is stored in the `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` file in the Druid 
+installation directory. 
 
-An ingestion spec can be written by hand or by using the "Data loader" that is built into the Druid console.
-The data loader can help you build an ingestion spec by sampling your data and and iteratively configuring various ingestion parameters.
-The data loader currently only supports native batch ingestion (support for streaming, including data stored in Apache Kafka and AWS Kinesis, is coming in future releases).
-Streaming ingestion is only available through a written ingestion spec today.
+You initiate data loading in Druid by submitting an *ingestion task* spec to the Druid Overlord. 
 
-We've included a sample of Wikipedia edits from September 12, 2015 to get you started.
+You can write ingestion specs by hand or using the _data loader_ built into the Druid console.
+The data loader builds an ingestion spec by sampling your data and incrementally building the configuration based on various ingestion parameters.
 
 
 ## Loading data with the data loader
