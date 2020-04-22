@@ -198,6 +198,8 @@ to `wikipedia`.
 
 13. Click **Next: Edit spec** to review the ingestion spec we've constructed with the data loader. 
 
+    ![Data loader spec](../assets/tutorial-batch-data-loader-08.png "Data loader spec")
+
     Feel free to go back and make changes in previous steps to see how changes will update the spec.
     Similarly, you can edit the spec directly and see it reflected in the previous steps. 
 
@@ -225,7 +227,7 @@ You can now see the data as a datasource in the console and try out a query.
    If the wikipedia datasource doesn't appear, wait a few moments for the segment to finish loading. A datasource is 
    queryable once its Availability is shown to be "Fully available". 
 
-2. When the datasource is available, open the Actions menu (![Load data](../assets/datasources-action-button.png)) and choose  **Query with SQL**.
+2. When the datasource is available, open the Actions menu (![Actions](../assets/datasources-action-button.png)) and choose  **Query with SQL**.
 
    ![Datasource view](../assets/tutorial-batch-data-loader-10.png "Datasource view")
 
