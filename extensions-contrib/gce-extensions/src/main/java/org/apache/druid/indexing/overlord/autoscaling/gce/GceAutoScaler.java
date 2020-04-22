@@ -144,6 +144,9 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
     final int maxRetries = 5;
 
     int retries = 0;
+    // This retry loop is here to catch the cases in which the underlying call to
+    // Compute.Builder(...).build() returns null, case that has been experienced
+    // sporadically at start time
     while (cachedComputeService == null && retries < maxRetries) {
       if (retries > 0) {
         Thread.sleep(POLL_INTERVAL_MS);
