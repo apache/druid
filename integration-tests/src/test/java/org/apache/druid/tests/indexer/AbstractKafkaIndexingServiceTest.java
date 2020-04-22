@@ -21,6 +21,7 @@ package org.apache.druid.tests.indexer;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.KafkaAdminClient;
 import org.apache.druid.testing.utils.KafkaEventWriter;
 import org.apache.druid.testing.utils.StreamAdminClient;
@@ -32,22 +33,24 @@ import java.util.function.Function;
 
 public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamIndexingTest
 {
-  public abstract boolean isKafkaWriterTransactionalEnabled();
+  protected abstract boolean isKafkaWriterTransactionalEnabled();
 
   @Override
-  StreamAdminClient getStreamAdminClient()
+  StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config)
   {
     return new KafkaAdminClient(config.getKafkaHost());
   }
 
   @Override
-  public StreamEventWriter getStreamEventWriter()
+  public StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config)
   {
     return new KafkaEventWriter(config, isKafkaWriterTransactionalEnabled());
   }
 
   @Override
-  Function<String, String> generateStreamIngestionPropsTransform(String streamName, String fullDatasourceName)
+  Function<String, String> generateStreamIngestionPropsTransform(String streamName,
+                                                                 String fullDatasourceName,
+                                                                 IntegrationTestingConfig config)
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties consumerProperties = new Properties();

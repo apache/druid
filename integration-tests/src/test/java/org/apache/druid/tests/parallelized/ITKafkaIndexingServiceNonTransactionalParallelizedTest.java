@@ -32,7 +32,7 @@ import org.testng.annotations.Test;
 public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends AbstractKafkaIndexingServiceTest
 {
   @Override
-  public boolean isKafkaWriterTransactionalEnabled()
+  protected boolean isKafkaWriterTransactionalEnabled()
   {
     return false;
   }
@@ -55,24 +55,40 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
     doClassTeardown();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKafkaIndexDataWithLegacyParserStableState() throws Exception
   {
     doTestIndexDataWithLegacyParserStableState();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKafkaIndexDataWithInputFormatStableState() throws Exception
   {
     doTestIndexDataWithInputFormatStableState();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKafkaIndexDataWithStartStopSupervisor() throws Exception
   {
     doTestIndexDataWithStartStopSupervisor();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKafkaIndexDataWithKafkaReshardSplit() throws Exception
   {

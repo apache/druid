@@ -20,6 +20,7 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.KinesisAdminClient;
 import org.apache.druid.testing.utils.KinesisEventWriter;
 import org.apache.druid.testing.utils.StreamAdminClient;
@@ -30,19 +31,21 @@ import java.util.function.Function;
 public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamIndexingTest
 {
   @Override
-  StreamAdminClient getStreamAdminClient() throws Exception
+  StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config) throws Exception
   {
     return new KinesisAdminClient(config.getStreamEndpoint());
   }
 
   @Override
-  StreamEventWriter getStreamEventWriter() throws Exception
+  StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config) throws Exception
   {
     return new KinesisEventWriter(config.getStreamEndpoint(), false);
   }
 
   @Override
-  Function<String, String> generateStreamIngestionPropsTransform(String streamName, String fullDatasourceName)
+  Function<String, String> generateStreamIngestionPropsTransform(String streamName,
+                                                                 String fullDatasourceName,
+                                                                 IntegrationTestingConfig config)
   {
     return spec -> {
       try {

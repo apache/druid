@@ -36,9 +36,9 @@ import java.util.concurrent.Future;
 public class KafkaEventWriter implements StreamEventWriter
 {
   private static final String TEST_PROPERTY_PREFIX = "kafka.test.property.";
-  private KafkaProducer<String, String> producer;
-  private boolean txnEnabled;
-  private List<Future<RecordMetadata>> pendingWriteRecords = new ArrayList<>();
+  private final KafkaProducer<String, String> producer;
+  private final boolean txnEnabled;
+  private final List<Future<RecordMetadata>> pendingWriteRecords = new ArrayList<>();
 
   public KafkaEventWriter(IntegrationTestingConfig config, boolean txnEnabled)
   {

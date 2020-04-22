@@ -37,12 +37,12 @@ import java.util.Properties;
 
 public class KafkaAdminClient implements StreamAdminClient
 {
-  AdminClient adminClient;
+  private AdminClient adminClient;
 
   public KafkaAdminClient(String kafkaInternalHost)
   {
     Properties config = new Properties();
-    config.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaInternalHost);
+    config.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaInternalHost);
     adminClient = AdminClient.create(config);
   }
 
@@ -67,10 +67,11 @@ public class KafkaAdminClient implements StreamAdminClient
    * This method can only increase the partition count of {@param streamName} to have a final partition
    * count of {@param newPartitionCount}
    * If {@param blocksUntilStarted} is set to true, then this method will blocks until the partitioning
-   * started (but not nessesary finished), otherwise, the method will returns right after issue the reshard command
+   * started (but not nessesary finished), otherwise, the method will returns right after issue the
+   * repartitioning command
    */
   @Override
-  public void updateShardCount(String streamName, int newPartitionCount, boolean blocksUntilStarted) throws Exception
+  public void updatePartitionCount(String streamName, int newPartitionCount, boolean blocksUntilStarted) throws Exception
   {
     Map<String, NewPartitions> counts = new HashMap<>();
     counts.put(streamName, NewPartitions.increaseTo(newPartitionCount));
@@ -81,6 +82,10 @@ public class KafkaAdminClient implements StreamAdminClient
     }
   }
 
+  /**
+   * Stream state such as active/non-active does not applies to Kafka.
+   * Returning true since Kafka stream is always active and can always be writen and read to.
+   */
   @Override
   public boolean isStreamActive(String streamName)
   {
@@ -88,7 +93,7 @@ public class KafkaAdminClient implements StreamAdminClient
   }
 
   @Override
-  public int getStreamShardCount(String streamName) throws Exception
+  public int getStreamPartitionCount(String streamName) throws Exception
   {
     DescribeTopicsResult result = adminClient.describeTopics(ImmutableList.of(streamName));
     TopicDescription topicDescription = result.values().get(streamName).get();
@@ -96,8 +101,8 @@ public class KafkaAdminClient implements StreamAdminClient
   }
 
   @Override
-  public boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount) throws Exception
+  public boolean verfiyPartitionCountUpdated(String streamName, int oldPartitionCount, int newPartitionCount) throws Exception
   {
-    return getStreamShardCount(streamName) == newShardCount;
+    return getStreamPartitionCount(streamName) == newPartitionCount;
   }
 }

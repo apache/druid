@@ -48,18 +48,27 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
     doClassTeardown();
   }
 
+  /**
+   * This test must be run individually since the test affect and modify the state of the Druid cluster
+   */
   @Test
   public void testKinesisIndexDataWithLosingCoordinator() throws Exception
   {
     doTestIndexDataWithLosingCoordinator();
   }
 
+  /**
+   * This test must be run individually since the test affect and modify the state of the Druid cluster
+   */
   @Test
   public void testKinesisIndexDataWithLosingOverlord() throws Exception
   {
     doTestIndexDataWithLosingOverlord();
   }
 
+  /**
+   * This test must be run individually since the test affect and modify the state of the Druid cluster
+   */
   @Test
   public void testKinesisIndexDataWithLosingHistorical() throws Exception
   {

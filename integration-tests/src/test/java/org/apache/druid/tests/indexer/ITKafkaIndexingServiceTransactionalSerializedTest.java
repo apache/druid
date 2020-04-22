@@ -31,7 +31,7 @@ import org.testng.annotations.Test;
 public class ITKafkaIndexingServiceTransactionalSerializedTest extends AbstractKafkaIndexingServiceTest
 {
   @Override
-  public boolean isKafkaWriterTransactionalEnabled()
+  protected boolean isKafkaWriterTransactionalEnabled()
   {
     return true;
   }
@@ -54,18 +54,27 @@ public class ITKafkaIndexingServiceTransactionalSerializedTest extends AbstractK
     doClassTeardown();
   }
 
+  /**
+   * This test must be run individually since the test affect and modify the state of the Druid cluster
+   */
   @Test
   public void testKafkaIndexDataWithLosingCoordinator() throws Exception
   {
     doTestIndexDataWithLosingCoordinator();
   }
 
+  /**
+   * This test must be run individually since the test affect and modify the state of the Druid cluster
+   */
   @Test
   public void testKafkaIndexDataWithLosingOverlord() throws Exception
   {
     doTestIndexDataWithLosingOverlord();
   }
 
+  /**
+   * This test must be run individually since the test affect and modify the state of the Druid cluster
+   */
   @Test
   public void testKafkaIndexDataWithLosingHistorical() throws Exception
   {

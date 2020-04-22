@@ -21,17 +21,24 @@ package org.apache.druid.testing.utils;
 
 import java.util.Map;
 
+/**
+ * This interface provides the administrative client contract for any stream storage (such as Kafka and Kinesis)
+ * which supports managing and inspecting streams (aka topics) and stream's partitions (aka shards).
+ * This is used for setting up, tearing down and any other administrative changes required in integration tests.
+ * Each method resulting in a change of state for the stream is intended to be synchronous to help
+ * make integration tests deterministic and easy to write.
+ */
 public interface StreamAdminClient
 {
   void createStream(String streamName, int partitionCount, Map<String, String> tags) throws Exception;
 
   void deleteStream(String streamName) throws Exception;
 
-  void updateShardCount(String streamName, int newPartitionCount, boolean blocksUntilStarted) throws Exception;
+  void updatePartitionCount(String streamName, int newPartitionCount, boolean blocksUntilStarted) throws Exception;
 
   boolean isStreamActive(String streamName);
 
-  int getStreamShardCount(String streamName) throws Exception;
+  int getStreamPartitionCount(String streamName) throws Exception;
 
-  boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount) throws Exception;
+  boolean verfiyPartitionCountUpdated(String streamName, int oldPartitionCount, int newPartitionCount) throws Exception;
 }

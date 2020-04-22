@@ -19,6 +19,11 @@
 
 package org.apache.druid.testing.utils;
 
+
+/**
+ * This interface is use to write test event data to the underlying stream (such as Kafka, Kinesis)
+ * This can also be use with {@link StreamGenerator} to write particular set of test data
+ */
 public interface StreamEventWriter
 {
   void write(String topic, String event);

@@ -49,30 +49,50 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
     doClassTeardown();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKinesisIndexDataWithLegacyParserStableState() throws Exception
   {
     doTestIndexDataWithLegacyParserStableState();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKinesisIndexDataWithInputFormatStableState() throws Exception
   {
     doTestIndexDataWithInputFormatStableState();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKinesisIndexDataWithStartStopSupervisor() throws Exception
   {
     doTestIndexDataWithStartStopSupervisor();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
   {
     doTestIndexDataWithStreamReshardSplit();
   }
 
+  /**
+   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
+   * and supervisor maintained and scoped within this test only
+   */
   @Test
   public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
   {

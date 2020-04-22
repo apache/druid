@@ -104,9 +104,9 @@ public class KinesisAdminClient implements StreamAdminClient
    * started (but not nessesary finished), otherwise, the method will returns right after issue the reshard command
    */
   @Override
-  public void updateShardCount(String streamName, int newShardCount, boolean blocksUntilStarted)
+  public void updatePartitionCount(String streamName, int newShardCount, boolean blocksUntilStarted)
   {
-    int originalShardCount = getStreamShardCount(streamName);
+    int originalShardCount = getStreamPartitionCount(streamName);
     UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
     updateShardCountRequest.setStreamName(streamName);
     updateShardCountRequest.setTargetShardCount(newShardCount);
@@ -140,16 +140,16 @@ public class KinesisAdminClient implements StreamAdminClient
   }
 
   @Override
-  public int getStreamShardCount(String streamName)
+  public int getStreamPartitionCount(String streamName)
   {
     StreamDescription streamDescription = getStreamDescription(streamName);
     return getStreamShardCount(streamDescription);
   }
 
   @Override
-  public boolean verfiyShardCountUpdated(String streamName, int oldShardCount, int newShardCount)
+  public boolean verfiyPartitionCountUpdated(String streamName, int oldShardCount, int newShardCount)
   {
-    int actualShardCount = getStreamShardCount(streamName);
+    int actualShardCount = getStreamPartitionCount(streamName);
     // Kinesis does not immediately drop the old shards after the resharding and hence,
     // would still returns both open shards and closed shards from the API call.
     // To verify, we sum the old count (closed shareds) and the expected new count (open shards)
