@@ -31,18 +31,19 @@ import java.util.Map;
 
 public class ZtestPostAggregatorTest
 {
-  FieldAccessPostAggregator successCount1, sample1Size, successCount2, sample2Size;
+  FieldAccessPostAggregator successCount1;
+  FieldAccessPostAggregator sample1Size;
+  FieldAccessPostAggregator successCount2;
+  FieldAccessPostAggregator sample2Size;
   ZtestPostAggregator ztestPostAggregator;
 
   @Before
   public void setup()
   {
-
     successCount1 = new FieldAccessPostAggregator("sc1", "successCountPopulation1");
     sample1Size = new FieldAccessPostAggregator("ss1", "sampleSizePopulation1");
     successCount2 = new FieldAccessPostAggregator("sc2", "successCountPopulation2");
     sample2Size = new FieldAccessPostAggregator("ss2", "sampleSizePopulation2");
-
 
     ztestPostAggregator = new ZtestPostAggregator(
         "zscore",
@@ -58,19 +59,19 @@ public class ZtestPostAggregatorTest
   {
     Map<String, Object> metricValues = new HashMap<>();
 
-    Object result =  ztestPostAggregator.compute(metricValues);
+    Object result = ztestPostAggregator.compute(metricValues);
     Assert.assertNull(result);
 
     metricValues.put("successCountPopulation1", 39244);
-    result =  ztestPostAggregator.compute(metricValues);
+    result = ztestPostAggregator.compute(metricValues);
     Assert.assertNull(result);
 
     metricValues.put("sampleSizePopulation1", 394298);
-    result =  ztestPostAggregator.compute(metricValues);
+    result = ztestPostAggregator.compute(metricValues);
     Assert.assertNull(result);
 
     metricValues.put("successCountPopulation2", 8991275);
-    result =  ztestPostAggregator.compute(metricValues);
+    result = ztestPostAggregator.compute(metricValues);
     metricValues.put("sampleSizePopulation2", 9385573);
     Assert.assertNull(result);
 
