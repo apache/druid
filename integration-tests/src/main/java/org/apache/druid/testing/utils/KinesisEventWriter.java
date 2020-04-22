@@ -64,6 +64,24 @@ public class KinesisEventWriter implements StreamEventWriter
   }
 
   @Override
+  public boolean isTransactionEnabled()
+  {
+    return false;
+  }
+
+  @Override
+  public void initTransaction()
+  {
+    // No-Op as Kinesis does not support transaction
+  }
+
+  @Override
+  public void commitTransaction()
+  {
+    // No-Op as Kinesis does not support transaction
+  }
+
+  @Override
   public void write(String streamName, String event)
   {
     kinesisProducer.addUserRecord(
