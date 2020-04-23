@@ -49,12 +49,13 @@ The software requirements for the installation machine are:
 * Java 8, Update 92 or later (8u92+)
 
 > Druid officially supports Java 8 only. Support for later major versions of Java is currently in experimental status.
->
-> You can set the location of the Java installation Druid uses with the environment variables `DRUID_JAVA_HOME` or `JAVA_HOME`. For more 
-information, run the verify-java script.
+
+> You can set the location of the Java installation for Druid to use with the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME`, if you 
+have more than one Java instace on your machine. For more 
+information about Java requirements, run the verify-java script.
 
 
-## Step 1. Getting started
+## Step 1. Install Druid
 
 After confirming the [requirements](#requirements), follow these steps: 
 
@@ -101,7 +102,6 @@ To stop Druid, type CTRL-C in the terminal. This exits the `bin/start-micro-quic
 terminates all Druid processes. 
 
 
-
 ## Step 3. Open the Druid console 
 
 After Druid finishes starting up, open the [Druid console](../operations/druid-console.md) at [http://localhost:8888](http://localhost:8888). 
@@ -111,8 +111,7 @@ After Druid finishes starting up, open the [Druid console](../operations/druid-c
 It may take a few seconds for all Druid services to start up, including the [Druid router](../design/router.md), which serves the console. If you attempt to open the Druid console before startup is complete, you may see errors in the browser. In this case, wait a few moments and try again. 
 
 
-
-## Step 4: Loading data
+## Step 4. Load data
 
 
 Ingestion specs define the schema of the data Druid reads and stores. You can write ingestion specs by hand or using the _data loader_, 
@@ -120,7 +119,7 @@ as we will here.
 
 For this tutorial, we'll load sample data bundled with Druid that represents Wikipedia page edits on a given day. 
 
-1. Click **Load data** from the Druid console header (![Load data](../assets/load-data-button.png)).
+1. Click **Load data** from the Druid console header (![Load data](../assets/tutorial-batch-data-loader-00.png)).
 
 2. Select the **Local disk** tile and then click **Connect data**.
 
@@ -138,18 +137,20 @@ For this tutorial, we'll load sample data bundled with Druid that represents Wik
 
 4. Click **Apply**. 
 
-   The raw data appears in the data loader, allowing you to verify that you entered a valid path and the data appears as expected. 
+   The data loader displays the raw data so that you can verify that it appears as expected. 
 
    ![Data loader sample](../assets/tutorial-batch-data-loader-02.png "Data loader sample")
 
-   > Notice that where you are in the data loader configuration steps appears at the top of the console, **Connect** in the 
-   screenshot above. You can go 
-   forward or backward at any time by clicking the step you want to go to. 
+   Notice that where you are in the sequence of steps, **Connect** currrently, appears at the top of the console:
+   
+   ![Load data](../assets/tutorial-batch-data-loader-12.png)  
+
+   You can click other steps to move forward or backward in the sequence at any time.
 
 5. Click **Next: Parse data**. 
 
    The data loader tries to determine the correct parser for the data automatically. In this case, 
-   it identifies the data format as `json`, as shown in the **Input format** field towards the bottom right of the page.
+   it identifies the data format as `json`, as shown in the **Input format** field at the bottom right.
 
    ![Data loader parse data](../assets/tutorial-batch-data-loader-03.png "Data loader parse data")
 
@@ -188,9 +189,9 @@ For this tutorial, we'll load sample data bundled with Druid that represents Wik
     Since this is a small dataset, we can have a 
    single segment, which `DAY` gives us. 
 
-11. Click **Next: Tune** and **Next: Publish**
+11. Click **Next: Tune** and **Next: Publish**.
 
-12. The Publish settings are where you can specify the datasource name in Druid. Let's change the default from `wikiticker-2015-09-12-sampled` 
+12. The Publish settings are where you can specify the datasource name in Druid. Change the default from `wikiticker-2015-09-12-sampled` 
 to `wikipedia`. 
 
     ![Data loader publish](../assets/tutorial-batch-data-loader-07.png "Data loader publish")
@@ -211,11 +212,11 @@ to `wikipedia`.
 
     ![Tasks view](../assets/tutorial-batch-data-loader-09.png "Tasks view")
 
-    The task may take a minute or two to complete. When done, the task status should appear as SUCCESS, with
-    an indication of the duration of the task. (Note that the view is set to automatically 
-    refresh, so you do not need to refresh the browser to see the status change.)
+    The task may take a minute or two to complete. When done, the task status should be "SUCCESS", with
+    the duration of the task indicated. Note that the view is set to automatically 
+    refresh, so you do not need to refresh the browser to see the status change.
 
-    When a tasks succeeds it means that it built one or more segments that will now be picked up by the data servers.
+    When a tasks succeeds it means that one or more segments have been built and will now be picked up by the data servers.
 
 
 ## Step 5. Query the data 
@@ -225,20 +226,20 @@ You can now see the data as a datasource in the console and try out a query.
 1. Click **Datasources** from the console header. 
   
    If the wikipedia datasource doesn't appear, wait a few moments for the segment to finish loading. A datasource is 
-   queryable once its Availability is shown to be "Fully available". 
+   queryable once it is shown to be "Fully available" in the **Availability** column. 
 
-2. When the datasource is available, open the Actions menu (![Actions](../assets/datasources-action-button.png)) and choose  **Query with SQL**.
+2. When the datasource is available, open the Actions menu (![Actions](../assets/datasources-action-button.png)) for that 
+   datasource and choose  **Query with SQL**.
 
    ![Datasource view](../assets/tutorial-batch-data-loader-10.png "Datasource view")
 
-   > Notice that the action menu is where you can edit retention rules for your data, configure compaction, and perform
-   other administrative tasks for the data. 
+   > Notice the other actions you can perform for a datasource, including configuring retention rules, compaction, and more. 
 
 3. Run the prepopulated query, `SELECT * FROM "wikipedia"` to see the results.
 
    ![Query view](../assets/tutorial-batch-data-loader-11.png "Query view")
 
-Congratulations! You've gotten from no Druid at all to loading and querying data on Druid, in just one quickstart. 
+Congratulation! You've gone from installing Druid to loading and querying data in just one quickstart. 
 
 
 ## Next steps
