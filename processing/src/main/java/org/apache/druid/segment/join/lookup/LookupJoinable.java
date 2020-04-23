@@ -31,6 +31,7 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -100,7 +101,7 @@ public class LookupJoinable implements Joinable
       if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
         correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
-        correlatedValues = ImmutableSet.of(extractor.apply(searchColumnName));
+        correlatedValues = Collections.singleton(extractor.apply(searchColumnName));
       }
     } else {
       if (!allowNonKeyColumnSearch) {

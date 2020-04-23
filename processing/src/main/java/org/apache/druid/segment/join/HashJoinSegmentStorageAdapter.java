@@ -236,6 +236,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     return Sequences.map(
         baseCursorSequence,
         cursor -> {
+          assert cursor != null;
           Cursor retVal = cursor;
 
           for (JoinableClause clause : clauses) {

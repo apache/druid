@@ -38,6 +38,7 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -175,9 +176,7 @@ public class JoinFilterAnalyzer
       for (Equality equality : clause.getCondition().getEquiConditions()) {
         Set<Expr> exprsForRhs = equiconditions.computeIfAbsent(
             clause.getPrefix() + equality.getRightColumn(),
-            (rhs) -> {
-              return new HashSet<>();
-            }
+            (rhs) -> new HashSet<>()
         );
         exprsForRhs.add(equality.getLeftExpr());
       }
@@ -263,9 +262,7 @@ public class JoinFilterAnalyzer
           Optional<List<JoinFilterColumnCorrelationAnalysis>> perColumnCorrelations =
               correlationsByFilteringColumn.computeIfAbsent(
                   rhsRewriteCandidate.getRhsColumn(),
-                  (rhsCol) -> {
-                    return Optional.of(new ArrayList<>());
-                  }
+                  (rhsCol) -> Optional.of(new ArrayList<>())
               );
           perColumnCorrelations.get().add(correlationForPrefix.getValue());
           correlationForPrefix.getValue().getCorrelatedValuesMap().computeIfAbsent(
@@ -350,6 +347,7 @@ public class JoinFilterAnalyzer
           joinFilterPreAnalysis
       );
       if (joinFilterAnalysis.isCanPushDown()) {
+        //noinspection OptionalGetWithoutIsPresent isCanPushDown checks isPresent
         leftFilters.add(joinFilterAnalysis.getPushDownFilter().get());
         if (!joinFilterAnalysis.getPushDownVirtualColumns().isEmpty()) {
           pushDownVirtualColumns.addAll(joinFilterAnalysis.getPushDownVirtualColumns());
@@ -438,6 +436,7 @@ public class JoinFilterAnalyzer
         if (!rewritten.isCanPushDown()) {
           return JoinFilterAnalysis.createNoPushdownFilterAnalysis(orFilter);
         } else {
+          //noinspection OptionalGetWithoutIsPresent  isCanPushDown checks isPresent
           newFilters.add(rewritten.getPushDownFilter().get());
         }
       } else {
@@ -762,6 +761,7 @@ public class JoinFilterAnalyzer
     return valueMatcher.matches();
   }
 
+  @Nullable
   private static JoinableClause isColumnFromJoin(
       List<JoinableClause> joinableClauses,
       String column

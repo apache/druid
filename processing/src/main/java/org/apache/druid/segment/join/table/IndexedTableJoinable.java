@@ -30,6 +30,7 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class IndexedTableJoinable implements Joinable
@@ -103,7 +104,8 @@ public class IndexedTableJoinable implements Joinable
       IntList rowIndex = index.find(searchColumnValue);
       for (int i = 0; i < rowIndex.size(); i++) {
         int rowNum = rowIndex.getInt(i);
-        correlatedValues.add(reader.read(rowNum).toString());
+        String correlatedDimVal = Objects.toString(reader.read(rowNum), null);
+        correlatedValues.add(correlatedDimVal);
 
         if (correlatedValues.size() > maxCorrelationSetSize) {
           return ImmutableSet.of();
@@ -118,8 +120,10 @@ public class IndexedTableJoinable implements Joinable
       IndexedTable.Reader dimNameReader = table.columnReader(filterColumnPosition);
       IndexedTable.Reader correlatedColumnReader = table.columnReader(correlatedColumnPosition);
       for (int i = 0; i < table.numRows(); i++) {
-        if (searchColumnValue.equals(dimNameReader.read(i).toString())) {
-          correlatedValues.add(correlatedColumnReader.read(i).toString());
+        String dimVal = Objects.toString(dimNameReader.read(i), null);
+        if (searchColumnValue.equals(dimVal)) {
+          String correlatedDimVal = Objects.toString(correlatedColumnReader.read(i), null);
+          correlatedValues.add(correlatedDimVal);
         }
         if (correlatedValues.size() > maxCorrelationSetSize) {
           return ImmutableSet.of();
@@ -129,4 +133,6 @@ public class IndexedTableJoinable implements Joinable
       return correlatedValues;
     }
   }
+
+
 }

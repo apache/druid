@@ -277,7 +277,7 @@ public class LookupJoinMatcher implements JoinMatcher
     } else {
       currentIterator = Iterators.filter(
           extractor.iterable().iterator(),
-          entry -> !matchedKeys.contains(entry.getKey())
+          entry -> entry != null && !matchedKeys.contains(entry.getKey())
       );
     }
 

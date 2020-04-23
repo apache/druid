@@ -138,7 +138,8 @@ public class PossiblyNullDimensionSelector extends AbstractDimensionSelector imp
       // id 0 is always null for this selector impl.
       return 0;
     } else {
-      return baseSelector.idLookup().lookupId(name) + nullAdjustment;
+      IdLookup idLookup = baseSelector.idLookup();
+      return (idLookup == null ? 0 : idLookup.lookupId(name)) + nullAdjustment;
     }
   }
 
