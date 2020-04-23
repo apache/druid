@@ -78,6 +78,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -2208,6 +2209,119 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         Granularities.NONE,
         index.getMetadata().getQueryGranularity()
     );
+  }
+
+  @Test
+  public void testMultivalDim_mergeAcrossSegments_rollupWorks() throws Exception
+  {
+    List<String> dims = Arrays.asList(
+        "dimA",
+        "dimMultiVal"
+    );
+
+    IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("dimA", MultiValueHandling.SORTED_ARRAY, true),
+                    new StringDimensionSchema("dimMultiVal", MultiValueHandling.SORTED_ARRAY, true)
+                )
+            )
+        )
+        .withMetrics(
+            new LongSumAggregatorFactory("sumCount", "sumCount")
+        )
+        .withRollup(true)
+        .build();
+
+    IncrementalIndex toPersistA = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
+    Map<String, Object> event1 = new HashMap<>();
+    event1.put("dimA", "leek");
+    event1.put("dimMultiVal", ImmutableList.of("1", "2", "4"));
+    event1.put("sumCount", 1L);
+
+    Map<String, Object> event2 = new HashMap<>();
+    event2.put("dimA", "leek");
+    event2.put("dimMultiVal", ImmutableList.of("1", "2", "3", "5"));
+    event2.put("sumCount", 1L);
+
+    toPersistA.add(new MapBasedInputRow(1, dims, event1));
+    toPersistA.add(new MapBasedInputRow(1, dims, event2));
+
+    IncrementalIndex toPersistB = new IncrementalIndex.Builder()
+        .setIndexSchema(indexSchema)
+        .setMaxRowCount(1000)
+        .buildOnheap();
+
+    Map<String, Object> event3 = new HashMap<>();
+    event3.put("dimA", "leek");
+    event3.put("dimMultiVal", ImmutableList.of("1", "2", "4"));
+    event3.put("sumCount", 1L);
+
+    Map<String, Object> event4 = new HashMap<>();
+    event4.put("dimA", "potato");
+    event4.put("dimMultiVal", ImmutableList.of("0", "1", "4"));
+    event4.put("sumCount", 1L);
+
+    toPersistB.add(new MapBasedInputRow(1, dims, event3));
+    toPersistB.add(new MapBasedInputRow(1, dims, event4));
+
+    final File tmpDirA = temporaryFolder.newFolder();
+    final File tmpDirB = temporaryFolder.newFolder();
+    final File tmpDirMerged = temporaryFolder.newFolder();
+
+    QueryableIndex indexA = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(toPersistA, tmpDirA, indexSpec, null))
+    );
+
+    QueryableIndex indexB = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(toPersistB, tmpDirB, indexSpec, null))
+    );
+
+    final QueryableIndex merged = closer.closeLater(
+        indexIO.loadIndex(
+            indexMerger.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB),
+                true,
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("sumCount", "sumCount")
+                },
+                tmpDirMerged,
+                indexSpec,
+                null
+            )
+        )
+    );
+
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
+
+    Assert.assertEquals(
+        ImmutableList.of("dimA", "dimMultiVal"),
+        ImmutableList.copyOf(adapter.getDimensionNames())
+    );
+
+    Assert.assertEquals(3, rowList.size());
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "4")), rowList.get(0).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(0).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "3", "5")), rowList.get(1).dimensionValues());
+    Assert.assertEquals(1L, rowList.get(1).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("potato", Arrays.asList("0", "1", "4")), rowList.get(2).dimensionValues());
+    Assert.assertEquals(1L, rowList.get(2).metricValues().get(0));
+
+    checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimA", "leek"));
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimA", "potato"));
+
+    checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimMultiVal", "0"));
+    checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("dimMultiVal", "1"));
+    checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimMultiVal", "2"));
+    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimMultiVal", "3"));
+    checkBitmapIndex(Arrays.asList(0, 2), adapter.getBitmapIndex("dimMultiVal", "4"));
+    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimMultiVal", "5"));
   }
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException

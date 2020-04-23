@@ -33,15 +33,50 @@ import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
 {
-
   /**
-   * Compares {@link IndexedInts} lexicographically, with the exception that if a row contains only zeros (that's the
-   * index of null) at all positions, it is considered "null" as a whole and is "less" than any "non-null" row. Empty
-   * row (size is zero) is also considered "null".
    *
-   * The implementation is a bit complicated because it tries to check each position of both rows only once.
    */
   private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR = (s1, s2) -> {
+    IndexedInts row1 = getRow(s1);
+    IndexedInts row2 = getRow(s2);
+    int len1 = row1.size();
+    int len2 = row2.size();
+    int retVal = Integer.compare(len1, len2);
+    int valsIndex = 0;
+
+    if (retVal != 0) {
+      // if the values don't have the same length, check if we're comparing [] and [null], which are equivalent
+      IndexedInts longerRow = len2 > len1 ? row2 : row1;
+      if (len1 + len2 == 1) {
+        if (longerRow.get(0) == 0) {
+          return 0;
+        } else {
+          //noinspection ObjectEquality -- longerRow is explicitly set to only row1 or row2
+          return longerRow == row1 ? 1 : -1;
+        }
+      }
+    }
+
+    while (retVal == 0 && valsIndex < len1) {
+      int v1 = row1.get(valsIndex);
+      int v2 = row2.get(valsIndex);
+      retVal = Integer.compare(v1, v2);
+      if (retVal != 0) {
+        return retVal;
+      }
+      ++valsIndex;
+    }
+    return retVal;
+  };
+
+    /**
+     * Compares {@link IndexedInts} lexicographically, with the exception that if a row contains only zeros (that's the
+     * index of null) at all positions, it is considered "null" as a whole and is "less" than any "non-null" row. Empty
+     * row (size is zero) is also considered "null".
+     *
+     * The implementation is a bit complicated because it tries to check each position of both rows only once.
+     */
+  private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR2 = (s1, s2) -> {
     IndexedInts row1 = getRow(s1);
     IndexedInts row2 = getRow(s2);
     int len1 = row1.size();

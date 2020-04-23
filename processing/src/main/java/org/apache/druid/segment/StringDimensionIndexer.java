@@ -401,6 +401,20 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     int retVal = Ints.compare(lhsLen, rhsLen);
     int valsIndex = 0;
+
+    if (retVal != 0) {
+      // if the values don't have the same length, check if we're comparing [] and [null], which are equivalent
+      int[] longerVal = rhsLen > lhsLen ? rhs : lhs;
+      if (lhsLen + rhsLen == 1) {
+        if (longerVal[0] == dimLookup.idForNull) {
+          return 0;
+        } else {
+          //noinspection ArrayEquality -- longerVal is explicitly set to only lhs or rhs
+          return longerVal == lhs ? 1 : -1;
+        }
+      }
+    }
+
     while (retVal == 0 && valsIndex < lhsLen) {
       int lhsVal = lhs[valsIndex];
       int rhsVal = rhs[valsIndex];
@@ -796,6 +810,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     return sortedLookup == null ? sortedLookup = dimLookup.sort() : sortedLookup;
   }
 
+  @Nullable
   private String getActualValue(int intermediateValue, boolean idSorted)
   {
     if (idSorted) {
