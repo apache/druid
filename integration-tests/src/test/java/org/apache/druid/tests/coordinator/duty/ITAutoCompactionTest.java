@@ -282,7 +282,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private void forceTriggerAutoCompaction(int numExpectedSegmentsAfterCompaction) throws Exception
   {
     compactionResource.forceTriggerAutoCompaction();
-    waitForAllTasksToComplete();
+    waitForAllTasksToComplete(fullDatasourceName);
     verifySegmentsCount(numExpectedSegmentsAfterCompaction);
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),

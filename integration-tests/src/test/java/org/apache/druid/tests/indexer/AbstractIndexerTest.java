@@ -83,7 +83,7 @@ public abstract class AbstractIndexerTest
   {
     // Wait for any existing index tasks to complete before disabling the datasource otherwise
     // realtime tasks can get stuck waiting for handoff. https://github.com/apache/druid/issues/1729
-    waitForAllTasksToComplete();
+    waitForAllTasksToComplete(dataSource);
     Interval interval = Intervals.of(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource);
     ITRetryUtil.retryUntilFalse(
@@ -97,19 +97,14 @@ public abstract class AbstractIndexerTest
         }, "Segment Unloading"
     );
     coordinator.deleteSegmentsDataSource(dataSource, interval);
-    waitForAllTasksToComplete();
+    waitForAllTasksToComplete(dataSource);
   }
 
-  protected void waitForAllTasksToComplete()
+  protected void waitForAllTasksToComplete(final String dataSource)
   {
     ITRetryUtil.retryUntilTrue(
-        () -> {
-          int numTasks = indexer.getPendingTasks().size() +
-                         indexer.getRunningTasks().size() +
-                         indexer.getWaitingTasks().size();
-          return numTasks == 0;
-        },
-        "Waiting for Tasks Completion"
+        () -> (indexer.getUncompletedTasksForDataSource(dataSource).size() == 0),
+        String.format("Waiting for all tasks of [%s] to complete", dataSource)
     );
   }
 
