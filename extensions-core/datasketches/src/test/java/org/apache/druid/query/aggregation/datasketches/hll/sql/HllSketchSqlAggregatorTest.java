@@ -94,13 +94,21 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
   private static final boolean ROUND = true;
-
-  private static QueryRunnerFactoryConglomerate conglomerate;
-  private static Closer resourceCloser;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, "dummy"
   );
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public QueryLogHook queryLogHook = QueryLogHook.create(TestHelper.JSON_MAPPER);
+  
+  private SpecificSegmentsQuerySegmentWalker walker;
+  private SqlLifecycleFactory sqlLifecycleFactory;
 
   @BeforeClass
   public static void setUpClass()
@@ -114,15 +122,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   {
     resourceCloser.close();
   }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create(TestHelper.JSON_MAPPER);
-
-  private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlLifecycleFactory sqlLifecycleFactory;
 
   @Before
   public void setUp() throws Exception
@@ -488,7 +487,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               + "  Log Config K   : 12\n"
               + "  Hll Target     : HLL_4\n"
               + "  Current Mode   : LIST\n"
-              + "  Memory         : false\n"
               + "  LB             : 2.0\n"
               + "  Estimate       : 2.000000004967054\n"
               + "  UB             : 2.000099863468538\n"
@@ -498,7 +496,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               + "  LOG CONFIG K   : 12\n"
               + "  HLL TARGET     : HLL_4\n"
               + "  CURRENT MODE   : LIST\n"
-              + "  MEMORY         : FALSE\n"
               + "  LB             : 2.0\n"
               + "  ESTIMATE       : 2.000000004967054\n"
               + "  UB             : 2.000099863468538\n"
@@ -632,7 +629,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               + "  Log Config K   : 12\n"
               + "  Hll Target     : HLL_4\n"
               + "  Current Mode   : LIST\n"
-              + "  Memory         : false\n"
               + "  LB             : 2.0\n"
               + "  Estimate       : 2.000000004967054\n"
               + "  UB             : 2.000099863468538\n"
