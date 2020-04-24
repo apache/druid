@@ -83,6 +83,40 @@ public class CloseableIteratorTest
     }
   }
 
+  @Test
+  public void testFlatMapClosedEarly() throws IOException
+  {
+    final int numIterations = 8;
+    List<CloseTrackingCloseableIterator<Integer>> innerIterators = new ArrayList<>();
+    final CloseTrackingCloseableIterator<Integer> actual = new CloseTrackingCloseableIterator<>(
+        generateTestIterator(numIterations)
+            .flatMap(list -> {
+              CloseTrackingCloseableIterator<Integer> inner =
+                  new CloseTrackingCloseableIterator<>(CloseableIterators.withEmptyBaggage(list.iterator()));
+              innerIterators.add(inner);
+              return inner;
+            })
+    );
+    final Iterator<Integer> expected = IntStream
+        .range(0, numIterations)
+        .flatMap(i -> IntStream.range(0, i))
+        .iterator();
+
+    // burn halfway through
+    int cnt = 0;
+    while (expected.hasNext() && actual.hasNext() && cnt++ < numIterations/2) {
+      Assert.assertEquals(expected.next(), actual.next());
+    }
+    // but stop while we still have an open iterator
+    Assert.assertTrue(actual.hasNext());
+    Assert.assertTrue(expected.hasNext());
+    actual.close();
+    Assert.assertEquals(1, actual.closeCount);
+    for (CloseTrackingCloseableIterator iter : innerIterators) {
+      Assert.assertEquals(1, iter.closeCount);
+    }
+  }
+
   private static CloseableIterator<List<Integer>> generateTestIterator(int numIterates)
   {
     return new CloseableIterator<List<Integer>>()
