@@ -125,7 +125,7 @@ public interface DimensionHandler
    *
    * The comparison rules used by this method should match the rules used by
    * {@link DimensionIndexer#compareUnsortedEncodedKeyComponents}, otherwise incorrect ordering/merging of rows
-   * can occur during ingestion.
+   * can occur during ingestion, causing issues such as imperfect rollup.
    */
   Comparator<ColumnValueSelector> getEncodedValueSelectorComparator();
 

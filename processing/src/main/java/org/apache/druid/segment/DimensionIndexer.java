@@ -243,7 +243,7 @@ public interface DimensionIndexer
    *
    * The comparison rules used by this method should match the rules used by
    * {@link DimensionHandler#getEncodedValueSelectorComparator()}, otherwise incorrect ordering/merging of rows
-   * can occur during ingestion.
+   * can occur during ingestion, causing issues such as imperfect rollup.
    *
    * @param lhs dimension value array from a Row key
    * @param rhs dimension value array from a Row key
