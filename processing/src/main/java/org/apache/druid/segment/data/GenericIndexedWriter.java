@@ -296,7 +296,7 @@ public class GenericIndexedWriter<T> implements Serializer
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     if (requireMultipleFiles) {
       // for multi-file version (version 2), getSerializedSize() returns number of bytes in meta file.
@@ -394,7 +394,7 @@ public class GenericIndexedWriter<T> implements Serializer
    *
    * @throws IOException
    */
-  private int bagSizePower() throws IOException
+  private int bagSizePower()
   {
     long avgObjectSize = (valuesOut.size() + numWritten - 1) / numWritten;
 
@@ -421,7 +421,7 @@ public class GenericIndexedWriter<T> implements Serializer
    *
    * @throws IOException
    */
-  private boolean actuallyFits(int powerTwo) throws IOException
+  private boolean actuallyFits(int powerTwo)
   {
     long lastValueOffset = 0;
     long currentValueOffset = 0;
