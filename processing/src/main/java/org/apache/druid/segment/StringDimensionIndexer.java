@@ -404,8 +404,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 
     if (retVal != 0) {
       // if the values don't have the same length, check if we're comparing [] and [null], which are equivalent
-      int[] longerVal = rhsLen > lhsLen ? rhs : lhs;
       if (lhsLen + rhsLen == 1) {
+        int[] longerVal = rhsLen > lhsLen ? rhs : lhs;
         if (longerVal[0] == dimLookup.idForNull) {
           return 0;
         } else {

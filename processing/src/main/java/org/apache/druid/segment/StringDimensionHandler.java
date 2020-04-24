@@ -46,8 +46,8 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
     if (retVal != 0) {
       // if the values don't have the same length, check if we're comparing [] and [null], which are equivalent
-      IndexedInts longerRow = len2 > len1 ? row2 : row1;
       if (len1 + len2 == 1) {
+        IndexedInts longerRow = len2 > len1 ? row2 : row1;
         if (longerRow.get(0) == 0) {
           return 0;
         } else {
