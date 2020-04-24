@@ -436,7 +436,7 @@ public class JoinFilterAnalyzer
         if (!rewritten.isCanPushDown()) {
           return JoinFilterAnalysis.createNoPushdownFilterAnalysis(orFilter);
         } else {
-          //noinspection OptionalGetWithoutIsPresent  isCanPushDown checks isPresent
+          //noinspection OptionalGetWithoutIsPresent isCanPushDown checks isPresent
           newFilters.add(rewritten.getPushDownFilter().get());
         }
       } else {

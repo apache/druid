@@ -133,6 +133,4 @@ public class IndexedTableJoinable implements Joinable
       return correlatedValues;
     }
   }
-
-
 }
