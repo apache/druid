@@ -61,13 +61,13 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
   abstract Object getEvent(int row, DateTime timestamp);
 
   @Override
-  public void start(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds)
+  public void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds)
   {
-    start(streamTopic, streamEventWriter, totalNumberOfSeconds, null);
+    run(streamTopic, streamEventWriter, totalNumberOfSeconds, null);
   }
 
   @Override
-  public void start(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime)
+  public void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime)
   {
     // The idea here is that we will send [eventsPerSecond] events that will either use [nowFlooredToSecond]
     // or the [overrrideFirstEventTime] as the primary timestamp.
@@ -94,6 +94,10 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
             nowCeilingToSecond.plusSeconds(1).minus(cyclePaddingMs)
         );
 
+        if (streamEventWriter.isTransactionEnabled()) {
+          streamEventWriter.initTransaction();
+        }
+
         for (int i = 1; i <= eventsPerSecond; i++) {
           streamEventWriter.write(streamTopic, MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
 
@@ -105,6 +109,10 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
           if (sleepTime > 0) {
             Thread.sleep(sleepTime);
           }
+        }
+
+        if (streamEventWriter.isTransactionEnabled()) {
+          streamEventWriter.commitTransaction();
         }
 
         nowCeilingToSecond = nowCeilingToSecond.plusSeconds(1);
