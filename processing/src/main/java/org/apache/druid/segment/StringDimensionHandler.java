@@ -35,19 +35,19 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 {
   /**
    * This comparator uses the following rules:
-   * - If the value arrays have different lengths, the shorter value array is considered smaller
-   *   - The single exception to this is null and the empty list, which are considered equal
-   * - If the value arrays are the same length, compare value by value until a difference is reached
+   * - Compare the two value arrays up to the length of the shorter array
+   * - If the two arrays match so far, then compare the array lengths, the shorter array is considered smaller
+   * - Comparing null and the empty list is a special case: these are considered equal
    */
   private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR = (s1, s2) -> {
     IndexedInts row1 = getRow(s1);
     IndexedInts row2 = getRow(s2);
     int len1 = row1.size();
     int len2 = row2.size();
-    int retVal = Integer.compare(len1, len2);
+    int lenCompareResult = Integer.compare(len1, len2);
     int valsIndex = 0;
 
-    if (retVal != 0) {
+    if (lenCompareResult != 0) {
       // if the values don't have the same length, check if we're comparing [] and [null], which are equivalent
       if (len1 + len2 == 1) {
         IndexedInts longerRow = len2 > len1 ? row2 : row1;
@@ -60,16 +60,18 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       }
     }
 
-    while (retVal == 0 && valsIndex < len1) {
+    int lenToCompare = Math.min(len1, len2);
+    while (valsIndex < lenToCompare) {
       int v1 = row1.get(valsIndex);
       int v2 = row2.get(valsIndex);
-      retVal = Integer.compare(v1, v2);
-      if (retVal != 0) {
-        return retVal;
+      int valueCompareResult = Integer.compare(v1, v2);
+      if (valueCompareResult != 0) {
+        return valueCompareResult;
       }
       ++valsIndex;
     }
-    return retVal;
+
+    return lenCompareResult;
   };
 
   /**

@@ -2306,10 +2306,10 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(3, rowList.size());
-    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "4")), rowList.get(0).dimensionValues());
-    Assert.assertEquals(2L, rowList.get(0).metricValues().get(0));
-    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "3", "5")), rowList.get(1).dimensionValues());
-    Assert.assertEquals(1L, rowList.get(1).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "3", "5")), rowList.get(0).dimensionValues());
+    Assert.assertEquals(1L, rowList.get(0).metricValues().get(0));
+    Assert.assertEquals(Arrays.asList("leek", Arrays.asList("1", "2", "4")), rowList.get(1).dimensionValues());
+    Assert.assertEquals(2L, rowList.get(1).metricValues().get(0));
     Assert.assertEquals(Arrays.asList("potato", Arrays.asList("0", "1", "4")), rowList.get(2).dimensionValues());
     Assert.assertEquals(1L, rowList.get(2).metricValues().get(0));
 
@@ -2319,9 +2319,9 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     checkBitmapIndex(Collections.singletonList(2), adapter.getBitmapIndex("dimMultiVal", "0"));
     checkBitmapIndex(Arrays.asList(0, 1, 2), adapter.getBitmapIndex("dimMultiVal", "1"));
     checkBitmapIndex(Arrays.asList(0, 1), adapter.getBitmapIndex("dimMultiVal", "2"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimMultiVal", "3"));
-    checkBitmapIndex(Arrays.asList(0, 2), adapter.getBitmapIndex("dimMultiVal", "4"));
-    checkBitmapIndex(Collections.singletonList(1), adapter.getBitmapIndex("dimMultiVal", "5"));
+    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimMultiVal", "3"));
+    checkBitmapIndex(Arrays.asList(1, 2), adapter.getBitmapIndex("dimMultiVal", "4"));
+    checkBitmapIndex(Collections.singletonList(0), adapter.getBitmapIndex("dimMultiVal", "5"));
   }
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
