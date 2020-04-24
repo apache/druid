@@ -74,13 +74,7 @@ public class StreamChunkParserTest
         null,
         null
     );
-    final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
-    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(json.getBytes(StringUtils.UTF8_STRING)));
-    Assert.assertEquals(1, parsedRows.size());
-    InputRow row = parsedRows.get(0);
-    Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
-    Assert.assertEquals("val", Iterables.getOnlyElement(row.getDimension("dim")));
-    Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
+    parseAndAssertResult(chunkParser);
   }
 
   @Test
@@ -94,13 +88,7 @@ public class StreamChunkParserTest
         TransformSpec.NONE,
         temporaryFolder.newFolder()
     );
-    final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
-    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(json.getBytes(StringUtils.UTF8_STRING)));
-    Assert.assertEquals(1, parsedRows.size());
-    InputRow row = parsedRows.get(0);
-    Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
-    Assert.assertEquals("val", Iterables.getOnlyElement(row.getDimension("dim")));
-    Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
+    parseAndAssertResult(chunkParser);
   }
 
   @Test
@@ -135,6 +123,12 @@ public class StreamChunkParserTest
         TransformSpec.NONE,
         temporaryFolder.newFolder()
     );
+    parseAndAssertResult(chunkParser);
+    Assert.assertTrue(inputFormat.used);
+  }
+
+  private void parseAndAssertResult(StreamChunkParser chunkParser) throws IOException
+  {
     final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
     List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(json.getBytes(StringUtils.UTF8_STRING)));
     Assert.assertEquals(1, parsedRows.size());
@@ -142,7 +136,6 @@ public class StreamChunkParserTest
     Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
     Assert.assertEquals("val", Iterables.getOnlyElement(row.getDimension("dim")));
     Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
-    Assert.assertTrue(inputFormat.used);
   }
 
   private static class NotConvertibleToInputFormatParseSpec extends JSONParseSpec
