@@ -102,14 +102,17 @@ public class CloseableIteratorTest
         .flatMap(i -> IntStream.range(0, i))
         .iterator();
 
-    // burn halfway through
+    // burn through the first few iterators
     int cnt = 0;
-    while (expected.hasNext() && actual.hasNext() && cnt++ < (numIterations / 2)) {
+    int numFlatIterations = 5;
+    while (expected.hasNext() && actual.hasNext() && cnt++ < numFlatIterations) {
       Assert.assertEquals(expected.next(), actual.next());
     }
-    // but stop while we still have an open iterator
+    // but stop while we still have an open current inner iterator and a few remaining inner iterators
     Assert.assertTrue(actual.hasNext());
     Assert.assertTrue(expected.hasNext());
+    Assert.assertEquals(4, innerIterators.size());
+    Assert.assertTrue(innerIterators.get(innerIterators.size() - 1).hasNext());
     actual.close();
     Assert.assertEquals(1, actual.closeCount);
     for (CloseTrackingCloseableIterator iter : innerIterators) {
