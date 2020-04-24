@@ -50,28 +50,28 @@ The software requirements for the installation machine are:
 
 > Druid officially supports Java 8 only. Support for later major versions of Java is currently in experimental status.
 
-> You can set the location of the Java installation for Druid to use with the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME`, if you 
-have more than one Java instace on your machine. For more 
-information about Java requirements, run the verify-java script.
+> Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set 
+`DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the 
+`bin/verify-java` script.
 
 
 ## Step 1. Install Druid
 
 After confirming the [requirements](#requirements), follow these steps: 
 
-1. [Download](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
-the {{DRUIDVERSION}} release.
-2. Extract Druid by running the following commands in your terminal:
+1. Download
+the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz).
+2. In your terminal, extract Druid and change directories to the distribution directory:
 
    ```bash
    tar -xzf apache-druid-{{DRUIDVERSION}}-bin.tar.gz
    cd apache-druid-{{DRUIDVERSION}}
    ```
-In the package, you'll find `LICENSE` and `NOTICE` files and directories for executable files, configuration files, sample data and more.
+In the directory, you'll find `LICENSE` and `NOTICE` files and subdirectories for executable files, configuration files, sample data and more.
 
 ## Step 2: Start up Druid services
 
-The following commands start up Druid services using the `micro-quickstart` single-machine configuration. 
+Start up Druid services using the `micro-quickstart` single-machine configuration. 
 
 From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 
@@ -79,7 +79,7 @@ From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 ./bin/start-micro-quickstart
 ```
 
-This brings up instances of ZooKeeper and the Druid services, all running on the local machine, as indicated in the command response:
+This brings up instances of ZooKeeper and the Druid services:
 
 ```bash
 $ ./bin/start-micro-quickstart
@@ -92,30 +92,29 @@ $ ./bin/start-micro-quickstart
 ```
 
 All persistent state, such as the cluster metadata store and segments for the services, are kept in the `var` directory under 
-the Druid root directory, apache-druid-{{DRUIDVERSION}}. A log file for each service is written to `var/sv`, as noted in the command output.
+the Druid root directory, apache-druid-{{DRUIDVERSION}}. Each service writes to a log file under `var/sv`, as noted in the startup script output above.
 
-At any time, you can revert Druid to its original, post-installation state by deleting the `var` directory. You may
-wish to do this, for example, between Druid tutorials. 
+At any time, you can revert Druid to its original, post-installation state by deleting the entire `var` directory. You may
+want to do this, for example, between Druid tutorials or after experimentation, to start with a fresh instance. 
 
-
-To stop Druid, type CTRL-C in the terminal. This exits the `bin/start-micro-quickstart` script and 
+To stop Druid at any time, use CTRL-C in the terminal. This exits the `bin/start-micro-quickstart` script and 
 terminates all Druid processes. 
 
 
 ## Step 3. Open the Druid console 
 
-After Druid finishes starting up, open the [Druid console](../operations/druid-console.md) at [http://localhost:8888](http://localhost:8888). 
+After the Druid services finish startup, open the [Druid console](../operations/druid-console.md) at [http://localhost:8888](http://localhost:8888). 
 
 ![Druid console](../assets/tutorial-quickstart-01.png "Druid console")
 
-It may take a few seconds for all Druid services to start up, including the [Druid router](../design/router.md), which serves the console. If you attempt to open the Druid console before startup is complete, you may see errors in the browser. In this case, wait a few moments and try again. 
+It may take a few seconds for all Druid services to finish starting, including the [Druid router](../design/router.md), which serves the console. If you attempt to open the Druid console before startup is complete, you may see errors in the browser. Wait a few moments and try again. 
 
 
 ## Step 4. Load data
 
 
 Ingestion specs define the schema of the data Druid reads and stores. You can write ingestion specs by hand or using the _data loader_, 
-as we will here. 
+as we will do here. 
 
 For this tutorial, we'll load sample data bundled with Druid that represents Wikipedia page edits on a given day. 
 
@@ -131,33 +130,34 @@ For this tutorial, we'll load sample data bundled with Druid that represents Wik
 
    - **File filter**: `wikiticker-2015-09-12-sampled.json.gz` 
 
-   Entering the base directory and [wildcard file filter](https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) separately, as we've done here, allows for having data ingested from multiple files at once.
-
    ![Data location](../assets/tutorial-batch-data-loader-015.png "Data location")
+
+   Entering the base directory and [wildcard file filter](https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) separately, as afforded by the UI, allows you to specify multiple files for ingestion at once.
 
 4. Click **Apply**. 
 
-   The data loader displays the raw data so that you can verify that it appears as expected. 
+   The data loader displays the raw data, giving you a chance to verify that the data 
+   appears as expected. 
 
    ![Data loader sample](../assets/tutorial-batch-data-loader-02.png "Data loader sample")
 
-   Notice that where you are in the sequence of steps, **Connect** currrently, appears at the top of the console:
+   Notice that your position in the sequence of steps to load data, **Connect** in our case, appears at the top of the console, as shown below. 
+   You can click other steps to move forward or backward in the sequence at any time.
    
    ![Load data](../assets/tutorial-batch-data-loader-12.png)  
-
-   You can click other steps to move forward or backward in the sequence at any time.
+   
 
 5. Click **Next: Parse data**. 
 
-   The data loader tries to determine the correct parser for the data automatically. In this case, 
+   The data loader tries to determine the parser appropriate for the data format automatically. In this case 
    it identifies the data format as `json`, as shown in the **Input format** field at the bottom right.
 
    ![Data loader parse data](../assets/tutorial-batch-data-loader-03.png "Data loader parse data")
 
-   Feel free to select other parser options to view their configuration options and get a sense of 
-   how Druid parses other types of data.
+   Feel free to select other **Input format** options to get a sense of their configuration settings 
+   and how Druid parses other types of data.  
 
-6. With the JSON parser selected, click **Next: Parse time**. Here you can view and adjust the 
+6. With the JSON parser selected, click **Next: Parse time**. The **Parse time** settings are where you view and adjust the 
    primary timestamp column for the data.
 
    ![Data loader parse time](../assets/tutorial-batch-data-loader-04.png "Data loader parse time")
@@ -186,8 +186,8 @@ For this tutorial, we'll load sample data bundled with Druid that represents Wik
 
     ![Data loader partition](../assets/tutorial-batch-data-loader-06.png "Data loader partition")
 
-    Since this is a small dataset, we can have a 
-   single segment, which `DAY` gives us. 
+    Since this is a small dataset, we can have just a single segment, which is what selecting `DAY` as the 
+    segment granularity gives us. 
 
 11. Click **Next: Tune** and **Next: Publish**.
 
@@ -201,7 +201,7 @@ to `wikipedia`.
 
     ![Data loader spec](../assets/tutorial-batch-data-loader-08.png "Data loader spec")
 
-    Feel free to go back and make changes in previous steps to see how changes will update the spec.
+    Feel free to go back and change settings from previous steps to see how doing so updates the spec.
     Similarly, you can edit the spec directly and see it reflected in the previous steps. 
 
     > For other ways to load ingestion specs in Druid, see the [file loading tutorial](tutorial-batch). 
@@ -216,12 +216,12 @@ to `wikipedia`.
     the duration of the task indicated. Note that the view is set to automatically 
     refresh, so you do not need to refresh the browser to see the status change.
 
-    When a tasks succeeds it means that one or more segments have been built and will now be picked up by the data servers.
+    A successful task means that one or more segments have been built and are now picked up by our data servers.
 
 
 ## Step 5. Query the data 
 
-You can now see the data as a datasource in the console and try out a query. 
+You can now see the data as a datasource in the console and try out a query, as follows: 
 
 1. Click **Datasources** from the console header. 
   
@@ -229,7 +229,7 @@ You can now see the data as a datasource in the console and try out a query.
    queryable once it is shown to be "Fully available" in the **Availability** column. 
 
 2. When the datasource is available, open the Actions menu (![Actions](../assets/datasources-action-button.png)) for that 
-   datasource and choose  **Query with SQL**.
+   datasource and choose **Query with SQL**.
 
    ![Datasource view](../assets/tutorial-batch-data-loader-10.png "Datasource view")
 
@@ -239,29 +239,25 @@ You can now see the data as a datasource in the console and try out a query.
 
    ![Query view](../assets/tutorial-batch-data-loader-11.png "Query view")
 
-Congratulation! You've gone from installing Druid to loading and querying data in just one quickstart. 
+Congratulations! You've gone from downloading Druid to querying data in just one quickstart. See the following
+section for what to do next. 
 
 
 ## Next steps
 
-After completing this quickstart, here's what you might want to do next. 
-
-### Reset Druid to its original state
-
-After stopping Druid services, you can perform a clean start by deleting the `var` directory from the Druid root directory and 
-running the `bin/start-micro-quickstart` script again. You will likely want to do this before taking other data ingestion tutorials, 
-since in them you will create the same wikipedia datasource. 
-
-
-### Take another tutorial 
-
-Check out the [query tutorial](../tutorials/tutorial-query.md) to further explore the Query features in the Druid console. 
+After finishing the quickstart, check out the [query tutorial](../tutorials/tutorial-query.md) to further explore 
+Query features in the Druid console. 
 
 Alternatively, learn about other ways to ingest data in one of these tutorials: 
 
 - [Loading stream data from Apache Kafka](./tutorial-kafka.md) – How to load streaming data from a Kafka topic.
 - [Loading a file using Apache Hadoop](./tutorial-batch-hadoop.md) – How to perform a batch file load, using a remote Hadoop cluster.
 - [Writing your own ingestion spec](./tutorial-ingestion-spec.md) – How to write a new ingestion spec and use it to load data.
+
+
+Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and 
+running the `bin/start-micro-quickstart` script again. You will likely want to do this before taking other data ingestion tutorials, 
+since in them you will create the same wikipedia datasource. 
 
 
 

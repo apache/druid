@@ -29,12 +29,10 @@ This tutorial demonstrates how to load data into Apache Druid from a file using 
 You initiate data loading in Druid by submitting an *ingestion task* spec to the Druid Overlord. You can write ingestion 
 specs by hand or using the _data loader_ built into the Druid console. 
 
-The [Quickstart](index) shows you how to use the data loader to build an ingestion spec. This tutorial shows you how to 
-submit an ingestion spec directly in the Druid console. 
-
-For production environments, it's likely that you'll want to automate data ingestion. This tutorial also 
-introduces you to ways to ingest batch data that lend themselves to automation: from the command line and from
-a script. 
+The [Quickstart](index) shows you how to use the data loader to build an ingestion spec. For production environments, it's 
+likely that you'll want to automate data ingestion. This tutorial starts by showing you how to submit an ingestion spec 
+directly in the Druid console, and then introduces ways to ingest batch data that lend themselves to 
+automation&mdash;from the command line and from a script. 
 
 Before starting, you should have already installed Druid using the `micro-quickstart` single-machine 
 configuration and have it
@@ -111,11 +109,11 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
 
 This spec creates a datasource named "wikipedia".
 
-From the Ingestion view, open the ... menu and choose `Submit JSON task`.
+From the Ingestion view, click the ellipses next to Tasks and choose `Submit JSON task`.
 
 ![Tasks view add task](../assets/tutorial-batch-submit-task-01.png "Tasks view add task")
 
-This will bring up the spec submission dialog where you can paste the spec above.
+This brings up the spec submission dialog where you can paste the spec above.
 
 ![Query view](../assets/tutorial-batch-submit-task-02.png "Query view")
 
