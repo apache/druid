@@ -81,7 +81,8 @@
         <avatica.version>1.15.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>1.2.0-incubating</datasketches.version>
+        <datasketches.version>1.1.0-incubating</datasketches.version>
+        <datasketches.memory.version>1.2.0-incubating</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <guava.version>16.0.1</guava.version>
@@ -1010,7 +1011,7 @@
             <dependency>
                 <groupId>org.apache.datasketches</groupId>
                 <artifactId>datasketches-memory</artifactId>
-                <version>${datasketches.version}</version>
+                <version>${datasketches.memory.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
