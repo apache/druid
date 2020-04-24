@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -54,10 +55,18 @@ public class CloseableIteratorTest
   }
 
   @Test
-  public void testFlatMap()
+  public void testFlatMap() throws IOException
   {
-    final CloseableIterator<Integer> actual = generateTestIterator(8)
-        .flatMap(list -> CloseableIterators.withEmptyBaggage(list.iterator()));
+    List<CloseTrackingCloseableIterator<Integer>> innerIterators = new ArrayList<>();
+    final CloseTrackingCloseableIterator<Integer> actual = new CloseTrackingCloseableIterator<>(
+        generateTestIterator(8)
+            .flatMap(list -> {
+              CloseTrackingCloseableIterator<Integer> inner =
+                  new CloseTrackingCloseableIterator<>(CloseableIterators.withEmptyBaggage(list.iterator()));
+              innerIterators.add(inner);
+              return inner;
+            })
+    );
     final Iterator<Integer> expected = IntStream
         .range(0, 8)
         .flatMap(i -> IntStream.range(0, i))
@@ -67,6 +76,11 @@ public class CloseableIteratorTest
     }
     Assert.assertFalse(actual.hasNext());
     Assert.assertFalse(expected.hasNext());
+    actual.close();
+    Assert.assertEquals(1, actual.closeCount);
+    for (CloseTrackingCloseableIterator iter : innerIterators) {
+      Assert.assertEquals(1, iter.closeCount);
+    }
   }
 
   private static CloseableIterator<List<Integer>> generateTestIterator(int numIterates)
@@ -98,5 +112,37 @@ public class CloseableIteratorTest
         // do nothing
       }
     };
+  }
+
+  static class CloseTrackingCloseableIterator<T> implements CloseableIterator<T>
+  {
+    CloseableIterator<T> inner;
+    int closeCount;
+
+    public CloseTrackingCloseableIterator(CloseableIterator<T> toTrack)
+    {
+      this.inner = toTrack;
+      this.closeCount = 0;
+    }
+
+
+    @Override
+    public void close() throws IOException
+    {
+      inner.close();
+      closeCount++;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return inner.hasNext();
+    }
+
+    @Override
+    public T next()
+    {
+      return inner.next();
+    }
   }
 }
