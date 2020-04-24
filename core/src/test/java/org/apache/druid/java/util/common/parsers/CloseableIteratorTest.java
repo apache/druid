@@ -104,7 +104,7 @@ public class CloseableIteratorTest
 
     // burn halfway through
     int cnt = 0;
-    while (expected.hasNext() && actual.hasNext() && cnt++ < numIterations/2) {
+    while (expected.hasNext() && actual.hasNext() && cnt++ < (numIterations / 2)) {
       Assert.assertEquals(expected.next(), actual.next());
     }
     // but stop while we still have an open iterator
