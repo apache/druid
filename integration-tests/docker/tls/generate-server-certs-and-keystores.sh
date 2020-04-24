@@ -17,6 +17,12 @@
 
 cd /tls
 
+FILE_CHECK_IF_RAN=/tls/server.key
+if [ -f "$FILE_CHECK_IF_RAN" ]; then
+  echo "Using existing certs/keys since /tls/server.key exists. Skipping generation (most likely this script was ran previously). To generate new certs, delete /tls/server.key"
+  exit
+fi
+
 rm -f cert_db.txt
 touch cert_db.txt
 
