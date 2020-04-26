@@ -58,7 +58,7 @@ public class OrcInputFormat extends NestedInputFormat
   }
 
   @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory, Boolean disableNullColumnSkipping)
   {
     return new OrcReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
   }

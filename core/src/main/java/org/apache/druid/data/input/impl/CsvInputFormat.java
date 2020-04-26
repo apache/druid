@@ -66,7 +66,7 @@ public class CsvInputFormat extends FlatTextInputFormat
   }
 
   @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory, Boolean disableNullColumnSkipping)
   {
     return new DelimitedValueReader(
         inputRowSchema,

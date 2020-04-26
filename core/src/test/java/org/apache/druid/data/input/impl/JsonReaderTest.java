@@ -67,7 +67,8 @@ public class JsonReaderTest
             Collections.emptyList()
         ),
         source,
-        null
+        null,
+        false
     );
     final int numExpectedIterations = 1;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -116,7 +117,8 @@ public class JsonReaderTest
             Collections.emptyList()
         ),
         source,
-        null
+        null,
+        false
     );
 
     final int numExpectedIterations = 1;

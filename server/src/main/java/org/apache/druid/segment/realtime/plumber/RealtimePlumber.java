@@ -966,7 +966,8 @@ public class RealtimePlumber implements Plumber
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
             config.getIndexSpecForIntermediatePersists(),
-            config.getSegmentWriteOutMediumFactory()
+            config.getSegmentWriteOutMediumFactory(),
+            false
         );
 
         indexToPersist.swapSegment(

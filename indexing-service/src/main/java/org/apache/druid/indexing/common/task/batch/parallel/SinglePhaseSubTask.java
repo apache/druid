@@ -330,7 +330,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         toolbox,
         dataSchema,
         tuningConfig,
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
+        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE),
+        false
     );
     final List<String> metricsNames = Arrays.stream(ingestionSchema.getDataSchema().getAggregators())
                                             .map(AggregatorFactory::getName)

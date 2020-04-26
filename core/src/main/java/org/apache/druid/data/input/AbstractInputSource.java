@@ -38,11 +38,23 @@ public abstract class AbstractInputSource implements InputSource
       File temporaryDirectory
   )
   {
+    return reader(inputRowSchema, inputFormat, temporaryDirectory, false);
+  }
+
+  @Override
+  public InputSourceReader reader(
+      InputRowSchema inputRowSchema,
+      @Nullable InputFormat inputFormat,
+      File temporaryDirectory,
+      Boolean disableNullColumnSkipping
+  )
+  {
     if (needsFormat()) {
       return formattableReader(
           inputRowSchema,
           Preconditions.checkNotNull(inputFormat, "inputFormat"),
-          temporaryDirectory
+          temporaryDirectory,
+          disableNullColumnSkipping
       );
     } else {
       return fixedFormatReader(inputRowSchema, temporaryDirectory);
@@ -52,7 +64,8 @@ public abstract class AbstractInputSource implements InputSource
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      File temporaryDirectory
+      File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     throw new UnsupportedOperationException("Implement this method properly if needsFormat() = true");

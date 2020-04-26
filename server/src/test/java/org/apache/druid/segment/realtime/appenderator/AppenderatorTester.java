@@ -285,7 +285,8 @@ public class AppenderatorTester implements AutoCloseable
         NoopJoinableFactory.INSTANCE,
         MapCache.create(2048),
         new CacheConfig(),
-        new CachePopulatorStats()
+        new CachePopulatorStats(),
+        false
     );
   }
 

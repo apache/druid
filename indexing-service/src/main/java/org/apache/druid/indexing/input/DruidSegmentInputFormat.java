@@ -59,7 +59,8 @@ public class DruidSegmentInputFormat implements InputFormat
   public InputEntityReader createReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
-      File temporaryDirectory
+      File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     return new DruidSegmentReader(

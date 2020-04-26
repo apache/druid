@@ -178,7 +178,8 @@ public interface IndexMerger
       Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean disableNullColumnSkipping
   ) throws IOException;
 
   File persist(
@@ -187,7 +188,8 @@ public interface IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean disableNullColumnSkipping
   ) throws IOException;
 
   File mergeQueryableIndex(

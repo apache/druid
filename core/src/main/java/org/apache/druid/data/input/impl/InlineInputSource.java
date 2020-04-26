@@ -65,14 +65,16 @@ public class InlineInputSource extends AbstractInputSource
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
         Stream.of(new ByteEntity(StringUtils.toUtf8(data))).iterator(),
-        temporaryDirectory
+        temporaryDirectory,
+        disableNullColumnSkipping
     );
   }
 }

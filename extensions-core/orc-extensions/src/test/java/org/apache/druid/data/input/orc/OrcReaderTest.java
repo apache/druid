@@ -261,6 +261,6 @@ public class OrcReaderTest
   {
     final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, Collections.emptyList());
     final FileEntity entity = new FileEntity(new File(dataFile));
-    return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
+    return inputFormat.createReader(schema, entity, temporaryFolder.newFolder(), false);
   }
 }

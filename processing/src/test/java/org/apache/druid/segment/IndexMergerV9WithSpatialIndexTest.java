@@ -495,9 +495,9 @@ public class IndexMergerV9WithSpatialIndexTest
       thirdFile.mkdirs();
       mergedFile.mkdirs();
 
-      indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
-      indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
-      indexMergerV9.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
+      indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null, false);
+      indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null, false);
+      indexMergerV9.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null, false);
 
       try {
         QueryableIndex mergedRealtime = indexIO.loadIndex(

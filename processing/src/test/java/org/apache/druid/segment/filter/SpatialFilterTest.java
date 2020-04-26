@@ -498,9 +498,9 @@ public class SpatialFilterTest
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
-      INDEX_MERGER.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
-      INDEX_MERGER.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
+      INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, indexSpec, null, false);
+      INDEX_MERGER.persist(second, DATA_INTERVAL, secondFile, indexSpec, null, false);
+      INDEX_MERGER.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null, false);
 
       QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
           INDEX_MERGER.mergeQueryableIndex(

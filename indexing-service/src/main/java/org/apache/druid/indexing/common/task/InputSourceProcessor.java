@@ -63,6 +63,7 @@ public class InputSourceProcessor
   private final int maxParseExceptions;
   private final long pushTimeout;
   private final IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder;
+  private final boolean disableNullColumnSkipping;
 
   public InputSourceProcessor(
       RowIngestionMeters buildSegmentsMeters,
@@ -70,7 +71,8 @@ public class InputSourceProcessor
       boolean logParseExceptions,
       int maxParseExceptions,
       long pushTimeout,
-      IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder
+      IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder,
+      boolean disableNullColumnSkipping
   )
   {
     this.buildSegmentsMeters = buildSegmentsMeters;
@@ -79,6 +81,7 @@ public class InputSourceProcessor
     this.maxParseExceptions = maxParseExceptions;
     this.pushTimeout = pushTimeout;
     this.inputRowIteratorBuilder = inputRowIteratorBuilder;
+    this.disableNullColumnSkipping = disableNullColumnSkipping;
   }
 
   /**
@@ -115,7 +118,8 @@ public class InputSourceProcessor
                 metricsNames
             ),
             inputFormat,
-            tmpDir
+            tmpDir,
+            disableNullColumnSkipping
         )
     );
     try (

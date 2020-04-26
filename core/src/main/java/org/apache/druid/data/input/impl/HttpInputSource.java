@@ -105,7 +105,8 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     return new InputEntityIteratingReader(

@@ -98,12 +98,14 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   private final String dimensionName;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
+  private final boolean disableNullColumnSkipping;
 
-  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
+  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling, boolean hasBitmapIndexes, boolean disableNullColumnSkipping)
   {
     this.dimensionName = dimensionName;
     this.multiValueHandling = multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
+    this.disableNullColumnSkipping = disableNullColumnSkipping;
   }
 
   @Override
@@ -160,6 +162,6 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       );
     }
 
-    return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
+    return new StringDimensionMergerV9(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer, disableNullColumnSkipping);
   }
 }

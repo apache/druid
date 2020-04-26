@@ -154,7 +154,8 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     try {

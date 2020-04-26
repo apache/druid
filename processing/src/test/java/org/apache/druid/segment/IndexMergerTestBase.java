@@ -1912,6 +1912,42 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(expectedFilenames, actualFilenames);
   }
 
+ @Test
+  public void testPersistNullColumnSkippingDisabled() throws Exception
+  {
+    //check that column d2 is skipped because it only has null values
+    IncrementalIndex index1 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("A", "A")
+    });
+    index1.add(new MapBasedInputRow(
+        1L,
+        Arrays.asList("d1", "d2"),
+        ImmutableMap.of("d1", "a", "A", 1)
+    ));
+
+    index1.add(new MapBasedInputRow(
+        1L,
+        Arrays.asList("d1", "d2"),
+        ImmutableMap.of("d1", "b", "A", 1)
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        indexIO.loadIndex(indexMerger.persist(index1, index1.getInterval(), tempDir, indexSpec, null, null, false))
+    );
+    List<String> expectedColumnNames = Arrays.asList("A", "d1", "d2");
+    List<String> actualColumnNames = Lists.newArrayList(index.getColumnNames());
+    Collections.sort(expectedColumnNames);
+    Collections.sort(actualColumnNames);
+    Assert.assertEquals(expectedColumnNames, actualColumnNames);
+
+    SmooshedFileMapper sfm = closer.closeLater(SmooshedFileMapper.load(tempDir));
+    List<String> expectedFilenames = Arrays.asList("A", "__time", "d1", "d2", "index.drd", "metadata.drd");
+    List<String> actualFilenames = new ArrayList<>(sfm.getInternalFilenames());
+    Collections.sort(expectedFilenames);
+    Collections.sort(actualFilenames);
+    Assert.assertEquals(expectedFilenames, actualFilenames);
+  }
 
   private IncrementalIndex getIndexD3() throws Exception
   {

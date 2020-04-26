@@ -64,7 +64,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean disableNullColumnSkipping
   )
   {
     realtimeAppenderator = Appenderators.createRealtime(
@@ -83,7 +84,8 @@ public class TestAppenderatorsManager implements AppenderatorsManager
         joinableFactory,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        disableNullColumnSkipping
     );
     return realtimeAppenderator;
   }

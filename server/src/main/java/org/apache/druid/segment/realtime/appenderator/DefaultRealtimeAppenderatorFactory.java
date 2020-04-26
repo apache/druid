@@ -114,7 +114,8 @@ public class DefaultRealtimeAppenderatorFactory implements AppenderatorFactory
         joinableFactory,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        false
     );
   }
 

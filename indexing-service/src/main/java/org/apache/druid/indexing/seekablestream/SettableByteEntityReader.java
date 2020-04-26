@@ -65,7 +65,7 @@ class SettableByteEntityReader implements InputEntityReader
     this.delegate = new TransformingInputEntityReader(
         // Yes, we are creating a new reader for every stream chunk.
         // This should be fine as long as initializing a reader is cheap which it is for now.
-        inputFormat.createReader(inputRowSchema, entity, indexingTmpDir),
+        inputFormat.createReader(inputRowSchema, entity, indexingTmpDir, false),
         transformer
     );
   }

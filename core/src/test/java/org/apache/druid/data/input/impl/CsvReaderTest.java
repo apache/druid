@@ -128,7 +128,7 @@ public class CsvReaderTest
         )
     );
     final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", null, true, 0);
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null, false);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
@@ -232,7 +232,8 @@ public class CsvReaderTest
             Collections.emptyList()
         ),
         source,
-        null
+        null,
+        false
     );
 
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -253,7 +254,7 @@ public class CsvReaderTest
         )
     );
     final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, null, false, 0);
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null, false);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
@@ -283,7 +284,7 @@ public class CsvReaderTest
 
   private void assertResult(ByteEntity source, CsvInputFormat format) throws IOException
   {
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null, false);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {

@@ -53,7 +53,7 @@ class BaseParquetReaderTest
   {
     FileEntity entity = new FileEntity(new File(parquetFile));
     ParquetInputFormat parquet = new ParquetInputFormat(flattenSpec, binaryAsString, new Configuration());
-    return parquet.createReader(schema, entity, null);
+    return parquet.createReader(schema, entity, null, false);
   }
 
   List<InputRow> readAllRows(InputEntityReader reader) throws IOException

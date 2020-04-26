@@ -47,6 +47,7 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   @Nullable
   private final SamplerConfig samplerConfig;
   private final InputSourceSampler inputSourceSampler;
+  private final Boolean disableNullColumnSkipping;
 
   @JsonCreator
   public IndexTaskSamplerSpec(
@@ -56,9 +57,8 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   )
   {
     this.dataSchema = Preconditions.checkNotNull(ingestionSpec, "[spec] is required").getDataSchema();
-
     Preconditions.checkNotNull(ingestionSpec.getIOConfig(), "[spec.ioConfig] is required");
-
+    this.disableNullColumnSkipping = ingestionSpec.getIOConfig().isDisableNullColumnSkipping();
     if (ingestionSpec.getIOConfig().getInputSource() != null) {
       this.inputSource = ingestionSpec.getIOConfig().getInputSource();
       if (ingestionSpec.getIOConfig().getInputSource().needsFormat()) {
@@ -91,6 +91,6 @@ public class IndexTaskSamplerSpec implements SamplerSpec
   @Override
   public SamplerResponse sample()
   {
-    return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig);
+    return inputSourceSampler.sample(inputSource, inputFormat, dataSchema, samplerConfig, disableNullColumnSkipping);
   }
 }

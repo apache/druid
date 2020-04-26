@@ -69,7 +69,8 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean disableNullColumnSkipping
   )
   {
     throw new UOE(ERROR_MSG);

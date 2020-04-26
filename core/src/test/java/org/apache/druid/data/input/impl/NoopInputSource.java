@@ -51,7 +51,18 @@ public class NoopInputSource implements InputSource
   public InputSourceReader reader(
       InputRowSchema inputRowSchema,
       @Nullable InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      File temporaryDirectory
+  )
+  {
+    return reader(inputRowSchema, inputFormat, temporaryDirectory, false);
+  }
+
+  @Override
+  public InputSourceReader reader(
+      InputRowSchema inputRowSchema,
+      @Nullable InputFormat inputFormat,
+      @Nullable File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     throw new UnsupportedOperationException();

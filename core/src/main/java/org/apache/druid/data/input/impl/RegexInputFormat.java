@@ -82,7 +82,7 @@ public class RegexInputFormat implements InputFormat
   }
 
   @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory, Boolean disableNullColumnSkipping)
   {
     return new RegexReader(inputRowSchema, source, pattern, compiledPatternSupplier.get(), listDelimiter, columns);
   }

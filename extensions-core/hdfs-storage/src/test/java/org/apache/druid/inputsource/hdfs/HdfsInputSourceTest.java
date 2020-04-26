@@ -234,7 +234,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void readsSplitsCorrectly() throws IOException
     {
-      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null);
+      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null, false);
 
       Map<Long, String> actualTimestampToValue = new HashMap<>();
       try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -311,7 +311,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void readsSplitsCorrectly() throws IOException
     {
-      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null);
+      InputSourceReader reader = target.formattableReader(INPUT_ROW_SCHEMA, INPUT_FORMAT, null, false);
 
       try (CloseableIterator<InputRow> iterator = reader.read()) {
         Assert.assertFalse(iterator.hasNext());

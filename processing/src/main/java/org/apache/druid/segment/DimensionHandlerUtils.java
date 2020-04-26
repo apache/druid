@@ -72,8 +72,18 @@ public final class DimensionHandlerUtils
       @Nullable MultiValueHandling multiValueHandling
   )
   {
+    return getHandlerFromCapabilities(dimensionName, capabilities, multiValueHandling, false);
+  }
+
+  public static DimensionHandler<?, ?, ?> getHandlerFromCapabilities(
+      String dimensionName,
+      @Nullable ColumnCapabilities capabilities,
+      @Nullable MultiValueHandling multiValueHandling,
+      boolean disableNullColumnSkipping
+  )
+  {
     if (capabilities == null) {
-      return new StringDimensionHandler(dimensionName, multiValueHandling, true);
+      return new StringDimensionHandler(dimensionName, multiValueHandling, true, disableNullColumnSkipping);
     }
 
     multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
@@ -82,7 +92,7 @@ public final class DimensionHandlerUtils
       if (!capabilities.isDictionaryEncoded()) {
         throw new IAE("String column must have dictionary encoding.");
       }
-      return new StringDimensionHandler(dimensionName, multiValueHandling, capabilities.hasBitmapIndexes());
+      return new StringDimensionHandler(dimensionName, multiValueHandling, capabilities.hasBitmapIndexes(), disableNullColumnSkipping);
     }
 
     if (capabilities.getType() == ValueType.LONG) {
@@ -98,7 +108,7 @@ public final class DimensionHandlerUtils
     }
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)
-    return new StringDimensionHandler(dimensionName, multiValueHandling, true);
+    return new StringDimensionHandler(dimensionName, multiValueHandling, true, disableNullColumnSkipping);
   }
 
   public static List<ValueType> getValueTypesFromDimensionSpecs(List<DimensionSpec> dimSpecs)

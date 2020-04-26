@@ -75,7 +75,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean disableNullColumnSkipping
   )
   {
     if (realtimeAppenderator != null) {
@@ -99,7 +100,8 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
           joinableFactory,
           cache,
           cacheConfig,
-          cachePopulatorStats
+          cachePopulatorStats,
+          disableNullColumnSkipping
       );
     }
     return realtimeAppenderator;

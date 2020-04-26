@@ -68,7 +68,8 @@ public class ParquetInputFormat extends NestedInputFormat
   public InputEntityReader createReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
-      File temporaryDirectory
+      File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   ) throws IOException
   {
     return new ParquetReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);

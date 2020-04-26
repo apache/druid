@@ -1174,12 +1174,14 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 );
               }
 
+              newSpec = deepSet(newSpec, 'spec.ioConfig.disableNullColumnSkipping', true);
+
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
               this.updateSpec(
                 fillDataSourceNameIfNeeded(
                   fillInputFormat(
-                    spec,
+                    deepSet(spec, 'spec.ioConfig.disableNullColumnSkipping', true),
                     filterMap(inputQueryState.data.data, l =>
                       l.parsed ? l.parsed.raw : undefined,
                     ),

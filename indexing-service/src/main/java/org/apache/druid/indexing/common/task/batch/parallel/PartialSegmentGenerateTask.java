@@ -185,7 +185,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         dataSchema,
         tuningConfig,
         new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager()),
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
+        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE),
+        ingestionSchema.getIOConfig().isDisableNullColumnSkipping()
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
@@ -197,7 +198,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions(),
           pushTimeout,
-          inputRowIteratorBuilder
+          inputRowIteratorBuilder,
+          ingestionSchema.getIOConfig().isDisableNullColumnSkipping()
       );
       final SegmentsAndCommitMetadata pushed = inputSourceProcessor.process(
           dataSchema,

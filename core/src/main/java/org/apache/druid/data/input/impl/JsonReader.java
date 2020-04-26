@@ -40,24 +40,27 @@ public class JsonReader extends TextReader
 {
   private final ObjectFlattener<JsonNode> flattener;
   private final ObjectMapper mapper;
+  private final boolean disableNullColumnSkipping;
 
   JsonReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
       JSONPathSpec flattenSpec,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      Boolean disableNullColumnSkipping
   )
   {
     super(inputRowSchema, source);
     this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker());
     this.mapper = mapper;
+    this.disableNullColumnSkipping = disableNullColumnSkipping;
   }
 
   @Override
   public List<InputRow> parseInputRows(String line) throws IOException, ParseException
   {
     final JsonNode document = mapper.readValue(line, JsonNode.class);
-    final Map<String, Object> flattened = flattener.flatten(document);
+    final Map<String, Object> flattened = disableNullColumnSkipping ? flattener.toMap(document) : flattener.flatten(document);
     return Collections.singletonList(MapInputRowParser.parse(getInputRowSchema(), flattened));
   }
 

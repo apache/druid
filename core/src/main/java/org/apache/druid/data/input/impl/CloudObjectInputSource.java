@@ -143,7 +143,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      Boolean nullIndex
   )
   {
     return new InputEntityIteratingReader(

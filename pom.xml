@@ -1360,7 +1360,7 @@
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <excludes>
-                      <exclude>**/SomeAvroDatum.class</exclude>
+                        <exclude>**/SomeAvroDatum.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>

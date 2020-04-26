@@ -167,10 +167,10 @@ public class StreamChunkParserTest
     }
 
     @Override
-    public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+    public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory, Boolean disableNullColumnSkipping)
     {
       used = true;
-      return super.createReader(inputRowSchema, source, temporaryDirectory);
+      return super.createReader(inputRowSchema, source, temporaryDirectory, disableNullColumnSkipping);
     }
   }
 }

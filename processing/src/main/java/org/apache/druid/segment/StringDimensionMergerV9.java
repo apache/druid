@@ -84,6 +84,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final MutableBitmap nullRowsBitmap;
   private final ColumnCapabilities capabilities;
+  private final boolean disableNullColumnSkipping;
 
   private int dictionarySize;
   private int rowCount = 0;
@@ -114,7 +115,8 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
-      Closer closer
+      Closer closer,
+      boolean disableNullColumnSkipping
   )
   {
     this.dimensionName = dimensionName;
@@ -125,6 +127,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
 
     this.progress = progress;
     this.closer = closer;
+    this.disableNullColumnSkipping = disableNullColumnSkipping;
   }
 
   @Override
@@ -526,7 +529,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   @Override
   public boolean canSkip()
   {
-    return cardinality == 0;
+    return !disableNullColumnSkipping && cardinality == 0;
   }
 
   @Override

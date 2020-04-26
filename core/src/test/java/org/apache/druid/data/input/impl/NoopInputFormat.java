@@ -35,7 +35,7 @@ public class NoopInputFormat implements InputFormat
   }
 
   @Override
-  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+  public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory, Boolean disableNullColumnSkipping)
   {
     throw new UnsupportedOperationException();
   }

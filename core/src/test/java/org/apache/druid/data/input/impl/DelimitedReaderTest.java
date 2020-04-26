@@ -139,7 +139,7 @@ public class DelimitedReaderTest
         )
     );
     final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "|", null, null, true, 0);
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null, false);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
@@ -174,7 +174,7 @@ public class DelimitedReaderTest
         )
     );
     final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "\t", "|", null, true, 0);
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null, false);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
@@ -213,7 +213,7 @@ public class DelimitedReaderTest
         false,
         0
     );
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null, false);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
@@ -243,7 +243,7 @@ public class DelimitedReaderTest
 
   private void assertResult(ByteEntity source, DelimitedInputFormat format) throws IOException
   {
-    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
+    final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null, false);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {

@@ -158,7 +158,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean disableNullColumnSkipping
   )
   {
     synchronized (this) {
@@ -179,7 +180,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           datasourceBundle.getWalker(),
           indexIO,
           wrapIndexMerger(indexMerger),
-          cache
+          cache,
+          disableNullColumnSkipping
       );
 
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -526,7 +528,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         Interval dataInterval,
         File outDir,
         IndexSpec indexSpec,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        boolean disableNullColumnSkipping
     )
     {
       ListenableFuture<File> mergeFuture = mergeExecutor.submit(
@@ -541,7 +544,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                     dataInterval,
                     outDir,
                     indexSpec,
-                    segmentWriteOutMediumFactory
+                    segmentWriteOutMediumFactory,
+                    false
                 );
               }
               catch (IOException ioe) {
@@ -611,7 +615,8 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         File outDir,
         IndexSpec indexSpec,
         ProgressIndicator progress,
-        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+        @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+        boolean disableNullColumnSkipping
     )
     {
       throw new UOE(ERROR_MSG);

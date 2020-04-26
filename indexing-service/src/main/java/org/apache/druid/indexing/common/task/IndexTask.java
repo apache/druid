@@ -757,7 +757,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 metricsNames
             ),
             inputSource.needsFormat() ? getInputFormat(ingestionSchema) : null,
-            tmpDir
+            tmpDir,
+            ingestionSchema.getIOConfig().isDisableNullColumnSkipping()
         )
     );
 
@@ -928,7 +929,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         toolbox,
         dataSchema,
         tuningConfig,
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
+        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE),
+        ingestionSchema.getIOConfig().isDisableNullColumnSkipping()
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
@@ -940,7 +942,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions(),
           pushTimeout,
-          new DefaultIndexTaskInputRowIteratorBuilder()
+          new DefaultIndexTaskInputRowIteratorBuilder(),
+          ingestionSchema.getIOConfig().isDisableNullColumnSkipping()
       );
       inputSourceProcessor.process(
           dataSchema,
@@ -1110,18 +1113,22 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public static class IndexIOConfig implements BatchIOConfig
   {
     private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
+    private static final boolean DEFAULT_DISABLE_NULL_COLUMN_SKIPPING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final InputFormat inputFormat;
     private final boolean appendToExisting;
+    private final boolean disableNullColumnSkipping;
+
 
     @JsonCreator
     public IndexIOConfig(
         @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+        @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+        @JsonProperty("disableNullColumnSkipping") @Nullable Boolean disableNullColumnSkipping
     )
     {
       Checks.checkOneNotNullOrEmpty(
@@ -1134,13 +1141,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
+      this.disableNullColumnSkipping = disableNullColumnSkipping == null ? DEFAULT_DISABLE_NULL_COLUMN_SKIPPING : disableNullColumnSkipping;
+
     }
 
     // old constructor for backward compatibility
     @Deprecated
     public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
     {
-      this(firehoseFactory, null, null, appendToExisting);
+      this(firehoseFactory, null, null, appendToExisting, false);
     }
 
     @Nullable
@@ -1198,6 +1207,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public boolean isAppendToExisting()
     {
       return appendToExisting;
+    }
+
+    @Override
+    @JsonProperty
+    public boolean isDisableNullColumnSkipping()
+    {
+      return disableNullColumnSkipping;
     }
   }
 

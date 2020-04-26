@@ -184,7 +184,8 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      Boolean nullIndex
   )
   {
     //noinspection ConstantConditions

@@ -60,7 +60,8 @@ public class IndexIngestionSpecTest
             null,
             new NoopInputSource(),
             new NoopInputFormat(),
-            null
+            null,
+            false
         ),
         null
     );
@@ -84,7 +85,8 @@ public class IndexIngestionSpecTest
             null,
             new NoopInputSource(),
             null,
-            null
+            null,
+            false
         ),
         null
     );
@@ -110,7 +112,8 @@ public class IndexIngestionSpecTest
             new NoopFirehoseFactory(),
             new NoopInputSource(),
             null,
-            null
+            null,
+            false
         ),
         null
     );
@@ -134,7 +137,8 @@ public class IndexIngestionSpecTest
             new NoopFirehoseFactory(),
             null,
             new NoopInputFormat(),
-            null
+            null,
+            false
         ),
         null
     );

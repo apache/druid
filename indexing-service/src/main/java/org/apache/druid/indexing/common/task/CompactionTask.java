@@ -606,6 +606,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             retryPolicyFactory
         ),
         null,
+        false,
         false
     );
   }

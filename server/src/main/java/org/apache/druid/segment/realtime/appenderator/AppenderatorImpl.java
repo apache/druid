@@ -117,6 +117,7 @@ public class AppenderatorImpl implements Appenderator
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
+  private final boolean disableNullColumnSkipping;
   /**
    * This map needs to be concurrent because it's accessed and mutated from multiple threads: both the thread from where
    * this Appenderator is used (and methods like {@link #add(SegmentIdWithShardSpec, InputRow, Supplier, boolean)} are
@@ -172,7 +173,8 @@ public class AppenderatorImpl implements Appenderator
       @Nullable SinkQuerySegmentWalker sinkQuerySegmentWalker,
       IndexIO indexIO,
       IndexMerger indexMerger,
-      Cache cache
+      Cache cache,
+      boolean disableNullColumnSkipping
   )
   {
     this.myId = id;
@@ -187,6 +189,8 @@ public class AppenderatorImpl implements Appenderator
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "indexMerger");
     this.cache = cache;
     this.texasRanger = sinkQuerySegmentWalker;
+    this.disableNullColumnSkipping = disableNullColumnSkipping;
+
 
     if (sinkQuerySegmentWalker == null) {
       this.sinkTimeline = new VersionedIntervalTimeline<>(
@@ -1334,7 +1338,8 @@ public class AppenderatorImpl implements Appenderator
             identifier.getInterval(),
             new File(persistDir, String.valueOf(indexToPersist.getCount())),
             tuningConfig.getIndexSpecForIntermediatePersists(),
-            tuningConfig.getSegmentWriteOutMediumFactory()
+            tuningConfig.getSegmentWriteOutMediumFactory(),
+            disableNullColumnSkipping
         );
 
         log.info(

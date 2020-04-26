@@ -99,7 +99,8 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     return new InputEntityIteratingReader(

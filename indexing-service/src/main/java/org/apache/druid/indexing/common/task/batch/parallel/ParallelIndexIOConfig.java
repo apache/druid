@@ -40,16 +40,17 @@ public class ParallelIndexIOConfig extends IndexIOConfig
       @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
       @JsonProperty("inputSource") @Nullable InputSource inputSource,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
-      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting
+      @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
+      @JsonProperty("disableNullColumnSkipping") @Nullable Boolean disableNullColumnSkipping
   )
   {
-    super(firehoseFactory, inputSource, inputFormat, appendToExisting);
+    super(firehoseFactory, inputSource, inputFormat, appendToExisting, disableNullColumnSkipping);
   }
 
   // old constructor for backward compatibility
   @Deprecated
   public ParallelIndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
   {
-    this(firehoseFactory, null, null, appendToExisting);
+    this(firehoseFactory, null, null, appendToExisting, false);
   }
 }

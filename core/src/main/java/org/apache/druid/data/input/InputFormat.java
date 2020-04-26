@@ -63,6 +63,7 @@ public interface InputFormat
   InputEntityReader createReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
-      File temporaryDirectory
+      File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   ) throws IOException;
 }

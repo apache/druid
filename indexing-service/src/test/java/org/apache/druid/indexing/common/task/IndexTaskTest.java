@@ -1835,7 +1835,8 @@ public class IndexTaskTest extends IngestionTestBase
               null,
               new LocalInputSource(baseDir, "druid*"),
               parseSpec == null ? DEFAULT_INPUT_FORMAT : parseSpec.toInputFormat(),
-              appendToExisting
+              appendToExisting,
+              false
           ),
           tuningConfig
       );

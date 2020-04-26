@@ -39,7 +39,8 @@ public final class BatchAppenderators
       TaskToolbox toolbox,
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
-      boolean storeCompactionState
+      boolean storeCompactionState,
+      boolean disableNullColumnSkipping
   )
   {
     return newAppenderator(
@@ -50,7 +51,8 @@ public final class BatchAppenderators
         dataSchema,
         appenderatorConfig,
         toolbox.getSegmentPusher(),
-        storeCompactionState
+        storeCompactionState,
+        disableNullColumnSkipping
     );
   }
 
@@ -62,7 +64,8 @@ public final class BatchAppenderators
       DataSchema dataSchema,
       AppenderatorConfig appenderatorConfig,
       DataSegmentPusher segmentPusher,
-      boolean storeCompactionState
+      boolean storeCompactionState,
+      boolean disableNullColumnSkipping
   )
   {
     return appenderatorsManager.createOfflineAppenderatorForTask(

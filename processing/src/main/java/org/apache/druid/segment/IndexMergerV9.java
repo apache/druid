@@ -113,6 +113,35 @@ public class IndexMergerV9 implements IndexMerger
       final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
+    return makeIndexFiles(
+        adapters,
+        metricAggs,
+        outDir,
+        progress,
+        mergedDimensions,
+        mergedMetrics,
+        rowMergerFn,
+        fillRowNumConversions,
+        indexSpec,
+        segmentWriteOutMediumFactory,
+        false
+    );
+  }
+
+  private File makeIndexFiles(
+      final List<IndexableAdapter> adapters,
+      final @Nullable AggregatorFactory[] metricAggs,
+      final File outDir,
+      final ProgressIndicator progress,
+      final List<String> mergedDimensions,
+      final List<String> mergedMetrics,
+      final Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn,
+      final boolean fillRowNumConversions,
+      final IndexSpec indexSpec,
+      final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      final boolean disableNullColumnSkipping
+  ) throws IOException
+  {
     progress.start();
     progress.progress();
 
@@ -162,7 +191,7 @@ public class IndexMergerV9 implements IndexMerger
       final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
       mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
 
-      final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
+      final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities, disableNullColumnSkipping);
       final List<DimensionMergerV9> mergers = new ArrayList<>();
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionHandler handler = handlers.get(mergedDimensions.get(i));
@@ -739,7 +768,7 @@ public class IndexMergerV9 implements IndexMerger
       @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
-    return persist(index, index.getInterval(), outDir, indexSpec, segmentWriteOutMediumFactory);
+    return persist(index, index.getInterval(), outDir, indexSpec, segmentWriteOutMediumFactory, false);
   }
 
   @Override
@@ -748,10 +777,11 @@ public class IndexMergerV9 implements IndexMerger
       final Interval dataInterval,
       File outDir,
       IndexSpec indexSpec,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean disableNullColumnSkipping
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory);
+    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator(), segmentWriteOutMediumFactory, disableNullColumnSkipping);
   }
 
   @Override
@@ -761,7 +791,8 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean disableNullColumnSkipping
   ) throws IOException
   {
     if (index.isEmpty()) {
@@ -799,7 +830,8 @@ public class IndexMergerV9 implements IndexMerger
         outDir,
         indexSpec,
         progress,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        disableNullColumnSkipping
     );
   }
 
@@ -855,7 +887,20 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpec
   ) throws IOException
   {
-    return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null);
+    return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null, false);
+  }
+
+  public File merge(
+      List<IndexableAdapter> indexes,
+      final boolean rollup,
+      final AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress,
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  ) throws IOException
+  {
+    return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator(), null, false);
   }
 
   private File merge(
@@ -865,7 +910,8 @@ public class IndexMergerV9 implements IndexMerger
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress,
-      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+      @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      boolean disableNullColumnSkipping
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
@@ -927,7 +973,8 @@ public class IndexMergerV9 implements IndexMerger
         rowMergerFn,
         true,
         indexSpec,
-        segmentWriteOutMediumFactory
+        segmentWriteOutMediumFactory,
+        disableNullColumnSkipping
     );
   }
 
@@ -996,14 +1043,15 @@ public class IndexMergerV9 implements IndexMerger
 
   private Map<String, DimensionHandler> makeDimensionHandlers(
       final List<String> mergedDimensions,
-      final List<ColumnCapabilitiesImpl> dimCapabilities
+      final List<ColumnCapabilitiesImpl> dimCapabilities,
+      final boolean disableNullColumnSkipping
   )
   {
     Map<String, DimensionHandler> handlers = new LinkedHashMap<>();
     for (int i = 0; i < mergedDimensions.size(); i++) {
       ColumnCapabilities capabilities = dimCapabilities.get(i);
       String dimName = mergedDimensions.get(i);
-      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimName, capabilities, null);
+      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimName, capabilities, null, disableNullColumnSkipping);
       handlers.put(dimName, handler);
     }
     return handlers;

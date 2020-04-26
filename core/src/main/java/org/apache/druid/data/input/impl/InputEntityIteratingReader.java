@@ -44,6 +44,7 @@ public class InputEntityIteratingReader implements InputSourceReader
   private final InputFormat inputFormat;
   private final CloseableIterator<InputEntity> sourceIterator;
   private final File temporaryDirectory;
+  private final Boolean disableNullColumnSkipping;
 
   public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
@@ -52,20 +53,33 @@ public class InputEntityIteratingReader implements InputSourceReader
       File temporaryDirectory
   )
   {
-    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceIterator), temporaryDirectory);
+    this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceIterator), temporaryDirectory, false);
   }
+
+  public InputEntityIteratingReader(
+         InputRowSchema inputRowSchema,
+         InputFormat inputFormat,
+         Iterator<? extends InputEntity> sourceIterator,
+         File temporaryDirectory,
+         Boolean disableNullColumnSkipping
+     )
+     {
+       this(inputRowSchema, inputFormat, CloseableIterators.withEmptyBaggage(sourceIterator), temporaryDirectory, disableNullColumnSkipping);
+     }
 
   public InputEntityIteratingReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
       CloseableIterator<? extends InputEntity> sourceCloseableIterator,
-      File temporaryDirectory
+      File temporaryDirectory,
+      Boolean disableNullColumnSkipping
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.inputFormat = inputFormat;
     this.sourceIterator = (CloseableIterator<InputEntity>) sourceCloseableIterator;
     this.temporaryDirectory = temporaryDirectory;
+    this.disableNullColumnSkipping = disableNullColumnSkipping;
   }
 
   @Override
@@ -74,7 +88,7 @@ public class InputEntityIteratingReader implements InputSourceReader
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
       try {
-        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
+        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory, disableNullColumnSkipping);
         return reader.read();
       }
       catch (IOException e) {
@@ -89,7 +103,7 @@ public class InputEntityIteratingReader implements InputSourceReader
     return createIterator(entity -> {
       // InputEntityReader is stateful and so a new one should be created per entity.
       try {
-        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory);
+        final InputEntityReader reader = inputFormat.createReader(inputRowSchema, entity, temporaryDirectory, disableNullColumnSkipping);
         return reader.sample();
       }
       catch (IOException e) {

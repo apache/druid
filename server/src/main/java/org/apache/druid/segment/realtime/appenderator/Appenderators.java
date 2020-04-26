@@ -56,7 +56,8 @@ public class Appenderators
       JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean disableNullColumnSkipping
   )
   {
     return new AppenderatorImpl(
@@ -84,7 +85,8 @@ public class Appenderators
         ),
         indexIO,
         indexMerger,
-        cache
+        cache,
+        disableNullColumnSkipping
     );
   }
 
@@ -137,7 +139,8 @@ public class Appenderators
         null,
         indexIO,
         indexMerger,
-        null
+        null,
+        false
     );
   }
 }

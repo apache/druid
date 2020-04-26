@@ -278,7 +278,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
-    appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox);
+    appenderator = newAppenderator(dataSchema, tuningConfig, metrics, toolbox, false);
     StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics);
 
     try {
@@ -756,7 +756,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       final DataSchema dataSchema,
       final RealtimeAppenderatorTuningConfig tuningConfig,
       final FireDepartmentMetrics metrics,
-      final TaskToolbox toolbox
+      final TaskToolbox toolbox,
+      final boolean disableNullColumnSkipping
   )
   {
     return appenderatorsManager.createRealtimeAppenderatorForTask(
@@ -775,7 +776,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getJoinableFactory(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
-        toolbox.getCachePopulatorStats()
+        toolbox.getCachePopulatorStats(),
+        disableNullColumnSkipping
     );
   }
 

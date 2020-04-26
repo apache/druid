@@ -88,6 +88,18 @@ public class InputSourceSampler
       @Nullable final SamplerConfig samplerConfig
   )
   {
+    return sample(inputSource, inputFormat, dataSchema, samplerConfig, false);
+  }
+
+  public SamplerResponse sample(
+      final InputSource inputSource,
+      // inputFormat can be null only if inputSource.needsFormat() = false or parser is specified.
+      @Nullable final InputFormat inputFormat,
+      @Nullable final DataSchema dataSchema,
+      @Nullable final SamplerConfig samplerConfig,
+      final Boolean disableNullColumnSkipping
+  )
+  {
     Preconditions.checkNotNull(inputSource, "inputSource required");
     if (inputSource.needsFormat()) {
       Preconditions.checkNotNull(inputFormat, "inputFormat required");
@@ -108,7 +120,8 @@ public class InputSourceSampler
         nonNullDataSchema,
         inputSource,
         inputFormat,
-        tempDir
+        tempDir,
+        disableNullColumnSkipping
     );
     try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
          final IncrementalIndex<Aggregator> index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
@@ -188,7 +201,8 @@ public class InputSourceSampler
       DataSchema dataSchema,
       InputSource inputSource,
       @Nullable InputFormat inputFormat,
-      File tempDir
+      File tempDir,
+      Boolean disableNullColumnSkipping
   )
   {
     final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
@@ -200,7 +214,7 @@ public class InputSourceSampler
         metricsNames
     );
 
-    InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir);
+    InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir, disableNullColumnSkipping);
 
     if (samplerConfig.getTimeoutMs() > 0) {
       reader = new TimedShutoffInputSourceReader(reader, DateTimes.nowUtc().plusMillis(samplerConfig.getTimeoutMs()));
