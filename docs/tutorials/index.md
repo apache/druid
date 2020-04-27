@@ -35,11 +35,11 @@ Before starting, you may want to read the [general Druid overview](../design/ind
 You can follow these steps on a relatively small machine, such as a laptop with around 4 CPU and 16 GB of RAM. 
 
 Druid comes with several startup configuration profiles for a range of machine sizes. 
-The `micro-quickstart`configuration profile shown here is suitable for early evaluation scenarios. To explore 
-Druid's performance or scaling capabilities, you'll need a larger machine.
+The `micro-quickstart`configuration profile shown here is suitable for evaluating Druid. If you want to 
+try out Druid's performance or scaling capabilities, you'll need a larger machine and configuration profile.
 
 The configuration profiles included with Druid range from the even smaller _Nano-Quickstart_ configuration (1 CPU, 4GB RAM) 
-to the _X-large_ configuration (64 CPU, 512GB RAM). For more information, see 
+to the _X-Large_ configuration (64 CPU, 512GB RAM). For more information, see 
 [Single server deployment](operations/single-server). Alternatively, see [Clustered deployment](tutorials/cluster) for 
 information on deploying Druid services across clustered machines. 
 
@@ -114,9 +114,10 @@ It may take a few seconds for all Druid services to finish starting, including t
 
 
 Ingestion specs define the schema of the data Druid reads and stores. You can write ingestion specs by hand or using the _data loader_, 
-as we will do here. 
+as we'll do here to perform batch file loading with Druid's native batch ingestion.
 
-For this tutorial, we'll load sample data bundled with Druid that represents Wikipedia page edits on a given day. 
+The Druid distribution bundles sample data we can use. The sample data located in `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` 
+in the Druid root directory represents Wikipedia page edits for a given day. 
 
 1. Click **Load data** from the Druid console header (![Load data](../assets/tutorial-batch-data-loader-00.png)).
 
@@ -182,7 +183,7 @@ For this tutorial, we'll load sample data bundled with Druid that represents Wik
 
 
 10. Click **Next: Partition** to configure how the data will be split into segments. In this case, choose `DAY` as 
-    the **Segment Granularity**. 
+    the **Segment granularity**. 
 
     ![Data loader partition](../assets/tutorial-batch-data-loader-06.png "Data loader partition")
 
@@ -191,8 +192,8 @@ For this tutorial, we'll load sample data bundled with Druid that represents Wik
 
 11. Click **Next: Tune** and **Next: Publish**.
 
-12. The Publish settings are where you can specify the datasource name in Druid. Change the default from `wikiticker-2015-09-12-sampled` 
-to `wikipedia`. 
+12. The Publish settings are where you specify the datasource name in Druid. Let's change the default name from 
+`wikiticker-2015-09-12-sampled` to `wikipedia`. 
 
     ![Data loader publish](../assets/tutorial-batch-data-loader-07.png "Data loader publish")
 
