@@ -40,7 +40,7 @@ try out Druid's performance or scaling capabilities, you'll need a larger machin
 
 The configuration profiles included with Druid range from the even smaller _Nano-Quickstart_ configuration (1 CPU, 4GB RAM) 
 to the _X-Large_ configuration (64 CPU, 512GB RAM). For more information, see 
-[Single server deployment](operations/single-server). Alternatively, see [Clustered deployment](tutorials/cluster) for 
+[Single server deployment](../operations/single-server.md). Alternatively, see [Clustered deployment](./cluster.md) for 
 information on deploying Druid services across clustered machines. 
 
 The software requirements for the installation machine are:
@@ -205,7 +205,7 @@ in the Druid root directory represents Wikipedia page edits for a given day.
     Feel free to go back and change settings from previous steps to see how doing so updates the spec.
     Similarly, you can edit the spec directly and see it reflected in the previous steps. 
 
-    > For other ways to load ingestion specs in Druid, see the [file loading tutorial](tutorial-batch). 
+    > For other ways to load ingestion specs in Druid, see [Tutorial: Loading a file](./tutorial-batch.md). 
 
 14. Once you are satisfied with the spec, click **Submit**.
 

@@ -29,14 +29,14 @@ This tutorial demonstrates how to load data into Apache Druid from a file using 
 You initiate data loading in Druid by submitting an *ingestion task* spec to the Druid Overlord. You can write ingestion 
 specs by hand or using the _data loader_ built into the Druid console. 
 
-The [Quickstart](index) shows you how to use the data loader to build an ingestion spec. For production environments, it's 
+The [Quickstart](./index.md) shows you how to use the data loader to build an ingestion spec. For production environments, it's 
 likely that you'll want to automate data ingestion. This tutorial starts by showing you how to submit an ingestion spec 
 directly in the Druid console, and then introduces ways to ingest batch data that lend themselves to 
 automation&mdash;from the command line and from a script. 
 
 Before starting, you should have already installed Druid using the `micro-quickstart` single-machine 
 configuration and have it
-running on your local machine. See the [Quickstart](index) if not. 
+running on your local machine. See the [Quickstart](./index.md) if not. 
 
 
 ## Loading data with a spec (via console)
