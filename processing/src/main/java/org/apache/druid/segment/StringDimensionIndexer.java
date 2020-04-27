@@ -399,23 +399,42 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     int lhsLen = lhs.length;
     int rhsLen = rhs.length;
 
-    int retVal = Ints.compare(lhsLen, rhsLen);
+    int lenCompareResult = Ints.compare(lhsLen, rhsLen);
+    if (lenCompareResult != 0) {
+      // if the values don't have the same length, check if we're comparing [] and [null], which are equivalent
+      if (lhsLen + rhsLen == 1) {
+        int[] longerVal = rhsLen > lhsLen ? rhs : lhs;
+        if (longerVal[0] == dimLookup.idForNull) {
+          return 0;
+        } else {
+          //noinspection ArrayEquality -- longerVal is explicitly set to only lhs or rhs
+          return longerVal == lhs ? 1 : -1;
+        }
+      }
+    }
+
     int valsIndex = 0;
-    while (retVal == 0 && valsIndex < lhsLen) {
+    int lenToCompare = Math.min(lhsLen, rhsLen);
+    while (valsIndex < lenToCompare) {
       int lhsVal = lhs[valsIndex];
       int rhsVal = rhs[valsIndex];
       if (lhsVal != rhsVal) {
         final String lhsValActual = getActualValue(lhsVal, false);
         final String rhsValActual = getActualValue(rhsVal, false);
+        int valueCompareResult = 0;
         if (lhsValActual != null && rhsValActual != null) {
-          retVal = lhsValActual.compareTo(rhsValActual);
+          valueCompareResult = lhsValActual.compareTo(rhsValActual);
         } else if (lhsValActual == null ^ rhsValActual == null) {
-          retVal = lhsValActual == null ? -1 : 1;
+          valueCompareResult = lhsValActual == null ? -1 : 1;
+        }
+        if (valueCompareResult != 0) {
+          return valueCompareResult;
         }
       }
       ++valsIndex;
     }
-    return retVal;
+
+    return lenCompareResult;
   }
 
   @Override
@@ -796,6 +815,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     return sortedLookup == null ? sortedLookup = dimLookup.sort() : sortedLookup;
   }
 
+  @Nullable
   private String getActualValue(int intermediateValue, boolean idSorted)
   {
     if (idSorted) {

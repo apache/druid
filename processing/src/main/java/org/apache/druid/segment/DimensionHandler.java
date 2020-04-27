@@ -122,6 +122,10 @@ public interface DimensionHandler
    * Returns a comparator that knows how to compare {@link ColumnValueSelector} of the assumed dimension type,
    * corresponding to this DimensionHandler. E. g. {@link StringDimensionHandler} returns a comparator, that compares
    * {@link ColumnValueSelector}s as {@link DimensionSelector}s.
+   *
+   * The comparison rules used by this method should match the rules used by
+   * {@link DimensionIndexer#compareUnsortedEncodedKeyComponents}, otherwise incorrect ordering/merging of rows
+   * can occur during ingestion, causing issues such as imperfect rollup.
    */
   Comparator<ColumnValueSelector> getEncodedValueSelectorComparator();
 
