@@ -124,9 +124,9 @@ public class IndexedTableJoinable implements Joinable
         if (searchColumnValue.equals(dimVal)) {
           String correlatedDimVal = Objects.toString(correlatedColumnReader.read(i), null);
           correlatedValues.add(correlatedDimVal);
-        }
-        if (correlatedValues.size() > maxCorrelationSetSize) {
-          return ImmutableSet.of();
+          if (correlatedValues.size() > maxCorrelationSetSize) {
+            return ImmutableSet.of();
+          }
         }
       }
 
