@@ -37,7 +37,7 @@ public class TestNGGroup
 
   public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
 
-  public static final String KAFKA_DATA_FORMAT = "kafka-data-foramt";
+  public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
 
   public static final String OTHER_INDEX = "other-index";
 

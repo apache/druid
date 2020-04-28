@@ -31,8 +31,10 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.DruidClusterAdminClient;
 import org.apache.druid.testing.utils.EventSerializer;
 import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.JsonEventSerializer;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
+import org.apache.druid.testing.utils.StreamGenerator;
 import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -90,7 +92,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   private IntegrationTestingConfig config;
 
   private StreamAdminClient streamAdminClient;
-  private WikipediaStreamEventStreamGenerator wikipediaStreamEventGenerator;
 
   abstract StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config) throws Exception;
 
@@ -166,7 +167,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   ) throws Exception
   {
     final EventSerializer serializer = jsonMapper.readValue(getResourceAsStream(serializerPath), EventSerializer.class);
-    wikipediaStreamEventGenerator = new WikipediaStreamEventStreamGenerator(
+    final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
         serializer,
         EVENTS_PER_SECOND,
         CYCLE_PADDING_MS
@@ -183,7 +184,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       generatedTestConfig.setSupervisorId(indexer.submitSupervisor(taskSpec));
       LOG.info("Submitted supervisor");
       // Start data generator
-      wikipediaStreamEventGenerator.run(
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           TOTAL_NUMBER_OF_SECOND,
@@ -240,7 +241,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 2;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-      wikipediaStreamEventGenerator.run(
+      final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
+          new JsonEventSerializer(jsonMapper),
+          EVENTS_PER_SECOND,
+          CYCLE_PADDING_MS
+      );
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateFirstRound,
@@ -257,7 +263,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Suspend the supervisor
       indexer.suspendSupervisor(generatedTestConfig.getSupervisorId());
       // Start generating remainning half of the data
-      wikipediaStreamEventGenerator.run(
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateRemaining,
@@ -314,7 +320,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-      wikipediaStreamEventGenerator.run(
+      final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
+          new JsonEventSerializer(jsonMapper),
+          EVENTS_PER_SECOND,
+          CYCLE_PADDING_MS
+      );
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateFirstRound,
@@ -335,7 +346,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Start generating one third of the data (while restarting)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
-      wikipediaStreamEventGenerator.run(
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateSecondRound,
@@ -346,7 +357,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       waitForReadyRunnable.run();
       LOG.info("Druid process is now available");
       // Start generating remaining data (after restarting)
-      wikipediaStreamEventGenerator.run(
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateRemaining,
@@ -385,7 +396,12 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       int secondsToGenerateRemaining = TOTAL_NUMBER_OF_SECOND;
       int secondsToGenerateFirstRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateFirstRound;
-      wikipediaStreamEventGenerator.run(
+      final StreamGenerator streamGenerator = new WikipediaStreamEventStreamGenerator(
+          new JsonEventSerializer(jsonMapper),
+          EVENTS_PER_SECOND,
+          CYCLE_PADDING_MS
+      );
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateFirstRound,
@@ -404,7 +420,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       // Start generating one third of the data (while resharding)
       int secondsToGenerateSecondRound = TOTAL_NUMBER_OF_SECOND / 3;
       secondsToGenerateRemaining = secondsToGenerateRemaining - secondsToGenerateSecondRound;
-      wikipediaStreamEventGenerator.run(
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateSecondRound,
@@ -430,7 +446,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "Waiting for stream to finish resharding"
       );
       // Start generating remaining data (after resharding)
-      wikipediaStreamEventGenerator.run(
+      streamGenerator.run(
           generatedTestConfig.getStreamName(),
           streamEventWriter,
           secondsToGenerateRemaining,
