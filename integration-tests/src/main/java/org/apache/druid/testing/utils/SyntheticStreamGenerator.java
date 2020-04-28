@@ -19,32 +19,18 @@
 
 package org.apache.druid.testing.utils;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
+import java.util.List;
+
 public abstract class SyntheticStreamGenerator implements StreamGenerator
 {
-  private static final Logger log = new Logger(SyntheticStreamGenerator.class);
-  static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private static final Logger LOG = new Logger(SyntheticStreamGenerator.class);
 
-  static {
-    MAPPER.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ObjectMapper.class.getName(), MAPPER)
-    );
-    MAPPER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-  }
-
-  public int getEventsPerSecond()
-  {
-    return eventsPerSecond;
-  }
-
+  private final EventSerializer serializer;
   private final int eventsPerSecond;
 
   // When calculating rates, leave this buffer to minimize overruns where we're still writing messages from the previous
@@ -52,13 +38,14 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
   // second to begin.
   private final long cyclePaddingMs;
 
-  public SyntheticStreamGenerator(int eventsPerSecond, long cyclePaddingMs)
+  public SyntheticStreamGenerator(EventSerializer serializer, int eventsPerSecond, long cyclePaddingMs)
   {
+    this.serializer = serializer;
     this.eventsPerSecond = eventsPerSecond;
     this.cyclePaddingMs = cyclePaddingMs;
   }
 
-  abstract Object getEvent(int row, DateTime timestamp);
+  abstract List<Pair<String, Object>> newEvent(int row, DateTime timestamp);
 
   @Override
   public void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds)
@@ -83,12 +70,12 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
       try {
         long sleepMillis = nowCeilingToSecond.getMillis() - DateTimes.nowUtc().getMillis();
         if (sleepMillis > 0) {
-          log.info("Waiting %s ms for next run cycle (at %s)", sleepMillis, nowCeilingToSecond);
+          LOG.info("Waiting %s ms for next run cycle (at %s)", sleepMillis, nowCeilingToSecond);
           Thread.sleep(sleepMillis);
           continue;
         }
 
-        log.info(
+        LOG.info(
             "Beginning run cycle with %s events, target completion time: %s",
             eventsPerSecond,
             nowCeilingToSecond.plusSeconds(1).minus(cyclePaddingMs)
@@ -99,11 +86,11 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
         }
 
         for (int i = 1; i <= eventsPerSecond; i++) {
-          streamEventWriter.write(streamTopic, MAPPER.writeValueAsString(getEvent(i, eventTimestamp)));
+          streamEventWriter.write(streamTopic, serializer.serialize(newEvent(i, eventTimestamp)));
 
           long sleepTime = calculateSleepTimeMs(eventsPerSecond - i, nowCeilingToSecond);
           if ((i <= 100 && i % 10 == 0) || i % 100 == 0) {
-            log.info("Event: %s/%s, sleep time: %s ms", i, eventsPerSecond, sleepTime);
+            LOG.info("Event: %s/%s, sleep time: %s ms", i, eventsPerSecond, sleepTime);
           }
 
           if (sleepTime > 0) {
@@ -119,7 +106,7 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
         eventTimestamp = eventTimestamp.plusSeconds(1);
         seconds++;
 
-        log.info(
+        LOG.info(
             "Finished writing %s events, current time: %s - updating next timestamp to: %s",
             eventsPerSecond,
             DateTimes.nowUtc(),
@@ -128,7 +115,7 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
 
         if (seconds >= totalNumberOfSeconds) {
           streamEventWriter.flush();
-          log.info(
+          LOG.info(
               "Finished writing %s seconds",
               seconds
           );
@@ -139,11 +126,6 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
         throw new RuntimeException("Exception in event generation loop", e);
       }
     }
-  }
-
-  @Override
-  public void shutdown()
-  {
   }
 
   /**

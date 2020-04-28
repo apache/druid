@@ -337,6 +337,14 @@ jobs:
       script: *run_integration_test
       after_failure: *integration_test_diags
 
+    - &integration_kafka_format_tests
+        name: "(Compile=openjdk8, Run=openjdk8) Kafka index integration test with various formats"
+        jdk: openjdk8
+        services: *integration_test_services
+        env: TESTNG_GROUPS='-Dgroups=kafka-data-format' JVM_RUNTIME='-Djvm.runtime=8 -Ddataproviderthreadcount=2'
+        script: *run_integration_test
+        after_failure: *integration_test_diags
+
     - &integration_query
       name: "(Compile=openjdk8, Run=openjdk8) query integration test"
       jdk: openjdk8

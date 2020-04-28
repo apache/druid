@@ -2,20 +2,15 @@
   "type": "%%STREAM_TYPE%%",
   "dataSchema": {
     "dataSource": "%%DATASOURCE%%",
-    "parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "timestamp",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": ["page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city"],
-          "dimensionExclusions": [],
-          "spatialDimensions": []
-        }
-      }
+    "parser": %%PARSER%%,
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "auto"
+    },
+    "dimensionsSpec": {
+      "dimensions": ["page", "language", "user", "unpatrolled", "newPage", "robot", "anonymous", "namespace", "continent", "country", "region", "city"],
+      "dimensionExclusions": [],
+      "spatialDimensions": []
     },
     "metricsSpec": [
       {
@@ -56,6 +51,7 @@
     "taskCount": 2,
     "replicas": 1,
     "taskDuration": "PT5M",
-    "%%USE_EARLIEST_KEY%%": true
+    "%%USE_EARLIEST_KEY%%": true,
+    "inputFormat" : %%INPUT_FORMAT%%
   }
 }
