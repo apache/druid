@@ -88,10 +88,6 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
         }
         runTests();
       }
-      catch (Exception e) {
-        LOG.error(e, "");
-        throw new RuntimeException(e);
-      }
       finally {
         // IntegrationTestSuite uses the configuration from integration-tests/src/test/resources/testng.xml
         // which already handle suite onStart and onFinish automatically
