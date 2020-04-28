@@ -534,6 +534,54 @@ public class KafkaRecordSupplierTest
     recordSupplier.close();
   }
 
+  @Test
+  public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
+  {
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+    StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
+    Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    Assert.assertEquals(new Long(0), recordSupplier.getLatestSequenceNumber(streamPartition));
+  }
+
+  @Test
+  public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
+  {
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+    StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
+    Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    Assert.assertEquals(new Long(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
+  }
+
+  @Test
+  public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
+  {
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+    StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
+    Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToLatest(partitions);
+    Assert.assertEquals(new Long(0), recordSupplier.getLatestSequenceNumber(streamPartition));
+  }
+
+  @Test
+  public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
+  {
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+    StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
+    Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToLatest(partitions);
+    Assert.assertEquals(new Long(0), recordSupplier.getEarliestSequenceNumber(streamPartition));
+  }
+
   private void insertData() throws ExecutionException, InterruptedException
   {
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
