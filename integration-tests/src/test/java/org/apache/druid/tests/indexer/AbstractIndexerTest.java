@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
@@ -104,7 +105,7 @@ public abstract class AbstractIndexerTest
   {
     ITRetryUtil.retryUntilTrue(
         () -> (indexer.getUncompletedTasksForDataSource(dataSource).size() == 0),
-        String.format("Waiting for all tasks of [%s] to complete", dataSource)
+        StringUtils.format("Waiting for all tasks of [%s] to complete", dataSource)
     );
   }
 
