@@ -471,7 +471,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         true,
         true,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
@@ -1476,7 +1476,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         false,
         true,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1548,7 +1548,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         true,
         false,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -1752,7 +1752,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         true,
         true,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
   }
 }

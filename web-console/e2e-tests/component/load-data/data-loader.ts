@@ -101,8 +101,12 @@ export class DataLoader {
     const rollupChecked = await rollup!.evaluate(el => (el as HTMLInputElement).checked);
     if (rollupChecked !== configureSchemaConfig.rollup) {
       await rollup!.click();
+      const confirmationDialogSelector = '//*[contains(@class,"bp3-alert-body")]';
+      await this.page.waitFor(confirmationDialogSelector);
       await this.clickButton('Yes');
-      await this.page.waitFor('.recipe-toaster');
+      const statusMessageSelector = '.recipe-toaster';
+      await this.page.waitFor(statusMessageSelector);
+      await this.page.click(`${statusMessageSelector} button`);
     }
   }
 

@@ -202,6 +202,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   private final SeekableStreamIndexTaskTuningConfig tuningConfig;
   private final InputRowSchema inputRowSchema;
+  @Nullable
   private final InputFormat inputFormat;
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
@@ -372,12 +373,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Now we can initialize StreamChunkReader with the given toolbox.
     final StreamChunkParser parser = new StreamChunkParser(
         this.parser,
-        new SettableByteEntityReader(
-            inputFormat,
-            inputRowSchema,
-            task.getDataSchema().getTransformSpec(),
-            toolbox.getIndexingTmpDir()
-        )
+        inputFormat,
+        inputRowSchema,
+        task.getDataSchema().getTransformSpec(),
+        toolbox.getIndexingTmpDir()
     );
 
     initializeSequences();
