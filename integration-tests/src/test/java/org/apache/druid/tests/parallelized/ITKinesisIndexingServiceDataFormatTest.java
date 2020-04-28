@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Test(groups = TestNGGroup.KINESIS_INDEX)
+@Test(groups = "kinesis-data-format")
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKinesisIndexingServiceDataFormatTest extends AbstractKinesisIndexingServiceTest
 {

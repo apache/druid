@@ -33,7 +33,7 @@ public class DelimitedEventSerializer implements EventSerializer
   public byte[] serialize(List<Pair<String, Object>> event)
   {
     //noinspection ConstantConditions
-    return StringUtils.toUtf8(event.stream().map(pair -> pair.rhs.toString()).collect(Collectors.joining("|")));
+    return StringUtils.toUtf8(event.stream().map(pair -> pair.rhs.toString()).collect(Collectors.joining("\t")));
   }
 
   @Override
