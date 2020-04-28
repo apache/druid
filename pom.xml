@@ -114,8 +114,8 @@
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.22.0</com.google.apis.client.version>
-
+        <com.google.apis.client.version>1.25.0</com.google.apis.client.version>
+        <com.google.apis.compute.version>v1-rev214-1.25.0</com.google.apis.compute.version>
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -188,6 +188,7 @@
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
+        <module>extensions-contrib/gce-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -1192,6 +1193,13 @@
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>
+            </dependency>
+            <!-- GCE -->
+            <dependency>
+                <groupId>com.google.apis</groupId>
+                <artifactId>google-api-services-compute</artifactId>
+                <version>${com.google.apis.compute.version}</version>
+                <scope>provided</scope>
             </dependency>
 
             <dependency>
