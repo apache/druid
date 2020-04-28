@@ -96,18 +96,23 @@ public class LookupJoinable implements Joinable
       boolean allowNonKeyColumnSearch
   )
   {
+    if (!ALL_COLUMNS.contains(searchColumnName) || !ALL_COLUMNS.contains(retrievalColumnName)) {
+      return ImmutableSet.of();
+    }
     Set<String> correlatedValues;
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
       if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
         correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
-        correlatedValues = Collections.singleton(extractor.apply(searchColumnName));
+        // This should not happen in practice because the column to be joined on must be a key.
+        correlatedValues = Collections.singleton(extractor.apply(searchColumnValue));
       }
     } else {
       if (!allowNonKeyColumnSearch) {
         return ImmutableSet.of();
       }
       if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
+        // This should not happen in practice because the column to be joined on must be a key.
         correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
         // Lookup extractor unapply only provides a list of strings, so we can't respect
