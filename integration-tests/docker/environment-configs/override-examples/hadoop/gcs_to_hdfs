@@ -26,6 +26,5 @@ druid_storage_storageDirectory=/druid/segments
 
 druid_extensions_loadList=["druid-google-extensions","druid-hdfs-storage"]
 
-# Set this to the path of the credentials file on the host where the integration tests are running
-GOOGLE_APPLICATION_CREDENTIALS=<OVERRIDE_THIS>
+GOOGLE_APPLICATION_CREDENTIALS=/shared/docker/credentials/<YOUR_GOOGLE_CREDENTIALS_FILE_NAME>
 

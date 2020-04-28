@@ -33,13 +33,14 @@ import org.testng.annotations.Test;
  *    exists within the Hadoop cluster that will ingest the data. The credentials file can be placed in the
  *    shared folder used by the integration test containers if running the Docker-based Hadoop container,
  *    in which case this property can be set to /shared/<path_of_your_credentials_file>
- * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
+ * 3) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
+ * 4) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
  *    located in integration-tests/src/test/resources/data/batch_index/json to your GCS at the location set in step 1.
- * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
+ * 5) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
  *    integration-tests/docker/environment-configs/override-examples/hadoop/gcs_to_hdfs for env vars to provide.
- * 4) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
+ * 6) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
  */
-@Test(groups = TestNGGroup.HADOOP_GCS)
+@Test(groups = TestNGGroup.HADOOP_GCS_TO_HDFS)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITGcsInputToHdfsHadoopIndexTest extends AbstractGcsInputHadoopIndexTest
 {

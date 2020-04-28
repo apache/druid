@@ -39,7 +39,7 @@ import org.testng.annotations.Test;
  *    integration-tests/docker/environment-configs/override-examples/hadoop/azure_to_azure for env vars to provide.
  * 4) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
  */
-@Test(groups = TestNGGroup.HADOOP_AZURE)
+@Test(groups = TestNGGroup.HADOOP_AZURE_TO_AZURE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAzureInputToAzureHadoopIndexTest extends AbstractAzureInputHadoopIndexTest
 {

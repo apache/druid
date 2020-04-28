@@ -37,7 +37,7 @@ import org.testng.annotations.Test;
  *    integration-tests/docker/environment-configs/override-examples/hadoop/s3_to_s3 for env vars to provide.
  * 5) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
  */
-@Test(groups = TestNGGroup.HADOOP_S3)
+@Test(groups = TestNGGroup.HADOOP_S3_TO_S3)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITS3InputToS3HadoopIndexTest extends AbstractS3InputHadoopIndexTest
 {

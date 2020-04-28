@@ -40,13 +40,16 @@ import java.util.function.Function;
  * IMPORTANT:
  * To run this test, you must:
  * 1) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
- *    located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at the location set in step 1.
+ *    located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
+ *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
+ * 2) Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
+ *    at /batch_index/tsv/
  *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
  * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with HDFS configs set. See
  *    integration-tests/docker/environment-configs/override-examples/hdfs for env vars to provide.
  * 3) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
  */
-@Test(groups = TestNGGroup.HADOOP_INDEX)
+@Test(groups = TestNGGroup.HDFS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITHadoopIndexTest extends AbstractITBatchIndexTest
 {

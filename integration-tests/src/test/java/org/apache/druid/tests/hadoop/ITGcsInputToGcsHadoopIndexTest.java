@@ -29,17 +29,18 @@ import org.testng.annotations.Test;
  * To run this test, you must:
  * 1) Set the bucket and path for your data. This can be done by setting -Ddruid.test.config.cloudBucket and
  *    -Ddruid.test.config.cloudPath or setting "cloud_bucket" and "cloud_path" in the config file.
- * 2. Set -Ddruid.test.config.hadoopGcsCredentialsPath to the location of your Google credentials file as it
+ * 2) Set -Ddruid.test.config.hadoopGcsCredentialsPath to the location of your Google credentials file as it
  *    exists within the Hadoop cluster that will ingest the data. The credentials file can be placed in the
  *    shared folder used by the integration test containers if running the Docker-based Hadoop container,
  *    in which case this property can be set to /shared/<path_of_your_credentials_file>
- * 2) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
+ * 3) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
+ * 4) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
  *    located in integration-tests/src/test/resources/data/batch_index/json to your GCS at the location set in step 1.
- * 3) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
+ * 5) Provide -Doverride.config.path=<PATH_TO_FILE> with gcs configs set. See
  *    integration-tests/docker/environment-configs/override-examples/hadoop/gcs_to_gcs for env vars to provide.
- * 4) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
+ * 6) Run the test with -Dstart.hadoop.docker=true -Dextra.datasource.name.suffix='' in the mvn command
  */
-@Test(groups = TestNGGroup.HADOOP_GCS)
+@Test(groups = TestNGGroup.HADOOP_GCS_TO_GCS)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITGcsInputToGcsHadoopIndexTest extends AbstractGcsInputHadoopIndexTest
 {

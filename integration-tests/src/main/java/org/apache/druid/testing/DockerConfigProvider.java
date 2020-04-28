@@ -34,10 +34,6 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   private String dockerIp;
 
   @JsonProperty
-  @NotNull
-  private String hadoopDir;
-
-  @JsonProperty
   private String extraDatasourceNameSuffix = "";
 
   @JsonProperty
@@ -194,9 +190,6 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getProperty(String prop)
       {
-        if ("hadoopTestDir".equals(prop)) {
-          return hadoopDir;
-        }
         throw new UnsupportedOperationException("DockerConfigProvider does not support property " + prop);
       }
 
