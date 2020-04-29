@@ -19,37 +19,25 @@
 
 package org.apache.druid.testing.utils;
 
-import org.apache.druid.java.util.common.DateTimes;
-import org.joda.time.DateTime;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.UUID;
+import java.util.List;
+import java.util.stream.Collectors;
 
-public class StreamVerifierEventGenerator extends SyntheticStreamGenerator
+public class DelimitedEventSerializer implements EventSerializer
 {
-  public StreamVerifierEventGenerator(int eventsPerSeconds, long cyclePaddingMs)
+  public static final String TYPE = "tsv";
+
+  @Override
+  public byte[] serialize(List<Pair<String, Object>> event)
   {
-    super(eventsPerSeconds, cyclePaddingMs);
+    //noinspection ConstantConditions
+    return StringUtils.toUtf8(event.stream().map(pair -> pair.rhs.toString()).collect(Collectors.joining("\t")));
   }
 
   @Override
-  Object getEvent(int i, DateTime timestamp)
+  public void close()
   {
-    return StreamVerifierSyntheticEvent.of(
-        UUID.randomUUID().toString(),
-        timestamp.getMillis(),
-        DateTimes.nowUtc().getMillis(),
-        i,
-        i == getEventsPerSecond() ? getSumOfEventSequence(getEventsPerSecond()) : null,
-        i == 1
-    );
-  }
-
-
-  /**
-   * Assumes the first number in the sequence is 1, incrementing by 1, until numEvents.
-   */
-  private long getSumOfEventSequence(int numEvents)
-  {
-    return (numEvents * (1 + numEvents)) / 2;
   }
 }

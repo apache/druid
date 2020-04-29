@@ -33,17 +33,19 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
 {
-
   @Inject
   protected CoordinatorResourceTestClient coordinator;
   @Inject
@@ -109,15 +111,33 @@ public abstract class AbstractIndexerTest
     );
   }
 
-  protected String getResourceAsString(String file) throws IOException
+  public static String getResourceAsString(String file) throws IOException
   {
-    final InputStream inputStream = ITRealtimeIndexTaskTest.class.getResourceAsStream(file);
-    try {
+    try (final InputStream inputStream = getResourceAsStream(file)) {
       return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-    }
-    finally {
-      IOUtils.closeQuietly(inputStream);
     }
   }
 
+  public static InputStream getResourceAsStream(String resource)
+  {
+    return ITRealtimeIndexTaskTest.class.getResourceAsStream(resource);
+  }
+
+  public static List<String> listResources(String dir) throws IOException
+  {
+    List<String> resources = new ArrayList<>();
+
+    try (
+        InputStream in = getResourceAsStream(dir);
+        BufferedReader br = new BufferedReader(new InputStreamReader(in, StringUtils.UTF8_STRING))
+    ) {
+      String resource;
+
+      while ((resource = br.readLine()) != null) {
+        resources.add(resource);
+      }
+    }
+
+    return resources;
+  }
 }
