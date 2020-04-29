@@ -40,7 +40,7 @@ public class PrometheusEmitterConfigTest
   @Test
   public void testSerDeserPrometheusEmitterConfig() throws Exception
   {
-    PrometheusEmitterConfig prometheusEmitterConfig = new PrometheusEmitterConfig("10.100.201.218", 9091, null, "druid");
+    PrometheusEmitterConfig prometheusEmitterConfig = new PrometheusEmitterConfig("10.100.201.218", 9091, null, "druid", null, null);
     String prometheusEmitterConfigString = mapper.writeValueAsString(prometheusEmitterConfig);
     PrometheusEmitterConfig expectedPrometheusEmitterConfig = mapper.readerFor(PrometheusEmitterConfig.class)
         .readValue(prometheusEmitterConfigString);

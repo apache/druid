@@ -108,17 +108,22 @@ public class Metrics
       InputStream is;
       if (Strings.isNullOrEmpty(path)) {
         log.info("Using default metric dimension and types");
-        is = this.getClass().getClassLoader().getResourceAsStream("defaultMetrics.json");
+        is = this.getClass().getClassLoader().getResourceAsStream("defaultMetrics-druid.json");
       } else {
         log.info("Using metric dimensions at types at [%s]", path);
         is = new FileInputStream(new File(path));
       }
-      return mapper.readerFor(new TypeReference<Map<String, Metric>>() {
+      return mapper.readerFor(new TypeReference<Map<String, Metric>>()
+      {
       }).readValue(is);
     }
     catch (IOException e) {
       throw new ISE(e, "Failed to parse metric dimensions and types");
     }
+  }
+
+  public Map<String, DimensionsAndCollector> getMap() {
+    return map;
   }
 
   public static class Metric

@@ -33,12 +33,14 @@ public class PrometheusReporterTest
 {
   private ObjectMapper mapper = new DefaultObjectMapper();
   private PrometheusReporter reporter;
+  private PrometheusEmitterConfig config;
 
   @Before
   public void setUp()
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper()));
-    reporter = new PrometheusReporter(mapper, null, "10.100.201.218", 9091, "druid");
+    config = new PrometheusEmitterConfig("10.100.201.218", 9091, null, "druid", null, null);
+    reporter = new PrometheusReporter(config, mapper);
   }
 
   @Test
@@ -52,7 +54,7 @@ public class PrometheusReporterTest
     ServiceMetricEvent metricEvent = ServiceMetricEvent.builder().setDimension("dataSource", "test").build(createdTime, "query/time", 10).build(serviceDims);
 
     reporter.emitMetric(metricEvent);
-    reporter.push("push_to_gateway_test");
+    reporter.push();
   }
 
 }

@@ -33,19 +33,14 @@ public class PrometheusEmitter implements Emitter
 {
 
   private static final Logger log = new Logger(PrometheusEmitter.class);
-
-  private final PrometheusReporter reporter;
   private final AtomicBoolean starter = new AtomicBoolean(false);
 
+  private final PrometheusReporter reporter;
 
   public PrometheusEmitter(PrometheusEmitterConfig config, ObjectMapper mapper)
   {
 
-    this.reporter = new PrometheusReporter(mapper,
-        config.getMetricMapPath(),
-        config.getHost(),
-        config.getPort(),
-        config.getNameSpace());
+    this.reporter = new PrometheusReporter(config, mapper);
 
   }
 
@@ -56,6 +51,7 @@ public class PrometheusEmitter implements Emitter
       if (!starter.get()) {
         log.info("prometheus emitter started");
         starter.set(true);
+        reporter.init();
       }
     }
   }
@@ -70,8 +66,6 @@ public class PrometheusEmitter implements Emitter
     if (event instanceof ServiceMetricEvent) {
       ServiceMetricEvent metricEvent = (ServiceMetricEvent) event;
       reporter.emitMetric(metricEvent);
-
-      reporter.push(metricEvent.getHost());
     }
   }
 
@@ -79,6 +73,7 @@ public class PrometheusEmitter implements Emitter
   public void flush() throws IOException
   {
     if (starter.get()) {
+      reporter.push();
       log.info("druid prometheus emitter flush");
     }
   }
@@ -88,7 +83,9 @@ public class PrometheusEmitter implements Emitter
   {
     if (starter.get()) {
       log.info("druid prometheus emitter close");
+      flush();
       starter.set(false);
+      reporter.delete();
     }
   }
 }

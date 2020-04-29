@@ -25,36 +25,47 @@ import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import io.prometheus.client.exporter.PushGateway;
-import org.apache.commons.lang.StringUtils;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class PrometheusReporter
 {
   private static final Logger log = new Logger(PrometheusReporter.class);
-  private static final Pattern UNALLOWED_CHAR_PATTERN = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
-  private static final CharacterFilter CHARACTER_FILTER = PrometheusReporter::replaceInvalidChars;
+  private static final Pattern pattern = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
 
-  static String replaceInvalidChars(final String input)
+  private final ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusEmitter-%s");
+
+  private Metrics metrics;
+  private String hostName;
+  private PushGateway pushGateway;
+  private PrometheusEmitterConfig config;
+
+  public PrometheusReporter(PrometheusEmitterConfig config, ObjectMapper mapper)
   {
-    return UNALLOWED_CHAR_PATTERN.matcher(input).replaceAll("_");
+    this.config = config;
   }
 
-  private final Metrics metrics;
-  private final PushGateway pushGateway;
+  public void init() {
+    initMetrics();
+    initGatWay();
 
-  public PrometheusReporter(ObjectMapper mapper,
-                            String metricMapPath,
-                            String host,
-                            int port,
-                            String nameSpace)
-  {
-    metrics = new Metrics(nameSpace, metricMapPath);
-    String address = port == 0 ? host : (host + ":" + port);
-    log.info("prometheus address:[%$]", address);
+    exec.scheduleAtFixedRate(this::push, this.config.getFlushDelay(), this.config.getFlushPeriod(), TimeUnit.SECONDS);
+  }
+
+  private void initMetrics() {
+    metrics = new Metrics(this.config.getNameSpace(), this.config.getMetricMapPath());
+  }
+
+  private void initGatWay() {
+    String address = this.config.getPort() == 0 ? this.config.getHost() : (this.config.getHost() + ":" + this.config.getPort());
+    log.info("prometheus address [%s]", address);
     pushGateway = new PushGateway(address);
   }
 
@@ -63,6 +74,7 @@ public class PrometheusReporter
     String name = metricEvent.getMetric();
     String service = metricEvent.getService();
     Map<String, Object> userDims = metricEvent.getUserDims();
+    hostName = metricEvent.getHost();
     Number value = metricEvent.getValue();
 
     DimensionsAndCollector metric = metrics.getByName(name, service);
@@ -71,13 +83,13 @@ public class PrometheusReporter
       String[] labelNames = metric.getDimensions();
       for (int i = 0; i < labelValues.length; i++) {
         String labelName = labelNames[i];
-        if (StringUtils.equals(labelName, "service")) {
+        if ("service".equals(labelName)) {
           labelValues[i] = service;
           continue;
         }
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? CHARACTER_FILTER.filterCharacters(userDim.toString()) : "unknown";
+        labelValues[i] = userDim != null ? pattern.matcher(StringUtils.toLowerCase(userDim.toString())).replaceAll("_") : "unknown";
       }
 
       if (metric.getCollector() instanceof Counter) {
@@ -97,15 +109,19 @@ public class PrometheusReporter
   /**
    * push data to prometheus gateway
    *
-   * @param jobName
    */
-  public void push(String jobName)
+  public void push()
   {
     try {
-      pushGateway.push(CollectorRegistry.defaultRegistry, jobName);
+      pushGateway.push(CollectorRegistry.defaultRegistry, hostName);
     }
     catch (Exception e) {
       log.error(e, "error occurred when sending metrics to prometheus gateway.");
     }
+  }
+
+  public void delete()
+  {
+    exec.shutdownNow();
   }
 }

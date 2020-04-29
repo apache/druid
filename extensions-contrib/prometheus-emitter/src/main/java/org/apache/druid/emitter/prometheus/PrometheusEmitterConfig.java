@@ -30,6 +30,7 @@ public class PrometheusEmitterConfig
 {
 
   Pattern pattern = Pattern.compile("[a-zA-Z_:][a-zA-Z0-9_:]*");
+  private static final int DEFAULT_FLUSH_PERIOD = 6000;
 
   @JsonProperty
   private final String host;
@@ -43,18 +44,28 @@ public class PrometheusEmitterConfig
   @JsonProperty
   private final String nameSpace;
 
+  @JsonProperty
+  private final int flushPeriod;
+
+  @JsonProperty
+  private final int flushDelay;
+
   @JsonCreator
   public PrometheusEmitterConfig(
       @JsonProperty("host") String host,
       @JsonProperty("port") Integer port,
       @JsonProperty("metricMapPath") String metricMapPath,
-      @JsonProperty("nameSpace") String nameSpace
+      @JsonProperty("nameSpace") String nameSpace,
+      @JsonProperty("flushPeriod") Integer flushPeriod,
+      @JsonProperty("flushDelay") Integer flushDelay
   )
   {
     this.host = Preconditions.checkNotNull(host, "host can not be null.");
     this.port = port == null ? 0 : port;
     this.metricMapPath = metricMapPath;
     this.nameSpace = nameSpace != null ? nameSpace : "druid";
+    this.flushDelay = flushDelay == null ? DEFAULT_FLUSH_PERIOD : flushDelay;
+    this.flushPeriod = flushPeriod == null ? DEFAULT_FLUSH_PERIOD : flushPeriod;
     Preconditions.checkArgument(pattern.matcher(this.nameSpace).matches(), "Invalid namespace " + this.nameSpace);
   }
 
@@ -63,6 +74,8 @@ public class PrometheusEmitterConfig
   {
     int result = host.hashCode();
     result = 31 * result + port;
+    result = 31 * result + getFlushPeriod();
+    result = 31 * result + getFlushDelay();
     result = 31 * result + (metricMapPath != null ? metricMapPath.hashCode() : 0);
     result = 31 * result + (nameSpace != null ? nameSpace.hashCode() : 0);
     return result;
@@ -88,6 +101,14 @@ public class PrometheusEmitterConfig
     return nameSpace;
   }
 
+  public Integer getFlushPeriod() {
+    return flushPeriod;
+  }
+
+  public Integer getFlushDelay() {
+    return flushDelay;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -100,6 +121,8 @@ public class PrometheusEmitterConfig
     PrometheusEmitterConfig that = (PrometheusEmitterConfig) o;
     return port == that.port &&
         host.equals(that.host) &&
+        flushDelay == that.flushDelay &&
+        flushPeriod == that.flushPeriod &&
         (Objects.equals(metricMapPath, that.metricMapPath)) &&
         (Objects.equals(nameSpace, that.nameSpace));
   }
