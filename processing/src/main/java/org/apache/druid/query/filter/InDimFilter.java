@@ -20,6 +20,7 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -32,13 +33,14 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractionFn;
@@ -47,14 +49,15 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.filter.InFilter;
 
 import javax.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 public class InDimFilter implements DimFilter
 {
@@ -63,7 +66,7 @@ public class InDimFilter implements DimFilter
   public static final int NUMERIC_HASHING_THRESHOLD = 16;
 
   // Values can contain `null` object
-  private final SortedSet<String> values;
+  private final Set<String> values;
   private final String dimension;
   @Nullable
   private final ExtractionFn extractionFn;
@@ -72,6 +75,9 @@ public class InDimFilter implements DimFilter
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+
+  @JsonIgnore
+  private byte[] cacheKey;
 
   @JsonCreator
   public InDimFilter(
@@ -82,11 +88,13 @@ public class InDimFilter implements DimFilter
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
-    Preconditions.checkArgument(values != null, "values can not be null");
+    Preconditions.checkArgument(values != null && !values.isEmpty(), "values can not be null");
 
-    this.values = new TreeSet<>(Comparators.naturalNullsFirst());
-    for (String value : values) {
-      this.values.add(NullHandling.emptyToNullIfNeeded(value));
+    // The values set can be huge. Try to avoid copying the set if possible.
+    if (values instanceof Set && values.stream().noneMatch(NullHandling::needsEmptyToNull)) {
+      this.values = Collections.unmodifiableSet((Set<String>) values);
+    } else {
+      this.values = values.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toSet());
     }
     this.dimension = dimension;
     this.extractionFn = extractionFn;
@@ -115,6 +123,7 @@ public class InDimFilter implements DimFilter
   }
 
   @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
@@ -132,31 +141,42 @@ public class InDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    boolean hasNull = false;
-    for (String value : values) {
-      if (value == null) {
-        hasNull = true;
-        break;
-      }
+    if (cacheKey == null) {
+      final boolean hasNull = values.stream().anyMatch(Objects::isNull);
+      final List<String> sortedValues = new ArrayList<>(values);
+      Collections.sort(sortedValues);
+      final Hasher hasher = Hashing.sha256().newHasher();
+      sortedValues.forEach(v -> {
+        if (v == null) {
+          hasher.putInt(0);
+        } else {
+          hasher.putString(v, StandardCharsets.UTF_8);
+        }
+      });
+      cacheKey = new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
+          .appendString(dimension)
+          .appendByte(DimFilterUtils.STRING_SEPARATOR)
+          .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
+          .appendByte(DimFilterUtils.STRING_SEPARATOR)
+          .appendByte(hasNull ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
+          .appendByte(DimFilterUtils.STRING_SEPARATOR)
+          .appendByteArray(hasher.hash().asBytes())
+          .build();
     }
-    return new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
-        .appendString(dimension)
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByte(hasNull ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendStrings(values).build();
+    return cacheKey;
   }
 
   @Override
   public DimFilter optimize()
   {
     InDimFilter inFilter = optimizeLookup();
+    if (NullHandling.sqlCompatible() && inFilter.values.contains(null)) {
+      return new FalseDimFilter();
+    }
     if (inFilter.values.size() == 1) {
       return new SelectorDimFilter(
           inFilter.dimension,
-          inFilter.values.first(),
+          inFilter.values.iterator().next(),
           inFilter.getExtractionFn(),
           filterTuning
       );
@@ -215,6 +235,7 @@ public class InDimFilter implements DimFilter
     );
   }
 
+  @Nullable
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
@@ -302,7 +323,7 @@ public class InDimFilter implements DimFilter
   // This supplier must be thread-safe, since this DimFilter will be accessed in the query runners.
   private Supplier<DruidLongPredicate> getLongPredicateSupplier()
   {
-    Supplier<DruidLongPredicate> longPredicate = () -> createLongPredicate();
+    Supplier<DruidLongPredicate> longPredicate = this::createLongPredicate;
     return Suppliers.memoize(longPredicate);
   }
 
@@ -330,7 +351,7 @@ public class InDimFilter implements DimFilter
 
   private Supplier<DruidFloatPredicate> getFloatPredicateSupplier()
   {
-    Supplier<DruidFloatPredicate> floatPredicate = () -> createFloatPredicate();
+    Supplier<DruidFloatPredicate> floatPredicate = this::createFloatPredicate;
     return Suppliers.memoize(floatPredicate);
   }
 
@@ -358,7 +379,7 @@ public class InDimFilter implements DimFilter
 
   private Supplier<DruidDoublePredicate> getDoublePredicateSupplier()
   {
-    Supplier<DruidDoublePredicate> doublePredicate = () -> createDoublePredicate();
+    Supplier<DruidDoublePredicate> doublePredicate = this::createDoublePredicate;
     return Suppliers.memoize(doublePredicate);
   }
 }

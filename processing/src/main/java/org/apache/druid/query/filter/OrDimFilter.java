@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -83,7 +84,15 @@ public class OrDimFilter implements DimFilter
   public DimFilter optimize()
   {
     List<DimFilter> elements = DimFilters.optimize(fields);
-    return elements.size() == 1 ? elements.get(0) : new OrDimFilter(elements);
+    if (elements.size() == 1) {
+      return elements.get(0);
+    } else if (elements.stream().anyMatch(filter -> filter instanceof TrueDimFilter)) {
+      return new TrueDimFilter();
+    } else {
+      return new OrDimFilter(
+          elements.stream().filter(filter -> filter instanceof FalseDimFilter).collect(Collectors.toList())
+      );
+    }
   }
 
   @Override

@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -73,7 +74,15 @@ public class AndDimFilter implements DimFilter
   public DimFilter optimize()
   {
     List<DimFilter> elements = DimFilters.optimize(fields);
-    return elements.size() == 1 ? elements.get(0) : new AndDimFilter(elements);
+    if (elements.size() == 1) {
+      return elements.get(0);
+    } else if (elements.stream().anyMatch(filter -> filter instanceof FalseDimFilter)) {
+      return new FalseDimFilter();
+    } else {
+      return new AndDimFilter(
+          elements.stream().filter(filter -> filter instanceof TrueDimFilter).collect(Collectors.toList())
+      );
+    }
   }
 
   @Override
