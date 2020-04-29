@@ -48,7 +48,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
 
     https://github.com/apache/druid/fork
 
-1. Clone your fork of the GitHub repository
+2. Clone your fork of the GitHub repository
 
     ```sh
     git clone git@github.com:<username>/druid.git
@@ -56,7 +56,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
 
     replace `<username>` with your GitHub username.
 
-1. Add a remote to keep up with upstream changes
+3. Add a remote to keep up with upstream changes
 
     ```
     git remote add upstream https://github.com/apache/druid.git
@@ -68,20 +68,20 @@ You can find more developers' resources in [`dev/`](dev) directory.
     git fetch upstream master
     ```
 
-1. Create a feature branch to work in
+4. Create a feature branch to work in
 
     ```
     git checkout -b feature-xxx remotes/upstream/master
     ```
 
-1. _Before submitting a pull request_ periodically rebase your changes
+5. _Before submitting a pull request_ periodically rebase your changes
     (but don't do it when a pull request is already submitted)
 
     ```
     git pull --rebase upstream master
     ```
 
-1. Before submitting a pull request, combine ("squash") related commits into a single one
+6. Before submitting a pull request, combine ("squash") related commits into a single one
 
     ```
     git rebase -i upstream/master
@@ -91,7 +91,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
     - Re-order the lines to change commit order (to the extent possible without creating conflicts)
     - Prefix commits using `s` (squash) or `f` (fixup) to merge extraneous commits.
 
-1. Submit a pull-request
+7. Submit a pull-request
 
     ```
     git push origin feature-xxx
@@ -111,7 +111,7 @@ You can find more developers' resources in [`dev/`](dev) directory.
     - Give your pull-request a meaningful title.
     - In the description, explain your changes and the problem they are solving.
 
-1. Addressing code review comments
+8. Addressing code review comments
 
     Address code review comments by committing changes and pushing them to your feature
     branch.
@@ -146,26 +146,25 @@ You can find more developers' resources in [`dev/`](dev) directory.
 Never fear! If you occasionally merged upstream/master, here is another way to squash your changes into a single commit:
 
 1. First, rename your existing branch to something else, e.g. `feature-xxx-unclean`
+    ```
+    git branch -m feature-xxx-unclean
+    ```
 
-  ```
-  git branch -m feature-xxx-unclean
-  ```
+2.  Checkout a new branch with the original name `feature-xxx` from upstream. This branch will supercede our old one.
 
-1. Checkout a new branch with the original name `feature-xxx` from upstream. This branch will supercede our old one.
+    ```
+    git checkout -b feature-xxx upstream/master
+    ```
 
-  ```
-  git checkout -b feature-xxx upstream/master
-  ```
+3. Then merge your changes in your original feature branch `feature-xxx-unclean` and create a single commit.
 
-1. Then merge your changes in your original feature branch `feature-xxx-unclean` and create a single commit.
+    ```
+    git merge --squash feature-xxx-unclean
+    git commit
+    ```
 
-  ```
-  git merge --squash feature-xxx-unclean
-  git commit
-  ```
+4. You can now submit this new branch and create or replace your existing pull request.
 
-1. You can now submit this new branch and create or replace your existing pull request.
-
-  ```
-  git push origin [--force] feature-xxx:feature-xxx
-  ```
+    ```
+    git push origin [--force] feature-xxx:feature-xxx
+    ```

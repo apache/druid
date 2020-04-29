@@ -49,6 +49,39 @@ import java.util.function.Function;
 
 public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
+  public enum InputFormatDetails
+  {
+    ORC("orc", ".orc", "/orc"),
+    JSON("json", ".json", "/json"),
+    PARQUET("parquet", ".parquet", "/parquet");
+
+    private final String inputFormatType;
+    private final String fileExtension;
+    private final String folderSuffix;
+
+    InputFormatDetails(String inputFormatType, String fileExtension, String folderSuffix)
+    {
+      this.inputFormatType = inputFormatType;
+      this.fileExtension = fileExtension;
+      this.folderSuffix = folderSuffix;
+    }
+
+    public String getInputFormatType()
+    {
+      return inputFormatType;
+    }
+
+    public String getFileExtension()
+    {
+      return fileExtension;
+    }
+
+    public String getFolderSuffix()
+    {
+      return folderSuffix;
+    }
+  }
+
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
