@@ -231,6 +231,8 @@ If you are running ITHadoopIndexTest with your own Druid + Hadoop cluster, pleas
   at /batch_index/tsv/
 If using the Docker-based Hadoop container, the steps above are automatically done by the integration tests.
 
+When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`, due to https://github.com/apache/druid/issues/9788.
+
 Run the test using mvn (using the bundled Docker-based Hadoop cluster):
 ```
   mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
