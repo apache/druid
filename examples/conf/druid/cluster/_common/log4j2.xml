@@ -30,6 +30,9 @@
     </Root>
 
     <!-- Set level="debug" to see stack traces for query errors -->
+    <Logger name="org.apache.druid.server.QueryResource" level="info" additivity="false">
+      <Appender-ref ref="Console"/>
+    </Logger>
     <Logger name="org.apache.druid.server.QueryLifecycle" level="info" additivity="false">
       <Appender-ref ref="Console"/>
     </Logger>

@@ -891,7 +891,7 @@ There are additional configs for autoscaling (if it is enabled):
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.autoscale.strategy`|Choices are "noop" or "ec2". Sets the strategy to run when autoscaling is required.|noop|
+|`druid.indexer.autoscale.strategy`|Choices are "noop", "ec2" or "gce". Sets the strategy to run when autoscaling is required.|noop|
 |`druid.indexer.autoscale.doAutoscale`|If set to "true" autoscaling will be enabled.|false|
 |`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new MiddleManagers should be added.|PT1M|
 |`druid.indexer.autoscale.terminatePeriod`|How often to check when MiddleManagers should be removed.|PT5M|
@@ -1115,7 +1115,9 @@ field. If not provided, the default is to not use it at all.
 
 ##### Autoscaler
 
-Amazon's EC2 is currently the only supported autoscaler.
+Amazon's EC2 together with Google's GCE are currently the only supported autoscalers.
+
+EC2's autoscaler properties are:
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1124,6 +1126,8 @@ Amazon's EC2 is currently the only supported autoscaler.
 |`availabilityZone`|What availability zone to run in.|none|
 |`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
 |`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
+
+For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
 ## Data Server
 
@@ -1306,7 +1310,6 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for zookeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
-|`druid.server.http.maxSubqueryRows`|Maximum number of rows from subqueries per query. These rows are stored in memory.|100000|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
 
 #### Indexer Processing Resources
@@ -1548,6 +1551,7 @@ Druid uses Jetty to serve HTTP requests. Each query being processed consumes a s
 |`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
 |`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
 |`druid.server.http.maxScatterGatherBytes`|Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. Queries that exceed this limit will fail. This is an advance configuration that allows to protect in case Broker is under heavy load and not utilizing the data gathered in memory fast enough and leading to OOMs. This limit can be further reduced at query time using `maxScatterGatherBytes` in the context. Note that having large limit is not necessarily bad if broker is never under heavy concurrent load in which case data gathered is processed quickly and freeing up the memory used.|Long.MAX_VALUE|
+|`druid.server.http.maxSubqueryRows`|Maximum number of rows from subqueries per query. These rows are stored in memory.|100000|
 |`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete.|`PT0S` (do not wait)|
 |`druid.server.http.unannouncePropagationDelay`|How long to wait for zookeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.md) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
@@ -1614,24 +1618,19 @@ The Druid SQL server is configured through the following properties on the Broke
 |--------|-----------|-------|
 |`druid.sql.enable`|Whether to enable SQL at all, including background metadata fetching. If false, this overrides all other SQL-related properties and disables SQL metadata, serving, and planning completely.|true|
 |`druid.sql.avatica.enable`|Whether to enable JDBC querying at `/druid/v2/sql/avatica/`.|true|
-|`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|50|
+|`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|25|
 |`druid.sql.avatica.maxRowsPerFrame`|Maximum number of rows to return in a single JDBC frame. Setting this property to -1 indicates that no row limit should be applied. Clients can optionally specify a row limit in their requests; if a client specifies a row limit, the lesser value of the client-provided limit and `maxRowsPerFrame` will be used.|5,000|
-|`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|1|
+|`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|4|
 |`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|PT5M|
 |`druid.sql.http.enable`|Whether to enable JSON over HTTP querying at `/druid/v2/sql/`.|true|
-|`druid.sql.planner.awaitInitializationOnStart`|Boolean|Whether the Broker will wait for its SQL metadata view to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.broker.segment.awaitInitializationOnStart`, a related setting.|true|
-|`druid.sql.planner.maxQueryCount`|Maximum number of queries to issue, including nested queries. Set to 1 to disable sub-queries, or set to 0 for unlimited.|8|
-|`druid.sql.planner.maxSemiJoinRowsInMemory`|Maximum number of rows to keep in memory for executing two-stage semi-join queries like `SELECT * FROM Employee WHERE DeptName IN (SELECT DeptName FROM Dept)`.|100000|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.md). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.md) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
-|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
-|`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
-|`druid.sql.planner.selectThreshold`|Page size threshold for [Select queries](../querying/select-query.md). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinality algorithm for `COUNT(DISTINCT foo)`.|true|
-|`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.md) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.md) will be used instead.|true|
+|`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries without filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
-|`druid.sql.planner.serializeComplexValues`|Whether to serialize "complex" output values, false will return the class name instead of the serialized value.|true|
+|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST API will be invoked when broker needs published segments info.|false|
+|`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
 
 > Previous versions of Druid had properties named `druid.sql.planner.maxQueryCount` and `druid.sql.planner.maxSemiJoinRowsInMemory`.
 > These properties are no longer available. Since Druid 0.18.0, you can use `druid.server.http.maxSubqueryRows` to control the maximum
@@ -1774,8 +1773,8 @@ The following configurations are to set the default behavior for query vectoriza
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.vectorize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorize` in the query contexts.|`false`|
-|`druid.query.vectorSize`|See [Vectorizable queries](../querying/query-context.html#vectorizable-queries) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
+|`druid.query.vectorize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorize` in the query contexts.|`false`|
+|`druid.query.vectorSize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
 
 ### TopN query config
 

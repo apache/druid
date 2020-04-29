@@ -35,3 +35,4 @@ druid_manager_lookups_threadPoolSize=2
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/coordinator
 druid_auth_unsecuredPaths=["/druid/coordinator/v1/loadqueue"]
 druid_server_https_crlPath=/tls/revocations.crl
+druid_coordinator_period_indexingPeriod=PT180000S

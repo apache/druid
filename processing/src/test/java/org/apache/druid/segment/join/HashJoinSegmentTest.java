@@ -88,7 +88,7 @@ public class HashJoinSegmentTest
         true,
         true,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
 
     hashJoinSegment = new HashJoinSegment(
@@ -113,7 +113,7 @@ public class HashJoinSegmentTest
         true,
         true,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
 
     final HashJoinSegment ignored = new HashJoinSegment(

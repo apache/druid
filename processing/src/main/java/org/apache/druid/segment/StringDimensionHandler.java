@@ -33,61 +33,46 @@ import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
 {
-
   /**
-   * Compares {@link IndexedInts} lexicographically, with the exception that if a row contains only zeros (that's the
-   * index of null) at all positions, it is considered "null" as a whole and is "less" than any "non-null" row. Empty
-   * row (size is zero) is also considered "null".
-   *
-   * The implementation is a bit complicated because it tries to check each position of both rows only once.
+   * This comparator uses the following rules:
+   * - Compare the two value arrays up to the length of the shorter array
+   * - If the two arrays match so far, then compare the array lengths, the shorter array is considered smaller
+   * - Comparing null and the empty list is a special case: these are considered equal
    */
   private static final Comparator<ColumnValueSelector> DIMENSION_SELECTOR_COMPARATOR = (s1, s2) -> {
     IndexedInts row1 = getRow(s1);
     IndexedInts row2 = getRow(s2);
     int len1 = row1.size();
     int len2 = row2.size();
-    boolean row1IsNull = true;
-    boolean row2IsNull = true;
-    for (int i = 0; i < Math.min(len1, len2); i++) {
-      int v1 = row1.get(i);
-      row1IsNull &= v1 == 0;
-      int v2 = row2.get(i);
-      row2IsNull &= v2 == 0;
-      int valueDiff = Integer.compare(v1, v2);
-      if (valueDiff != 0) {
-        return valueDiff;
-      }
-    }
-    //noinspection SubtractionInCompareTo -- substraction is safe here, because lengths or rows are small numbers.
-    int lenDiff = len1 - len2;
-    if (lenDiff == 0) {
-      return 0;
-    } else {
-      if (!row1IsNull || !row2IsNull) {
-        return lenDiff;
-      } else {
-        return compareRestNulls(row1, len1, row2, len2);
-      }
-    }
-  };
+    int lenCompareResult = Integer.compare(len1, len2);
+    int valsIndex = 0;
 
-  private static int compareRestNulls(IndexedInts row1, int len1, IndexedInts row2, int len2)
-  {
-    if (len1 < len2) {
-      for (int i = len1; i < len2; i++) {
-        if (row2.get(i) != 0) {
-          return -1;
-        }
-      }
-    } else {
-      for (int i = len2; i < len1; i++) {
-        if (row1.get(i) != 0) {
-          return 1;
+    if (lenCompareResult != 0) {
+      // if the values don't have the same length, check if we're comparing [] and [null], which are equivalent
+      if (len1 + len2 == 1) {
+        IndexedInts longerRow = len2 > len1 ? row2 : row1;
+        if (longerRow.get(0) == 0) {
+          return 0;
+        } else {
+          //noinspection ObjectEquality -- longerRow is explicitly set to only row1 or row2
+          return longerRow == row1 ? 1 : -1;
         }
       }
     }
-    return 0;
-  }
+
+    int lenToCompare = Math.min(len1, len2);
+    while (valsIndex < lenToCompare) {
+      int v1 = row1.get(valsIndex);
+      int v2 = row2.get(valsIndex);
+      int valueCompareResult = Integer.compare(v1, v2);
+      if (valueCompareResult != 0) {
+        return valueCompareResult;
+      }
+      ++valsIndex;
+    }
+
+    return lenCompareResult;
+  };
 
   /**
    * Value for absent column, i. e. {@link NilColumnValueSelector}, should be equivalent to [null] during index merging.

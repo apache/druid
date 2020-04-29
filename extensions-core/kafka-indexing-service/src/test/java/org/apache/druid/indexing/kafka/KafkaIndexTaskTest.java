@@ -136,6 +136,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -2363,6 +2364,47 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRunWithoutDataInserted() throws Exception
+  {
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 2L), ImmutableSet.of()),
+            new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            INPUT_FORMAT
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    Thread.sleep(1000);
+
+    Assert.assertEquals(0, countEvents(task));
+    Assert.assertEquals(SeekableStreamIndexTaskRunner.Status.READING, task.getRunner().getStatus());
+
+    task.getRunner().stopGracefully();
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata and segments in deep storage
+    assertEqualsExceptVersion(Collections.emptyList(), publishedDescriptors());
+    Assert.assertNull(newDataSchemaMetadata());
   }
 
   @Test

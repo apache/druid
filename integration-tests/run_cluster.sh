@@ -14,6 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Skip starting docker if flag set (For use during development)
+if [ -n "$DRUID_INTEGRATION_TEST_SKIP_START_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_SKIP_START_DOCKER" == true ]
+  then
+    exit 0
+  fi
+
 # Cleanup old images/containers
 {
   for node in druid-historical druid-coordinator druid-overlord druid-router druid-router-permissive-tls druid-router-no-client-auth-tls druid-router-custom-check-tls druid-broker druid-middlemanager druid-zookeeper-kafka druid-metadata-storage druid-it-hadoop;
@@ -74,6 +80,12 @@
   # For druid-kinesis-indexing-service
   mkdir -p $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
   mv $SHARED_DIR/docker/lib/druid-kinesis-indexing-service-* $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
+  $ For druid-parquet-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-parquet-extensions
+  mv $SHARED_DIR/docker/lib/druid-parquet-extensions-* $SHARED_DIR/docker/extensions/druid-parquet-extensions
+  $ For druid-orc-extensions
+  mkdir -p $SHARED_DIR/docker/extensions/druid-orc-extensions
+  mv $SHARED_DIR/docker/lib/druid-orc-extensions-* $SHARED_DIR/docker/extensions/druid-orc-extensions
 
   # Pull Hadoop dependency if needed
   if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
