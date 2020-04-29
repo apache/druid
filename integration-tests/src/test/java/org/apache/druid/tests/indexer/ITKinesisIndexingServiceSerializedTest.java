@@ -21,7 +21,6 @@ package org.apache.druid.tests.indexer;
 
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -42,19 +41,13 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
     doBeforeClass();
   }
 
-  @AfterClass
-  public void tearDown()
-  {
-    doClassTeardown();
-  }
-
   /**
    * This test must be run individually since the test affect and modify the state of the Druid cluster
    */
   @Test
   public void testKinesisIndexDataWithLosingCoordinator() throws Exception
   {
-    doTestIndexDataWithLosingCoordinator();
+    doTestIndexDataWithLosingCoordinator(false);
   }
 
   /**
@@ -63,7 +56,7 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
   @Test
   public void testKinesisIndexDataWithLosingOverlord() throws Exception
   {
-    doTestIndexDataWithLosingOverlord();
+    doTestIndexDataWithLosingOverlord(false);
   }
 
   /**
@@ -72,6 +65,6 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
   @Test
   public void testKinesisIndexDataWithLosingHistorical() throws Exception
   {
-    doTestIndexDataWithLosingHistorical();
+    doTestIndexDataWithLosingHistorical(false);
   }
 }
