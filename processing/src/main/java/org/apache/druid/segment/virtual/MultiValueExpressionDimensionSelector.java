@@ -50,7 +50,6 @@ public class MultiValueExpressionDimensionSelector implements DimensionSelector
     this.baseSelector = baseSelector;
   }
 
-  @Nullable
   ExprEval getEvaluated()
   {
     return baseSelector.getObject();
@@ -86,7 +85,7 @@ public class MultiValueExpressionDimensionSelector implements DimensionSelector
   public IndexedInts getRow()
   {
     ExprEval evaluated = getEvaluated();
-    if (evaluated != null && evaluated.isArray()) {
+    if (evaluated.isArray()) {
       RangeIndexedInts ints = new RangeIndexedInts();
       Object[] evaluatedArray = evaluated.asArray();
       ints.setSize(evaluatedArray != null ? evaluatedArray.length : 0);
