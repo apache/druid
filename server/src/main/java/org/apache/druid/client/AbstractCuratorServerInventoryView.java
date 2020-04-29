@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -53,6 +54,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
 
   private final ConcurrentMap<ServerRemovedCallback, Executor> serverRemovedCallbacks = new ConcurrentHashMap<>();
   private final ConcurrentMap<SegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
+  protected final ExecutorService exec = Execs.singleThreaded("ServerInventoryView-%s");
 
   public AbstractCuratorServerInventoryView(
       final EmittingLogger log,
@@ -80,7 +82,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
             return inventoryPath;
           }
         },
-        Execs.singleThreaded("ServerInventoryView-%s"),
+        exec,
         new CuratorInventoryManagerStrategy<DruidServer, InventoryType>()
         {
           @Override

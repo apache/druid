@@ -37,6 +37,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -53,6 +54,7 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
   private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);
 
   private final ConcurrentMap<String, Set<DataSegment>> zNodes = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Set<String>> serverInventoryKeys = new ConcurrentHashMap<>();
   private final ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates =
       new ConcurrentHashMap<>();
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
@@ -77,6 +79,38 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
     );
 
     this.defaultFilter = Preconditions.checkNotNull(defaultFilter);
+    this.registerServerRemovedCallback(
+        exec,
+        new ServerRemovedCallback()
+        {
+          @Override
+          public ServerView.CallbackAction serverRemoved(DruidServer server)
+          {
+            removeInventory(server);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
+    );
+  }
+
+  private void removeInventory(DruidServer container)
+  {
+    log.debug("Remove all inventory for server[%s]", container.getName());
+    Set<String> inventoryKeys = serverInventoryKeys.remove(container.getName());
+    if (inventoryKeys == null) {
+      log.warn("Told to remove server[%s], which didn't exist", container.getName());
+    } else {
+      for (String inventoryKey : inventoryKeys) {
+        Set<DataSegment> segments = zNodes.remove(inventoryKey);
+        if (segments == null) {
+          log.warn("Told to remove container[%s], which didn't exist", inventoryKey);
+        } else {
+          for (DataSegment segment : segments) {
+            removeSingleInventory(container, segment.getId());
+          }
+        }
+      }
+    }
   }
 
   @Override
@@ -88,6 +122,14 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
   {
     Set<DataSegment> filteredInventory = filterInventory(container, inventory);
     zNodes.put(inventoryKey, filteredInventory);
+
+    log.debug("Server[%s] add inventoryKey[%s]", container.getName(), inventoryKey);
+    Set<String> inventoryKeys = serverInventoryKeys.computeIfAbsent(
+        container.getName(),
+        containerName -> new HashSet<String>()
+    );
+    inventoryKeys.add(inventoryKey);
+
     for (DataSegment segment : filteredInventory) {
       addSingleInventory(container, segment);
     }
@@ -157,6 +199,12 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
   {
     log.debug("Server[%s] removed container[%s]", container.getName(), inventoryKey);
     Set<DataSegment> segments = zNodes.remove(inventoryKey);
+
+    Set<String> inventoryKeys = serverInventoryKeys.get(container.getName());
+    if (inventoryKeys != null) {
+      log.debug("Server[%s] removed inventoryKey[%s]", container.getName(), inventoryKey);
+      inventoryKeys.remove(inventoryKey);
+    }
 
     if (segments == null) {
       log.warn("Told to remove container[%s], which didn't exist", inventoryKey);
