@@ -20,16 +20,20 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.KinesisAdminClient;
 import org.apache.druid.testing.utils.KinesisEventWriter;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
 
+import javax.annotation.Nullable;
 import java.util.function.Function;
 
 public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamIndexingTest
 {
+  private static final Logger LOG = new Logger(AbstractKinesisIndexingServiceTest.class);
+
   @Override
   StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config) throws Exception
   {
@@ -37,9 +41,15 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
   }
 
   @Override
-  StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, boolean transactionEnabled)
+  StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, @Nullable Boolean transactionEnabled)
       throws Exception
   {
+    if (transactionEnabled != null) {
+      LOG.warn(
+          "Kinesis event writer doesn't support transaction. Ignoring the given parameter transactionEnabled[%s]",
+          transactionEnabled
+      );
+    }
     return new KinesisEventWriter(config.getStreamEndpoint(), false);
   }
 

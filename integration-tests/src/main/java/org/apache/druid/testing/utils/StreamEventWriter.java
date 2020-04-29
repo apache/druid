@@ -28,22 +28,43 @@ import java.io.Closeable;
  */
 public interface StreamEventWriter extends Closeable
 {
+  /**
+   * Returns true if the stream supports transactions.
+   */
+  boolean supportTransaction();
+
+  /**
+   * Returns true if the transaction is enabled for this writer. Callers should check {@link #supportTransaction()}
+   * before calling this method.
+   *
+   * @throws UnsupportedOperationException if {@link #supportTransaction()} returns false.
+   */
   boolean isTransactionEnabled();
 
+  /**
+   * Initializes a transaction for this writer.
+   *
+   * @throws UnsupportedOperationException if {@link #supportTransaction()} returns false.
+   */
   void initTransaction();
 
+  /**
+   * Commits a transaction.
+   *
+   * @throws UnsupportedOperationException if {@link #supportTransaction()} returns false.
+   */
   void commitTransaction();
 
   void write(String topic, byte[] event);
 
   /**
-   * Flush pending writes on the underlying stream. This method is synchronous and waits until the flush completes.
+   * Flushes pending writes on the underlying stream. This method is synchronous and waits until the flush completes.
    * Note that this method is not interruptible
    */
   void flush();
 
   /**
-   * Close this writer. Any resource should be cleaned up when this method is called.
+   * Closes this writer. Any resource should be cleaned up when this method is called.
    * Implementations must call {@link #flush()} before closing the writer.
    */
   @Override
