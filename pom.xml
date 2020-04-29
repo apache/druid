@@ -188,11 +188,8 @@
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
-<<<<<<< HEAD
         <module>extensions-contrib/prometheus-emitter</module>
-=======
         <module>extensions-contrib/gce-extensions</module>
->>>>>>> b279e04a314c8fc289fbb5f01ba7d0961158fb0d
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>

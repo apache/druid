@@ -101,11 +101,13 @@ public class PrometheusEmitterConfig
     return nameSpace;
   }
 
-  public Integer getFlushPeriod() {
+  public Integer getFlushPeriod()
+  {
     return flushPeriod;
   }
 
-  public Integer getFlushDelay() {
+  public Integer getFlushDelay()
+  {
     return flushDelay;
   }
 

@@ -122,7 +122,8 @@ public class Metrics
     }
   }
 
-  public Map<String, DimensionsAndCollector> getMap() {
+  public Map<String, DimensionsAndCollector> getMap()
+  {
     return map;
   }
 

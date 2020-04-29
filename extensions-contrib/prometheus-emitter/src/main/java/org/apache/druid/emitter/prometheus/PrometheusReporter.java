@@ -37,8 +37,10 @@ import java.util.regex.Pattern;
 
 public class PrometheusReporter
 {
+
   private static final Logger log = new Logger(PrometheusReporter.class);
-  private static final Pattern pattern = Pattern.compile("[^a-zA-Z_:][^a-zA-Z0-9_:]*");
+
+  private static final Pattern UNALLOWED_CHAR_PATTERN = Pattern.compile("[^a-zA-Z0-9:_]");
 
   private final ScheduledExecutorService exec = ScheduledExecutors.fixed(1, "PrometheusEmitter-%s");
 
@@ -52,18 +54,21 @@ public class PrometheusReporter
     this.config = config;
   }
 
-  public void init() {
+  public void init()
+  {
     initMetrics();
     initGatWay();
 
     exec.scheduleAtFixedRate(this::push, this.config.getFlushDelay(), this.config.getFlushPeriod(), TimeUnit.SECONDS);
   }
 
-  private void initMetrics() {
+  private void initMetrics()
+  {
     metrics = new Metrics(this.config.getNameSpace(), this.config.getMetricMapPath());
   }
 
-  private void initGatWay() {
+  private void initGatWay()
+  {
     String address = this.config.getPort() == 0 ? this.config.getHost() : (this.config.getHost() + ":" + this.config.getPort());
     log.info("prometheus address [%s]", address);
     pushGateway = new PushGateway(address);
@@ -89,7 +94,7 @@ public class PrometheusReporter
         }
         //labelName is controlled by the user. Instead of potential NPE on invalid labelName we use "unknown" as the dimension value
         Object userDim = userDims.get(labelName);
-        labelValues[i] = userDim != null ? pattern.matcher(StringUtils.toLowerCase(userDim.toString())).replaceAll("_") : "unknown";
+        labelValues[i] = userDim != null ? UNALLOWED_CHAR_PATTERN.matcher(StringUtils.toLowerCase(userDim.toString())).replaceAll("_") : "unknown";
       }
 
       if (metric.getCollector() instanceof Counter) {
