@@ -89,7 +89,7 @@ Select `Apache Kafka` and click `Connect data`.
 
 Enter `localhost:9092` as the bootstrap server and `wikipedia` as the topic.
 
-Click `Preview` and make sure that the data you are seeing is correct.
+Click `Apply` and make sure that the data you are seeing is correct.
 
 Once the data is located, you can click "Next: Parse data" to go to the next step.
 

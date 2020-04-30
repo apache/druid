@@ -34,10 +34,6 @@ likely that you'll want to automate data ingestion. This tutorial starts by show
 directly in the Druid console, and then introduces ways to ingest batch data that lend themselves to 
 automation&mdash;from the command line and from a script. 
 
-Before starting, you should have already installed Druid using the `micro-quickstart` single-machine 
-configuration and have it
-running on your local machine. See the [Quickstart](./index.md) if not. 
-
 
 ## Loading data with a spec (via console)
 

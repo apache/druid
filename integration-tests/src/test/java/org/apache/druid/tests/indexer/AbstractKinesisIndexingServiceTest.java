@@ -37,15 +37,20 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
   }
 
   @Override
-  StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config) throws Exception
+  StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, boolean transactionEnabled)
+      throws Exception
   {
     return new KinesisEventWriter(config.getStreamEndpoint(), false);
   }
 
   @Override
-  Function<String, String> generateStreamIngestionPropsTransform(String streamName,
-                                                                 String fullDatasourceName,
-                                                                 IntegrationTestingConfig config)
+  Function<String, String> generateStreamIngestionPropsTransform(
+      String streamName,
+      String fullDatasourceName,
+      String parserType,
+      String parserOrInputFormat,
+      IntegrationTestingConfig config
+  )
   {
     return spec -> {
       try {
@@ -69,6 +74,29 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
             "%%TOPIC_VALUE%%",
             streamName
         );
+        if (AbstractStreamIndexingTest.INPUT_FORMAT.equals(parserType)) {
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT%%",
+              parserOrInputFormat
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARSER%%",
+              "null"
+          );
+        } else if (AbstractStreamIndexingTest.INPUT_ROW_PARSER.equals(parserType)) {
+          spec = StringUtils.replace(
+              spec,
+              "%%PARSER%%",
+              parserOrInputFormat
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT%%",
+              "null"
+          );
+        }
         spec = StringUtils.replace(
             spec,
             "%%USE_EARLIEST_KEY%%",
