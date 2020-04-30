@@ -2,58 +2,51 @@
   "type": "index_hadoop",
   "spec": {
     "dataSchema": {
-      "dataSource": "%%DATASOURCE%%",
+      "dataSource": "%%REINDEX_DATASOURCE%%",
       "parser": {
         "type": "hadoopyString",
         "parseSpec": {
-          "format": "tsv",
+          "format" : "json",
           "timestampSpec": {
             "column": "timestamp",
-            "format": "yyyyMMddHH"
+            "format": "iso"
           },
           "dimensionsSpec": {
-            "dimensions": [
-              "location",
-              "product"
-            ]
-          },
-          "columns": [
-            "timestamp",
-            "location",
-            "product",
-            "other_metric",
-            "user_id_sketch"
-          ]
+            "dimensionExclusions" : ["robot", "continent"]
+          }
         }
       },
       "metricsSpec": [
         {
-          "type": "thetaSketch",
-          "name": "other_metric",
-          "fieldName": "other_metric",
-          "size": 16384
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
         },
         {
-          "type": "thetaSketch",
-          "name": "user_id_sketch",
-          "fieldName": "user_id_sketch",
-          "size": 16384
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
         }
       ],
       "granularitySpec": {
-        "type": "uniform",
         "segmentGranularity": "DAY",
-        "queryGranularity": "DAY",
-        "intervals": [
-          "2014-10-20T00:00:00Z/P2W"
-        ]
+        "queryGranularity": "second",
+        "intervals" : [ "2013-08-31/2013-09-01" ]
       }
     },
     "ioConfig": {
       "type": "hadoop",
       "inputSpec": {
-        "type": "static",
-        "paths": "/batch_index/tsv/batch_hadoop.data"
+        "type": "dataSource",
+        "ingestionSpec": {
+          "dataSource": "%%DATASOURCE%%",
+          "intervals": ["2013-08-31/2013-09-01"]
+        }
       }
     },
     "tuningConfig": {

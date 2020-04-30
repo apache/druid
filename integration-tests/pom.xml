@@ -365,6 +365,7 @@
                 <skip.stop.docker>false</skip.stop.docker>
                 <override.config.path></override.config.path>
                 <resource.file.dir.path></resource.file.dir.path>
+                <extra.datasource.name.suffix>\ Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
             </properties>
             <build>
                 <plugins>
@@ -430,7 +431,7 @@
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
-                                -Ddruid.test.config.extraDatasourceNameSuffix=\ Россия\ 한국\ 中国!?
+                                -Ddruid.test.config.extraDatasourceNameSuffix=${extra.datasource.name.suffix}
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
                                 -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
                                 -Ddruid.client.https.trustStorePassword=druid123
