@@ -65,4 +65,14 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(expected, dimFilter.toFilter());
   }
+
+  @Test
+  public void testOptimieShortCircuitWithFalseFilter()
+  {
+    DimFilter filter = DimFilterTestUtils.and(
+        DimFilterTestUtils.selector("col1", "1"),
+        new FalseDimFilter()
+    );
+    Assert.assertTrue(filter.optimize() instanceof FalseDimFilter);
+  }
 }
