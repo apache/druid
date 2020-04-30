@@ -275,6 +275,7 @@ public class LookupJoinMatcher implements JoinMatcher
     } else if (condition.isAlwaysTrue()) {
       currentIterator = Collections.emptyIterator();
     } else {
+      //noinspection ConstantConditions - entry can not be null because extractor.iterable() prevents this
       currentIterator = Iterators.filter(
           extractor.iterable().iterator(),
           entry -> !matchedKeys.contains(entry.getKey())

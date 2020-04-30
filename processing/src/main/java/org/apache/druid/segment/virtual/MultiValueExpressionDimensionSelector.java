@@ -55,6 +55,7 @@ public class MultiValueExpressionDimensionSelector implements DimensionSelector
     return baseSelector.getObject();
   }
 
+  @Nullable
   String getValue(ExprEval evaluated)
   {
     assert !evaluated.isArray();
@@ -64,15 +65,18 @@ public class MultiValueExpressionDimensionSelector implements DimensionSelector
   List<String> getArray(ExprEval evaluated)
   {
     assert evaluated.isArray();
+    //noinspection ConstantConditions
     return Arrays.stream(evaluated.asStringArray())
                  .map(NullHandling::emptyToNullIfNeeded)
                  .collect(Collectors.toList());
   }
 
+  @Nullable
   String getArrayValue(ExprEval evaluated, int i)
   {
     assert evaluated.isArray();
     String[] stringArray = evaluated.asStringArray();
+    //noinspection ConstantConditions because of assert statement above
     assert i < stringArray.length;
     return NullHandling.emptyToNullIfNeeded(stringArray[i]);
   }
@@ -83,7 +87,8 @@ public class MultiValueExpressionDimensionSelector implements DimensionSelector
     ExprEval evaluated = getEvaluated();
     if (evaluated.isArray()) {
       RangeIndexedInts ints = new RangeIndexedInts();
-      ints.setSize(evaluated.asArray() != null ? evaluated.asArray().length : 0);
+      Object[] evaluatedArray = evaluated.asArray();
+      ints.setSize(evaluatedArray != null ? evaluatedArray.length : 0);
       return ints;
     }
     return ZeroIndexedInts.instance();
