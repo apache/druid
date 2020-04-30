@@ -48,8 +48,15 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return capabilities;
   }
 
+  /**
+   * Used at indexing time to finalize all {@link ColumnCapabilities.Capable#UNKNOWN} values to
+   * {@link ColumnCapabilities.Capable#FALSE}, in order to present a snapshot of the state of the this column
+   */
   @Nullable
-  public static ColumnCapabilitiesImpl complete(@Nullable final ColumnCapabilities capabilities, boolean convertUnknownToTrue)
+  public static ColumnCapabilitiesImpl complete(
+      @Nullable final ColumnCapabilities capabilities,
+      boolean convertUnknownToTrue
+  )
   {
     if (capabilities == null) {
       return null;
@@ -229,10 +236,5 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
 
     return this;
-  }
-
-  public ColumnCapabilitiesImpl complete(boolean unknownToTrue)
-  {
-    return ColumnCapabilitiesImpl.complete(this, unknownToTrue);
   }
 }
