@@ -81,9 +81,9 @@ public interface Joinable
    * Searches a column from this Joinable for a particular value, finds rows that match,
    * and returns values of a second column for those rows.
    *
-   * @param searchColumnName Name of the search column
-   * @param searchColumnValue Target value of the search column
-   * @param retrievalColumnName The column to retrieve values from
+   * @param searchColumnName Name of the search column. This is the column that is being used in the filter
+   * @param searchColumnValue Target value of the search column. This is the value that is being filtered on.
+   * @param retrievalColumnName The column to retrieve values from. This is the column that is being joined against.
    * @param maxCorrelationSetSize Maximum number of values to retrieve. If we detect that more values would be
    *                              returned than this limit, return an empty set.
    * @param allowNonKeyColumnSearch If true, allow searchs on non-key columns. If this is false,

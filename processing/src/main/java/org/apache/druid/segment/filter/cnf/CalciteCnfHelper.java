@@ -59,9 +59,7 @@ public class CalciteCnfHelper
       final List<Filter> list = new ArrayList<>();
       for (Filter operand : operands) {
         Filter removed = removeFactor(factors, operand);
-        if (removed != null) {
-          list.add(removed);
-        }
+        list.add(removed);
       }
       if (list.isEmpty()) {
         return and(factors.values());

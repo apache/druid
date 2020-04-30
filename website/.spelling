@@ -1548,6 +1548,7 @@ EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
+GCE
 HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
@@ -1556,6 +1557,7 @@ JRE8u60
 KeyManager
 L1
 L2
+ListManagedInstances
 LoadSpec
 LoggingEmitter
 Los_Angeles
@@ -1597,6 +1599,8 @@ affinityConfig
 allowAll
 ANDed
 array_mod
+autoscale
+autoscalers
 batch_index_task
 cgroup
 classloader
@@ -1634,6 +1638,8 @@ floatMax
 floatMin
 floatSum
 freeSpacePercent
+gce
+gce-extensions
 getCanonicalHostName
 groupBy
 hdfs

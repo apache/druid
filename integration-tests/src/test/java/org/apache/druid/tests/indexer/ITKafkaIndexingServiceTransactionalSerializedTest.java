@@ -21,7 +21,6 @@ package org.apache.druid.tests.indexer;
 
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -30,12 +29,6 @@ import org.testng.annotations.Test;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKafkaIndexingServiceTransactionalSerializedTest extends AbstractKafkaIndexingServiceTest
 {
-  @Override
-  protected boolean isKafkaWriterTransactionalEnabled()
-  {
-    return true;
-  }
-
   @Override
   public String getTestNamePrefix()
   {
@@ -48,19 +41,13 @@ public class ITKafkaIndexingServiceTransactionalSerializedTest extends AbstractK
     doBeforeClass();
   }
 
-  @AfterClass
-  public void tearDown()
-  {
-    doClassTeardown();
-  }
-
   /**
    * This test must be run individually since the test affect and modify the state of the Druid cluster
    */
   @Test
   public void testKafkaIndexDataWithLosingCoordinator() throws Exception
   {
-    doTestIndexDataWithLosingCoordinator();
+    doTestIndexDataWithLosingCoordinator(true);
   }
 
   /**
@@ -69,7 +56,7 @@ public class ITKafkaIndexingServiceTransactionalSerializedTest extends AbstractK
   @Test
   public void testKafkaIndexDataWithLosingOverlord() throws Exception
   {
-    doTestIndexDataWithLosingOverlord();
+    doTestIndexDataWithLosingOverlord(true);
   }
 
   /**
@@ -78,6 +65,6 @@ public class ITKafkaIndexingServiceTransactionalSerializedTest extends AbstractK
   @Test
   public void testKafkaIndexDataWithLosingHistorical() throws Exception
   {
-    doTestIndexDataWithLosingHistorical();
+    doTestIndexDataWithLosingHistorical(true);
   }
 }

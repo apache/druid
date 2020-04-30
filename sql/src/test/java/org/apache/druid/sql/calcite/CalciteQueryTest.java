@@ -8194,6 +8194,45 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdown() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+    Map<String, Object> queryRewriteValueColumnFiltersContext = DEFAULT_QUERY_CONTEXT_BUILDER
+        .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+        .build();
+    testQuery(
+        "SELECT lookyloo.k, COUNT(*)\n"
+        + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
+        + "WHERE lookyloo.v = 'xa'\n"
+        + "GROUP BY lookyloo.k",
+        queryRewriteValueColumnFiltersContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("j0.v", "xa", null))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.k", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(queryRewriteValueColumnFiltersContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 2L}
+        )
+    );
+  }
+
+  @Test
   public void testFilterAndGroupByLookupUsingPostAggregationJoinOperator() throws Exception
   {
     testQuery(
