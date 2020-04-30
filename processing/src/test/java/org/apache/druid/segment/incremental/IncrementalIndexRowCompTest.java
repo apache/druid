@@ -71,8 +71,8 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
 
     Assert.assertTrue(comparator.compare(ir4, ir6) > 0);
     Assert.assertTrue(comparator.compare(ir5, ir6) > 0);
-    Assert.assertTrue(comparator.compare(ir4, ir5) < 0);
-    Assert.assertTrue(comparator.compare(ir5, ir4) > 0);
+    Assert.assertTrue(comparator.compare(ir5, ir4) < 0);
+    Assert.assertTrue(comparator.compare(ir4, ir5) > 0);
   }
 
   private MapBasedInputRow toMapRow(long time, Object... dimAndVal)

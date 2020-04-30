@@ -68,7 +68,18 @@ can either be 8 or 11.
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
 
-## Debugging Druid while running tests
+## Tips & tricks for debugging and developing integration tests
+
+### Useful mvn command flags
+
+- -Dskip.start.docker=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
+up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
+these containers already running if using this flag. Additionally, please make sure that the running containers
+are in the same state that the setup script (run_cluster.sh) would have brought it up in. 
+- -Dskip.stop.docker=true to skip stopping and teardowning down the docker containers. This can be useful in further
+debugging after the integration tests have finish running. 
+
+### Debugging Druid while running tests
 
 For your convenience, Druid processes running inside Docker have debugging enabled and the following ports have 
 been made available to attach your remote debugger (such as via IntelliJ IDEA's Remote Configuration):
@@ -303,3 +314,16 @@ This will tell the test framework that the test class needs to be constructed us
 2) FromFileTestQueryHelper - reads queries with expected results from file and executes them and verifies the results using ResultVerifier
 
 Refer ITIndexerTest as an example on how to use dependency Injection
+
+### Running test methods in parallel
+By default, test methods in a test class will be run in sequential order one at a time. Test methods for a given test 
+class can be set to run in parallel (multiple test methods of each class running at the same time) by excluding
+the given class/package from the "AllSerializedTests" test tag section and including it in the "AllParallelizedTests" 
+test tag section in integration-tests/src/test/resources/testng.xml. TestNG uses two parameters, i.e.,
+`thread-count` and `data-provider-thread-count`, for parallel test execution, which are set to 2 for Druid integration tests.
+You may want to modify those values for faster execution.
+See https://testng.org/doc/documentation-main.html#parallel-running and https://testng.org/doc/documentation-main.html#parameters-dataproviders for details.
+Please be mindful when adding tests to the "AllParallelizedTests" test tag that the tests can run in parallel with
+other tests from the same class at the same time. i.e. test does not modify/restart/stop the druid cluster or other dependency containers,
+test does not use excessive memory starving other concurent task, test does not modify and/or use other task, 
+supervisor, datasource it did not create. 

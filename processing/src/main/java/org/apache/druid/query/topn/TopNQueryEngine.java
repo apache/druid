@@ -132,9 +132,10 @@ public class TopNQueryEngine
       topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isHasExtractionFn()) {
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
-    } else if (columnCapabilities != null && !(columnCapabilities.getType() == ValueType.STRING
+    } else if (columnCapabilities == null || !(columnCapabilities.getType() == ValueType.STRING
                                                && columnCapabilities.isDictionaryEncoded())) {
-      // Use HeapBasedTopNAlgorithm for non-Strings and for non-dictionary-encoded Strings.
+      // Use HeapBasedTopNAlgorithm for non-Strings and for non-dictionary-encoded Strings, and for things we don't know
+      // which can happen for 'inline' data sources when this is run on the broker
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
     } else if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
       // Use HeapBasedTopNAlgorithm when the dimension output type is a non-String. (It's like an extractionFn: there can be

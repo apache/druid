@@ -83,7 +83,7 @@ public class VectorGroupByEngine
     // This situation should sort itself out pretty well once this engine supports multi-valued columns. Then we
     // won't have to worry about having this all-single-value-dims check here.
 
-    return GroupByQueryEngineV2.isAllSingleValueDims(adapter::getColumnCapabilities, query.getDimensions())
+    return GroupByQueryEngineV2.isAllSingleValueDims(adapter::getColumnCapabilities, query.getDimensions(), true)
            && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
            && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
            && adapter.canVectorize(filter, query.getVirtualColumns(), false);

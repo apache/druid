@@ -56,7 +56,11 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -107,6 +111,7 @@ public class ClientQuerySegmentWalkerTest
 
   private static final String FOO = "foo";
   private static final String BAR = "bar";
+  private static final String MULTI = "multi";
 
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
@@ -132,6 +137,20 @@ public class ClientQuerySegmentWalkerTest
           .add(new Object[]{INTERVAL.getStartMillis(), "a", 2})
           .add(new Object[]{INTERVAL.getStartMillis(), "b", 3})
           .add(new Object[]{INTERVAL.getStartMillis(), "c", 4})
+          .build(),
+      RowSignature.builder()
+                  .addTimeColumn()
+                  .add("s", ValueType.STRING)
+                  .add("n", ValueType.LONG)
+                  .build()
+  );
+
+  private static final InlineDataSource MULTI_VALUE_INLINE = InlineDataSource.fromIterable(
+      ImmutableList.<Object[]>builder()
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "b"), 1})
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "c"), 2})
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("b"), 3})
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("c"), 4})
           .build(),
       RowSignature.builder()
                   .addTimeColumn()
@@ -400,6 +419,115 @@ public class ClientQuerySegmentWalkerTest
   }
 
   @Test
+  public void testGroupByOnScanMultiValue()
+  {
+    ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
+                                                      .columns("s", "n")
+                                                      .intervals(
+                                                          new MultipleIntervalSegmentSpec(
+                                                              ImmutableList.of(Intervals.ETERNITY)
+                                                          )
+                                                      )
+                                                      .legacy(false)
+                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                      .build();
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource(new QueryDataSource(subquery))
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ONLY_ETERNITY)
+                    .setDimensions(DefaultDimensionSpec.of("s"))
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("sum_n", "n"))
+                    .build();
+
+    testQuery(
+        query,
+        // GroupBy handles its own subqueries; only the inner one will go to the cluster.
+        ImmutableList.of(
+            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.local(
+                query.withDataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(
+                            new Object[]{ImmutableList.of("a", "b"), 1},
+                            new Object[]{ImmutableList.of("a", "c"), 2},
+                            new Object[]{ImmutableList.of("b"), 3},
+                            new Object[]{ImmutableList.of("c"), 4}
+                        ),
+                        RowSignature.builder().add("s", null).add("n", null).build()
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 3L},
+            new Object[]{"b", 4L},
+            new Object[]{"c", 6L}
+        )
+    );
+
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTopNScanMultiValue()
+  {
+    ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
+                                                      .columns("s", "n")
+                                                      .intervals(
+                                                          new MultipleIntervalSegmentSpec(
+                                                              ImmutableList.of(Intervals.ETERNITY)
+                                                          )
+                                                      )
+                                                      .legacy(false)
+                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                      .build();
+    final TopNQuery query =
+        new TopNQueryBuilder().dataSource(new QueryDataSource(subquery))
+                              .granularity(Granularities.ALL)
+                              .intervals(Intervals.ONLY_ETERNITY)
+                              .dimension(DefaultDimensionSpec.of("s"))
+                              .metric("sum_n")
+                              .threshold(100)
+                              .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                              .build();
+
+    testQuery(
+        query,
+        // GroupBy handles its own subqueries; only the inner one will go to the cluster.
+        ImmutableList.of(
+            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.local(
+                query.withDataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(
+                            new Object[]{ImmutableList.of("a", "b"), 1},
+                            new Object[]{ImmutableList.of("a", "c"), 2},
+                            new Object[]{ImmutableList.of("b"), 3},
+                            new Object[]{ImmutableList.of("c"), 4}
+                        ),
+                        RowSignature.builder().add("s", null).add("n", null).build()
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(
+            new Object[]{Intervals.ETERNITY.getStartMillis(), "c", 6L},
+            new Object[]{Intervals.ETERNITY.getStartMillis(), "b", 4L},
+            new Object[]{Intervals.ETERNITY.getStartMillis(), "a", 3L}
+        )
+    );
+
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+  }
+
+  @Test
   public void testJoinOnTableErrorCantInlineTable()
   {
     final GroupByQuery query =
@@ -522,7 +650,8 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createClusterQuerySegmentWalker(
                 ImmutableMap.of(
                     FOO, makeTimeline(FOO, FOO_INLINE),
-                    BAR, makeTimeline(BAR, BAR_INLINE)
+                    BAR, makeTimeline(BAR, BAR_INLINE),
+                    MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE)
                 ),
                 joinableFactory,
                 conglomerate,

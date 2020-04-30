@@ -23,9 +23,7 @@ import org.joda.time.DateTime;
 
 public interface StreamGenerator
 {
-  void start(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds);
+  void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds);
 
-  void start(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
-
-  void shutdown();
+  void run(String streamTopic, StreamEventWriter streamEventWriter, int totalNumberOfSeconds, DateTime overrrideFirstEventTime);
 }

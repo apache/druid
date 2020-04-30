@@ -780,6 +780,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private String getSequenceNumberInternal(StreamPartition<String> partition, String shardIterator)
   {
     long timeoutMillis = System.currentTimeMillis() + fetchSequenceNumberTimeout;
+    GetRecordsResult recordsResult = null;
 
     while (shardIterator != null && System.currentTimeMillis() < timeoutMillis) {
 
@@ -787,8 +788,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         log.info("KinesisRecordSupplier closed while fetching sequenceNumber");
         return null;
       }
-
-      GetRecordsResult recordsResult;
       try {
         // we call getRecords with limit 1000 to make sure that we can find the first (earliest) record in the shard.
         // In the case where the shard is constantly removing records that are past their retention period, it is possible
@@ -832,8 +831,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     // if we reach here, it usually means either the shard has no more records, or records have not been
     // added to this shard
     log.warn(
-        "timed out while trying to fetch position for shard[%s], likely no more records in shard",
-        partition.getPartitionId()
+        "timed out while trying to fetch position for shard[%s], millisBehindLatest is [%s], likely no more records in shard",
+        partition.getPartitionId(),
+        recordsResult != null ? recordsResult.getMillisBehindLatest() : "UNKNOWN"
     );
     return null;
 

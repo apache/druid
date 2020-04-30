@@ -53,7 +53,7 @@ Select `Local disk` and click `Connect data`.
 Enter `quickstart/tutorial/` as the base directory and `wikiticker-2015-09-12-sampled.json.gz` as a filter.
 The separation of base directory and [wildcard file filter](https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html) is there if you need to ingest data from multiple files.
 
-Click `Preview` and make sure that the data you are seeing is correct.
+Click `Apply` and make sure that the data you are seeing is correct.
 
 Once the data is located, you can click "Next: Parse data" to go to the next step.
 

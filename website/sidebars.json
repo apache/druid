@@ -214,6 +214,7 @@
       "development/extensions-contrib/tdigestsketch-quantiles",
       "development/extensions-contrib/thrift",
       "development/extensions-contrib/time-min-max",
+      "development/extensions-contrib/gce-extensions",
       "ingestion/standalone-realtime"
     ]
   }

@@ -126,6 +126,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     return inputFormat;
   }
 
+  @Nullable
   public InputFormat getInputFormat(ParseSpec parseSpec)
   {
     return inputFormat == null ? Preconditions.checkNotNull(parseSpec, "parseSpec").toInputFormat() : inputFormat;

@@ -156,6 +156,7 @@ public class Transformer
     {
       final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
       if (transform != null) {
+        //noinspection ConstantConditions time column is never null
         return Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
       } else {
         return row.getTimestampFromEpoch();

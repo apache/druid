@@ -227,7 +227,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions()),
+                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions(), false),
                       cardinalityForArrayAggregation
                   );
                 } else {
@@ -238,7 +238,7 @@ public class GroupByQueryEngineV2
                       processingBuffer,
                       fudgeTimestamp,
                       dims,
-                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions())
+                      isAllSingleValueDims(columnSelectorFactory::getColumnCapabilities, query.getDimensions(), false)
                   );
                 }
               }
@@ -313,12 +313,15 @@ public class GroupByQueryEngineV2
   }
 
   /**
-   * Checks whether all "dimensions" are either single-valued or nonexistent (which is just as good as single-valued,
-   * since their selectors will show up as full of nulls).
+   * Checks whether all "dimensions" are either single-valued, or if allowed, nonexistent. Since non-existent column
+   * selectors will show up as full of nulls they are effectively single valued, however they can also be null during
+   * broker merge, for example with an 'inline' datasource subquery. 'missingMeansNonexistent' is sort of a hack to let
+   * the vectorized engine, which only operates on actual segments, to still work in this case for non-existent columns.
    */
   public static boolean isAllSingleValueDims(
       final Function<String, ColumnCapabilities> capabilitiesFunction,
-      final List<DimensionSpec> dimensions
+      final List<DimensionSpec> dimensions,
+      final boolean missingMeansNonexistent
   )
   {
     return dimensions
@@ -333,7 +336,8 @@ public class GroupByQueryEngineV2
 
               // Now check column capabilities.
               final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return columnCapabilities == null || !columnCapabilities.hasMultipleValues().isMaybeTrue();
+              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues().isMaybeTrue()) ||
+                     (missingMeansNonexistent && columnCapabilities == null);
             });
   }
 

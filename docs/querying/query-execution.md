@@ -62,6 +62,23 @@ Queries that operate directly on [lookup datasources](datasource.md#lookup) (wit
 that received the query, using its local copy of the lookup. All registered lookup tables are preloaded in-memory on the
 Broker. The query runs single-threaded.
 
+Execution of queries that use lookups as right-hand inputs to a join are executed in a way that depends on their
+"base" (bottom-leftmost) datasource, as described in the [join](#join) section below.
+
+### `union`
+
+Queries that operate directly on [union datasources](datasource.md#union) are split up on the Broker into a separate
+query for each table that is part of the union. Each of these queries runs separately, and the Broker merges their
+results together.
+
+### `inline`
+
+Queries that operate directly on [inline datasources](datasource.md#inline) are executed on the Broker that received the
+query. The query runs single-threaded.
+
+Execution of queries that use inline datasources as right-hand inputs to a join are executed in a way that depends on
+their "base" (bottom-leftmost) datasource, as described in the [join](#join) section below.
+
 ### `query`
 
 [Query datasources](datasource.md#query) are subqueries. Each subquery is executed as if it was its own query and
@@ -99,14 +116,3 @@ lookups do not require new hash tables to be built (because they are preloaded),
 5. Query execution proceeds again using the same structure that the base datasource would use on its own, with one
 addition: while processing the base datasource, Druid servers will use the hash tables built from the other join inputs
 to produce the join result row-by-row, and query engines will operate on the joined rows rather than the base rows.
-
-### `union`
-
-Queries that operate directly on [union datasources](datasource.md#union) are split up on the Broker into a separate
-query for each table that is part of the union. Each of these queries runs separately, and the Broker merges their
-results together.
-
-### `inline`
-
-Queries that operate directly on [inline datasources](datasource.md#inline) are executed on the Broker that received the
-query. The query runs single-threaded.

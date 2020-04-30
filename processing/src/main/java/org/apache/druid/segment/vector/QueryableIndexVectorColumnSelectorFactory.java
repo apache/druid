@@ -96,6 +96,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
           final DictionaryEncodedColumn<String> dictionaryEncodedColumn = (DictionaryEncodedColumn<String>)
               getCachedColumn(spec.getDimension());
 
+          // dictionaryEncodedColumn is not null because of holder null check above
+          assert dictionaryEncodedColumn != null;
           final MultiValueDimensionVectorSelector selector = dictionaryEncodedColumn.makeMultiValueDimensionVectorSelector(
               offset
           );
@@ -132,6 +134,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
           final DictionaryEncodedColumn<String> dictionaryEncodedColumn = (DictionaryEncodedColumn<String>)
               getCachedColumn(spec.getDimension());
 
+          // dictionaryEncodedColumn is not null because of holder null check above
+          assert dictionaryEncodedColumn != null;
           final SingleValueDimensionVectorSelector selector =
               dictionaryEncodedColumn.makeSingleValueDimensionVectorSelector(offset);
 
