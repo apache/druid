@@ -22,7 +22,6 @@ package org.apache.druid.tests.parallelized;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractKafkaIndexingServiceTest;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -31,12 +30,6 @@ import org.testng.annotations.Test;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends AbstractKafkaIndexingServiceTest
 {
-  @Override
-  protected boolean isKafkaWriterTransactionalEnabled()
-  {
-    return false;
-  }
-
   @Override
   public String getTestNamePrefix()
   {
@@ -49,32 +42,6 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
     doBeforeClass();
   }
 
-  @AfterClass
-  public void tearDown()
-  {
-    doClassTeardown();
-  }
-
-  /**
-   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
-   * and supervisor maintained and scoped within this test only
-   */
-  @Test
-  public void testKafkaIndexDataWithLegacyParserStableState() throws Exception
-  {
-    doTestIndexDataWithLegacyParserStableState();
-  }
-
-  /**
-   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
-   * and supervisor maintained and scoped within this test only
-   */
-  @Test
-  public void testKafkaIndexDataWithInputFormatStableState() throws Exception
-  {
-    doTestIndexDataWithInputFormatStableState();
-  }
-
   /**
    * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
    * and supervisor maintained and scoped within this test only
@@ -82,7 +49,7 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
   @Test
   public void testKafkaIndexDataWithStartStopSupervisor() throws Exception
   {
-    doTestIndexDataWithStartStopSupervisor();
+    doTestIndexDataWithStartStopSupervisor(false);
   }
 
   /**
@@ -92,6 +59,6 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
   @Test
   public void testKafkaIndexDataWithKafkaReshardSplit() throws Exception
   {
-    doTestIndexDataWithStreamReshardSplit();
+    doTestIndexDataWithStreamReshardSplit(false);
   }
 }

@@ -37,6 +37,8 @@ public class TestNGGroup
 
   public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
 
+  public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
+
   public static final String OTHER_INDEX = "other-index";
 
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
@@ -110,4 +112,12 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_INDEX = "kinesis-index";
+
+  /**
+   * This group is not part of CI. To run this group, AWS kinesis configs/credentials for your AWS kinesis must be
+   * provided in a file. The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
+   * See integration-tests/docker/environment-configs/override-examples/kinesis for env vars to provide.
+   * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
+   */
+  public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
 }

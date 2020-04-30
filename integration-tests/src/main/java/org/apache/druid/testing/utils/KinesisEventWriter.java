@@ -25,17 +25,13 @@ import com.amazonaws.services.kinesis.producer.KinesisProducer;
 import com.amazonaws.services.kinesis.producer.KinesisProducerConfiguration;
 import com.amazonaws.util.AwsHostNameUtils;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.FileInputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 public class KinesisEventWriter implements StreamEventWriter
 {
-  private static final Logger LOG = new Logger(KinesisEventWriter.class);
-
   private final KinesisProducer kinesisProducer;
 
   public KinesisEventWriter(String endpoint, boolean aggregate) throws Exception
@@ -82,20 +78,19 @@ public class KinesisEventWriter implements StreamEventWriter
   }
 
   @Override
-  public void write(String streamName, String event)
+  public void write(String streamName, byte[] event)
   {
     kinesisProducer.addUserRecord(
         streamName,
         DigestUtils.sha1Hex(event),
-        ByteBuffer.wrap(event.getBytes(StandardCharsets.UTF_8))
+        ByteBuffer.wrap(event)
     );
   }
 
   @Override
-  public void shutdown()
+  public void close()
   {
-    LOG.info("Shutting down Kinesis client");
-    kinesisProducer.flushSync();
+    flush();
   }
 
   @Override
