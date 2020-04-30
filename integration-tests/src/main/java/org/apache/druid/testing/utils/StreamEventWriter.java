@@ -20,21 +20,32 @@
 package org.apache.druid.testing.utils;
 
 
+import java.io.Closeable;
+
 /**
  * This interface is use to write test event data to the underlying stream (such as Kafka, Kinesis)
  * This can also be use with {@link StreamGenerator} to write particular set of test data
  */
-public interface StreamEventWriter
+public interface StreamEventWriter extends Closeable
 {
-  void write(String topic, String event);
-
-  void shutdown();
-
-  void flush() throws Exception;
-
   boolean isTransactionEnabled();
 
   void initTransaction();
 
   void commitTransaction();
+
+  void write(String topic, byte[] event);
+
+  /**
+   * Flush pending writes on the underlying stream. This method is synchronous and waits until the flush completes.
+   * Note that this method is not interruptible
+   */
+  void flush();
+
+  /**
+   * Close this writer. Any resource should be cleaned up when this method is called.
+   * Implementations must call {@link #flush()} before closing the writer.
+   */
+  @Override
+  void close();
 }

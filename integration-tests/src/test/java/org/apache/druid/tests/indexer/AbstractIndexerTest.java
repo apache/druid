@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
@@ -32,16 +33,19 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
 {
-
   @Inject
   protected CoordinatorResourceTestClient coordinator;
   @Inject
@@ -112,15 +116,33 @@ public abstract class AbstractIndexerTest
     );
   }
 
-  protected String getResourceAsString(String file) throws IOException
+  public static String getResourceAsString(String file) throws IOException
   {
-    final InputStream inputStream = ITRealtimeIndexTaskTest.class.getResourceAsStream(file);
-    try {
-      return IOUtils.toString(inputStream, "UTF-8");
-    }
-    finally {
-      IOUtils.closeQuietly(inputStream);
+    try (final InputStream inputStream = getResourceAsStream(file)) {
+      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
     }
   }
 
+  public static InputStream getResourceAsStream(String resource)
+  {
+    return ITRealtimeIndexTaskTest.class.getResourceAsStream(resource);
+  }
+
+  public static List<String> listResources(String dir) throws IOException
+  {
+    List<String> resources = new ArrayList<>();
+
+    try (
+        InputStream in = getResourceAsStream(dir);
+        BufferedReader br = new BufferedReader(new InputStreamReader(in, StringUtils.UTF8_STRING))
+    ) {
+      String resource;
+
+      while ((resource = br.readLine()) != null) {
+        resources.add(resource);
+      }
+    }
+
+    return resources;
+  }
 }

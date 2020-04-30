@@ -22,7 +22,6 @@ package org.apache.druid.tests.parallelized;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractKinesisIndexingServiceTest;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -43,32 +42,6 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
     doBeforeClass();
   }
 
-  @AfterClass
-  public void tearDown()
-  {
-    doClassTeardown();
-  }
-
-  /**
-   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
-   * and supervisor maintained and scoped within this test only
-   */
-  @Test
-  public void testKinesisIndexDataWithLegacyParserStableState() throws Exception
-  {
-    doTestIndexDataWithLegacyParserStableState();
-  }
-
-  /**
-   * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
-   * and supervisor maintained and scoped within this test only
-   */
-  @Test
-  public void testKinesisIndexDataWithInputFormatStableState() throws Exception
-  {
-    doTestIndexDataWithInputFormatStableState();
-  }
-
   /**
    * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
    * and supervisor maintained and scoped within this test only
@@ -76,7 +49,7 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
   @Test
   public void testKinesisIndexDataWithStartStopSupervisor() throws Exception
   {
-    doTestIndexDataWithStartStopSupervisor();
+    doTestIndexDataWithStartStopSupervisor(false);
   }
 
   /**
@@ -86,7 +59,7 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
   @Test
   public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
   {
-    doTestIndexDataWithStreamReshardSplit();
+    doTestIndexDataWithStreamReshardSplit(false);
   }
 
   /**
@@ -96,6 +69,6 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
   @Test
   public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
   {
-    doTestIndexDataWithStreamReshardMerge();
+    doTestIndexDataWithStreamReshardMerge(false);
   }
 }
