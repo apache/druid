@@ -85,14 +85,14 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
-  IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
   @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath,
@@ -104,7 +104,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion, runTestQueries, waitForSegmentsToLoad);
   }
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       Function<String, String> taskSpecTransform,
@@ -151,7 +151,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  void doReindexTest(
+  protected void doReindexTest(
       String baseDataSource,
       String reindexDataSource,
       String reindexTaskFilePath,

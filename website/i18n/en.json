@@ -424,7 +424,7 @@
         "sidebar_label": "Multitenancy"
       },
       "querying/post-aggregations": {
-        "title": "Postaggregations"
+        "title": "Post-aggregations"
       },
       "querying/query-context": {
         "title": "Query context",

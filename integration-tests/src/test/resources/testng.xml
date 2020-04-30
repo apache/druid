@@ -28,7 +28,6 @@
   <test name="AllSerializedTests">
     <packages>
       <package name="org.apache.druid.tests.*">
-        <exclude name="org.apache.druid.tests.hadoop"/>
         <exclude name="org.apache.druid.tests.parallelized"/>
       </package>
     </packages>
