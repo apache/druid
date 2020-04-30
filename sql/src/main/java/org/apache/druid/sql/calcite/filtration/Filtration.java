@@ -36,8 +36,8 @@ import java.util.Objects;
 
 public class Filtration
 {
-  private static final DimFilter MATCH_NOTHING = new FalseDimFilter();
-  private static final DimFilter MATCH_EVERYTHING = new TrueDimFilter();
+  private static final DimFilter MATCH_NOTHING = FalseDimFilter.instance();
+  private static final DimFilter MATCH_EVERYTHING = TrueDimFilter.instance();
 
   // 1) If "dimFilter" is null, it should be ignored and not affect filtration.
   // 2) There is an implicit AND between "intervals" and "dimFilter" (if dimFilter is non-null).

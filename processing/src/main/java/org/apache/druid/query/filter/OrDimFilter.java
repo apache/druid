@@ -45,9 +45,7 @@ public class OrDimFilter implements DimFilter
   private final List<DimFilter> fields;
 
   @JsonCreator
-  public OrDimFilter(
-      @JsonProperty("fields") List<DimFilter> fields
-  )
+  public OrDimFilter(@JsonProperty("fields") List<DimFilter> fields)
   {
     fields = DimFilters.filterNulls(fields);
     Preconditions.checkArgument(fields.size() > 0, "OR operator requires at least one field");
@@ -83,15 +81,19 @@ public class OrDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    List<DimFilter> elements = DimFilters.optimize(fields);
-    if (elements.size() == 1) {
+    List<DimFilter> elements = DimFilters.optimize(fields)
+                                         .stream()
+                                         .filter(filter -> !(filter instanceof FalseDimFilter))
+                                         .collect(Collectors.toList());
+    if (elements.isEmpty()) {
+      // All elements were FalseDimFilter after optimization
+      return FalseDimFilter.instance();
+    } else if (elements.size() == 1) {
       return elements.get(0);
     } else if (elements.stream().anyMatch(filter -> filter instanceof TrueDimFilter)) {
-      return new TrueDimFilter();
+      return TrueDimFilter.instance();
     } else {
-      return new OrDimFilter(
-          elements.stream().filter(filter -> filter instanceof FalseDimFilter).collect(Collectors.toList())
-      );
+      return new OrDimFilter(elements);
     }
   }
 

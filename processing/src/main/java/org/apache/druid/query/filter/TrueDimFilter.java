@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.filter.TrueFilter;
@@ -26,10 +27,20 @@ import org.apache.druid.segment.filter.TrueFilter;
 import java.util.Collections;
 import java.util.Set;
 
-/**
- */
 public class TrueDimFilter implements DimFilter
 {
+  private static final TrueDimFilter INSTANCE = new TrueDimFilter();
+
+  @JsonCreator
+  public static TrueDimFilter instance()
+  {
+    return INSTANCE;
+  }
+
+  private TrueDimFilter()
+  {
+  }
+
   @Override
   public byte[] getCacheKey()
   {
@@ -58,5 +69,23 @@ public class TrueDimFilter implements DimFilter
   public Set<String> getRequiredColumns()
   {
     return Collections.emptySet();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return DimFilterUtils.TRUE_CACHE_ID;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    return o == this;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TRUE";
   }
 }

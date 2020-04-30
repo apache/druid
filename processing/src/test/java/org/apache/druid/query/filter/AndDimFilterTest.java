@@ -71,8 +71,15 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
   {
     DimFilter filter = DimFilterTestUtils.and(
         DimFilterTestUtils.selector("col1", "1"),
-        new FalseDimFilter()
+        FalseDimFilter.instance()
     );
     Assert.assertTrue(filter.optimize() instanceof FalseDimFilter);
+  }
+
+  @Test
+  public void testOptimizeOringTrueFilters()
+  {
+    DimFilter filter = DimFilterTestUtils.and(TrueDimFilter.instance(), TrueDimFilter.instance());
+    Assert.assertSame(TrueDimFilter.instance(), filter.optimize());
   }
 }

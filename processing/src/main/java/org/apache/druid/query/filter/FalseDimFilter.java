@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -30,6 +31,18 @@ import java.util.Set;
 
 public class FalseDimFilter implements DimFilter
 {
+  private static final FalseDimFilter INSTANCE = new FalseDimFilter();
+
+  @JsonCreator
+  public static FalseDimFilter instance()
+  {
+    return INSTANCE;
+  }
+
+  private FalseDimFilter()
+  {
+  }
+
   @Override
   public DimFilter optimize()
   {
@@ -59,5 +72,23 @@ public class FalseDimFilter implements DimFilter
   public byte[] getCacheKey()
   {
     return new CacheKeyBuilder(DimFilterUtils.FALSE_CACHE_ID).build();
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return DimFilterUtils.FALSE_CACHE_ID;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    return o == this;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "FALSE";
   }
 }

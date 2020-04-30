@@ -17,31 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation;
+package org.apache.druid.query.filter;
 
-import org.apache.druid.query.filter.TrueDimFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class FilteredAggregatorFactoryTest
+import java.io.IOException;
+
+public class TrueDimFilterTest
 {
   @Test
-  public void testSimpleNaming()
+  public void testSerde() throws IOException
   {
-    Assert.assertEquals("overrideName", new FilteredAggregatorFactory(
-        new CountAggregatorFactory("foo"),
-        TrueDimFilter.instance(),
-        "overrideName"
-    ).getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
-        new CountAggregatorFactory("delegateName"),
-        TrueDimFilter.instance(),
-        ""
-    ).getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
-        new CountAggregatorFactory("delegateName"),
-        TrueDimFilter.instance(),
-        null
-    ).getName());
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final TrueDimFilter original = TrueDimFilter.instance();
+    final byte[] bytes = mapper.writeValueAsBytes(original);
+    final TrueDimFilter fromBytes = (TrueDimFilter) mapper.readValue(bytes, DimFilter.class);
+    Assert.assertSame(original, fromBytes);
   }
 }

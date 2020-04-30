@@ -171,7 +171,7 @@ public class InDimFilter implements DimFilter
   {
     InDimFilter inFilter = optimizeLookup();
     if (NullHandling.sqlCompatible() && inFilter.values.contains(null)) {
-      return new FalseDimFilter();
+      return FalseDimFilter.instance();
     }
     if (inFilter.values.size() == 1) {
       return new SelectorDimFilter(

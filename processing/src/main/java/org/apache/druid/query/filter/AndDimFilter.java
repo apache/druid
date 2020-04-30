@@ -73,15 +73,19 @@ public class AndDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    List<DimFilter> elements = DimFilters.optimize(fields);
-    if (elements.size() == 1) {
+    List<DimFilter> elements = DimFilters.optimize(fields)
+                                         .stream()
+                                         .filter(filter -> !(filter instanceof TrueDimFilter))
+                                         .collect(Collectors.toList());
+    if (elements.isEmpty()) {
+      // All elements were TrueDimFilter after optimization
+      return TrueDimFilter.instance();
+    } else if (elements.size() == 1) {
       return elements.get(0);
     } else if (elements.stream().anyMatch(filter -> filter instanceof FalseDimFilter)) {
-      return new FalseDimFilter();
+      return FalseDimFilter.instance();
     } else {
-      return new AndDimFilter(
-          elements.stream().filter(filter -> filter instanceof TrueDimFilter).collect(Collectors.toList())
-      );
+      return new AndDimFilter(elements);
     }
   }
 
