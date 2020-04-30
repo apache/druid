@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -152,7 +153,11 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
+    // multi-value is unknown unless explicitly set to 'true'
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
+    // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
+    // coercing any 'UNKNOWN' values to false
+    Assert.assertFalse(ColumnCapabilitiesImpl.complete(caps, false).hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
 
     caps = MMAP_INDEX.getColumnHolder("d1").getCapabilities();

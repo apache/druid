@@ -62,7 +62,7 @@ public interface ColumnCapabilities
 
     public Capable complete(boolean convertUnknownToTrue)
     {
-      return this == UNKNOWN ? convertUnknownToTrue ? TRUE : FALSE : this;
+      return this == UNKNOWN ? Capable.of(convertUnknownToTrue) : this;
     }
 
     public Capable and(Capable other)
@@ -71,6 +71,14 @@ public interface ColumnCapabilities
         return UNKNOWN;
       }
       return this == TRUE && other == TRUE ? TRUE : FALSE;
+    }
+
+    public Capable or(Capable other)
+    {
+      if (this == TRUE) {
+        return TRUE;
+      }
+      return other;
     }
 
     public static Capable of(boolean bool)

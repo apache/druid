@@ -39,7 +39,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -142,24 +141,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    // Different from index.getCapabilities because, in a way, IncrementalIndex's string-typed dimensions
-    // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be
-    // represented by an empty array; see StringDimensionIndexer.IndexerDimensionSelector's getRow method.)
-    //
-    // We don't want to represent this as having-multiple-values in index.getCapabilities, because that's used
-    // at index-persisting time to determine if we need a multi-value column or not. However, that means we
-    // need to tweak the capabilities here in the StorageAdapter (a query-time construct), so at query time
-    // they appear multi-valued.
-
-    final ColumnCapabilities capabilitiesFromIndex = index.getCapabilities(column);
-    final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(column);
-    if (dimensionDesc != null && dimensionDesc.getCapabilities().getType() == ValueType.STRING) {
-      final ColumnCapabilitiesImpl retVal = ColumnCapabilitiesImpl.copyOf(capabilitiesFromIndex);
-      retVal.setHasMultipleValues(true);
-      return retVal;
-    } else {
-      return capabilitiesFromIndex;
-    }
+    // snapshot the current state
+    return ColumnCapabilitiesImpl.complete(index.getCapabilities(column), false);
   }
 
   @Override

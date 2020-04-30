@@ -22,6 +22,7 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
 
@@ -30,7 +31,7 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
-  public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
+  public static ColumnCapabilitiesImpl copyOf(@Nullable final ColumnCapabilities other)
   {
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     if (other != null) {
@@ -47,8 +48,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return capabilities;
   }
 
-  public static ColumnCapabilitiesImpl complete(final ColumnCapabilities capabilities, boolean convertUnknownToTrue)
+  @Nullable
+  public static ColumnCapabilitiesImpl complete(@Nullable final ColumnCapabilities capabilities, boolean convertUnknownToTrue)
   {
+    if (capabilities == null) {
+      return null;
+    }
     ColumnCapabilitiesImpl copy = copyOf(capabilities);
     copy.hasMultipleValues = copy.hasMultipleValues.complete(convertUnknownToTrue);
     copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.complete(convertUnknownToTrue);
@@ -198,5 +203,36 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   {
     this.filterable = filterable;
     return this;
+  }
+
+  public ColumnCapabilities merge(@Nullable ColumnCapabilities other)
+  {
+    if (other == null) {
+      return this;
+    }
+
+    if (type == null) {
+      type = other.getType();
+    }
+
+    if (!type.equals(other.getType())) {
+      throw new ISE("Cannot merge columns of type[%s] and [%s]", type, other.getType());
+    }
+
+    this.dictionaryEncoded |= other.isDictionaryEncoded();
+    this.runLengthEncoded |= other.isRunLengthEncoded();
+    this.hasInvertedIndexes |= other.hasBitmapIndexes();
+    this.hasSpatialIndexes |= other.hasSpatialIndexes();
+    this.filterable &= other.isFilterable();
+    this.hasMultipleValues = this.hasMultipleValues.or(other.hasMultipleValues());
+    this.dictionaryValuesSorted = this.dictionaryValuesSorted.and(other.areDictionaryValuesSorted());
+    this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
+
+    return this;
+  }
+
+  public ColumnCapabilitiesImpl complete(boolean unknownToTrue)
+  {
+    return ColumnCapabilitiesImpl.complete(this, unknownToTrue);
   }
 }

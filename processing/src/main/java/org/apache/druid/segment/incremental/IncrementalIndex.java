@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -89,6 +90,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -641,12 +643,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
 
     final List<String> rowDimensions = row.getDimensions();
-
     Object[] dims;
     List<Object> overflow = null;
     long dimsKeySize = 0;
     List<String> parseExceptionMessages = new ArrayList<>();
     synchronized (dimensionDescs) {
+      // all known dimensions are assumed missing until we encounter in the rowDimensions
+      Set<String> absentDimensions = Sets.newHashSet(dimensionDescs.keySet());
+
+      // first, process dimension values present in the row
       dims = new Object[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
         if (Strings.isNullOrEmpty(dimension)) {
@@ -657,6 +662,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         DimensionDesc desc = dimensionDescs.get(dimension);
         if (desc != null) {
           capabilities = desc.getCapabilities();
+          absentDimensions.remove(dimension);
         } else {
           wasNewDim = true;
           capabilities = columnCapabilities.get(dimension);
@@ -672,10 +678,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
-          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
-              row.getRaw(dimension),
-              true
-          );
+          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
         }
         catch (ParseException pe) {
           parseExceptionMessages.add(pe.getMessage());
@@ -689,6 +692,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         }
 
         if (wasNewDim) {
+          // unless this is the first row we are processing, all newly discovered columns will be sparse
+          if (maxIngestedEventTime != null) {
+            indexer.setSparseIndexed();
+          }
           if (overflow == null) {
             overflow = new ArrayList<>();
           }
@@ -707,6 +714,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         } else {
           dims[desc.getIndex()] = dimsKey;
         }
+      }
+
+      // process any dimensions with missing values in the row
+      for (String missing : absentDimensions) {
+        dimensionDescs.get(missing).getIndexer().setSparseIndexed();
       }
     }
 
@@ -924,8 +936,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                                          .setHasBitmapIndexes(true)
                                          .setDictionaryEncoded(true)
                                          .setDictionaryValuesUnique(true)
-                                         .setDictionaryValuesSorted(false)
-                                         .setHasMultipleValues(false);
+                                         .setDictionaryValuesSorted(false);
     } else {
       return ColumnCapabilitiesImpl.createSimpleNumericColumn(type);
     }
@@ -984,6 +995,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new IncrementalIndexStorageAdapter(this);
   }
 
+  @Nullable
   public ColumnCapabilities getCapabilities(String column)
   {
     return columnCapabilities.get(column);

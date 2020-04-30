@@ -128,6 +128,19 @@ public interface DimensionIndexer
   EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions);
 
   /**
+   * This method will be called whenever a known dimension is absent in a row to allow an indexer
+   * to account for any missing rows. Useful so that a {@link DimensionSelector} built on top of an
+   * {@link IncrementalIndex} may accurately report {@link DimensionSelector#nameLookupPossibleInAdvance()}.
+   *
+   * At index persist/merge time all missing columns for a row will be explicitly replaced with the value appropriate
+   * null or default value.
+   */
+  default void setSparseIndexed()
+  {
+    // no-op, only implement this if the dimension needs to perform any special handling for absent rows
+  }
+
+  /**
    * Gives the estimated size in bytes for the given key
    *
    * @param key dimension value array from a TimeAndDims key
