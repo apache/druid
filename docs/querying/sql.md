@@ -729,7 +729,7 @@ be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM da
 ##### Request
       
 |Property|Description|Default|
-|--------|----|-----------|--------|
+|--------|----|-----------|
 |`query`|SQL query string.| none (required)|
 |`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
 |`header`|Whether or not to include a header. See [Responses] for details.|`false`|

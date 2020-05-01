@@ -20,6 +20,7 @@
 package org.apache.druid.segment.writeout;
 
 import org.easymock.EasyMock;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,28 +37,106 @@ public class FileWriteOutBytesTest
   @Before
   public void setUp()
   {
-    this.mockFileChannel = EasyMock.mock(FileChannel.class);
-    this.fileWriteOutBytes = new FileWriteOutBytes(EasyMock.mock(File.class), mockFileChannel);
+    mockFileChannel = EasyMock.mock(FileChannel.class);
+    fileWriteOutBytes = new FileWriteOutBytes(EasyMock.mock(File.class), mockFileChannel);
   }
 
   @Test
-  public void testWrite4KBInts() throws IOException
+  public void write4KBIntsShouldNotFlush() throws IOException
   {
     // Write 4KB of ints and expect the write operation of the file channel will be triggered only once.
-    EasyMock.expect(this.mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
+    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
             .andAnswer(() -> {
               ByteBuffer buffer = (ByteBuffer) EasyMock.getCurrentArguments()[0];
               int remaining = buffer.remaining();
               buffer.position(remaining);
               return remaining;
             }).times(1);
-    EasyMock.replay(this.mockFileChannel);
+    EasyMock.replay(mockFileChannel);
     final int writeBytes = 4096;
     final int numOfInt = writeBytes / Integer.BYTES;
     for (int i = 0; i < numOfInt; i++) {
-      this.fileWriteOutBytes.writeInt(i);
+      fileWriteOutBytes.writeInt(i);
     }
-    this.fileWriteOutBytes.flush();
-    EasyMock.verify(this.mockFileChannel);
+    // no need to flush up to 4KB
+    // the first byte after 4KB will cause a flush
+    fileWriteOutBytes.write(1);
+    EasyMock.verify(mockFileChannel);
+  }
+
+  @Test
+  public void writeShouldIncrementSize() throws IOException
+  {
+    fileWriteOutBytes.write(1);
+    Assert.assertEquals(1, fileWriteOutBytes.size());
+  }
+
+  @Test
+  public void writeIntShouldIncrementSize() throws IOException
+  {
+    fileWriteOutBytes.writeInt(1);
+    Assert.assertEquals(4, fileWriteOutBytes.size());
+  }
+
+  @Test
+  public void writeBufferLargerThanCapacityShouldIncrementSizeCorrectly() throws IOException
+  {
+    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
+            .andAnswer(() -> {
+              ByteBuffer buffer = (ByteBuffer) EasyMock.getCurrentArguments()[0];
+              int remaining = buffer.remaining();
+              buffer.position(remaining);
+              return remaining;
+            }).times(1);
+    EasyMock.replay(mockFileChannel);
+    ByteBuffer src = ByteBuffer.allocate(4096 + 1);
+    fileWriteOutBytes.write(src);
+    Assert.assertEquals(src.capacity(), fileWriteOutBytes.size());
+    EasyMock.verify(mockFileChannel);
+  }
+
+  @Test
+  public void writeBufferLargerThanCapacityThrowsIOEInTheMiddleShouldIncrementSizeCorrectly() throws IOException
+  {
+    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
+            .andAnswer(() -> {
+              ByteBuffer buffer = (ByteBuffer) EasyMock.getCurrentArguments()[0];
+              int remaining = buffer.remaining();
+              buffer.position(remaining);
+              return remaining;
+            }).once();
+    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
+            .andThrow(new IOException())
+            .once();
+    EasyMock.replay(mockFileChannel);
+    ByteBuffer src = ByteBuffer.allocate(4096 * 2 + 1);
+    try {
+      fileWriteOutBytes.write(src);
+      Assert.fail("IOException should have been thrown.");
+    }
+    catch (IOException e) {
+      // The second invocation to flush bytes fails. So the size should count what has already been put successfully
+      Assert.assertEquals(4096 * 2, fileWriteOutBytes.size());
+    }
+  }
+
+  @Test
+  public void writeBufferSmallerThanCapacityShouldIncrementSizeCorrectly() throws IOException
+  {
+    ByteBuffer src = ByteBuffer.allocate(4096);
+    fileWriteOutBytes.write(src);
+    Assert.assertEquals(src.capacity(), fileWriteOutBytes.size());
+  }
+  @Test
+  public void sizeDoesNotFlush() throws IOException
+  {
+    EasyMock.expect(mockFileChannel.write(EasyMock.anyObject(ByteBuffer.class)))
+            .andThrow(new AssertionError("file channel should not have been written to."));
+    EasyMock.replay(mockFileChannel);
+    long size = fileWriteOutBytes.size();
+    Assert.assertEquals(0, size);
+    fileWriteOutBytes.writeInt(10);
+    size = fileWriteOutBytes.size();
+    Assert.assertEquals(4, size);
   }
 }
