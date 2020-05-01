@@ -292,23 +292,12 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost;
-
-    if (computeLeftRequiresSubquery(getAllDruidChild(left))) {
-      cost = CostEstimates.COST_JOIN_SUBQUERY;
-    } else {
-      cost = partialQuery.estimateCost();
-    }
-
-    if (computeRightRequiresSubquery(getAllDruidChild(right))) {
-      cost += CostEstimates.COST_JOIN_SUBQUERY;
-    }
-
-    if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
-      cost += CostEstimates.COST_JOIN_CROSS;
-    }
-
-    return planner.getCostFactory().makeCost(cost, 0, 0);
+    double cost = partialQuery.estimateCost();
+//    if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
+//      cost += CostEstimates.COST_JOIN_CROSS;
+//    }
+    double multiplier = DruidRels.isScanOrMapping(this, true) ? 1 : 5000;
+    return planner.getCostFactory().makeCost(cost * multiplier, 0, 0);
   }
 
   private static JoinType toDruidJoinType(JoinRelType calciteJoinType)
