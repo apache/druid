@@ -84,7 +84,7 @@ public class TrueFilter implements Filter
   }
 
   @Override
-  public  boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher()
   {
     return true;
   }

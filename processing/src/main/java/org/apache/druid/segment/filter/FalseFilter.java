@@ -88,7 +88,7 @@ public class FalseFilter implements Filter
   }
 
   @Override
-  public  boolean canVectorizeMatcher()
+  public boolean canVectorizeMatcher()
   {
     return true;
   }
