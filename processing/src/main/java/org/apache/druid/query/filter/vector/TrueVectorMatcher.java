@@ -19,21 +19,20 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.segment.vector.VectorSizeInspector;
+
 public class TrueVectorMatcher implements VectorValueMatcher
 {
-  private final int maxVectorSize;
+  private final VectorSizeInspector vectorSizeInspector;
 
-  private int currentVectorSize;
-
-  public TrueVectorMatcher(int maxVectorSize)
+  public TrueVectorMatcher(VectorSizeInspector vectorSizeInspector)
   {
-    this.maxVectorSize = maxVectorSize;
+    this.vectorSizeInspector = vectorSizeInspector;
   }
 
   @Override
   public ReadableVectorMatch match(ReadableVectorMatch mask)
   {
-    currentVectorSize = mask.getSelectionSize();
     // The given mask is all true for its valid selections.
     return mask;
   }
@@ -41,12 +40,12 @@ public class TrueVectorMatcher implements VectorValueMatcher
   @Override
   public int getMaxVectorSize()
   {
-    return maxVectorSize;
+    return vectorSizeInspector.getMaxVectorSize();
   }
 
   @Override
   public int getCurrentVectorSize()
   {
-    return currentVectorSize;
+    return vectorSizeInspector.getCurrentVectorSize();
   }
 }

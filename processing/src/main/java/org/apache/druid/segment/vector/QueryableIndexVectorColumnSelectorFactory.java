@@ -66,9 +66,9 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   }
 
   @Override
-  public int getMaxVectorSize()
+  public VectorSizeInspector getVectorSizeInspector()
   {
-    return offset.getMaxVectorSize();
+    return offset;
   }
 
   @Override

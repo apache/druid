@@ -62,7 +62,7 @@ public class TrueFilter implements Filter
   @Override
   public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
   {
-    return new TrueVectorMatcher(factory.getMaxVectorSize());
+    return new TrueVectorMatcher(factory.getVectorSizeInspector());
   }
 
   @Override
