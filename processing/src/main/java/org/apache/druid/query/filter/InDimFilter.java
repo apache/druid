@@ -88,7 +88,7 @@ public class InDimFilter implements DimFilter
   )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
-    Preconditions.checkArgument(values != null && !values.isEmpty(), "values can not be null");
+    Preconditions.checkArgument(values != null, "values can not be null");
 
     // The values set can be huge. Try to avoid copying the set if possible.
     if (values instanceof Set && values.stream().noneMatch(NullHandling::needsEmptyToNull)) {
@@ -170,6 +170,10 @@ public class InDimFilter implements DimFilter
   public DimFilter optimize()
   {
     InDimFilter inFilter = optimizeLookup();
+
+    if (inFilter.values.isEmpty()) {
+      return FalseDimFilter.instance();
+    }
     if (NullHandling.sqlCompatible() && inFilter.values.contains(null)) {
       return FalseDimFilter.instance();
     }

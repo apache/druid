@@ -33,6 +33,7 @@ public interface VectorValueMatcher extends VectorSizeInspector
 {
   /**
    * Examine the current vector and return a match indicating what is accepted.
+   * This method should be called before calling {@link #getCurrentVectorSize()} for the current vector.
    *
    * @param mask must not be null; use {@link VectorMatch#allTrue} if you don't need a mask.
    *
