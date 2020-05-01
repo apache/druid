@@ -36,6 +36,7 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -293,11 +294,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
     double cost = partialQuery.estimateCost();
-//    if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
-//      cost += CostEstimates.COST_JOIN_CROSS;
-//    }
-    double multiplier = DruidRels.isScanOrMapping(this, true) ? 1 : 5000;
-    return planner.getCostFactory().makeCost(cost * multiplier, 0, 0);
+    if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
+      cost += CostEstimates.COST_JOIN_CROSS;
+    }
+    double multiplier = DruidRels.isScanOrMapping(this, true)
+                        ? 1
+                        : CostEstimates.MULTIPLIER_JOIN_NOT_SCAN_OR_MAPPING;
+    return planner.getCostFactory().makeCost(cost, 0, 0).multiplyBy(multiplier);
   }
 
   private static JoinType toDruidJoinType(JoinRelType calciteJoinType)
