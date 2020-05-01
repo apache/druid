@@ -20,19 +20,25 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
  */
 public class RegexFilter extends DimensionPredicateFilter
 {
+  private final Pattern pattern;
+
   public RegexFilter(
       final String dimension,
       final Pattern pattern,
@@ -79,5 +85,53 @@ public class RegexFilter extends DimensionPredicateFilter
         extractionFn,
         filterTuning
     );
+    this.pattern = pattern;
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    if (columnRewrites.get(dimension) == null) {
+      throw new IAE(
+          "Received a non-applicable rewrite: %s, filter's dimension: %s",
+          columnRewrites,
+          dimension
+      );
+    }
+
+    return new RegexFilter(
+        columnRewrites.get(dimension),
+        pattern,
+        extractionFn,
+        filterTuning
+    );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    RegexFilter that = (RegexFilter) o;
+    return Objects.equals(pattern.toString(), that.pattern.toString());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), pattern.toString());
   }
 }

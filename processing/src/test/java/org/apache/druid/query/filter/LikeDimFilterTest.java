@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.junit.Assert;
@@ -67,5 +68,14 @@ public class LikeDimFilterTest
   {
     final DimFilter filter = new LikeDimFilter("foo", "bar%", "@", new SubstringDimExtractionFn(1, 2));
     Assert.assertEquals(filter.getRequiredColumns(), Sets.newHashSet("foo"));
+  }
+
+  @Test
+  public void test_LikeMatcher_equals()
+  {
+    EqualsVerifier.forClass(LikeDimFilter.LikeMatcher.class)
+                  .usingGetClass()
+                  .withNonnullFields("suffixMatch", "prefix", "pattern")
+                  .verify();
   }
 }

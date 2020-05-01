@@ -498,4 +498,41 @@ public class Filters
 
     return new AndFilter(filterList);
   }
+
+  /**
+   * Create a filter representing an OR relationship across a list of filters.
+   *
+   * @param filterList List of filters
+   *
+   * @return If filterList has more than one element, return an OR filter composed of the filters from filterList
+   * If filterList has a single element, return that element alone
+   * If filterList is empty, return null
+   */
+  @Nullable
+  public static Filter or(List<Filter> filterList)
+  {
+    if (filterList.isEmpty()) {
+      return null;
+    }
+
+    if (filterList.size() == 1) {
+      return filterList.get(0);
+    }
+
+    return new OrFilter(filterList);
+  }
+
+  @Nullable
+  public static Filter or(Set<Filter> filterSet)
+  {
+    if (filterSet.isEmpty()) {
+      return null;
+    }
+
+    if (filterSet.size() == 1) {
+      return filterSet.iterator().next();
+    }
+
+    return new OrFilter(filterSet);
+  }
 }

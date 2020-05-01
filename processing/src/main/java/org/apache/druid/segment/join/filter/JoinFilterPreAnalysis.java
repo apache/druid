@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.filter;
 
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.JoinableClause;
@@ -26,6 +27,7 @@ import org.apache.druid.segment.join.JoinableClause;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * A JoinFilterPreAnalysis contains filter push down/rewrite information that does not have per-segment dependencies.
@@ -48,6 +50,7 @@ public class JoinFilterPreAnalysis
   private final boolean enableFilterPushDown;
   private final boolean enableFilterRewrite;
   private final List<VirtualColumn> postJoinVirtualColumns;
+  private final Map<String, Set<Expr>> equiconditions;
 
   public JoinFilterPreAnalysis(
       final List<JoinableClause> joinableClauses,
@@ -57,7 +60,8 @@ public class JoinFilterPreAnalysis
       final List<Filter> normalizedJoinTableClauses,
       final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn,
       final boolean enableFilterPushDown,
-      final boolean enableFilterRewrite
+      final boolean enableFilterRewrite,
+      final Map<String, Set<Expr>> equiconditions
   )
   {
     this.joinableClauses = joinableClauses;
@@ -68,6 +72,7 @@ public class JoinFilterPreAnalysis
     this.correlationsByFilteringColumn = correlationsByFilteringColumn;
     this.enableFilterPushDown = enableFilterPushDown;
     this.enableFilterRewrite = enableFilterRewrite;
+    this.equiconditions = equiconditions;
   }
 
   public List<JoinableClause> getJoinableClauses()
@@ -108,6 +113,11 @@ public class JoinFilterPreAnalysis
   public boolean isEnableFilterRewrite()
   {
     return enableFilterRewrite;
+  }
+
+  public Map<String, Set<Expr>> getEquiconditions()
+  {
+    return equiconditions;
   }
 }
 

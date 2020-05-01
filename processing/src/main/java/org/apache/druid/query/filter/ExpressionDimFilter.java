@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -44,6 +45,9 @@ public class ExpressionDimFilter implements DimFilter
   @Nullable
   private final FilterTuning filterTuning;
 
+  @JsonIgnore
+  private final ExprMacroTable macroTable;
+
   @JsonCreator
   public ExpressionDimFilter(
       @JsonProperty("expression") final String expression,
@@ -54,6 +58,7 @@ public class ExpressionDimFilter implements DimFilter
     this.expression = expression;
     this.filterTuning = filterTuning;
     this.parsed = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
+    this.macroTable = macroTable;
   }
 
   @VisibleForTesting
@@ -85,7 +90,7 @@ public class ExpressionDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new ExpressionFilter(parsed, filterTuning);
+    return new ExpressionFilter(parsed, filterTuning, macroTable);
   }
 
   @Override

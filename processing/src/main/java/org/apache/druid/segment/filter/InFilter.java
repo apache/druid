@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -177,6 +179,30 @@ public class InFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    if (columnRewrites.get(dimension) == null) {
+      throw new IAE("Received a non-applicable rewrite: %s, filter's dimension: %s", columnRewrites, dimension);
+    }
+
+    return new InFilter(
+        columnRewrites.get(dimension),
+        values,
+        longPredicateSupplier,
+        floatPredicateSupplier,
+        doublePredicateSupplier,
+        extractionFn,
+        filterTuning
+    );
   }
 
   @Override
