@@ -131,17 +131,6 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testOptimizeShortCircuitWithNull()
-  {
-    final InDimFilter filter = new InDimFilter("dim", Sets.newHashSet(null, "v1"), null);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(filter.optimize() instanceof FalseDimFilter);
-    } else {
-      Assert.assertEquals(filter, filter.optimize());
-    }
-  }
-
-  @Test
   public void testOptimizeSingleValueInToSelector()
   {
     final InDimFilter filter = new InDimFilter("dim", Collections.singleton("v1"), null);
