@@ -77,15 +77,10 @@ public class CostEstimates
   static final double MULTIPLIER_OUTER_QUERY = .1;
 
   /**
-   * Multiplier to apply to a join query via {@link DruidJoinQueryRel} if it must always query (not scan or mapping).
-   * Strongly encourages avoiding subqueries, since they must be inlined and then the join must run on the Broker.
-   */
-  static final double MULTIPLIER_JOIN_NOT_SCAN_OR_MAPPING = 5000;
-
-  /**
    * Multiplier to apply to a query via {@link DruidQueryRel} if it must always query (not scan or mapping).
+   * Encourages to push filter up to avoid subquery if possible.
    */
-  static final double MULTIPLIER_QUERY_NOT_SCAN_OR_MAPPING = 10000;
+  static final double MULTIPLIER_QUERY_NOT_SCAN_OR_MAPPING = 1e4;
 
   /**
    * Cost to perform a cross join. Strongly encourages pushing down filters into join conditions, even if it means

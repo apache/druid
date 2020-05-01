@@ -297,9 +297,12 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
       cost += CostEstimates.COST_JOIN_CROSS;
     }
+    // This is to cancel out the MULTIPLIER_FILTER (value=0.1) from partialQuery.estimateCost() to discourage
+    // filter push down if pushing down the filter makes this DruidJoinQueryRel not a scan or mapping.
+    // This will leave the filter at the topmost DruidJoinQueryRel (due to the order of applying/popping rules).
     double multiplier = DruidRels.isScanOrMapping(this, true)
                         ? 1
-                        : CostEstimates.MULTIPLIER_JOIN_NOT_SCAN_OR_MAPPING;
+                        : 1 / CostEstimates.MULTIPLIER_FILTER;
     return planner.getCostFactory().makeCost(cost, 0, 0).multiplyBy(multiplier);
   }
 
