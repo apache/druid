@@ -17,15 +17,18 @@
 # under the License.
 #
 
-DRUID_SERVICE=router
-DRUID_LOG_PATH=/shared/logs/router.log
+#
+# Example of override config file to provide.
+# Please replace <OVERRIDE_THIS> with your cloud configs/credentials
+#
+druid_s3_accessKey=<OVERRIDE_THIS>
+druid_s3_secretKey=<OVERRIDE_THIS>
 
-# JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx128m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5004
+druid_storage_type=hdfs
+druid_storage_storageDirectory=/druid/segments
 
-# Druid configs
-druid_auth_basic_common_cacheDirectory=/tmp/authCache/router
-druid_sql_avatica_enable=true
-druid_server_https_crlPath=/tls/revocations.crl
-druid_router_managementProxy_enabled=true
+AWS_REGION=<OVERRIDE_THIS>
 
+druid_extensions_loadList=["druid-s3-extensions","druid-hdfs-storage"]
+
+druid.indexer.task.defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client:2.8.5", "org.apache.hadoop:hadoop-aws:2.8.5"]

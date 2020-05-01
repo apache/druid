@@ -27,8 +27,6 @@ public class TestNGGroup
 {
   public static final String BATCH_INDEX = "batch-index";
 
-  public static final String HADOOP_INDEX = "hadoop-index";
-
   public static final String KAFKA_INDEX = "kafka-index";
 
   public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
@@ -85,6 +83,15 @@ public class TestNGGroup
    * Additionally, hadoop docker must be started by passing -Dstart.hadoop.docker=true to mvn.
    */
   public static final String HDFS_DEEP_STORAGE = "hdfs-deep-storage";
+
+  public static final String HADOOP_S3_TO_S3 = "hadoop-s3-to-s3-deep-storage";
+  public static final String HADOOP_S3_TO_HDFS = "hadoop-s3-to-hdfs-deep-storage";
+
+  public static final String HADOOP_AZURE_TO_AZURE = "hadoop-azure-to-azure-deep-storage";
+  public static final String HADOOP_AZURE_TO_HDFS = "hadoop-azure-to-hdfs-deep-storage";
+
+  public static final String HADOOP_GCS_TO_GCS = "hadoop-gcs-to-gcs-deep-storage";
+  public static final String HADOOP_GCS_TO_HDFS = "hadoop-gcs-to-hdfs-deep-storage";
 
   /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.

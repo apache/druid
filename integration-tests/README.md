@@ -214,31 +214,33 @@ of the integration test run discussed above.  This is because druid
 test clusters might not, in general, have access to hadoop.
 This also applies to integration test that uses Hadoop HDFS as an inputSource or as a deep storage. 
 To run integration test that uses Hadoop, you will have to run a Hadoop cluster. This can be done in two ways:
-1) Run your own Druid + Hadoop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
-2) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. 
+1) Run Druid Docker test clusters with Hadoop container by passing -Dstart.hadoop.docker=true to the mvn command. 
+2) Run your own Druid + Hadoop cluster and specified Hadoop configs in the configuration file (CONFIG_FILE).
 
 Currently, hdfs-deep-storage and other <cloud>-deep-storage integration test groups can only be run with 
 Druid Docker test clusters by passing -Dstart.hadoop.docker=true to start Hadoop container.
 You will also have to provide -Doverride.config.path=<PATH_TO_FILE> with your Druid's Hadoop configs set. 
 See integration-tests/docker/environment-configs/override-examples/hdfs directory for example.
 Note that if the integration test you are running also uses other cloud extension (S3, Azure, GCS), additional
-credentials/configs may need to be set in the same file as your Druid's Hadoop configs set. 
+credentials/configs may need to be set in the same file as your Druid's Hadoop configs set.
 
-Currently, ITHadoopIndexTest can only be run with your own Druid + Hadoop cluster by following the below steps:
-Create a directory called batchHadoop1 in the hadoop file system
-(anywhere you want) and put batch_hadoop.data (integration-tests/src/test/resources/hadoop/batch_hadoop.data) 
-into that directory (as its only file).
+If you are running ITHadoopIndexTest with your own Druid + Hadoop cluster, please follow the below steps:
+- Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
+  located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
+- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
+  at /batch_index/tsv/
+If using the Docker-based Hadoop container, the steps above are automatically done by the integration tests.
 
-Add this keyword to the configuration file (see above):
+When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`, due to https://github.com/apache/druid/issues/9788.
 
+Run the test using mvn (using the bundled Docker-based Hadoop cluster):
 ```
-    "hadoopTestDir": "<name_of_dir_containing_batchHadoop1>"
+  mvn verify -P integration-tests -Dit.test=ITHadoopIndexTest -Dstart.hadoop.docker=true -Doverride.config.path=docker/environment-configs/override-examples/hdfs -Dextra.datasource.name.suffix=''
 ```
 
-Run the test using mvn:
-
+Run the test using mvn (using config file for existing Hadoop cluster):
 ```
-  mvn verify -P int-tests-config-file -Dit.test=ITHadoopIndexTest
+  mvn verify -P int-tests-config-file -Dit.test=ITHadoopIndexTest -Dextra.datasource.name.suffix=''
 ```
 
 In some test environments, the machine where the tests need to be executed
