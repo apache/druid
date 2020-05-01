@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.rel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -35,7 +36,6 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -142,13 +142,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final RowSignature rightSignature = rightQuery.getOutputRowSignature();
     final DataSource rightDataSource;
 
-    if (computeLeftRequiresSubquery(ImmutableList.of(leftDruidRel))) {
+    if (computeLeftRequiresSubquery(leftDruidRel)) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
     } else {
       leftDataSource = leftQuery.getDataSource();
     }
 
-    if (computeRightRequiresSubquery(ImmutableList.of(rightDruidRel))) {
+    if (computeRightRequiresSubquery(rightDruidRel)) {
       rightDataSource = new QueryDataSource(rightQuery.getQuery());
     } else {
       rightDataSource = rightQuery.getDataSource();
@@ -316,27 +316,17 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
-  private static boolean computeLeftRequiresSubquery(final List<DruidRel<?>> leftList)
+  private static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
   {
     // Left requires a subquery unless it's a scan or mapping on top of any table or a join.
-    for (DruidRel<?> left : leftList) {
-      if (!DruidRels.isScanOrMapping(left, true)) {
-        return true;
-      }
-    }
-    return false;
+    return !DruidRels.isScanOrMapping(left, true);
   }
 
-  private static boolean computeRightRequiresSubquery(final List<DruidRel<?>> rightList)
+  private static boolean computeRightRequiresSubquery(final DruidRel<?> right)
   {
     // Right requires a subquery unless it's a scan or mapping on top of a global datasource.
-    for (DruidRel<?> right : rightList) {
-      if (!(DruidRels.isScanOrMapping(right, false)
-            && DruidRels.dataSourceIfLeafRel(right).filter(DataSource::isGlobal).isPresent())) {
-        return true;
-      }
-    }
-    return false;
+    return !(DruidRels.isScanOrMapping(right, false)
+             && DruidRels.dataSourceIfLeafRel(right).filter(DataSource::isGlobal).isPresent());
   }
 
   /**
@@ -364,17 +354,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     return Pair.of(rightPrefix, signatureBuilder.build());
   }
 
-  private static List<DruidRel<?>> getAllDruidChild(final RelNode child)
+  private static DruidRel<?> getSomeDruidChild(final RelNode child)
   {
     if (child instanceof DruidRel) {
-      return ImmutableList.of((DruidRel<?>) child);
+      return (DruidRel<?>) child;
     } else {
       final RelSubset subset = (RelSubset) child;
-      ImmutableList.Builder<DruidRel<?>> childList = ImmutableList.builder();
-      for (RelNode relList : subset.getRelList()) {
-        childList.add((DruidRel<?>) relList);
-      }
-      return childList.build();
+      return (DruidRel<?>) Iterables.getFirst(subset.getRels(), null);
     }
   }
 }
