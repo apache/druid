@@ -8468,6 +8468,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @Ignore
   public void testInnerJoinTableLookupLookupWithFilterWithoutLimitWithAllColumns() throws Exception
   {
     testQuery(
