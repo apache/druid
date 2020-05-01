@@ -92,7 +92,7 @@ public class InDimFilter implements DimFilter
 
     // The values set can be huge. Try to avoid copying the set if possible.
     if (values instanceof Set && values.stream().noneMatch(NullHandling::needsEmptyToNull)) {
-      this.values = Collections.unmodifiableSet((Set<String>) values);
+      this.values = (Set<String>) values;
     } else {
       this.values = values.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toSet());
     }
@@ -172,9 +172,6 @@ public class InDimFilter implements DimFilter
     InDimFilter inFilter = optimizeLookup();
 
     if (inFilter.values.isEmpty()) {
-      return FalseDimFilter.instance();
-    }
-    if (NullHandling.sqlCompatible() && inFilter.values.contains(null)) {
       return FalseDimFilter.instance();
     }
     if (inFilter.values.size() == 1) {
