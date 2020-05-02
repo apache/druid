@@ -234,37 +234,54 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return !domainSet.isEmpty() && chunkPossibleInDomain(domainSet, new HashMap<>());
   }
 
-  // Enumerate all possible combinations of partition dimensions from domain, return chunk not in domain if and only if
-  // none of the combinations can be in chunk
+  /**
+   * Recursively enumerate all possible combinations of values for dimensions in {@link #partitionDimensions} based on
+   * {@code domainSet}, test if any combination matches the current segment
+   *
+   * @param domainSet                 The set where values of dimensions in {@link #partitionDimensions} are
+   *                                  drawn from
+   * @param partitionDimensionsValues A map from dimensions in {@link #partitionDimensions} to their values drawn from
+   *                                  {@code domainSet}
+   *
+   * @return Whether the current segment possibly holds records for the provided domain. Return false if and only if
+   * none of the combinations matches this segment
+   */
   private boolean chunkPossibleInDomain(
       Map<String, Set<String>> domainSet,
-      Map<String, String> partitionDimensionsFromDomain
+      Map<String, String> partitionDimensionsValues
   )
   {
-    int curIndex = partitionDimensionsFromDomain.size();
+    int curIndex = partitionDimensionsValues.size();
     if (curIndex == partitionDimensions.size()) {
-      return isInChunk(partitionDimensionsFromDomain);
+      return isInChunk(partitionDimensionsValues);
     }
 
     String dimension = partitionDimensions.get(curIndex);
     for (String e : domainSet.get(dimension)) {
-      partitionDimensionsFromDomain.put(dimension, e);
-      if (chunkPossibleInDomain(domainSet, partitionDimensionsFromDomain)) {
+      partitionDimensionsValues.put(dimension, e);
+      if (chunkPossibleInDomain(domainSet, partitionDimensionsValues)) {
         return true;
       }
-      partitionDimensionsFromDomain.remove(dimension);
+      partitionDimensionsValues.remove(dimension);
     }
 
     return false;
   }
 
-  // Just another isInChunk with different signature
-  private boolean isInChunk(Map<String, String> partitionDimensionsFromDomain)
+  /**
+   * Check if the current segment possibly holds records if the values of dimensions in {@link #partitionDimensions}
+   * are of {@code partitionDimensionsValues}
+   *
+   * @param partitionDimensionsValues An instance of values of dimensions in {@link #partitionDimensions}
+   *
+   * @return Whether the current segment possibly holds records for the given values of partition dimensions
+   */
+  private boolean isInChunk(Map<String, String> partitionDimensionsValues)
   {
     assert !partitionDimensions.isEmpty();
     List<Object> groupKey = Lists.transform(
         partitionDimensions,
-        o -> Collections.singletonList(partitionDimensionsFromDomain.get(o))
+        o -> Collections.singletonList(partitionDimensionsValues.get(o))
     );
     try {
       return Math.abs(hash(jsonMapper, groupKey) % numBuckets) == bucketId;
