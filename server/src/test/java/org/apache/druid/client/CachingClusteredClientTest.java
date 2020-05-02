@@ -118,6 +118,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -125,6 +126,7 @@ import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -1539,6 +1541,128 @@ public class CachingClusteredClientTest
     runner.run(QueryPlus.wrap(query)).toList();
 
     Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
+  }
+
+  @Test
+  public void testHashBasedPruning()
+  {
+    DimFilter filter = new AndDimFilter(
+        new SelectorDimFilter("dim1", "a", null),
+        new BoundDimFilter("dim2", "e", "zzz", true, true, false, null, StringComparators.LEXICOGRAPHIC),
+        // Equivalent filter of dim2 below is InDimFilter("dim3", Arrays.asList("c", "e", "g"), null)
+        new AndDimFilter(
+            new InDimFilter("dim3", Arrays.asList("a", "c", "e", "g"), null),
+            new BoundDimFilter("dim3", "aaa", "hi", false, false, false, null, StringComparators.LEXICOGRAPHIC)
+        )
+    );
+
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .filters(filter)
+                                                        .granularity(GRANULARITY)
+                                                        .intervals(SEG_SPEC)
+                                                        .context(CONTEXT)
+                                                        .intervals("2011-01-05/2011-01-10")
+                                                        .aggregators(RENAMED_AGGS)
+                                                        .postAggregators(RENAMED_POST_AGGS);
+
+    TimeseriesQuery query = builder.build();
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
+    final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
+    final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
+    final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
+
+    List<String> partitionDimensions1 = ImmutableList.of("dim1");
+    List<String> partitionDimensions2 = ImmutableList.of("dim2");
+    List<String> partitionDimensions3 = ImmutableList.of("dim1", "dim3");
+
+    final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    ServerSelector selector1 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 0, 6);
+    ServerSelector selector2 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 1, 6);
+    ServerSelector selector3 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 2, 6);
+    ServerSelector selector4 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 3, 6);
+    ServerSelector selector5 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 4, 6);
+    ServerSelector selector6 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 5, 6);
+
+    ServerSelector selector7 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 0, 3);
+    ServerSelector selector8 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 1, 3);
+    ServerSelector selector9 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 2, 3);
+
+    ServerSelector selector10 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 0, 4);
+    ServerSelector selector11 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 1, 4);
+    ServerSelector selector12 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 2, 4);
+    ServerSelector selector13 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 3, 4);
+
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(0, 6, selector1));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(1, 6, selector2));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(2, 6, selector3));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(3, 6, selector4));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(4, 6, selector5));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(5, 6, selector6));
+
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(0, 3, selector7));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(1, 3, selector8));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(2, 3, selector9));
+
+    timeline.add(interval3, "v", new NumberedPartitionChunk<>(0, 3, selector10));
+    timeline.add(interval3, "v", new NumberedPartitionChunk<>(1, 3, selector11));
+    timeline.add(interval3, "v", new NumberedPartitionChunk<>(2, 3, selector12));
+    timeline.add(interval3, "v", new NumberedPartitionChunk<>(2, 3, selector13));
+
+    final Capture<QueryPlus> capture = Capture.newInstance();
+    final Capture<ResponseContext> contextCap = Capture.newInstance();
+
+    QueryRunner mockRunner = EasyMock.createNiceMock(QueryRunner.class);
+    EasyMock.expect(mockRunner.run(EasyMock.capture(capture), EasyMock.capture(contextCap)))
+            .andReturn(Sequences.empty())
+            .anyTimes();
+    EasyMock.expect(serverView.getQueryRunner(lastServer))
+            .andReturn(mockRunner)
+            .anyTimes();
+    EasyMock.replay(serverView);
+    EasyMock.replay(mockRunner);
+
+    List<SegmentDescriptor> descriptors = new ArrayList<>();
+    descriptors.add(new SegmentDescriptor(interval1, "v", 3));
+
+    descriptors.add(new SegmentDescriptor(interval2, "v", 0));
+    descriptors.add(new SegmentDescriptor(interval2, "v", 1));
+    descriptors.add(new SegmentDescriptor(interval2, "v", 2));
+
+    descriptors.add(new SegmentDescriptor(interval3, "v", 2));
+
+    MultipleSpecificSegmentSpec expected = new MultipleSpecificSegmentSpec(descriptors);
+
+    runner.run(QueryPlus.wrap(query)).toList();
+    Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
+  }
+
+  private ServerSelector makeMockHashBasedSelector(
+      DruidServer server,
+      List<String> partitionDimensions,
+      int partitionNum,
+      int partitions
+  )
+  {
+    final DataSegment segment = new DataSegment(
+        SegmentId.dummy(DATA_SOURCE),
+        null,
+        null,
+        null,
+        new HashBasedNumberedShardSpec(partitionNum, partitions, partitionDimensions, ServerTestHelper.MAPPER),
+        null,
+        9,
+        0L
+    );
+
+    ServerSelector selector = new ServerSelector(
+        segment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), segment);
+    return selector;
   }
 
   private ServerSelector makeMockSingleDimensionSelector(

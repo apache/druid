@@ -26,16 +26,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
@@ -93,7 +101,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    return (((long) hash(timestamp, inputRow)) - bucketId) % numBuckets == 0;
+    return Math.abs(hash(timestamp, inputRow) % numBuckets) == bucketId;
   }
 
   /**
@@ -191,5 +199,78 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
            ", numBuckets=" + numBuckets +
            ", partitionDimensions=" + partitionDimensions +
            '}';
+  }
+
+  @Override
+  public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
+  {
+    // If no partitionDimensions are specified during ingestion, hash is based on all dimensions plus the truncated
+    // input timestamp according to QueryGranularity instead of just partitionDimensions. Since we don't store the
+    // timestamp after ingestion, bypass this case
+    if (partitionDimensions.isEmpty()) {
+      return true;
+    }
+
+    // One possible optimization is to move the conversion from range set to point set to the function signature and
+    // cache it in the caller of this function if there are repetitive calls of the same domain
+    Map<String, Set<String>> domainSet = new HashMap<>();
+    for (String p : partitionDimensions) {
+      RangeSet<String> domainRangeSet = domain.get(p);
+      if (domainRangeSet == null || domainRangeSet.isEmpty()) {
+        return true;
+      }
+
+      for (Range<String> v : domainRangeSet.asRanges()) {
+        // If there are range values, simply bypass, because we can't hash range values
+        if (v.isEmpty() || !v.hasLowerBound() || !v.hasUpperBound() ||
+            v.lowerBoundType() != BoundType.CLOSED || v.upperBoundType() != BoundType.CLOSED ||
+            !v.lowerEndpoint().equals(v.upperEndpoint())) {
+          return true;
+        }
+        domainSet.computeIfAbsent(p, k -> new HashSet<>()).add(v.lowerEndpoint());
+      }
+    }
+
+    return !domainSet.isEmpty() && chunkPossibleInDomain(domainSet, new HashMap<>());
+  }
+
+  // Enumerate all possible combinations of partition dimensions from domain, return chunk not in domain if and only if
+  // none of the combinations can be in chunk
+  private boolean chunkPossibleInDomain(
+      Map<String, Set<String>> domainSet,
+      Map<String, String> partitionDimensionsFromDomain
+  )
+  {
+    int curIndex = partitionDimensionsFromDomain.size();
+    if (curIndex == partitionDimensions.size()) {
+      return isInChunk(partitionDimensionsFromDomain);
+    }
+
+    String dimension = partitionDimensions.get(curIndex);
+    for (String e : domainSet.get(dimension)) {
+      partitionDimensionsFromDomain.put(dimension, e);
+      if (chunkPossibleInDomain(domainSet, partitionDimensionsFromDomain)) {
+        return true;
+      }
+      partitionDimensionsFromDomain.remove(dimension);
+    }
+
+    return false;
+  }
+
+  // Just another isInChunk with different signature
+  private boolean isInChunk(Map<String, String> partitionDimensionsFromDomain)
+  {
+    assert !partitionDimensions.isEmpty();
+    List<Object> groupKey = Lists.transform(
+        partitionDimensions,
+        o -> Collections.singletonList(partitionDimensionsFromDomain.get(o))
+    );
+    try {
+      return Math.abs(hash(jsonMapper, groupKey) % numBuckets) == bucketId;
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
   }
 }
