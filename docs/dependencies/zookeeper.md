@@ -74,3 +74,22 @@ ${druid.zk.paths.loadQueuePath}/_host_of_historical_process/_segment_identifier
 ```
 
 This znode will contain a payload that indicates to the Historical process what it should do with the given segment. When the Historical process is done with the work, it will delete the znode in order to signify to the Coordinator that it is complete.
+
+## Common zookeeper related config
+
+### Znode size limit
+When dealing with large data volumn and a lot of segments, errors can be caused due to Znode size limit exceeded.
+There are at least 3 places the znode size can be configured:
+- Druid nodes runtime property:
+`druid.indexer.runner.maxZnodeBytes` works as druid internal znode limit on middleManagers and overlods.
+
+- Zookeeper client side config:
+`jute.maxbuffer` Java system property works as a zookeeper client side limit on druid nodes.
+
+- Zookeeper server side config:
+`jute.maxbuffer` Java system property works as a zookeeper server side limit on your zookeeper cluster.
+
+When increasing znode size limit, the same value should be set in all 3 places.
+Reference: https://zookeeper.apache.org/doc/current/zookeeperAdmin.html
+
+
