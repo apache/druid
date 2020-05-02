@@ -22,12 +22,14 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -134,7 +136,13 @@ public class IndexTaskTest extends IngestionTestBase
       false,
       0
   );
-  private static final InputFormat DEFAULT_INPUT_FORMAT = DEFAULT_PARSE_SPEC.toInputFormat();
+  private static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
+      Arrays.asList("ts", "dim", "val"),
+      null,
+      null,
+      false,
+      0
+  );
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
@@ -1816,11 +1824,12 @@ public class IndexTaskTest extends IngestionTestBase
   )
   {
     if (useInputFormatApi) {
+      Preconditions.checkArgument(parseSpec == null, "Can't use parseSpec");
       return new IndexIngestionSpec(
           new DataSchema(
               "test",
-              parseSpec == null ? DEFAULT_TIMESTAMP_SPEC : parseSpec.getTimestampSpec(),
-              parseSpec == null ? DEFAULT_DIMENSIONS_SPEC : parseSpec.getDimensionsSpec(),
+              DEFAULT_TIMESTAMP_SPEC,
+              DEFAULT_DIMENSIONS_SPEC,
               new AggregatorFactory[]{
                   new LongSumAggregatorFactory("val", "val")
               },
@@ -1834,7 +1843,7 @@ public class IndexTaskTest extends IngestionTestBase
           new IndexIOConfig(
               null,
               new LocalInputSource(baseDir, "druid*"),
-              parseSpec == null ? DEFAULT_INPUT_FORMAT : parseSpec.toInputFormat(),
+              DEFAULT_INPUT_FORMAT,
               appendToExisting
           ),
           tuningConfig

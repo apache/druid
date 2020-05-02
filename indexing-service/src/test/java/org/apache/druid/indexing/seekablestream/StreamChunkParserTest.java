@@ -22,7 +22,6 @@ package org.apache.druid.indexing.seekablestream;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
-import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -63,7 +62,12 @@ public class StreamChunkParserTest
   public void testWithParserAndNullInputformatParseProperly() throws IOException
   {
     final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new NotConvertibleToInputFormatParseSpec(),
+        new JSONParseSpec(
+            TIMESTAMP_SPEC,
+            DimensionsSpec.EMPTY,
+            JSONPathSpec.DEFAULT,
+            Collections.emptyMap()
+        ),
         StringUtils.UTF8_STRING
     );
     final StreamChunkParser chunkParser = new StreamChunkParser(
@@ -109,7 +113,12 @@ public class StreamChunkParserTest
   public void testBothParserAndInputFormatParseProperlyUsingInputFormat() throws IOException
   {
     final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new NotConvertibleToInputFormatParseSpec(),
+        new JSONParseSpec(
+            TIMESTAMP_SPEC,
+            DimensionsSpec.EMPTY,
+            JSONPathSpec.DEFAULT,
+            Collections.emptyMap()
+        ),
         StringUtils.UTF8_STRING
     );
     final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
@@ -136,25 +145,6 @@ public class StreamChunkParserTest
     Assert.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());
     Assert.assertEquals("val", Iterables.getOnlyElement(row.getDimension("dim")));
     Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
-  }
-
-  private static class NotConvertibleToInputFormatParseSpec extends JSONParseSpec
-  {
-    private NotConvertibleToInputFormatParseSpec()
-    {
-      super(
-          TIMESTAMP_SPEC,
-          DimensionsSpec.EMPTY,
-          JSONPathSpec.DEFAULT,
-          Collections.emptyMap()
-      );
-    }
-
-    @Override
-    public InputFormat toInputFormat()
-    {
-      return null;
-    }
   }
 
   private static class TrackingJsonInputFormat extends JsonInputFormat
