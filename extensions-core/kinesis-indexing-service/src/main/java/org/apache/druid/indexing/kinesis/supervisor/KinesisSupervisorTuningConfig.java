@@ -40,10 +40,12 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   private final Duration shutdownTimeout;
   private final Duration repartitionTransitionDuration;
   private final Duration offsetFetchPeriod;
+  private final Boolean enableTimeLagMetrics;
 
   public static KinesisSupervisorTuningConfig defaultConfig()
   {
     return new KinesisSupervisorTuningConfig(
+        null,
         null,
         null,
         null,
@@ -111,7 +113,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
-      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod
+      @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
+      @JsonProperty("enableTimeLagMetrics") Boolean enableTimeLagMetrics
   )
   {
     super(
@@ -158,6 +161,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         offsetFetchPeriod,
         DEFAULT_OFFSET_FETCH_PERIOD
     );
+    this.enableTimeLagMetrics = enableTimeLagMetrics == null ? false : enableTimeLagMetrics;
   }
 
   @Override
@@ -196,6 +200,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   }
 
   @Override
+  @JsonProperty
   public Duration getRepartitionTransitionDuration()
   {
     return repartitionTransitionDuration;
@@ -206,6 +211,13 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public Duration getOffsetFetchPeriod()
   {
     return offsetFetchPeriod;
+  }
+
+  @Override
+  @JsonProperty
+  public Boolean isEnableTimeLagMetrics()
+  {
+    return enableTimeLagMetrics;
   }
 
   @Override
@@ -241,6 +253,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
+           ", enableTimeLagMetrics=" + isEnableTimeLagMetrics() +
            '}';
   }
 

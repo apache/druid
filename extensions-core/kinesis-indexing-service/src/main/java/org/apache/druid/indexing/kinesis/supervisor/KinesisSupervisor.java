@@ -270,7 +270,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   )
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<String, Long> partitionLag = getTimeLagPerPartition(getHighestCurrentOffsets());
+    boolean effectiveIncludeOffsets = includeOffsets && spec.getTuningConfig().isEnableTimeLagMetrics();
+    Map<String, Long> partitionLag = null;
+    if (effectiveIncludeOffsets) {
+      partitionLag = getTimeLagPerPartition(getHighestCurrentOffsets());
+    }
     return new KinesisSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
@@ -282,8 +286,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         stateManager.getSupervisorState().getBasicState(),
         stateManager.getSupervisorState(),
         stateManager.getExceptionEvents(),
-        includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
+        effectiveIncludeOffsets ? partitionLag : null,
+        effectiveIncludeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
     );
   }
 
@@ -323,7 +327,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   )
   {
     KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
-    currentPartitionTimeLag = supplier.getPartitionTimeLag(getHighestCurrentOffsets());
+    if (spec.getTuningConfig().isEnableTimeLagMetrics()) {
+      currentPartitionTimeLag = supplier.getPartitionTimeLag(getHighestCurrentOffsets());
+    }
   }
 
   @Override
@@ -335,7 +341,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected Map<String, Long> getPartitionTimeLag()
   {
-    return currentPartitionTimeLag;
+    if (spec.getTuningConfig().isEnableTimeLagMetrics()) {
+      return currentPartitionTimeLag;
+    } else {
+      return null;
+    }
   }
 
   @Override

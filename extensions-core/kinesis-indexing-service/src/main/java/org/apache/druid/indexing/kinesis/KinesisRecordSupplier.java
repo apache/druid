@@ -247,7 +247,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
             final List<byte[]> data;
 
-
             if (deaggregate) {
               if (deaggregateHandle == null || getDataHandle == null) {
                 throw new ISE("deaggregateHandle or getDataHandle is null!");

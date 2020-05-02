@@ -187,6 +187,13 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
   }
 
   @Override
+  public Boolean isEnableTimeLagMetrics()
+  {
+    // Kafka ingestion doesn't support time lag metrics
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "KafkaSupervisorTuningConfig{" +

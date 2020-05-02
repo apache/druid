@@ -58,5 +58,8 @@ public interface SeekableStreamSupervisorTuningConfig
   @JsonProperty
   Duration getOffsetFetchPeriod();
 
+  @JsonProperty
+  Boolean isEnableTimeLagMetrics();
+
   SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig();
 }

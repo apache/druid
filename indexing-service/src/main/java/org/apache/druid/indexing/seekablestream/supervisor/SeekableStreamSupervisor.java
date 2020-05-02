@@ -849,7 +849,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   remainingSeconds,
                   TaskReportData.TaskType.ACTIVE,
                   includeOffsets ? getRecordLagPerPartition(currentOffsets) : null,
-                  includeOffsets ? getTimeLagPerPartition(currentOffsets) : null
+                  includeOffsets && spec.getTuningConfig().isEnableTimeLagMetrics() ? getTimeLagPerPartition(currentOffsets) : null
               )
           );
         }
@@ -3452,15 +3452,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return;
     }
     try {
-      Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
-      Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
-
-      if (partitionRecordLags == null && partitionTimeLags == null) {
-        throw new ISE("Latest offsets have not been fetched");
-      }
       final String type = spec.getType();
-
-      BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
+      final BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
         if (partitionLags == null) {
           return;
         }
@@ -3491,9 +3484,27 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       };
 
+      final Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
+      final Map<PartitionIdType, Long> partitionTimeLags;
+
+      if (spec.getTuningConfig().isEnableTimeLagMetrics()) {
+        partitionTimeLags = getPartitionTimeLag();
+        if (partitionRecordLags == null && partitionTimeLags == null) {
+          throw new ISE("Latest record and time lags have not been fetched");
+        }
+      } else {
+        partitionTimeLags = null;
+        if (partitionRecordLags == null) {
+          throw new ISE("Latest record lags have not been fetched");
+        }
+      }
+
       // this should probably really be /count or /records or something.. but keeping like this for backwards compat
       emitFn.accept(partitionRecordLags, "");
-      emitFn.accept(partitionTimeLags, "/time");
+
+      if (spec.getTuningConfig().isEnableTimeLagMetrics()) {
+        emitFn.accept(partitionTimeLags, "/time");
+      }
     }
     catch (Exception e) {
       log.warn(e, "Unable to compute lag");

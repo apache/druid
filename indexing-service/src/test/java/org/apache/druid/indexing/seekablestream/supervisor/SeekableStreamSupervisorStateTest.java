@@ -873,6 +873,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       }
 
       @Override
+      public Boolean isEnableTimeLagMetrics()
+      {
+        return true;
+      }
+
+      @Override
       public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
       {
         return new SeekableStreamIndexTaskTuningConfig(
