@@ -150,8 +150,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertNotNull(actual);
     Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
     // Unlike for querying, Druid doesn't explode multi-valued columns automatically for ingestion.
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot apply strlen() to an array");
+    expectedException.expect(AssertionError.class);
     actual.getRaw("dim");
   }
 

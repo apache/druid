@@ -1492,9 +1492,7 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval eval = args.get(0).eval(bindings);
-      if (eval instanceof ArrayExprEval) {
-        throw new IAE("Cannot apply strlen() to an array %s", eval.asString());
-      }
+      assert !(eval instanceof ArrayExprEval);
       final String arg = eval.asString();
       return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
     }

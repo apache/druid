@@ -105,7 +105,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("strlen(x)", 3L);
     assertExpr("strlen(nonexistent)", NullHandling.defaultLongValue());
-    assertExprFail("strlen(a)", IllegalArgumentException.class, "Cannot apply strlen() to an array");
+    assertExprFail("strlen(a)", AssertionError.class, null);
   }
 
   @Test
@@ -371,11 +371,13 @@ public class FunctionTest extends InitializedNullHandlingTest
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
   }
 
-  private void assertExprFail(final String expression, Class expectedExceptionClass, String expectedMessage)
+  private void assertExprFail(final String expression, Class expectedExceptionClass, @Nullable String expectedMessage)
   {
     final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
     expectedException.expect(expectedExceptionClass);
-    expectedException.expectMessage(expectedMessage);
+    if (expectedMessage != null) {
+      expectedException.expectMessage(expectedMessage);
+    }
     expr.eval(bindings);
   }
 
