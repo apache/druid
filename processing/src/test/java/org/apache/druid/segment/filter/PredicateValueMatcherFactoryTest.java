@@ -404,7 +404,8 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
         DateTimes.nowUtc()
     );
     columnValueSelector.advance();
-    final ValueMatcher matcher = forSelector("dmFy").makeComplexProcessor(columnValueSelector);
+    final String base64Encoded = StringUtils.encodeBase64String(StringUtils.toUtf8("var"));
+    final ValueMatcher matcher = forSelector(base64Encoded).makeComplexProcessor(columnValueSelector);
     Assert.assertTrue(matcher.matches());
   }
 
