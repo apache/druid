@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExprEval.ArrayExprEval;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -1490,7 +1491,11 @@ public interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final String arg = args.get(0).eval(bindings).asString();
+      final ExprEval eval = args.get(0).eval(bindings);
+      if (eval instanceof ArrayExprEval) {
+        throw new IAE("Cannot apply strlen() to an array %s", eval.asString());
+      }
+      final String arg = eval.asString();
       return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
     }
 

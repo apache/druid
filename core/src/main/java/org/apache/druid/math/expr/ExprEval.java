@@ -137,6 +137,23 @@ public abstract class ExprEval<T>
     return value;
   }
 
+  void setStringValue(@Nullable String value)
+  {
+    stringValue = value;
+    stringValueValid = true;
+  }
+
+  @Nullable
+  String getStringValue()
+  {
+    return stringValue;
+  }
+
+  boolean isStringValueValid()
+  {
+    return stringValueValid;
+  }
+
   @Nullable
   public String asString()
   {
@@ -565,6 +582,21 @@ public abstract class ExprEval<T>
     private ArrayExprEval(@Nullable T[] value)
     {
       super(value);
+    }
+
+    @Override
+    @Nullable
+    public String asString()
+    {
+      if (!isStringValueValid()) {
+        if (value == null) {
+          setStringValue(null);
+        } else {
+          setStringValue(Arrays.toString(value));
+        }
+      }
+
+      return getStringValue();
     }
 
     @Override

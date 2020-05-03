@@ -24,12 +24,17 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private Expr.ObjectBinding bindings;
 
   @Before
@@ -100,6 +105,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("strlen(x)", 3L);
     assertExpr("strlen(nonexistent)", NullHandling.defaultLongValue());
+    assertExprFail("strlen(a)", IllegalArgumentException.class, "Cannot apply strlen() to an array");
   }
 
   @Test
@@ -363,6 +369,14 @@ public class FunctionTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(expr.stringify(), roundTrip.stringify());
     Assert.assertEquals(expr.stringify(), roundTripFlatten.stringify());
+  }
+
+  private void assertExprFail(final String expression, Class expectedExceptionClass, String expectedMessage)
+  {
+    final Expr expr = Parser.parse(expression, ExprMacroTable.nil());
+    expectedException.expect(expectedExceptionClass);
+    expectedException.expectMessage(expectedMessage);
+    expr.eval(bindings);
   }
 
   private void assertArrayExpr(final String expression, @Nullable final Object[] expectedResult)
