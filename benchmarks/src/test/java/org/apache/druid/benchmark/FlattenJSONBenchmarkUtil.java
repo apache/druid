@@ -65,7 +65,7 @@ public class FlattenJSONBenchmarkUtil
   public Parser getFieldDiscoveryParser()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields, false);
 
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
@@ -109,7 +109,7 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createNestedField("e3.am1[3]", "$.e3.am1[3]"));
     fields.add(JSONPathFieldSpec.createNestedField("e4.e4.m4", "$.e4.e4.m4"));
 
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields, false);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
         new DimensionsSpec(null, null, null),
@@ -152,7 +152,7 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createNestedField("e3.am1[3]", "$['e3.am1[3]']"));
     fields.add(JSONPathFieldSpec.createNestedField("e4.e4.m4", "$['e4.e4.m4']"));
 
-    JSONPathSpec flattenSpec = new JSONPathSpec(false, fields);
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, fields, false);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
         new DimensionsSpec(null, null, null),
@@ -193,7 +193,7 @@ public class FlattenJSONBenchmarkUtil
     fields.add(JSONPathFieldSpec.createJqField("e3.am1[3]", ".e3.am1[3]"));
     fields.add(JSONPathFieldSpec.createJqField("e4.e4.m4", ".e4.e4.m4"));
 
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields, false);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("ts", "iso", null),
         new DimensionsSpec(null, null, null),

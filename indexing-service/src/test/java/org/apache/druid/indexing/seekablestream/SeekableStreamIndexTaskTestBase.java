@@ -125,7 +125,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       null
   );
   protected static final InputFormat INPUT_FORMAT = new JsonInputFormat(
-      new JSONPathSpec(true, ImmutableList.of()),
+      new JSONPathSpec(true, ImmutableList.of(), false),
       ImmutableMap.of()
   );
   protected static final Logger LOG = new Logger(SeekableStreamIndexTaskTestBase.class);
@@ -164,7 +164,7 @@ public class SeekableStreamIndexTaskTestBase extends EasyMockSupport
                         null,
                         null
                     ),
-                    new JSONPathSpec(true, ImmutableList.of()),
+                    new JSONPathSpec(true, ImmutableList.of(), false),
                     ImmutableMap.of()
                 ),
                 StandardCharsets.UTF_8.name()

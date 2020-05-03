@@ -42,7 +42,7 @@ public class JSONPathParser implements Parser<String, Object>
   public JSONPathParser(JSONPathSpec flattenSpec, ObjectMapper mapper)
   {
     this.mapper = mapper == null ? new ObjectMapper() : mapper;
-    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker());
+    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(flattenSpec.isKeepNullColumns()));
   }
 
   @Override

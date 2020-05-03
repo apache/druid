@@ -76,7 +76,8 @@ public class OrcReaderTest
     final InputFormat inputFormat = new OrcInputFormat(
         new JSONPathSpec(
             true,
-            Collections.singletonList(new JSONPathFieldSpec(JSONPathFieldType.PATH, "col7-subcol7", "$.col7.subcol7"))
+            Collections.singletonList(new JSONPathFieldSpec(JSONPathFieldType.PATH, "col7-subcol7", "$.col7.subcol7")),
+            false
         ),
         null,
         new Configuration()
@@ -113,7 +114,8 @@ public class OrcReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "struct_list_struct_intlist", "$.middle.list[*].int1"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "list_struct_string", "$.list[0].string1"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "map_struct_int", "$.map.chani.int1")
-            )
+            ),
+            false
         ),
         null,
         new Configuration()
@@ -179,7 +181,7 @@ public class OrcReaderTest
     final InputEntityReader reader = createReader(
         new TimestampSpec("ts", "millis", null),
         new DimensionsSpec(null),
-        new OrcInputFormat(new JSONPathSpec(true, null), null, new Configuration()),
+        new OrcInputFormat(new JSONPathSpec(true, null, false), null, new Configuration()),
         "example/orc_split_elim.orc"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -207,7 +209,7 @@ public class OrcReaderTest
     final InputEntityReader reader = createReader(
         new TimestampSpec("time", "millis", null),
         new DimensionsSpec(null, Collections.singletonList("time"), null),
-        new OrcInputFormat(new JSONPathSpec(true, null), null, new Configuration()),
+        new OrcInputFormat(new JSONPathSpec(true, null, false), null, new Configuration()),
         "example/TestOrcFile.testDate1900.orc"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -233,7 +235,7 @@ public class OrcReaderTest
     final InputEntityReader reader = createReader(
         new TimestampSpec("time", "millis", null),
         new DimensionsSpec(null, Collections.singletonList("time"), null),
-        new OrcInputFormat(new JSONPathSpec(true, null), null, new Configuration()),
+        new OrcInputFormat(new JSONPathSpec(true, null, false), null, new Configuration()),
         "example/TestOrcFile.testDate2038.orc"
     );
     try (CloseableIterator<InputRow> iterator = reader.read()) {

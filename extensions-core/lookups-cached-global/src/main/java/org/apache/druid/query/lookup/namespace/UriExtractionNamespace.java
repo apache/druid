@@ -538,7 +538,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
                   ImmutableList.of(
                       new JSONPathFieldSpec(JSONPathFieldType.ROOT, keyFieldName, keyFieldName),
                       new JSONPathFieldSpec(JSONPathFieldType.ROOT, valueFieldName, valueFieldName)
-                  )
+                  ),
+                  false
               ),
               jsonMapper.copy()
           ),

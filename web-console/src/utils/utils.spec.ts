@@ -104,6 +104,9 @@ describe('test-utils', () => {
           },
           "ioConfig": Object {
             "inputFormat": Object {
+              "flattenSpec": Object {
+                "keepNullColumns": true,
+              },
               "type": "json",
             },
             "inputSource": Object {

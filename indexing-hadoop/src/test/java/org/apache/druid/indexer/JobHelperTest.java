@@ -79,7 +79,7 @@ public class JobHelperTest
                       null,
                       null
                   ),
-                  new JSONPathSpec(true, ImmutableList.of()),
+                  new JSONPathSpec(true, ImmutableList.of(), false),
                   ImmutableMap.of()
               )
           ),

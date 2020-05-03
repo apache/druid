@@ -28,19 +28,23 @@ import java.util.Objects;
 
 public class JSONPathSpec
 {
-  public static final JSONPathSpec DEFAULT = new JSONPathSpec(null, null);
+  public static final JSONPathSpec DEFAULT = new JSONPathSpec(null, null, null);
 
   private final boolean useFieldDiscovery;
   private final List<JSONPathFieldSpec> fields;
+  private final boolean keepNullColumns;
 
   @JsonCreator
   public JSONPathSpec(
       @JsonProperty("useFieldDiscovery") Boolean useFieldDiscovery,
-      @JsonProperty("fields") List<JSONPathFieldSpec> fields
+      @JsonProperty("fields") List<JSONPathFieldSpec> fields,
+      @JsonProperty("keepNullColumns") Boolean keepNullColumns
+
   )
   {
     this.useFieldDiscovery = useFieldDiscovery == null ? true : useFieldDiscovery;
     this.fields = fields == null ? ImmutableList.of() : fields;
+    this.keepNullColumns = keepNullColumns == null ? false : keepNullColumns;
   }
 
   @JsonProperty
@@ -55,6 +59,13 @@ public class JSONPathSpec
     return fields;
   }
 
+
+  @JsonProperty
+  public boolean isKeepNullColumns()
+  {
+    return keepNullColumns;
+  }
+
   @Override
   public boolean equals(final Object o)
   {
@@ -66,6 +77,7 @@ public class JSONPathSpec
     }
     final JSONPathSpec that = (JSONPathSpec) o;
     return useFieldDiscovery == that.useFieldDiscovery &&
+           keepNullColumns == that.keepNullColumns &&
            Objects.equals(fields, that.fields);
   }
 
@@ -81,6 +93,7 @@ public class JSONPathSpec
     return "JSONPathSpec{" +
            "useFieldDiscovery=" + useFieldDiscovery +
            ", fields=" + fields +
+           ", keepNullColumns=" + keepNullColumns +
            '}';
   }
 }

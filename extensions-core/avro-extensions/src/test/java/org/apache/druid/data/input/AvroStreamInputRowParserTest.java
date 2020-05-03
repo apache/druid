@@ -105,7 +105,8 @@ public class AvroStreamInputRowParserTest
           true,
           ImmutableList.of(
               new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
-          )
+          ),
+          false
       )
   );
   private static final AvroParseSpec PARSE_SPEC_SCHEMALESS = new AvroParseSpec(
@@ -115,7 +116,8 @@ public class AvroStreamInputRowParserTest
           true,
           ImmutableList.of(
               new JSONPathFieldSpec(JSONPathFieldType.PATH, "nested", "someRecord.subLong")
-          )
+          ),
+          false
       )
   );
   private static final MyFixed SOME_FIXED_VALUE = new MyFixed(ByteBuffer.allocate(16).array());

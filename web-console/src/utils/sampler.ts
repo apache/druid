@@ -107,6 +107,8 @@ export function getCacheRowsFromSampleResponse(
 export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   if (!cacheRows) return sampleSpec;
 
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec.keepNullColumns', true);
+
   // If this is already an inline spec there is nothing to do
   if (deepGet(sampleSpec, 'spec.ioConfig.inputSource.type') === 'inline') return sampleSpec;
 
@@ -198,6 +200,7 @@ function makeSamplerIoConfig(
   } else if (specType === 'kinesis') {
     ioConfig = deepSet(ioConfig, 'useEarliestSequenceNumber', sampleStrategy === 'start');
   }
+  ioConfig = deepSet(ioConfig, 'inputFormat.flattenSpec.keepNullColumns', true);
   return ioConfig;
 }
 

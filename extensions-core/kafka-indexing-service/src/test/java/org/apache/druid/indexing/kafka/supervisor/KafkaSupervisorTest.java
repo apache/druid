@@ -131,7 +131,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
-      new JSONPathSpec(true, ImmutableList.of()),
+      new JSONPathSpec(true, ImmutableList.of(), false),
       ImmutableMap.of()
   );
   private static final String TOPIC_PREFIX = "testTopic";

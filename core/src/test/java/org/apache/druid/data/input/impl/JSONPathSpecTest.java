@@ -48,7 +48,7 @@ public class JSONPathSpecTest
     fields.add(JSONPathFieldSpec.createJqField("baz0", ".baz[0]"));
     fields.add(JSONPathFieldSpec.createJqField("hey0barx", ".hey[0].barx"));
 
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields, false);
 
     final JSONPathSpec serde = jsonMapper.readValue(
         jsonMapper.writeValueAsString(flattenSpec),

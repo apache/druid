@@ -71,7 +71,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "listDim"))),
         ImmutableList.of("metric1", "metric2")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of());
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of(), false);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -145,7 +145,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "dim3", null),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "list", "$.listDim")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr, false);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -185,7 +185,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "dim2", null),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "listExtracted", "$.listDim[1]")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr, false);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -219,7 +219,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1"))),
         ImmutableList.of("metric1")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of());
+    JSONPathSpec flattenSpec = new JSONPathSpec(false, ImmutableList.of(), false);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -296,7 +296,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "metric2", "$.nestedData.metric2"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "listDim", "$.nestedData.listDim[*]")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -338,7 +338,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "dim3", "$.nestedData.dim3"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "listextracted", "$.nestedData.listDim[1]")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
     InputEntityReader reader = createReader(
         file,
         schema,

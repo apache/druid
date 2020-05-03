@@ -202,7 +202,7 @@ public class InputRowParserSerdeTest
     fields.add(JSONPathFieldSpec.createRootField("timestamp"));
     fields.add(JSONPathFieldSpec.createRootField("foo.bar1"));
 
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, fields, false);
     final StringInputRowParser parser = new StringInputRowParser(
         new JSONParseSpec(
             new TimestampSpec("timestamp", "iso", null),

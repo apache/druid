@@ -55,7 +55,8 @@ public class JSONParseSpecTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
-            )
+            ),
+            false
         ),
         null
     );
@@ -93,7 +94,8 @@ public class JSONParseSpecTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.[?(@.maybe_object)].maybe_object.foo.test"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "baz", "$.maybe_object_2.foo.test"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
-            )
+            ),
+            false
         ),
         null
     );

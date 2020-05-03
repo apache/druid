@@ -34,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 
 public class JsonReaderTest
@@ -51,7 +52,8 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
-            )
+            ),
+            false
         ),
         null
     );
@@ -100,7 +102,8 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.[?(@.maybe_object)].maybe_object.foo.test"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "baz", "$.maybe_object_2.foo.test"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
-            )
+            ),
+            false
         ),
         null
     );
@@ -130,6 +133,47 @@ public class JsonReaderTest
         numActualIterations++;
       }
       Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
+
+  @Test
+  public void testParseRowKeepNullColumns() throws IOException
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg")
+            ),
+            true
+        ),
+        null
+    );
+
+    final ByteEntity source = new ByteEntity(
+        StringUtils.toUtf8("{\"timestamp\":\"2019-01-01\",\"bar\":null,\"foo\":\"x\",\"o\":{\"mg\":null}}")
+    );
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.emptyList())),
+            Collections.emptyList()
+        ),
+        source,
+        null
+    );
+    final int numExpectedIterations = 1;
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+        final InputRow row = iterator.next();
+        Assert.assertEquals(Arrays.asList("path_omg", "timestamp", "bar", "foo"), row.getDimensions());
+        Assert.assertEquals(Collections.emptyList(), row.getDimension("bar"));
+        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assert.assertEquals(Collections.emptyList(), row.getDimension("path_omg"));
+        numActualIterations++;
+      }
     }
   }
 }

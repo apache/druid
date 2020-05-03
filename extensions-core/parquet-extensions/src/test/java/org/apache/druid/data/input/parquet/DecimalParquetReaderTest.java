@@ -55,7 +55,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "fixed_len_dec", "fixed_len_dec"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "metric1", "$.fixed_len_dec")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -92,7 +92,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "i32_dec", "i32_dec"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "metric1", "$.i32_dec")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -129,7 +129,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "i32_dec", "i64_dec"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "metric1", "$.i64_dec")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
     InputEntityReader reader = createReader(
         file,
         schema,

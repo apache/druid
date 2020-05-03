@@ -49,7 +49,7 @@ public class JsonReader extends TextReader
   )
   {
     super(inputRowSchema, source);
-    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker());
+    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(flattenSpec.isKeepNullColumns()));
     this.mapper = mapper;
   }
 
