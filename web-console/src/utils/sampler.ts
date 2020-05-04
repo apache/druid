@@ -107,7 +107,7 @@ export function getCacheRowsFromSampleResponse(
 export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   if (!cacheRows) return sampleSpec;
 
-  // Prevent sampler from filtering out null columns
+  // Keep null columns during sampling
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec.keepNullColumns', true);
 
   // If this is already an inline spec there is nothing to do
