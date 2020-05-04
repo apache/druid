@@ -115,6 +115,14 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetCacheKeyReturningDifferentKeysWithAndWithoutNull()
+  {
+    InDimFilter filter1 = new InDimFilter("dim", Arrays.asList("val", null), null);
+    InDimFilter filter2 = new InDimFilter("dim", Collections.singletonList("val"), null);
+    Assert.assertFalse(Arrays.equals(filter1.getCacheKey(), filter2.getCacheKey()));
+  }
+
+  @Test
   public void testGetCacheKeyReturningCachedCacheKey()
   {
     final InDimFilter filter = new InDimFilter("dim", ImmutableList.of("v1", "v2"), null);

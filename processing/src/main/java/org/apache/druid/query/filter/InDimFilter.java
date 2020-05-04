@@ -30,6 +30,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -53,7 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -146,12 +147,10 @@ public class InDimFilter implements DimFilter
   {
     if (cacheKey == null) {
       final List<String> sortedValues = new ArrayList<>(values);
-      Collections.sort(sortedValues);
+      sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
       final Hasher hasher = Hashing.sha256().newHasher();
-      boolean hasNull = false;
       for (String v : sortedValues) {
         if (v == null) {
-          hasNull = true;
           hasher.putInt(0);
         } else {
           hasher.putString(v, StandardCharsets.UTF_8);
@@ -162,7 +161,6 @@ public class InDimFilter implements DimFilter
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
           .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
-          .appendByte(hasNull ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
           .appendByteArray(hasher.hash().asBytes())
           .build();
