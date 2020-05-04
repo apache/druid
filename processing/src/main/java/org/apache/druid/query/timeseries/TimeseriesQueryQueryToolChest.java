@@ -48,11 +48,11 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -212,11 +212,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     String[] aggregatorNames = new String[aggregatorSpecs.size()];
     for (int i = 0; i < aggregatorSpecs.size(); i++) {
-      aggregators[i] = aggregatorSpecs.get(i)
-                                      .factorize(RowBasedColumnSelectorFactory.create(() -> new MapBasedRow(
-                                          null,
-                                          null
-                                      ), null));
+      aggregators[i] =
+          aggregatorSpecs.get(i)
+                         .factorize(
+                             RowBasedColumnSelectorFactory.create(
+                                 RowAdapters.standardRow(),
+                                 () -> new MapBasedRow(null, null),
+                                 RowSignature.empty(),
+                                 false
+                             )
+                         );
       aggregatorNames[i] = aggregatorSpecs.get(i).getName();
     }
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
@@ -397,17 +402,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public List<String> resultArrayFields(TimeseriesQuery query)
+  public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    final List<String> fields = new ArrayList<>(
-        1 + query.getAggregatorSpecs().size() + query.getPostAggregatorSpecs().size()
-    );
-
-    fields.add(ColumnHolder.TIME_COLUMN_NAME);
-    query.getAggregatorSpecs().stream().map(AggregatorFactory::getName).forEach(fields::add);
-    query.getPostAggregatorSpecs().stream().map(PostAggregator::getName).forEach(fields::add);
-
-    return fields;
+    return RowSignature.builder()
+                       .addTimeColumn()
+                       .addAggregators(query.getAggregatorSpecs())
+                       .addPostAggregators(query.getPostAggregatorSpecs())
+                       .build();
   }
 
   @Override
@@ -416,7 +417,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       final Sequence<Result<TimeseriesResultValue>> resultSequence
   )
   {
-    final List<String> fields = resultArrayFields(query);
+    final List<String> fields = resultArraySignature(query).getColumnNames();
 
     return Sequences.map(
         resultSequence,

@@ -22,6 +22,7 @@ package org.apache.druid.inputsource.hdfs;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
@@ -116,6 +117,7 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
 
     return new HdfsFileInputFormat().getSplits(job)
                                     .stream()
+                                    .filter(split -> ((FileSplit) split).getLength() > 0)
                                     .map(split -> ((FileSplit) split).getPath())
                                     .collect(Collectors.toSet());
   }
@@ -141,8 +143,9 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
     }
   }
 
+  @VisibleForTesting
   @JsonProperty(PROP_PATHS)
-  private List<String> getInputPaths()
+  List<String> getInputPaths()
   {
     return inputPaths;
   }
@@ -198,7 +201,8 @@ public class HdfsInputSource extends AbstractInputSource implements SplittableIn
   @Override
   public SplittableInputSource<List<Path>> withSplit(InputSplit<List<Path>> split)
   {
-    return new HdfsInputSource(split.get().toString(), configuration);
+    List<String> paths = split.get().stream().map(path -> path.toString()).collect(Collectors.toList());
+    return new HdfsInputSource(paths, configuration);
   }
 
   @Override

@@ -47,7 +47,7 @@ import java.util.stream.Stream;
 
 public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 {
-  static final String SCHEME = "gs";
+  public static final String SCHEME = "gs";
 
   private static final Logger LOG = new Logger(GoogleCloudStorageInputSource.class);
 
@@ -117,7 +117,7 @@ public class GoogleCloudStorageInputSource extends CloudObjectInputSource
 
   private CloudObjectLocation byteSourceFromStorageObject(final StorageObject storageObject)
   {
-    return new CloudObjectLocation(storageObject.getBucket(), storageObject.getName());
+    return GoogleUtils.objectToCloudObjectLocation(storageObject);
   }
 
   private Iterable<StorageObject> storageObjectIterable()

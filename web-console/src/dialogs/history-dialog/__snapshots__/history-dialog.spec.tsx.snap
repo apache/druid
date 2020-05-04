@@ -16,121 +16,125 @@ exports[`history dialog matches snapshot 1`] = `
       tabindex="0"
     >
       <div
-        class="bp3-dialog history-dialog"
+        class="bp3-dialog"
       >
         <div
-          class="bp3-dialog-body history-record-container"
+          class="history-dialog"
         >
-          <span
-            class="history-dialog-title"
-          >
-            History
-          </span>
           <div
-            class="history-record-entries"
+            class="bp3-dialog-body history-record-container"
           >
+            <span
+              class="history-dialog-title"
+            >
+              History
+            </span>
             <div
-              class="history-record-entry"
+              class="history-record-entries"
             >
               <div
-                class="bp3-card bp3-elevation-0"
+                class="history-record-entry"
               >
                 <div
-                  class="history-record-title"
+                  class="bp3-card bp3-elevation-0"
                 >
-                  <span
-                    class="history-record-title-change"
-                  >
-                    Change
-                  </span>
-                  <span />
-                </div>
-                <div
-                  class="bp3-divider"
-                />
-                <p />
-                <div
-                  class="json-collapse"
-                >
-                  <button
-                    class="bp3-button bp3-minimal"
-                    type="button"
+                  <div
+                    class="history-record-title"
                   >
                     <span
-                      class="bp3-button-text"
+                      class="history-record-title-change"
                     >
-                      Payload
+                      Change
                     </span>
-                  </button>
-                  <div>
-                    <div
-                      class="bp3-collapse"
+                    <span />
+                  </div>
+                  <div
+                    class="bp3-divider"
+                  />
+                  <p />
+                  <div
+                    class="json-collapse"
+                  >
+                    <button
+                      class="bp3-button bp3-minimal"
+                      type="button"
                     >
+                      <span
+                        class="bp3-button-text"
+                      >
+                        Payload
+                      </span>
+                    </button>
+                    <div>
                       <div
-                        aria-hidden="false"
-                        class="bp3-collapse-body"
-                        style="transform: translateY(-0px);"
-                      />
+                        class="bp3-collapse"
+                      >
+                        <div
+                          aria-hidden="false"
+                          class="bp3-collapse-body"
+                          style="transform: translateY(-0px);"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div
-              class="history-record-entry"
-            >
               <div
-                class="bp3-card bp3-elevation-0"
+                class="history-record-entry"
               >
                 <div
-                  class="history-record-title"
+                  class="bp3-card bp3-elevation-0"
                 >
-                  <span
-                    class="history-record-title-change"
-                  >
-                    Change
-                  </span>
-                  <span />
-                </div>
-                <div
-                  class="bp3-divider"
-                />
-                <p />
-                <div
-                  class="json-collapse"
-                >
-                  <button
-                    class="bp3-button bp3-minimal"
-                    type="button"
+                  <div
+                    class="history-record-title"
                   >
                     <span
-                      class="bp3-button-text"
+                      class="history-record-title-change"
                     >
-                      Payload
+                      Change
                     </span>
-                  </button>
-                  <div>
-                    <div
-                      class="bp3-collapse"
+                    <span />
+                  </div>
+                  <div
+                    class="bp3-divider"
+                  />
+                  <p />
+                  <div
+                    class="json-collapse"
+                  >
+                    <button
+                      class="bp3-button bp3-minimal"
+                      type="button"
                     >
+                      <span
+                        class="bp3-button-text"
+                      >
+                        Payload
+                      </span>
+                    </button>
+                    <div>
                       <div
-                        aria-hidden="false"
-                        class="bp3-collapse-body"
-                        style="transform: translateY(-0px);"
-                      />
+                        class="bp3-collapse"
+                      >
+                        <div
+                          aria-hidden="false"
+                          class="bp3-collapse-body"
+                          style="transform: translateY(-0px);"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div
-          class="bp3-dialog-footer"
-        >
           <div
-            class="bp3-dialog-footer-actions"
-          />
+            class="bp3-dialog-footer"
+          >
+            <div
+              class="bp3-dialog-footer-actions"
+            />
+          </div>
         </div>
       </div>
     </div>

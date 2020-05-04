@@ -55,6 +55,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   private Map<String, String> props = null;
   private String username;
   private String password;
+  private String cloudBucket;
+  private String cloudPath;
+  private String cloudRegion;
+  private String hadoopGcsCredentialsPath;
+  private String azureKey;
+  private String streamEndpoint;
 
   @JsonCreator
   ConfigFileConfigProvider(@JsonProperty("configFile") String configFile)
@@ -187,6 +193,13 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     username = props.get("username");
 
     password = props.get("password");
+
+    cloudBucket = props.get("cloud_bucket");
+    cloudPath = props.get("cloud_path");
+    cloudRegion = props.get("cloud_region");
+    hadoopGcsCredentialsPath = props.get("hadoopGcsCredentialsPath");
+    azureKey = props.get("azureKey");
+    streamEndpoint = props.get("stream_endpoint");
 
     LOG.info("router: [%s], [%s]", routerUrl, routerTLSUrl);
     LOG.info("broker: [%s], [%s]", brokerUrl, brokerTLSUrl);
@@ -335,6 +348,42 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getPassword()
       {
         return password;
+      }
+
+      @Override
+      public String getCloudBucket()
+      {
+        return cloudBucket;
+      }
+
+      @Override
+      public String getCloudPath()
+      {
+        return cloudPath;
+      }
+
+      @Override
+      public String getCloudRegion()
+      {
+        return cloudRegion;
+      }
+
+      @Override
+      public String getAzureKey()
+      {
+        return azureKey;
+      }
+
+      @Override
+      public String getHadoopGcsCredentialsPath()
+      {
+        return hadoopGcsCredentialsPath;
+      }
+
+      @Override
+      public String getStreamEndpoint()
+      {
+        return streamEndpoint;
       }
 
       @Override

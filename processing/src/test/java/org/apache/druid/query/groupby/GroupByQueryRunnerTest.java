@@ -3300,8 +3300,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(baseQuery, "2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    final int idxPosition = baseQuery.getResultRowPositionLookup().getInt("idx");
-    final int rowsPosition = baseQuery.getResultRowPositionLookup().getInt("rows");
+    final int idxPosition = baseQuery.getResultRowSignature().indexOf("idx");
+    final int rowsPosition = baseQuery.getResultRowSignature().indexOf("rows");
 
     Comparator<ResultRow> idxComparator = Comparator.comparing(row -> ((Number) row.get(idxPosition)).floatValue());
     Comparator<ResultRow> rowsComparator = Comparator.comparing(row -> ((Number) row.get(rowsPosition)).floatValue());
@@ -5356,8 +5356,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
               public boolean eval(ResultRow row)
               {
                 final String field = "idx_subpostagg";
-                final int p = query.getResultRowPositionLookup().getInt(field);
-                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
+                final int p = query.getResultRowSignature().indexOf(field);
+                return (Rows.objectToNumber(field, row.get(p), true).floatValue() < 3800);
               }
             }
         )
@@ -5650,8 +5650,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
               public boolean eval(ResultRow row)
               {
                 final String field = "idx_subpostagg";
-                final int p = query.getResultRowPositionLookup().getInt(field);
-                return (Rows.objectToNumber(field, row.get(p)).floatValue() < 3800);
+                final int p = query.getResultRowSignature().indexOf(field);
+                return (Rows.objectToNumber(field, row.get(p), true).floatValue() < 3800);
               }
             }
         )

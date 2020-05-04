@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -49,6 +48,8 @@ import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableClause;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -69,6 +70,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -125,72 +127,112 @@ public class JoinAndLookupBenchmark
 
     baseSegment = new QueryableIndexSegment(index, SegmentId.dummy("join"));
 
+    List<JoinableClause> joinableClausesLookupStringKey = ImmutableList.of(
+        new JoinableClause(
+            prefix,
+            LookupJoinable.wrap(JoinTestHelper.createCountryIsoCodeToNameLookup()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format("countryIsoCode == \"%sk\"", prefix),
+                prefix,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+    JoinFilterPreAnalysis preAnalysisLookupStringKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClausesLookupStringKey,
+        VirtualColumns.EMPTY,
+        null,
+        false,
+        false,
+        false,
+        0
+    );
     hashJoinLookupStringKeySegment = new HashJoinSegment(
         baseSegment,
-        ImmutableList.of(
-            new JoinableClause(
-                prefix,
-                LookupJoinable.wrap(JoinTestHelper.createCountryIsoCodeToNameLookup()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression(
-                    StringUtils.format("countryIsoCode == \"%sk\"", prefix),
-                    prefix,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        joinableClausesLookupStringKey,
+        preAnalysisLookupStringKey
     );
 
+    List<JoinableClause> joinableClausesLookupLongKey = ImmutableList.of(
+        new JoinableClause(
+            prefix,
+            LookupJoinable.wrap(JoinTestHelper.createCountryIsoCodeToNameLookup()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format("countryIsoCode == \"%sk\"", prefix),
+                prefix,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+    JoinFilterPreAnalysis preAnalysisLookupLongKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClausesLookupLongKey,
+        VirtualColumns.EMPTY,
+        null,
+        false,
+        false,
+        false,
+        0
+    );
     hashJoinLookupLongKeySegment = new HashJoinSegment(
         baseSegment,
-        ImmutableList.of(
-            new JoinableClause(
-                prefix,
-                LookupJoinable.wrap(JoinTestHelper.createCountryNumberToNameLookup()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression(
-                    StringUtils.format("countryNumber == \"%sk\"", prefix),
-                    prefix,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        joinableClausesLookupLongKey,
+        preAnalysisLookupLongKey
     );
 
+    List<JoinableClause> joinableClausesIndexedTableStringKey = ImmutableList.of(
+        new JoinableClause(
+            prefix,
+            new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format("countryIsoCode == \"%scountryIsoCode\"", prefix),
+                prefix,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+    JoinFilterPreAnalysis preAnalysisIndexedTableStringKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClausesIndexedTableStringKey,
+        VirtualColumns.EMPTY,
+        null,
+        false,
+        false,
+        false,
+        0
+    );
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
         baseSegment,
-        ImmutableList.of(
-            new JoinableClause(
-                prefix,
-                new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression(
-                    StringUtils.format("countryIsoCode == \"%scountryIsoCode\"", prefix),
-                    prefix,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        joinableClausesIndexedTableStringKey,
+        preAnalysisIndexedTableStringKey
     );
 
+    List<JoinableClause> joinableClausesIndexedTableLonggKey = ImmutableList.of(
+        new JoinableClause(
+            prefix,
+            new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
+            JoinType.LEFT,
+            JoinConditionAnalysis.forExpression(
+                StringUtils.format("countryNumber == \"%scountryNumber\"", prefix),
+                prefix,
+                ExprMacroTable.nil()
+            )
+        )
+    );
+    JoinFilterPreAnalysis preAnalysisIndexedTableLongKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClausesIndexedTableLonggKey,
+        VirtualColumns.EMPTY,
+        null,
+        false,
+        false,
+        false,
+        0
+    );
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
         baseSegment,
-        ImmutableList.of(
-            new JoinableClause(
-                prefix,
-                new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
-                JoinType.LEFT,
-                JoinConditionAnalysis.forExpression(
-                    StringUtils.format("countryNumber == \"%scountryNumber\"", prefix),
-                    prefix,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN
+        joinableClausesIndexedTableLonggKey,
+        preAnalysisIndexedTableLongKey
     );
 
     final Map<String, String> countryCodeToNameMap = JoinTestHelper.createCountryIsoCodeToNameLookup().getMap();

@@ -75,6 +75,8 @@ import java.util.function.Function;
 
 /**
  * Query handler for Historical processes (see CliHistorical).
+ *
+ * In tests, this class's behavior is partially mimicked by TestClusterQuerySegmentWalker.
  */
 public class ServerManager implements QuerySegmentWalker
 {
@@ -196,7 +198,12 @@ public class ServerManager implements QuerySegmentWalker
         analysis.getPreJoinableClauses(),
         joinableFactory,
         cpuTimeAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(query)
+        QueryContexts.getEnableJoinFilterPushDown(query),
+        QueryContexts.getEnableJoinFilterRewrite(query),
+        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+        QueryContexts.getJoinFilterRewriteMaxSize(query),
+        query.getFilter() == null ? null : query.getFilter().toFilter(),
+        query.getVirtualColumns()
     );
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable

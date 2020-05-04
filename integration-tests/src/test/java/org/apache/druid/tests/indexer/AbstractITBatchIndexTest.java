@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
@@ -48,17 +49,50 @@ import java.util.function.Function;
 
 public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
+  public enum InputFormatDetails
+  {
+    ORC("orc", ".orc", "/orc"),
+    JSON("json", ".json", "/json"),
+    PARQUET("parquet", ".parquet", "/parquet");
+
+    private final String inputFormatType;
+    private final String fileExtension;
+    private final String folderSuffix;
+
+    InputFormatDetails(String inputFormatType, String fileExtension, String folderSuffix)
+    {
+      this.inputFormatType = inputFormatType;
+      this.fileExtension = fileExtension;
+      this.folderSuffix = folderSuffix;
+    }
+
+    public String getInputFormatType()
+    {
+      return inputFormatType;
+    }
+
+    public String getFileExtension()
+    {
+      return fileExtension;
+    }
+
+    public String getFolderSuffix()
+    {
+      return folderSuffix;
+    }
+  }
+
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
-  IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
   @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath,
@@ -70,7 +104,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion, runTestQueries, waitForSegmentsToLoad);
   }
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       Function<String, String> taskSpecTransform,
@@ -117,7 +151,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  void doReindexTest(
+  protected void doReindexTest(
       String baseDataSource,
       String reindexDataSource,
       String reindexTaskFilePath,
@@ -250,11 +284,13 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
             );
 
             final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(Intervals.ETERNITY);
-            return holders
-                .stream()
-                .flatMap(holder -> holder.getObject().stream())
-                .anyMatch(chunk -> oldVersions.stream()
-                                              .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment)));
+            return FluentIterable
+                .from(holders)
+                .transformAndConcat(TimelineObjectHolder::getObject)
+                .anyMatch(
+                    chunk -> FluentIterable.from(oldVersions)
+                                           .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment))
+                );
           },
           "See a new version"
       );

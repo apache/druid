@@ -19,14 +19,17 @@
 
 package org.apache.druid.storage.azure;
 
+import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -38,14 +41,26 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(AzureDataSegmentKiller.class);
 
+  private final AzureDataSegmentConfig segmentConfig;
+  private final AzureInputDataConfig inputDataConfig;
+  private final AzureAccountConfig accountConfig;
   private final AzureStorage azureStorage;
+  private final AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
 
   @Inject
   public AzureDataSegmentKiller(
-      final AzureStorage azureStorage
+      AzureDataSegmentConfig segmentConfig,
+      AzureInputDataConfig inputDataConfig,
+      AzureAccountConfig accountConfig,
+      final AzureStorage azureStorage,
+      AzureCloudBlobIterableFactory azureCloudBlobIterableFactory
   )
   {
+    this.segmentConfig = segmentConfig;
+    this.inputDataConfig = inputDataConfig;
+    this.accountConfig = accountConfig;
     this.azureStorage = azureStorage;
+    this.azureCloudBlobIterableFactory = azureCloudBlobIterableFactory;
   }
 
   @Override
@@ -72,9 +87,31 @@ public class AzureDataSegmentKiller implements DataSegmentKiller
   }
 
   @Override
-  public void killAll()
+  public void killAll() throws IOException
   {
-    throw new UnsupportedOperationException("not implemented");
+    if (segmentConfig.getContainer() == null || segmentConfig.getPrefix() == null) {
+      throw new ISE(
+          "Cannot delete all segment files since Azure Deep Storage since druid.azure.container and druid.azure.prefix are not both set.");
+    }
+    log.info(
+        "Deleting all segment files from Azure storage location [bucket: '%s' prefix: '%s']",
+        segmentConfig.getContainer(),
+        segmentConfig.getPrefix()
+    );
+    try {
+      AzureUtils.deleteObjectsInPath(
+          azureStorage,
+          inputDataConfig,
+          accountConfig,
+          azureCloudBlobIterableFactory,
+          segmentConfig.getContainer(),
+          segmentConfig.getPrefix(),
+          Predicates.alwaysTrue()
+      );
+    }
+    catch (Exception e) {
+      log.error("Error occurred while deleting segment files from Azure. Error: %s", e.getMessage());
+      throw new IOException(e);
+    }
   }
-
 }

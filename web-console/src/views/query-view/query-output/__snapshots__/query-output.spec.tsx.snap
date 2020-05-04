@@ -74,7 +74,7 @@ exports[`query output matches snapshot 1`] = `
             />
           </div>
           <div
-            class="rt-th  aggregate-header rt-resizable-header"
+            class="rt-th aggregate-header rt-resizable-header"
             role="columnheader"
             style="flex: 100 0 auto; width: 100px;"
             tabindex="-1"
@@ -101,7 +101,7 @@ exports[`query output matches snapshot 1`] = `
             />
           </div>
           <div
-            class="rt-th  aggregate-header rt-resizable-header"
+            class="rt-th aggregate-header rt-resizable-header"
             role="columnheader"
             style="flex: 100 0 auto; width: 100px;"
             tabindex="-1"

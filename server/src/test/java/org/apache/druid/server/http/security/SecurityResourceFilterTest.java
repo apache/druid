@@ -28,6 +28,7 @@ import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.StatusResource;
 import org.apache.druid.server.http.BrokerResource;
+import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorResource;
 import org.apache.druid.server.http.DataSourcesResource;
@@ -72,7 +73,8 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
             getRequestPathsWithAuthorizer(StatusResource.class),
             getRequestPathsWithAuthorizer(SelfDiscoveryResource.class),
             getRequestPathsWithAuthorizer(BrokerQueryResource.class),
-            getRequestPathsWithAuthorizer(RouterResource.class)
+            getRequestPathsWithAuthorizer(RouterResource.class),
+            getRequestPathsWithAuthorizer(CompactionResource.class)
         )
     );
   }

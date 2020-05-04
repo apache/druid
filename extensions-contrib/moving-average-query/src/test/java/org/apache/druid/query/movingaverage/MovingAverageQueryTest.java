@@ -65,6 +65,7 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
@@ -361,7 +362,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
             return null;
           }
         },
-        ForkJoinPool.commonPool()
+        ForkJoinPool.commonPool(),
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
@@ -372,7 +374,14 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           {
           }
         },
-        baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
+        baseClient,
+        null /* local client; unused in this test, so pass in null */,
+        warehouse,
+        retryConfig,
+        jsonMapper,
+        serverConfig,
+        null,
+        new CacheConfig()
     );
 
     defineMocks();

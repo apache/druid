@@ -107,11 +107,10 @@ public class SelectorFilterTest extends BaseFilterTest
   {
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
-      assertFilterMatches(new SelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     } else {
       assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of());
-      assertFilterMatches(new SelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     }
+    assertFilterMatches(new SelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     assertFilterMatches(new SelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new SelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
     assertFilterMatches(new SelectorDimFilter("dim1", "1", null), ImmutableList.of("3"));

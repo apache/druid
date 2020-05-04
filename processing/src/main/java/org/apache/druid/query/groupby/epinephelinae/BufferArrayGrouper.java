@@ -21,6 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.IAE;
@@ -68,24 +69,37 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   @Nullable
   private int[] vAggregationRows = null;
 
-  static long requiredBufferCapacity(
-      int cardinality,
-      AggregatorFactory[] aggregatorFactories
-  )
+  /**
+   * Computes required buffer capacity for a grouping key of the given cardinaltiy and aggregatorFactories.
+   * This method assumes that the given cardinality doesn't count nulls.
+   *
+   * Returns -1 if cardinality + 1 (for null) > Integer.MAX_VALUE. Returns computed required buffer capacity
+   * otherwise.
+   */
+  static long requiredBufferCapacity(int cardinality, AggregatorFactory[] aggregatorFactories)
   {
-    final int cardinalityWithMissingValue = cardinality + 1;
-    final int recordSize = Arrays.stream(aggregatorFactories)
-                                 .mapToInt(AggregatorFactory::getMaxIntermediateSizeWithNulls)
-                                 .sum();
+    final long cardinalityWithMissingValue = computeCardinalityWithMissingValue(cardinality);
+    // Cardinality should be in the integer range. See DimensionDictionarySelector.
+    if (cardinalityWithMissingValue > Integer.MAX_VALUE) {
+      return -1;
+    }
+    final long recordSize = Arrays.stream(aggregatorFactories)
+                                  .mapToLong(AggregatorFactory::getMaxIntermediateSizeWithNulls)
+                                  .sum();
 
     return getUsedFlagBufferCapacity(cardinalityWithMissingValue) +  // total used flags size
-           (long) cardinalityWithMissingValue * recordSize;                 // total values size
+           cardinalityWithMissingValue * recordSize;                 // total values size
+  }
+
+  private static long computeCardinalityWithMissingValue(int cardinality)
+  {
+    return (long) cardinality + 1;
   }
 
   /**
    * Compute the number of bytes to store all used flag bits.
    */
-  private static int getUsedFlagBufferCapacity(int cardinalityWithMissingValue)
+  private static long getUsedFlagBufferCapacity(long cardinalityWithMissingValue)
   {
     return (cardinalityWithMissingValue + Byte.SIZE - 1) / Byte.SIZE;
   }
@@ -102,7 +116,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
 
     this.bufferSupplier = Preconditions.checkNotNull(bufferSupplier, "bufferSupplier");
     this.aggregators = aggregators;
-    this.cardinalityWithMissingValue = cardinality + 1;
+    this.cardinalityWithMissingValue = Ints.checkedCast(computeCardinalityWithMissingValue(cardinality));
     this.recordSize = aggregators.spaceNeeded();
   }
 
@@ -112,7 +126,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
     if (!initialized) {
       final ByteBuffer buffer = bufferSupplier.get();
 
-      final int usedFlagBufferEnd = getUsedFlagBufferCapacity(cardinalityWithMissingValue);
+      final int usedFlagBufferEnd = Ints.checkedCast(getUsedFlagBufferCapacity(cardinalityWithMissingValue));
 
       // Sanity check on buffer capacity.
       if (usedFlagBufferEnd + (long) cardinalityWithMissingValue * recordSize > buffer.capacity()) {
@@ -185,6 +199,10 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       throw new ISE("keySpace too large to handle");
     }
 
+    if (vAggregationPositions == null || vAggregationRows == null) {
+      throw new ISE("Grouper was not initialized for vectorization");
+    }
+
     if (keySpace.getCapacity() == 0) {
       // Empty key space, assume keys are all zeroes.
       final int dimIndex = 1;
@@ -200,7 +218,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
     } else {
       for (int i = 0; i < numRows; i++) {
         // +1 matches what hashFunction() would do.
-        final int dimIndex = keySpace.getInt(i * Integer.BYTES) + 1;
+        final int dimIndex = keySpace.getInt(((long) i) * Integer.BYTES) + 1;
 
         if (dimIndex < 0 || dimIndex >= cardinalityWithMissingValue) {
           throw new IAE("Invalid dimIndex[%s]", dimIndex);

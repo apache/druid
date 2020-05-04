@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.timeline.partition.ImmutablePartitionHolder;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.OvershadowableInteger;
 import org.apache.druid.timeline.partition.PartitionHolder;
@@ -58,7 +57,7 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
     add("2011-01-02/2011-01-05", "2", 1);
 
     Assert.assertEquals(
-        new ImmutablePartitionHolder<>(new PartitionHolder<>(makeSingle("1", 1))),
+        new PartitionHolder<>(makeSingle("1", 1)).asImmutable(),
         timeline.findEntry(Intervals.of("2011-01-02T02/2011-01-04"), "1")
     );
   }
@@ -1407,9 +1406,7 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
                 new PartitionHolder<>(
                     ImmutableList.of(
                         makeNumbered("1", 0, 0),
-                        makeNumbered("1", 1, 0),
-                        makeNumberedOverwriting("1", 0, 1, 0, 2, 1, 3),
-                        makeNumberedOverwriting("1", 1, 1, 0, 2, 1, 3)
+                        makeNumbered("1", 1, 0)
                     )
                 )
             )
@@ -1500,4 +1497,79 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
     Assert.assertEquals(2, Lists.newArrayList(overshadowableIntegers.iterator()).size());
   }
 
+  @Test
+  public void testFindNonOvershadowedObjectsInIntervalWithOnlyCompletePartitionsReturningValidResult()
+  {
+    // 2019-01-01/2019-01-02
+    add("2019-01-01/2019-01-02", "0", makeNumbered("0", 0, 0));
+    add("2019-01-01/2019-01-02", "0", makeNumbered("0", 1, 0));
+    add("2019-01-01/2019-01-02", "0", makeNumbered("0", 2, 0));
+
+    // 2019-01-02/2019-01-03
+    add("2019-01-02/2019-01-03", "0", makeNumbered("0", 0, 0));
+    add("2019-01-02/2019-01-03", "0", makeNumbered("0", 1, 0));
+
+    // Incomplete partitions
+    add("2019-01-03/2019-01-04", "0", makeNumbered("2", 0, 3, 0));
+    add("2019-01-03/2019-01-04", "0", makeNumbered("2", 1, 3, 0));
+
+    // Overwrite 2019-01-01/2019-01-02
+    add("2019-01-01/2019-01-02", "1", makeNumbered("1", 0, 0));
+    add("2019-01-01/2019-01-02", "1", makeNumbered("1", 1, 0));
+
+    // Overwrite 2019-01-01/2019-01-02
+    add("2019-01-01/2019-01-02", "1", makeNumberedOverwriting("1", 0, 1, 0, 2, 1, 3));
+    add("2019-01-01/2019-01-02", "1", makeNumberedOverwriting("1", 1, 1, 0, 2, 1, 3));
+    add("2019-01-01/2019-01-02", "1", makeNumberedOverwriting("1", 2, 1, 0, 2, 1, 3));
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            makeNumberedOverwriting("1", 0, 1, 0, 2, 1, 3).getObject(),
+            makeNumberedOverwriting("1", 1, 1, 0, 2, 1, 3).getObject(),
+            makeNumberedOverwriting("1", 2, 1, 0, 2, 1, 3).getObject(),
+            makeNumbered("0", 0, 0).getObject(),
+            makeNumbered("0", 1, 0).getObject()
+        ),
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2019-01-01/2019-01-04"), Partitions.ONLY_COMPLETE)
+    );
+  }
+
+  @Test
+  public void testFindNonOvershadowedObjectsInIntervalWithIncompleteOkReturningValidResult()
+  {
+    // 2019-01-01/2019-01-02
+    add("2019-01-01/2019-01-02", "0", makeNumbered("0", 0, 0));
+    add("2019-01-01/2019-01-02", "0", makeNumbered("0", 1, 0));
+    add("2019-01-01/2019-01-02", "0", makeNumbered("0", 2, 0));
+
+    // 2019-01-02/2019-01-03
+    add("2019-01-02/2019-01-03", "0", makeNumbered("0", 0, 0));
+    add("2019-01-02/2019-01-03", "0", makeNumbered("0", 1, 0));
+
+    // Incomplete partitions
+    add("2019-01-03/2019-01-04", "0", makeNumbered("2", 0, 3, 0));
+    add("2019-01-03/2019-01-04", "0", makeNumbered("2", 1, 3, 0));
+
+    // Overwrite 2019-01-01/2019-01-02
+    add("2019-01-01/2019-01-02", "1", makeNumbered("1", 0, 0));
+    add("2019-01-01/2019-01-02", "1", makeNumbered("1", 1, 0));
+
+    // Overwrite 2019-01-01/2019-01-02
+    add("2019-01-01/2019-01-02", "1", makeNumberedOverwriting("1", 0, 1, 0, 2, 1, 3));
+    add("2019-01-01/2019-01-02", "1", makeNumberedOverwriting("1", 1, 1, 0, 2, 1, 3));
+    add("2019-01-01/2019-01-02", "1", makeNumberedOverwriting("1", 2, 1, 0, 2, 1, 3));
+
+    Assert.assertEquals(
+        ImmutableSet.of(
+            makeNumberedOverwriting("1", 0, 1, 0, 2, 1, 3).getObject(),
+            makeNumberedOverwriting("1", 1, 1, 0, 2, 1, 3).getObject(),
+            makeNumberedOverwriting("1", 2, 1, 0, 2, 1, 3).getObject(),
+            makeNumbered("0", 0, 0).getObject(),
+            makeNumbered("0", 1, 0).getObject(),
+            makeNumbered("2", 0, 3, 0).getObject(),
+            makeNumbered("2", 1, 3, 0).getObject()
+        ),
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2019-01-01/2019-01-04"), Partitions.INCOMPLETE_OK)
+    );
+  }
 }

@@ -42,6 +42,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
       .writeInt(x -> x.sizePer)
       .writeSomething(CompressionFactory.longEncodingWriter(x -> x.writer, x -> x.compression));
 
+  private final String columnName;
   private final int sizePer;
   private final CompressionFactory.LongEncodingWriter writer;
   private final GenericIndexedWriter<ByteBuffer> flattener;
@@ -53,6 +54,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarLongsSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
@@ -60,6 +62,7 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.sizePer = writer.getBlockSize(CompressedPools.BUFFER_SIZE);
     int bufferSize = writer.getNumBytes(sizePer);
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(segmentWriteOutMedium, filenameBase, compression, bufferSize);
@@ -100,6 +103,9 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
 
     writer.write(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

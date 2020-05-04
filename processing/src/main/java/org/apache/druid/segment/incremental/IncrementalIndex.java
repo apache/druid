@@ -62,12 +62,14 @@ import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -130,7 +132,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       final boolean deserializeComplexMetrics
   )
   {
-    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in::get, null);
+    final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
+        RowAdapters.standardRow(),
+        in::get,
+        RowSignature.empty(),
+        true
+    );
 
     class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory
     {
@@ -658,6 +665,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             capabilities.setType(ValueType.STRING);
             capabilities.setDictionaryEncoded(true);
             capabilities.setHasBitmapIndexes(true);
+            capabilities.setDictionaryValuesSorted(false);
+            capabilities.setDictionaryValuesUnique(true);
             capabilities.setIsComplete(true);
             columnCapabilities.put(dimension, capabilities);
           }
@@ -917,6 +926,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     capabilities.setDictionaryEncoded(type == ValueType.STRING);
     capabilities.setHasBitmapIndexes(type == ValueType.STRING);
+    if (type == ValueType.STRING) {
+      capabilities.setDictionaryValuesUnique(true);
+      capabilities.setDictionaryValuesSorted(false);
+    }
     capabilities.setType(type);
     capabilities.setIsComplete(true);
     return capabilities;

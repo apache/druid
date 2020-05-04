@@ -75,7 +75,7 @@ public class JoinableClauseTest
   public void test_getAvailableColumnsPrefixed()
   {
     Assert.assertEquals(
-        ImmutableList.of("j.countryIsoCode", "j.countryName", "j.countryNumber"),
+        ImmutableList.of("j.countryNumber", "j.countryIsoCode", "j.countryName"),
         clause.getAvailableColumnsPrefixed()
     );
   }

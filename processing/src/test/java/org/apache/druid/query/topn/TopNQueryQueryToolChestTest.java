@@ -61,6 +61,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -298,7 +299,7 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testResultArrayFields()
+  public void testResultArraySignature()
   {
     final TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -312,8 +313,15 @@ public class TopNQueryQueryToolChestTest extends InitializedNullHandlingTest
         .build();
 
     Assert.assertEquals(
-        ImmutableList.of("__time", "dim", "rows", "index", "uniques", "const"),
-        new TopNQueryQueryToolChest(null, null).resultArrayFields(query)
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("dim", ValueType.STRING)
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        new TopNQueryQueryToolChest(null, null).resultArraySignature(query)
     );
   }
 

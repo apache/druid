@@ -84,7 +84,10 @@ public class ExpressionFilterTest extends BaseFilterTest
       ImmutableMap.of("dim0", "6", "dim1", 6L, "dim2", 6.0f, "dim3", "1"),
       ImmutableMap.of("dim0", "7", "dim1", 7L, "dim2", 7.0f, "dim3", "a"),
       ImmutableMap.of("dim0", "8", "dim1", 8L, "dim2", 8.0f, "dim3", 8L),
-      ImmutableMap.of("dim0", "9", "dim1", 9L, "dim2", 9.0f, "dim3", 1.234f, "dim4", 1.234f)
+
+      // Note: the "dim3 == 1.234" check in "testOneSingleValuedStringColumn" fails if dim3 is 1.234f instead of 1.234d,
+      // because the literal 1.234 is interpreted as a double, and 1.234f cast to double is not equivalent to 1.234d.
+      ImmutableMap.of("dim0", "9", "dim1", 9L, "dim2", 9.0f, "dim3", 1.234d, "dim4", 1.234d)
   ).stream().map(e -> PARSER.parseBatch(e).get(0)).collect(Collectors.toList());
 
   public ExpressionFilterTest(

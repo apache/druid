@@ -37,9 +37,10 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -127,28 +128,44 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @Override
-  public List<String> resultArrayFields(final ScanQuery query)
+  public RowSignature resultArraySignature(final ScanQuery query)
   {
     if (query.getColumns() == null || query.getColumns().isEmpty()) {
       // Note: if no specific list of columns is provided, then since we can't predict what columns will come back, we
       // unfortunately can't do array-based results. In this case, there is a major difference between standard and
       // array-based results: the standard results will detect and return _all_ columns, whereas the array-based results
       // will include none of them.
-      return Collections.emptyList();
-    } else if (query.withNonNullLegacy(scanQueryConfig).isLegacy()) {
-      final List<String> retVal = new ArrayList<>();
-      retVal.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY);
-      retVal.addAll(query.getColumns());
-      return retVal;
+      return RowSignature.empty();
     } else {
-      return query.getColumns();
+      final RowSignature.Builder builder = RowSignature.builder();
+
+      if (query.withNonNullLegacy(scanQueryConfig).isLegacy()) {
+        builder.add(ScanQueryEngine.LEGACY_TIMESTAMP_KEY, null);
+      }
+
+      for (String columnName : query.getColumns()) {
+        // With the Scan query we only know the columnType for virtual columns. Let's report those, at least.
+        final ValueType columnType;
+
+        final VirtualColumn virtualColumn = query.getVirtualColumns().getVirtualColumn(columnName);
+        if (virtualColumn != null) {
+          columnType = virtualColumn.capabilities(columnName).getType();
+        } else {
+          // Unknown type. In the future, it would be nice to have a way to fill these in.
+          columnType = null;
+        }
+
+        builder.add(columnName, columnType);
+      }
+
+      return builder.build();
     }
   }
 
   @Override
   public Sequence<Object[]> resultsAsArrays(final ScanQuery query, final Sequence<ScanResultValue> resultSequence)
   {
-    final List<String> fields = resultArrayFields(query);
+    final List<String> fields = resultArraySignature(query).getColumnNames();
     final Function<?, Object[]> mapper;
 
     switch (query.getResultFormat()) {

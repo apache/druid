@@ -20,6 +20,15 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,4 +43,39 @@ public class ResultRowTest
     Assert.assertEquals(row, objectMapper.readValue("[1, 2, 3]", ResultRow.class));
     Assert.assertEquals(row, objectMapper.readValue(objectMapper.writeValueAsBytes(row), ResultRow.class));
   }
+
+  @Test
+  public void testMapBasedRowWithNullValues()
+  {
+    GroupByQuery query = new GroupByQuery(
+        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
+        null,
+        null,
+        Granularities.ALL,
+        ImmutableList.of(
+            new DefaultDimensionSpec("dim1", "dim1"),
+            new DefaultDimensionSpec("dim2", "dim2"),
+            new DefaultDimensionSpec("dim3", "dim3")
+        ),
+        ImmutableList.of(new CountAggregatorFactory("count")),
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    final ResultRow row = ResultRow.of("1", "2", null);
+    MapBasedRow mapBasedRow = row.toMapBasedRow(query);
+
+    // Let's make sure values are there as expected
+    Assert.assertEquals("1", mapBasedRow.getRaw("dim1"));
+    Assert.assertEquals("2", mapBasedRow.getRaw("dim2"));
+    Assert.assertNull(mapBasedRow.getRaw("dim3"));
+
+    // Also, let's make sure that the dimension with null value is actually present in the map
+    Assert.assertTrue(mapBasedRow.getEvent().containsKey("dim3"));
+  }
+
 }

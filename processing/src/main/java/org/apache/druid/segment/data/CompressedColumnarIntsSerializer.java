@@ -25,7 +25,6 @@ import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -44,6 +43,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
       .writeInt(x -> x.chunkFactor)
       .writeByte(x -> x.compression.getId());
 
+  private final String columnName;
   private final int chunkFactor;
   private final CompressionStrategy compression;
   private final GenericIndexedWriter<ByteBuffer> flattener;
@@ -53,6 +53,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
   private ByteBuffer endBuffer;
 
   CompressedColumnarIntsSerializer(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int chunkFactor,
@@ -61,6 +62,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
   )
   {
     this(
+        columnName,
         segmentWriteOutMedium,
         chunkFactor,
         byteOrder,
@@ -75,6 +77,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
   }
 
   CompressedColumnarIntsSerializer(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final int chunkFactor,
       final ByteOrder byteOrder,
@@ -82,6 +85,7 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
       final GenericIndexedWriter<ByteBuffer> flattener
   )
   {
+    this.columnName = columnName;
     this.chunkFactor = chunkFactor;
     this.compression = compression;
     this.flattener = flattener;
@@ -110,6 +114,9 @@ public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSer
     }
     endBuffer.putInt(val);
     numInserted++;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

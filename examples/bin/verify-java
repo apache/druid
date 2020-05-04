@@ -28,10 +28,10 @@ sub fail_check {
     : "Make sure that \"java\" is installed and on your PATH.";
 
   print STDERR <<"EOT";
-Druid requires Java 8. $current_version_text
+Druid only officially supports Java 8. Any Java version later than 8 is still experimental. $current_version_text
 
-If you believe this check is in error, you can skip it using an
-environment variable:
+If you believe this check is in error or you still want to proceed with Java version other than 8,
+you can skip this check using an environment variable:
 
   export DRUID_SKIP_JAVA_CHECK=1
 

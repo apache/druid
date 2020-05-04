@@ -22,11 +22,13 @@ package org.apache.druid.sql.calcite.rel;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptCost;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Join;
@@ -34,6 +36,7 @@ import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -42,11 +45,12 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.HashSet;
 import java.util.List;
@@ -59,7 +63,6 @@ import java.util.stream.Collectors;
 public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
 {
   private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__join__");
-  private static final double COST_FACTOR = 100.0;
 
   private final PartialDruidQuery partialQuery;
   private final Join joinRel;
@@ -81,7 +84,13 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     this.partialQuery = partialQuery;
   }
 
-  public static DruidJoinQueryRel create(final Join joinRel, final QueryMaker queryMaker)
+  /**
+   * Create an instance from a Join that is based on two {@link DruidRel} inputs.
+   */
+  public static DruidJoinQueryRel create(
+      final Join joinRel,
+      final QueryMaker queryMaker
+  )
   {
     return new DruidJoinQueryRel(
         joinRel.getCluster(),
@@ -122,12 +131,6 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   }
 
   @Override
-  public int getQueryCount()
-  {
-    return ((DruidRel<?>) left).getQueryCount() + ((DruidRel<?>) right).getQueryCount();
-  }
-
-  @Override
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     final DruidRel<?> leftDruidRel = (DruidRel<?>) left;
@@ -140,18 +143,16 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final RowSignature rightSignature = rightQuery.getOutputRowSignature();
     final DataSource rightDataSource;
 
-    // Left rel: allow direct embedding of scans/mappings including those of joins.
-    if (DruidRels.isScanOrMapping(leftDruidRel, true)) {
-      leftDataSource = leftQuery.getDataSource();
-    } else {
+    if (computeLeftRequiresSubquery(leftDruidRel)) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
+    } else {
+      leftDataSource = leftQuery.getDataSource();
     }
 
-    // Right rel: allow direct embedding of scans/mappings, excluding joins (those must be done as subqueries).
-    if (DruidRels.isScanOrMapping(rightDruidRel, false)) {
-      rightDataSource = rightQuery.getDataSource();
-    } else {
+    if (computeRightRequiresSubquery(rightDruidRel)) {
       rightDataSource = new QueryDataSource(rightQuery.getQuery());
+    } else {
+      rightDataSource = rightQuery.getDataSource();
     }
 
     final Pair<String, RowSignature> prefixSignaturePair = computeJoinRowSignature(leftSignature, rightSignature);
@@ -190,7 +191,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignature.from(
+        RowSignatures.fromRelDataType(
             joinRel.getRowType().getFieldNames(),
             joinRel.getRowType()
         ),
@@ -278,12 +279,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       throw new RuntimeException(e);
     }
 
-    return pw.input("left", left)
-             .input("right", right)
-             .item("condition", joinRel.getCondition())
-             .item("joinType", joinRel.getJoinType())
-             .item("query", queryString)
-             .item("signature", druidQuery.getOutputRowSignature());
+    return joinRel.explainTerms(pw)
+                  .item("query", queryString)
+                  .item("signature", druidQuery.getOutputRowSignature());
   }
 
   @Override
@@ -295,10 +293,23 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    return planner.getCostFactory()
-                  .makeCost(mq.getRowCount(left), 0, 0)
-                  .plus(planner.getCostFactory().makeCost(mq.getRowCount(right), 0, 0))
-                  .multiplyBy(COST_FACTOR);
+    double cost;
+
+    if (computeLeftRequiresSubquery(getSomeDruidChild(left))) {
+      cost = CostEstimates.COST_JOIN_SUBQUERY;
+    } else {
+      cost = partialQuery.estimateCost();
+    }
+
+    if (computeRightRequiresSubquery(getSomeDruidChild(right))) {
+      cost += CostEstimates.COST_JOIN_SUBQUERY;
+    }
+
+    if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
+      cost += CostEstimates.COST_JOIN_CROSS;
+    }
+
+    return planner.getCostFactory().makeCost(cost, 0, 0);
   }
 
   private static JoinType toDruidJoinType(JoinRelType calciteJoinType)
@@ -317,6 +328,19 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
+  private static boolean computeLeftRequiresSubquery(final DruidRel<?> left)
+  {
+    // Left requires a subquery unless it's a scan or mapping on top of any table or a join.
+    return !DruidRels.isScanOrMapping(left, true);
+  }
+
+  private static boolean computeRightRequiresSubquery(final DruidRel<?> right)
+  {
+    // Right requires a subquery unless it's a scan or mapping on top of a global datasource.
+    return !(DruidRels.isScanOrMapping(right, false)
+             && DruidRels.dataSourceIfLeafRel(right).filter(DataSource::isGlobal).isPresent());
+  }
+
   /**
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
@@ -328,17 +352,27 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     final RowSignature.Builder signatureBuilder = RowSignature.builder();
 
-    for (final String column : leftSignature.getRowOrder()) {
-      signatureBuilder.add(column, leftSignature.getColumnType(column));
+    for (final String column : leftSignature.getColumnNames()) {
+      signatureBuilder.add(column, leftSignature.getColumnType(column).orElse(null));
     }
 
     // Need to include the "0" since findUnusedPrefixForDigits only guarantees safety for digit-initiated suffixes
-    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getRowOrder()) + "0.";
+    final String rightPrefix = Calcites.findUnusedPrefixForDigits("j", leftSignature.getColumnNames()) + "0.";
 
-    for (final String column : rightSignature.getRowOrder()) {
-      signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column));
+    for (final String column : rightSignature.getColumnNames()) {
+      signatureBuilder.add(rightPrefix + column, rightSignature.getColumnType(column).orElse(null));
     }
 
     return Pair.of(rightPrefix, signatureBuilder.build());
+  }
+
+  private static DruidRel<?> getSomeDruidChild(final RelNode child)
+  {
+    if (child instanceof DruidRel) {
+      return (DruidRel<?>) child;
+    } else {
+      final RelSubset subset = (RelSubset) child;
+      return (DruidRel<?>) Iterables.getFirst(subset.getRels(), null);
+    }
   }
 }
