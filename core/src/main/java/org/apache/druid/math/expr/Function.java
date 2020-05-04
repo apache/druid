@@ -1491,9 +1491,7 @@ public interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      final ExprEval eval = args.get(0).eval(bindings);
-      assert !(eval instanceof ArrayExprEval);
-      final String arg = eval.asString();
+      final String arg = args.get(0).eval(bindings).asString();
       return arg == null ? ExprEval.ofLong(NullHandling.defaultLongValue()) : ExprEval.of(arg.length());
     }
 
