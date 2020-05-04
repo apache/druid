@@ -410,7 +410,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 -XX:MaxDirectMemorySize=1g
 ```
 > Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate 
-for your specific scenario and be sure to test any changes in staging evironments.
+for your specific scenario and be sure to test any changes in staging environments.
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
