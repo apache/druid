@@ -107,7 +107,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeoutException;
 
 public class KinesisSupervisorTest extends EasyMockSupport
 {
@@ -128,7 +130,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private static final StreamPartition<String> SHARD0_PARTITION = StreamPartition.of(STREAM, SHARD_ID0);
   private static final StreamPartition<String> SHARD1_PARTITION = StreamPartition.of(STREAM, SHARD_ID1);
   private static final StreamPartition<String> SHARD2_PARTITION = StreamPartition.of(STREAM, SHARD_ID2);
-  private static final Map<String, Long> TIME_LAG = ImmutableMap.of(SHARD_ID1, 9000L, SHARD_ID0, 1234L);
   private static DataSchema dataSchema;
   private KinesisRecordSupplier supervisorRecordSupplier;
 
@@ -231,9 +232,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -301,9 +299,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -363,9 +358,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -443,9 +435,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -498,9 +487,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -560,9 +546,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<KinesisIndexTask> captured = Capture.newInstance();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -660,9 +643,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     // non KinesisIndexTask (don't kill)
     Task id2 = new RealtimeIndexTask(
@@ -729,9 +709,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Task id1 = createKinesisIndexTask(
         "id1",
@@ -844,9 +821,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -958,9 +932,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     DateTime now = DateTimes.nowUtc();
     DateTime maxi = now.plusMinutes(60);
@@ -1098,9 +1069,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -1227,9 +1195,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     final Capture<Task> firstTasks = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -1452,9 +1417,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
 
-    Assert.assertEquals(timeLag, payload.getMinimumLagMillis());
-    Assert.assertEquals(20000000L, (long) payload.getAggregateLagMillis());
-
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
     Assert.assertEquals("id1", publishingReport.getId());
@@ -1604,9 +1566,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, payload.getPublishingTasks().size());
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
-    Assert.assertEquals(timeLag, payload.getMinimumLagMillis());
-    Assert.assertEquals(9000L + 1234L, (long) payload.getAggregateLagMillis());
-
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
@@ -1858,9 +1817,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -1943,9 +1899,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2054,10 +2007,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2206,9 +2155,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Task id1 = createKinesisIndexTask(
         "id1",
@@ -2617,9 +2563,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Task id1 = createKinesisIndexTask(
         "id1",
@@ -2846,9 +2789,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
@@ -2911,7 +2851,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
 
   @Test(timeout = 60_000L)
-  public void testCheckpointForInactiveTaskGroup() throws InterruptedException
+  public void testCheckpointForInactiveTaskGroup() throws InterruptedException, TimeoutException, ExecutionException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -3004,9 +2944,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -3260,9 +3197,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Task id1 = createKinesisIndexTask(
         "id1",
@@ -3481,7 +3415,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testDoNotKillCompatibleTasks() throws InterruptedException, EntryExistsException
+  public void testDoNotKillCompatibleTasks()
+      throws InterruptedException, EntryExistsException, TimeoutException, ExecutionException
   {
     // This supervisor always returns true for isTaskCurrent -> it should not kill its tasks
     int numReplicas = 2;
@@ -3511,9 +3446,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Task task = createKinesisIndexTask(
         "id2",
@@ -3581,7 +3513,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testKillIncompatibleTasks() throws InterruptedException, EntryExistsException
+  public void testKillIncompatibleTasks()
+      throws InterruptedException, EntryExistsException, TimeoutException, ExecutionException
   {
     // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
     int numReplicas = 2;
@@ -3610,9 +3543,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Task task = createKinesisIndexTask(
         "id1",
@@ -3855,9 +3785,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -3966,9 +3893,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> postSplitCaptured = Capture.newInstance(CaptureType.ALL);
 
@@ -4144,9 +4068,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> postSplitCaptured = Capture.newInstance(CaptureType.ALL);
 
@@ -4310,9 +4231,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -4432,9 +4350,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> postMergeCaptured = Capture.newInstance(CaptureType.ALL);
 
@@ -4589,9 +4504,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(TIME_LAG)
-            .atLeastOnce();
 
     Capture<Task> postSplitCaptured = Capture.newInstance(CaptureType.ALL);
 

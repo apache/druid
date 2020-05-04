@@ -46,6 +46,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningCon
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -336,16 +337,35 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  protected void updateLatestSequenceFromStream(
-      RecordSupplier<Integer, Long> recordSupplier,
-      Set<StreamPartition<Integer>> partitions
-  )
+  protected void updatePartitionLagFromStream()
   {
-    latestSequenceFromStream = partitions.stream()
-                                         .collect(Collectors.toMap(
-                                             StreamPartition::getPartitionId,
-                                             recordSupplier::getPosition
-                                         ));
+    getRecordSupplierLock().lock();
+    try {
+      Set<Integer> partitionIds;
+      try {
+        partitionIds = recordSupplier.getPartitionIds(getIoConfig().getStream());
+      }
+      catch (Exception e) {
+        log.warn("Could not fetch partitions for topic/stream [%s]", getIoConfig().getStream());
+        throw new StreamException(e);
+      }
+
+      Set<StreamPartition<Integer>> partitions = partitionIds
+          .stream()
+          .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
+          .collect(Collectors.toSet());
+
+      recordSupplier.seekToLatest(partitions);
+
+      latestSequenceFromStream =
+          partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getPosition));
+    }
+    catch (InterruptedException e) {
+      throw new StreamException(e);
+    }
+    finally {
+      getRecordSupplierLock().unlock();
+    }
   }
 
   @Override

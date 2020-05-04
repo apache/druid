@@ -50,6 +50,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
@@ -203,7 +205,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        5
+        5,
+        true
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -212,6 +215,9 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(ImmutableSet.of(SHARD_ID1, SHARD_ID0), recordSupplier.getPartitionIds(STREAM));
+
+    // calling poll would start background fetch if seek was called, but will instead be skipped and the results
+    // empty
     Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
 
     verifyAll();
@@ -290,7 +296,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        100
+        100,
+        true
     );
 
     recordSupplier.assign(partitions);
@@ -367,7 +374,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        100
+        100,
+        true
     );
 
     recordSupplier.assign(partitions);
@@ -434,7 +442,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        100
+        100,
+        true
     );
 
     recordSupplier.assign(partitions);
@@ -468,7 +477,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        5
+        5,
+        true
     );
 
     recordSupplier.assign(partitions);
@@ -530,7 +540,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        1
+        1,
+        true
     );
 
     recordSupplier.assign(partitions);
@@ -622,7 +633,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        100
+        100,
+        true
     );
 
     recordSupplier.assign(partitions);
@@ -692,13 +704,14 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         1000,
-        100
+        100,
+        true
     );
     return recordSupplier;
   }
 
   @Test
-  public void getPartitionTimeLag() throws InterruptedException
+  public void getPartitionTimeLag() throws InterruptedException, TimeoutException, ExecutionException
   {
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
@@ -749,7 +762,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         5000,
         60000,
-        100
+        100,
+        true
     );
 
     recordSupplier.assign(partitions);

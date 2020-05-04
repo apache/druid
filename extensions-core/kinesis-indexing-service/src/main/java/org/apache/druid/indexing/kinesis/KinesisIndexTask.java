@@ -97,7 +97,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     KinesisIndexTaskTuningConfig tuningConfig = ((KinesisIndexTaskTuningConfig) super.tuningConfig);
     int fetchThreads = tuningConfig.getFetchThreads() != null
                        ? tuningConfig.getFetchThreads()
-                       : Math.max(1, ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+                       : Runtime.getRuntime().availableProcessors() * 2;
 
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
@@ -114,7 +114,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
         tuningConfig.getFetchSequenceNumberTimeout(),
-        tuningConfig.getMaxRecordsPerPoll()
+        tuningConfig.getMaxRecordsPerPoll(),
+        false
     );
   }
 

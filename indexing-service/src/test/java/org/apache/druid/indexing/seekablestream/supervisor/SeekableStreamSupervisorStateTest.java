@@ -986,9 +986,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected void updateLatestSequenceFromStream(
-        RecordSupplier<String, String> recordSupplier, Set<StreamPartition<String>> streamPartitions
-    )
+    protected void updatePartitionLagFromStream()
     {
       // do nothing
     }

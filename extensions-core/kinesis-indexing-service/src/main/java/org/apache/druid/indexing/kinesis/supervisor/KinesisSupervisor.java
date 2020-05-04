@@ -49,7 +49,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
@@ -64,6 +64,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Supervisor responsible for managing the KinesisIndexTask for a single dataSource. At a high level, the class accepts a
@@ -210,7 +213,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         taskTuningConfig.getRecordBufferOfferTimeout(),
         taskTuningConfig.getRecordBufferFullWait(),
         taskTuningConfig.getFetchSequenceNumberTimeout(),
-        taskTuningConfig.getMaxRecordsPerPoll()
+        taskTuningConfig.getMaxRecordsPerPoll(),
+        ioConfig.isUseEarliestSequenceNumber()
     );
   }
 
@@ -298,7 +302,19 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected Map<String, Long> getTimeLagPerPartition(Map<String, String> currentOffsets)
   {
-    return ((KinesisRecordSupplier) recordSupplier).getPartitionTimeLag(currentOffsets);
+    return currentOffsets
+        .entrySet()
+        .stream()
+        .filter(e -> e.getValue() != null &&
+                     currentPartitionTimeLag != null &&
+                     currentPartitionTimeLag.get(e.getKey()) != null
+        )
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                e -> currentPartitionTimeLag.get(e.getKey())
+            )
+        );
   }
 
   @Override
@@ -317,13 +333,19 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected void updateLatestSequenceFromStream(
-      RecordSupplier<String, String> recordSupplier,
-      Set<StreamPartition<String>> streamPartitions
-  )
+  protected void updatePartitionLagFromStream()
   {
-    KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
-    currentPartitionTimeLag = supplier.getPartitionTimeLag(getHighestCurrentOffsets());
+    getRecordSupplierLock().lock();
+    try {
+      KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
+      currentPartitionTimeLag = supplier.getPartitionTimeLag(getHighestCurrentOffsets());
+    }
+    catch (InterruptedException | TimeoutException | ExecutionException e) {
+      throw new StreamException(e);
+    }
+    finally {
+      getRecordSupplierLock().unlock();
+    }
   }
 
   @Override

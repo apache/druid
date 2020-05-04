@@ -65,6 +65,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,11 +79,15 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -112,10 +117,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     // to indicate that this shard has no more records to read
     @Nullable
     private volatile String shardIterator;
-    private volatile boolean started;
-    private volatile boolean stopRequested;
-
     private volatile long currentLagMillis;
+
+    private final AtomicBoolean fetchStarted = new AtomicBoolean();
 
     PartitionResource(StreamPartition<String> streamPartition)
     {
@@ -124,30 +128,34 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     void startBackgroundFetch()
     {
-      if (started) {
+      if (shardIterator == null) {
+        log.info(
+            "Skipping background fetch for stream[%s] partition[%s] since seek has not been called on the stream",
+            streamPartition.getStream(),
+            streamPartition.getPartitionId()
+        );
         return;
       }
+      if (fetchStarted.compareAndSet(false, true)) {
+        log.info(
+            "Starting scheduled fetch runnable for stream[%s] partition[%s]",
+            streamPartition.getStream(),
+            streamPartition.getPartitionId()
+        );
 
-      log.info(
-          "Starting scheduled fetch runnable for stream[%s] partition[%s]",
-          streamPartition.getStream(),
-          streamPartition.getPartitionId()
-      );
-
-      stopRequested = false;
-      started = true;
-
-      rescheduleRunnable(fetchDelayMillis);
+        rescheduleRunnable(fetchDelayMillis);
+      }
     }
 
     void stopBackgroundFetch()
     {
-      log.info(
-          "Stopping scheduled fetch runnable for stream[%s] partition[%s]",
-          streamPartition.getStream(),
-          streamPartition.getPartitionId()
-      );
-      stopRequested = true;
+      if (fetchStarted.compareAndSet(true, false)) {
+        log.info(
+            "Stopping scheduled fetch runnable for stream[%s] partition[%s]",
+            streamPartition.getStream(),
+            streamPartition.getPartitionId()
+        );
+      }
     }
 
     long getPartitionTimeLag()
@@ -158,15 +166,19 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     long getPartitionTimeLag(String offset)
     {
       // if not started (fetching records in background), fetch lag ourself with a throw-away iterator
-      if (!started) {
+      if (!fetchStarted.get()) {
         try {
           final String iteratorType;
           final String offsetToUse;
           if (offset == null || KinesisSupervisor.NOT_SET.equals(offset)) {
-            // this should probably check if will start processing earliest or latest rather than assuming earliest
-            // if latest we could skip this because latest will not be behind latest so lag is 0.
-            iteratorType = ShardIteratorType.TRIM_HORIZON.toString();
-            offsetToUse = null;
+            if (useEarliestSequenceNumber) {
+              iteratorType = ShardIteratorType.TRIM_HORIZON.toString();
+              offsetToUse = null;
+            } else {
+              // if offset is not set and not using earliest, it means we will start reading from latest,
+              // so lag will be 0 and we have nothing to do here
+              return 0L;
+            }
           } else {
             iteratorType = ShardIteratorType.AT_SEQUENCE_NUMBER.toString();
             offsetToUse = offset;
@@ -179,7 +191,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           ).getShardIterator();
 
           GetRecordsResult recordsResult = kinesis.getRecords(
-              new GetRecordsRequest().withShardIterator(shardIterator).withLimit(recordsPerFetch)
+              new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
           );
 
           currentLagMillis = recordsResult.getMillisBehindLatest();
@@ -198,14 +210,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       return currentLagMillis;
     }
 
+    private Callable<AbstractMap.SimpleEntry<String, Long>> getLagCallable(String partitionId, String offset)
+    {
+      return () -> new AbstractMap.SimpleEntry<>(partitionId, this.getPartitionTimeLag(offset));
+    }
+
     private Runnable getRecordRunnable()
     {
       return () -> {
 
-        if (stopRequested) {
-          started = false;
-          stopRequested = false;
-
+        if (!fetchStarted.get()) {
           log.info("Worker for partition[%s] has been stopped", streamPartition.getPartitionId());
           return;
         }
@@ -364,7 +378,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     private void rescheduleRunnable(long delayMillis)
     {
-      if (started && !stopRequested) {
+      if (fetchStarted.get()) {
         try {
           scheduledExec.schedule(getRecordRunnable(), delayMillis, TimeUnit.MILLISECONDS);
         }
@@ -398,6 +412,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private final int maxRecordsPerPoll;
   private final int fetchThreads;
   private final int recordBufferSize;
+  private final boolean useEarliestSequenceNumber;
 
   private ScheduledExecutorService scheduledExec;
 
@@ -405,8 +420,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       new ConcurrentHashMap<>();
   private BlockingQueue<OrderedPartitionableRecord<String, String>> records;
 
-  private volatile boolean checkPartitionsStarted = false;
   private volatile boolean closed = false;
+  private AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
@@ -418,7 +433,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       int recordBufferOfferTimeout,
       int recordBufferFullWait,
       int fetchSequenceNumberTimeout,
-      int maxRecordsPerPoll
+      int maxRecordsPerPoll,
+      boolean useEarliestSequenceNumber
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
@@ -432,6 +448,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.maxRecordsPerPoll = maxRecordsPerPoll;
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
+    this.useEarliestSequenceNumber = useEarliestSequenceNumber;
 
     // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
     // The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
@@ -517,9 +534,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   public void start()
   {
     checkIfClosed();
-    if (checkPartitionsStarted) {
+    if (partitionsFetchStarted.compareAndSet(false, true)) {
       partitionResources.values().forEach(PartitionResource::startBackgroundFetch);
-      checkPartitionsStarted = false;
     }
   }
 
@@ -535,15 +551,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         )
     );
 
-    for (Iterator<Map.Entry<StreamPartition<String>, PartitionResource>> i = partitionResources.entrySet()
-                                                                                               .iterator(); i.hasNext(); ) {
+    Iterator<Map.Entry<StreamPartition<String>, PartitionResource>> i = partitionResources.entrySet().iterator();
+    while (i.hasNext()) {
       Map.Entry<StreamPartition<String>, PartitionResource> entry = i.next();
       if (!collection.contains(entry.getKey())) {
         i.remove();
         entry.getValue().stopBackgroundFetch();
       }
     }
-
   }
 
   @Override
@@ -581,9 +596,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   public List<OrderedPartitionableRecord<String, String>> poll(long timeout)
   {
     checkIfClosed();
-    if (checkPartitionsStarted) {
+    if (partitionsFetchStarted.compareAndSet(false, true)) {
       partitionResources.values().forEach(PartitionResource::startBackgroundFetch);
-      checkPartitionsStarted = false;
     }
 
     try {
@@ -701,12 +715,25 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   }
 
   public Map<String, Long> getPartitionTimeLag(Map<String, String> currentOffsets)
+      throws InterruptedException, TimeoutException, ExecutionException
   {
     Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
-    for (Map.Entry<StreamPartition<String>, PartitionResource> partition : partitionResources.entrySet()) {
-      final String partitionId = partition.getKey().getPartitionId();
-      partitionLag.put(partitionId, partition.getValue().getPartitionTimeLag(currentOffsets.get(partitionId)));
+
+    List<Future<AbstractMap.SimpleEntry<String, Long>>> longo = scheduledExec.invokeAll(
+        partitionResources.entrySet()
+                          .stream()
+                          .map(partition -> {
+                            final String partitionId = partition.getKey().getPartitionId();
+                            return partition.getValue().getLagCallable(partitionId, currentOffsets.get(partitionId));
+                          })
+                          .collect(Collectors.toList())
+
+    );
+    for (Future<AbstractMap.SimpleEntry<String, Long>> future : longo) {
+      AbstractMap.SimpleEntry<String, Long> result = future.get(fetchSequenceNumberTimeout, TimeUnit.MILLISECONDS);
+      partitionLag.put(result.getKey(), result.getValue());
     }
+
     return partitionLag;
   }
 
@@ -729,28 +756,28 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         iteratorEnum.toString(),
         sequenceNumber
     ).getShardIterator());
-
-    checkPartitionsStarted = true;
   }
 
   private void filterBufferAndResetFetchRunnable(Set<StreamPartition<String>> partitions) throws InterruptedException
   {
-    scheduledExec.shutdown();
+    if (partitionsFetchStarted.compareAndSet(true, false)) {
+      scheduledExec.shutdown();
 
-    try {
-      if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
-        scheduledExec.shutdownNow();
+      try {
+        if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
+          scheduledExec.shutdownNow();
+        }
       }
-    }
-    catch (InterruptedException e) {
-      log.warn(e, "InterruptedException while shutting down");
-      throw e;
-    }
+      catch (InterruptedException e) {
+        log.warn(e, "InterruptedException while shutting down");
+        throw e;
+      }
 
-    scheduledExec = Executors.newScheduledThreadPool(
-        fetchThreads,
-        Execs.makeThreadFactory("KinesisRecordSupplier-Worker-%d")
-    );
+      scheduledExec = Executors.newScheduledThreadPool(
+          fetchThreads,
+          Execs.makeThreadFactory("KinesisRecordSupplier-Worker-%d")
+      );
+    }
 
     // filter records in buffer and only retain ones whose partition was not seeked
     BlockingQueue<OrderedPartitionableRecord<String, String>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
@@ -762,8 +789,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     records = newQ;
 
     // restart fetching threads
-    partitionResources.values().forEach(x -> x.started = false);
-    checkPartitionsStarted = true;
+    partitionResources.values().forEach(x -> x.stopBackgroundFetch());
   }
 
   @Nullable
