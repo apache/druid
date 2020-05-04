@@ -82,6 +82,8 @@ public class InDimFilter implements DimFilter
   @JsonCreator
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
+      // This 'values' collection instance can be reused if possible to avoid copying a big collection.
+      // Callers should _not_ modify the collection after it is passed to this constructor.
       @JsonProperty("values") Collection<String> values,
       @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
@@ -91,7 +93,8 @@ public class InDimFilter implements DimFilter
     Preconditions.checkArgument(values != null, "values can not be null");
 
     // The values set can be huge. Try to avoid copying the set if possible.
-    if (values instanceof Set && values.stream().noneMatch(NullHandling::needsEmptyToNull)) {
+    if (values instanceof Set
+        && (NullHandling.sqlCompatible() || values.stream().noneMatch(NullHandling::needsEmptyToNull))) {
       this.values = (Set<String>) values;
     } else {
       this.values = values.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toSet());
@@ -142,17 +145,18 @@ public class InDimFilter implements DimFilter
   public byte[] getCacheKey()
   {
     if (cacheKey == null) {
-      final boolean hasNull = values.stream().anyMatch(Objects::isNull);
       final List<String> sortedValues = new ArrayList<>(values);
       Collections.sort(sortedValues);
       final Hasher hasher = Hashing.sha256().newHasher();
-      sortedValues.forEach(v -> {
+      boolean hasNull = false;
+      for (String v : sortedValues) {
         if (v == null) {
+          hasNull = true;
           hasher.putInt(0);
         } else {
           hasher.putString(v, StandardCharsets.UTF_8);
         }
-      });
+      }
       cacheKey = new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
           .appendString(dimension)
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
