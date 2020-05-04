@@ -55,8 +55,6 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         latestOffsets,
         minimumLag,
         aggregateLag,
-        null,
-        null,
         offsetsLastUpdated,
         suspended,
         healthy,
