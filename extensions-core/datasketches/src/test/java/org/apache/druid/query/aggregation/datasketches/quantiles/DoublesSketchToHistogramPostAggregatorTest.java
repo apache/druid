@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
@@ -114,4 +115,11 @@ public class DoublesSketchToHistogramPostAggregatorTest
     Assert.assertEquals(3.0, histogram[1], 0);
   }
 
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(DoublesSketchToHistogramPostAggregator.class)
+                  .usingGetClass()
+                  .verify();
+  }
 }
