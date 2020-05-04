@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -1125,6 +1126,28 @@ public class ImmutableConciseSetTest
     }
 
     verifyUnion(expected, sets);
+  }
+
+  @Test
+  public void testUnion24()
+  {
+    List<ConciseSet> sets = new ArrayList<>();
+    final Random random = new Random(37L);
+    int count = ImmutableConciseSet.UNION_BY_COUNTING_SORT_THRESHOLD + 11;
+    for (int i = 0; i < count; i++) {
+      sets.add(new ConciseSet());
+    }
+    for (int i = 0; i < 1000; i++) {
+      sets.get(random.nextInt(count)).add(i);
+    }
+    List<Integer> expected = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      expected.add(i);
+    }
+    List<ImmutableConciseSet> immutableConciseSets = sets.stream()
+                                                         .map(s -> ImmutableConciseSet.newImmutableFromMutable(s))
+                                                         .collect(Collectors.toList());
+    verifyUnion(expected, immutableConciseSets);
   }
 
   private void verifyUnion(List<Integer> expected, List<ImmutableConciseSet> sets)

@@ -20,10 +20,14 @@
 package org.apache.druid.extendedset.intset;
 
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
 import org.apache.druid.extendedset.utilities.IntList;
 import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.RoaringBatchIterator;
+import org.roaringbitmap.RoaringBitmap;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -37,6 +41,11 @@ import java.util.PriorityQueue;
 public class ImmutableConciseSet
 {
   private static final int CHUNK_SIZE = 10000;
+
+  private static final int BITMAP_CHUNK_SIZE = 1024;
+
+  @VisibleForTesting
+  static final int UNION_BY_COUNTING_SORT_THRESHOLD = 30;
 
   private static final Comparator<WordIterator> UNION_COMPARATOR = new Comparator<WordIterator>()
   {
@@ -139,17 +148,10 @@ public class ImmutableConciseSet
 
   public static ImmutableConciseSet union(Iterable<ImmutableConciseSet> sets)
   {
-    return union(sets.iterator());
-  }
-
-  public static ImmutableConciseSet union(Iterator<ImmutableConciseSet> sets)
-  {
-    ImmutableConciseSet partialResults = doUnion(Iterators.limit(sets, CHUNK_SIZE));
-    while (sets.hasNext()) {
-      final UnmodifiableIterator<ImmutableConciseSet> partialIter = Iterators.singletonIterator(partialResults);
-      partialResults = doUnion(Iterators.concat(partialIter, Iterators.limit(sets, CHUNK_SIZE)));
+    if (Iterables.size(sets) >= UNION_BY_COUNTING_SORT_THRESHOLD) {
+      return doUnionByCountingSort(sets.iterator());
     }
-    return partialResults;
+    return doUnion(sets.iterator());
   }
 
   public static ImmutableConciseSet intersection(ImmutableConciseSet... sets)
@@ -337,6 +339,35 @@ public class ImmutableConciseSet
     } else {
       set.add(wordToAdd);
     }
+  }
+
+  private static ImmutableConciseSet doUnionByCountingSort(Iterator<ImmutableConciseSet> sets)
+  {
+    RoaringBitmap bitmap = new RoaringBitmap();
+    int[] elems = new int[BITMAP_CHUNK_SIZE];
+    int i = 0;
+    while (sets.hasNext()) {
+      ImmutableConciseSet set = sets.next();
+      IntSet.IntIterator intIterator = set.iterator();
+      while (intIterator.hasNext()) {
+        elems[i] = intIterator.next();
+        i += 1;
+        if (i == BITMAP_CHUNK_SIZE) {
+          bitmap.add(elems);
+          i = 0;
+        }
+      }
+    }
+    bitmap.add(Arrays.copyOfRange(elems, 0, i));
+    ConciseSet set = new ConciseSet();
+    RoaringBatchIterator iterator = bitmap.getBatchIterator();
+    while (iterator.hasNext()) {
+      int count = iterator.nextBatch(elems);
+      for (int j = 0; j < count; j++) {
+        set.add(elems[j]);
+      }
+    }
+    return ImmutableConciseSet.newImmutableFromMutable(set);
   }
 
   private static ImmutableConciseSet doUnion(Iterator<ImmutableConciseSet> sets)
