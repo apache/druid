@@ -107,9 +107,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeoutException;
 
 public class KinesisSupervisorTest extends EasyMockSupport
 {
@@ -2851,7 +2849,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
 
   @Test(timeout = 60_000L)
-  public void testCheckpointForInactiveTaskGroup() throws InterruptedException, TimeoutException, ExecutionException
+  public void testCheckpointForInactiveTaskGroup() throws InterruptedException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -3416,7 +3414,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test
   public void testDoNotKillCompatibleTasks()
-      throws InterruptedException, EntryExistsException, TimeoutException, ExecutionException
+      throws InterruptedException, EntryExistsException
   {
     // This supervisor always returns true for isTaskCurrent -> it should not kill its tasks
     int numReplicas = 2;
@@ -3514,7 +3512,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test
   public void testKillIncompatibleTasks()
-      throws InterruptedException, EntryExistsException, TimeoutException, ExecutionException
+      throws InterruptedException, EntryExistsException
   {
     // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
     int numReplicas = 2;

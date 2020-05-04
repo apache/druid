@@ -2028,13 +2028,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     if (newlyDiscovered.size() > 0) {
-      for (Int2ObjectMap.Entry<List<PartitionIdType>> entry : newlyDiscovered.int2ObjectEntrySet())
-      log.info(
-          "New partitions %s discovered for stream [%s], added to task group [%s]",
-          entry.getValue(),
-          ioConfig.getStream(),
-          entry.getIntKey()
-      );
+      for (Int2ObjectMap.Entry<List<PartitionIdType>> taskGroupPartitions : newlyDiscovered.int2ObjectEntrySet()) {
+        log.info(
+            "New partitions %s discovered for stream [%s], added to task group [%s]",
+            taskGroupPartitions.getValue(),
+            ioConfig.getStream(),
+            taskGroupPartitions.getIntKey()
+        );
+      }
     }
 
     if (!partitionIds.equals(previousPartitionIds)) {
