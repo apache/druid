@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.quantiles.DoublesSketch;
@@ -55,6 +56,9 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
     this.field = Preconditions.checkNotNull(field, "field is null");
     this.splitPoints = splitPoints;
     this.numBins = numBins;
+    if (splitPoints != null && numBins != null) {
+      throw new IAE("Cannot accept both 'splitPoints' and 'numBins'");
+    }
   }
 
   @Override
@@ -105,12 +109,14 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public double[] getSplitPoints()
   {
     return splitPoints;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getNumBins()
   {
     return numBins;
