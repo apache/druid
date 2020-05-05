@@ -117,7 +117,7 @@ public abstract class ExprEval<T>
   }
 
   // Cached String values
-  private boolean stringValueValid = false;
+  private boolean stringValueCached = false;
   @Nullable
   private String stringValue;
 
@@ -137,34 +137,35 @@ public abstract class ExprEval<T>
     return value;
   }
 
-  void setStringValue(@Nullable String value)
+  void cacheStringValue(@Nullable String value)
   {
     stringValue = value;
-    stringValueValid = true;
+    stringValueCached = true;
   }
 
   @Nullable
-  String getStringValue()
+  String getCacheStringValue()
   {
+    assert stringValueCached;
     return stringValue;
   }
 
-  boolean isStringValueValid()
+  boolean isStringValueCached()
   {
-    return stringValueValid;
+    return stringValueCached;
   }
 
   @Nullable
   public String asString()
   {
-    if (!stringValueValid) {
+    if (!stringValueCached) {
       if (value == null) {
         stringValue = null;
       } else {
         stringValue = String.valueOf(value);
       }
 
-      stringValueValid = true;
+      stringValueCached = true;
     }
 
     return stringValue;
@@ -588,15 +589,15 @@ public abstract class ExprEval<T>
     @Nullable
     public String asString()
     {
-      if (!isStringValueValid()) {
+      if (!isStringValueCached()) {
         if (value == null) {
-          setStringValue(null);
+          cacheStringValue(null);
         } else {
-          setStringValue(Arrays.toString(value));
+          cacheStringValue(Arrays.toString(value));
         }
       }
 
-      return getStringValue();
+      return getCacheStringValue();
     }
 
     @Override

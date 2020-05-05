@@ -30,6 +30,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -132,6 +133,7 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
   }
 
+  @Ignore("Disabled until https://github.com/apache/druid/issues/9824 is fixed")
   @Test
   public void testTransformWithStringTransformOnListColumnThrowingException()
   {
