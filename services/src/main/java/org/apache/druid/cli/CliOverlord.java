@@ -98,6 +98,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.input.SqlInputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
@@ -347,6 +348,7 @@ public class CliOverlord extends ServerRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new IndexingServiceTuningConfigModule(),
+        new SqlInputSourceModule(),
         new SupervisorModule(),
         new LookupSerdeModule(),
         new SamplerModule()
