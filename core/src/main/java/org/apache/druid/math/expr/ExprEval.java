@@ -144,7 +144,7 @@ public abstract class ExprEval<T>
   }
 
   @Nullable
-  String getCacheStringValue()
+  String getCachedStringValue()
   {
     assert stringValueCached;
     return stringValue;
@@ -597,7 +597,7 @@ public abstract class ExprEval<T>
         }
       }
 
-      return getCacheStringValue();
+      return getCachedStringValue();
     }
 
     @Override
