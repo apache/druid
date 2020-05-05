@@ -67,4 +67,22 @@ public class OrDimFilterTest extends InitializedNullHandlingTest
     DimFilter filter = DimFilterTestUtils.or(FalseDimFilter.instance(), FalseDimFilter.instance());
     Assert.assertSame(FalseDimFilter.instance(), filter.optimize());
   }
+
+  @Test
+  public void testOptimizeOrOfSingleFilterUnwrapOr()
+  {
+    DimFilter expected = DimFilterTestUtils.selector("col1", "1");
+    DimFilter filter = DimFilterTestUtils.or(expected);
+    Assert.assertEquals(expected, filter.optimize());
+  }
+
+  @Test
+  public void testOptimizeOrOfMultipleFiltersReturningAsItIs()
+  {
+    DimFilter filter = DimFilterTestUtils.or(
+        DimFilterTestUtils.selector("col1", "1"),
+        DimFilterTestUtils.selector("col1", "2")
+    );
+    Assert.assertEquals(filter, filter.optimize());
+  }
 }

@@ -32,6 +32,7 @@ import java.util.Set;
 public class FalseDimFilter implements DimFilter
 {
   private static final FalseDimFilter INSTANCE = new FalseDimFilter();
+  private static final byte[] CACHE_KEY = new CacheKeyBuilder(DimFilterUtils.FALSE_CACHE_ID).build();
 
   @JsonCreator
   public static FalseDimFilter instance()
@@ -71,7 +72,7 @@ public class FalseDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(DimFilterUtils.FALSE_CACHE_ID).build();
+    return CACHE_KEY;
   }
 
   @Override
@@ -83,7 +84,7 @@ public class FalseDimFilter implements DimFilter
   @Override
   public boolean equals(Object o)
   {
-    return o == this;
+    return o != null && o.getClass() == this.getClass();
   }
 
   @Override

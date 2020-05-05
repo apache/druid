@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -85,7 +86,7 @@ public class InDimFilter implements DimFilter
       @JsonProperty("dimension") String dimension,
       // This 'values' collection instance can be reused if possible to avoid copying a big collection.
       // Callers should _not_ modify the collection after it is passed to this constructor.
-      @JsonProperty("values") Collection<String> values,
+      @JsonProperty("values") Set<String> values,
       @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
@@ -94,9 +95,9 @@ public class InDimFilter implements DimFilter
     Preconditions.checkArgument(values != null, "values can not be null");
 
     // The values set can be huge. Try to avoid copying the set if possible.
-    if (values instanceof Set
-        && (NullHandling.sqlCompatible() || values.stream().noneMatch(NullHandling::needsEmptyToNull))) {
-      this.values = (Set<String>) values;
+    // Note that we may still need to copy values to a list for caching. See getCacheKey().
+    if ((NullHandling.sqlCompatible() || values.stream().noneMatch(NullHandling::needsEmptyToNull))) {
+      this.values = values;
     } else {
       this.values = values.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toSet());
     }
@@ -111,7 +112,7 @@ public class InDimFilter implements DimFilter
   @VisibleForTesting
   public InDimFilter(String dimension, Collection<String> values, @Nullable ExtractionFn extractionFn)
   {
-    this(dimension, values, extractionFn, null);
+    this(dimension, new HashSet<>(values), extractionFn, null);
   }
 
   @JsonProperty
@@ -193,7 +194,7 @@ public class InDimFilter implements DimFilter
       LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
       LookupExtractor lookup = exFn.getLookup();
 
-      final List<String> keys = new ArrayList<>();
+      final Set<String> keys = new HashSet<>();
       for (String value : values) {
 
         // We cannot do an unapply()-based optimization if the selector value
