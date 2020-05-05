@@ -28,13 +28,13 @@ import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
 
-public class SqlInputSourceModule implements DruidModule
+public class InputSourceModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.<Module>of(
-        new SimpleModule("SqlInputSourceModule")
+        new SimpleModule("InputSourceModule")
             .registerSubtypes(
                 new NamedType(SqlInputSource.class, "sql")
             )

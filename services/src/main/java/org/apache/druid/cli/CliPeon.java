@@ -92,7 +92,7 @@ import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import org.apache.druid.metadata.input.SqlInputSourceModule;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
@@ -263,7 +263,7 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
-        new SqlInputSourceModule(),
+        new InputSourceModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule()
     );
