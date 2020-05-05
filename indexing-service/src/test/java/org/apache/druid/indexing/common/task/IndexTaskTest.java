@@ -22,15 +22,18 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -134,7 +137,13 @@ public class IndexTaskTest extends IngestionTestBase
       false,
       0
   );
-  private static final InputFormat DEFAULT_INPUT_FORMAT = DEFAULT_PARSE_SPEC.toInputFormat();
+  private static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
+      Arrays.asList("ts", "dim", "val"),
+      null,
+      null,
+      false,
+      0
+  );
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
@@ -205,11 +214,9 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             null,
             null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
@@ -252,53 +259,65 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("2014-01-01T02:00:30Z,c,and|another,0|1,1\n");
     }
 
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        DimensionsSpec.getDefaultSchemas(
+            Arrays.asList(
+                "ts",
+                "dim",
+                "dim_array",
+                "dim_num_array",
+                "dimt",
+                "dimtarray1",
+                "dimtarray2",
+                "dimtnum_array"
+            )
+        )
+    );
+    final List<String> columns = Arrays.asList("ts", "dim", "dim_array", "dim_num_array", "val");
+    final String listDelimiter = "|";
+    final TransformSpec transformSpec = new TransformSpec(
+        new SelectorDimFilter("dim", "b", null),
+        ImmutableList.of(
+            new ExpressionTransform("dimt", "concat(dim,dim)", ExprMacroTable.nil()),
+            new ExpressionTransform("dimtarray1", "array(dim, dim)", ExprMacroTable.nil()),
+            new ExpressionTransform(
+                "dimtarray2",
+                "map(d -> concat(d, 'foo'), dim_array)",
+                ExprMacroTable.nil()
+            ),
+            new ExpressionTransform("dimtnum_array", "map(d -> d + 3, dim_num_array)", ExprMacroTable.nil())
+        )
+    );
+    final IndexTuningConfig tuningConfig = createTuningConfigWithMaxRowsPerSegment(2, false);
+    final IndexIngestionSpec indexIngestionSpec;
+    if (useInputFormatApi) {
+      indexIngestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          DEFAULT_TIMESTAMP_SPEC,
+          dimensionsSpec,
+          new CsvInputFormat(columns, listDelimiter, null, false, 0),
+          transformSpec,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      indexIngestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, dimensionsSpec, listDelimiter, columns, false, 0),
+          transformSpec,
+          null,
+          tuningConfig,
+          false
+      );
+    }
+
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
-            jsonMapper,
-            tmpDir,
-            new CSVParseSpec(
-                new TimestampSpec(
-                    "ts",
-                    "auto",
-                    null
-                ),
-                new DimensionsSpec(
-                    DimensionsSpec.getDefaultSchemas(
-                        Arrays.asList(
-                            "ts",
-                            "dim",
-                            "dim_array",
-                            "dim_num_array",
-                            "dimt",
-                            "dimtarray1",
-                            "dimtarray2",
-                            "dimtnum_array"
-                        )
-                    ),
-                    new ArrayList<>(),
-                    new ArrayList<>()
-                ),
-                "|",
-                Arrays.asList("ts", "dim", "dim_array", "dim_num_array", "val"),
-                false,
-                0
-            ),
-            new TransformSpec(
-                new SelectorDimFilter("dim", "b", null),
-                ImmutableList.of(
-                    new ExpressionTransform("dimt", "concat(dim,dim)", ExprMacroTable.nil()),
-                    new ExpressionTransform("dimtarray1", "array(dim, dim)", ExprMacroTable.nil()),
-                    new ExpressionTransform("dimtarray2", "map(d -> concat(d, 'foo'), dim_array)", ExprMacroTable.nil()),
-                    new ExpressionTransform("dimtnum_array", "map(d -> d + 3, dim_num_array)", ExprMacroTable.nil())
-                )
-            ),
-            null,
-            createTuningConfigWithMaxRowsPerSegment(2, false),
-            false
-        ),
+        indexIngestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -329,13 +348,22 @@ public class IndexTaskTest extends IngestionTestBase
     final List<Map<String, Object>> transforms = cursorSequence
         .map(cursor -> {
           final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
-                                                   .makeDimensionSelector(new DefaultDimensionSpec("dimt", "dimt"));
+                                                    .makeDimensionSelector(new DefaultDimensionSpec("dimt", "dimt"));
           final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec("dimtarray1", "dimtarray1"));
+                                                    .makeDimensionSelector(new DefaultDimensionSpec(
+                                                        "dimtarray1",
+                                                        "dimtarray1"
+                                                    ));
           final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
-                                                   .makeDimensionSelector(new DefaultDimensionSpec("dimtarray2", "dimtarray2"));
+                                                    .makeDimensionSelector(new DefaultDimensionSpec(
+                                                        "dimtarray2",
+                                                        "dimtarray2"
+                                                    ));
           final DimensionSelector selector4 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec("dimtnum_array", "dimtnum_array"));
+                                                    .makeDimensionSelector(new DefaultDimensionSpec(
+                                                        "dimtnum_array",
+                                                        "dimtnum_array"
+                                                    ));
 
 
           Map<String, Object> row = new HashMap<>();
@@ -375,15 +403,14 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             new ArbitraryGranularitySpec(
                 Granularities.MINUTE,
                 Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
             ),
+            null,
             createTuningConfigWithMaxRowsPerSegment(10, true),
             false
         ),
@@ -414,16 +441,15 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.HOUR,
                 Collections.singletonList(Intervals.of("2014-01-01T08:00:00Z/2014-01-01T09:00:00Z"))
             ),
+            null,
             createTuningConfigWithMaxRowsPerSegment(50, true),
             false
         ),
@@ -454,11 +480,9 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             null,
             null,
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 1, null), true),
@@ -496,11 +520,9 @@ public class IndexTaskTest extends IngestionTestBase
     final IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             null,
             null,
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")), true),
@@ -574,11 +596,9 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             null,
             null,
             createTuningConfigWithMaxRowsPerSegment(2, false),
@@ -624,16 +644,15 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,
                 null
             ),
+            null,
             createTuningConfigWithMaxRowsPerSegment(2, true),
             false
         ),
@@ -676,25 +695,37 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
+    final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
+    final IndexTuningConfig tuningConfig = createTuningConfigWithMaxRowsPerSegment(2, true);
+    final IndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          timestampSpec,
+          DimensionsSpec.EMPTY,
+          new CsvInputFormat(null, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
+
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
-            jsonMapper,
-            tmpDir,
-            new CSVParseSpec(
-                new TimestampSpec("time", "auto", null),
-                DimensionsSpec.EMPTY,
-                null,
-                null,
-                true,
-                0
-            ),
-            null,
-            createTuningConfigWithMaxRowsPerSegment(2, true),
-            false
-        ),
+        ingestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -723,25 +754,38 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
+    final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
+    final List<String> columns = Arrays.asList("time", "dim", "val");
+    final IndexTuningConfig tuningConfig = createTuningConfigWithMaxRowsPerSegment(2, true);
+    final IndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          timestampSpec,
+          DimensionsSpec.EMPTY,
+          new CsvInputFormat(columns, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
+
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
-            jsonMapper,
-            tmpDir,
-            new CSVParseSpec(
-                new TimestampSpec("time", "auto", null),
-                DimensionsSpec.EMPTY,
-                null,
-                Arrays.asList("time", "dim", "val"),
-                true,
-                0
-            ),
-            null,
-            createTuningConfigWithMaxRowsPerSegment(2, true),
-            false
-        ),
+        ingestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -779,16 +823,15 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,
                 null
             ),
+            null,
             createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
@@ -826,17 +869,16 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.DAY,
                 true,
                 null
             ),
+            null,
             createTuningConfig(3, 2, null, 2L, null, true, true),
             false
         ),
@@ -873,17 +915,16 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             new UniformGranularitySpec(
                 Granularities.DAY,
                 Granularities.DAY,
                 true,
                 null
             ),
+            null,
             createTuningConfig(3, 2, null, 2L, null, false, true),
             false
         ),
@@ -937,24 +978,37 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
+    final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
+    final List<String> columns = Arrays.asList("time", "dim", "val");
+    // ignore parse exception
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, false);
+
     // GranularitySpec.intervals and numShards must be null to verify reportParseException=false is respected both in
     // IndexTask.determineShardSpecs() and IndexTask.generateAndPublishSegments()
-    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
-        useInputFormatApi,
-        jsonMapper,
-        tmpDir,
-        new CSVParseSpec(
-            new TimestampSpec("time", "auto", null),
-            DimensionsSpec.EMPTY,
-            null,
-            Arrays.asList("time", "dim", "val"),
-            true,
-            0
-        ),
-        null,
-        createTuningConfig(2, null, null, null, null, false, false), // ignore parse exception,
-        false
-    );
+    final IndexIngestionSpec parseExceptionIgnoreSpec;
+    if (useInputFormatApi) {
+      parseExceptionIgnoreSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          timestampSpec,
+          DimensionsSpec.EMPTY,
+          new CsvInputFormat(columns, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      parseExceptionIgnoreSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
@@ -987,27 +1041,39 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
-    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
-        useInputFormatApi,
-        jsonMapper,
-        tmpDir,
-        new CSVParseSpec(
-            new TimestampSpec("time", "auto", null),
-            DimensionsSpec.EMPTY,
-            null,
-            Arrays.asList("time", "dim", "val"),
-            true,
-            0
-        ),
-        null,
-        createTuningConfig(2, null, null, null, null, false, true), // report parse exception
-        false
-    );
+    final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
+    final List<String> columns = Arrays.asList("time", "dim", "val");
+    // report parse exception
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, true);
+    final IndexIngestionSpec indexIngestionSpec;
+    if (useInputFormatApi) {
+      indexIngestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          timestampSpec,
+          DimensionsSpec.EMPTY,
+          new CsvInputFormat(columns, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      indexIngestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        parseExceptionIgnoreSpec,
+        indexIngestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -1075,31 +1141,43 @@ public class IndexTaskTest extends IngestionTestBase
         7
     );
 
-    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
-        useInputFormatApi,
-        jsonMapper,
-        tmpDir,
-        new JSONParseSpec(
-            new TimestampSpec("time", "auto", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat")
-                )
-            ),
-            null,
-            null
-        ),
-        null,
-        tuningConfig,
-        false
+    final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("dim"),
+            new LongDimensionSchema("dimLong"),
+            new FloatDimensionSchema("dimFloat")
+        )
     );
+    final IndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          timestampSpec,
+          dimensionsSpec,
+          new JsonInputFormat(null, null),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new JSONParseSpec(timestampSpec, dimensionsSpec, null, null),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        parseExceptionIgnoreSpec,
+        ingestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -1195,33 +1273,44 @@ public class IndexTaskTest extends IngestionTestBase
         5
     );
 
-    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
-        useInputFormatApi,
-        jsonMapper,
-        tmpDir,
-        new CSVParseSpec(
-            new TimestampSpec("time", "auto", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat")
-                )
-            ),
-            null,
-            Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
-            true,
-            0
-        ),
-        null,
-        tuningConfig,
-        false
+    final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("dim"),
+            new LongDimensionSchema("dimLong"),
+            new FloatDimensionSchema("dimFloat")
+        )
     );
+    final List<String> columns = Arrays.asList("time", "dim", "dimLong", "dimFloat", "val");
+    final IndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          timestampSpec,
+          dimensionsSpec,
+          new CsvInputFormat(columns, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        parseExceptionIgnoreSpec,
+        ingestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -1308,33 +1397,44 @@ public class IndexTaskTest extends IngestionTestBase
         5
     );
 
-    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
-        useInputFormatApi,
-        jsonMapper,
-        tmpDir,
-        new CSVParseSpec(
-            new TimestampSpec("time", "auto", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat")
-                )
-            ),
-            null,
-            Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
-            true,
-            0
-        ),
-        null,
-        tuningConfig,
-        false
+    final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("dim"),
+            new LongDimensionSchema("dimLong"),
+            new FloatDimensionSchema("dimFloat")
+        )
     );
+    final List<String> columns = Arrays.asList("time", "dim", "dimLong", "dimFloat", "val");
+    final IndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          timestampSpec,
+          dimensionsSpec,
+          new CsvInputFormat(columns, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        parseExceptionIgnoreSpec,
+        ingestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -1389,45 +1489,55 @@ public class IndexTaskTest extends IngestionTestBase
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("time,,\n");
+      writer.write("ts,,\n");
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
     tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("time,dim,\n");
+      writer.write("ts,dim,\n");
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
     tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
-      writer.write("time,,val\n");
+      writer.write("ts,,val\n");
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
-    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
-        useInputFormatApi,
-        jsonMapper,
-        tmpDir,
-        new CSVParseSpec(
-            new TimestampSpec("time", "auto", null),
-            DimensionsSpec.EMPTY,
-            null,
-            null,
-            true,
-            0
-        ),
-        null,
-        createTuningConfig(2, 1, null, null, null, true, true), // report parse exception
-        false
-    );
+    // report parse exception
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, 1, null, null, null, true, true);
+    final IndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          DEFAULT_TIMESTAMP_SPEC,
+          DimensionsSpec.EMPTY,
+          new CsvInputFormat(null, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        parseExceptionIgnoreSpec,
+        ingestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -1472,27 +1582,38 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("2014-01-01T00:00:10Z,a,1\n");
     }
 
-    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
-        useInputFormatApi,
-        jsonMapper,
-        tmpDir,
-        new CSVParseSpec(
-            new TimestampSpec("time", "auto", null),
-            DimensionsSpec.EMPTY,
-            null,
-            Arrays.asList("time", "", ""),
-            true,
-            0
-        ),
-        null,
-        createTuningConfig(2, null, null, null, null, false, true), // report parse exception
-        false
-    );
+    final List<String> columns = Arrays.asList("ts", "", "");
+    // report parse exception
+    final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, null, false, true);
+    final IndexIngestionSpec ingestionSpec;
+    if (useInputFormatApi) {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          DEFAULT_TIMESTAMP_SPEC,
+          DimensionsSpec.EMPTY,
+          new CsvInputFormat(columns, null, null, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    } else {
+      ingestionSpec = createIngestionSpec(
+          jsonMapper,
+          tmpDir,
+          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, columns, true, 0),
+          null,
+          null,
+          tuningConfig,
+          false
+      );
+    }
 
     IndexTask indexTask = new IndexTask(
         null,
         null,
-        parseExceptionIgnoreSpec,
+        ingestionSpec,
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
@@ -1529,17 +1650,16 @@ public class IndexTaskTest extends IngestionTestBase
       final IndexTask indexTask = new IndexTask(
           null,
           null,
-          createIngestionSpec(
-              useInputFormatApi,
+          createDefaultIngestionSpec(
               jsonMapper,
               tmpDir,
-              null,
               new UniformGranularitySpec(
                   Granularities.DAY,
                   Granularities.DAY,
                   true,
                   null
               ),
+              null,
               createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
@@ -1598,17 +1718,16 @@ public class IndexTaskTest extends IngestionTestBase
       final IndexTask indexTask = new IndexTask(
           null,
           null,
-          createIngestionSpec(
-              useInputFormatApi,
+          createDefaultIngestionSpec(
               jsonMapper,
               tmpDir,
-              null,
               new UniformGranularitySpec(
                   segmentGranularity,
                   Granularities.DAY,
                   true,
                   null
               ),
+              null,
               createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
@@ -1643,11 +1762,9 @@ public class IndexTaskTest extends IngestionTestBase
     final IndexTask task = new IndexTask(
         null,
         null,
-        createIngestionSpec(
-            useInputFormatApi,
+        createDefaultIngestionSpec(
             jsonMapper,
             tmpDir,
-            null,
             null,
             null,
             createTuningConfigWithPartitionsSpec(new SingleDimensionPartitionsSpec(null, 1, null, false), true),
@@ -1762,20 +1879,58 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
+  private IndexIngestionSpec createDefaultIngestionSpec(
+      ObjectMapper objectMapper,
+      File baseDir,
+      @Nullable GranularitySpec granularitySpec,
+      @Nullable TransformSpec transformSpec,
+      IndexTuningConfig tuningConfig,
+      boolean appendToExisting
+  )
+  {
+    if (useInputFormatApi) {
+      return createIngestionSpec(
+          objectMapper,
+          baseDir,
+          DEFAULT_TIMESTAMP_SPEC,
+          DEFAULT_DIMENSIONS_SPEC,
+          DEFAULT_INPUT_FORMAT,
+          transformSpec,
+          granularitySpec,
+          tuningConfig,
+          appendToExisting
+      );
+    } else {
+      return createIngestionSpec(
+          objectMapper,
+          baseDir,
+          DEFAULT_PARSE_SPEC,
+          transformSpec,
+          granularitySpec,
+          tuningConfig,
+          appendToExisting
+      );
+    }
+  }
+
   static IndexIngestionSpec createIngestionSpec(
       ObjectMapper objectMapper,
       File baseDir,
       @Nullable ParseSpec parseSpec,
-      GranularitySpec granularitySpec,
+      @Nullable TransformSpec transformSpec,
+      @Nullable GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
       boolean appendToExisting
   )
   {
     return createIngestionSpec(
-        false,
         objectMapper,
         baseDir,
         parseSpec,
+        null,
+        null,
+        null,
+        transformSpec,
         granularitySpec,
         tuningConfig,
         appendToExisting
@@ -1783,21 +1938,25 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   static IndexIngestionSpec createIngestionSpec(
-      boolean useInputFormatApi,
       ObjectMapper objectMapper,
       File baseDir,
-      @Nullable ParseSpec parseSpec,
-      GranularitySpec granularitySpec,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      InputFormat inputFormat,
+      @Nullable TransformSpec transformSpec,
+      @Nullable GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
       boolean appendToExisting
   )
   {
     return createIngestionSpec(
-        useInputFormatApi,
         objectMapper,
         baseDir,
-        parseSpec,
-        TransformSpec.NONE,
+        null,
+        timestampSpec,
+        dimensionsSpec,
+        inputFormat,
+        transformSpec,
         granularitySpec,
         tuningConfig,
         appendToExisting
@@ -1805,22 +1964,25 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   private static IndexIngestionSpec createIngestionSpec(
-      boolean useInputFormatApi,
       ObjectMapper objectMapper,
       File baseDir,
       @Nullable ParseSpec parseSpec,
-      TransformSpec transformSpec,
-      GranularitySpec granularitySpec,
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable DimensionsSpec dimensionsSpec,
+      @Nullable InputFormat inputFormat,
+      @Nullable TransformSpec transformSpec,
+      @Nullable GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
       boolean appendToExisting
   )
   {
-    if (useInputFormatApi) {
+    if (inputFormat != null) {
+      Preconditions.checkArgument(parseSpec == null, "Can't use parseSpec");
       return new IndexIngestionSpec(
           new DataSchema(
               "test",
-              parseSpec == null ? DEFAULT_TIMESTAMP_SPEC : parseSpec.getTimestampSpec(),
-              parseSpec == null ? DEFAULT_DIMENSIONS_SPEC : parseSpec.getDimensionsSpec(),
+              Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
+              Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"),
               new AggregatorFactory[]{
                   new LongSumAggregatorFactory("val", "val")
               },
@@ -1834,7 +1996,7 @@ public class IndexTaskTest extends IngestionTestBase
           new IndexIOConfig(
               null,
               new LocalInputSource(baseDir, "druid*"),
-              parseSpec == null ? DEFAULT_INPUT_FORMAT : parseSpec.toInputFormat(),
+              inputFormat,
               appendToExisting
           ),
           tuningConfig

@@ -30,7 +30,6 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -196,19 +195,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
               if (lastStatus != null) {
                 LOG.error("Failed because of the failed sub task[%s]", lastStatus.getId());
               } else {
-                final SinglePhaseSubTaskSpec spec =
-                    (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
-                final InputRowParser inputRowParser = spec.getIngestionSpec().getDataSchema().getParser();
-                LOG.error(
-                    "Failed to run sub tasks for inputSplits[%s]",
-                    getSplitsIfSplittable(
-                        spec.getIngestionSpec().getIOConfig().getNonNullInputSource(inputRowParser),
-                        spec.getIngestionSpec().getIOConfig().getNonNullInputFormat(
-                            inputRowParser == null ? null : inputRowParser.getParseSpec()
-                        ),
-                        tuningConfig.getSplitHintSpec()
-                    )
-                );
+                final SinglePhaseSubTaskSpec spec = (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
+                LOG.error("Failed to run sub tasks for inputSplits[%s]", spec.getInputSplit());
               }
               break;
             default:
