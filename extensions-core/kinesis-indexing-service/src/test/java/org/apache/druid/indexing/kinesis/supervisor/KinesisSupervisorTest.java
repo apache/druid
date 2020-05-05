@@ -280,6 +280,68 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testRecordSupplier()
+  {
+    KinesisSupervisorIOConfig kinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+        STREAM,
+        INPUT_FORMAT,
+        "awsEndpoint",
+        null,
+        1,
+        1,
+        new Period("PT30M"),
+        new Period("P1D"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null,
+        100,
+        1000,
+        null,
+        null,
+        false
+    );
+    KinesisIndexTaskClientFactory clientFactory = new KinesisIndexTaskClientFactory(null, OBJECT_MAPPER);
+    KinesisSupervisor supervisor = new KinesisSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        clientFactory,
+        OBJECT_MAPPER,
+        new KinesisSupervisorSpec(
+            null,
+            dataSchema,
+            tuningConfig,
+            kinesisSupervisorIOConfig,
+            null,
+            false,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            clientFactory,
+            OBJECT_MAPPER,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory,
+            null,
+            new SupervisorStateManagerConfig()
+        ),
+        rowIngestionMetersFactory,
+        null
+    );
+
+    KinesisRecordSupplier supplier = (KinesisRecordSupplier) supervisor.setupRecordSupplier();
+    Assert.assertNotNull(supplier);
+    Assert.assertEquals(0, supplier.bufferSize());
+    Assert.assertEquals(Collections.emptySet(), supplier.getAssignment());
+    // background fetch should not be enabled for supervisor supplier
+    supplier.start();
+    Assert.assertFalse(supplier.isBackgroundFetchRunning());
+  }
+
+  @Test
   public void testMultiTask() throws Exception
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
@@ -1323,7 +1385,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
+    EasyMock.expect(supervisorRecordSupplier.getPartitionsTimeLag(EasyMock.anyString(), EasyMock.anyObject()))
             .andReturn(timeLag)
             .atLeastOnce();
 
@@ -1484,7 +1546,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
+    EasyMock.expect(supervisorRecordSupplier.getPartitionsTimeLag(EasyMock.anyString(), EasyMock.anyObject()))
             .andReturn(timeLag)
             .atLeastOnce();
 
@@ -1637,7 +1699,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(SHARD0_PARTITION)).andReturn("1").anyTimes();
     supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(supervisorRecordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
+    EasyMock.expect(supervisorRecordSupplier.getPartitionsTimeLag(EasyMock.anyString(), EasyMock.anyObject()))
             .andReturn(timeLag)
             .atLeastOnce();
     Task id1 = createKinesisIndexTask(

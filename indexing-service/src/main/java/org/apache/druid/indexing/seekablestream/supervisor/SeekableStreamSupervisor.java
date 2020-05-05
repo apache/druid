@@ -3077,6 +3077,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return Collections.emptyMap();
   }
 
+  /**
+   * Fetches the earliest or latest offset from the stream via the {@link RecordSupplier}
+   */
   @Nullable
   private SequenceOffsetType getOffsetFromStreamForPartition(PartitionIdType partition, boolean useEarliestOffset)
   {

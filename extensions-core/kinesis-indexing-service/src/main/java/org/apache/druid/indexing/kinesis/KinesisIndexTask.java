@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -99,6 +100,10 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
                        ? tuningConfig.getFetchThreads()
                        : Runtime.getRuntime().availableProcessors() * 2;
 
+    Preconditions.checkArgument(
+        fetchThreads > 0,
+        "Must have at least one background fetch thread for the record supplier"
+    );
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
             ioConfig.getEndpoint(),
