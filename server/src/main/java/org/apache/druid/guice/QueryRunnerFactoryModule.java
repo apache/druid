@@ -21,7 +21,10 @@ package org.apache.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Key;
+import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryWatcher;
@@ -42,7 +45,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
-import org.apache.druid.server.QueryManager;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QuerySchedulerProvider;
 
 import java.util.Map;
 
@@ -50,8 +54,8 @@ import java.util.Map;
  */
 public class QueryRunnerFactoryModule extends QueryToolChestModule
 {
-  private static final Map<Class<? extends Query>, Class<? extends QueryRunnerFactory>> MAPPINGS =
-      ImmutableMap.<Class<? extends Query>, Class<? extends QueryRunnerFactory>>builder()
+  private static final Map<Class<? extends Query<?>>, Class<? extends QueryRunnerFactory<?, ?>>> MAPPINGS =
+      ImmutableMap.<Class<? extends Query<?>>, Class<? extends QueryRunnerFactory<?, ?>>>builder()
                   .put(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
                   .put(SearchQuery.class, SearchQueryRunnerFactory.class)
                   .put(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
@@ -67,21 +71,28 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
   {
     super.configure(binder);
 
-    binder.bind(QueryWatcher.class)
-          .to(QueryManager.class)
+    binder.bind(QueryScheduler.class)
+          .toProvider(Key.get(QuerySchedulerProvider.class, Global.class))
           .in(LazySingleton.class);
-    binder.bind(QueryManager.class)
-          .in(LazySingleton.class);
+    binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
+    JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
 
     final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder = DruidBinders.queryRunnerFactoryBinder(
         binder
     );
 
-    for (Map.Entry<Class<? extends Query>, Class<? extends QueryRunnerFactory>> entry : MAPPINGS.entrySet()) {
+    for (Map.Entry<Class<? extends Query<?>>, Class<? extends QueryRunnerFactory<?, ?>>> entry : MAPPINGS.entrySet()) {
       queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }
 
     binder.bind(GroupByQueryEngine.class).in(LazySingleton.class);
+  }
+
+  @LazySingleton
+  @Provides
+  public QueryWatcher getWatcher(QueryScheduler scheduler)
+  {
+    return scheduler;
   }
 }

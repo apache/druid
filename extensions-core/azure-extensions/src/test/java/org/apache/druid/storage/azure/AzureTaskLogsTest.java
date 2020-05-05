@@ -20,10 +20,15 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
+import com.microsoft.azure.storage.StorageException;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.After;
@@ -35,6 +40,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
@@ -45,16 +51,41 @@ public class AzureTaskLogsTest extends EasyMockSupport
   private static final String PREFIX = "test/log";
   private static final String TASK_ID = "taskid";
   private static final String TASK_ID_NOT_FOUND = "taskidNotFound";
-  private static final AzureTaskLogsConfig AZURE_TASK_LOGS_CONFIG = new AzureTaskLogsConfig(CONTAINER, PREFIX, 3);
+  private static final int MAX_TRIES = 3;
+  private static final AzureTaskLogsConfig AZURE_TASK_LOGS_CONFIG = new AzureTaskLogsConfig(CONTAINER, PREFIX, MAX_TRIES);
+  private static final int MAX_KEYS = 1;
+  private static final long TIME_0 = 0L;
+  private static final long TIME_1 = 1L;
+  private static final long TIME_NOW = 2L;
+  private static final long TIME_FUTURE = 3L;
+  private static final String KEY_1 = "key1";
+  private static final String KEY_2 = "key2";
+  private static final URI PREFIX_URI = URI.create(StringUtils.format("azure://%s/%s", CONTAINER, PREFIX));
+  private static final Exception RECOVERABLE_EXCEPTION = new StorageException("", "", null);
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new URISyntaxException("", "");
 
+  private AzureInputDataConfig inputDataConfig;
+  private AzureAccountConfig accountConfig;
   private AzureStorage azureStorage;
+  private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
+  private CurrentTimeMillisSupplier timeSupplier;
   private AzureTaskLogs azureTaskLogs;
 
   @Before
   public void before()
   {
+    inputDataConfig = createMock(AzureInputDataConfig.class);
+    accountConfig = createMock(AzureAccountConfig.class);
     azureStorage = createMock(AzureStorage.class);
-    azureTaskLogs = new AzureTaskLogs(AZURE_TASK_LOGS_CONFIG, azureStorage);
+    azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
+    timeSupplier = createMock(CurrentTimeMillisSupplier.class);
+    azureTaskLogs = new AzureTaskLogs(
+        AZURE_TASK_LOGS_CONFIG,
+        inputDataConfig,
+        accountConfig,
+        azureStorage,
+        azureCloudBlobIterableFactory,
+        timeSupplier);
   }
 
 
@@ -292,17 +323,214 @@ public class AzureTaskLogsTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test (expected = UnsupportedOperationException.class)
-  public void test_killAll_throwsUnsupportedOperationException()
+  @Test
+  public void test_killAll_noException_deletesAllTaskLogs() throws Exception
   {
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+    EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+    EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
+
+    CloudBlobHolder object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
+    CloudBlobHolder object2 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_2, TIME_1);
+
+    AzureCloudBlobIterable azureCloudBlobIterable = AzureTestUtils.expectListObjects(
+        azureCloudBlobIterableFactory,
+        MAX_KEYS,
+        PREFIX_URI,
+        ImmutableList.of(object1, object2));
+
+    EasyMock.replay(object1, object2);
+    AzureTestUtils.expectDeleteObjects(
+        azureStorage,
+        ImmutableList.of(object1, object2),
+        ImmutableMap.of());
+    EasyMock.replay(inputDataConfig, accountConfig, timeSupplier, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
     azureTaskLogs.killAll();
+    EasyMock.verify(inputDataConfig, accountConfig, timeSupplier, object1, object2, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
   }
 
+  @Test
+  public void test_killAll_recoverableExceptionWhenDeletingObjects_deletesAllTaskLogs() throws Exception
+  {
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+    EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+    EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
+
+    CloudBlobHolder object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
+
+    AzureCloudBlobIterable azureCloudBlobIterable = AzureTestUtils.expectListObjects(
+        azureCloudBlobIterableFactory,
+        MAX_KEYS,
+        PREFIX_URI,
+        ImmutableList.of(object1));
+
+    EasyMock.replay(object1);
+    AzureTestUtils.expectDeleteObjects(
+        azureStorage,
+        ImmutableList.of(object1),
+        ImmutableMap.of(object1, RECOVERABLE_EXCEPTION));
+    EasyMock.replay(inputDataConfig, accountConfig, timeSupplier, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
+    azureTaskLogs.killAll();
+    EasyMock.verify(inputDataConfig, accountConfig, timeSupplier, object1, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
+  }
+
+  @Test
+  public void test_killAll_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs() throws Exception
+  {
+    boolean ioExceptionThrown = false;
+    CloudBlobHolder object1 = null;
+    AzureCloudBlobIterable azureCloudBlobIterable = null;
+    try {
+      EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+      EasyMock.expect(timeSupplier.getAsLong()).andReturn(TIME_NOW);
+
+      object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
+
+      azureCloudBlobIterable = AzureTestUtils.expectListObjects(
+          azureCloudBlobIterableFactory,
+          MAX_KEYS,
+          PREFIX_URI,
+          ImmutableList.of(object1)
+      );
+
+      EasyMock.replay(object1);
+      AzureTestUtils.expectDeleteObjects(
+          azureStorage,
+          ImmutableList.of(),
+          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
+      );
+      EasyMock.replay(
+          inputDataConfig,
+          accountConfig,
+          timeSupplier,
+          azureCloudBlobIterable,
+          azureCloudBlobIterableFactory,
+          azureStorage
+      );
+      azureTaskLogs.killAll();
+    }
+    catch (IOException e) {
+      ioExceptionThrown = true;
+    }
+    Assert.assertTrue(ioExceptionThrown);
+    EasyMock.verify(
+        inputDataConfig,
+        accountConfig,
+        timeSupplier,
+        object1,
+        azureCloudBlobIterable,
+        azureCloudBlobIterableFactory,
+        azureStorage
+    );
+  }
+
+  @Test
+  public void test_killOlderThan_noException_deletesOnlyTaskLogsOlderThan() throws Exception
+  {
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+    EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+
+    CloudBlobHolder object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
+    CloudBlobHolder object2 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_2, TIME_FUTURE);
+
+    AzureCloudBlobIterable azureCloudBlobIterable = AzureTestUtils.expectListObjects(
+        azureCloudBlobIterableFactory,
+        MAX_KEYS,
+        PREFIX_URI,
+        ImmutableList.of(object1, object2));
+
+    EasyMock.replay(object1, object2);
+    AzureTestUtils.expectDeleteObjects(
+        azureStorage,
+        ImmutableList.of(object1),
+        ImmutableMap.of());
+    EasyMock.replay(inputDataConfig, accountConfig, timeSupplier, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
+    azureTaskLogs.killOlderThan(TIME_NOW);
+    EasyMock.verify(inputDataConfig, accountConfig, timeSupplier, object1, object2, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
+  }
+
+  @Test
+  public void test_killOlderThan_recoverableExceptionWhenDeletingObjects_deletesOnlyTaskLogsOlderThan() throws Exception
+  {
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+    EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+
+    CloudBlobHolder object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
+
+    AzureCloudBlobIterable azureCloudBlobIterable = AzureTestUtils.expectListObjects(
+        azureCloudBlobIterableFactory,
+        MAX_KEYS,
+        PREFIX_URI,
+        ImmutableList.of(object1));
+
+    EasyMock.replay(object1);
+    AzureTestUtils.expectDeleteObjects(
+        azureStorage,
+        ImmutableList.of(object1),
+        ImmutableMap.of(object1, RECOVERABLE_EXCEPTION));
+    EasyMock.replay(inputDataConfig, accountConfig, timeSupplier, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
+    azureTaskLogs.killOlderThan(TIME_NOW);
+    EasyMock.verify(inputDataConfig, accountConfig, timeSupplier, object1, azureCloudBlobIterable, azureCloudBlobIterableFactory, azureStorage);
+  }
+
+  @Test
+  public void test_killOlderThan_nonrecoverableExceptionWhenListingObjects_doesntDeleteAnyTaskLogs() throws Exception
+  {
+    boolean ioExceptionThrown = false;
+    CloudBlobHolder object1 = null;
+    AzureCloudBlobIterable azureCloudBlobIterable = null;
+    try {
+      EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
+      EasyMock.expect(accountConfig.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+
+      object1 = AzureTestUtils.newCloudBlobHolder(CONTAINER, KEY_1, TIME_0);
+
+      azureCloudBlobIterable = AzureTestUtils.expectListObjects(
+          azureCloudBlobIterableFactory,
+          MAX_KEYS,
+          PREFIX_URI,
+          ImmutableList.of(object1)
+      );
+
+      EasyMock.replay(object1);
+      AzureTestUtils.expectDeleteObjects(
+          azureStorage,
+          ImmutableList.of(),
+          ImmutableMap.of(object1, NON_RECOVERABLE_EXCEPTION)
+      );
+      EasyMock.replay(
+          inputDataConfig,
+          accountConfig,
+          timeSupplier,
+          azureCloudBlobIterable,
+          azureCloudBlobIterableFactory,
+          azureStorage
+      );
+      azureTaskLogs.killOlderThan(TIME_NOW);
+    }
+    catch (IOException e) {
+      ioExceptionThrown = true;
+    }
+    Assert.assertTrue(ioExceptionThrown);
+    EasyMock.verify(
+        inputDataConfig,
+        accountConfig,
+        timeSupplier,
+        object1,
+        azureCloudBlobIterable,
+        azureCloudBlobIterableFactory,
+        azureStorage
+    );
+  }
+
+  /*
   @Test (expected = UnsupportedOperationException.class)
-  public void test_killOlderThan_throwsUnsupportedOperationException()
+  public void test_killOlderThan_throwsUnsupportedOperationException() throws IOException
   {
     azureTaskLogs.killOlderThan(0);
   }
+   */
 
   @After
   public void cleanup()

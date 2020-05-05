@@ -46,14 +46,13 @@ RUN ln -sf /usr/share/java/mysql-connector-java.jar /usr/local/druid/lib/mysql-c
 RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && java -cp "/usr/local/druid/lib/*" -Ddruid.metadata.storage.type=mysql org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
       && /etc/init.d/mysql stop
-ADD sample-data.sql sample-data.sql
-# touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
-RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
-      && cat sample-data.sql | mysql -u root druid \
-      && /etc/init.d/mysql stop
+ADD test-data /test-data
 
 # Setup supervisord
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Add druid configuration setup script
+ADD druid.sh /druid.sh
 
 # mysql
 ADD run-mysql.sh /run-mysql.sh
@@ -95,4 +94,14 @@ EXPOSE 8300 8301 8302 8303 8304 8305
 EXPOSE 9092 9093
 
 WORKDIR /var/lib/druid
-ENTRYPOINT export HOST_IP="$(resolveip -s $HOSTNAME)" && /tls/generate-server-certs-and-keystores.sh && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+ENTRYPOINT /tls/generate-server-certs-and-keystores.sh \
+            # Create druid service config files with all the config variables
+            && . /druid.sh; setupConfig \
+            # Some test groups require pre-existing data to be setup
+            && . /druid.sh; setupData \
+            # Export the service config file path to use in supervisord conf file
+            && export DRUID_COMMON_CONF_DIR="$(. /druid.sh; getConfPath ${DRUID_SERVICE})" \
+            # Export the common config file path to use in supervisord conf file
+            && export DRUID_SERVICE_CONF_DIR="$(. /druid.sh; getConfPath _common)" \
+            # Run Druid service using supervisord
+            && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

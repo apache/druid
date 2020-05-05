@@ -110,7 +110,7 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
         } else if (rawValue instanceof String) {
           Number numberAttempt;
           try {
-            numberAttempt = Rows.objectToNumber(metricName, rawValue);
+            numberAttempt = Rows.objectToNumber(metricName, rawValue, true);
             FixedBucketsHistogram fbh = new FixedBucketsHistogram(
                 aggregatorFactory.getLowerLimit(),
                 aggregatorFactory.getUpperLimit(),

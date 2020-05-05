@@ -26,6 +26,7 @@ import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -51,11 +52,15 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
   public ExpectedException expectedException = ExpectedException.none();
 
   private IntermediaryDataManager intermediaryDataManager;
+  private File intermediarySegmentsLocation;
+  private File siblingLocation;
 
   @Before
   public void setup() throws IOException
   {
     final WorkerConfig workerConfig = new WorkerConfig();
+    intermediarySegmentsLocation = tempDir.newFolder();
+    siblingLocation = tempDir.newFolder();
     final TaskConfig taskConfig = new TaskConfig(
         null,
         null,
@@ -65,7 +70,7 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
         false,
         null,
         null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), 600L, null))
+        ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 600L, null))
     );
     final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
     intermediaryDataManager = new IntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
@@ -155,6 +160,63 @@ public class IntermediaryDataManagerManualAddAndDeleteTest
     File segmentFile = generateSegmentDir("file_" + i);
     DataSegment segment = newSegment(interval, i);
     intermediaryDataManager.addSegment(supervisorTaskId, "subTaskId", segment, segmentFile);
+  }
+
+  @Test
+  public void testFailsWithCraftyFabricatedNamesForDelete() throws IOException
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("supervisorTaskId cannot start with the '.' character.");
+    final String supervisorTaskId = "../" + siblingLocation.getName();
+    final String someFile = "sneaky-snake.txt";
+    File dataFile = new File(siblingLocation, someFile);
+    FileUtils.write(
+        dataFile,
+        "test data",
+        StandardCharsets.UTF_8
+    );
+    Assert.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
+    Assert.assertTrue(dataFile.exists());
+    intermediaryDataManager.deletePartitions(supervisorTaskId);
+    Assert.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
+    Assert.assertTrue(dataFile.exists());
+  }
+
+  @Test
+  public void testFailsWithCraftyFabricatedNamesForFind() throws IOException
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("supervisorTaskId cannot start with the '.' character.");
+    final String supervisorTaskId = "../" + siblingLocation.getName();
+    final Interval interval = Intervals.of("2018/2019");
+    final int partitionId = 0;
+    final String intervalAndPart =
+        StringUtils.format("%s/%s/%s", interval.getStart().toString(), interval.getEnd().toString(), partitionId);
+
+    final String someFile = "sneaky-snake.txt";
+
+    final String someFilePath = intervalAndPart + "/" + someFile;
+
+    // can only traverse to find files that are in a path of the form {start}/{end}/{partitionId}, so write a data file
+    // in a location like that
+    File dataFile = new File(siblingLocation, someFilePath);
+    FileUtils.write(
+        dataFile,
+        "test data",
+        StandardCharsets.UTF_8
+    );
+
+    Assert.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
+    Assert.assertTrue(
+        new File(intermediarySegmentsLocation, supervisorTaskId + "/" + someFilePath).exists());
+
+    final File foundFile1 = intermediaryDataManager.findPartitionFile(
+        supervisorTaskId,
+        someFile,
+        interval,
+        partitionId
+    );
+    Assert.assertNull(foundFile1);
   }
 
   private File generateSegmentDir(String fileName) throws IOException

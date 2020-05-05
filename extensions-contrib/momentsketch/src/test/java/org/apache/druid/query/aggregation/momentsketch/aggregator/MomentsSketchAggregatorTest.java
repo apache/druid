@@ -131,8 +131,12 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(400.0, sketchObject.getPowerSums()[0], 1e-10);
 
     MomentSketchWrapper sketchObjectWithNulls = (MomentSketchWrapper) row.get(1); // "sketchWithNulls"
-    // 23 null values, nulls at ingestion time are not replaced with default values for complex metrics inputs
-    Assert.assertEquals(377.0, sketchObjectWithNulls.getPowerSums()[0], 1e-10);
+    // 23 null values (377 when nulls are not replaced with default)
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? 400.0 : 377.0,
+        sketchObjectWithNulls.getPowerSums()[0],
+        1e-10
+    );
 
     double[] quantilesArray = (double[]) row.get(2); // "quantiles"
     Assert.assertEquals(0, quantilesArray[0], 0.05);
@@ -146,12 +150,16 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(0.9969, maxValue, 0.0001);
 
     double[] quantilesArrayWithNulls = (double[]) row.get(5); // "quantilesWithNulls"
-    Assert.assertEquals(5.0, quantilesArrayWithNulls[0], 0.05);
-    Assert.assertEquals(7.57, quantilesArrayWithNulls[1], 0.05);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 5.0, quantilesArrayWithNulls[0], 0.05);
+    Assert.assertEquals(
+        NullHandling.replaceWithDefault() ? 7.721400294818661d : 7.57,
+        quantilesArrayWithNulls[1],
+        0.05
+    );
     Assert.assertEquals(10.0, quantilesArrayWithNulls[2], 0.05);
 
     Double minValueWithNulls = (Double) row.get(6); // "minWithNulls"
-    Assert.assertEquals(5.0164, minValueWithNulls, 0.0001);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 5.0164, minValueWithNulls, 0.0001);
 
     Double maxValueWithNulls = (Double) row.get(7); // "maxWithNulls"
     Assert.assertEquals(9.9788, maxValueWithNulls, 0.0001);

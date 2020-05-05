@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.FluentIterable;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputRow;
@@ -65,6 +66,7 @@ import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
@@ -223,11 +225,10 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
     allSegments.addAll(pushedSegments);
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
-    final Set<DataSegment> oldSegments = timeline.findFullyOvershadowed()
-                                                 .stream()
-                                                 .flatMap(holder -> holder.getObject().stream())
-                                                 .map(PartitionChunk::getObject)
-                                                 .collect(Collectors.toSet());
+    final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
+                                                       .transformAndConcat(TimelineObjectHolder::getObject)
+                                                       .transform(PartitionChunk::getObject)
+                                                       .toSet();
     taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments));
 
     return TaskStatus.success(getId());

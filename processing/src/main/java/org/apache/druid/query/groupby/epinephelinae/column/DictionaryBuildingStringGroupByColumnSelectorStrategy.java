@@ -54,7 +54,7 @@ public class DictionaryBuildingStringGroupByColumnSelectorStrategy extends Strin
 
   public DictionaryBuildingStringGroupByColumnSelectorStrategy()
   {
-    super(null);
+    super(null, null);
   }
 
   @Override

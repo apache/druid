@@ -451,7 +451,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           Duration.millis(timeLeft)
       );
 
-      queryWatcher.registerQuery(query, future);
+      queryWatcher.registerQueryFuture(query, future);
 
       openConnections.getAndIncrement();
       Futures.addCallback(
@@ -521,7 +521,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     return retVal;
   }
 
-  private <T> void cancelQuery(Query<T> query, String cancelUrl)
+  private void cancelQuery(Query<T> query, String cancelUrl)
   {
     Runnable cancelRunnable = () -> {
       try {

@@ -34,6 +34,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
@@ -52,9 +53,8 @@ public class DataSourceAnalysisTest
   private static final TableDataSource TABLE_BAR = new TableDataSource("bar");
   private static final LookupDataSource LOOKUP_LOOKYLOO = new LookupDataSource("lookyloo");
   private static final InlineDataSource INLINE = InlineDataSource.fromIterable(
-      ImmutableList.of("column"),
-      ImmutableList.of(ValueType.STRING),
-      ImmutableList.of(new Object[0])
+      ImmutableList.of(new Object[0]),
+      RowSignature.builder().add("column", ValueType.STRING).build()
   );
 
   @Test
@@ -136,7 +136,7 @@ public class DataSourceAnalysisTest
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(LOOKUP_LOOKYLOO);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isQuery());
@@ -153,7 +153,7 @@ public class DataSourceAnalysisTest
     final QueryDataSource queryDataSource = subquery(LOOKUP_LOOKYLOO);
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(queryDataSource);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertTrue(analysis.isQuery());
@@ -172,7 +172,7 @@ public class DataSourceAnalysisTest
   {
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(INLINE);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isQuery());
@@ -378,7 +378,7 @@ public class DataSourceAnalysisTest
 
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(joinDataSource);
 
-    Assert.assertFalse(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isConcreteBased());
     Assert.assertFalse(analysis.isConcreteTableBased());
     Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isQuery());

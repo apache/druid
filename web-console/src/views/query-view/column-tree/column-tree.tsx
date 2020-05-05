@@ -27,7 +27,7 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { refExpressionFactory, SqlQuery, stringFactory } from 'druid-query-toolkit';
+import { SqlMulti, SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React, { ChangeEvent } from 'react';
 
 import { Loader } from '../../../components';
@@ -125,6 +125,32 @@ export interface ColumnTreeState {
   selectedTreeIndex: number;
 }
 
+export function getCurrentColumns(parsedQuery: SqlQuery, table: string) {
+  let lookupColumn;
+  let originalTableColumn;
+  if (
+    parsedQuery.joinTable &&
+    parsedQuery.joinTable.table === table &&
+    parsedQuery.onExpression &&
+    parsedQuery.onExpression instanceof SqlMulti
+  ) {
+    parsedQuery.onExpression.arguments.map(argument => {
+      if (argument instanceof SqlRef) {
+        if (argument.namespace === 'lookup') {
+          lookupColumn = argument.column;
+        } else {
+          originalTableColumn = argument.column;
+        }
+      }
+    });
+  }
+
+  return {
+    lookupColumn: lookupColumn || 'XXX',
+    originalTableColumn: originalTableColumn || 'XXX',
+  };
+}
+
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultTable } = props;
@@ -184,15 +210,77 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 icon={IconNames.EXCHANGE}
                                 text={`Replace FROM with: ${table}`}
                                 onClick={() => {
-                                  props.onQueryStringChange(
-                                    parsedQuery.replaceFrom(
-                                      refExpressionFactory(stringFactory(table, `"`)),
-                                    ),
-                                    true,
-                                  );
+                                  props.onQueryStringChange(parsedQuery.replaceFrom(table), true);
                                 }}
                               />
                             )}
+                            {parsedQuery && schema === 'lookup' && (
+                              <MenuItem
+                                popoverProps={{ openOnTargetFocus: false }}
+                                icon={IconNames.JOIN_TABLE}
+                                text={parsedQuery.joinTable ? `Replace join` : `Join`}
+                              >
+                                <MenuItem
+                                  icon={IconNames.LEFT_JOIN}
+                                  text={`Left join`}
+                                  onClick={() => {
+                                    const { lookupColumn, originalTableColumn } = getCurrentColumns(
+                                      parsedQuery,
+                                      table,
+                                    );
+                                    props.onQueryStringChange(
+                                      parsedQuery.addJoin(
+                                        'LEFT',
+                                        SqlRef.fromString(table, schema).upgrade(),
+                                        SqlMulti.sqlMultiFactory('=', [
+                                          SqlRef.fromString(lookupColumn, table, 'lookup'),
+                                          SqlRef.fromString(
+                                            originalTableColumn,
+                                            parsedQuery.getTableName(),
+                                          ),
+                                        ]),
+                                      ),
+                                      false,
+                                    );
+                                  }}
+                                />
+                                <MenuItem
+                                  icon={IconNames.INNER_JOIN}
+                                  text={`Inner join`}
+                                  onClick={() => {
+                                    const { lookupColumn, originalTableColumn } = getCurrentColumns(
+                                      parsedQuery,
+                                      table,
+                                    );
+                                    props.onQueryStringChange(
+                                      parsedQuery.addJoin(
+                                        'INNER',
+                                        SqlRef.fromString(table, schema).upgrade(),
+                                        SqlMulti.sqlMultiFactory('=', [
+                                          SqlRef.fromString(lookupColumn, table, 'lookup'),
+                                          SqlRef.fromString(
+                                            originalTableColumn,
+                                            parsedQuery.getTableName(),
+                                          ),
+                                        ]),
+                                      ),
+                                      false,
+                                    );
+                                  }}
+                                />
+                              </MenuItem>
+                            )}
+                            {parsedQuery &&
+                              parsedQuery.joinTable &&
+                              parsedQuery.joinTable.table === table && (
+                                <MenuItem
+                                  icon={IconNames.EXCHANGE}
+                                  text={`Remove join`}
+                                  onClick={() =>
+                                    props.onQueryStringChange(parsedQuery.removeJoin())
+                                  }
+                                />
+                              )}
                           </Menu>
                         );
                       }}
@@ -239,6 +327,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     (columnData.DATA_TYPE === 'BIGINT' ||
                                       columnData.DATA_TYPE === 'FLOAT') && (
                                       <NumberMenuItems
+                                        table={table}
+                                        schema={schema}
                                         columnName={columnData.COLUMN_NAME}
                                         parsedQuery={parsedQuery}
                                         onQueryChange={props.onQueryStringChange}
@@ -246,6 +336,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     )}
                                   {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
                                     <StringMenuItems
+                                      table={table}
+                                      schema={schema}
                                       columnName={columnData.COLUMN_NAME}
                                       parsedQuery={parsedQuery}
                                       onQueryChange={props.onQueryStringChange}
@@ -253,6 +345,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                   )}
                                   {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
                                     <TimeMenuItems
+                                      table={table}
+                                      schema={schema}
                                       columnName={columnData.COLUMN_NAME}
                                       parsedQuery={parsedQuery}
                                       onQueryChange={props.onQueryStringChange}

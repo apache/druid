@@ -63,7 +63,7 @@ public class ByteBufferWriter<T> implements Serializer
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     return headerOut.size() + valueOut.size();
   }

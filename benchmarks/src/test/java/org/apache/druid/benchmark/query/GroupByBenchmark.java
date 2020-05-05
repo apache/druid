@@ -735,7 +735,7 @@ public class GroupByBenchmark
   {
     List<QueryRunner<ResultRow>> runners = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      String segmentName = "qIndex " + i;
       QueryRunner<ResultRow> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           SegmentId.dummy(segmentName),

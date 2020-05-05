@@ -272,13 +272,12 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //dataSource
-        newLineBuilder.append(parsed[1]).append(","); //created_date
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[2])).append(","); //commit_metadata_payload
-        newLineBuilder.append(parsed[3]); //commit_metadata_sha1
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //dataSource
+                         + parsed[1] + "," //created_date
+                         + rewriteHexPayloadAsEscapedJson(parsed[2]) + "," //commit_metadata_payload
+                         + parsed[3] //commit_metadata_sha1
+                         + "\n";
+        writer.write(newLine);
 
       }
     }
@@ -303,13 +302,12 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //id
-        newLineBuilder.append(parsed[1]).append(","); //dataSource
-        newLineBuilder.append(parsed[2]).append(","); //version
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[3])); //payload
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //id
+                         + parsed[1] + "," //dataSource
+                         + parsed[2] + "," //version
+                         + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
+                         + "\n";
+        writer.write(newLine);
 
       }
     }
@@ -334,11 +332,10 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //name
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[1])); //payload
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //name
+                         + rewriteHexPayloadAsEscapedJson(parsed[1]) //payload
+                         + "\n";
+        writer.write(newLine);
 
       }
     }
@@ -363,13 +360,12 @@ public class ExportMetadata extends GuiceRunnable
       while ((line = reader.readLine()) != null) {
         String[] parsed = PARSER.parseLine(line);
 
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //id
-        newLineBuilder.append(parsed[1]).append(","); //spec_id
-        newLineBuilder.append(parsed[2]).append(","); //created_date
-        newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[3])); //payload
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
+        String newLine = parsed[0] + "," //id
+                         + parsed[1] + "," //spec_id
+                         + parsed[2] + "," //created_date
+                         + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
+                         + "\n";
+        writer.write(newLine);
 
       }
     }

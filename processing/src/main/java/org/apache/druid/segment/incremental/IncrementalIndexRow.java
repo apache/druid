@@ -126,7 +126,7 @@ public final class IncrementalIndexRow
    */
   public long estimateBytesInMemory()
   {
-    long sizeInBytes = Long.BYTES + Integer.BYTES * dims.length + Long.BYTES + Long.BYTES;
+    long sizeInBytes = Long.BYTES + ((long) Integer.BYTES) * dims.length + Long.BYTES + Long.BYTES;
     sizeInBytes += dimsKeySize;
     return sizeInBytes;
   }

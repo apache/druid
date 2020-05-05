@@ -32,10 +32,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -96,7 +96,7 @@ public class Grouping
     }
 
     // Verify that items in the output signature exist.
-    for (final String field : outputRowSignature.getRowOrder()) {
+    for (final String field : outputRowSignature.getColumnNames()) {
       if (!seen.contains(field)) {
         throw new ISE("Missing field in rowOrder: %s", field);
       }

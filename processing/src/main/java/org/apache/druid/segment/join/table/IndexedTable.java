@@ -20,11 +20,9 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -40,15 +38,10 @@ public interface IndexedTable
   Set<String> keyColumns();
 
   /**
-   * Returns all columns of this table, including the key and non-key columns.
+   * Returns the signature of this table, which includes all key columns (as well as other columns that can be
+   * selected, but are not keys).
    */
-  List<String> allColumns();
-
-  /**
-   * Returns the signature of this table: a map where each key is a column from {@link #allColumns()} and each value
-   * is a type code.
-   */
-  Map<String, ValueType> rowSignature();
+  RowSignature rowSignature();
 
   /**
    * Returns the number of rows in this table. It must not change over time, since it is used for things like algorithm
@@ -58,13 +51,13 @@ public interface IndexedTable
 
   /**
    * Returns the index for a particular column. The provided column number must be that column's position in
-   * {@link #allColumns()}.
+   * {@link #rowSignature()}.
    */
   Index columnIndex(int column);
 
   /**
    * Returns a reader for a particular column. The provided column number must be that column's position in
-   * {@link #allColumns()}.
+   * {@link #rowSignature()}.
    */
   Reader columnReader(int column);
 

@@ -81,6 +81,7 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
     abstract void write(WriteOutBytes out, int v) throws IOException;
   }
 
+  private final String columnName;
   private final int maxId;
   private final WriteInt writeInt;
 
@@ -92,8 +93,13 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
   private int numWritten = 0;
   private boolean numBytesForMaxWritten = false;
 
-  public VSizeColumnarMultiIntsSerializer(SegmentWriteOutMedium segmentWriteOutMedium, int maxId)
+  public VSizeColumnarMultiIntsSerializer(
+      String columnName,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      int maxId
+  )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.maxId = maxId;
     this.writeInt = WriteInt.values()[VSizeColumnarInts.getNumBytesForMax(maxId) - 1];
@@ -120,6 +126,9 @@ public class VSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerialize
     headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
 
     ++numWritten;
+    if (numWritten < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

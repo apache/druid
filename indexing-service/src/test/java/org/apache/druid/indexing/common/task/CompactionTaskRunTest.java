@@ -129,7 +129,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
       ImmutableMap.of(
           "bitmap",
-          ImmutableMap.of("type", "concise"),
+          ImmutableMap.of("type", "roaring", "compressRunOnSerialization", true),
           "dimensionCompression",
           "lz4",
           "metricCompression",

@@ -31,6 +31,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
@@ -41,6 +42,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +80,11 @@ public class CoordinatorResourceTestClient
     return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
+  private String getFullSegmentsMetadataURL(String dataSource)
+  {
+    return StringUtils.format("%smetadata/datasources/%s/segments?full", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
+  }
+
   private String getIntervalsURL(String dataSource)
   {
     return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
@@ -102,6 +109,24 @@ public class CoordinatorResourceTestClient
 
       segments = jsonMapper.readValue(
           response.getContent(), new TypeReference<List<String>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return segments;
+  }
+
+  public List<DataSegment> getFullSegmentsMetadata(final String dataSource)
+  {
+    List<DataSegment> segments;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsMetadataURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<DataSegment>>()
           {
           }
       );
@@ -166,6 +191,14 @@ public class CoordinatorResourceTestClient
     return status;
   }
 
+  /**
+   * Warning: This API reads segments from {@link SqlSegmentsMetadataManager} of the Coordinator which
+   * caches segments in memory and periodically updates them. Hence, there can be a race condition as
+   * this API implementation compares segments metadata from cache with segments in historicals.
+   * Particularly, when number of segment changes after the first initial load of the datasource.
+   * Workaround is to verify the number of segments matches expected from {@link #getSegments(String) getSegments}
+   * before calling this method (since, that would wait until the cache is updated with expected data)
+   */
   public boolean areSegmentsLoaded(String dataSource)
   {
     final Map<String, Integer> status = getLoadStatus();
@@ -262,13 +295,29 @@ public class CoordinatorResourceTestClient
     return results2;
   }
 
+  @Nullable
   private Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> getLookupLoadStatus()
   {
     String url = StringUtils.format("%slookups/nodeStatus", getCoordinatorURL());
 
     Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, url);
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, new URL(url)),
+          responseHandler
+      ).get();
+
+      if (response.getStatus().getCode() == HttpResponseStatus.NOT_FOUND.getCode()) {
+        return null;
+      }
+      if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+      }
 
       status = jsonMapper.readValue(
           response.getContent(), new TypeReference<Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>>>()
@@ -285,6 +334,10 @@ public class CoordinatorResourceTestClient
   public boolean areLookupsLoaded(String lookup)
   {
     final Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status = getLookupLoadStatus();
+
+    if (status == null) {
+      return false;
+    }
 
     final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> defaultTier = status.get("__default");
 

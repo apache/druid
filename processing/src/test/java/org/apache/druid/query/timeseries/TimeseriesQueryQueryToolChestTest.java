@@ -22,6 +22,7 @@ package org.apache.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -42,7 +43,10 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -53,6 +57,12 @@ import java.util.Arrays;
 public class TimeseriesQueryQueryToolChestTest
 {
   private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -354,7 +364,7 @@ public class TimeseriesQueryQueryToolChestTest
   }
 
   @Test
-  public void testResultArrayFields()
+  public void testResultArraySignature()
   {
     final TimeseriesQuery query =
         Druids.newTimeseriesQueryBuilder()
@@ -367,8 +377,14 @@ public class TimeseriesQueryQueryToolChestTest
               .build();
 
     Assert.assertEquals(
-        ImmutableList.of("__time", "rows", "index", "uniques", "const"),
-        TOOL_CHEST.resultArrayFields(query)
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        TOOL_CHEST.resultArraySignature(query)
     );
   }
 

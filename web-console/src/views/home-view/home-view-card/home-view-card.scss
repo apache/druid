@@ -20,4 +20,17 @@
   .bp3-card {
     height: 170px;
   }
+
+  &:hover {
+    text-decoration: none;
+  }
+
+  p {
+    padding-left: 20px;
+  }
+}
+
+.bp3-dark a.home-view-card,
+.bp3-dark a.home-view-card:hover {
+  color: inherit;
 }

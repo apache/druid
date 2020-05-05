@@ -104,6 +104,7 @@ import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -338,7 +339,8 @@ public class CachingClusteredClientBenchmark
         new CacheConfig(),
         new DruidHttpClientConfig(),
         processingConfig,
-        forkJoinPool
+        forkJoinPool,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 

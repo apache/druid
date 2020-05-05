@@ -23,6 +23,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
@@ -31,6 +32,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -41,7 +43,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  *
@@ -198,6 +202,63 @@ public class S3Utils
     }
 
     return objectSummary;
+  }
+
+  /**
+   * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
+   * @param s3Client s3 client
+   * @param config   specifies the configuration to use when finding matching files in S3 to delete
+   * @param bucket   s3 bucket
+   * @param prefix   the file prefix
+   * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
+   * @throws Exception
+   */
+  public static void deleteObjectsInPath(
+      ServerSideEncryptingAmazonS3 s3Client,
+      S3InputDataConfig config,
+      String bucket,
+      String prefix,
+      Predicate<S3ObjectSummary> filter
+  )
+      throws Exception
+  {
+    final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(config.getMaxListingLength());
+    final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
+        s3Client,
+        ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
+        config.getMaxListingLength()
+    );
+
+    while (iterator.hasNext()) {
+      final S3ObjectSummary nextObject = iterator.next();
+      if (filter.apply(nextObject)) {
+        keysToDelete.add(new DeleteObjectsRequest.KeyVersion(nextObject.getKey()));
+        if (keysToDelete.size() == config.getMaxListingLength()) {
+          deleteBucketKeys(s3Client, bucket, keysToDelete);
+          log.info("Deleted %d files", keysToDelete.size());
+          keysToDelete.clear();
+        }
+      }
+    }
+
+    if (keysToDelete.size() > 0) {
+      deleteBucketKeys(s3Client, bucket, keysToDelete);
+      log.info("Deleted %d files", keysToDelete.size());
+    }
+  }
+
+  private static void deleteBucketKeys(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String bucket,
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete
+  )
+      throws Exception
+  {
+    DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
+    S3Utils.retryS3Operation(() -> {
+      s3Client.deleteObjects(deleteRequest);
+      return null;
+    });
   }
 
   /**
