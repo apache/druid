@@ -221,7 +221,8 @@ public class JoinFilterAnalyzer
       // LHS join column instead.
       // Currently, we only support rewrites of filters that operate on a single column for simplicity.
       Set<String> requiredColumns = orClause.getRequiredColumns();
-      if (doesRequiredColumnSetSupportDirectJoinFilterRewrite(requiredColumns, equiconditions)) {
+      if (orClause.supportsRequiredColumnRewrite() &&
+          doesRequiredColumnSetSupportDirectJoinFilterRewrite(requiredColumns, equiconditions)) {
         String reqColumn = requiredColumns.iterator().next();
         JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
         rhsRewriteCandidates.add(
@@ -269,7 +270,7 @@ public class JoinFilterAnalyzer
     // JoinFilterColumnCorrelationAnalysis objects, which are shared across all rhsFilterColumn entries that belong
     // to the same RHS table.
     //
-    // The value is a List<JoinFilterColumnCorreationAnalysis> instead of a single value because a table can be joined
+    // The value is a List<JoinFilterColumnCorrelationAnalysis> instead of a single value because a table can be joined
     // to another via multiple columns.
     // (See JoinFilterAnalyzerTest.test_filterPushDown_factToRegionOneColumnToTwoRHSColumnsAndFilterOnRHS for an example)
     Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn = new HashMap<>();
@@ -285,8 +286,9 @@ public class JoinFilterAnalyzer
                   rhsRewriteCandidate.getRhsColumn(),
                   (rhsCol) -> Optional.of(new ArrayList<>())
               );
+          assert (perColumnCorrelations.isPresent());
           perColumnCorrelations.get().add(correlationForPrefix.getValue());
-          if (rhsRewriteCandidate.isJoinColumn()) {
+          if (rhsRewriteCandidate.isDirectRewrite()) {
             // we don't need to determine correlated values if the filter is on the join column
             continue;
           }
@@ -436,7 +438,7 @@ public class JoinFilterAnalyzer
       );
     }
 
-    if (doesRequiredColumnSetSupportDirectJoinFilterRewrite(
+    if (filterClause.supportsRequiredColumnRewrite() && doesRequiredColumnSetSupportDirectJoinFilterRewrite(
         filterClause.getRequiredColumns(),
         joinFilterPreAnalysis.getEquiconditions()
     )) {
@@ -470,25 +472,6 @@ public class JoinFilterAnalyzer
     }
 
     List<Filter> newFilters = new ArrayList<>();
-    /*
-    if (areSomeColumnsFromPostJoinVirtualColumns(
-        joinFilterPreAnalysis.getPostJoinVirtualColumns(),
-        filterClause.getRequiredColumns()
-    )) {
-      return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
-    }
-    */
-
-    /*
-    if (!areSomeColumnsFromJoin(joinFilterPreAnalysis.getJoinableClauses(), filterClause.getRequiredColumns())) {
-      return new JoinFilterAnalysis(
-          false,
-          filterClause,
-          filterClause,
-          pushdownVirtualColumns
-      );
-    }
-    */
 
     // we only support direct rewrites of filters that reference a single column
     String reqColumn = filterClause.getRequiredColumns().iterator().next();
@@ -783,7 +766,7 @@ public class JoinFilterAnalyzer
     JoinConditionAnalysis jca = clauseForTablePrefix.getCondition();
 
     Set<String> rhsColumns = new HashSet<>();
-    if (rhsRewriteCandidate.isJoinColumn()) {
+    if (rhsRewriteCandidate.isDirectRewrite()) {
       // If we filter on a RHS join column, we only need to consider that column from the RHS side
       rhsColumns.add(rhsRewriteCandidate.getRhsColumn());
     } else {
@@ -991,7 +974,7 @@ public class JoinFilterAnalyzer
 
   private static class RhsRewriteCandidate
   {
-    private final boolean isJoinColumn;
+    private final boolean isDirectRewrite;
     private final JoinableClause joinableClause;
     private final String rhsColumn;
     private final String valueForRewrite;
@@ -1000,13 +983,13 @@ public class JoinFilterAnalyzer
         JoinableClause joinableClause,
         String rhsColumn,
         String valueForRewrite,
-        boolean isJoinColumn
+        boolean isDirectRewrite
     )
     {
       this.joinableClause = joinableClause;
       this.rhsColumn = rhsColumn;
       this.valueForRewrite = valueForRewrite;
-      this.isJoinColumn = isJoinColumn;
+      this.isDirectRewrite = isDirectRewrite;
     }
 
     public JoinableClause getJoinableClause()
@@ -1024,9 +1007,9 @@ public class JoinFilterAnalyzer
       return valueForRewrite;
     }
 
-    public boolean isJoinColumn()
+    public boolean isDirectRewrite()
     {
-      return isJoinColumn;
+      return isDirectRewrite;
     }
   }
 }

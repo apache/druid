@@ -1646,10 +1646,19 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ExprMacroTable.nil()
     ).toFilter();
 
+    Filter specialSelectorFilter = new SelectorFilter("rtc.countryIsoCode", "CA") {
+      @Override
+      public boolean supportsRequiredColumnRewrite()
+      {
+        return false;
+      }
+    };
+
     Filter originalFilter = new AndFilter(
         ImmutableList.of(
             new SelectorFilter("r1.regionIsoCode", "ON"),
             new SelectorFilter("rtc.countryIsoCode", "CA"),
+            specialSelectorFilter,
             new BoundFilter(new BoundDimFilter(
                 "rtc.countryIsoCode",
                 "CA",
@@ -1779,6 +1788,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                     null
                 )),
                 new InDimFilter(rewrittenCountryIsoCodeColumnName, ImmutableSet.of("CA", "CA2", "CA3"), null, null).toFilter(),
+                new InDimFilter(rewrittenCountryIsoCodeColumnName, ImmutableSet.of("CA"), null, null).toFilter(),
                 new OrFilter(
                     ImmutableList.of(
                         new SelectorFilter("channel", "#fr.wikipedia"),
@@ -1816,6 +1826,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ),
         new AndFilter(
             ImmutableList.of(
+                specialSelectorFilter,
                 expressionFilter,
                 new OrFilter(
                     ImmutableList.of(
