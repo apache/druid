@@ -161,7 +161,6 @@ public class InDimFilter implements DimFilter
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
           .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
-          .appendByte(DimFilterUtils.STRING_SEPARATOR)
           .appendByteArray(hasher.hash().asBytes())
           .build();
     }
