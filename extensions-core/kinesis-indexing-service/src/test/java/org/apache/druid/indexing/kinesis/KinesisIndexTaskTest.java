@@ -2034,12 +2034,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             .andReturn(Collections.emptyList())
             .anyTimes();
 
-    EasyMock.expect(recordSupplier.getPartitionTimeLag(EasyMock.anyObject()))
-            .andReturn(null)
-            .anyTimes();
-
     replayAll();
-
 
     final KinesisIndexTask task1 = createTask(
         "task1",

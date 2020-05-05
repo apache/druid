@@ -1371,7 +1371,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
-    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.updateCurrentAndLatestOffsets().run();
     SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
@@ -1481,7 +1481,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
-    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.updateCurrentAndLatestOffsets().run();
     SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
@@ -1625,7 +1625,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
-    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.updateCurrentAndLatestOffsets().run();
     SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
