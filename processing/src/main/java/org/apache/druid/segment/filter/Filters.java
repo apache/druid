@@ -500,28 +500,14 @@ public class Filters
   }
 
   /**
-   * Create a filter representing an OR relationship across a list of filters.
+   * Create a filter representing an OR relationship across a set of filters.
    *
-   * @param filterList List of filters
+   * @param filterSet Set of filters
    *
-   * @return If filterList has more than one element, return an OR filter composed of the filters from filterList
-   * If filterList has a single element, return that element alone
-   * If filterList is empty, return null
+   * @return If filterSet has more than one element, return an OR filter composed of the filters from filterSet
+   * If filterSet has a single element, return that element alone
+   * If filterSet is empty, return null
    */
-  @Nullable
-  public static Filter or(List<Filter> filterList)
-  {
-    if (filterList.isEmpty()) {
-      return null;
-    }
-
-    if (filterList.size() == 1) {
-      return filterList.get(0);
-    }
-
-    return new OrFilter(filterList);
-  }
-
   @Nullable
   public static Filter or(Set<Filter> filterSet)
   {
