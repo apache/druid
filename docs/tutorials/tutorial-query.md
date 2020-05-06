@@ -26,11 +26,11 @@ sidebar_label: "Querying data"
 
 This tutorial will demonstrate how to query data in Apache Druid, with examples for Druid SQL and Druid's native query format.
 
-The tutorial assumes that you've already completed one of the 4 ingestion tutorials, as we will be querying the sample Wikipedia edits data.
+The tutorial assumes that you've already completed the [Quickstart](../tutorials/index.md) or one of the other ingestion tutorials, as we will be querying the Wikipedia datasource created in those guides.
 
-* [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
 * [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.md)
 * [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
+* [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
 
 Druid queries are sent over HTTP.
 The Druid console includes a view to issue queries to Druid and nicely format the results.
