@@ -56,7 +56,8 @@ public class ServerConfig
       @NotNull Period unannouncePropagationDelay,
       int inflateBufferSize,
       int compressionLevel,
-      boolean enableForwardedRequestCustomizer
+      boolean enableForwardedRequestCustomizer,
+      boolean sendServerVersion
   )
   {
     this.numThreads = numThreads;
@@ -73,6 +74,7 @@ public class ServerConfig
     this.inflateBufferSize = inflateBufferSize;
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
+    this.sendServerVersion = sendServerVersion;
   }
 
   public ServerConfig()
@@ -133,6 +135,9 @@ public class ServerConfig
 
   @JsonProperty
   private boolean enableForwardedRequestCustomizer = false;
+
+  @JsonProperty
+  private boolean sendServerVersion = true;
 
   public int getNumThreads()
   {
@@ -204,6 +209,11 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
+  public boolean isSendServerVersion()
+  {
+    return sendServerVersion;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -225,6 +235,7 @@ public class ServerConfig
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           sendServerVersion == that.sendServerVersion &&
            maxIdleTime.equals(that.maxIdleTime) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay);
@@ -247,7 +258,8 @@ public class ServerConfig
         unannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,
-        enableForwardedRequestCustomizer
+        enableForwardedRequestCustomizer,
+        sendServerVersion
     );
   }
 
@@ -269,6 +281,7 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
+           ", sendServerVersion=" + sendServerVersion +
            '}';
   }
 
