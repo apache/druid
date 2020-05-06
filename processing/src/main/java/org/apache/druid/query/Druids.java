@@ -203,7 +203,7 @@ public class Druids
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      final Set<String> filterValues = Sets.newHashSet(value);
+      final Set<String> filterValues = Sets.newHashSet(values);
       filterValues.add(value);
       dimFilter = new InDimFilter(dimensionName, filterValues, null, null);
       return this;
