@@ -1156,7 +1156,7 @@ public class IndexTaskTest extends IngestionTestBase
           tmpDir,
           timestampSpec,
           dimensionsSpec,
-          new JsonInputFormat(null, null),
+          new JsonInputFormat(null, null, null),
           null,
           null,
           tuningConfig,
@@ -1166,7 +1166,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new JSONParseSpec(timestampSpec, dimensionsSpec, null, null),
+          new JSONParseSpec(timestampSpec, dimensionsSpec, null, null, null),
           null,
           null,
           tuningConfig,

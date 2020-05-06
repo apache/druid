@@ -66,7 +66,8 @@ public class StreamChunkParserTest
             TIMESTAMP_SPEC,
             DimensionsSpec.EMPTY,
             JSONPathSpec.DEFAULT,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         ),
         StringUtils.UTF8_STRING
     );
@@ -117,7 +118,8 @@ public class StreamChunkParserTest
             TIMESTAMP_SPEC,
             DimensionsSpec.EMPTY,
             JSONPathSpec.DEFAULT,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         ),
         StringUtils.UTF8_STRING
     );
@@ -147,29 +149,6 @@ public class StreamChunkParserTest
     Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
   }
 
-<<<<<<< HEAD
-=======
-  private static class NotConvertibleToInputFormatParseSpec extends JSONParseSpec
-  {
-    private NotConvertibleToInputFormatParseSpec()
-    {
-      super(
-          TIMESTAMP_SPEC,
-          DimensionsSpec.EMPTY,
-          JSONPathSpec.DEFAULT,
-          Collections.emptyMap(),
-          false
-      );
-    }
-
-    @Override
-    public InputFormat toInputFormat()
-    {
-      return null;
-    }
-  }
-
->>>>>>> ba5f5f14ec... move keepNullColmns to JSONParseSpec
   private static class TrackingJsonInputFormat extends JsonInputFormat
   {
     private boolean used;
