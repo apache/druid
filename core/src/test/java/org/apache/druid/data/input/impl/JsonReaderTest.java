@@ -147,7 +147,7 @@ public class JsonReaderTest
             )
         ),
         null,
-        null
+        true
     );
 
     final ByteEntity source = new ByteEntity(

@@ -60,7 +60,7 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
 
   public JSONParseSpec(TimestampSpec ts, DimensionsSpec dims)
   {
-    this(ts, dims, null, null, null);
+    this(ts, dims, null, null, false);
   }
 
   @Override
