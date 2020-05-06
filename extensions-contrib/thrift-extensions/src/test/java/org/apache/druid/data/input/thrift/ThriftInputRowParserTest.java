@@ -67,9 +67,10 @@ public class ThriftInputRowParserTest
                                       Lists.newArrayList(
                                           new JSONPathFieldSpec(JSONPathFieldType.ROOT, "title", "title"),
                                           new JSONPathFieldSpec(JSONPathFieldType.PATH, "lastName", "$.author.lastName")
-                                      ),
-                                      false
-                                  ), null
+                                      )
+                                  ),
+                                  null,
+                                  null
     );
   }
 

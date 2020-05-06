@@ -70,9 +70,10 @@ public class ProtobufInputRowParserTest
                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "eventType", "eventType"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "foobar", "$.foo.bar"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar0", "$.bar[0].bar")
-            ),
-            false
-        ), null
+            )
+        ),
+        null,
+        null
     );
 
   }

@@ -52,9 +52,9 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
-            ),
-            false
+            )
         ),
+        null,
         null
     );
 
@@ -102,9 +102,9 @@ public class JsonReaderTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.[?(@.maybe_object)].maybe_object.foo.test"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "baz", "$.maybe_object_2.foo.test"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
-            ),
-            false
+            )
         ),
+        null,
         null
     );
 
@@ -144,9 +144,9 @@ public class JsonReaderTest
             true,
             ImmutableList.of(
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg")
-            ),
-            true
+            )
         ),
+        null,
         null
     );
 
@@ -169,11 +169,12 @@ public class JsonReaderTest
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
         Assert.assertEquals(Arrays.asList("path_omg", "timestamp", "bar", "foo"), row.getDimensions());
-        Assert.assertEquals(Collections.emptyList(), row.getDimension("bar"));
+        Assert.assertTrue(row.getDimension("bar").isEmpty());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals(Collections.emptyList(), row.getDimension("path_omg"));
+        Assert.assertTrue(row.getDimension("path_omg").isEmpty());
         numActualIterations++;
       }
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 }

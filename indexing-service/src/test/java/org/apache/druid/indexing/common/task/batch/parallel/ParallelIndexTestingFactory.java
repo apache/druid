@@ -273,6 +273,6 @@ class ParallelIndexTestingFactory
 
   static InputFormat getInputFormat()
   {
-    return new JsonInputFormat(null, null);
+    return new JsonInputFormat(null, null, null);
   }
 }

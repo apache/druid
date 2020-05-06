@@ -48,10 +48,10 @@ public class JsonInputFormatTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
-            ),
-            false
+            )
         ),
-        ImmutableMap.of(Feature.ALLOW_COMMENTS.name(), true, Feature.ALLOW_UNQUOTED_FIELD_NAMES.name(), false)
+        ImmutableMap.of(Feature.ALLOW_COMMENTS.name(), true, Feature.ALLOW_UNQUOTED_FIELD_NAMES.name(), false),
+        false
     );
     final byte[] bytes = mapper.writeValueAsBytes(format);
     final JsonInputFormat fromJson = (JsonInputFormat) mapper.readValue(bytes, InputFormat.class);

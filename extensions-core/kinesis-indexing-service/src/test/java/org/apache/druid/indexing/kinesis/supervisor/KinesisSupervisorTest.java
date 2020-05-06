@@ -113,8 +113,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
-      new JSONPathSpec(true, ImmutableList.of(), false),
-      ImmutableMap.of()
+      new JSONPathSpec(true, ImmutableList.of()),
+      ImmutableMap.of(),
+      false
   );
   private static final String DATASOURCE = "testDS";
   private static final int TEST_CHAT_THREADS = 3;

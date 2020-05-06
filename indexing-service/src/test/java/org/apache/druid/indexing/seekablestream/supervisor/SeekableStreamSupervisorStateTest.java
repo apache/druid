@@ -757,7 +757,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
         "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of(), false), ImmutableMap.of()),
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
         1,
         1,
         new Period("PT1H"),
@@ -811,7 +811,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of(), false), ImmutableMap.of()),
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
         1,
         1,
         new Period("PT1H"),

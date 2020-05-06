@@ -95,6 +95,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
                   null
               ),
               null,
+              null,
               null
           )
       )

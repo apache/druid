@@ -84,7 +84,7 @@ public class StreamChunkParserTest
   @Test
   public void testWithNullParserAndInputformatParseProperly() throws IOException
   {
-    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap());
+    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null);
     final StreamChunkParser chunkParser = new StreamChunkParser(
         null,
         inputFormat,
@@ -147,13 +147,36 @@ public class StreamChunkParserTest
     Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
   }
 
+<<<<<<< HEAD
+=======
+  private static class NotConvertibleToInputFormatParseSpec extends JSONParseSpec
+  {
+    private NotConvertibleToInputFormatParseSpec()
+    {
+      super(
+          TIMESTAMP_SPEC,
+          DimensionsSpec.EMPTY,
+          JSONPathSpec.DEFAULT,
+          Collections.emptyMap(),
+          false
+      );
+    }
+
+    @Override
+    public InputFormat toInputFormat()
+    {
+      return null;
+    }
+  }
+
+>>>>>>> ba5f5f14ec... move keepNullColmns to JSONParseSpec
   private static class TrackingJsonInputFormat extends JsonInputFormat
   {
     private boolean used;
 
     private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec, @Nullable Map<String, Boolean> featureSpec)
     {
-      super(flattenSpec, featureSpec);
+      super(flattenSpec, featureSpec, null);
     }
 
     @Override

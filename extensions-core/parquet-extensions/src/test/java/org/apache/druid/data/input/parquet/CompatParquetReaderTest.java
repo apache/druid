@@ -120,7 +120,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "col", "col"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "metric1", "$.col")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -206,7 +206,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByLogicalMap", "$.intToStringColumn.1"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractByComplexLogicalMap", "$.complexColumn.1[0].nestedIntsColumn[1]")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -320,7 +320,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     List<JSONPathFieldSpec> flattenExpr = ImmutableList.of(
         new JSONPathFieldSpec(JSONPathFieldType.ROOT, "repeatedInt", "repeatedInt")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -359,7 +359,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extracted1", "$.myComplex[0].id"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extracted2", "$.myComplex[0].repeatedMessage[*].someId")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
         file,
         schema,
@@ -402,7 +402,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractedRequired", "$.requiredMessage.someId"),
         new JSONPathFieldSpec(JSONPathFieldType.PATH, "extractedRepeated", "$.repeatedMessage[*]")
     );
-    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr, false);
+    JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     InputEntityReader reader = createReader(
         file,
         schema,

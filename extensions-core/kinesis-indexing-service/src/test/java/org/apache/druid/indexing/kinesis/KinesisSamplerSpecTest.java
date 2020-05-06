@@ -135,7 +135,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         new KinesisSupervisorIOConfig(
             STREAM,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of(), false), ImmutableMap.of()),
+            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
             null,
             null,
             null,
