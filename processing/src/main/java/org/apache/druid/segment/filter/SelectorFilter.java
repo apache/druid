@@ -38,6 +38,11 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
+ * This filter is to select the rows where the {@link #dimension} has the {@link #value}. The value can be null.
+ * In SQL-compatible null handling mode, this filter is equivalent to {@code dimension = value}
+ * or {@code dimension IS NULL} when the value is null.
+ * In default null handling mode, this filter is equivalent to {@code dimension = value} or
+ * {@code dimension = ''} when the value is null.
  */
 public class SelectorFilter implements Filter
 {

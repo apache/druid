@@ -20,32 +20,28 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.filter.TrueFilter;
+import org.apache.druid.segment.filter.FalseFilter;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Set;
 
-public class TrueDimFilter implements DimFilter
+public class FalseDimFilter implements DimFilter
 {
-  private static final TrueDimFilter INSTANCE = new TrueDimFilter();
-  private static final byte[] CACHE_KEY = new CacheKeyBuilder(DimFilterUtils.TRUE_CACHE_ID).build();
+  private static final FalseDimFilter INSTANCE = new FalseDimFilter();
+  private static final byte[] CACHE_KEY = new CacheKeyBuilder(DimFilterUtils.FALSE_CACHE_ID).build();
 
   @JsonCreator
-  public static TrueDimFilter instance()
+  public static FalseDimFilter instance()
   {
     return INSTANCE;
   }
 
-  private TrueDimFilter()
+  private FalseDimFilter()
   {
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return CACHE_KEY;
   }
 
   @Override
@@ -57,13 +53,14 @@ public class TrueDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return TrueFilter.instance();
+    return FalseFilter.instance();
   }
 
+  @Nullable
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    return null;
+    return ImmutableRangeSet.of();
   }
 
   @Override
@@ -73,9 +70,15 @@ public class TrueDimFilter implements DimFilter
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    return CACHE_KEY;
+  }
+
+  @Override
   public int hashCode()
   {
-    return DimFilterUtils.TRUE_CACHE_ID;
+    return DimFilterUtils.FALSE_CACHE_ID;
   }
 
   @Override
@@ -87,6 +90,6 @@ public class TrueDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    return "TRUE";
+    return "FALSE";
   }
 }

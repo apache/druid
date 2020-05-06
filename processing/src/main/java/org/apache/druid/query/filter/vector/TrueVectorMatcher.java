@@ -17,31 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation;
+package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.query.filter.TrueDimFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.segment.vector.VectorSizeInspector;
 
-public class FilteredAggregatorFactoryTest
+public class TrueVectorMatcher implements VectorValueMatcher
 {
-  @Test
-  public void testSimpleNaming()
+  private final VectorSizeInspector vectorSizeInspector;
+
+  public TrueVectorMatcher(VectorSizeInspector vectorSizeInspector)
   {
-    Assert.assertEquals("overrideName", new FilteredAggregatorFactory(
-        new CountAggregatorFactory("foo"),
-        TrueDimFilter.instance(),
-        "overrideName"
-    ).getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
-        new CountAggregatorFactory("delegateName"),
-        TrueDimFilter.instance(),
-        ""
-    ).getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
-        new CountAggregatorFactory("delegateName"),
-        TrueDimFilter.instance(),
-        null
-    ).getName());
+    this.vectorSizeInspector = vectorSizeInspector;
+  }
+
+  @Override
+  public ReadableVectorMatch match(ReadableVectorMatch mask)
+  {
+    // The given mask is all true for its valid selections.
+    return mask;
+  }
+
+  @Override
+  public int getMaxVectorSize()
+  {
+    return vectorSizeInspector.getMaxVectorSize();
+  }
+
+  @Override
+  public int getCurrentVectorSize()
+  {
+    return vectorSizeInspector.getCurrentVectorSize();
   }
 }
