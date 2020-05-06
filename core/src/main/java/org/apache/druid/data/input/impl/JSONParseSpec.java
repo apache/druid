@@ -50,7 +50,7 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
   {
     super(timestampSpec, dimensionsSpec, flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT);
     this.objectMapper = new ObjectMapper();
-    this.keepNullColumns = keepNullColumns;
+    this.keepNullColumns = keepNullColumns = null ? false : keepNullColumns;
     this.featureSpec = (featureSpec == null) ? new HashMap<>() : featureSpec;
     for (Map.Entry<String, Boolean> entry : this.featureSpec.entrySet()) {
       Feature feature = Feature.valueOf(entry.getKey());
