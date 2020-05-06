@@ -26,7 +26,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -47,14 +46,12 @@ public class ExpressionFilter implements Filter
   private final Supplier<Expr> expr;
   private final Supplier<Set<String>> requiredBindings;
   private final FilterTuning filterTuning;
-  private final ExprMacroTable exprMacroTable;
 
-  public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning, ExprMacroTable exprMacroTable)
+  public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning)
   {
     this.expr = expr;
     this.requiredBindings = Suppliers.memoize(() -> expr.get().analyzeInputs().getRequiredBindings());
     this.filterTuning = filterTuning;
-    this.exprMacroTable = exprMacroTable;
   }
 
   @Override
