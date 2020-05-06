@@ -109,6 +109,9 @@ public class InDimFilter implements DimFilter
     this.doublePredicateSupplier = getDoublePredicateSupplier();
   }
 
+  /**
+   * This constructor should be called only in unit tests since it creates a new hash set wrapping the given values.
+   */
   @VisibleForTesting
   public InDimFilter(String dimension, Collection<String> values, @Nullable ExtractionFn extractionFn)
   {

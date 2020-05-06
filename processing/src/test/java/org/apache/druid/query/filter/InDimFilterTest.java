@@ -62,7 +62,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   public void testGetValuesWithValuesSetOfNonEmptyStringsUseTheGivenSet()
   {
     final Set<String> values = ImmutableSet.of("v1", "v2", "v3");
-    final InDimFilter filter = new InDimFilter("dim", values, null);
+    final InDimFilter filter = new InDimFilter("dim", values, null, null);
     Assert.assertSame(values, filter.getValues());
   }
 
@@ -70,7 +70,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   public void testGetValuesWithValuesSetIncludingEmptyString()
   {
     final Set<String> values = Sets.newHashSet("v1", "", "v3");
-    final InDimFilter filter = new InDimFilter("dim", values, null);
+    final InDimFilter filter = new InDimFilter("dim", values, null, null);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertNotSame(values, filter.getValues());
       Assert.assertEquals(Sets.newHashSet("v1", null, "v3"), filter.getValues());
