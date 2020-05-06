@@ -67,20 +67,24 @@ public class LookupJoinMatcherTest
   }
 
   @Test
-  public void testCreateConditionAlwaysFalse()
+  public void testCreateConditionAlwaysFalseShouldReturnSuccessfullyAndNotThrowException()
   {
     JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("0", PREFIX, ExprMacroTable.nil());
     target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false);
-    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false);
+    Assert.assertNotNull(target);
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    Assert.assertNotNull(target);
   }
 
   @Test
-  public void testCreateConditionAlwaysTrue()
+  public void testCreateConditionAlwaysTrueShouldReturnSuccessfullyAndNotThrowException()
   {
     JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("1", PREFIX, ExprMacroTable.nil());
     Mockito.doReturn(true).when(extractor).canIterate();
     target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false);
+    Assert.assertNotNull(target);
     target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    Assert.assertNotNull(target);
   }
 
   @Test
