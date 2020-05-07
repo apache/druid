@@ -55,7 +55,7 @@ public class OpenCensusProtobufInputRowParser implements ByteBufferInputRowParse
   private static final String DEFAULT_METRIC_DIMENSION = "name";
   private static final String VALUE = "value";
   private static final String TIMESTAMP_COLUMN = "timestamp";
-  private static final String DEFAULT_RESOURCE_PREFIX = "resource.";
+  private static final String DEFAULT_RESOURCE_PREFIX = "";
   private final ParseSpec parseSpec;
   private final List<String> dimensions;
 
