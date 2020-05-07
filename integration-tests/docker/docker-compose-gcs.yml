@@ -1,0 +1,335 @@
+version: "2.2"
+services:
+  druid-it-hadoop:
+    image: druid-it/hadoop:2.8.5
+    container_name: druid-it-hadoop
+    ports:
+      - 2049:2049
+      - 2122:2122
+      - 8020:8020
+      - 8021:8021
+      - 8030:8030
+      - 8031:8031
+      - 8032:8032
+      - 8033:8033
+      - 8040:8040
+      - 8042:8042
+      - 8088:8088
+      - 8443:8443
+      - 9000:9000
+      - 10020:10020
+      - 19888:19888
+      - 34455:34455
+      - 50010:50010
+      - 50020:50020
+      - 50030:50030
+      - 50060:50060
+      - 50070:50070
+      - 50075:50075
+      - 50090:50090
+      - 51111:51111
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.13
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+    hostname: "druid-it-hadoop"
+    command: "bash -c 'echo Start druid-it-hadoop container... && \
+                /etc/bootstrap.sh && \
+                tail -f /dev/null'"
+
+  druid-zookeeper-kafka:
+    image: druid/cluster
+    container_name: druid-zookeeper-kafka
+    ports:
+      - 2181:2181
+      - 9092:9092
+      - 9093:9093
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.2
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/zookeeper.conf:/usr/lib/druid/conf/zookeeper.conf
+      - ./service-supervisords/kafka.conf:/usr/lib/druid/conf/kafka.conf
+    env_file:
+      - ./environment-configs/common
+
+  druid-metadata-storage:
+    image: druid/cluster
+    container_name: druid-metadata-storage
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.3
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/metadata-storage.conf:/usr/lib/druid/conf/metadata-storage.conf
+    env_file:
+      - ./environment-configs/common
+    depends_on:
+      - druid-zookeeper-kafka
+
+  druid-overlord:
+    image: druid/cluster
+    container_name: druid-overlord
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.4
+    ports:
+      - 8090:8090
+      - 8290:8290
+    links:
+      - druid-metadata-storage:druid-metadata-storage
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/overlord
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-metadata-storage
+      - druid-zookeeper-kafka
+
+  druid-coordinator:
+    image: druid/cluster
+    container_name: druid-coordinator
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.5
+    ports:
+      - 8081:8081
+      - 8281:8281
+    links:
+      - druid-overlord:druid-overlord
+      - druid-metadata-storage:druid-metadata-storage
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid-overlord.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/coordinator
+      - ./environment-configs/override-examples/gcs
+      -
+    depends_on:
+      - druid-overlord
+      - druid-metadata-storage
+      - druid-zookeeper-kafka
+
+  druid-historical:
+    image: druid/cluster
+    container_name: druid-historical
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.6
+    ports:
+      - 8083:8083
+      - 8283:8283
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/historical
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-zookeeper-kafka
+
+  druid-middlemanager:
+    image: druid/cluster
+    container_name: druid-middlemanager
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.7
+    ports:
+      - 8091:8091
+      - 8291:8291
+      - 8100:8100
+      - 8101:8101
+      - 8102:8102
+      - 8103:8103
+      - 8104:8104
+      - 8105:8105
+      - 8300:8300
+      - 8301:8301
+      - 8302:8302
+      - 8303:8303
+      - 8304:8304
+      - 8305:8305
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+      - druid-overlord:druid-overlord
+    privileged: true
+    volumes:
+      - ./src/test/resources:/resources
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/middlemanager
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-overlord
+
+  druid-broker:
+    image: druid/cluster
+    container_name: druid-broker
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.8
+    ports:
+      - 8082:8082
+      - 8282:8282
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+      - druid-middlemanager:druid-middlemanager
+      - druid-historical:druid-historical
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/broker
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-middlemanager
+      - druid-historical
+
+  druid-router:
+    image: druid/cluster
+    container_name: druid-router
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.9
+    ports:
+      - 8888:8888
+      - 9088:9088
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+      - druid-coordinator:druid-coordinator
+      - druid-broker:druid-broker
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-coordinator
+      - druid-broker
+
+  druid-router-permissive-tls:
+    image: druid/cluster
+    container_name: druid-router-permissive-tls
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.10
+    ports:
+      - 8889:8889
+      - 9089:9089
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+      - druid-coordinator:druid-coordinator
+      - druid-broker:druid-broker
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router-permissive-tls
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-metadata-storage
+      - druid-overlord
+      - druid-coordinator
+      - druid-historical
+      - druid-middlemanager
+      - druid-broker
+      - druid-router
+
+  druid-router-no-client-auth-tls:
+    image: druid/cluster
+    container_name: druid-router-no-client-auth-tls
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.11
+    ports:
+      - 8890:8890
+      - 9090:9090
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+      - druid-coordinator:druid-coordinator
+      - druid-broker:druid-broker
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router-no-client-auth-tls
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-metadata-storage
+      - druid-overlord
+      - druid-coordinator
+      - druid-historical
+      - druid-middlemanager
+      - druid-broker
+      - druid-router
+
+  druid-router-custom-check-tls:
+    image: druid/cluster
+    container_name: druid-router-custom-check-tls
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.12
+    ports:
+      - 8891:8891
+      - 9091:9091
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+      - druid-coordinator:druid-coordinator
+      - druid-broker:druid-broker
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/router-custom-check-tls
+      - ./environment-configs/override-examples/gcs
+    depends_on:
+      - druid-zookeeper-kafka
+      - druid-metadata-storage
+      - druid-overlord
+      - druid-coordinator
+      - druid-historical
+      - druid-middlemanager
+      - druid-broker
+      - druid-router
+
+networks:
+  druid-it-net:
+    name: druid-it-net
+    ipam:
+      config:
+        - subnet: 172.172.172.0/24
