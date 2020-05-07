@@ -322,13 +322,13 @@ public class OpenCensusProtobufInputRowParserTest
     Assert.assertEquals(4, row.getDimensions().size());
     assertDimensionEquals(row, "name", "metric_summary-count");
     assertDimensionEquals(row, "foo_key", "foo_value");
-    assertDimensionEquals(row, "resource.env_key", "env_val");
+    assertDimensionEquals(row, "env_key", "env_val");
 
     row = rows.get(1);
     Assert.assertEquals(4, row.getDimensions().size());
     assertDimensionEquals(row, "name", "metric_summary-sum");
     assertDimensionEquals(row, "foo_key", "foo_value");
-    assertDimensionEquals(row, "resource.env_key", "env_val");
+    assertDimensionEquals(row, "env_key", "env_val");
   }
 
   @Test
