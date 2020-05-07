@@ -32,7 +32,7 @@ public class TaskIdUtils
 {
   private static final Pattern INVALIDCHARS = Pattern.compile("(?s).*[^\\S ].*");
 
-  private static final Joiner underscoreJoiner = Joiner.on("_");
+  private static final Joiner UNDERSCORE_JOINER = Joiner.on("_");
 
   public static void validateId(String thingToValidate, String stringToValidate)
   {
@@ -66,6 +66,6 @@ public class TaskIdUtils
 
   public static String getRandomIdWithPrefix(String prefix)
   {
-    return underscoreJoiner.join(prefix, TaskIdUtils.getRandomId());
+    return UNDERSCORE_JOINER.join(prefix, TaskIdUtils.getRandomId());
   }
 }

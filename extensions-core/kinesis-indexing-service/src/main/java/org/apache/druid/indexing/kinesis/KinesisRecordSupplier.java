@@ -703,7 +703,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
     for (Map.Entry<String, String> partitionOffset : currentOffsets.entrySet()) {
       StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
-      long currentLag = getPartitionResourcesTimeLag(partition, partitionOffset.getValue());
+      long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
       partitionLag.put(partitionOffset.getKey(), currentLag);
     }
     return partitionLag;
@@ -837,7 +837,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
    * not depend on the internal state of the supplier (it doesn't use the {@link PartitionResource} which have been
    * assigned to the supplier), and the Kinesis client is thread safe.
    */
-  private Long getPartitionResourcesTimeLag(StreamPartition<String> partition, String offset)
+  private Long getPartitionTimeLag(StreamPartition<String> partition, String offset)
   {
     return wrapExceptions(() -> {
       final String iteratorType;
