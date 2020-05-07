@@ -276,19 +276,6 @@ jobs:
 
         " && false; }
 
-    # Integration tests Java Compile version is set by the machine environment jdk (set by the jdk key)
-    # Integration tests Java Runtime version is set by the JVM_RUNTIME env property (set env key to -Djvm.runtime=<JVM_RUNTIME_VERSION>)
-    # (Currently integration tests only support running with jvm runtime 8 and 11)
-    # START - Integration tests for Compile with Java 8 and Run with Java 8
-    - &integration_tests_build_docker_image
-      name: "(Compile=openjdk8, Run=openjdk8) build docker container for integration tests"
-      jdk: openjdk8
-      services: &integration_test_services
-        - docker
-      env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8'
-      script: &run_integration_test
-        - ${MVN} verify -pl integration-tests -P integration-tests ${MAVEN_SKIP} -DintegrationTests.docker.run.skip=true -Dmaven.test.skip=true
-
     - &integration_batch_index
       name: "(Compile=openjdk8, Run=openjdk8) batch index integration test"
       jdk: openjdk8
@@ -296,6 +283,7 @@ jobs:
         - docker
       env: TESTNG_GROUPS='-Dgroups=batch-index' JVM_RUNTIME='-Djvm.runtime=8'
       script: &run_integration_test
+        - ${MVN} verify -pl integration-tests -P integration-tests ${MAVEN_SKIP} -DintegrationTests.docker.run.skip=true -Dmaven.test.skip=true
         - docker-compose -f ./integration-tests/docker/docker-compose.yml up
         - ${MVN} verify -pl integration-tests -P integration-tests ${TESTNG_GROUPS} ${JVM_RUNTIME} ${MAVEN_SKIP} -DintegrationTests.docker.build.skip=true -DintegrationTests.docker.run.skip=true
       after_failure: &integration_test_diags
