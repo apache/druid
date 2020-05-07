@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.junit.Assert;
@@ -63,15 +62,6 @@ public class TDigestSketchToQuantilePostAggregatorTest
     );
   }
 
-  @Test
-  public void testComparator()
-  {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of quantiles is not supported");
-    PostAggregator postAgg =
-        new TDigestSketchToQuantilePostAggregator("post", new ConstantPostAggregator("", 100), 0.5);
-    postAgg.getComparator();
-  }
   @Test
   public void testEquals()
   {
