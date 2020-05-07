@@ -3159,8 +3159,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void updateCurrentAndLatestOffsets()
   {
-    // if we aren't in a steady state, chill out for a bit, don't worry, we'll get called later
-    if (stateManager.isSteadyState()) {
+    // if we aren't in a steady state, chill out for a bit, don't worry, we'll get called later, but if we aren't
+    // healthy go ahead and try anyway to try if possible to provide insight into how much time is left to fix the
+    // issue for cluster operators since this feeds the lag metrics
+    if (stateManager.isSteadyState() || !stateManager.isHealthy()) {
       try {
         updateCurrentOffsets();
         updatePartitionLagFromStream();
