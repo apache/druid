@@ -43,8 +43,6 @@ import org.apache.calcite.tools.RelBuilderFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.calcite.plan.RelOptUtil.conjunctions;
-
 public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
 {
   /** Copied from {@link FilterJoinRule#NOT_ENUMERABLE} */
@@ -59,10 +57,11 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
       new FilterIntoJoinExcludePushToChildRule(RelFactories.LOGICAL_BUILDER, NOT_ENUMERABLE);
 
   FilterJoinExcludePushToChildRule(RelOptRuleOperand operand,
-                                             String id,
-                                             boolean smart,
-                                             RelBuilderFactory relBuilderFactory,
-                                             Predicate predicate) {
+                                   String id,
+                                   boolean smart,
+                                   RelBuilderFactory relBuilderFactory,
+                                   Predicate predicate)
+  {
     super(operand, id, smart, relBuilderFactory, predicate);
   }
 
@@ -72,7 +71,8 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
    */
   public static class FilterIntoJoinExcludePushToChildRule extends FilterJoinExcludePushToChildRule
   {
-    public FilterIntoJoinExcludePushToChildRule(RelBuilderFactory relBuilderFactory, Predicate predicate) {
+    public FilterIntoJoinExcludePushToChildRule(RelBuilderFactory relBuilderFactory, Predicate predicate)
+    {
       super(
           operand(Filter.class,
                   operand(Join.class, RelOptRule.any())),
@@ -81,7 +81,8 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
     }
 
     @Override
-    public void onMatch(RelOptRuleCall call) {
+    public void onMatch(RelOptRuleCall call)
+    {
       Filter filter = call.rel(0);
       Join join = call.rel(1);
       perform(call, filter, join);
@@ -93,8 +94,8 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
    * The difference is that this method will not not push filters to the children in classifyFilters
    */
   @Override
-  protected void perform(RelOptRuleCall call, Filter filter,
-                         Join join) {
+  protected void perform(RelOptRuleCall call, Filter filter, Join join)
+  {
     final List<RexNode> joinFilters =
         RelOptUtil.conjunctions(join.getCondition());
     final List<RexNode> origJoinFilters = ImmutableList.copyOf(joinFilters);
@@ -230,8 +231,9 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
   /**
    * Copied from {@link FilterJoinRule#getConjunctions}. Method is exactly the same as original.
    */
-  private List<RexNode> getConjunctions(Filter filter) {
-    List<RexNode> conjunctions = conjunctions(filter.getCondition());
+  private List<RexNode> getConjunctions(Filter filter)
+  {
+    List<RexNode> conjunctions = RelOptUtil.conjunctions(filter.getCondition());
     RexBuilder rexBuilder = filter.getCluster().getRexBuilder();
     for (int i = 0; i < conjunctions.size(); i++) {
       RexNode node = conjunctions.get(i);
@@ -252,7 +254,8 @@ public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
   private static boolean classifyFilters(List<RexNode> filters,
                                         JoinRelType joinType,
                                         boolean pushInto,
-                                        List<RexNode> joinFilters) {
+                                        List<RexNode> joinFilters)
+  {
     final List<RexNode> filtersToRemove = new ArrayList<>();
     for (RexNode filter : filters) {
       // Skip pushing the filter to either child. However, if the join
