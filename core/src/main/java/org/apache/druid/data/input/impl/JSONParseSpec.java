@@ -37,7 +37,7 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
 {
   private final ObjectMapper objectMapper;
   private final Map<String, Boolean> featureSpec;
-  private final Boolean keepNullColumns;
+  private final boolean keepNullColumns;
 
   @JsonCreator
   public JSONParseSpec(
@@ -88,7 +88,7 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
   }
 
   @JsonProperty
-  public Boolean getKeepNullColumns()
+  public boolean getKeepNullColumns()
   {
     return keepNullColumns;
   }
@@ -112,7 +112,7 @@ public class JSONParseSpec extends NestedDataParseSpec<JSONPathSpec>
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), featureSpec);
+    return Objects.hash(super.hashCode(), featureSpec, getKeepNullColumns());
   }
 
   @Override

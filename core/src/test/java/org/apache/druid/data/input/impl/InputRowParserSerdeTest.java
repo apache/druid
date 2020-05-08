@@ -53,7 +53,7 @@ public class InputRowParserSerdeTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "bar")), null, null),
             null,
             null,
-            false
+            null
         ),
         null
     );
@@ -100,7 +100,7 @@ public class InputRowParserSerdeTest
             ),
             null,
             null,
-            false
+            null
         )
     );
     final MapInputRowParser parser2 = (MapInputRowParser) jsonMapper.readValue(
@@ -172,7 +172,7 @@ public class InputRowParserSerdeTest
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo", "bar")), null, null),
             null,
             null,
-            false
+            null
         ),
         charset.name()
     );
@@ -213,7 +213,7 @@ public class InputRowParserSerdeTest
             new DimensionsSpec(null, null, null),
             flattenSpec,
             null,
-            false
+            null
         ),
         null
     );

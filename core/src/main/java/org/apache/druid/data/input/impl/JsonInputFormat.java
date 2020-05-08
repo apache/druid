@@ -95,6 +95,6 @@ public class JsonInputFormat extends NestedInputFormat
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), featureSpec);
+    return Objects.hash(super.hashCode(), featureSpec, keepNullColumns);
   }
 }
