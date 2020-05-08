@@ -8507,6 +8507,164 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testManyManyInnerJoinOnManyManyLookup() throws Exception
+  {
+    testQuery(
+        "SELECT dim1\n"
+        + "FROM foo\n"
+        + "INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k\n"
+        + "INNER JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k\n"
+        + "INNER JOIN lookup.lookyloo l3 ON foo.dim2 = l3.k\n"
+        + "INNER JOIN lookup.lookyloo l4 ON foo.dim2 = l4.k\n"
+        + "INNER JOIN lookup.lookyloo l5 ON foo.dim2 = l5.k\n"
+        + "INNER JOIN lookup.lookyloo l6 ON foo.dim2 = l6.k\n"
+        + "INNER JOIN lookup.lookyloo l7 ON foo.dim2 = l7.k\n"
+        + "INNER JOIN lookup.lookyloo l8 ON foo.dim2 = l8.k\n"
+        + "INNER JOIN lookup.lookyloo l9 ON foo.dim2 = l9.k\n"
+        + "INNER JOIN lookup.lookyloo l10 ON foo.dim2 = l10.k\n"
+        + "INNER JOIN lookup.lookyloo l11 ON foo.dim2 = l11.k\n"
+        + "INNER JOIN lookup.lookyloo l12 ON foo.dim2 = l12.k\n"
+        + "INNER JOIN lookup.lookyloo l13 ON foo.dim2 = l13.k\n"
+        + "INNER JOIN lookup.lookyloo l14 ON foo.dim2 = l14.k\n"
+        + "INNER JOIN lookup.lookyloo l15 ON foo.dim2 = l15.k\n"
+        + "INNER JOIN lookup.lookyloo l16 ON foo.dim2 = l16.k\n"
+        + "INNER JOIN lookup.lookyloo l17 ON foo.dim2 = l17.k\n"
+        + "INNER JOIN lookup.lookyloo l18 ON foo.dim2 = l18.k\n"
+        + "INNER JOIN lookup.lookyloo l19 ON foo.dim2 = l19.k\n"
+        + "WHERE l.v = 'xa'\n",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        join(
+                            join(
+                                join(
+                                    join(
+                                        join(
+                                            join(
+                                                join(
+                                                    join(
+                                                        join(
+                                                            join(
+                                                                join(
+                                                                    join(
+                                                                        join(
+                                                                            join(
+                                                                                join(
+                                                                                    join(
+                                                                                        join(
+                                                                                            join(
+                                                                                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                                                                                new LookupDataSource("lookyloo"),
+                                                                                                "j0.",
+                                                                                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                                                                                                JoinType.INNER
+                                                                                                ),
+                                                                                            new LookupDataSource("lookyloo"),
+                                                                                            "_j0.",
+                                                                                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_j0.k")),
+                                                                                            JoinType.INNER
+                                                                                        ),
+                                                                                        new LookupDataSource("lookyloo"),
+                                                                                        "__j0.",
+                                                                                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("__j0.k")),
+                                                                                        JoinType.INNER
+                                                                                    ),
+                                                                                    new LookupDataSource("lookyloo"),
+                                                                                    "___j0.",
+                                                                                    equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("___j0.k")),
+                                                                                    JoinType.INNER
+                                                                                ),
+                                                                                new LookupDataSource("lookyloo"),
+                                                                                "____j0.",
+                                                                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("____j0.k")),
+                                                                                JoinType.INNER
+                                                                            ),
+                                                                            new LookupDataSource("lookyloo"),
+                                                                            "_____j0.",
+                                                                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_____j0.k")),
+                                                                            JoinType.INNER
+                                                                        ),
+                                                                        new LookupDataSource("lookyloo"),
+                                                                        "______j0.",
+                                                                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("______j0.k")),
+                                                                        JoinType.INNER
+                                                                    ),
+                                                                    new LookupDataSource("lookyloo"),
+                                                                    "_______j0.",
+                                                                    equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_______j0.k")),
+                                                                    JoinType.INNER
+                                                                ),
+                                                                new LookupDataSource("lookyloo"),
+                                                                "________j0.",
+                                                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("________j0.k")),
+                                                                JoinType.INNER
+                                                            ),
+                                                            new LookupDataSource("lookyloo"),
+                                                            "_________j0.",
+                                                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_________j0.k")),
+                                                            JoinType.INNER
+                                                        ),
+                                                        new LookupDataSource("lookyloo"),
+                                                        "__________j0.",
+                                                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("__________j0.k")),
+                                                        JoinType.INNER
+                                                    ),
+                                                    new LookupDataSource("lookyloo"),
+                                                    "___________j0.",
+                                                    equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("___________j0.k")),
+                                                    JoinType.INNER
+                                                ),
+                                                new LookupDataSource("lookyloo"),
+                                                "____________j0.",
+                                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("____________j0.k")),
+                                                JoinType.INNER
+                                            ),
+                                            new LookupDataSource("lookyloo"),
+                                            "_____________j0.",
+                                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_____________j0.k")),
+                                            JoinType.INNER
+                                        ),
+                                        new LookupDataSource("lookyloo"),
+                                        "______________j0.",
+                                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("______________j0.k")),
+                                        JoinType.INNER
+                                    ),
+                                    new LookupDataSource("lookyloo"),
+                                    "_______________j0.",
+                                    equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_______________j0.k")),
+                                    JoinType.INNER
+                                ),
+                                new LookupDataSource("lookyloo"),
+                                "________________j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("________________j0.k")),
+                                JoinType.INNER
+                            ),
+                            new LookupDataSource("lookyloo"),
+                            "_________________j0.",
+                            equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("_________________j0.k")),
+                            JoinType.INNER
+                        ),
+                        new LookupDataSource("lookyloo"),
+                        "__________________j0.",
+                        equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("__________________j0.k")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(selector("j0.v", "xa", null))
+                .columns("dim1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""},
+            new Object[]{"1"}
+        )
+    );
+  }
+
+  @Test
   public void testInnerJoinQueryOfLookup() throws Exception
   {
     // Cannot vectorize the subquery.
@@ -8867,10 +9025,40 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testWhereInSelectNullFromLookup() throws Exception
   {
     // Regression test for https://github.com/apache/druid/issues/9646.
+    cannotVectorize();
 
     testQuery(
         "SELECT * FROM foo where dim1 IN (SELECT NULL FROM lookup.lookyloo)",
-        ImmutableList.of(),
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(new LookupDataSource("lookyloo"))
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setVirtualColumns(
+                                            expressionVirtualColumn("v0", "null", ValueType.STRING)
+                                        )
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0")))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        ),
+                        "j0.",
+                        "0",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "null", ValueType.STRING)
+                )
+                .columns("__time", "cnt", "dim2", "dim3", "m1", "m2", "unique_dim1", "v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
         ImmutableList.of()
     );
   }
@@ -8909,6 +9097,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // This SQL currently does not result in an optimum plan.
+  // Unfortunetly, we have disabled pushing down predicates (conditions and filters) due to https://github.com/apache/druid/pull/9773
+  // Hence, comma join will result in a cross join with filter on outermost
   @Test
   public void testCommaJoinTableLookupTableMismatchedTypes() throws Exception
   {
@@ -8921,6 +9112,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*)\n"
         + "FROM foo, lookup.lookyloo l, numfoo\n"
         + "WHERE foo.cnt = l.k AND l.k = numfoo.cnt\n",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      join(
+                          join(
+                              new TableDataSource(CalciteTests.DATASOURCE1),
+                              new LookupDataSource("lookyloo"),
+                              "j0.",
+                              "1",
+                              JoinType.INNER
+                          ),
+                          new QueryDataSource(
+                              newScanQueryBuilder()
+                                  .dataSource(CalciteTests.DATASOURCE3)
+                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                  .columns("cnt")
+                                  .context(QUERY_CONTEXT_DEFAULT)
+                                  .build()
+                          ),
+                          "_j0.",
+                          "1",
+                          JoinType.INNER
+                      )
+                  )
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(new CountAggregatorFactory("a0"))
+                  .filters(and(
+                      expressionFilter("(\"cnt\" == CAST(\"j0.k\", 'LONG'))"),
+                      expressionFilter("(CAST(\"j0.k\", 'LONG') == \"_j0.cnt\")")
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testJoinTableLookupTableMismatchedTypesWithoutComma() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT COUNT(*)\n"
+        + "FROM foo\n"
+        + "INNER JOIN lookup.lookyloo l ON foo.cnt = l.k\n"
+        + "INNER JOIN numfoo ON l.k = numfoo.cnt\n",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(

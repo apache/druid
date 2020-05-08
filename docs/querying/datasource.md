@@ -268,6 +268,9 @@ perform best if `d.field` is a string.
 4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
 to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
 common use cases.
+5. Currently, Druid does not support pushing down predicates (condition and filter) pass a Join (i.e. into 
+Join's children). Druid only supports pushing predicates into the join if they originated from 
+above the join. Hence, the location of predicates and filters in your Druid SQL is very important. 
 
 #### Future work for joins
 
@@ -279,6 +282,7 @@ future versions:
 always be correct.
 - Performance-related optimizations as mentioned in the [previous section](#join-performance).
 - Join algorithms other than broadcast hash-joins.
+- Reordering of predicates and filters (pushing up and/or pushing down) to get the most performant plan.
 
 ### `union`
 

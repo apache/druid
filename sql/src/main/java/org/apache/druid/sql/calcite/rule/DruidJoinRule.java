@@ -193,9 +193,16 @@ public class DruidJoinRule extends RelOptRule
     final int numLeftFields = leftRowType.getFieldCount();
 
     for (RexNode subCondition : subConditions) {
-      if (subCondition.isA(SqlKind.LITERAL)) {
-        // Literals are always OK.
-        literalSubConditions.add((RexLiteral) subCondition);
+      if (RexUtil.isLiteral(subCondition, true)) {
+        if (subCondition instanceof RexCall) {
+          // This is CAST(literal) which is always OK.
+          // We know that this is CASE(literal) as it pass the check from RexUtil.isLiteral
+          RexCall call = (RexCall) subCondition;
+          literalSubConditions.add((RexLiteral) call.operands.get(0));
+        } else {
+          // Literals are always OK.
+          literalSubConditions.add((RexLiteral) subCondition);
+        }
         continue;
       }
 

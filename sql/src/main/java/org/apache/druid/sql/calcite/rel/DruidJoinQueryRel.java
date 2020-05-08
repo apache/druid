@@ -293,17 +293,23 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost = partialQuery.estimateCost();
+    double cost;
+
+    if (computeLeftRequiresSubquery(getSomeDruidChild(left))) {
+      cost = CostEstimates.COST_JOIN_SUBQUERY;
+    } else {
+      cost = partialQuery.estimateCost();
+    }
+
+    if (computeRightRequiresSubquery(getSomeDruidChild(right))) {
+      cost += CostEstimates.COST_JOIN_SUBQUERY;
+    }
+
     if (joinRel.getCondition().isA(SqlKind.LITERAL) && !joinRel.getCondition().isAlwaysFalse()) {
       cost += CostEstimates.COST_JOIN_CROSS;
     }
-    // This is to cancel out the MULTIPLIER_FILTER (value=0.1) from partialQuery.estimateCost() to discourage
-    // filter push down if pushing down the filter makes this DruidJoinQueryRel not a scan or mapping.
-    // This will leave the filter at the topmost DruidJoinQueryRel (due to the order of applying/popping rules).
-    double multiplier = DruidRels.isScanOrMapping(this, true)
-                        ? 1
-                        : 1 / CostEstimates.MULTIPLIER_FILTER;
-    return planner.getCostFactory().makeCost(cost, 0, 0).multiplyBy(multiplier);
+
+    return planner.getCostFactory().makeCost(cost, 0, 0);
   }
 
   private static JoinType toDruidJoinType(JoinRelType calciteJoinType)

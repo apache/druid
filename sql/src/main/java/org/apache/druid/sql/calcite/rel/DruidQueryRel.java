@@ -183,10 +183,6 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost = partialQuery.estimateCost();
-    double multiplier = DruidRels.isScanOrMapping(this, true)
-                        ? 1
-                        : CostEstimates.MULTIPLIER_QUERY_NOT_SCAN_OR_MAPPING;
-    return planner.getCostFactory().makeCost(cost, 0, 0).multiplyBy(multiplier);
+    return planner.getCostFactory().makeCost(partialQuery.estimateCost(), 0, 0);
   }
 }
