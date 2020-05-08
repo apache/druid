@@ -35,8 +35,3 @@ if !($DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER_CONTAINER); then
   sh ./stop_cluster.sh
   sh ./script/docker_run_cluster.sh
 fi
-
-if ($DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER_CONTAINER) && ($DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER)
-then
-  sh ./script/copy_hadoop_resources.sh
-fi

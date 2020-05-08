@@ -70,6 +70,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/overlord
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-metadata-storage
       - druid-zookeeper-kafka
@@ -90,11 +91,12 @@ services:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
     privileged: true
     volumes:
-      - ${HOME}/shared:/shared
+      - ${c}/shared:/shared
       - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid-overlord.conf
     env_file:
       - ./environment-configs/common
       - ./environment-configs/coordinator
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-overlord
       - druid-metadata-storage
@@ -107,9 +109,9 @@ services:
       druid-it-net:
         ipv4_address: 172.172.172.6
     ports:
+      - 5007:5007
       - 8083:8083
       - 8283:8283
-      - 5007:5007
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
     privileged: true
@@ -119,6 +121,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/historical
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
 
@@ -155,6 +158,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/middlemanager
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
       - druid-overlord
@@ -180,6 +184,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/broker
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
       - druid-middlemanager
@@ -206,6 +211,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
       - druid-coordinator
@@ -232,6 +238,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router-permissive-tls
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
       - druid-metadata-storage
@@ -263,6 +270,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router-no-client-auth-tls
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
       - druid-metadata-storage
@@ -294,6 +302,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/router-custom-check-tls
+      - ${OVERRIDE_ENV}
     depends_on:
       - druid-zookeeper-kafka
       - druid-metadata-storage
