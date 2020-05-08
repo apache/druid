@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
@@ -56,5 +57,19 @@ public class JsonInputFormatTest
     final byte[] bytes = mapper.writeValueAsBytes(format);
     final JsonInputFormat fromJson = (JsonInputFormat) mapper.readValue(bytes, InputFormat.class);
     Assert.assertEquals(format, fromJson);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(JsonInputFormat.class)
+              .usingGetClass()
+              .withPrefabValues(
+              ObjectMapper.class,
+              new ObjectMapper(),
+              new ObjectMapper()
+              )
+              .withIgnoredFields("objectMapper")
+              .verify();
   }
 }
