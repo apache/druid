@@ -15,6 +15,45 @@
 
 version: "2.2"
 services:
+  druid-it-hadoop:
+    image: druid-it/hadoop:2.8.5
+    container_name: druid-it-hadoop
+    ports:
+      - 2049:2049
+      - 2122:2122
+      - 8020:8020
+      - 8021:8021
+      - 8030:8030
+      - 8031:8031
+      - 8032:8032
+      - 8033:8033
+      - 8040:8040
+      - 8042:8042
+      - 8088:8088
+      - 8443:8443
+      - 9000:9000
+      - 10020:10020
+      - 19888:19888
+      - 34455:34455
+      - 50010:50010
+      - 50020:50020
+      - 50030:50030
+      - 50060:50060
+      - 50070:50070
+      - 50075:50075
+      - 50090:50090
+      - 51111:51111
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.13
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+    hostname: "druid-it-hadoop"
+    command: "bash -c 'echo Start druid-it-hadoop container... && \
+                /etc/bootstrap.sh && \
+                tail -f /dev/null'"
+
   druid-zookeeper-kafka:
     image: druid/cluster
     container_name: druid-zookeeper-kafka
@@ -146,7 +185,7 @@ services:
       - druid-overlord:druid-overlord
     privileged: true
     volumes:
-      - ./src/test/resources:/resources
+      - ./../src/test/resources:/resources
       - ${HOME}/shared:/shared
       - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
     env_file:

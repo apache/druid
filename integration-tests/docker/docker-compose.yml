@@ -149,7 +149,7 @@ services:
       - druid-overlord:druid-overlord
     privileged: true
     volumes:
-      - ./src/test/resources:/resources
+      - ./../src/test/resources:/resources
       - ${HOME}/shared:/shared
       - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
     env_file:
