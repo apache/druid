@@ -30,6 +30,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 public class FalseFilter implements Filter
@@ -97,6 +98,18 @@ public class FalseFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return Collections.emptySet();
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    return this;
   }
 
   @Override
