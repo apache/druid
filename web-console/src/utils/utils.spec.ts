@@ -104,6 +104,7 @@ describe('test-utils', () => {
           },
           "ioConfig": Object {
             "inputFormat": Object {
+              "keepNullColumns": true,
               "type": "json",
             },
             "inputSource": Object {
