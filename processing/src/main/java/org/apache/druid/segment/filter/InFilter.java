@@ -56,6 +56,11 @@ import java.util.Set;
  * given {@link #values}.
  * For multi-valued dimension, this filter returns true if one of the dimension values matches to one of the
  * given {@link #values}.
+ *
+ * In SQL-compatible null handling mode, this filter is equivalent to {@code (dimension IN [values])} or
+ * {@code (dimension IN [non-null values] OR dimension IS NULL)} when {@link #values} contains nulls.
+ * In default null handling mode, this filter is equivalent to {@code (dimension IN [values])} or
+ * {@code (dimension IN [non-null values, ''])} when {@link #values} contains nulls.
  */
 public class InFilter implements Filter
 {

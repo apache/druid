@@ -348,7 +348,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           DATA_SOURCE,
           testCase.interval,
           null,
-          new TrueDimFilter(),
+          TrueDimFilter.instance(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
           // Split as much as possible

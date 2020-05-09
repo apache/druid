@@ -23,8 +23,11 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.TrueVectorMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Collections;
 import java.util.Map;
@@ -58,6 +61,12 @@ public class TrueFilter implements Filter
   }
 
   @Override
+  public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
+  {
+    return new TrueVectorMatcher(factory.getVectorSizeInspector());
+  }
+
+  @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return true;
@@ -71,6 +80,12 @@ public class TrueFilter implements Filter
 
   @Override
   public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  {
+    return true;
+  }
+
+  @Override
+  public boolean canVectorizeMatcher()
   {
     return true;
   }

@@ -63,7 +63,6 @@ import org.apache.calcite.rel.rules.SortRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.TableScanRule;
-import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
@@ -141,6 +140,8 @@ public class Rules
 
   // Rules from RelOptUtil's registerAbstractRules.
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
+  // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
+  // expensive in terms of planning time.
   private static final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
@@ -155,9 +156,6 @@ public class Rules
           PruneEmptyRules.JOIN_LEFT_INSTANCE,
           PruneEmptyRules.JOIN_RIGHT_INSTANCE,
           PruneEmptyRules.SORT_FETCH_ZERO_INSTANCE,
-          UnionMergeRule.INSTANCE,
-          UnionMergeRule.INTERSECT_INSTANCE,
-          UnionMergeRule.MINUS_INSTANCE,
           ProjectToWindowRule.PROJECT,
           FilterMergeRule.INSTANCE,
           IntersectToDistinctRule.INSTANCE

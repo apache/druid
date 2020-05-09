@@ -1027,9 +1027,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           true,
           minimumMessageTime,
           maximumMessageTime,
-          ioConfig.getInputFormat(
-              getDataSchema().getParser() == null ? null : getDataSchema().getParser().getParseSpec()
-          )
+          ioConfig.getInputFormat()
       )
       {
       };

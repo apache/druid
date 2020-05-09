@@ -2420,7 +2420,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
-    info: <>Compression format for metric columns.</>,
+    info: <>Compression format for primitive type metric columns.</>,
   },
   {
     name: 'indexSpec.longEncoding',
