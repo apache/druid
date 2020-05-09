@@ -17,40 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.query.extraction;
+package org.apache.druid.query.expression;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
-import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-
-public class UpperExtractionFnTest
+public class TrimExprMacroTest
 {
-  ExtractionFn extractionFn = new UpperExtractionFn(null);
-
   @Test
-  public void testApply()
+  public void testEqualsContractForTrimStaticCharsExpr()
   {
-    Assert.assertEquals("UPPER", extractionFn.apply("uPpeR"));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply(""));
-    Assert.assertEquals(null, extractionFn.apply(null));
-    Assert.assertEquals(null, extractionFn.apply((Object) null));
-    Assert.assertEquals("1", extractionFn.apply(1));
+    EqualsVerifier.forClass(TrimExprMacro.TrimStaticCharsExpr.class)
+                  .withIgnoredFields("analyzeInputsSupplier")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
-  public void testGetCacheKey()
+  public void testEqualsContractForTrimDynamicCharsExpr()
   {
-    Assert.assertArrayEquals(extractionFn.getCacheKey(), extractionFn.getCacheKey());
-    Assert.assertFalse(Arrays.equals(extractionFn.getCacheKey(), new LowerExtractionFn(null).getCacheKey()));
-  }
-
-  @Test
-  public void testEqualsContract()
-  {
-    EqualsVerifier.forClass(UpperExtractionFn.class)
+    EqualsVerifier.forClass(TrimExprMacro.TrimDynamicCharsExpr.class)
                   .usingGetClass()
                   .verify();
   }

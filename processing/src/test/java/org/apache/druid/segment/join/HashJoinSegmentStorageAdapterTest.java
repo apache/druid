@@ -2169,7 +2169,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         ImmutableList.of()
     );
   }
-  
+
   @Test
   public void test_makeCursors_originalFilterDoesNotMatchPreAnalysis_shouldThrowISE()
   {

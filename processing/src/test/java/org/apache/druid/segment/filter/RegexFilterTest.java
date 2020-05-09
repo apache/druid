@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
@@ -134,5 +135,21 @@ public class RegexFilterTest extends BaseFilterTest
 
     assertFilterMatches(new RegexDimFilter("dim4", ".*ANYMORE", changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
     assertFilterMatches(new RegexDimFilter("dim4", "a.*", changeNullFn), ImmutableList.of());
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(RegexFilter.class)
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testEqualsContractForPatternDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(RegexFilter.PatternDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

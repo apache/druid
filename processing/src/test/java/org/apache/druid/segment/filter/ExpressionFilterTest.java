@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -271,6 +272,14 @@ public class ExpressionFilterTest extends BaseFilterTest
     Assert.assertEquals(edf("1 + 1").getRequiredColumns(), new HashSet<>());
     Assert.assertEquals(edf("dim0 == dim3").getRequiredColumns(), Sets.newHashSet("dim0", "dim3"));
     Assert.assertEquals(edf("missing == ''").getRequiredColumns(), Sets.newHashSet("missing"));
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(ExpressionFilter.class)
+                  .usingGetClass()
+                  .verify();
   }
 
   private static ExpressionDimFilter edf(final String expression)

@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidDoublePredicate;
@@ -29,6 +30,8 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.search.SearchQuerySpec;
+
+import java.util.Objects;
 
 /**
  */
@@ -44,34 +47,63 @@ public class SearchQueryFilter extends DimensionPredicateFilter
   {
     super(
         dimension,
-        new DruidPredicateFactory()
-        {
-          @Override
-          public Predicate<String> makeStringPredicate()
-          {
-            return input -> query.accept(input);
-          }
-
-          @Override
-          public DruidLongPredicate makeLongPredicate()
-          {
-            return input -> query.accept(String.valueOf(input));
-          }
-
-          @Override
-          public DruidFloatPredicate makeFloatPredicate()
-          {
-            return input -> query.accept(String.valueOf(input));
-          }
-
-          @Override
-          public DruidDoublePredicate makeDoublePredicate()
-          {
-            return input -> query.accept(String.valueOf(input));
-          }
-        },
+        new SearchQueryDruidPredicateFactory(query),
         extractionFn,
         filterTuning
     );
+  }
+
+  @VisibleForTesting
+  static class SearchQueryDruidPredicateFactory implements DruidPredicateFactory
+  {
+    private final SearchQuerySpec query;
+
+    SearchQueryDruidPredicateFactory(SearchQuerySpec query)
+    {
+      this.query = query;
+    }
+
+    @Override
+    public Predicate<String> makeStringPredicate()
+    {
+      return input -> query.accept(input);
+    }
+
+    @Override
+    public DruidLongPredicate makeLongPredicate()
+    {
+      return input -> query.accept(String.valueOf(input));
+    }
+
+    @Override
+    public DruidFloatPredicate makeFloatPredicate()
+    {
+      return input -> query.accept(String.valueOf(input));
+    }
+
+    @Override
+    public DruidDoublePredicate makeDoublePredicate()
+    {
+      return input -> query.accept(String.valueOf(input));
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      SearchQueryDruidPredicateFactory that = (SearchQueryDruidPredicateFactory) o;
+      return Objects.equals(query, that.query);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(query);
+    }
   }
 }

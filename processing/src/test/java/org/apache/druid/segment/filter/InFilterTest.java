@@ -363,6 +363,16 @@ public class InFilterTest extends BaseFilterTest
                   .verify();
   }
 
+  @Test
+  public void test_equals_forInFilterDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(InFilter.InFilterDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .withNonnullFields("values")
+                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .verify();
+  }
+
   private DimFilter toInFilter(String dim)
   {
     List<String> emptyList = new ArrayList<>();

@@ -17,22 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.annotations;
+package org.apache.druid.query.filter;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-/**
- * An annotation that tells all subclasses of the annotated class to override equals.
- */
-@Documented
-@Inherited
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.TYPE)
-public @interface SubclassesMustOverrideEquals
+public class SelectorPredicateFactoryTest
 {
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(SelectorPredicateFactory.class)
+                  // initLock is initialized when the object is constructed and never changed,
+                  // so the lock can be used in equals comparison.
+                  .withOnlyTheseFields("initLock")
+                  .usingGetClass()
+                  .verify();
+  }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
@@ -171,5 +172,19 @@ public class SearchQueryFilterTest extends BaseFilterTest
 
     assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("ANYMORE"), changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
     assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("a"), changeNullFn), ImmutableList.of());
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(SearchQueryFilter.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void testEqualsContractForSearchQueryDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(SearchQueryFilter.SearchQueryDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidDoublePredicate;
@@ -27,12 +28,15 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.FilterTuning;
 
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
  */
 public class RegexFilter extends DimensionPredicateFilter
 {
+  private final Pattern pattern;
+
   public RegexFilter(
       final String dimension,
       final Pattern pattern,
@@ -42,42 +46,94 @@ public class RegexFilter extends DimensionPredicateFilter
   {
     super(
         dimension,
-        new DruidPredicateFactory()
-        {
-          @Override
-          public Predicate<String> makeStringPredicate()
-          {
-            return input -> (input != null) && pattern.matcher(input).find();
-          }
-
-          @Override
-          public DruidLongPredicate makeLongPredicate()
-          {
-            return input -> pattern.matcher(String.valueOf(input)).find();
-          }
-
-          @Override
-          public DruidFloatPredicate makeFloatPredicate()
-          {
-            return input -> pattern.matcher(String.valueOf(input)).find();
-          }
-
-          @Override
-          public DruidDoublePredicate makeDoublePredicate()
-          {
-            return input -> pattern.matcher(String.valueOf(input)).find();
-          }
-
-          @Override
-          public String toString()
-          {
-            return "RegexFilter{" +
-                   "pattern='" + pattern + '\'' +
-                   '}';
-          }
-        },
+        new PatternDruidPredicateFactory(pattern),
         extractionFn,
         filterTuning
     );
+    this.pattern = pattern;
+  }
+
+  @VisibleForTesting
+  static class PatternDruidPredicateFactory implements DruidPredicateFactory
+  {
+    private final Pattern pattern;
+
+    PatternDruidPredicateFactory(Pattern pattern)
+    {
+      this.pattern = pattern;
+    }
+
+    @Override
+    public Predicate<String> makeStringPredicate()
+    {
+      return input -> (input != null) && pattern.matcher(input).find();
+    }
+
+    @Override
+    public DruidLongPredicate makeLongPredicate()
+    {
+      return input -> pattern.matcher(String.valueOf(input)).find();
+    }
+
+    @Override
+    public DruidFloatPredicate makeFloatPredicate()
+    {
+      return input -> pattern.matcher(String.valueOf(input)).find();
+    }
+
+    @Override
+    public DruidDoublePredicate makeDoublePredicate()
+    {
+      return input -> pattern.matcher(String.valueOf(input)).find();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      PatternDruidPredicateFactory that = (PatternDruidPredicateFactory) o;
+      return Objects.equals(pattern, that.pattern);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(pattern);
+    }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RegexFilter{" +
+           "pattern='" + pattern + '\'' +
+           '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    RegexFilter that = (RegexFilter) o;
+    return Objects.equals(pattern, that.pattern);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), pattern);
   }
 }

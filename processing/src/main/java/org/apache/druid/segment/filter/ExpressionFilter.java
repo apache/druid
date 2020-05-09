@@ -39,6 +39,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 
 public class ExpressionFilter implements Filter
@@ -175,5 +176,26 @@ public class ExpressionFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return requiredBindings.get();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ExpressionFilter that = (ExpressionFilter) o;
+    return Objects.equals(expr, that.expr) &&
+           Objects.equals(requiredBindings, that.requiredBindings) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(expr, requiredBindings, filterTuning);
   }
 }

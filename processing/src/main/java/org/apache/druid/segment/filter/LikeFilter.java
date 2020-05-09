@@ -45,6 +45,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 
 public class LikeFilter implements Filter
@@ -252,5 +253,27 @@ public class LikeFilter implements Filter
         };
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LikeFilter that = (LikeFilter) o;
+    return Objects.equals(dimension, that.dimension) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(likeMatcher, that.likeMatcher) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, extractionFn, likeMatcher, filterTuning);
   }
 }

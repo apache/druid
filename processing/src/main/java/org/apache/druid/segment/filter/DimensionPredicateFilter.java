@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -77,73 +79,7 @@ public class DimensionPredicateFilter implements Filter
     if (extractionFn == null) {
       this.predicateFactory = predicateFactory;
     } else {
-      this.predicateFactory = new DruidPredicateFactory()
-      {
-        final Predicate<String> baseStringPredicate = predicateFactory.makeStringPredicate();
-
-        @Override
-        public Predicate<String> makeStringPredicate()
-        {
-          return input -> baseStringPredicate.apply(extractionFn.apply(input));
-        }
-
-        @Override
-        public DruidLongPredicate makeLongPredicate()
-        {
-          return new DruidLongPredicate()
-          {
-            @Override
-            public boolean applyLong(long input)
-            {
-              return baseStringPredicate.apply(extractionFn.apply(input));
-            }
-
-            @Override
-            public boolean applyNull()
-            {
-              return baseStringPredicate.apply(extractionFn.apply(null));
-            }
-          };
-        }
-
-        @Override
-        public DruidFloatPredicate makeFloatPredicate()
-        {
-          return new DruidFloatPredicate()
-          {
-            @Override
-            public boolean applyFloat(float input)
-            {
-              return baseStringPredicate.apply(extractionFn.apply(input));
-            }
-
-            @Override
-            public boolean applyNull()
-            {
-              return baseStringPredicate.apply(extractionFn.apply(null));
-            }
-          };
-        }
-
-        @Override
-        public DruidDoublePredicate makeDoublePredicate()
-        {
-          return new DruidDoublePredicate()
-          {
-            @Override
-            public boolean applyDouble(double input)
-            {
-              return baseStringPredicate.apply(extractionFn.apply(input));
-            }
-
-            @Override
-            public boolean applyNull()
-            {
-              return baseStringPredicate.apply(extractionFn.apply(null));
-            }
-          };
-        }
-      };
+      this.predicateFactory = new DelegatingStringPredicateFactory(predicateFactory, extractionFn);
     }
   }
 
@@ -210,12 +146,133 @@ public class DimensionPredicateFilter implements Filter
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DimensionPredicateFilter that = (DimensionPredicateFilter) o;
+    return Objects.equals(dimension, that.dimension) &&
+           Objects.equals(predicateFactory, that.predicateFactory) &&
+           Objects.equals(basePredicateString, that.basePredicateString) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, predicateFactory, basePredicateString, extractionFn, filterTuning);
+  }
+
+  @Override
   public String toString()
   {
     if (extractionFn != null) {
       return StringUtils.format("%s(%s) = %s", extractionFn, dimension, basePredicateString);
     } else {
       return StringUtils.format("%s = %s", dimension, basePredicateString);
+    }
+  }
+
+  @VisibleForTesting
+  static class DelegatingStringPredicateFactory implements DruidPredicateFactory
+  {
+    private final Predicate<String> baseStringPredicate;
+    private final DruidPredicateFactory predicateFactory;
+    private final ExtractionFn extractionFn;
+
+    DelegatingStringPredicateFactory(DruidPredicateFactory predicateFactory, ExtractionFn extractionFn)
+    {
+      this.predicateFactory = predicateFactory;
+      this.baseStringPredicate = predicateFactory.makeStringPredicate();
+      this.extractionFn = extractionFn;
+    }
+
+    @Override
+    public Predicate<String> makeStringPredicate()
+    {
+      return input -> baseStringPredicate.apply(extractionFn.apply(input));
+    }
+
+    @Override
+    public DruidLongPredicate makeLongPredicate()
+    {
+      return new DruidLongPredicate()
+      {
+        @Override
+        public boolean applyLong(long input)
+        {
+          return baseStringPredicate.apply(extractionFn.apply(input));
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return baseStringPredicate.apply(extractionFn.apply(null));
+        }
+      };
+    }
+
+    @Override
+    public DruidFloatPredicate makeFloatPredicate()
+    {
+      return new DruidFloatPredicate()
+      {
+        @Override
+        public boolean applyFloat(float input)
+        {
+          return baseStringPredicate.apply(extractionFn.apply(input));
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return baseStringPredicate.apply(extractionFn.apply(null));
+        }
+      };
+    }
+
+    @Override
+    public DruidDoublePredicate makeDoublePredicate()
+    {
+      return new DruidDoublePredicate()
+      {
+        @Override
+        public boolean applyDouble(double input)
+        {
+          return baseStringPredicate.apply(extractionFn.apply(input));
+        }
+
+        @Override
+        public boolean applyNull()
+        {
+          return baseStringPredicate.apply(extractionFn.apply(null));
+        }
+      };
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      DelegatingStringPredicateFactory that = (DelegatingStringPredicateFactory) o;
+      return Objects.equals(predicateFactory, that.predicateFactory) &&
+             Objects.equals(extractionFn, that.extractionFn);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(predicateFactory, extractionFn);
     }
   }
 }
