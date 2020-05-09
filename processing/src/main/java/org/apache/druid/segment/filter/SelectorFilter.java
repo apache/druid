@@ -139,7 +139,9 @@ public class SelectorFilter implements Filter
   @Override
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
-    if (columnRewrites.get(dimension) == null) {
+    String rewriteDimensionTo = columnRewrites.get(dimension);
+
+    if (rewriteDimensionTo == null) {
       throw new IAE(
           "Received a non-applicable rewrite: %s, filter's dimension: %s",
           columnRewrites,
@@ -148,7 +150,7 @@ public class SelectorFilter implements Filter
     }
 
     return new SelectorFilter(
-        columnRewrites.get(dimension),
+        rewriteDimensionTo,
         value
     );
   }

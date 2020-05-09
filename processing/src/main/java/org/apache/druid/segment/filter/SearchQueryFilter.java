@@ -101,8 +101,9 @@ public class SearchQueryFilter extends DimensionPredicateFilter
   @Override
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
+    String rewriteDimensionTo = columnRewrites.get(dimension);
 
-    if (columnRewrites.get(dimension) == null) {
+    if (rewriteDimensionTo == null) {
       throw new IAE(
           "Received a non-applicable rewrite: %s, filter's dimension: %s",
           columnRewrites,
@@ -111,7 +112,7 @@ public class SearchQueryFilter extends DimensionPredicateFilter
     }
 
     return new SearchQueryFilter(
-        columnRewrites.get(dimension),
+        rewriteDimensionTo,
         query,
         extractionFn,
         filterTuning

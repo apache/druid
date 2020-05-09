@@ -183,7 +183,9 @@ public class BoundFilter implements Filter
   @Override
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
-    if (columnRewrites.get(boundDimFilter.getDimension()) == null) {
+    String rewriteDimensionTo = columnRewrites.get(boundDimFilter.getDimension());
+
+    if (rewriteDimensionTo == null) {
       throw new IAE(
           "Received a non-applicable rewrite: %s, filter's dimension: %s",
           columnRewrites,
@@ -191,7 +193,7 @@ public class BoundFilter implements Filter
       );
     }
     BoundDimFilter newDimFilter = new BoundDimFilter(
-        columnRewrites.get(boundDimFilter.getDimension()),
+        rewriteDimensionTo,
         boundDimFilter.getLower(),
         boundDimFilter.getUpper(),
         boundDimFilter.isLowerStrict(),

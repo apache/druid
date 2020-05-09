@@ -97,7 +97,9 @@ public class RegexFilter extends DimensionPredicateFilter
   @Override
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
-    if (columnRewrites.get(dimension) == null) {
+    String rewriteDimensionTo = columnRewrites.get(dimension);
+
+    if (rewriteDimensionTo == null) {
       throw new IAE(
           "Received a non-applicable rewrite: %s, filter's dimension: %s",
           columnRewrites,
@@ -106,7 +108,7 @@ public class RegexFilter extends DimensionPredicateFilter
     }
 
     return new RegexFilter(
-        columnRewrites.get(dimension),
+        rewriteDimensionTo,
         pattern,
         extractionFn,
         filterTuning

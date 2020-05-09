@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -114,7 +115,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
   }
-
 
   @Test
   public void test_filterPushDown_factToRegionExprToCountryLeftFilterOnCountryName()
@@ -1893,6 +1893,83 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
   }
+
+
+  @Test
+  public void test_filterPushDown_factToRegionThreeRHSColumnsAllDirectAndFilterOnRHS()
+  {
+    JoinableClause factExprToRegon = new JoinableClause(
+        FACT_TO_REGION_PREFIX,
+        new IndexedTableJoinable(regionsTable),
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression(
+            StringUtils.format(
+                "\"%sregionIsoCode\" == regionIsoCode && \"%scountryIsoCode\" == regionIsoCode && \"%sregionName\" == user",
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX,
+                FACT_TO_REGION_PREFIX
+            ),
+            FACT_TO_REGION_PREFIX,
+            ExprMacroTable.nil()
+        )
+    );
+    List<JoinableClause> joinableClauses = ImmutableList.of(
+        factExprToRegon
+    );
+    Filter originalFilter = new OrFilter(
+        ImmutableList.of(
+            new SelectorFilter("r1.regionName", "Fourems Province"),
+            new SelectorFilter("r1.regionIsoCode", "AAAA")
+        )
+    );
+
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
+        joinableClauses,
+        originalFilter
+    );
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
+    );
+
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        new OrFilter(
+            ImmutableList.of(
+                new SelectorFilter("user", "Fourems Province"),
+                new SelectorFilter("regionIsoCode", "AAAA")
+            )
+        ),
+        null,
+        ImmutableSet.of()
+    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+
+    // This query doesn't execute because regionName is not a key column, but we can still check the
+    // filter rewrites.
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(
+        "Cannot build hash-join matcher on non-key-based condition: Equality{leftExpr=user, rightColumn='regionName'}"
+    );
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            originalFilter,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            FACT_TO_REGION_PREFIX + "regionName"
+        ),
+        ImmutableList.of()
+    );
+  }
+
 
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftFilterOnPageDisablePushDown()

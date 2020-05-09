@@ -26,7 +26,6 @@ import org.apache.druid.segment.join.JoinableClause;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -37,6 +36,7 @@ import java.util.Set;
  * - A list of filter clauses from the original filter's CNF representation that only reference the base table
  * - A list of filter clauses from the original filter's CNF representation that reference RHS join tables
  * - A mapping of RHS filtering columns -> List<JoinFilterColumnCorrelationAnalysis>, used for filter rewrites
+ * - A second mapping of RHS filtering columns -> List<JoinFilterColumnCorrelationAnalysis>, used for direct filter rewrites
  * - A list of virtual columns that can only be computed post-join
  * - Control flag booleans for whether filter push down and RHS rewrites are enabled.
  */
@@ -46,7 +46,8 @@ public class JoinFilterPreAnalysis
   private final Filter originalFilter;
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
-  private final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn;
+  private final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn;
+  private final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn;
   private final boolean enableFilterPushDown;
   private final boolean enableFilterRewrite;
   private final List<VirtualColumn> postJoinVirtualColumns;
@@ -58,7 +59,8 @@ public class JoinFilterPreAnalysis
       final List<VirtualColumn> postJoinVirtualColumns,
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
-      final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn,
+      final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn,
+      final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn,
       final boolean enableFilterPushDown,
       final boolean enableFilterRewrite,
       final Map<String, Set<Expr>> equiconditions
@@ -70,6 +72,7 @@ public class JoinFilterPreAnalysis
     this.normalizedBaseTableClauses = normalizedBaseTableClauses;
     this.normalizedJoinTableClauses = normalizedJoinTableClauses;
     this.correlationsByFilteringColumn = correlationsByFilteringColumn;
+    this.correlationsByDirectFilteringColumn = correlationsByDirectFilteringColumn;
     this.enableFilterPushDown = enableFilterPushDown;
     this.enableFilterRewrite = enableFilterRewrite;
     this.equiconditions = equiconditions;
@@ -100,9 +103,14 @@ public class JoinFilterPreAnalysis
     return normalizedJoinTableClauses;
   }
 
-  public Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> getCorrelationsByFilteringColumn()
+  public Map<String, List<JoinFilterColumnCorrelationAnalysis>> getCorrelationsByFilteringColumn()
   {
     return correlationsByFilteringColumn;
+  }
+
+  public Map<String, List<JoinFilterColumnCorrelationAnalysis>> getCorrelationsByDirectFilteringColumn()
+  {
+    return correlationsByDirectFilteringColumn;
   }
 
   public boolean isEnableFilterPushDown()

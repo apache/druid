@@ -119,7 +119,9 @@ public class LikeFilter implements Filter
   @Override
   public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
   {
-    if (columnRewrites.get(dimension) == null) {
+    String rewriteDimensionTo = columnRewrites.get(dimension);
+
+    if (rewriteDimensionTo == null) {
       throw new IAE(
           "Received a non-applicable rewrite: %s, filter's dimension: %s",
           columnRewrites,
@@ -128,7 +130,7 @@ public class LikeFilter implements Filter
     }
 
     return new LikeFilter(
-        columnRewrites.get(dimension),
+        rewriteDimensionTo,
         extractionFn,
         likeMatcher,
         filterTuning

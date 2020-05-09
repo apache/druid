@@ -45,6 +45,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -125,9 +127,10 @@ public class JoinFilterAnalyzer
           null,
           null,
           null,
+          null,
           enableFilterPushDown,
           enableFilterRewrite,
-          new HashMap<>()
+          Collections.emptyMap()
       );
     }
 
@@ -167,9 +170,10 @@ public class JoinFilterAnalyzer
           normalizedBaseTableClauses,
           normalizedJoinTableClauses,
           null,
+          null,
           enableFilterPushDown,
           enableFilterRewrite,
-          new HashMap<>()
+          Collections.emptyMap()
       );
     }
 
@@ -185,12 +189,10 @@ public class JoinFilterAnalyzer
       }
     }
 
-    Map<String, Optional<Map<String, JoinFilterColumnCorrelationAnalysis>>> correlationsByPrefix = new HashMap<>();
-
     // Determine candidates for filter rewrites.
     // A candidate is an RHS column that appears in a filter, along with the value being filtered on, plus
     // the joinable clause associated with the table that the RHS column is from.
-    Set<RhsRewriteCandidate> rhsRewriteCandidates = new HashSet<>();
+    Set<RhsRewriteCandidate> rhsRewriteCandidates = new LinkedHashSet<>();
     for (Filter orClause : normalizedJoinTableClauses) {
       if (filterMatchesNull(orClause)) {
         continue;
@@ -198,70 +200,68 @@ public class JoinFilterAnalyzer
 
       if (orClause instanceof OrFilter) {
         for (Filter subFilter : ((OrFilter) orClause).getFilters()) {
-          if (subFilter instanceof SelectorFilter) {
-            String reqColumn = ((SelectorFilter) subFilter).getDimension();
-            String reqValue = ((SelectorFilter) subFilter).getValue();
-            JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
-            if (joinableClause != null) {
-              rhsRewriteCandidates.add(
-                  new RhsRewriteCandidate(
-                      joinableClause,
-                      reqColumn,
-                      reqValue,
-                      false
-                  )
-              );
-            }
+          Optional<RhsRewriteCandidate> rhsRewriteCandidate = determineRhsRewriteCandidatesForSingleFilter(
+              subFilter,
+              equiconditions,
+              joinableClauses
+          );
+
+          if (rhsRewriteCandidate.isPresent()) {
+            rhsRewriteCandidates.add(rhsRewriteCandidate.get());
           }
         }
         continue;
       }
 
-      // Check if the filter clause is on the RHS join column. If so, we can rewrite the clause to filter on the
-      // LHS join column instead.
-      // Currently, we only support rewrites of filters that operate on a single column for simplicity.
-      Set<String> requiredColumns = orClause.getRequiredColumns();
-      if (orClause.supportsRequiredColumnRewrite() &&
-          doesRequiredColumnSetSupportDirectJoinFilterRewrite(requiredColumns, equiconditions)) {
-        String reqColumn = requiredColumns.iterator().next();
-        JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
-        rhsRewriteCandidates.add(
-            new RhsRewriteCandidate(
-                joinableClause,
-                reqColumn,
-                null,
-                true
-            )
-        );
-      } else if (orClause instanceof SelectorFilter) {
-        // this is a candidate for RHS filter rewrite, determine column correlations and correlated values
-        String reqColumn = ((SelectorFilter) orClause).getDimension();
-        String reqValue = ((SelectorFilter) orClause).getValue();
-        JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
-        if (joinableClause != null) {
-          rhsRewriteCandidates.add(
-              new RhsRewriteCandidate(
-                  joinableClause,
-                  reqColumn,
-                  reqValue,
-                  false
-              )
-          );
-        }
+      Optional<RhsRewriteCandidate> rhsRewriteCandidate = determineRhsRewriteCandidatesForSingleFilter(
+          orClause,
+          equiconditions,
+          joinableClauses
+      );
+
+      if (rhsRewriteCandidate.isPresent()) {
+        rhsRewriteCandidates.add(rhsRewriteCandidate.get());
       }
     }
 
     // Build a map of RHS table prefix -> JoinFilterColumnCorrelationAnalysis based on the RHS rewrite candidates
+    Map<String, Optional<Map<String, JoinFilterColumnCorrelationAnalysis>>> correlationsByPrefix = new HashMap<>();
+    Map<String, Optional<JoinFilterColumnCorrelationAnalysis>> directRewriteCorrelations = new HashMap<>();
+
     for (RhsRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
-      correlationsByPrefix.computeIfAbsent(
-          rhsRewriteCandidate.getJoinableClause().getPrefix(),
-          p -> findCorrelatedBaseTableColumns(
-              joinableClauses,
-              p,
-              rhsRewriteCandidate,
-              equiconditions
-          )
-      );
+      if (rhsRewriteCandidate.isDirectRewrite()) {
+        directRewriteCorrelations.computeIfAbsent(
+            rhsRewriteCandidate.getRhsColumn(),
+            c -> {
+              Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlatedBaseTableColumns =
+                  findCorrelatedBaseTableColumns(
+                      joinableClauses,
+                      c,
+                      rhsRewriteCandidate,
+                      equiconditions
+                  );
+              if (!correlatedBaseTableColumns.isPresent()) {
+                return Optional.empty();
+              } else {
+                JoinFilterColumnCorrelationAnalysis baseColumnAnalysis = correlatedBaseTableColumns.get().get(c);
+                // for direct rewrites, there will only be one analysis keyed by the RHS column
+                assert (baseColumnAnalysis != null);
+                return Optional.of(correlatedBaseTableColumns.get().get(c));
+              }
+
+            }
+        );
+      } else {
+        correlationsByPrefix.computeIfAbsent(
+            rhsRewriteCandidate.getJoinableClause().getPrefix(),
+            p -> findCorrelatedBaseTableColumns(
+                joinableClauses,
+                p,
+                rhsRewriteCandidate,
+                equiconditions
+            )
+        );
+      }
     }
 
     // Using the RHS table prefix -> JoinFilterColumnCorrelationAnalysis created in the previous step,
@@ -273,25 +273,37 @@ public class JoinFilterAnalyzer
     // The value is a List<JoinFilterColumnCorrelationAnalysis> instead of a single value because a table can be joined
     // to another via multiple columns.
     // (See JoinFilterAnalyzerTest.test_filterPushDown_factToRegionOneColumnToTwoRHSColumnsAndFilterOnRHS for an example)
-    Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn = new HashMap<>();
+    Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn = new LinkedHashMap<>();
+    Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn = new LinkedHashMap<>();
     for (RhsRewriteCandidate rhsRewriteCandidate : rhsRewriteCandidates) {
+      if (rhsRewriteCandidate.isDirectRewrite()) {
+        List<JoinFilterColumnCorrelationAnalysis> perColumnCorrelations =
+            correlationsByDirectFilteringColumn.computeIfAbsent(
+                rhsRewriteCandidate.getRhsColumn(),
+                (rhsCol) -> {
+                  return new ArrayList<>();
+                }
+            );
+        perColumnCorrelations.add(
+            directRewriteCorrelations.get(rhsRewriteCandidate.getRhsColumn()).get()
+        );
+        continue;
+      }
+
       Optional<Map<String, JoinFilterColumnCorrelationAnalysis>> correlationsForPrefix = correlationsByPrefix.get(
           rhsRewriteCandidate.getJoinableClause().getPrefix()
       );
       if (correlationsForPrefix.isPresent()) {
         for (Map.Entry<String, JoinFilterColumnCorrelationAnalysis> correlationForPrefix : correlationsForPrefix.get()
                                                                                                                 .entrySet()) {
-          Optional<List<JoinFilterColumnCorrelationAnalysis>> perColumnCorrelations =
+          List<JoinFilterColumnCorrelationAnalysis> perColumnCorrelations =
               correlationsByFilteringColumn.computeIfAbsent(
                   rhsRewriteCandidate.getRhsColumn(),
-                  (rhsCol) -> Optional.of(new ArrayList<>())
+                  (rhsCol) -> {
+                    return new ArrayList<>();
+                  }
               );
-          assert (perColumnCorrelations.isPresent());
-          perColumnCorrelations.get().add(correlationForPrefix.getValue());
-          if (rhsRewriteCandidate.isDirectRewrite()) {
-            // we don't need to determine correlated values if the filter is on the join column
-            continue;
-          }
+          perColumnCorrelations.add(correlationForPrefix.getValue());
           correlationForPrefix.getValue().getCorrelatedValuesMap().computeIfAbsent(
               Pair.of(rhsRewriteCandidate.getRhsColumn(), rhsRewriteCandidate.getValueForRewrite()),
               (rhsVal) -> {
@@ -313,20 +325,30 @@ public class JoinFilterAnalyzer
           );
         }
       } else {
-        correlationsByFilteringColumn.put(rhsRewriteCandidate.getRhsColumn(), Optional.empty());
+        correlationsByFilteringColumn.put(rhsRewriteCandidate.getRhsColumn(), null);
       }
     }
 
     // Go through each per-column analysis list and prune duplicates
-    for (Map.Entry<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlation : correlationsByFilteringColumn
+    for (Map.Entry<String, List<JoinFilterColumnCorrelationAnalysis>> correlation : correlationsByFilteringColumn
         .entrySet()) {
-      if (correlation.getValue().isPresent()) {
+      if (correlation.getValue() != null) {
         List<JoinFilterColumnCorrelationAnalysis> dedupList = eliminateCorrelationDuplicates(
-            correlation.getValue().get()
+            correlation.getValue()
         );
-        correlationsByFilteringColumn.put(correlation.getKey(), Optional.of(dedupList));
+        correlationsByFilteringColumn.put(correlation.getKey(), dedupList);
       }
     }
+    for (Map.Entry<String, List<JoinFilterColumnCorrelationAnalysis>> correlation : correlationsByDirectFilteringColumn
+        .entrySet()) {
+      if (correlation.getValue() != null) {
+        List<JoinFilterColumnCorrelationAnalysis> dedupList = eliminateCorrelationDuplicates(
+            correlation.getValue()
+        );
+        correlationsByDirectFilteringColumn.put(correlation.getKey(), dedupList);
+      }
+    }
+
 
     return new JoinFilterPreAnalysis(
         joinableClauses,
@@ -335,10 +357,54 @@ public class JoinFilterAnalyzer
         normalizedBaseTableClauses,
         normalizedJoinTableClauses,
         correlationsByFilteringColumn,
+        correlationsByDirectFilteringColumn,
         enableFilterPushDown,
         enableFilterRewrite,
         equiconditions
     );
+  }
+
+  private static Optional<RhsRewriteCandidate> determineRhsRewriteCandidatesForSingleFilter(
+      Filter orClause,
+      Map<String, Set<Expr>> equiconditions,
+      List<JoinableClause> joinableClauses
+  )
+  {
+    // Check if the filter clause is on the RHS join column. If so, we can rewrite the clause to filter on the
+    // LHS join column instead.
+    // Currently, we only support rewrites of filters that operate on a single column for simplicity.
+    Set<String> requiredColumns = orClause.getRequiredColumns();
+    if (orClause.supportsRequiredColumnRewrite() &&
+        doesRequiredColumnSetSupportDirectJoinFilterRewrite(requiredColumns, equiconditions)) {
+      String reqColumn = requiredColumns.iterator().next();
+      JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
+
+      return Optional.of(
+          new RhsRewriteCandidate(
+              joinableClause,
+              reqColumn,
+              null,
+              true
+          )
+      );
+    } else if (orClause instanceof SelectorFilter) {
+      // this is a candidate for RHS filter rewrite, determine column correlations and correlated values
+      String reqColumn = ((SelectorFilter) orClause).getDimension();
+      String reqValue = ((SelectorFilter) orClause).getValue();
+      JoinableClause joinableClause = isColumnFromJoin(joinableClauses, reqColumn);
+      if (joinableClause != null) {
+        return Optional.of(
+            new RhsRewriteCandidate(
+                joinableClause,
+                reqColumn,
+                reqValue,
+                false
+            )
+        );
+      }
+    }
+
+    return Optional.empty();
   }
 
   private static boolean doesRequiredColumnSetSupportDirectJoinFilterRewrite(
@@ -412,8 +478,16 @@ public class JoinFilterAnalyzer
    * Analyze a filter clause from a filter that is in conjunctive normal form (AND of ORs).
    * The clause is expected to be an OR filter or a leaf filter.
    *
-   * @param filterClause          Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
-   * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param filterClause                       Individual filter clause (an OR filter or a leaf filter) from a filter that is in CNF
+   * @param joinFilterPreAnalysis              The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
+   * @param pushDownVirtualColumnsForLhsExprs  Used when there are LHS expressions in the join equiconditions.
+   *                                           If we rewrite an RHS filter such that it applies to the LHS expression instead,
+   *                                           because the expression existed only in the equicondition, we must create a virtual column
+   *                                           on the LHS with the same expression in order to apply the filter.
+   *                                           The specific rewriting methods such as {@link #rewriteSelectorFilter} will use this
+   *                                           as a cache for virtual columns that they need to created, keyed by the expression, so that
+   *                                           they can avoid creating redundant virtual columns.
+   *
    *
    * @return a JoinFilterAnalysis that contains a possible filter rewrite and information on how to handle the filter.
    */
@@ -476,14 +550,14 @@ public class JoinFilterAnalyzer
     // we only support direct rewrites of filters that reference a single column
     String reqColumn = filterClause.getRequiredColumns().iterator().next();
 
-    Optional<List<JoinFilterColumnCorrelationAnalysis>> correlationAnalyses = joinFilterPreAnalysis.getCorrelationsByFilteringColumn()
-                                                                                                   .get(reqColumn);
+    List<JoinFilterColumnCorrelationAnalysis> correlationAnalyses = joinFilterPreAnalysis.getCorrelationsByDirectFilteringColumn()
+                                                                                         .get(reqColumn);
 
-    if (!correlationAnalyses.isPresent()) {
+    if (correlationAnalyses == null) {
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(filterClause);
     }
 
-    for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses.get()) {
+    for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses) {
       if (correlationAnalysis.supportsPushDown()) {
         for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
           Filter rewrittenFilter = filterClause.rewriteRequiredColumns(ImmutableMap.of(
@@ -533,7 +607,7 @@ public class JoinFilterAnalyzer
    *
    * @param orFilter              OrFilter to be rewritten
    * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
-   *
+   * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
    * @return A JoinFilterAnalysis indicating how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteOrFilter(
@@ -592,7 +666,7 @@ public class JoinFilterAnalyzer
    *
    * @param selectorFilter        SelectorFilter to be rewritten
    * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
-   *
+   * @param pushDownVirtualColumnsForLhsExprs See comments on {@link #analyzeJoinFilterClause}
    * @return A JoinFilterAnalysis that indicates how to handle the potentially rewritten filter
    */
   private static JoinFilterAnalysis rewriteSelectorFilter(
@@ -621,14 +695,14 @@ public class JoinFilterAnalyzer
       );
     }
 
-    Optional<List<JoinFilterColumnCorrelationAnalysis>> correlationAnalyses = joinFilterPreAnalysis.getCorrelationsByFilteringColumn()
-                                                                                                   .get(filteringColumn);
+    List<JoinFilterColumnCorrelationAnalysis> correlationAnalyses = joinFilterPreAnalysis.getCorrelationsByFilteringColumn()
+                                                                                         .get(filteringColumn);
 
-    if (!correlationAnalyses.isPresent()) {
+    if (correlationAnalyses == null) {
       return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
     }
 
-    for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses.get()) {
+    for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses) {
       if (correlationAnalysis.supportsPushDown()) {
         Optional<Set<String>> correlatedValues = correlationAnalysis.getCorrelatedValuesMap().get(
             Pair.of(filteringColumn, filteringValue)
@@ -775,7 +849,7 @@ public class JoinFilterAnalyzer
       }
     }
 
-    Map<String, JoinFilterColumnCorrelationAnalysis> correlations = new HashMap<>();
+    Map<String, JoinFilterColumnCorrelationAnalysis> correlations = new LinkedHashMap<>();
 
     for (String rhsColumn : rhsColumns) {
       Set<String> correlatedBaseColumns = new HashSet<>();
@@ -888,9 +962,15 @@ public class JoinFilterAnalyzer
       List<JoinFilterColumnCorrelationAnalysis> originalList
   )
   {
-    Map<List<String>, JoinFilterColumnCorrelationAnalysis> uniquesMap = new HashMap<>();
+    Map<Set<String>, JoinFilterColumnCorrelationAnalysis> uniquesMap = new HashMap<>();
+
     for (JoinFilterColumnCorrelationAnalysis jca : originalList) {
-      uniquesMap.put(jca.getBaseColumns(), jca);
+      Set<String> mapKey = new HashSet<>(jca.getBaseColumns());
+      for (Expr expr : jca.getBaseExpressions()) {
+        mapKey.add(expr.stringify());
+      }
+
+      uniquesMap.put(mapKey, jca);
     }
 
     return new ArrayList<>(uniquesMap.values());
@@ -1007,6 +1087,12 @@ public class JoinFilterAnalyzer
       return valueForRewrite;
     }
 
+    /**
+     * A direct rewrite occurs when we filter on an RHS column that is also part of a join equicondition.
+     *
+     * For example, if we have the filter (j.x = 'hello') and the join condition is (y = j.x), we can directly
+     * rewrite the j.x filter to (y = 'hello').
+     */
     public boolean isDirectRewrite()
     {
       return isDirectRewrite;
