@@ -38,12 +38,15 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -111,6 +114,9 @@ public class ExpressionFilterTest extends BaseFilterTest
         optimize
     );
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -280,6 +286,17 @@ public class ExpressionFilterTest extends BaseFilterTest
     EqualsVerifier.forClass(ExpressionFilter.class)
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testRequiredColumnRewrite()
+  {
+    Filter filter = edf("dim1 == '1'").toFilter();
+    Assert.assertFalse(filter.supportsRequiredColumnRewrite());
+
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage("Required column rewrite is not supported by this filter.");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
   }
 
   private static ExpressionDimFilter edf(final String expression)

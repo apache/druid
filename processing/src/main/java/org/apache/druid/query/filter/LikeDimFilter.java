@@ -400,5 +400,26 @@ public class LikeDimFilter implements DimFilter
         return Objects.hash(extractionFn, pattern);
       }
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      LikeMatcher that = (LikeMatcher) o;
+      return getSuffixMatch() == that.getSuffixMatch() &&
+             Objects.equals(getPrefix(), that.getPrefix()) &&
+             Objects.equals(pattern.toString(), that.pattern.toString());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(getSuffixMatch(), getPrefix(), pattern.toString());
+    }
   }
 }

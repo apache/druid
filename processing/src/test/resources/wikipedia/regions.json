@@ -17,4 +17,5 @@
 {"regionIsoCode":"VA","countryIsoCode":"US","regionName":"Virginia"}
 {"regionIsoCode":"AV","countryIsoCode":"SU","regionName":"Ainigriv"}
 {"regionIsoCode":"ZZ","countryIsoCode":"USCA","regionName":"Usca City"}
-{"regionIsoCode":"MMMM","countryIsoCode":"MMMM","regionName":"Fourems Province"}
+{"regionIsoCode":"MMMM","countryIsoCode":"MMMM","regionName":"Fourems Province", "extraField":"California"}
+{"regionIsoCode":"AAAA","countryIsoCode":"AAAA","regionName":"Foureis Province", "extraField":"California"}

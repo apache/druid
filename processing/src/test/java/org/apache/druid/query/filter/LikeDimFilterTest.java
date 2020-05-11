@@ -78,4 +78,13 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
                   .usingGetClass()
                   .verify();
   }
+
+  @Test
+  public void test_LikeMatcher_equals()
+  {
+    EqualsVerifier.forClass(LikeDimFilter.LikeMatcher.class)
+                  .usingGetClass()
+                  .withNonnullFields("suffixMatch", "prefix", "pattern")
+                  .verify();
+  }
 }

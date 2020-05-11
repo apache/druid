@@ -77,6 +77,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
                 null,
+                null,
                 null
             ),
             null
@@ -114,6 +115,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                     null
                 ),
                 null,
+                null,
                 null
             ),
             null
@@ -150,6 +152,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                     ImmutableList.of(),
                     null
                 ),
+                null,
                 null,
                 null
             ),
@@ -209,6 +212,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                     "metric1"
                 )), ImmutableList.of("dimC"), null),
                 null,
+                null,
                 null
             ),
             null
@@ -241,6 +245,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                     ImmutableList.of("dimC"),
                     null
                 ),
+                null,
                 null,
                 null
             ),
@@ -306,6 +311,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                     ImmutableList.of("dimC"),
                     null
                 ),
+                null,
                 null,
                 null
             ),
@@ -401,6 +407,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
             new TimestampSpec("xXx", null, null),
             new DimensionsSpec(null, Arrays.asList("metric1", "xXx", "col1"), null),
             null,
+            null,
             null
         )
     );
@@ -467,6 +474,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
                 null,
+                null,
                 null
             ),
             null
@@ -505,6 +513,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                null,
                 null,
                 null
             ),

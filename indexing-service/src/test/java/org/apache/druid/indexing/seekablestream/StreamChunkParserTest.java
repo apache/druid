@@ -66,7 +66,8 @@ public class StreamChunkParserTest
             TIMESTAMP_SPEC,
             DimensionsSpec.EMPTY,
             JSONPathSpec.DEFAULT,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         ),
         StringUtils.UTF8_STRING
     );
@@ -84,7 +85,7 @@ public class StreamChunkParserTest
   @Test
   public void testWithNullParserAndInputformatParseProperly() throws IOException
   {
-    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap());
+    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null);
     final StreamChunkParser chunkParser = new StreamChunkParser(
         null,
         inputFormat,
@@ -117,7 +118,8 @@ public class StreamChunkParserTest
             TIMESTAMP_SPEC,
             DimensionsSpec.EMPTY,
             JSONPathSpec.DEFAULT,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         ),
         StringUtils.UTF8_STRING
     );
@@ -153,7 +155,7 @@ public class StreamChunkParserTest
 
     private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec, @Nullable Map<String, Boolean> featureSpec)
     {
-      super(flattenSpec, featureSpec);
+      super(flattenSpec, featureSpec, null);
     }
 
     @Override

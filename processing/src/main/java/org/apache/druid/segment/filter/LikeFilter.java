@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
@@ -106,6 +108,33 @@ public class LikeFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    String rewriteDimensionTo = columnRewrites.get(dimension);
+
+    if (rewriteDimensionTo == null) {
+      throw new IAE(
+          "Received a non-applicable rewrite: %s, filter's dimension: %s",
+          columnRewrites,
+          dimension
+      );
+    }
+
+    return new LikeFilter(
+        rewriteDimensionTo,
+        extractionFn,
+        likeMatcher,
+        filterTuning
+    );
   }
 
   @Override

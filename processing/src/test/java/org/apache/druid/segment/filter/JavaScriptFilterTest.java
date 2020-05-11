@@ -28,13 +28,17 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -54,6 +58,9 @@ public class JavaScriptFilterTest extends BaseFilterTest
   {
     super(testName, DEFAULT_ROWS, indexBuilder, finisher, cnf, optimize);
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -229,6 +236,18 @@ public class JavaScriptFilterTest extends BaseFilterTest
                   .usingGetClass()
                   .verify();
   }
+
+  @Test
+  public void testRequiredColumnRewrite()
+  {
+    Filter filter = newJavaScriptDimFilter("dim3", jsValueFilter("a"), null).toFilter();
+    Assert.assertFalse(filter.supportsRequiredColumnRewrite());
+
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage("Required column rewrite is not supported by this filter.");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
+  }
+
   private JavaScriptDimFilter newJavaScriptDimFilter(
       final String dimension,
       final String function,

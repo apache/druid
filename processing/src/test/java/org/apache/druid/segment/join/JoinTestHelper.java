@@ -99,6 +99,7 @@ public class JoinTestHelper
                   .add("regionIsoCode", ValueType.STRING)
                   .add("countryIsoCode", ValueType.STRING)
                   .add("regionName", ValueType.STRING)
+                  .add("extraField", ValueType.STRING)
                   .build();
 
   private static final ColumnProcessorFactory<Supplier<Object>> SIMPLE_READER =

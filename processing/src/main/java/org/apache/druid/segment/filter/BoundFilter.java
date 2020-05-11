@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -47,6 +48,7 @@ import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -161,6 +163,39 @@ public class BoundFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return boundDimFilter.getRequiredColumns();
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    String rewriteDimensionTo = columnRewrites.get(boundDimFilter.getDimension());
+
+    if (rewriteDimensionTo == null) {
+      throw new IAE(
+          "Received a non-applicable rewrite: %s, filter's dimension: %s",
+          columnRewrites,
+          boundDimFilter.getDimension()
+      );
+    }
+    BoundDimFilter newDimFilter = new BoundDimFilter(
+        rewriteDimensionTo,
+        boundDimFilter.getLower(),
+        boundDimFilter.getUpper(),
+        boundDimFilter.isLowerStrict(),
+        boundDimFilter.isUpperStrict(),
+        null,
+        boundDimFilter.getExtractionFn(),
+        boundDimFilter.getOrdering()
+    );
+    return new BoundFilter(
+        newDimFilter
+    );
   }
 
   private static Pair<Integer, Integer> getStartEndIndexes(

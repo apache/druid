@@ -48,11 +48,11 @@ import java.util.Set;
  */
 public class DimensionPredicateFilter implements Filter
 {
-  private final String dimension;
-  private final DruidPredicateFactory predicateFactory;
-  private final String basePredicateString;
-  private final ExtractionFn extractionFn;
-  private final FilterTuning filterTuning;
+  protected final String dimension;
+  protected final DruidPredicateFactory predicateFactory;
+  protected final String basePredicateString;
+  protected final ExtractionFn extractionFn;
+  protected final FilterTuning filterTuning;
 
   public DimensionPredicateFilter(
       final String dimension,
@@ -143,29 +143,6 @@ public class DimensionPredicateFilter implements Filter
         indexSelector,
         predicateFactory.makeStringPredicate()
     );
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    DimensionPredicateFilter that = (DimensionPredicateFilter) o;
-    return Objects.equals(dimension, that.dimension) &&
-           Objects.equals(predicateFactory, that.predicateFactory) &&
-           Objects.equals(basePredicateString, that.basePredicateString) &&
-           Objects.equals(extractionFn, that.extractionFn) &&
-           Objects.equals(filterTuning, that.filterTuning);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(dimension, predicateFactory, basePredicateString, extractionFn, filterTuning);
   }
 
   @Override
@@ -274,5 +251,27 @@ public class DimensionPredicateFilter implements Filter
     {
       return Objects.hash(predicateFactory, extractionFn);
     }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DimensionPredicateFilter that = (DimensionPredicateFilter) o;
+    return Objects.equals(dimension, that.dimension) &&
+           Objects.equals(basePredicateString, that.basePredicateString) &&
+           Objects.equals(extractionFn, that.extractionFn) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, basePredicateString, extractionFn, filterTuning);
   }
 }

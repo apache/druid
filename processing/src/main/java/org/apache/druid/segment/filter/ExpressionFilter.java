@@ -179,6 +179,13 @@ public class ExpressionFilter implements Filter
   }
 
   @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    // We could support this, but need a good approach to rewriting the identifiers within an expression.
+    return false;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -34,6 +35,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -126,6 +128,31 @@ public class SelectorFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    String rewriteDimensionTo = columnRewrites.get(dimension);
+
+    if (rewriteDimensionTo == null) {
+      throw new IAE(
+          "Received a non-applicable rewrite: %s, filter's dimension: %s",
+          columnRewrites,
+          dimension
+      );
+    }
+
+    return new SelectorFilter(
+        rewriteDimensionTo,
+        value
+    );
   }
 
   @Override
