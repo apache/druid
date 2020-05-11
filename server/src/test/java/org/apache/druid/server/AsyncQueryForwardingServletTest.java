@@ -201,6 +201,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     final HttpServletRequest requestMock = EasyMock.createMock(HttpServletRequest.class);
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(jsonMapper.writeValueAsBytes(query));
+
+    final HttpServletResponse responseMock = EasyMock.createMock(HttpServletResponse.class);
+    EasyMock.expect(responseMock.getHeader("Date")).andReturn("2020-02-02");
+    responseMock.setHeader("Date", null);
+    EasyMock.expectLastCall();
+    EasyMock.replay(responseMock);
+
     final ServletInputStream servletInputStream = new ServletInputStream()
     {
       private boolean finished;
@@ -269,7 +276,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       }
     };
 
-    servlet.service(requestMock, null);
+    servlet.service(requestMock, responseMock);
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.
     EasyMock.verify(hostFinder, requestMock);
