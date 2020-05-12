@@ -887,6 +887,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             toolbox,
             getDataSource(),
             getId(),
+            dataSchema.getGranularitySpec().getQueryGranularity(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
         );
@@ -1019,10 +1020,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   static class ShardSpecs
   {
     private final Map<Interval, List<ShardSpec>> map;
+    private Granularity queryGranularity;
 
-    ShardSpecs(final Map<Interval, List<ShardSpec>> map)
+    ShardSpecs(final Map<Interval, List<ShardSpec>> map, Granularity queryGranularity)
     {
       this.map = map;
+      this.queryGranularity = queryGranularity;
     }
 
     /**
@@ -1039,7 +1042,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (shardSpecs == null || shardSpecs.isEmpty()) {
         throw new ISE("Failed to get shardSpec for interval[%s]", interval);
       }
-      return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(row.getTimestampFromEpoch(), row);
+      final long truncatedTimestamp = queryGranularity.bucketStart(row.getTimestamp()).getMillis();
+      return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(truncatedTimestamp, row);
     }
   }
 
