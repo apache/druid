@@ -50,7 +50,7 @@ public class SegmentLoaderConfig
   private int announceIntervalMillis = 0; // do not background announce
 
   @JsonProperty("numLoadingThreads")
-  private int numLoadingThreads = Math.min(1, JvmUtils.getRuntimeInfo().getAvailableProcessors());
+  private int numLoadingThreads = Math.min(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 6);
 
   @JsonProperty("numBootstrapThreads")
   private Integer numBootstrapThreads = null;
