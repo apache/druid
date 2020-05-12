@@ -45,11 +45,12 @@ public class JsonReader extends TextReader
       InputRowSchema inputRowSchema,
       InputEntity source,
       JSONPathSpec flattenSpec,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      boolean keepNullColumns
   )
   {
     super(inputRowSchema, source);
-    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker());
+    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(keepNullColumns));
     this.mapper = mapper;
   }
 

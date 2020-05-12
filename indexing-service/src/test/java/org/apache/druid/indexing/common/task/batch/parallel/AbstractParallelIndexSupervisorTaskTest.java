@@ -38,6 +38,7 @@ import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -131,7 +132,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       false,
       0
   );
-  static final InputFormat DEFAULT_INPUT_FORMAT = DEFAULT_PARSE_SPEC.toInputFormat();
+  static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
+      Arrays.asList("ts", "dim", "val"),
+      null,
+      false,
+      false,
+      0
+  );
   static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING = new ParallelIndexTuningConfig(
       null,
       null,

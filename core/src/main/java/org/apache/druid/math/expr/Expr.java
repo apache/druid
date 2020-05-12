@@ -1287,7 +1287,6 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
       return ExprEval.of(null);
     }
 
-
     if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
     } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {

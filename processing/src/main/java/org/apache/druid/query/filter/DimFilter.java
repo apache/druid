@@ -47,7 +47,8 @@ import java.util.Set;
     @JsonSubTypes.Type(name = "interval", value = IntervalDimFilter.class),
     @JsonSubTypes.Type(name = "like", value = LikeDimFilter.class),
     @JsonSubTypes.Type(name = "expression", value = ExpressionDimFilter.class),
-    @JsonSubTypes.Type(name = "true", value = TrueDimFilter.class)
+    @JsonSubTypes.Type(name = "true", value = TrueDimFilter.class),
+    @JsonSubTypes.Type(name = "false", value = FalseDimFilter.class)
 })
 public interface DimFilter extends Cacheable
 {
@@ -78,6 +79,7 @@ public interface DimFilter extends Cacheable
    * @return a RangeSet that represent the possible range of the input dimension, or null if it is not possible to
    * determine for this DimFilter.
    */
+  @Nullable
   RangeSet<String> getDimensionRangeSet(String dimension);
 
   /**

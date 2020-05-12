@@ -33,6 +33,7 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -109,6 +110,18 @@ public class NotFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return baseFilter.getRequiredColumns();
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return baseFilter.supportsRequiredColumnRewrite();
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    return new NotFilter(baseFilter.rewriteRequiredColumns(columnRewrites));
   }
 
   @Override

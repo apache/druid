@@ -218,7 +218,7 @@ public class BlockingPoolTest
     final List<ReferenceCountingResourceHolder<Integer>> r1 = f1.get();
     final List<ReferenceCountingResourceHolder<Integer>> r2 = f2.get();
 
-    if (r1 != null) {
+    if (!r1.isEmpty()) {
       Assert.assertTrue(r2.isEmpty());
       Assert.assertEquals(pool.maxSize() - batch1, pool.getPoolSize());
       Assert.assertEquals(batch1, r1.size());

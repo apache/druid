@@ -754,24 +754,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     spec = createMock(SeekableStreamSupervisorSpec.class);
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig())
-            .andReturn(
-                new SeekableStreamSupervisorIOConfig(
-                    "stream",
-                    new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of()),
-                    1,
-                    1,
-                    new Period("PT1H"),
-                    new Period("PT1S"),
-                    new Period("PT30S"),
-                    false,
-                    new Period("PT30M"),
-                    null,
-                    null, null
-                )
-                {
-                }
-            ).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
+        "stream",
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
+        1,
+        1,
+        new Period("PT1H"),
+        new Period("PT1S"),
+        new Period("PT30S"),
+        false,
+        new Period("PT30M"),
+        null,
+        null,
+        null
+    )
+    {
+    }).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
@@ -819,7 +817,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     return new SeekableStreamSupervisorIOConfig(
         "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of()),
+        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
         1,
         1,
         new Period("PT1H"),
@@ -1033,9 +1031,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           true,
           minimumMessageTime,
           maximumMessageTime,
-          ioConfig.getInputFormat(
-              getDataSchema().getParser() == null ? null : getDataSchema().getParser().getParseSpec()
-          )
+          ioConfig.getInputFormat()
       )
       {
       };

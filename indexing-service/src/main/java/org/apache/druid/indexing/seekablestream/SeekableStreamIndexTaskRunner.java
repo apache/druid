@@ -255,7 +255,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               .map(AggregatorFactory::getName)
               .collect(Collectors.toList())
     );
-    this.inputFormat = ioConfig.getInputFormat(parser == null ? null : parser.getParseSpec());
+    this.inputFormat = ioConfig.getInputFormat();
     this.parser = parser;
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;

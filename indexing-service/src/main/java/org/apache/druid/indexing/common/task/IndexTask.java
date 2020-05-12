@@ -44,7 +44,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
@@ -1046,10 +1045,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private static InputFormat getInputFormat(IndexIngestionSpec ingestionSchema)
   {
-    final InputRowParser parser = ingestionSchema.getDataSchema().getParser();
-    return ingestionSchema.getIOConfig().getNonNullInputFormat(
-        parser == null ? null : parser.getParseSpec()
-    );
+    return ingestionSchema.getIOConfig().getNonNullInputFormat();
   }
 
   public static class IndexIngestionSpec extends IngestionSpec<IndexIOConfig, IndexTuningConfig>
@@ -1184,13 +1180,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       }
     }
 
-    public InputFormat getNonNullInputFormat(@Nullable ParseSpec parseSpec)
+    public InputFormat getNonNullInputFormat()
     {
-      if (inputFormat == null) {
-        return Preconditions.checkNotNull(parseSpec, "parseSpec").toInputFormat();
-      } else {
-        return inputFormat;
-      }
+      return Preconditions.checkNotNull(inputFormat, "inputFormat");
     }
 
     @Override

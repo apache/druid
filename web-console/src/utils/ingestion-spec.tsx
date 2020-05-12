@@ -230,6 +230,7 @@ export interface InputFormat {
   pattern?: string;
   function?: string;
   flattenSpec?: FlattenSpec;
+  keepNullColumns?: boolean;
 }
 
 export type DimensionMode = 'specific' | 'auto-detect';
@@ -2420,7 +2421,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
-    info: <>Compression format for metric columns.</>,
+    info: <>Compression format for primitive type metric columns.</>,
   },
   {
     name: 'indexSpec.longEncoding',

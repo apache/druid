@@ -40,6 +40,7 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
@@ -95,8 +96,14 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
   abstract StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config) throws Exception;
 
-  abstract StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, boolean transactionEnabled)
-      throws Exception;
+  /**
+   * Create an event writer for an underlying stream. {@code transactionEnabled} should not be null if the stream
+   * supports transactions. It is ignored otherwise.
+   */
+  abstract StreamEventWriter createStreamEventWriter(
+      IntegrationTestingConfig config,
+      @Nullable Boolean transactionEnabled
+  ) throws Exception;
 
   abstract Function<String, String> generateStreamIngestionPropsTransform(
       String streamName,
@@ -160,7 +167,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
   }
 
   protected void doTestIndexDataStableState(
-      boolean transactionEnabled,
+      @Nullable Boolean transactionEnabled,
       String serializerPath,
       String parserType,
       String specPath
@@ -194,7 +201,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  void doTestIndexDataWithLosingCoordinator(boolean transactionEnabled) throws Exception
+  void doTestIndexDataWithLosingCoordinator(@Nullable Boolean transactionEnabled) throws Exception
   {
     testIndexWithLosingNodeHelper(
         () -> druidClusterAdminClient.restartCoordinatorContainer(),
@@ -203,7 +210,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     );
   }
 
-  void doTestIndexDataWithLosingOverlord(boolean transactionEnabled) throws Exception
+  void doTestIndexDataWithLosingOverlord(@Nullable Boolean transactionEnabled) throws Exception
   {
     testIndexWithLosingNodeHelper(
         () -> druidClusterAdminClient.restartIndexerContainer(),
@@ -212,7 +219,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     );
   }
 
-  void doTestIndexDataWithLosingHistorical(boolean transactionEnabled) throws Exception
+  void doTestIndexDataWithLosingHistorical(@Nullable Boolean transactionEnabled) throws Exception
   {
     testIndexWithLosingNodeHelper(
         () -> druidClusterAdminClient.restartHistoricalContainer(),
@@ -221,7 +228,7 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     );
   }
 
-  protected void doTestIndexDataWithStartStopSupervisor(boolean transactionEnabled) throws Exception
+  protected void doTestIndexDataWithStartStopSupervisor(@Nullable Boolean transactionEnabled) throws Exception
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
         INPUT_FORMAT,
@@ -284,22 +291,22 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  protected void doTestIndexDataWithStreamReshardSplit(boolean transactionEnabled) throws Exception
+  protected void doTestIndexDataWithStreamReshardSplit(@Nullable Boolean transactionEnabled) throws Exception
   {
     // Reshard the stream from STREAM_SHARD_COUNT to STREAM_SHARD_COUNT * 2
     testIndexWithStreamReshardHelper(transactionEnabled, STREAM_SHARD_COUNT * 2);
   }
 
-  protected void doTestIndexDataWithStreamReshardMerge(boolean transactionEnabled) throws Exception
+  protected void doTestIndexDataWithStreamReshardMerge() throws Exception
   {
     // Reshard the stream from STREAM_SHARD_COUNT to STREAM_SHARD_COUNT / 2
-    testIndexWithStreamReshardHelper(transactionEnabled, STREAM_SHARD_COUNT / 2);
+    testIndexWithStreamReshardHelper(null, STREAM_SHARD_COUNT / 2);
   }
 
   private void testIndexWithLosingNodeHelper(
       Runnable restartRunnable,
       Runnable waitForReadyRunnable,
-      boolean transactionEnabled
+      @Nullable Boolean transactionEnabled
   ) throws Exception
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
@@ -376,7 +383,8 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
     }
   }
 
-  private void testIndexWithStreamReshardHelper(boolean transactionEnabled, int newShardCount) throws Exception
+  private void testIndexWithStreamReshardHelper(@Nullable Boolean transactionEnabled, int newShardCount)
+      throws Exception
   {
     final GeneratedTestConfig generatedTestConfig = new GeneratedTestConfig(
         INPUT_FORMAT,
