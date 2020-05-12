@@ -284,6 +284,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   public void testEqualsContract()
   {
     EqualsVerifier.forClass(ExpressionFilter.class)
+                  .withIgnoredFields("requiredBindings")
                   .usingGetClass()
                   .verify();
   }

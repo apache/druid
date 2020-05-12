@@ -150,6 +150,8 @@ public class RegexFilterTest extends BaseFilterTest
   public void testEqualsContract()
   {
     EqualsVerifier.forClass(RegexFilter.class)
+                  .withNonnullFields("pattern")
+                  .withIgnoredFields("predicateFactory")
                   .usingGetClass()
                   .verify();
   }

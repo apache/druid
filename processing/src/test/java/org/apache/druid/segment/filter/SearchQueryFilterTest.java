@@ -186,7 +186,10 @@ public class SearchQueryFilterTest extends BaseFilterTest
   @Test
   public void testEqualsContract()
   {
-    EqualsVerifier.forClass(SearchQueryFilter.class).usingGetClass().verify();
+    EqualsVerifier.forClass(SearchQueryFilter.class)
+                  .withIgnoredFields("predicateFactory")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test

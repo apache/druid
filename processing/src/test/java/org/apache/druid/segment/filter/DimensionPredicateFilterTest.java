@@ -28,6 +28,7 @@ public class DimensionPredicateFilterTest
   public void testEqualsContract()
   {
     EqualsVerifier.forClass(DimensionPredicateFilter.class)
+                  .withIgnoredFields("predicateFactory")
                   .usingGetClass()
                   .verify();
   }

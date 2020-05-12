@@ -196,13 +196,22 @@ public class ExpressionFilter implements Filter
     }
     ExpressionFilter that = (ExpressionFilter) o;
     return Objects.equals(expr, that.expr) &&
-           Objects.equals(requiredBindings, that.requiredBindings) &&
            Objects.equals(filterTuning, that.filterTuning);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(expr, requiredBindings, filterTuning);
+    return Objects.hash(expr, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ExpressionFilter{" +
+           "expr=" + expr +
+           ", requiredBindings=" + requiredBindings +
+           ", filterTuning=" + filterTuning +
+           '}';
   }
 }

@@ -108,6 +108,14 @@ public class RegexFilter extends DimensionPredicateFilter
     {
       return Objects.hash(pattern);
     }
+
+    @Override
+    public String toString()
+    {
+      return "RegexFilter$PatternDruidPredicateFactory{" +
+             "pattern='" + pattern + '\'' +
+             '}';
+    }
   }
 
   @Override
