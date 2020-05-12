@@ -168,7 +168,7 @@ public class ExprTest
   @Test
   public void testEqualsContractForIdentifierExpr()
   {
-    EqualsVerifier.forClass(IdentifierExpr.class).usingGetClass().withIgnoredFields("identifier").verify();
+    EqualsVerifier.forClass(IdentifierExpr.class).usingGetClass().withIgnoredFields("binding").verify();
   }
 
   @Test

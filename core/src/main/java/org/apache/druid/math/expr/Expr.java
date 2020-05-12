@@ -976,13 +976,13 @@ class IdentifierExpr implements Expr
       return false;
     }
     IdentifierExpr that = (IdentifierExpr) o;
-    return Objects.equals(binding, that.binding);
+    return Objects.equals(identifier, that.identifier);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(binding);
+    return Objects.hash(identifier);
   }
 }
 

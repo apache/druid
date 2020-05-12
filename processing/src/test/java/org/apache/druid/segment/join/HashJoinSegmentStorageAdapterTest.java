@@ -2133,6 +2133,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     );
   }
 
+  @Test
   public void test_makeCursors_factToCountryLeft_filterExcludesAllLeftRowsUsingLookup()
   {
     Filter originalFilter = new SelectorFilter("page", "this matches nothing");
