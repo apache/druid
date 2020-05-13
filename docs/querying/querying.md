@@ -35,6 +35,11 @@ posted like this:
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
 ```
 
+You can also enter them directly in the Druid console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
+
+![Native query](../assets/tutorial-query-07.png "Native query")
+
+
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different
 [client libraries](/libraries.html) in other languages to query Druid.
 
@@ -44,7 +49,7 @@ The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/x-jackson-smile' -d @<query_json_file>
 ```
 
-Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.
+> If the Accept header is not provided, it defaults to the value of 'Content-Type' header.
 
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build
