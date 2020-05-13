@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -129,6 +130,26 @@ public class ExprMacroTable
       return StringUtils.format("%s(%s)", name, arg.stringify());
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      BaseScalarUnivariateMacroFunctionExpr that = (BaseScalarUnivariateMacroFunctionExpr) o;
+      return Objects.equals(name, that.name) &&
+             Objects.equals(arg, that.arg);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(name, arg);
+    }
+
     private BindingDetails supplyAnalyzeInputs()
     {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
@@ -176,6 +197,26 @@ public class ExprMacroTable
     public BindingDetails analyzeInputs()
     {
       return analyzeInputsSupplier.get();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      BaseScalarMacroFunctionExpr that = (BaseScalarMacroFunctionExpr) o;
+      return Objects.equals(name, that.name) &&
+             Objects.equals(args, that.args);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(name, args);
     }
 
     private BindingDetails supplyAnalyzeInputs()

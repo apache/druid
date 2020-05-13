@@ -17,19 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.query.filter;
+package org.apache.druid.annotations;
 
-import com.google.common.base.Predicate;
-import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@SubclassesMustOverrideEqualsAndHashCode
-public interface DruidPredicateFactory
+/**
+ * An annotation that tells all subclasses of the annotated class to not use the default implementation of hashCode
+ * and equals that is provided by {@link Object}.
+ *
+ * This annotation is useful on classes that you expect will be used in equals checks in other parts of the codebase.
+ */
+@Documented
+@Inherited
+@Retention(RetentionPolicy.CLASS)
+@Target(ElementType.TYPE)
+public @interface SubclassesMustOverrideEqualsAndHashCode
 {
-  Predicate<String> makeStringPredicate();
-
-  DruidLongPredicate makeLongPredicate();
-
-  DruidFloatPredicate makeFloatPredicate();
-
-  DruidDoublePredicate makeDoublePredicate();
 }

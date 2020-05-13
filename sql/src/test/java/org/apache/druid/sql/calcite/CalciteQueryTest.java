@@ -27,6 +27,7 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -10964,6 +10965,83 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
     testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
+  }
+
+  @Test
+  public void testNestedGroupByOnInlineDataSourceWithFilterIsNotSupported() throws Exception
+  {
+    try {
+      testQuery(
+          "with abc as"
+          + "("
+          + "  SELECT dim1, m2 from druid.foo where \"__time\" >= '2001-01-02'"
+          + ")"
+          + ", def as"
+          + "("
+          + "  SELECT t1.dim1, SUM(t2.m2) as \"metricSum\" "
+          + "  from abc as t1 inner join abc as t2 on t1.dim1 = t2.dim1"
+          + "  where t1.dim1='def'"
+          + "  group by 1"
+          + ")"
+          + "SELECT count(*) from def",
+          ImmutableList.of(
+              GroupByQuery
+                  .builder()
+                  .setDataSource(
+                      GroupByQuery
+                          .builder()
+                          .setDataSource(
+                              join(
+                                  new QueryDataSource(
+                                      newScanQueryBuilder()
+                                          .dataSource(CalciteTests.DATASOURCE1)
+                                          .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                                          .columns("dim1", "m2")
+                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                          .context(QUERY_CONTEXT_DEFAULT)
+                                          .build()
+                                  ),
+                                  new QueryDataSource(
+                                      newScanQueryBuilder()
+                                          .dataSource(CalciteTests.DATASOURCE1)
+                                          .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                                          .columns("dim1", "m2")
+                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                          .context(QUERY_CONTEXT_DEFAULT)
+                                          .build()
+                                  ),
+                                  "j0",
+                                  equalsCondition(
+                                      DruidExpression.fromColumn("dim1"),
+                                      DruidExpression.fromColumn("j0.dim1")
+                                  ),
+                                  JoinType.INNER
+                              )
+                          )
+                          .setGranularity(Granularities.ALL)
+                          .setInterval(querySegmentSpec(Filtration.eternity()))
+                          .build()
+                  )
+                  .setGranularity(Granularities.ALL)
+                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                  .build()
+          ),
+          ImmutableList.of(new Object[] {1})
+      );
+      Assert.fail("Expected an ISE to be thrown");
+    }
+    catch (RuntimeException e) {
+      Throwable cause = e.getCause();
+      boolean foundISE = false;
+      while (cause != null) {
+        if (cause instanceof ISE) {
+          foundISE = true;
+          break;
+        }
+        cause = cause.getCause();
+      }
+      Assert.assertTrue(foundISE);
+    }
   }
 
   @Test

@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
@@ -226,6 +227,14 @@ public class JavaScriptFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNumericValueFilter("5.5"), null), ImmutableList.of("2"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNumericValueFilter("120.0245"), null), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNumericValueFilter("9001"), null), ImmutableList.of("4"));
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(JavaScriptFilter.class)
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test
