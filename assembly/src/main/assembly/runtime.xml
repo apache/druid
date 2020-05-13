@@ -41,6 +41,10 @@
       <source>src/main/sh/druid.sh</source>
       <outputDirectory>druid-${project.version}</outputDirectory>
     </file>
+    <file>
+      <source>src/main/log/log4j2.xml</source>
+      <outputDirectory>druid-${project.version}</outputDirectory>
+    </file>
   </files>
 </assembly>
 
