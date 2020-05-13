@@ -85,6 +85,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleFirstAggregatorFactory(name, fieldName);
           case STRING:
+          case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, maxStringBytes);
           default:
             throw new ISE("Cannot build EARLIEST aggregatorFactory for type[%s]", type);
@@ -104,6 +105,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleLastAggregatorFactory(name, fieldName);
           case STRING:
+          case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, maxStringBytes);
           default:
             throw new ISE("Cannot build LATEST aggregatorFactory for type[%s]", type);
@@ -234,7 +236,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
               OperandTypes.BOOLEAN,
               OperandTypes.sequence(
                   "'" + aggregatorType.name() + "(expr, maxBytesPerString)'\n",
-                  OperandTypes.STRING,
+                  OperandTypes.or(OperandTypes.STRING, OperandTypes.ANY),
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
               )
           ),
