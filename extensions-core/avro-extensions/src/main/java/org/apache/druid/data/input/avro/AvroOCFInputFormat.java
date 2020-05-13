@@ -42,13 +42,14 @@ public class AvroOCFInputFormat extends NestedInputFormat
   private static final Logger LOGGER = new Logger(AvroOCFInputFormat.class);
 
   private final boolean binaryAsString;
+  @Nullable
   private final Schema readerSchema;
 
   @JsonCreator
   public AvroOCFInputFormat(
       @JacksonInject @Json ObjectMapper mapper,
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
-      @JsonProperty("schema") Map<String, Object> schema,
+      @JsonProperty("schema") @Nullable Map<String, Object> schema,
       @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString
   ) throws Exception
   {
@@ -67,6 +68,8 @@ public class AvroOCFInputFormat extends NestedInputFormat
   @Override
   public boolean isSplittable()
   {
+    // In the future Avro OCF files could be split, the format allows for efficient splitting
+    // See https://avro.apache.org/docs/current/spec.html#Object+Container+Files for details
     return false;
   }
 

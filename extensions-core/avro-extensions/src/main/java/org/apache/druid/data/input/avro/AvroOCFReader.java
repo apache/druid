@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -53,7 +54,7 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory,
-      Schema readerSchema,
+      @Nullable Schema readerSchema,
       JSONPathSpec flattenSpec,
       boolean binaryAsString
   )
@@ -67,7 +68,10 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
 
   private static Schema dataFileSchema(File file) throws IOException
   {
-    return new DataFileReader<GenericRecord>(file, new GenericDatumReader<>()).getSchema();
+    final DataFileReader<GenericRecord> reader = new DataFileReader<>(file, new GenericDatumReader<>());
+    final Schema schema = reader.getSchema();
+    reader.close();
+    return schema;
   }
 
   @Override
@@ -83,6 +87,7 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
     }
     final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>(writerSchema, readerSchema);
     final DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(file.file(), datumReader);
+    closer.register(dataFileReader);
 
     return new CloseableIterator<GenericRecord>()
     {

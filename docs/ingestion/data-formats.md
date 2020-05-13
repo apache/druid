@@ -237,13 +237,25 @@ The `inputFormat` to load data of Avro OCF format. An example is:
       "fields": [
         {
           "type": "path",
-          "name": "nested",
-          "expr": "$.path.to.nested"
+          "name": "someRecord_subInt",
+          "expr": "$.someRecord.subInt"
         }
       ]
     },
     "schema": {
-      ...
+      "namespace": "org.apache.druid.data.input",
+      "name": "SomeDatum",
+      "type": "record",
+      "fields" : [
+        { "name": "timestamp", "type": "long" },
+        { "name": "eventType", "type": "string" },
+        { "name": "id", "type": "long" },
+        { "name": "someRecord", "type": {
+          "type": "record", "name": "MySubRecord", "fields": [
+            { "name": "subInt", "type": "int"},
+            { "name": "subLong", "type": "long"}
+          ]
+        }}]
     },
     "binaryAsString": false
   },
