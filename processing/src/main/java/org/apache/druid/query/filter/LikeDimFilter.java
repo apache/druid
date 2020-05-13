@@ -397,7 +397,7 @@ public class LikeDimFilter implements DimFilter
       @Override
       public int hashCode()
       {
-        return Objects.hash(extractionFn, pattern);
+        return Objects.hash(extractionFn, pattern.toString());
       }
     }
 

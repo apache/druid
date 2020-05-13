@@ -106,7 +106,7 @@ public class RegexFilter extends DimensionPredicateFilter
     @Override
     public int hashCode()
     {
-      return Objects.hash(pattern);
+      return Objects.hash(pattern.toString());
     }
 
     @Override
