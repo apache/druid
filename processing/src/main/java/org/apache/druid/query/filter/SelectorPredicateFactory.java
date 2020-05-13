@@ -159,12 +159,12 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
       return false;
     }
     SelectorPredicateFactory that = (SelectorPredicateFactory) o;
-    return Objects.equals(initLock, that.initLock);
+    return Objects.equals(value, that.value);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(initLock);
+    return Objects.hash(value);
   }
 }

@@ -179,12 +179,12 @@ public class ExprTest
   @Test
   public void testEqualsContractForNullLongExpr()
   {
-    EqualsVerifier.forClass(NullLongExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(NullLongExpr.class).verify();
   }
 
   @Test
   public void testEqualsContractForNullDoubleExpr()
   {
-    EqualsVerifier.forClass(NullDoubleExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(NullDoubleExpr.class).verify();
   }
 }

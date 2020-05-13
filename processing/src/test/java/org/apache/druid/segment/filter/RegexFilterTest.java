@@ -160,6 +160,7 @@ public class RegexFilterTest extends BaseFilterTest
   public void testEqualsContractForPatternDruidPredicateFactory()
   {
     EqualsVerifier.forClass(RegexFilter.PatternDruidPredicateFactory.class)
+                  .withNonnullFields("pattern")
                   .usingGetClass()
                   .verify();
   }

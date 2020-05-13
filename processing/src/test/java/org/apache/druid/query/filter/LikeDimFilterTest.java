@@ -75,6 +75,7 @@ public class LikeDimFilterTest extends InitializedNullHandlingTest
   public void testEqualsContractForExtractionFnDruidPredicateFactory()
   {
     EqualsVerifier.forClass(LikeDimFilter.LikeMatcher.PatternDruidPredicateFactory.class)
+                  .withNonnullFields("pattern")
                   .usingGetClass()
                   .verify();
   }

@@ -28,9 +28,7 @@ public class SelectorPredicateFactoryTest
   public void testEqualsContract()
   {
     EqualsVerifier.forClass(SelectorPredicateFactory.class)
-                  // initLock is initialized when the object is constructed and never changed,
-                  // so the lock can be used in equals comparison.
-                  .withOnlyTheseFields("initLock")
+                  .withIgnoredFields("initLock", "longPredicate", "floatPredicate", "doublePredicate")
                   .usingGetClass()
                   .verify();
   }

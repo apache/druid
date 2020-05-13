@@ -391,7 +391,7 @@ public class LikeDimFilter implements DimFilter
         }
         PatternDruidPredicateFactory that = (PatternDruidPredicateFactory) o;
         return Objects.equals(extractionFn, that.extractionFn) &&
-               Objects.equals(pattern, that.pattern);
+               Objects.equals(pattern.toString(), that.pattern.toString());
       }
 
       @Override

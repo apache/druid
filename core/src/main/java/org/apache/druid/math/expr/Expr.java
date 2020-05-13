@@ -496,18 +496,6 @@ abstract class NullNumericConstantExpr extends ConstantExpr
   {
     return NULL_LITERAL;
   }
-
-  @Override
-  public int hashCode()
-  {
-    return getClass().hashCode();
-  }
-
-  @Override
-  public boolean equals(Object obj)
-  {
-    return obj != null && getClass().equals(obj.getClass());
-  }
 }
 
 class LongExpr extends ConstantExpr
@@ -563,6 +551,18 @@ class NullLongExpr extends NullNumericConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLong(null);
+  }
+
+  @Override
+  public final int hashCode()
+  {
+    return NullLongExpr.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof NullLongExpr;
   }
 }
 
@@ -800,6 +800,18 @@ class NullDoubleExpr extends NullNumericConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofDouble(null);
+  }
+
+  @Override
+  public final int hashCode()
+  {
+    return NullDoubleExpr.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof NullDoubleExpr;
   }
 }
 

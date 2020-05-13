@@ -100,7 +100,7 @@ public class RegexFilter extends DimensionPredicateFilter
         return false;
       }
       PatternDruidPredicateFactory that = (PatternDruidPredicateFactory) o;
-      return Objects.equals(pattern, that.pattern);
+      return Objects.equals(pattern.toString(), that.pattern.toString());
     }
 
     @Override
