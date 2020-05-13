@@ -66,6 +66,12 @@ public class KafkaEventWriter implements StreamEventWriter
   }
 
   @Override
+  public boolean supportTransaction()
+  {
+    return true;
+  }
+
+  @Override
   public boolean isTransactionEnabled()
   {
     return txnEnabled;
