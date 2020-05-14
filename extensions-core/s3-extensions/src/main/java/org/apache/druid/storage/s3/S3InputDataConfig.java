@@ -36,8 +36,9 @@ public class S3InputDataConfig
   static final int MAX_LISTING_LENGTH_MIN = 1;
 
   /**
-   * AWS S3 only allows deleting 1000 elements at a time:
-   * https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/s3/model/DeleteObjectsRequest.html
+   * AWS S3 only allows listing and deleting 1000 elements at a time:
+   * https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html#API_ListObjects_RequestSyntax
+   * https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html#API_DeleteObjects_RequestSyntax
    */
   @VisibleForTesting
   static final int MAX_LISTING_LENGTH_MAX = 1000;

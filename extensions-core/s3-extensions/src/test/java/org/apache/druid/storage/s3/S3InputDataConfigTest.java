@@ -34,17 +34,6 @@ public class S3InputDataConfigTest
       "{\n"
       + "    \"maxListingLength\": \"%1$d\"\n"
       + "}";
-  private static final String INPUT_DATA_MAX_LISTING_LENGTH_TOO_LOW_JSON_STR =
-      StringUtils.format(INPUT_DATA_TEMPLATE_JSON_STR, MAX_LISTING_LENGTH_TOO_LOW);
-
-  private static final String INPUT_DATA_MAX_LISTING_LENGTH_TOO_HIGH_JSON_STR =
-      StringUtils.format(INPUT_DATA_TEMPLATE_JSON_STR, MAX_LISTING_LENGTH_TOO_HIGH);
-
-  private static final String INPUT_DATA_MAX_LISTING_LENGTH_MIN_JSON_STR =
-      StringUtils.format(INPUT_DATA_TEMPLATE_JSON_STR, S3InputDataConfig.MAX_LISTING_LENGTH_MIN);
-
-  private static final String INPUT_DATA_MAX_LISTING_LENGTH_MAX_JSON_STR =
-      StringUtils.format(INPUT_DATA_TEMPLATE_JSON_STR, S3InputDataConfig.MAX_LISTING_LENGTH_MAX);
 
   public static final ObjectMapper JSON_MAPPER = new ObjectMapper();
   private S3InputDataConfig inputDataConfig;
@@ -54,7 +43,7 @@ public class S3InputDataConfigTest
   {
     boolean exceptionThrown = false;
     try {
-      inputDataConfig = JSON_MAPPER.readValue(INPUT_DATA_MAX_LISTING_LENGTH_TOO_LOW_JSON_STR, S3InputDataConfig.class);
+      inputDataConfig = JSON_MAPPER.readValue(formatTemplate(MAX_LISTING_LENGTH_TOO_LOW), S3InputDataConfig.class);
     }
     catch (JsonProcessingException e) {
       exceptionThrown = true;
@@ -67,7 +56,7 @@ public class S3InputDataConfigTest
   {
     boolean exceptionThrown = false;
     try {
-      inputDataConfig = JSON_MAPPER.readValue(INPUT_DATA_MAX_LISTING_LENGTH_TOO_HIGH_JSON_STR, S3InputDataConfig.class);
+      inputDataConfig = JSON_MAPPER.readValue(formatTemplate(MAX_LISTING_LENGTH_TOO_HIGH), S3InputDataConfig.class);
     }
     catch (JsonProcessingException e) {
       exceptionThrown = true;
@@ -78,14 +67,20 @@ public class S3InputDataConfigTest
   @Test
   public void test_construct_maxListingLengthMin_succeeds() throws JsonProcessingException
   {
-    inputDataConfig = JSON_MAPPER.readValue(INPUT_DATA_MAX_LISTING_LENGTH_MIN_JSON_STR, S3InputDataConfig.class);
+    inputDataConfig = JSON_MAPPER.readValue(
+        formatTemplate(S3InputDataConfig.MAX_LISTING_LENGTH_MIN),
+        S3InputDataConfig.class
+    );
     Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MIN, inputDataConfig.getMaxListingLength());
   }
 
   @Test
   public void test_construct_maxListingLengthMax_succeeds() throws JsonProcessingException
   {
-    inputDataConfig = JSON_MAPPER.readValue(INPUT_DATA_MAX_LISTING_LENGTH_MAX_JSON_STR, S3InputDataConfig.class);
+    inputDataConfig = JSON_MAPPER.readValue(
+        formatTemplate(S3InputDataConfig.MAX_LISTING_LENGTH_MAX),
+        S3InputDataConfig.class
+    );
     Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
   }
 
@@ -138,5 +133,10 @@ public class S3InputDataConfigTest
   {
     inputDataConfig = new S3InputDataConfig();
     Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
+  }
+
+  private static String formatTemplate(int maxListingLength)
+  {
+    return StringUtils.format(INPUT_DATA_TEMPLATE_JSON_STR, maxListingLength);
   }
 }
