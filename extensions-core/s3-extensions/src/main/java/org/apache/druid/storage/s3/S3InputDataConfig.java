@@ -45,7 +45,7 @@ public class S3InputDataConfig
 
   /**
    * The maximum number of input files matching a given prefix to retrieve
-   * or delete Amazon S3 at a time.
+   * or delete from Amazon S3 at a time.
    */
   @JsonProperty
   @Min(MAX_LISTING_LENGTH_MIN)

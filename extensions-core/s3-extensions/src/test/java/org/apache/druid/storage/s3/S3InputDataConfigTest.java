@@ -35,7 +35,7 @@ public class S3InputDataConfigTest
       + "    \"maxListingLength\": \"%1$d\"\n"
       + "}";
 
-  public static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
   private S3InputDataConfig inputDataConfig;
 
   @Test
