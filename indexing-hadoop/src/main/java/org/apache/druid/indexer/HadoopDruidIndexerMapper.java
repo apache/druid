@@ -70,7 +70,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         try {
           if (inputRow == null) {
             // Throw away null rows from the parser.
-            log.debug("Throwing away row [%s]", value);
+            log.info("Throwing away row [%s]", value);
             context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).increment(1);
             continue;
           }
@@ -88,6 +88,8 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
                                 .isPresent()) {
             innerMap(inputRow, context);
           } else {
+            log.info("granularitySpec.bucketIntervals().isPresent(): " + granularitySpec.bucketIntervals().isPresent());
+            log.info("DateTimes.utc(inputRow.getTimestampFromEpoch()): " + DateTimes.utc(inputRow.getTimestampFromEpoch()));
             context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).increment(1);
           }
         }
