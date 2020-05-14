@@ -194,10 +194,12 @@ public class DruidJoinRule extends RelOptRule
 
     for (RexNode subCondition : subConditions) {
       if (RexUtil.isLiteral(subCondition, true)) {
-        if (subCondition instanceof RexCall) {
+        if (subCondition.isA(SqlKind.CAST)) {
           // This is CAST(literal) which is always OK.
-          // We know that this is CASE(literal) as it pass the check from RexUtil.isLiteral
+          // We know that this is CAST(literal) as it passed the check from RexUtil.isLiteral
           RexCall call = (RexCall) subCondition;
+          // We have to verify the types of the cast here, because if the underlying literal and the cast output type
+          // are different, then skipping the cast might change the meaning of the subcondition.
           literalSubConditions.add((RexLiteral) call.operands.get(0));
         } else {
           // Literals are always OK.

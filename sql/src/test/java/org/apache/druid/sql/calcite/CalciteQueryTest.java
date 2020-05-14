@@ -9098,7 +9098,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // This SQL currently does not result in an optimum plan.
-  // Unfortunetly, we have disabled pushing down predicates (conditions and filters) due to https://github.com/apache/druid/pull/9773
+  // Unfortunately, we have disabled pushing down predicates (conditions and filters) due to https://github.com/apache/druid/pull/9773
   // Hence, comma join will result in a cross join with filter on outermost
   @Test
   public void testCommaJoinTableLookupTableMismatchedTypes() throws Exception

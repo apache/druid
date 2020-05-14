@@ -43,6 +43,21 @@ import org.apache.calcite.tools.RelBuilderFactory;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This class is a copy (with modification) of {@link FilterJoinRule}. Specifically, this class contains a
+ * subset of code from {@link FilterJoinRule} for the codepath involving {@link FilterJoinRule#FILTER_ON_JOIN}
+ * Everything has been keep as-is from {@link FilterJoinRule} except for the modification
+ * of {@link #classifyFilters(List, JoinRelType, boolean, List)} method called in the
+ * {@link #perform(RelOptRuleCall, Filter, Join)} method of this class.
+ * The {@link #classifyFilters(List, JoinRelType, boolean, List)} method is based of {@link RelOptUtil#classifyFilters}.
+ * The difference is that the modfied method use in thsi class will not not push filters to the children.
+ * Hence, filters will either stay where they are or are pushed to the join (if they originated from above the join).
+ *
+ * This modification is needed due to the bug described in https://github.com/apache/druid/pull/9773
+ * This class and it's modification can be removed, switching back to the default Rule provided in Calcite's
+ * {@link FilterJoinRule} when https://github.com/apache/druid/issues/9843 is resolved.
+ */
+
 public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
 {
   /** Copied from {@link FilterJoinRule#NOT_ENUMERABLE} */

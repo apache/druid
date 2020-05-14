@@ -268,9 +268,10 @@ perform best if `d.field` is a string.
 4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
 to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
 common use cases.
-5. Currently, Druid does not support pushing down predicates (condition and filter) pass a Join (i.e. into 
+5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into 
 Join's children). Druid only supports pushing predicates into the join if they originated from 
 above the join. Hence, the location of predicates and filters in your Druid SQL is very important. 
+Also, as a result of this, comma joins should be avoided.
 
 #### Future work for joins
 
