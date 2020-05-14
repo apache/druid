@@ -200,7 +200,13 @@ public class DruidJoinRule extends RelOptRule
           RexCall call = (RexCall) subCondition;
           // We have to verify the types of the cast here, because if the underlying literal and the cast output type
           // are different, then skipping the cast might change the meaning of the subcondition.
-          literalSubConditions.add((RexLiteral) call.operands.get(0));
+          if (call.getType().getSqlTypeName().equals(call.getOperands().get(0).getType().getSqlTypeName())) {
+            // If the types are the same, unwrap the cast and use the underlying literal.
+            literalSubConditions.add((RexLiteral) call.getOperands().get(0));
+          } else {
+            // If the types are not the same, return Optional.empty() indicating the condition is not supported.
+            return Optional.empty();
+          }
         } else {
           // Literals are always OK.
           literalSubConditions.add((RexLiteral) subCondition);
