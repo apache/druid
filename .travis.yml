@@ -152,7 +152,8 @@ jobs:
         # Add merge target branch to determine diff (see https://github.com/travis-ci/travis-ci/issues/6069)
         - echo "TRAVIS_BRANCH=${TRAVIS_BRANCH}"  # for debugging
         - git remote set-branches --add origin ${TRAVIS_BRANCH} && git fetch
-        # Determine the modified files that match the maven projects being tested
+        # Determine the modified files that match the maven projects being tested. We use maven project lists that
+        # either exclude (starts with "!") or include (does not start with "!"), so both cases need to be handled.
         - all_files="$(git diff --name-only origin/${TRAVIS_BRANCH}...HEAD | grep "\.java$" || [[ $? == 1 ]])"
         - for f in ${all_files}; do echo $f; done  # for debugging
         - >
