@@ -24,6 +24,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-metadata-storage
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
 
@@ -31,8 +33,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-overlord
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
@@ -46,8 +46,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-coordinator
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
@@ -63,8 +61,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-historical
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
@@ -76,8 +72,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-middlemanager
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
@@ -91,8 +85,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-broker
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
@@ -108,8 +100,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router
-    env_file:
-      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
@@ -125,10 +115,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router-permissive-tls
-    env_file:
-      - ${OVERRIDE_ENV}
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
       - druid-coordinator:druid-coordinator
@@ -147,10 +133,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router-no-client-auth-tls
-    env_file:
-      - ${OVERRIDE_ENV}
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
       - druid-coordinator:druid-coordinator
@@ -169,10 +151,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router-custom-check-tls
-    env_file:
-      - ${OVERRIDE_ENV}
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
       - druid-coordinator:druid-coordinator
