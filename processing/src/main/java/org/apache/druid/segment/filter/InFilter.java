@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
@@ -133,27 +134,20 @@ public class InFilter implements Filter
 
   private IntIterable getBitmapIndexIterable(final BitmapIndex bitmapIndex)
   {
-    return new IntIterable()
+    return () -> new IntIterator()
     {
+      final Iterator<String> iterator = values.iterator();
+
       @Override
-      public IntIterator iterator()
+      public boolean hasNext()
       {
-        return new IntIterator()
-        {
-          Iterator<String> iterator = values.iterator();
+        return iterator.hasNext();
+      }
 
-          @Override
-          public boolean hasNext()
-          {
-            return iterator.hasNext();
-          }
-
-          @Override
-          public int nextInt()
-          {
-            return bitmapIndex.getIndex(iterator.next());
-          }
-        };
+      @Override
+      public int nextInt()
+      {
+        return bitmapIndex.getIndex(iterator.next());
       }
     };
   }
@@ -231,47 +225,7 @@ public class InFilter implements Filter
 
   private DruidPredicateFactory getPredicateFactory()
   {
-    return new DruidPredicateFactory()
-    {
-      @Override
-      public Predicate<String> makeStringPredicate()
-      {
-        if (extractionFn != null) {
-          return input -> values.contains(extractionFn.apply(input));
-        } else {
-          return input -> values.contains(input);
-        }
-      }
-
-      @Override
-      public DruidLongPredicate makeLongPredicate()
-      {
-        if (extractionFn != null) {
-          return input -> values.contains(extractionFn.apply(input));
-        } else {
-          return longPredicateSupplier.get();
-        }
-      }
-
-      @Override
-      public DruidFloatPredicate makeFloatPredicate()
-      {
-        if (extractionFn != null) {
-          return input -> values.contains(extractionFn.apply(input));
-        } else {
-          return floatPredicateSupplier.get();
-        }
-      }
-
-      @Override
-      public DruidDoublePredicate makeDoublePredicate()
-      {
-        if (extractionFn != null) {
-          return input -> values.contains(extractionFn.apply(input));
-        }
-        return input -> doublePredicateSupplier.get().applyDouble(input);
-      }
-    };
+    return new InFilterDruidPredicateFactory(extractionFn, values, longPredicateSupplier, floatPredicateSupplier, doublePredicateSupplier);
   }
 
   @Override
@@ -294,5 +248,89 @@ public class InFilter implements Filter
   public int hashCode()
   {
     return Objects.hash(dimension, values, extractionFn, filterTuning);
+  }
+
+  @VisibleForTesting
+  static class InFilterDruidPredicateFactory implements DruidPredicateFactory
+  {
+    private final ExtractionFn extractionFn;
+    private final Set<String> values;
+    private final Supplier<DruidLongPredicate> longPredicateSupplier;
+    private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
+    private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
+
+    InFilterDruidPredicateFactory(
+        ExtractionFn extractionFn,
+        Set<String> values,
+        Supplier<DruidLongPredicate> longPredicateSupplier,
+        Supplier<DruidFloatPredicate> floatPredicateSupplier,
+        Supplier<DruidDoublePredicate> doublePredicateSupplier
+    )
+    {
+      this.extractionFn = extractionFn;
+      this.values = values;
+      this.longPredicateSupplier = longPredicateSupplier;
+      this.floatPredicateSupplier = floatPredicateSupplier;
+      this.doublePredicateSupplier = doublePredicateSupplier;
+    }
+
+    @Override
+    public Predicate<String> makeStringPredicate()
+    {
+      if (extractionFn != null) {
+        return input -> values.contains(extractionFn.apply(input));
+      } else {
+        return input -> values.contains(input);
+      }
+    }
+
+    @Override
+    public DruidLongPredicate makeLongPredicate()
+    {
+      if (extractionFn != null) {
+        return input -> values.contains(extractionFn.apply(input));
+      } else {
+        return longPredicateSupplier.get();
+      }
+    }
+
+    @Override
+    public DruidFloatPredicate makeFloatPredicate()
+    {
+      if (extractionFn != null) {
+        return input -> values.contains(extractionFn.apply(input));
+      } else {
+        return floatPredicateSupplier.get();
+      }
+    }
+
+    @Override
+    public DruidDoublePredicate makeDoublePredicate()
+    {
+      if (extractionFn != null) {
+        return input -> values.contains(extractionFn.apply(input));
+      }
+      return input -> doublePredicateSupplier.get().applyDouble(input);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      InFilterDruidPredicateFactory that = (InFilterDruidPredicateFactory) o;
+      return Objects.equals(extractionFn, that.extractionFn) &&
+             Objects.equals(values, that.values);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(extractionFn, values);
+    }
   }
 }

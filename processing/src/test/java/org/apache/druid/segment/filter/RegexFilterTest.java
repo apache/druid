@@ -147,6 +147,25 @@ public class RegexFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(RegexFilter.class)
+                  .withNonnullFields("pattern")
+                  .withIgnoredFields("predicateFactory")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testEqualsContractForPatternDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(RegexFilter.PatternDruidPredicateFactory.class)
+                  .withNonnullFields("pattern")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
   public void testRequiredColumnRewrite()
   {
     Filter filter = new RegexDimFilter("dim0", ".*", null).toFilter();
@@ -161,15 +180,5 @@ public class RegexFilterTest extends BaseFilterTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
     filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
-  }
-
-  @Test
-  public void test_equals()
-  {
-    EqualsVerifier.forClass(RegexFilter.class)
-                  .usingGetClass()
-                  .withNonnullFields("dimension", "pattern")
-                  .withIgnoredFields("predicateFactory")
-                  .verify();
   }
 }

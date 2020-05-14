@@ -17,40 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.query.extraction;
+package org.apache.druid.segment.filter;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
-import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-
-public class UpperExtractionFnTest
+public class DimensionPredicateFilterTest
 {
-  ExtractionFn extractionFn = new UpperExtractionFn(null);
-
-  @Test
-  public void testApply()
-  {
-    Assert.assertEquals("UPPER", extractionFn.apply("uPpeR"));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply(""));
-    Assert.assertEquals(null, extractionFn.apply(null));
-    Assert.assertEquals(null, extractionFn.apply((Object) null));
-    Assert.assertEquals("1", extractionFn.apply(1));
-  }
-
-  @Test
-  public void testGetCacheKey()
-  {
-    Assert.assertArrayEquals(extractionFn.getCacheKey(), extractionFn.getCacheKey());
-    Assert.assertFalse(Arrays.equals(extractionFn.getCacheKey(), new LowerExtractionFn(null).getCacheKey()));
-  }
-
   @Test
   public void testEqualsContract()
   {
-    EqualsVerifier.forClass(UpperExtractionFn.class)
+    EqualsVerifier.forClass(DimensionPredicateFilter.class)
+                  .withIgnoredFields("predicateFactory")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testEqualsContractForDelegatingStringPredicateFactory()
+  {
+    EqualsVerifier.forClass(DimensionPredicateFilter.DelegatingStringPredicateFactory.class)
+                  .withIgnoredFields("baseStringPredicate")
                   .usingGetClass()
                   .verify();
   }

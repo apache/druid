@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -2137,7 +2138,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     Filter originalFilter = new SelectorFilter("page", "this matches nothing");
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
-
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
         joinableClauses,
         VirtualColumns.EMPTY,
@@ -2169,5 +2169,41 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         ),
         ImmutableList.of()
     );
+  }
+
+  @Test
+  public void test_makeCursors_originalFilterDoesNotMatchPreAnalysis_shouldThrowISE()
+  {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+
+    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        joinableClauses,
+        VirtualColumns.EMPTY,
+        null,
+        true,
+        true,
+        true,
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+    );
+    Filter filter = new SelectorFilter("page", "this matches nothing");
+
+    try {
+      new HashJoinSegmentStorageAdapter(
+          factSegment.asStorageAdapter(),
+          joinableClauses,
+          preAnalysis
+      ).makeCursors(
+          filter,
+          Intervals.ETERNITY,
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      );
+      Assert.fail();
+    }
+    catch (ISE e) {
+      Assert.assertTrue(e.getMessage().startsWith("Filter provided to cursor ["));
+    }
   }
 }
