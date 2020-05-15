@@ -361,9 +361,8 @@
             <id>integration-tests</id>
             <properties>
                 <start.hadoop.docker>false</start.hadoop.docker>
-                <skip.start.docker>false</skip.start.docker>
-                <skip.stop.docker>false</skip.stop.docker>
-                <skip.build.docker>false</skip.build.docker>
+                <docker.run.skip>false</docker.run.skip>
+                <docker.build.skip>false</docker.build.skip>
                 <override.config.path></override.config.path>
                 <resource.file.dir.path></resource.file.dir.path>
                 <extra.datasource.name.suffix>\ Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
@@ -387,9 +386,8 @@
                                         <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                         <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
                                         <DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>${resource.file.dir.path}</DRUID_INTEGRATION_TEST_RESOURCE_FILE_DIR_PATH>
-                                        <DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>${skip.build.docker}</DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>
-                                        <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${skip.start.docker}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
-                                        <DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>${skip.stop.docker}</DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>
+                                        <DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>${docker.build.skip}</DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER>
+                                        <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${docker.run.skip}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
                                     </environmentVariables>
                                     <executable>${project.basedir}/build_run_cluster.sh</executable>
                                 </configuration>
@@ -402,7 +400,7 @@
                                 <phase>post-integration-test</phase>
                                 <configuration>
                                     <environmentVariables>
-                                        <DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>${skip.stop.docker}</DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>
+                                        <DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>${docker.run.skip}</DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER>
                                     </environmentVariables>
                                     <executable>${project.basedir}/stop_cluster.sh</executable>
                                 </configuration>
@@ -451,6 +449,62 @@
                         </configuration>
                     </plugin>
 
+                    <plugin>
+                        <groupId>de.thetaphi</groupId>
+                        <artifactId>forbiddenapis</artifactId>
+                        <configuration>
+                            <signaturesFiles>
+                                <!-- Needed because of https://github.com/policeman-tools/forbidden-apis/issues/126 -->
+                                <signaturesFile>../codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                                <signaturesFile>../codestyle/druid-forbidden-apis.txt</signaturesFile>
+                            </signaturesFiles>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>int-tests-config-file</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-tests</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <properties>
+                                <property>
+                                    <name>testrunfactory</name>
+                                    <value>org.testng.DruidTestRunnerFactory</value>
+                                </property>
+                            </properties>
+                            <argLine>
+                                -Duser.timezone=UTC
+                                -Dfile.encoding=UTF-8
+                                -Ddruid.test.config.type=configFile
+                                -Ddruid.test.config.configFile=${env.CONFIG_FILE}
+                                -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
+                                -Ddruid.client.https.trustStorePassword=druid123
+                                -Ddruid.client.https.keyStorePath=client_tls/client.jks
+                                -Ddruid.client.https.certAlias=druid
+                                -Ddruid.client.https.keyManagerPassword=druid123
+                                -Ddruid.client.https.keyStorePassword=druid123
+                            </argLine>
+                            <suiteXmlFiles>
+                                <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                            </suiteXmlFiles>
+                        </configuration>
+                    </plugin>
                     <plugin>
                         <groupId>de.thetaphi</groupId>
                         <artifactId>forbiddenapis</artifactId>

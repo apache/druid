@@ -72,7 +72,7 @@ The file must contain one property per line, the key must start with `druid_` an
 
 Build druid-cluster, druid-hadoop docker images. From root module run maven command:
 ```
-mvn clean install -pl integration-tests -P integration-tests -Dskip.start.docker=true -Dmaven.test.skip=true
+mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true
 ```
 
 Run druid cluster by docker-compose:
@@ -82,7 +82,7 @@ docker-compose -f integration-tests/docker/docker-compose.yml up
 
 Run integration tests:
 ```
-mvn verify -pl integration-tests -P integration-tests -Dgroups=batch-index -Djvm.runtime=8 -Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true -Dskip.start.docker=true -Dskip.build.docker=true -Dskip.stop.docker=true
+mvn verify -pl integration-tests -P integration-tests -Dgroups=batch-index -Djvm.runtime=8 -Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true -Ddocker.run.skip=true -Ddocker.build.skip=true
 ```
 
 Run s3 | azure | gcs integration tests:
@@ -104,12 +104,12 @@ Run maven command to execute tests.
 
 ### Useful mvn command flags
 
-- -Dskip.start.docker=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
+- -Ddocker.build.skip=true to skip build druid containers. This can save ~4 minutes to build druid cluster and druid hadoop.
+You need to build druid containers only once, after you can skip docker build step. 
+- -Ddocker.run.skip=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
 up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
 these containers already running if using this flag. Additionally, please make sure that the running containers
 are in the same state that the setup script (run_cluster.sh) would have brought it up in. 
-- -Dskip.stop.docker=true to skip stopping and teardowning down the docker containers. This can be useful in further
-debugging after the integration tests have finish running. 
 
 ### Debugging Druid while running tests
 
