@@ -66,49 +66,48 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
     this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString));
   }
 
-  private static Schema dataFileSchema(File file) throws IOException
-  {
-    final DataFileReader<GenericRecord> reader = new DataFileReader<>(file, new GenericDatumReader<>());
-    final Schema schema = reader.getSchema();
-    reader.close();
-    return schema;
-  }
-
   @Override
   protected CloseableIterator<GenericRecord> intermediateRowIterator() throws IOException
   {
     final Closer closer = Closer.create();
-
     final byte[] buffer = new byte[InputEntity.DEFAULT_FETCH_BUFFER_SIZE];
-    final InputEntity.CleanableFile file = closer.register(source.fetch(temporaryDirectory, buffer));
-    final Schema writerSchema = dataFileSchema(file.file());
-    if (readerSchema == null) {
-      readerSchema = writerSchema;
+    try {
+      final InputEntity.CleanableFile file = closer.register(source.fetch(temporaryDirectory, buffer));
+      final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+      final DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(file.file(), datumReader);
+      final Schema writerSchema = dataFileReader.getSchema();
+      if (readerSchema == null) {
+        readerSchema = writerSchema;
+      }
+      datumReader.setSchema(writerSchema);
+      datumReader.setExpected(readerSchema);
+      closer.register(dataFileReader);
+
+      return new CloseableIterator<GenericRecord>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return dataFileReader.hasNext();
+        }
+
+        @Override
+        public GenericRecord next()
+        {
+          return dataFileReader.next();
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          closer.close();
+        }
+      };
     }
-    final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>(writerSchema, readerSchema);
-    final DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(file.file(), datumReader);
-    closer.register(dataFileReader);
-
-    return new CloseableIterator<GenericRecord>()
-    {
-      @Override
-      public boolean hasNext()
-      {
-        return dataFileReader.hasNext();
-      }
-
-      @Override
-      public GenericRecord next()
-      {
-        return dataFileReader.next();
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        closer.close();
-      }
-    };
+    catch (Exception e) {
+      closer.close();
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
