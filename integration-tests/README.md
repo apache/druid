@@ -68,6 +68,38 @@ can either be 8 or 11.
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
 
+## Running tests by docker-compose + mvn
+
+Build druid-cluster, druid-hadoop docker images. From root module run maven command:
+```
+mvn clean install -pl integration-tests -P integration-tests -Dskip.start.docker=true -Dmaven.test.skip=true
+```
+
+Run druid cluster by docker-compose:
+```
+docker-compose -f integration-tests/docker/docker-compose.yml up
+```
+
+Run integration tests:
+```
+mvn verify -pl integration-tests -P integration-tests -Dgroups=batch-index -Djvm.runtime=8 -Pskip-static-checks -Ddruid.console.skip=true -Dmaven.javadoc.skip=true -Dskip.start.docker=true -Dskip.build.docker=true -Dskip.stop.docker=true
+```
+
+Run s3 | azure | gcs integration tests:
+
+Prepare configuration for integration tests:
+```
+   integration-tests/docker/environment-configs/override-examples/*
+```
+
+Run docker compose for one of group:
+```
+    docker-compose -f integration-tests/docker/docker-compose-s3.yml up
+```
+
+Run maven command to execute tests. 
+> See: Running a Test That Uses Cloud 
+
 ## Tips & tricks for debugging and developing integration tests
 
 ### Useful mvn command flags
