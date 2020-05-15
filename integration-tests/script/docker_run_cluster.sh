@@ -36,7 +36,11 @@ then
     echo "\$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH is not set. No override config file provided"
     if [ "$DRUID_INTEGRATION_TEST_GROUP" = "s3-deep-storage" ] || \
     [ "$DRUID_INTEGRATION_TEST_GROUP" = "gcs-deep-storage" ] || \
-    [ "$DRUID_INTEGRATION_TEST_GROUP" = "azure-deep-storage" ]; then
+    [ "$DRUID_INTEGRATION_TEST_GROUP" = "azure-deep-storage" ] || \
+    [ "$DRUID_INTEGRATION_TEST_GROUP" = "hdfs-deep-storage" ] || \
+    [ "$DRUID_INTEGRATION_TEST_GROUP" = "s3-ingestion" ] || \
+    [ "$DRUID_INTEGRATION_TEST_GROUP" = "kinesis-index" ] || \
+    [ "$DRUID_INTEGRATION_TEST_GROUP" = "kinesis-data-format" ]; then
       echo "Test group $DRUID_INTEGRATION_TEST_GROUP requires override config file. Stopping test..."
       exit 1
     fi
