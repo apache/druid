@@ -28,15 +28,15 @@ This tutorial demonstrates how to query data in Apache Druid using Druid SQL, a 
 for querying data in Druid.   
 
 It assumes that you've completed the [Quickstart](../tutorials/index.md) 
-or one of the following tutorials, since we will be querying datasources created
-in the tutorials:
+or one of the following tutorials, since we'll query datasources that you would have created
+by following one of them:
 
 * [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
 * [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.md)
 * [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
 
-There are various ways to issue Druid SQL queries, from the Druid console, using a command line utility
-and by posting the query by HTTP. We'll look at each of these here. 
+There are various ways to run Druid SQL queries: from the Druid console, using a command line utility
+and by posting the query by HTTP. We'll look at each of these. 
 
 
 ## Query SQL from the Druid console
@@ -44,7 +44,7 @@ and by posting the query by HTTP. We'll look at each of these here.
 The Druid console includes a view that makes it easier to buid and test queries, and 
 view their results. 
 
-1. Start up the Druid cluster, if not already running, and open the console in your web
+1. Start up the Druid cluster, if it's not already running, and open the Druid console in your web
 browser. 
 
 2. Click **Query** from the header to open the Query view:  
@@ -61,49 +61,52 @@ create a query for the page dimension.
 
    ![Query select page](../assets/tutorial-query-02.png "Query select page")
 
-   A SELECT query appears in the query edit pane and immediately runs, returning, in this case, no data. By default, 
-   our query returns timestamped data from the last day.  
+   A SELECT query appears in the query edit pane and immediately runs. However, in this case, the query 
+   returns no data, since by default the query filters for data from the last day, while our data is considerably
+   older than that. Let's remove the filter.  
 
-5. In the datasource tree, click `__time` and then **Remove Filter**, removing the filter clause from
-the query. 
+5. In the datasource tree, click `__time` and **Remove Filter**. 
 
    ![Clear WHERE filter](../assets/tutorial-query-03.png "Clear WHERE filter")
 
-6. Click **Run** (or ctrl+return) to run the query again.   
+6. Click **Run** to run the query.   
 
    You should now see two columns of data, a page name and the count:
 
    ![Query results](../assets/tutorial-query-04.png "Query results")
 
-   Notice that the results are limited in the console to about a hundred results. The **Smart query limit** option helps 
-   you avoid inadvertently running queries that return an excessive number of rows. 
+   Notice that the results are limited in the console to about a hundred, by default, due to the **Smart query limit** 
+   feature. This helps queriers avoid inadvertently running queries that return an excessive amount of data, and possibly
+   overwhelming their system. 
 
-7. Let's edit the query directly to try out a few more query building features. In the query edit pane, make the following changes: 
+7. Let's edit the query directly and take a look at a few more query building features in the editor. 
+   Click in the query edit pane and make the following changes: 
 
-   1.  Add a line after the first column, `"page"` and Start typing the name of a new column, `"countryName"`. Notice  
-the autocompletion feature of the editor. Choose `countryName` from the autocomplete menu when it appears. Also add the new second
-column to the GROUP BY clause.  
+   1.  Add a line after the first column, `"page"` and Start typing the name of a new column, `"countryName"`. Notice that the autocompletion menu suggests column names, functions, keywords, and more. Choose "countryName" and 
+add the new column to the GROUP BY clause as well, either by name or by reference to its position, `2`.  
 
-   2. For readability, replace `Count` column name with `Edits`. In this case, the `COUNT()` function actually 
-returns the number of edits for the page. Change it in the ORDER BY clause as well. 
+   2. For readability, replace `Count` column name with `Edits`, since the `COUNT()` function actually
+returns the number of edits for the page. Make the same column name change in the ORDER BY clause as well. 
 
-      The `COUNT()` function is one of many aggregation functions supported by Druid. To see a brief description of the function, 
-      move your mouse over the function in the autocomplete menu. Also see the Druid documentation, such 
-      as [Aggregation functions](querying/sql.html#aggregation-functions). 
+      The `COUNT()` function is one of many functions available for use in Druid SQL queries. You can mouse over a function name
+      in the autocomplete menu to see a brief description of a function. Also, you can find more information in the Druid 
+      documentation; for example, the `COUNT()` function is documented in 
+      [Aggregation functions](querying/sql.html#aggregation-functions). 
 
-   The query should be:
+   The query should now be:
 
    ```sql
    SELECT
      "page",
      "countryName",
-     COUNT(*) AS "Count"
+     COUNT(*) AS "Edits"
    FROM "wikipedia"
    GROUP BY 1, 2
-   ORDER BY "Count" DESC
+   ORDER BY "Edits" DESC
    ``` 
 
-   When you run the query again, notice that we're getting the new dimension,`countryName`, but for most of the rows, its value is null. Let's 
+   When you run the query again, notice that we're getting the new dimension,`countryName`, but for most of the rows, its value 
+   is null. Let's 
    show only rows with a `countryName` value.
 
 8. Click the countryName dimension in the left pane and choose the first filtering option. It's not exactly what we want, but
@@ -118,37 +121,35 @@ we'll edit it by hand. The new WHERE clause should appear in your query.
 
    ![Finished query](../assets/tutorial-query-035.png "Finished query")
 
+9. Under the covers, every Druid SQL query is translated into a query in the JSON-based _Druid native query_ format before it runs
+ on data nodes. You can view the native query for this query by clicking `...` and **Explain SQL Query**. 
 
-9. Underlying every Druid SQL query is a native query, a JSON-based query syntax. Native query is the form of the query that executes on data nodes. View 
-the query plan for our query by clicking `...` and **Explain SQL Query**. 
-
-   While you can use Druid SQL most of the time, familiarity with native query is useful for composing complex queries or troubleshooting 
+   While you can use Druid SQL for most purposes, familiarity with native query is useful for composing complex queries and for troubleshooting 
 performance issues. For more information, see [Native queries](../querying/querying/querying.md). 
 
    ![Explain query](../assets/tutorial-query-06.png "Explain query")
 
-    > Alternatively, you can see the explain plan by putting EXPLAIN PLAN FOR to your query. This lets you see explain plans
-    while running queries from the command line or over HTTP.
+    > Another way to view the explain plan is by adding EXPLAIN PLAN FOR to the front of your query, as follows:
     >
     >```sql
     >EXPLAIN PLAN FOR
     >SELECT
     >  "page",
     >  "countryName",
-    >  COUNT(*) AS "Count"
+    >  COUNT(*) AS "Edits"
     >FROM "wikipedia"
     >WHERE "countryName" IS NOT NULL
     >GROUP BY 1, 2
-    >ORDER BY "Count" DESC
+    >ORDER BY "Edits" DESC
     >```
+    >This is particularly useful when running queries 
+    from the command line or over HTTP.
 
 
-9. Finally, see other ways you can control how queries run by clicking  `...`  and **Edit context**. In the field, you can enter the
-query context options, as JSON 
-key-value pairs, described in [Context flags](../querying/query-context.md).   
+9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  
 
-That's it! We've built a simple query using some of the query builder features of the Druid Console. The following
-sections provide a few more example queries you can try. Also, see [Other ways to invoke SQL queries](#other-ways-to-invoke-sql-queries), for how
+That's it! We've built a simple query using some of the query builder features built into the Druid Console. The following
+sections provide a few more example queries you can try. Also, see [Other ways to invoke SQL queries](#other-ways-to-invoke-sql-queries) to learn how
 to run Druid SQL from the command line or over HTTP. 
 
 ## More Druid SQL examples
@@ -181,7 +182,7 @@ ORDER BY SUM(added) DESC
 
 ### Query SQL via dsql
 
-For convenience, the Druid package includes a SQL command-line client, located at `bin/dsql` from the Druid package root.
+For convenience, the Druid package includes a SQL command-line client, located at `bin/dsql` in the Druid package root.
 
 Let's now run `bin/dsql`; you should see the following prompt:
 
@@ -216,7 +217,7 @@ Retrieved 10 rows in 0.06s.
 ### Query SQL over HTTP
 
 
-The SQL queries are submitted as JSON over HTTP.
+You can submit queries directly to the Druid Broker over HTTP. 
 
 The tutorial package includes an example file that contains the SQL query shown above at `quickstart/tutorial/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid Broker:
 
@@ -273,6 +274,6 @@ The following results should be returned:
 
 ## Further reading
 
-The [Queries documentation](../querying/querying.md) has more information on Druid native query.
+See the [Queries documentation](../querying/querying.md) for more information on Druid native query.
 
-The [Druid SQL documentation](../querying/sql.md) has more information on using Druid SQL queries.
+See the [Druid SQL documentation](../querying/sql.md) for more information on using Druid SQL queries.
