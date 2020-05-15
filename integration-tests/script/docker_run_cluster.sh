@@ -59,7 +59,7 @@ fi
 
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
-     docker-compose -f ${DOCKERDIR}/docker-compose.test-env.yml up -d
+     docker-compose -f ${DOCKERDIR}/docker-compose.yml up -d
   else
     # run druid cluster with override config
     OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up -d

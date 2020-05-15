@@ -24,6 +24,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-metadata-storage
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
 
@@ -31,6 +33,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-overlord
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-metadata-storage:druid-metadata-storage
       - druid-zookeeper-kafka:druid-zookeeper-kafka
@@ -42,6 +46,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-coordinator
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-overlord:druid-overlord
       - druid-metadata-storage:druid-metadata-storage
@@ -55,6 +61,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-historical
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
     depends_on:
@@ -64,6 +72,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-middlemanager
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
       - druid-overlord:druid-overlord
@@ -75,6 +85,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-broker
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
       - druid-middlemanager:druid-middlemanager
@@ -88,6 +100,8 @@ services:
     extends:
       file: docker-compose.base.yml
       service: druid-router
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     links:
       - druid-zookeeper-kafka:druid-zookeeper-kafka
       - druid-coordinator:druid-coordinator
