@@ -354,6 +354,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
       recordSupplier.seekToLatest(partitions);
 
+      // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
+      // because we currently only have record lag for kafka, which can be lazily computed by subtracting the highest
+      // task offsets from the latest offsets from the stream when it is needed
       latestSequenceFromStream =
           partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getPosition));
     }
