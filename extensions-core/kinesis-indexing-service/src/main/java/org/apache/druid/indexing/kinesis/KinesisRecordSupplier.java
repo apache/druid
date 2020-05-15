@@ -54,6 +54,7 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -82,6 +83,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -95,7 +97,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
-  private static final int FETCH_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
+
+  /**
+   * We call getRecords with limit 1000 to make sure that we can find the first (earliest) record in the shard.
+   * In the case where the shard is constantly removing records that are past their retention period, it is possible
+   * that we never find the first record in the shard if we use a limit of 1.
+   */
+  private static final int GET_SEQUENCE_NUMBER_RECORD_COUNT = 1000;
+  private static final int GET_SEQUENCE_NUMBER_RETRY_COUNT = 10;
 
   private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
   {
@@ -148,6 +157,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     private volatile long currentLagMillis;
 
     private final AtomicBoolean fetchStarted = new AtomicBoolean();
+    private ScheduledFuture<?> currentFetch;
 
     private PartitionResource(StreamPartition<String> streamPartition)
     {
@@ -169,7 +179,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         return;
       }
       if (fetchStarted.compareAndSet(false, true)) {
-        log.info(
+        log.debug(
             "Starting scheduled fetch for stream[%s] partition[%s]",
             streamPartition.getStream(),
             streamPartition.getPartitionId()
@@ -182,11 +192,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     private void stopBackgroundFetch()
     {
       if (fetchStarted.compareAndSet(true, false)) {
-        log.info(
+        log.debug(
             "Stopping scheduled fetch for stream[%s] partition[%s]",
             streamPartition.getStream(),
             streamPartition.getPartitionId()
         );
+        if (currentFetch != null && !currentFetch.isDone()) {
+          currentFetch.cancel(true);
+        }
       }
     }
 
@@ -194,7 +207,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     {
       if (fetchStarted.get()) {
         try {
-          scheduledExec.schedule(fetchRecords(), delayMillis, TimeUnit.MILLISECONDS);
+          currentFetch = scheduledExec.schedule(fetchRecords(), delayMillis, TimeUnit.MILLISECONDS);
         }
         catch (RejectedExecutionException e) {
           log.warn(
@@ -206,7 +219,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
         }
       } else {
-        log.info("Worker for partition[%s] has been stopped", streamPartition.getPartitionId());
+        log.debug("Worker for partition[%s] is already stopped", streamPartition.getPartitionId());
       }
     }
 
@@ -214,7 +227,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     {
       return () -> {
         if (!fetchStarted.get()) {
-          log.info("Worker for partition[%s] has been stopped", streamPartition.getPartitionId());
+          log.debug("Worker for partition[%s] has been stopped", streamPartition.getPartitionId());
           return;
         }
 
@@ -758,7 +771,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   /**
    * Given a partition and a {@link ShardIteratorType}, create a shard iterator and fetch
-   * {@link #FETCH_SEQUENCE_NUMBER_RECORD_COUNT} records and return the first sequence number from the result set.
+   * {@link #GET_SEQUENCE_NUMBER_RECORD_COUNT} records and return the first sequence number from the result set.
    * This method is thread safe as it does not depend on the internal state of the supplier (it doesn't use the
    * {@link PartitionResource} which have been assigned to the supplier), and the Kinesis client is thread safe.
    */
@@ -778,32 +791,26 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           log.info("KinesisRecordSupplier closed while fetching sequenceNumber");
           return null;
         }
-        try {
-          // we call getRecords with limit 1000 to make sure that we can find the first (earliest) record in the shard.
-          // In the case where the shard is constantly removing records that are past their retention period, it is possible
-          // that we never find the first record in the shard if we use a limit of 1.
-          recordsResult = kinesis.getRecords(
-              new GetRecordsRequest().withShardIterator(shardIterator).withLimit(FETCH_SEQUENCE_NUMBER_RECORD_COUNT)
-          );
-        }
-        catch (ProvisionedThroughputExceededException e) {
-          log.warn(
-              e,
-              "encountered ProvisionedThroughputExceededException while fetching records, this means "
-              + "that the request rate for the stream is too high, or the requested data is too large for "
-              + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
-              + "the number of shards to increase throughput."
-          );
-          try {
-            Thread.sleep(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS);
-            continue;
-          }
-          catch (InterruptedException e1) {
-            log.warn(e1, "Thread interrupted!");
-            Thread.currentThread().interrupt();
-            break;
-          }
-        }
+        final String currentShardIterator = shardIterator;
+        final GetRecordsRequest request = new GetRecordsRequest().withShardIterator(currentShardIterator)
+                                                                 .withLimit(GET_SEQUENCE_NUMBER_RECORD_COUNT);
+        recordsResult = RetryUtils.retry(
+            () -> kinesis.getRecords(request),
+            (throwable) -> {
+              if (throwable instanceof ProvisionedThroughputExceededException) {
+                log.warn(
+                    throwable,
+                    "encountered ProvisionedThroughputExceededException while fetching records, this means "
+                    + "that the request rate for the stream is too high, or the requested data is too large for "
+                    + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+                    + "the number of shards to increase throughput."
+                );
+                return true;
+              }
+              return false;
+            },
+            GET_SEQUENCE_NUMBER_RETRY_COUNT
+        );
 
         List<Record> records = recordsResult.getRecords();
 
@@ -892,7 +899,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private void filterBufferAndResetBackgroundFetch(Set<StreamPartition<String>> partitions) throws InterruptedException
   {
     checkIfClosed();
-    if (partitionsFetchStarted.compareAndSet(true, false)) {
+    if (backgroundFetchEnabled && partitionsFetchStarted.compareAndSet(true, false)) {
       scheduledExec.shutdown();
 
       try {

@@ -2016,14 +2016,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             taskGroupId
         );
 
-        newlyDiscovered.compute(taskGroupId, (groupId, partitions) -> {
-          if (partitions == null) {
-            partitions = new ArrayList<>();
-          }
-          partitions.add(partitionId);
-          return partitions;
-        });
-        newlyDiscovered.get(taskGroupId).add(partitionId);
+        newlyDiscovered.computeIfAbsent(taskGroupId, ArrayList::new).add(partitionId);
       }
     }
 
