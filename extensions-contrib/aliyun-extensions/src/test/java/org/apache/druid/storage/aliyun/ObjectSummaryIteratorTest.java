@@ -19,14 +19,6 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.junit.Assert;
-import org.junit.Test;
-
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.ListObjectsRequest;
@@ -34,6 +26,13 @@ import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ObjectSummaryIteratorTest
 {
@@ -65,7 +64,13 @@ public class ObjectSummaryIteratorTest
   public void testMultiObjectOneKeyAtATime()
   {
     test(
-        ImmutableList.of("oss://b/foo/bar1", "oss://b/foo/bar2", "oss://b/foo/bar3", "oss://b/foo/bar4", "oss://b/foo/baz"),
+        ImmutableList.of(
+            "oss://b/foo/bar1",
+            "oss://b/foo/bar2",
+            "oss://b/foo/bar3",
+            "oss://b/foo/bar4",
+            "oss://b/foo/baz"
+        ),
         ImmutableList.of("oss://b/foo/"),
         1
     );
@@ -75,7 +80,13 @@ public class ObjectSummaryIteratorTest
   public void testMultiObjectTwoKeysAtATime()
   {
     test(
-        ImmutableList.of("oss://b/foo/bar1", "oss://b/foo/bar2", "oss://b/foo/bar3", "oss://b/foo/bar4", "oss://b/foo/baz"),
+        ImmutableList.of(
+            "oss://b/foo/bar1",
+            "oss://b/foo/bar2",
+            "oss://b/foo/bar3",
+            "oss://b/foo/bar4",
+            "oss://b/foo/baz"
+        ),
         ImmutableList.of("oss://b/foo/"),
         2
     );
@@ -85,7 +96,13 @@ public class ObjectSummaryIteratorTest
   public void testMultiObjectTenKeysAtATime()
   {
     test(
-        ImmutableList.of("oss://b/foo/bar1", "oss://b/foo/bar2", "oss://b/foo/bar3", "oss://b/foo/bar4", "oss://b/foo/baz"),
+        ImmutableList.of(
+            "oss://b/foo/bar1",
+            "oss://b/foo/bar2",
+            "oss://b/foo/bar3",
+            "oss://b/foo/bar4",
+            "oss://b/foo/baz"
+        ),
         ImmutableList.of("oss://b/foo/"),
         10
     );
@@ -149,7 +166,13 @@ public class ObjectSummaryIteratorTest
   public void testWithMultiplePrefixesReturningAllNonEmptyObjectsStartingWithOneOfPrefixes()
   {
     test(
-        ImmutableList.of("oss://b/foo/bar1", "oss://b/foo/bar2", "oss://b/foo/bar3", "oss://b/foo/bar4", "oss://b/foo/baz"),
+        ImmutableList.of(
+            "oss://b/foo/bar1",
+            "oss://b/foo/bar2",
+            "oss://b/foo/bar3",
+            "oss://b/foo/bar4",
+            "oss://b/foo/baz"
+        ),
         ImmutableList.of("oss://b/foo/bar", "oss://b/foo/baz"),
         10
     );
@@ -166,11 +189,11 @@ public class ObjectSummaryIteratorTest
     // O(N^2) but who cares -- the list is short.
     for (final String uri : expectedUris) {
       final List<OSSObjectSummary> matches = TEST_OBJECTS.stream()
-                                                        .filter(
-                                                            summary ->
-                                                                OssUtils.summaryToUri(summary).toString().equals(uri)
-                                                        )
-                                                        .collect(Collectors.toList());
+                                                         .filter(
+                                                             summary ->
+                                                                 OssUtils.summaryToUri(summary).toString().equals(uri)
+                                                         )
+                                                         .collect(Collectors.toList());
 
       expectedObjects.add(Iterables.getOnlyElement(matches));
     }

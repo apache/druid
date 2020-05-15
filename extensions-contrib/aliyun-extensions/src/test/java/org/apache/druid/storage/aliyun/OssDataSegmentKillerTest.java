@@ -19,10 +19,12 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.Arrays;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.DeleteObjectsRequest;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.amazonaws.SdkClientException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
@@ -33,12 +35,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.model.DeleteObjectsRequest;
-import com.aliyun.oss.model.OSSObjectSummary;
-import com.amazonaws.SdkClientException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
 
 @RunWith(EasyMockRunner.class)
 public class OssDataSegmentKillerTest extends EasyMockSupport

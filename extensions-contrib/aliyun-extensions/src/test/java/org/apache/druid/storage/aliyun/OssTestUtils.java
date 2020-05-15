@@ -19,12 +19,12 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.net.URI;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.DeleteObjectsRequest;
+import com.aliyun.oss.model.DeleteObjectsResult;
+import com.aliyun.oss.model.ListObjectsRequest;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectListing;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
@@ -33,12 +33,11 @@ import org.easymock.IArgumentMatcher;
 import org.easymock.IExpectationSetters;
 import org.joda.time.DateTime;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.model.DeleteObjectsRequest;
-import com.aliyun.oss.model.DeleteObjectsResult;
-import com.aliyun.oss.model.ListObjectsRequest;
-import com.aliyun.oss.model.OSSObjectSummary;
-import com.aliyun.oss.model.ObjectListing;
+import java.net.URI;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class OssTestUtils extends EasyMockSupport
 {
@@ -84,7 +83,8 @@ public class OssTestUtils extends EasyMockSupport
   public static void expectListObjects(
       OSS client,
       URI prefix,
-      List<OSSObjectSummary> objectSummaries)
+      List<OSSObjectSummary> objectSummaries
+  )
   {
     final ObjectListing result = new ObjectListing();
     result.setBucketName(prefix.getAuthority());
@@ -163,7 +163,8 @@ public class OssTestUtils extends EasyMockSupport
   public static OSSObjectSummary newOSSObjectSummary(
       String bucket,
       String key,
-      long lastModifiedTimestamp)
+      long lastModifiedTimestamp
+  )
   {
     OSSObjectSummary objectSummary = new OSSObjectSummary();
     objectSummary.setBucketName(bucket);

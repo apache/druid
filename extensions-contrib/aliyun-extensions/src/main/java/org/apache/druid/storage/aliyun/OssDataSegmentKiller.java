@@ -19,9 +19,10 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.IOException;
-import java.util.Map;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSException;
+import com.google.common.base.Predicates;
+import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -29,10 +30,8 @@ import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSException;
-import com.google.common.base.Predicates;
-import com.google.inject.Inject;
+import java.io.IOException;
+import java.util.Map;
 
 /**
  *

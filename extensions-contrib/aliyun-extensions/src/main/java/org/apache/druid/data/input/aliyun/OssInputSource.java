@@ -19,16 +19,15 @@
 
 package org.apache.druid.data.input.aliyun;
 
-import java.net.URI;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
@@ -41,15 +40,14 @@ import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
 import org.apache.druid.utils.Streams;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSClientBuilder;
-import com.aliyun.oss.model.OSSObjectSummary;
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.net.URI;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class OssInputSource extends CloudObjectInputSource
 {
@@ -63,19 +61,19 @@ public class OssInputSource extends CloudObjectInputSource
 
   /**
    * Constructor for S3InputSource
-   * @param client                The default ServerSideEncryptingAmazonS3 client built with all default configs
-   *                                from Guice. This injected singleton client is use when {@param s3InputSourceConfig}
-   *                                is not provided and hence, we can skip building a new client from
-   *                                {@param s3ClientBuilder}
-   * @param clientBulider         Use for building a new s3Client to use instead of the default injected
-   *                                {@param s3Client}. The configurations of the client can be changed
-   *                                before being built
-   * @param inputDataConfig         Stores the configuration for options related to reading input data
-   * @param uris                    User provided uris to read input data
-   * @param prefixes                User provided prefixes to read input data
-   * @param objects                 User provided cloud objects values to read input data
-   * @param inputSourceConfig     User provided properties for overriding the default S3 configuration
    *
+   * @param client            The default ServerSideEncryptingAmazonS3 client built with all default configs
+   *                          from Guice. This injected singleton client is use when {@param s3InputSourceConfig}
+   *                          is not provided and hence, we can skip building a new client from
+   *                          {@param s3ClientBuilder}
+   * @param clientBulider     Use for building a new s3Client to use instead of the default injected
+   *                          {@param s3Client}. The configurations of the client can be changed
+   *                          before being built
+   * @param inputDataConfig   Stores the configuration for options related to reading input data
+   * @param uris              User provided uris to read input data
+   * @param prefixes          User provided prefixes to read input data
+   * @param objects           User provided cloud objects values to read input data
+   * @param inputSourceConfig User provided properties for overriding the default S3 configuration
    */
   @JsonCreator
   public OssInputSource(
@@ -94,9 +92,9 @@ public class OssInputSource extends CloudObjectInputSource
     this.clientSupplier = Suppliers.memoize(
         () -> {
           if (inputSourceConfig != null) {
-        	  String accessKeyId = inputSourceConfig.getAccessKeyId().getPassword();
-              String secretAccessKey = inputSourceConfig.getSecretAccessKey().getPassword();
-              return new OSSClientBuilder().build(inputSourceConfig.getEndpoint(), accessKeyId, secretAccessKey);
+            String accessKeyId = inputSourceConfig.getAccessKeyId().getPassword();
+            String secretAccessKey = inputSourceConfig.getSecretAccessKey().getPassword();
+            return new OSSClientBuilder().build(inputSourceConfig.getEndpoint(), accessKeyId, secretAccessKey);
           } else {
             return client;
           }
@@ -105,7 +103,7 @@ public class OssInputSource extends CloudObjectInputSource
   }
 
 
-@Nullable
+  @Nullable
   @JsonProperty("properties")
   public OssInputSourceConfig getOssInputSourceConfig()
   {
@@ -181,6 +179,10 @@ public class OssInputSource extends CloudObjectInputSource
 
   private Iterable<OSSObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> OssUtils.objectSummaryIterator(clientSupplier.get(), getPrefixes(), inputDataConfig.getMaxListingLength());
+    return () -> OssUtils.objectSummaryIterator(
+        clientSupplier.get(),
+        getPrefixes(),
+        inputDataConfig.getMaxListingLength()
+    );
   }
 }

@@ -19,20 +19,6 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.IOException;
-import java.util.Map;
-
-import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.MapUtils;
-import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.loading.DataSegmentMover;
-import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.timeline.DataSegment;
-
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.CopyObjectRequest;
@@ -45,6 +31,19 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.loading.DataSegmentMover;
+import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.timeline.DataSegment;
+
+import java.io.IOException;
+import java.util.Map;
 
 public class OssDataSegmentMover implements DataSegmentMover
 {
@@ -168,7 +167,7 @@ public class OssDataSegmentMover implements DataSegmentMover
     }
     if (client.doesObjectExist(srcBucket, srcPath)) {
       final ObjectListing listResult = client.listObjects(
-          new ListObjectsRequest(srcBucket,srcPath, null, null, 1)
+          new ListObjectsRequest(srcBucket, srcPath, null, null, 1)
       );
       // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
       // it is observed that even though the getObjectSummaries returns some data

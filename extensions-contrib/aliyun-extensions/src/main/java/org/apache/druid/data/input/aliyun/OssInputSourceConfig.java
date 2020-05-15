@@ -36,17 +36,23 @@ public class OssInputSourceConfig
 {
   @JsonCreator
   public OssInputSourceConfig(
-		  @JsonProperty("endpoint") String endpoint,
+      @JsonProperty("endpoint") String endpoint,
       @JsonProperty("accessKeyId") @Nullable PasswordProvider accessKeyId,
       @JsonProperty("secretAccessKey") @Nullable PasswordProvider secretAccessKey
   )
   {
     if (accessKeyId != null || secretAccessKey != null) {
-      this.accessKeyId = Preconditions.checkNotNull(accessKeyId, "accessKeyId cannot be null if secretAccessKey is given");
-      this.secretAccessKey = Preconditions.checkNotNull(secretAccessKey, "secretAccessKey cannot be null if accessKeyId is given");
+      this.accessKeyId = Preconditions.checkNotNull(
+          accessKeyId,
+          "accessKeyId cannot be null if secretAccessKey is given"
+      );
+      this.secretAccessKey = Preconditions.checkNotNull(
+          secretAccessKey,
+          "secretAccessKey cannot be null if accessKeyId is given"
+      );
     }
   }
-  
+
   @JsonProperty
   private String endpoint;
 
@@ -56,8 +62,9 @@ public class OssInputSourceConfig
   @JsonProperty
   private PasswordProvider secretAccessKey;
 
-  public String getEndpoint() {
-	  return endpoint;
+  public String getEndpoint()
+  {
+    return endpoint;
   }
 
   public PasswordProvider getAccessKeyId()
@@ -81,7 +88,7 @@ public class OssInputSourceConfig
   public String toString()
   {
     return "OssInputSourceConfig{" +
-    		"endpoint=" + endpoint + 
+           "endpoint=" + endpoint +
            "accessKeyId=" + accessKeyId +
            ", secretAccessKey=" + secretAccessKey +
            '}';
@@ -99,7 +106,7 @@ public class OssInputSourceConfig
     OssInputSourceConfig that = (OssInputSourceConfig) o;
     return Objects.equals(accessKeyId, that.accessKeyId) &&
            Objects.equals(secretAccessKey, that.secretAccessKey) &&
-           Objects.equals(endpoint,  that.endpoint);
+           Objects.equals(endpoint, that.endpoint);
   }
 
   @Override

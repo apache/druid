@@ -29,6 +29,7 @@ import org.apache.druid.initialization.DruidModule;
 import java.util.List;
 
 /**
+ *
  */
 public class OssFirehoseDruidModule implements DruidModule
 {

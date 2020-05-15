@@ -19,19 +19,22 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.util.List;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClientBuilder;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.Module;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import com.google.inject.Provides;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
+import org.apache.druid.data.input.aliyun.OssInputSourceConfig;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
-import com.google.inject.multibindings.MapBinder;
+import java.util.List;
 
 /**
  *
@@ -80,14 +83,21 @@ public class OssStorageDruidModule implements DruidModule
              .addBinding(SCHEME_S3N)
              .to(OssTimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
-    Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME_S3_ZIP).to(OssDataSegmentKiller.class).in(LazySingleton.class);
-    Binders.dataSegmentMoverBinder(binder).addBinding(SCHEME_S3_ZIP).to(OssDataSegmentMover.class).in(LazySingleton.class);
+    Binders.dataSegmentKillerBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(OssDataSegmentKiller.class)
+           .in(LazySingleton.class);
+    Binders.dataSegmentMoverBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(OssDataSegmentMover.class)
+           .in(LazySingleton.class);
     Binders.dataSegmentArchiverBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
            .to(OssDataSegmentArchiver.class)
            .in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(OssDataSegmentPusher.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", OssInputDataConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage", OssInputSourceConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", OssDataSegmentPusherConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", OssDataSegmentArchiverConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", OssStorageConfig.class);
@@ -95,5 +105,15 @@ public class OssStorageDruidModule implements DruidModule
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(OssTaskLogs.class);
     JsonConfigProvider.bind(binder, "druid.indexer.logs", OssTaskLogsConfig.class);
     binder.bind(OssTaskLogs.class).in(LazySingleton.class);
+  }
+
+  @Provides
+  @LazySingleton
+  public OSS getOSS(OssInputSourceConfig inputSourceConfig)
+  {
+    return new OSSClientBuilder().build(inputSourceConfig.getEndpoint(),
+                                        inputSourceConfig.getAccessKeyId().getPassword(),
+                                        inputSourceConfig.getSecretAccessKey().getPassword()
+    );
   }
 }

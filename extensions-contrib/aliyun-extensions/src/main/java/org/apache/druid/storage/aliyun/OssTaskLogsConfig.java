@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import javax.validation.constraints.NotNull;
 
 /**
+ *
  */
 public class OssTaskLogsConfig
 {

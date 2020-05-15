@@ -19,20 +19,6 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
-import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RetryUtils;
-import org.apache.druid.java.util.common.RetryUtils.Task;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.AccessControlList;
@@ -45,6 +31,19 @@ import com.aliyun.oss.model.PutObjectRequest;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.RetryUtils.Task;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  *
@@ -60,7 +59,7 @@ public class OssUtils
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
     final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    final boolean badStatusCode = false;//ex. == 400 || ex.getStatusCode() == 403 || ex.getStatusCode() == 404;
+    final boolean badStatusCode = false; //ex. == 400 || ex.getStatusCode() == 403 || ex.getStatusCode() == 404;
     return !badStatusCode && (isIOException || isTimeout);
   }
 
@@ -111,7 +110,7 @@ public class OssUtils
 
   /**
    * Create an iterator over a set of S3 objects specified by a set of prefixes.
-   *
+   * <p>
    * For each provided prefix URI, the iterator will walk through all objects that are in the same bucket as the
    * provided URI and whose keys start with that URI's path, except for directory placeholders (which will be
    * ignored). The iterator is computed incrementally by calling {@link OssClientHelper#listObjectsV2} for
@@ -178,8 +177,8 @@ public class OssUtils
    * in the given bucket.
    *
    * @param client s3 client
-   * @param bucket   s3 bucket
-   * @param key      unique key for the object to be retrieved
+   * @param bucket s3 bucket
+   * @param key    unique key for the object to be retrieved
    */
   public static OSSObjectSummary getSingleObjectSummary(OSS client, String bucket, String key)
   {
@@ -205,11 +204,12 @@ public class OssUtils
 
   /**
    * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
+   *
    * @param client s3 client
-   * @param config   specifies the configuration to use when finding matching files in S3 to delete
-   * @param bucket   s3 bucket
-   * @param prefix   the file prefix
-   * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
+   * @param config specifies the configuration to use when finding matching files in S3 to delete
+   * @param bucket s3 bucket
+   * @param prefix the file prefix
+   * @param filter function which returns true if the prefix file found should be deleted and false otherwise.
    * @throws Exception
    */
   public static void deleteObjectsInPath(
@@ -263,7 +263,7 @@ public class OssUtils
   /**
    * Uploads a file to S3 if possible. First trying to set ACL to give the bucket owner full control of the file before uploading.
    *
-   * @param client    aliyun OSS client
+   * @param client     aliyun OSS client
    * @param disableAcl true if ACL shouldn't be set for the file
    * @param key        The key under which to store the new object.
    * @param file       The path of the file to upload to Amazon S3.
@@ -280,9 +280,9 @@ public class OssUtils
 
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
     client.putObject(putObjectRequest);
-    
+
     if (!disableAcl) {
-    	client.setObjectAcl(bucket, key, OssUtils.grantFullControlToBucketOwner(client, bucket));
+      client.setObjectAcl(bucket, key, OssUtils.grantFullControlToBucketOwner(client, bucket));
     }
   }
 }

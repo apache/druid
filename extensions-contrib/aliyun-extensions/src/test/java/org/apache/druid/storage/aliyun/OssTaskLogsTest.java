@@ -19,13 +19,17 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
+import com.aliyun.oss.ClientException;
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.AccessControlList;
+import com.aliyun.oss.model.DeleteObjectsRequest;
+import com.aliyun.oss.model.Grant;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.Owner;
+import com.aliyun.oss.model.PutObjectRequest;
+import com.aliyun.oss.model.PutObjectResult;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
@@ -38,19 +42,12 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
-import com.aliyun.oss.ClientException;
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.model.AccessControlList;
-import com.aliyun.oss.model.DeleteObjectsRequest;
-import com.aliyun.oss.model.Grant;
-import com.aliyun.oss.model.OSSObjectSummary;
-import com.aliyun.oss.model.Owner;
-import com.aliyun.oss.model.Permission;
-import com.aliyun.oss.model.PutObjectRequest;
-import com.aliyun.oss.model.PutObjectResult;
-import com.aliyun.oss.model.SetObjectAclRequest;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RunWith(EasyMockRunner.class)
 public class OssTaskLogsTest extends EasyMockSupport
@@ -76,7 +73,7 @@ public class OssTaskLogsTest extends EasyMockSupport
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
- 
+
   @Test
   public void testTaskLogsPushWithAclDisabled() throws Exception
   {
@@ -88,25 +85,6 @@ public class OssTaskLogsTest extends EasyMockSupport
     Assert.assertNotNull("Grant list should not be null", grantList);
     Assert.assertEquals("Grant list should be empty as ACL is disabled", 0, grantList.size());
   }
-
-//  @Test
-//  public void testTaskLogsPushWithAclEnabled() throws Exception
-//  {
-//    String ownerId = "test_owner";
-//    String ownerDisplayName = "test_owner";
-//
-//    List<Grant> grantList = testPushInternal(false, ownerId, ownerDisplayName);
-//
-//    Assert.assertNotNull("Grant list should not be null", grantList);
-//    Assert.assertEquals("Grant list size should be equal to 1", 1, grantList.size());
-//    Grant grant = grantList.get(0);
-//    Assert.assertEquals(
-//        "The Grantee identifier should be test_owner",
-//        "test_owner",
-//        grant.getGrantee().getIdentifier()
-//    );
-//    Assert.assertEquals("The Grant should have full control permission", Permission.FullControl, grant.getPermission());
-//  }
 
   @Test
   public void test_killAll_noException_deletesAllTaskLogs() throws IOException
@@ -123,9 +101,9 @@ public class OssTaskLogsTest extends EasyMockSupport
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET);
-        deleteRequest1.setKeys(Arrays.asList(KEY_1));
+    deleteRequest1.setKeys(Arrays.asList(KEY_1));
     DeleteObjectsRequest deleteRequest2 = new DeleteObjectsRequest(TEST_BUCKET);
-        deleteRequest2.setKeys(Arrays.asList(KEY_2));
+    deleteRequest2.setKeys(Arrays.asList(KEY_2));
 
     OssTestUtils.mockClientDeleteObjects(
         ossClient,
@@ -140,8 +118,8 @@ public class OssTaskLogsTest extends EasyMockSupport
     config.setPrefix(TEST_PREFIX);
     OssInputDataConfig inputDataConfig = new OssInputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs OssTaskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
-    OssTaskLogs.killAll();
+    OssTaskLogs taskLogs = new taskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    taskLogs.killAll();
 
     EasyMock.verify(ossClient, timeSupplier);
   }
@@ -174,8 +152,8 @@ public class OssTaskLogsTest extends EasyMockSupport
     config.setPrefix(TEST_PREFIX);
     OssInputDataConfig inputDataConfig = new OssInputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs OssTaskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
-    OssTaskLogs.killAll();
+    OssTaskLogs taskLogs = new taskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    taskLogs.killAll();
 
     EasyMock.verify(ossClient, timeSupplier);
   }
@@ -208,8 +186,8 @@ public class OssTaskLogsTest extends EasyMockSupport
       config.setPrefix(TEST_PREFIX);
       OssInputDataConfig inputDataConfig = new OssInputDataConfig();
       inputDataConfig.setMaxListingLength(MAX_KEYS);
-      OssTaskLogs OssTaskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
-      OssTaskLogs.killAll();
+      OssTaskLogs taskLogs = new taskLogs(ossClient, config, inputDataConfig, timeSupplier);
+      taskLogs.killAll();
     }
     catch (IOException e) {
       ioExceptionThrown = true;
@@ -244,8 +222,8 @@ public class OssTaskLogsTest extends EasyMockSupport
     config.setPrefix(TEST_PREFIX);
     OssInputDataConfig inputDataConfig = new OssInputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs OssTaskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
-    OssTaskLogs.killOlderThan(TIME_NOW);
+    OssTaskLogs taskLogs = new taskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    taskLogs.killOlderThan(TIME_NOW);
 
     EasyMock.verify(ossClient, timeSupplier);
   }
@@ -277,8 +255,8 @@ public class OssTaskLogsTest extends EasyMockSupport
     config.setPrefix(TEST_PREFIX);
     OssInputDataConfig inputDataConfig = new OssInputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_KEYS);
-    OssTaskLogs OssTaskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
-    OssTaskLogs.killOlderThan(TIME_NOW);
+    OssTaskLogs taskLogs = new taskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    taskLogs.killOlderThan(TIME_NOW);
 
     EasyMock.verify(ossClient, timeSupplier);
   }
@@ -310,8 +288,8 @@ public class OssTaskLogsTest extends EasyMockSupport
       config.setPrefix(TEST_PREFIX);
       OssInputDataConfig inputDataConfig = new OssInputDataConfig();
       inputDataConfig.setMaxListingLength(MAX_KEYS);
-      OssTaskLogs OssTaskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
-      OssTaskLogs.killOlderThan(TIME_NOW);
+      OssTaskLogs taskLogs = new taskLogs(ossClient, config, inputDataConfig, timeSupplier);
+      taskLogs.killOlderThan(TIME_NOW);
     }
     catch (IOException e) {
       ioExceptionThrown = true;
@@ -346,12 +324,12 @@ public class OssTaskLogsTest extends EasyMockSupport
     config.setBucket(TEST_BUCKET);
     CurrentTimeMillisSupplier timeSupplier = new CurrentTimeMillisSupplier();
     OssInputDataConfig inputDataConfig = new OssInputDataConfig();
-    OssTaskLogs OssTaskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
+    OssTaskLogs taskLogs = new taskLogs(ossClient, config, inputDataConfig, timeSupplier);
 
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
     File logFile = tempFolder.newFile("test_log_file");
 
-    OssTaskLogs.pushTaskLog(taskId, logFile);
+    taskLogs.pushTaskLog(taskId, logFile);
 
     return aclExpected.getGrants().stream().collect(Collectors.toList());
   }

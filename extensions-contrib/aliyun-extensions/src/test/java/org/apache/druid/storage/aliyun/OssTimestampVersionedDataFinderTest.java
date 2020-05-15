@@ -19,19 +19,18 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.net.URI;
-import java.util.Date;
-import java.util.regex.Pattern;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.ListObjectsRequest;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectListing;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.model.ListObjectsRequest;
-import com.aliyun.oss.model.OSSObjectSummary;
-import com.aliyun.oss.model.ObjectListing;
+import java.net.URI;
+import java.util.Date;
+import java.util.regex.Pattern;
 
 public class OssTimestampVersionedDataFinderTest
 {

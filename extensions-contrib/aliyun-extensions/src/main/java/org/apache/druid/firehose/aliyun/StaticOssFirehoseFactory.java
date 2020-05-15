@@ -19,27 +19,6 @@
 
 package org.apache.druid.firehose.aliyun;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.impl.StringInputRowParser;
-import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.aliyun.OssUtils;
-import org.apache.druid.utils.CompressionUtils;
-
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.GetObjectRequest;
@@ -50,6 +29,26 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.aliyun.OssUtils;
+import org.apache.druid.utils.CompressionUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.
@@ -137,11 +136,11 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
       final String bucket = object.getAuthority();
       final String key = OssUtils.extractKey(object);
 
-      final OSSObject OSSObject = client.getObject(bucket, key);
-      if (OSSObject == null) {
+      final OSSObject ossObject = client.getObject(bucket, key);
+      if (ossObject == null) {
         throw new ISE("Failed to get an s3 object for bucket[%s] and key[%s]", bucket, key);
       }
-      return OSSObject.getObjectContent();
+      return ossObject.getObjectContent();
     }
     catch (OSSException e) {
       throw new IOException(e);
@@ -156,8 +155,8 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
 
     final GetObjectRequest request = new GetObjectRequest(bucket, key);
     try {
-      final OSSObject OSSObject = client.getObject(request);
-      if (OSSObject == null) {
+      final OSSObject ossObject = client.getObject(request);
+      if (ossObject == null) {
         throw new ISE(
             "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
             bucket,
@@ -165,7 +164,7 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
             start
         );
       }
-      InputStream is = OSSObject.getObjectContent();
+      InputStream is = ossObject.getObjectContent();
       is.skip(start);
       return is;
     }

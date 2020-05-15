@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.Min;
 
 /**
+ *
  */
 public class OssDataSegmentPusherConfig
 {
@@ -39,6 +40,7 @@ public class OssDataSegmentPusherConfig
   @JsonProperty
   @Min(1)
   private int maxListingLength = 1024;
+
   // use s3n by default for backward compatibility
   public void setBucket(String bucket)
   {

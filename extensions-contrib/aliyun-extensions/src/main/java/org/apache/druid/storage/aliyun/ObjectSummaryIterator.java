@@ -19,21 +19,20 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.net.URI;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
-import org.apache.druid.java.util.common.RE;
-
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
+import org.apache.druid.java.util.common.RE;
+
+import java.net.URI;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Iterator class used by {@link OssUtils#objectSummaryIterator}.
- *
+ * <p>
  * As required by the specification of that method, this iterator is computed incrementally in batches of
  * {@code maxListLength}. The first call is made at the same time the iterator is constructed.
  */
@@ -87,7 +86,7 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
     final String currentBucket = currentUri.getAuthority();
     final String currentPrefix = OssUtils.extractKey(currentUri);
 
-    request = new ListObjectsRequest(currentBucket,currentPrefix, null, null, maxListingLength);
+    request = new ListObjectsRequest(currentBucket, currentPrefix, null, null, maxListingLength);
   }
 
   private void fetchNextBatch()
@@ -145,7 +144,7 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
 
   /**
    * Checks if a given object is a directory placeholder and should be ignored.
-   *
+   * <p>
    * Adapted from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder(). Does not include the check for
    * legacy JetS3t directory placeholder objects, since it is based on content-type, which isn't available in an
    * S3ObjectSummary.

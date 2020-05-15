@@ -19,17 +19,15 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.File;
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Reader;
-import java.io.Writer;
-import java.net.URI;
-
-import javax.tools.FileObject;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSException;
+import com.aliyun.oss.model.OSSObject;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import com.google.common.io.ByteSource;
+import com.google.common.io.Files;
+import com.google.inject.Inject;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -43,15 +41,15 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.URIDataPuller;
 import org.apache.druid.utils.CompressionUtils;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSException;
-import com.aliyun.oss.model.OSSObject;
-import com.aliyun.oss.model.OSSObjectSummary;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.io.ByteSource;
-import com.google.common.io.Files;
-import com.google.inject.Inject;
+import javax.tools.FileObject;
+import java.io.File;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
+import java.net.URI;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
@@ -71,7 +69,8 @@ public class OssDataSegmentPuller implements URIDataPuller
     this.client = s3Client;
   }
 
-  FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation ossCoords, final File outDir) throws SegmentLoadingException
+  FileUtils.FileCopyResult getSegmentFiles(final CloudObjectLocation ossCoords, final File outDir)
+      throws SegmentLoadingException
   {
 
     log.info("Pulling index at path[%s] to outDir[%s]", ossCoords, outDir);
@@ -270,9 +269,7 @@ public class OssDataSegmentPuller implements URIDataPuller
    * Returns the "version" (aka last modified timestamp) of the URI
    *
    * @param uri The URI to check the last timestamp
-   *
    * @return The time in ms of the last modification of the URI in String format
-   *
    * @throws IOException
    */
   @Override

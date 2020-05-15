@@ -19,20 +19,18 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.net.URI;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.OSSObjectSummary;
+import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.StringUtils;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.model.OSSObjectSummary;
-import com.google.inject.Inject;
+import javax.annotation.Nullable;
+import java.net.URI;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.regex.Pattern;
 
 public class OssTimestampVersionedDataFinder extends OssDataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
@@ -54,7 +52,6 @@ public class OssTimestampVersionedDataFinder extends OssDataSegmentPuller implem
    *
    * @param uri     The URI of in the form of `s3://some_bucket/some_key`
    * @param pattern The pattern matcher to determine if a *key* is of interest, or `null` to match everything.
-   *
    * @return A URI to the most recently modified object which matched the pattern.
    */
   @Override

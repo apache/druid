@@ -19,16 +19,6 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.util.Map;
-
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.timeline.DataSegment;
-import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClient;
 import com.fasterxml.jackson.databind.BeanProperty;
@@ -38,6 +28,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.timeline.DataSegment;
+import org.easymock.EasyMock;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.util.Map;
 
 public class OssDataSegmentArchiverTest
 {
@@ -112,7 +111,12 @@ public class OssDataSegmentArchiverTest
             OssDataSegmentPuller.KEY,
             ARCHIVER_CONFIG.getArchiveBaseKey() + "archived"
         ));
-    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(MAPPER, OSS_CLIENT, ARCHIVER_CONFIG, PUSHER_CONFIG)
+    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(
+        MAPPER,
+        OSS_CLIENT,
+        ARCHIVER_CONFIG,
+        PUSHER_CONFIG
+    )
     {
       @Override
       public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
@@ -126,7 +130,12 @@ public class OssDataSegmentArchiverTest
   @Test
   public void testSimpleArchiveDoesntMove() throws Exception
   {
-    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(MAPPER, OSS_CLIENT, ARCHIVER_CONFIG, PUSHER_CONFIG)
+    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(
+        MAPPER,
+        OSS_CLIENT,
+        ARCHIVER_CONFIG,
+        PUSHER_CONFIG
+    )
     {
       @Override
       public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
@@ -149,7 +158,12 @@ public class OssDataSegmentArchiverTest
             OssDataSegmentPuller.KEY,
             ARCHIVER_CONFIG.getArchiveBaseKey() + "archived"
         ));
-    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(MAPPER, OSS_CLIENT, ARCHIVER_CONFIG, PUSHER_CONFIG)
+    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(
+        MAPPER,
+        OSS_CLIENT,
+        ARCHIVER_CONFIG,
+        PUSHER_CONFIG
+    )
     {
       @Override
       public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)
@@ -163,7 +177,12 @@ public class OssDataSegmentArchiverTest
   @Test
   public void testSimpleRestoreDoesntMove() throws Exception
   {
-    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(MAPPER, OSS_CLIENT, ARCHIVER_CONFIG, PUSHER_CONFIG)
+    final OssDataSegmentArchiver archiver = new OssDataSegmentArchiver(
+        MAPPER,
+        OSS_CLIENT,
+        ARCHIVER_CONFIG,
+        PUSHER_CONFIG
+    )
     {
       @Override
       public DataSegment move(DataSegment segment, Map<String, Object> targetLoadSpec)

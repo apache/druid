@@ -19,11 +19,9 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.regex.Pattern;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.model.PutObjectResult;
+import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -33,11 +31,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.model.PutObjectResult;
-import com.google.common.io.Files;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.regex.Pattern;
 
 /**
+ *
  */
 public class OssDataSegmentPusherTest
 {
@@ -68,7 +68,10 @@ public class OssDataSegmentPusherTest
   @Test
   public void testPushUseUniquePath() throws Exception
   {
-    testPushInternal(true, "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip");
+    testPushInternal(
+        true,
+        "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip"
+    );
   }
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception

@@ -19,21 +19,20 @@
 
 package org.apache.druid.data.input.aliyun;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSException;
+import com.aliyun.oss.model.GetObjectRequest;
+import com.aliyun.oss.model.OSSObject;
+import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSException;
-import com.aliyun.oss.model.GetObjectRequest;
-import com.aliyun.oss.model.OSSObject;
-import com.google.common.base.Predicate;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 
 public class OssEntity extends RetryingInputEntity
 {
@@ -57,7 +56,7 @@ public class OssEntity extends RetryingInputEntity
   {
     final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
     request.setRange(offset, request.getRange()[1]);
-    
+
     try {
       final OSSObject ossObject = ossClient.getObject(request);
       if (ossObject == null) {

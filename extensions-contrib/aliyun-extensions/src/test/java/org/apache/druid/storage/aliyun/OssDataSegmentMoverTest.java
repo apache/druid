@@ -19,20 +19,6 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.File;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.MapUtils;
-import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
-
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.CopyObjectRequest;
@@ -44,6 +30,19 @@ import com.aliyun.oss.model.PutObjectResult;
 import com.aliyun.oss.model.StorageClass;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.MapUtils;
+import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class OssDataSegmentMoverTest
 {
@@ -126,7 +125,7 @@ public class OssDataSegmentMoverTest
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
   }
-  
+
   @Test
   public void testIgnoresGoneButAlreadyMoved() throws Exception
   {
@@ -181,22 +180,13 @@ public class OssDataSegmentMoverTest
 
     private MockClient()
     {
-      super("endpoint","accessKeyId","keySecret");
+      super("endpoint", "accessKeyId", "keySecret");
     }
 
     public boolean didMove()
     {
       return copied && deletedOld;
     }
-
-//    @Override
-//    public AccessControlList getBucketAcl(String bucketName)
-//    {
-//      final AccessControlList acl = new AccessControlList();
-//      acl.setOwner(new Owner("ownerId", "owner"));
-//      acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
-//      return acl;
-//    }
 
     @Override
     public boolean doesObjectExist(String bucketName, String objectKey)
@@ -241,7 +231,15 @@ public class OssDataSegmentMoverTest
                .add(destinationObjectKey);
         return new CopyObjectResult();
       } else {
-        final OSSException exception = new OSSException("OssDataSegmentMoverTest", "NoSuchKey",null, null, null, null, null);
+        final OSSException exception = new OSSException(
+            "OssDataSegmentMoverTest",
+            "NoSuchKey",
+            null,
+            null,
+            null,
+            null,
+            null
+        );
         throw exception;
       }
     }

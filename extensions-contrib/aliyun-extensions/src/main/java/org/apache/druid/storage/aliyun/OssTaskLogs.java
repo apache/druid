@@ -19,18 +19,6 @@
 
 package org.apache.druid.storage.aliyun;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.Date;
-
-import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
-import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.tasklogs.TaskLogs;
-
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.GetObjectRequest;
@@ -39,6 +27,17 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
+import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.tasklogs.TaskLogs;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Date;
 
 /**
  * Provides task logs archived on S3.
@@ -117,7 +116,7 @@ public class OssTaskLogs implements TaskLogs
       );
     }
     catch (OSSException e) {
-      if ( "NoSuchKey".equals(e.getErrorCode())
+      if ("NoSuchKey".equals(e.getErrorCode())
           || "NoSuchBucket".equals(e.getErrorCode())) {
         return Optional.absent();
       } else {

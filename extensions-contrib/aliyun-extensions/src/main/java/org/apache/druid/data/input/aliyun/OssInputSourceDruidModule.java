@@ -19,16 +19,15 @@
 
 package org.apache.druid.data.input.aliyun;
 
-import java.util.List;
-
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.storage.aliyun.OssStorageDruidModule;
-
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.storage.aliyun.OssStorageDruidModule;
+
+import java.util.List;
 
 /**
  * Druid module to wire up native batch support for S3 input
