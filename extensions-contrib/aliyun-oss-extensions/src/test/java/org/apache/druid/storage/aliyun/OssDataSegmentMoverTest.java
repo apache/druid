@@ -67,7 +67,7 @@ public class OssDataSegmentMoverTest
   public void testMove() throws Exception
   {
     MockClient mockClient = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockClient, new OssDataSegmentPusherConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(mockClient, new OssStorageConfig());
 
     mockClient.putObject(
         "main",
@@ -92,7 +92,7 @@ public class OssDataSegmentMoverTest
   public void testMoveNoop() throws Exception
   {
     MockClient mockS3Client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssDataSegmentPusherConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssStorageConfig());
 
     mockS3Client.putObject(
         "archive",
@@ -118,7 +118,7 @@ public class OssDataSegmentMoverTest
   public void testMoveException() throws Exception
   {
     MockClient mockS3Client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssDataSegmentPusherConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssStorageConfig());
 
     mover.move(
         SOURCE_SEGMENT,
@@ -130,7 +130,7 @@ public class OssDataSegmentMoverTest
   public void testIgnoresGoneButAlreadyMoved() throws Exception
   {
     MockClient mockS3Client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssDataSegmentPusherConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssStorageConfig());
     mover.move(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
@@ -153,7 +153,7 @@ public class OssDataSegmentMoverTest
   public void testFailsToMoveMissing() throws Exception
   {
     MockClient client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(client, new OssDataSegmentPusherConfig());
+    OssDataSegmentMover mover = new OssDataSegmentMover(client, new OssStorageConfig());
     mover.move(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),

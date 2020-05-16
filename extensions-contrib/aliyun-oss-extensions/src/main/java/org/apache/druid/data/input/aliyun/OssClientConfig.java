@@ -32,10 +32,10 @@ import java.util.Objects;
  * Contains properties for aliyun-oss input source.
  * Properties can be specified by ingestionSpec which will override system default.
  */
-public class OssInputSourceConfig
+public class OssClientConfig
 {
   @JsonCreator
-  public OssInputSourceConfig(
+  public OssClientConfig(
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("accessKey") PasswordProvider accessKey,
       @JsonProperty("secretKey") PasswordProvider secretKey
@@ -95,7 +95,7 @@ public class OssInputSourceConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    OssInputSourceConfig that = (OssInputSourceConfig) o;
+    OssClientConfig that = (OssClientConfig) o;
     return Objects.equals(accessKey, that.accessKey) &&
            Objects.equals(secretKey, that.secretKey) &&
            Objects.equals(endpoint, that.endpoint);

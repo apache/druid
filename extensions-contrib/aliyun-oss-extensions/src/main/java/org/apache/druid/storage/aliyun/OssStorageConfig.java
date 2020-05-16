@@ -26,35 +26,25 @@ import javax.validation.constraints.Min;
 /**
  *
  */
-public class OssDataSegmentPusherConfig
+public class OssStorageConfig
 {
   @JsonProperty
   private String bucket = "";
 
   @JsonProperty
-  private String baseKey = "";
-
-  @JsonProperty
-  private boolean disableAcl = true;
+  private String prefix = "";
 
   @JsonProperty
   @Min(1)
   private int maxListingLength = 1024;
 
-  // use s3n by default for backward compatibility
   public void setBucket(String bucket)
   {
     this.bucket = bucket;
   }
-
-  public void setBaseKey(String baseKey)
+  public void setPrefix(String prefix)
   {
-    this.baseKey = baseKey;
-  }
-
-  public void setDisableAcl(boolean disableAcl)
-  {
-    this.disableAcl = disableAcl;
+    this.prefix = prefix;
   }
 
   public void setMaxListingLength(int maxListingLength)
@@ -67,14 +57,9 @@ public class OssDataSegmentPusherConfig
     return bucket;
   }
 
-  public String getBaseKey()
+  public String getPrefix()
   {
-    return baseKey;
-  }
-
-  public boolean getDisableAcl()
-  {
-    return disableAcl;
+    return prefix;
   }
 
   public int getMaxListingLength()

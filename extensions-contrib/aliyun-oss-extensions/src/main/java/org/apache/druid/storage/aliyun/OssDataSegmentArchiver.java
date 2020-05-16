@@ -34,7 +34,7 @@ import org.apache.druid.timeline.DataSegment;
 public class OssDataSegmentArchiver extends OssDataSegmentMover implements DataSegmentArchiver
 {
   private final OssDataSegmentArchiverConfig archiveConfig;
-  private final OssDataSegmentPusherConfig restoreConfig;
+  private final OssStorageConfig restoreConfig;
   private final ObjectMapper mapper;
 
   @Inject
@@ -42,7 +42,7 @@ public class OssDataSegmentArchiver extends OssDataSegmentMover implements DataS
       @Json ObjectMapper mapper,
       OSS client,
       OssDataSegmentArchiverConfig archiveConfig,
-      OssDataSegmentPusherConfig restoreConfig
+      OssStorageConfig restoreConfig
   )
   {
     super(client, restoreConfig);
@@ -74,7 +74,7 @@ public class OssDataSegmentArchiver extends OssDataSegmentMover implements DataS
   public DataSegment restore(DataSegment segment) throws SegmentLoadingException
   {
     String targetBucket = restoreConfig.getBucket();
-    String targetKey = restoreConfig.getBaseKey();
+    String targetKey = restoreConfig.getPrefix();
 
     final DataSegment restored = move(
         segment,

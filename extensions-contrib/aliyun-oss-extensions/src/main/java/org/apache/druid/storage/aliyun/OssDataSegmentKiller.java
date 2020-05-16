@@ -41,13 +41,13 @@ public class OssDataSegmentKiller implements DataSegmentKiller
   private static final Logger log = new Logger(OssDataSegmentKiller.class);
 
   private final OSS client;
-  private final OssDataSegmentPusherConfig segmentPusherConfig;
+  private final OssStorageConfig segmentPusherConfig;
   private final OssInputDataConfig inputDataConfig;
 
   @Inject
   public OssDataSegmentKiller(
       OSS client,
-      OssDataSegmentPusherConfig segmentPusherConfig,
+      OssStorageConfig segmentPusherConfig,
       OssInputDataConfig inputDataConfig
   )
   {
@@ -84,19 +84,19 @@ public class OssDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
-    if (segmentPusherConfig.getBucket() == null || segmentPusherConfig.getBaseKey() == null) {
+    if (segmentPusherConfig.getBucket() == null || segmentPusherConfig.getPrefix() == null) {
       throw new ISE(
           "Cannot delete all segment from aliyun OSS Deep Storage since druid.storage.bucket and druid.storage.baseKey are not both set.");
     }
     log.info("Deleting all segment files from aliyun OSS location [bucket: '%s' prefix: '%s']",
-             segmentPusherConfig.getBucket(), segmentPusherConfig.getBaseKey()
+             segmentPusherConfig.getBucket(), segmentPusherConfig.getPrefix()
     );
     try {
       OssUtils.deleteObjectsInPath(
           client,
           inputDataConfig,
           segmentPusherConfig.getBucket(),
-          segmentPusherConfig.getBaseKey(),
+          segmentPusherConfig.getPrefix(),
           Predicates.alwaysTrue()
       );
     }

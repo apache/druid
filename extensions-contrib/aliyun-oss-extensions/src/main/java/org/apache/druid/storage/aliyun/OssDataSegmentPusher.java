@@ -42,12 +42,12 @@ public class OssDataSegmentPusher implements DataSegmentPusher
   private static final EmittingLogger log = new EmittingLogger(OssDataSegmentPusher.class);
 
   private final OSS client;
-  private final OssDataSegmentPusherConfig config;
+  private final OssStorageConfig config;
 
   @Inject
   public OssDataSegmentPusher(
       OSS client,
-      OssDataSegmentPusherConfig config
+      OssStorageConfig config
   )
   {
     this.client = client;
@@ -57,7 +57,7 @@ public class OssDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getPathForHadoop()
   {
-    return StringUtils.format("%s/%s", config.getBucket(), config.getBaseKey());
+    return StringUtils.format("%s/%s", config.getBucket(), config.getPrefix());
   }
 
   @Deprecated
@@ -77,7 +77,7 @@ public class OssDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment, final boolean useUniquePath)
       throws IOException
   {
-    final String path = OssUtils.constructSegmentPath(config.getBaseKey(), getStorageDir(inSegment, useUniquePath));
+    final String path = OssUtils.constructSegmentPath(config.getPrefix(), getStorageDir(inSegment, useUniquePath));
 
     log.debug("Copying segment[%s] to OSS at location[%s]", inSegment.getId(), path);
 
@@ -91,7 +91,7 @@ public class OssDataSegmentPusher implements DataSegmentPusher
     try {
       return OssUtils.retry(
           () -> {
-            OssUtils.uploadFileIfPossible(client, config.getDisableAcl(), config.getBucket(), path, zipOutFile);
+            OssUtils.uploadFileIfPossible(client, config.getBucket(), path, zipOutFile);
 
             return outSegment;
           }
@@ -123,7 +123,7 @@ public class OssDataSegmentPusher implements DataSegmentPusher
   {
     return ImmutableMap.of(
         "type",
-        "oss_zip",
+        OssStorageDruidModule.SCHEME_ZIP,
         "bucket",
         bucket,
         "key",

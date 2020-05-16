@@ -146,7 +146,7 @@ public class OssTaskLogs implements TaskLogs
     try {
       OssUtils.retry(
           () -> {
-            OssUtils.uploadFileIfPossible(client, config.getDisableAcl(), config.getBucket(), taskKey, logFile);
+            OssUtils.uploadFileIfPossible(client, config.getBucket(), taskKey, logFile);
             return null;
           }
       );

@@ -39,21 +39,21 @@ public class OssDataSegmentPusherConfigTest
   @Test
   public void testSerialization() throws IOException
   {
-    String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        + "\"disableAcl\":false,\"maxListingLength\":2000}";
+    String jsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\","
+                        + "\"maxListingLength\":2000}";
 
-    OssDataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, OssDataSegmentPusherConfig.class);
+    OssStorageConfig config = JSON_MAPPER.readValue(jsonConfig, OssStorageConfig.class);
     Assert.assertEquals(jsonConfig, JSON_MAPPER.writeValueAsString(config));
   }
 
   @Test
   public void testSerializationWithDefaults() throws IOException
   {
-    String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\"}";
-    String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                                + "\"disableAcl\":true,\"maxListingLength\":1024}";
+    String jsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\"}";
+    String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\","
+                                + "\"maxListingLength\":1024}";
 
-    OssDataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, OssDataSegmentPusherConfig.class);
+    OssStorageConfig config = JSON_MAPPER.readValue(jsonConfig, OssStorageConfig.class);
     Assert.assertEquals(expectedJsonConfig, JSON_MAPPER.writeValueAsString(config));
   }
 
@@ -63,12 +63,12 @@ public class OssDataSegmentPusherConfigTest
     Locale old = Locale.getDefault();
     Locale.setDefault(Locale.ENGLISH);
     try {
-      String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                          + "\"disableAcl\":false,\"maxListingLength\":-1}";
+      String jsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\","
+                          + "\"maxListingLength\":-1}";
       Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
-      OssDataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, OssDataSegmentPusherConfig.class);
-      Set<ConstraintViolation<OssDataSegmentPusherConfig>> violations = validator.validate(config);
+      OssStorageConfig config = JSON_MAPPER.readValue(jsonConfig, OssStorageConfig.class);
+      Set<ConstraintViolation<OssStorageConfig>> violations = validator.validate(config);
       Assert.assertEquals(1, violations.size());
       ConstraintViolation<?> violation = Iterators.getOnlyElement(violations.iterator());
       Assert.assertEquals("must be greater than or equal to 1", violation.getMessage());

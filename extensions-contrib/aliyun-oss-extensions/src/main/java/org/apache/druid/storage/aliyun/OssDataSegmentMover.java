@@ -50,12 +50,12 @@ public class OssDataSegmentMover implements DataSegmentMover
   private static final Logger log = new Logger(OssDataSegmentMover.class);
 
   private final OSS client;
-  private final OssDataSegmentPusherConfig config;
+  private final OssStorageConfig config;
 
   @Inject
   public OssDataSegmentMover(
       OSS client,
-      OssDataSegmentPusherConfig config
+      OssStorageConfig config
   )
   {
     this.client = client;
@@ -189,9 +189,6 @@ public class OssDataSegmentMover implements DataSegmentMover
       } else {
         log.info("Moving file %s", copyMsg);
         final CopyObjectRequest copyRequest = new CopyObjectRequest(srcBucket, srcPath, dstBucket, dstPath);
-        if (!config.getDisableAcl()) {
-          //copyRequest.set(OssUtils.grantFullControlToBucketOwner(client, dstBucket));
-        }
         client.copyObject(copyRequest);
         if (!client.doesObjectExist(dstBucket, dstPath)) {
           throw new IOE(

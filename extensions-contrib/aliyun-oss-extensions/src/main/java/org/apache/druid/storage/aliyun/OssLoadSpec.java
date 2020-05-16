@@ -33,7 +33,7 @@ import java.io.File;
 /**
  *
  */
-@JsonTypeName(OssStorageDruidModule.SCHEME_S3_ZIP)
+@JsonTypeName(OssStorageDruidModule.SCHEME_ZIP)
 public class OssLoadSpec implements LoadSpec
 {
   private final String bucket;

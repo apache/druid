@@ -84,9 +84,9 @@ public class OssDataSegmentPusherTest
 
     EasyMock.replay(client);
 
-    OssDataSegmentPusherConfig config = new OssDataSegmentPusherConfig();
+    OssStorageConfig config = new OssStorageConfig();
     config.setBucket("bucket");
-    config.setBaseKey("key");
+    config.setPrefix("key");
 
     OssDataSegmentPusher pusher = new OssDataSegmentPusher(client, config);
 
@@ -118,7 +118,7 @@ public class OssDataSegmentPusherTest
         segment.getLoadSpec().get("key").toString(),
         Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches()
     );
-    Assert.assertEquals("oss_zip", segment.getLoadSpec().get("type"));
+    Assert.assertEquals("aliyun-oss_zip", segment.getLoadSpec().get("type"));
 
     EasyMock.verify(client);
   }

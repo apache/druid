@@ -52,7 +52,7 @@ public class OssInputSource extends CloudObjectInputSource
 {
   private final Supplier<OSS> clientSupplier;
   @JsonProperty("properties")
-  private final OssInputSourceConfig inputSourceConfig;
+  private final OssClientConfig inputSourceConfig;
   private final OssInputDataConfig inputDataConfig;
 
   /**
@@ -74,7 +74,7 @@ public class OssInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("properties") @Nullable OssInputSourceConfig inputSourceConfig
+      @JsonProperty("properties") @Nullable OssClientConfig inputSourceConfig
   )
   {
     super(OssStorageDruidModule.SCHEME, uris, prefixes, objects);
@@ -95,7 +95,7 @@ public class OssInputSource extends CloudObjectInputSource
 
   @Nullable
   @JsonProperty("properties")
-  public OssInputSourceConfig getOssInputSourceConfig()
+  public OssClientConfig getOssInputSourceConfig()
   {
     return inputSourceConfig;
   }

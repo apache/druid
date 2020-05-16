@@ -165,8 +165,8 @@ public class OssUtils
 
   public static URI checkURI(URI uri)
   {
-    if (uri.getScheme().equalsIgnoreCase(OssStorageDruidModule.SCHEME_S3_ZIP)) {
-      uri = URI.create(SCHEME + uri.toString().substring(OssStorageDruidModule.SCHEME_S3_ZIP.length()));
+    if (uri.getScheme().equalsIgnoreCase(OssStorageDruidModule.SCHEME_ZIP)) {
+      uri = URI.create(SCHEME + uri.toString().substring(OssStorageDruidModule.SCHEME_ZIP.length()));
     }
     return CloudObjectLocation.validateUriScheme(SCHEME, uri);
   }
@@ -270,7 +270,6 @@ public class OssUtils
    */
   static void uploadFileIfPossible(
       OSS client,
-      boolean disableAcl,
       String bucket,
       String key,
       File file
@@ -280,9 +279,5 @@ public class OssUtils
 
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
     client.putObject(putObjectRequest);
-
-    if (!disableAcl) {
-      client.setObjectAcl(bucket, key, OssUtils.grantFullControlToBucketOwner(client, bucket));
-    }
   }
 }

@@ -71,7 +71,7 @@ public class OssDataSegmentArchiverTest
       return "archive_base_key";
     }
   };
-  private static final OssDataSegmentPusherConfig PUSHER_CONFIG = new OssDataSegmentPusherConfig();
+  private static final OssStorageConfig PUSHER_CONFIG = new OssStorageConfig();
   private static final OSS OSS_CLIENT = EasyMock.createStrictMock(OSSClient.class);
   private static final OssDataSegmentPuller PULLER = new OssDataSegmentPuller(OSS_CLIENT);
   private static final DataSegment SOURCE_SEGMENT = DataSegment
@@ -83,7 +83,7 @@ public class OssDataSegmentArchiverTest
       .version("version")
       .loadSpec(ImmutableMap.of(
           "type",
-          OssStorageDruidModule.SCHEME_S3_ZIP,
+          OssStorageDruidModule.SCHEME_ZIP,
           OssDataSegmentPuller.BUCKET,
           "source_bucket",
           OssDataSegmentPuller.KEY,
@@ -95,7 +95,7 @@ public class OssDataSegmentArchiverTest
   @BeforeClass
   public static void setUpStatic()
   {
-    PUSHER_CONFIG.setBaseKey("push_base");
+    PUSHER_CONFIG.setPrefix("push_base");
     PUSHER_CONFIG.setBucket("push_bucket");
   }
 
@@ -105,7 +105,7 @@ public class OssDataSegmentArchiverTest
     final DataSegment archivedSegment = SOURCE_SEGMENT
         .withLoadSpec(ImmutableMap.of(
             "type",
-            OssStorageDruidModule.SCHEME_S3_ZIP,
+            OssStorageDruidModule.SCHEME_ZIP,
             OssDataSegmentPuller.BUCKET,
             ARCHIVER_CONFIG.getArchiveBucket(),
             OssDataSegmentPuller.KEY,
@@ -152,7 +152,7 @@ public class OssDataSegmentArchiverTest
     final DataSegment archivedSegment = SOURCE_SEGMENT
         .withLoadSpec(ImmutableMap.of(
             "type",
-            OssStorageDruidModule.SCHEME_S3_ZIP,
+            OssStorageDruidModule.SCHEME_ZIP,
             OssDataSegmentPuller.BUCKET,
             ARCHIVER_CONFIG.getArchiveBucket(),
             OssDataSegmentPuller.KEY,

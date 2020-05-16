@@ -56,7 +56,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
   @Mock
   private OSS client;
   @Mock
-  private OssDataSegmentPusherConfig segmentPusherConfig;
+  private OssStorageConfig segmentPusherConfig;
   @Mock
   private OssInputDataConfig inputDataConfig;
 
@@ -67,7 +67,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
   {
     EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(null);
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(segmentPusherConfig.getBaseKey()).andReturn(null);
+    EasyMock.expect(segmentPusherConfig.getPrefix()).andReturn(null);
     EasyMock.expectLastCall().anyTimes();
 
     boolean thrownISEException = false;
@@ -111,7 +111,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
 
     EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET);
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(segmentPusherConfig.getBaseKey()).andReturn(TEST_PREFIX);
+    EasyMock.expect(segmentPusherConfig.getPrefix()).andReturn(TEST_PREFIX);
     EasyMock.expectLastCall().anyTimes();
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
@@ -146,7 +146,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
 
     EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET);
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(segmentPusherConfig.getBaseKey()).andReturn(TEST_PREFIX);
+    EasyMock.expect(segmentPusherConfig.getPrefix()).andReturn(TEST_PREFIX);
     EasyMock.expectLastCall().anyTimes();
 
     EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
@@ -184,7 +184,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
 
       EasyMock.expect(segmentPusherConfig.getBucket()).andReturn(TEST_BUCKET);
       EasyMock.expectLastCall().anyTimes();
-      EasyMock.expect(segmentPusherConfig.getBaseKey()).andReturn(TEST_PREFIX);
+      EasyMock.expect(segmentPusherConfig.getPrefix()).andReturn(TEST_PREFIX);
       EasyMock.expectLastCall().anyTimes();
 
       EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS);
