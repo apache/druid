@@ -48,6 +48,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * @author frank.chen021@outlook.com
+ */
 public class OssInputSource extends CloudObjectInputSource
 {
   private final Supplier<OSS> clientSupplier;

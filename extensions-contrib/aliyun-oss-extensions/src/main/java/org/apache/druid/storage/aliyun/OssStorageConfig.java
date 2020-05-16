@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.Min;
 
 /**
- *
+ * @author frank.chen021@outlook.com
  */
 public class OssStorageConfig
 {

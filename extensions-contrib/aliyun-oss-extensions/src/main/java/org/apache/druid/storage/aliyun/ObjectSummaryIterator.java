@@ -35,6 +35,8 @@ import java.util.NoSuchElementException;
  * <p>
  * As required by the specification of that method, this iterator is computed incrementally in batches of
  * {@code maxListLength}. The first call is made at the same time the iterator is constructed.
+ *
+ * @author frank.chen021@outlook.com
  */
 public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
 {

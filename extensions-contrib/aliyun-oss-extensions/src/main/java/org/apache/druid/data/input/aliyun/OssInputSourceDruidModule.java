@@ -31,6 +31,7 @@ import java.util.List;
 
 /**
  * Druid module to wire up native batch support for aliyun-oss input
+ * @author frank.chen021@outlook.com
  */
 public class OssInputSourceDruidModule implements DruidModule
 {

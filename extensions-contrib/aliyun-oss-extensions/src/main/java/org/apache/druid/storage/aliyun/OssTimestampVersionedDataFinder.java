@@ -32,6 +32,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
+/**
+ * @author frank.chen021@outlook.com
+ */
 public class OssTimestampVersionedDataFinder extends OssDataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
   private static final int MAX_LISTING_KEYS = 1000;

@@ -30,7 +30,9 @@ import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 
-
+/**
+ * @author frank.chen021@outlook.com
+ */
 public class OssDataSegmentArchiver extends OssDataSegmentMover implements DataSegmentArchiver
 {
   private final OssDataSegmentArchiverConfig archiveConfig;

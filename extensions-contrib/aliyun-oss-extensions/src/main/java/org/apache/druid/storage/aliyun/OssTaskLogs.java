@@ -41,6 +41,7 @@ import java.util.Date;
 
 /**
  * Provides task logs archived on aliyun-oss.
+ * @author frank.chen021@outlook.com
  */
 public class OssTaskLogs implements TaskLogs
 {

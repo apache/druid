@@ -46,7 +46,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- *
+ * @author frank.chen021@outlook.com
  */
 public class OssUtils
 {

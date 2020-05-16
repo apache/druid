@@ -52,6 +52,7 @@ import java.util.stream.Collectors;
 
 /**
  * Builds firehoses that read from a predefined list of aliyun-oss objects and then dry up.
+ * @author frank.chen021@outlook.com
  */
 public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {

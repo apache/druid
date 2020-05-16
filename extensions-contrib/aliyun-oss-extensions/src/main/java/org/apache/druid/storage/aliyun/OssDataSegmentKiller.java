@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- *
+ * @author frank.chen021@outlook.com
  */
 public class OssDataSegmentKiller implements DataSegmentKiller
 {
