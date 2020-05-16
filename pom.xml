@@ -189,6 +189,7 @@
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
         <module>extensions-contrib/gce-extensions</module>
+        <module>extensions-contrib/aliyun-oss-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
