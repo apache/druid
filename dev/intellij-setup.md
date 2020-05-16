@@ -43,7 +43,7 @@ Use of other databases such as Postgres or Derby are entirely reasonable, but do
 This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
 
 ## Initial Build
-Before running the apps, you should do a `mvn clean install -DskipTests` in the Druid source in order to make sure directories are populated correctly.
+Before running the apps, you should do a `mvn clean install -Pdist -DskipTests` in the Druid source in order to make sure directories are populated correctly.
 
 ## XML App Def
 You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in `.idea/runConfigurations` in the Druid source code.
