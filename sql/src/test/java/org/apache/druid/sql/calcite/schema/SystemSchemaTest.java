@@ -467,7 +467,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(14, fields.size());
+    Assert.assertEquals(13, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
