@@ -241,7 +241,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
                                    + "  LB             : 200.0\n"
                                    + "  Estimate       : 200.0000988444255\n"
                                    + "  UB             : 200.01008469948434\n"
-                                   + "  OutOfOrder Flag: true\n"
+                                   + "  OutOfOrder Flag: false\n"
                                    + "  Coupon Count   : 200\n";
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());

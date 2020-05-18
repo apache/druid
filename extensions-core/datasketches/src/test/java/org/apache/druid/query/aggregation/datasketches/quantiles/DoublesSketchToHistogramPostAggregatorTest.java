@@ -70,7 +70,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
     );
 
     Assert.assertEquals(
-        "DoublesSketchToHistogramPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, splitPoints=[0.25, 0.75]}",
+        "DoublesSketchToHistogramPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, splitPoints=[0.25, 0.75], numBins=null}",
         postAgg.toString()
     );
   }
