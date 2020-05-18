@@ -122,16 +122,27 @@ public class TimestampParser
   {
     final Function<String, DateTime> stringFun = createTimestampParser(format);
     final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
+    final boolean isNumericFormat = isNumericFormat(format);
 
     return o -> {
       Preconditions.checkNotNull(o, "null timestamp");
 
-      if (o instanceof Number) {
+      if (o instanceof Number && isNumericFormat) {
         return numericFun.apply((Number) o);
       } else {
         return stringFun.apply(o.toString());
       }
     };
+  }
+
+  private static boolean isNumericFormat(String format)
+  {
+    return "auto".equalsIgnoreCase(format)
+           || "millis".equalsIgnoreCase(format)
+           || "posix".equalsIgnoreCase(format)
+           || "micro".equalsIgnoreCase(format)
+           || "nano".equalsIgnoreCase(format)
+           || "ruby".equalsIgnoreCase(format);
   }
 
   private static DateTimeFormatter createAutoParser()
