@@ -21,16 +21,23 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -49,6 +56,9 @@ public class RegexFilterTest extends BaseFilterTest
   {
     super(testName, DEFAULT_ROWS, indexBuilder, finisher, cnf, optimize);
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -134,5 +144,41 @@ public class RegexFilterTest extends BaseFilterTest
 
     assertFilterMatches(new RegexDimFilter("dim4", ".*ANYMORE", changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
     assertFilterMatches(new RegexDimFilter("dim4", "a.*", changeNullFn), ImmutableList.of());
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(RegexFilter.class)
+                  .withNonnullFields("pattern")
+                  .withIgnoredFields("predicateFactory")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testEqualsContractForPatternDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(RegexFilter.PatternDruidPredicateFactory.class)
+                  .withNonnullFields("pattern")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testRequiredColumnRewrite()
+  {
+    Filter filter = new RegexDimFilter("dim0", ".*", null).toFilter();
+    Filter filter2 = new RegexDimFilter("dim1", ".*", null).toFilter();
+
+    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+
+    Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
+    Assert.assertEquals(filter2, rewrittenFilter);
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
   }
 }

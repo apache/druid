@@ -32,11 +32,19 @@ import javax.annotation.Nullable;
 public interface VectorColumnSelectorFactory
 {
   /**
+   * Returns a {@link VectorSizeInspector} for the {@link VectorCursor} that generated this object.
+   */
+  VectorSizeInspector getVectorSizeInspector();
+
+  /**
    * Returns the maximum vector size for the {@link VectorCursor} that generated this object.
    *
    * @see VectorCursor#getMaxVectorSize()
    */
-  int getMaxVectorSize();
+  default int getMaxVectorSize()
+  {
+    return getVectorSizeInspector().getMaxVectorSize();
+  }
 
   /**
    * Returns a string-typed, single-value-per-row column selector.

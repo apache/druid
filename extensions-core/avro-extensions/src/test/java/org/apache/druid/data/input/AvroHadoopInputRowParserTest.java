@@ -81,16 +81,8 @@ public class AvroHadoopInputRowParserTest
   private static GenericRecord buildAvroFromFile(GenericRecord datum)
       throws IOException
   {
-    final File tmpDir = FileUtils.createTempDir();
-
     // 0. write avro object into temp file.
-    File someAvroDatumFile = new File(tmpDir, "someAvroDatum.avro");
-    try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(
-        new SpecificDatumWriter<>()
-    )) {
-      dataFileWriter.create(SomeAvroDatum.getClassSchema(), someAvroDatumFile);
-      dataFileWriter.append(datum);
-    }
+    final File someAvroDatumFile = createAvroFile(datum);
 
     final GenericRecord record;
     // 3. read avro object from AvroStorage
@@ -102,5 +94,19 @@ public class AvroHadoopInputRowParserTest
     }
 
     return record;
+  }
+
+  public static File createAvroFile(GenericRecord datum)
+      throws IOException
+  {
+    final File tmpDir = FileUtils.createTempDir();
+    File someAvroDatumFile = new File(tmpDir, "someAvroDatum.avro");
+    try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(
+        new SpecificDatumWriter<>()
+    )) {
+      dataFileWriter.create(SomeAvroDatum.getClassSchema(), someAvroDatumFile);
+      dataFileWriter.append(datum);
+    }
+    return someAvroDatumFile;
   }
 }

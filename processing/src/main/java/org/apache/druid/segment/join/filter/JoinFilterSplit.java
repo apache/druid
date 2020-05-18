@@ -23,9 +23,9 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Holds the result of splitting a filter into:
@@ -37,12 +37,12 @@ public class JoinFilterSplit
 {
   final Optional<Filter> baseTableFilter;
   final Optional<Filter> joinTableFilter;
-  final List<VirtualColumn> pushDownVirtualColumns;
+  final Set<VirtualColumn> pushDownVirtualColumns;
 
   public JoinFilterSplit(
       @Nullable Filter baseTableFilter,
       @Nullable Filter joinTableFilter,
-      List<VirtualColumn> pushDownVirtualColumns
+      Set<VirtualColumn> pushDownVirtualColumns
   )
   {
     this.baseTableFilter = baseTableFilter == null ? Optional.empty() : Optional.of(baseTableFilter);
@@ -60,7 +60,7 @@ public class JoinFilterSplit
     return joinTableFilter;
   }
 
-  public List<VirtualColumn> getPushDownVirtualColumns()
+  public Set<VirtualColumn> getPushDownVirtualColumns()
   {
     return pushDownVirtualColumns;
   }

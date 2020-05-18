@@ -36,27 +36,33 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
    */
   public static final String END_OF_SHARD_MARKER = "EOS";
 
-  // this special marker is used by the KinesisSupervisor to set the endOffsets
-  // of newly created indexing tasks. This is necessary because streaming tasks do not
-  // have endPartitionOffsets. This marker signals to the task that it should continue
-  // to ingest data until taskDuration has elapsed or the task was stopped or paused or killed
+
+  /**
+   *  This special marker is used by the KinesisSupervisor to set the endOffsets of newly created indexing tasks. This
+   *  is necessary because streaming tasks do not have endPartitionOffsets. This marker signals to the task that it
+   *  should continue to ingest data until taskDuration has elapsed or the task was stopped or paused or killed.
+   */
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
 
-  // this special marker is used by the KinesisSupervisor to mark that a shard has been expired
-  // (i.e., closed and then the retention period has passed)
+
+  /**
+   * This special marker is used by the KinesisSupervisor to mark that a shard has been expired
+   * (i.e., closed and then the retention period has passed)
+   */
   public static final String EXPIRED_MARKER = "EXPIRED";
 
-  // this flag is used to indicate either END_OF_SHARD_MARKER
-  // or NO_END_SEQUENCE_NUMBER so that they can be properly compared
-  // with other sequence numbers
+  /**
+   * this flag is used to indicate either END_OF_SHARD_MARKER
+   * or NO_END_SEQUENCE_NUMBER so that they can be properly compared
+   * with other sequence numbers
+   */
   private final boolean isMaxSequenceNumber;
   private final BigInteger intSequence;
 
   private KinesisSequenceNumber(String sequenceNumber, boolean isExclusive)
   {
     super(sequenceNumber, isExclusive);
-    if (END_OF_SHARD_MARKER.equals(sequenceNumber)
-        || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
+    if (END_OF_SHARD_MARKER.equals(sequenceNumber) || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
       isMaxSequenceNumber = true;
       this.intSequence = null;
     } else {

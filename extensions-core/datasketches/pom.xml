@@ -150,6 +150,11 @@
       <artifactId>jackson-jaxrs-smile-provider</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>nl.jqno.equalsverifier</groupId>
+      <artifactId>equalsverifier</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- Test Dependencies -->
     <dependency>

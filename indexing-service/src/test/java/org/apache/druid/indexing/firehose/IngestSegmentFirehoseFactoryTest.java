@@ -240,6 +240,7 @@ public class IngestSegmentFirehoseFactoryTest
                     ImmutableList.of()
                 ),
                 null,
+                null,
                 null
             )
         )

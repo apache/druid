@@ -42,7 +42,6 @@ import org.apache.calcite.rel.rules.AggregateValuesRule;
 import org.apache.calcite.rel.rules.CalcRemoveRule;
 import org.apache.calcite.rel.rules.ExchangeRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
-import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
@@ -63,7 +62,6 @@ import org.apache.calcite.rel.rules.SortRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.TableScanRule;
-import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
@@ -76,6 +74,7 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
+import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 
@@ -103,7 +102,6 @@ public class Rules
           FilterTableScanRule.INSTANCE,
           ProjectFilterTransposeRule.INSTANCE,
           FilterProjectTransposeRule.INSTANCE,
-          FilterJoinRule.FILTER_ON_JOIN,
           JoinPushExpressionsRule.INSTANCE,
           AggregateCaseToFilterRule.INSTANCE,
           FilterAggregateTransposeRule.INSTANCE,
@@ -141,6 +139,8 @@ public class Rules
 
   // Rules from RelOptUtil's registerAbstractRules.
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
+  // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
+  // expensive in terms of planning time.
   private static final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
@@ -155,9 +155,6 @@ public class Rules
           PruneEmptyRules.JOIN_LEFT_INSTANCE,
           PruneEmptyRules.JOIN_RIGHT_INSTANCE,
           PruneEmptyRules.SORT_FETCH_ZERO_INSTANCE,
-          UnionMergeRule.INSTANCE,
-          UnionMergeRule.INTERSECT_INSTANCE,
-          UnionMergeRule.MINUS_INSTANCE,
           ProjectToWindowRule.PROJECT,
           FilterMergeRule.INSTANCE,
           IntersectToDistinctRule.INSTANCE
@@ -171,8 +168,6 @@ public class Rules
   // 3) JoinCommuteRule (we don't support reordering joins yet).
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
-          FilterJoinRule.FILTER_ON_JOIN,
-          FilterJoinRule.JOIN,
           AbstractConverter.ExpandConversionRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
           UnionToDistinctRule.INSTANCE,
@@ -245,6 +240,7 @@ public class Rules
     }
 
     // Rules that we wrote.
+    rules.add(FilterJoinExcludePushToChildRule.FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD);
     rules.add(SortCollapseRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
 

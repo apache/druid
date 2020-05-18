@@ -511,7 +511,7 @@ public class JettyTest extends BaseJettyTest
   {
     // it can take a bit to close the connection, so maybe sleep for a while and hope it closes
     final int sleepTimeMills = 10;
-    final int totalSleeps = 5_000 / sleepTimeMills;
+    final int totalSleeps = 10_000 / sleepTimeMills;
     int count = 0;
     while (jsm.getActiveConnections() > 0 && count++ < totalSleeps) {
       Thread.sleep(sleepTimeMills);

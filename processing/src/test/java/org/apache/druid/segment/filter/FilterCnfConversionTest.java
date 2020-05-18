@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -352,6 +353,16 @@ public class FilterCnfConversionTest
     );
 
     assertFilter(filter, expectedCnf, Filters.toCnf(filter));
+  }
+
+  @Test
+  public void testTrueFalseFilterRequiredColumnRewrite()
+  {
+    Assert.assertTrue(TrueFilter.instance().supportsRequiredColumnRewrite());
+    Assert.assertTrue(FalseFilter.instance().supportsRequiredColumnRewrite());
+
+    Assert.assertEquals(TrueFilter.instance(), TrueFilter.instance().rewriteRequiredColumns(ImmutableMap.of()));
+    Assert.assertEquals(FalseFilter.instance(), FalseFilter.instance().rewriteRequiredColumns(ImmutableMap.of()));
   }
 
   private void assertFilter(Filter original, Filter expectedConverted, Filter actualConverted)

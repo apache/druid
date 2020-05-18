@@ -354,6 +354,7 @@ The following monitors are available:
 |`org.apache.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: https://github.com/apache/druid/pull/4973.|
+|`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|
 
 
 ### Emitting Metrics
@@ -891,7 +892,7 @@ There are additional configs for autoscaling (if it is enabled):
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.autoscale.strategy`|Choices are "noop" or "ec2". Sets the strategy to run when autoscaling is required.|noop|
+|`druid.indexer.autoscale.strategy`|Choices are "noop", "ec2" or "gce". Sets the strategy to run when autoscaling is required.|noop|
 |`druid.indexer.autoscale.doAutoscale`|If set to "true" autoscaling will be enabled.|false|
 |`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new MiddleManagers should be added.|PT1M|
 |`druid.indexer.autoscale.terminatePeriod`|How often to check when MiddleManagers should be removed.|PT5M|
@@ -1115,7 +1116,9 @@ field. If not provided, the default is to not use it at all.
 
 ##### Autoscaler
 
-Amazon's EC2 is currently the only supported autoscaler.
+Amazon's EC2 together with Google's GCE are currently the only supported autoscalers.
+
+EC2's autoscaler properties are:
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1124,6 +1127,8 @@ Amazon's EC2 is currently the only supported autoscaler.
 |`availabilityZone`|What availability zone to run in.|none|
 |`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
 |`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
+
+For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
 ## Data Server
 

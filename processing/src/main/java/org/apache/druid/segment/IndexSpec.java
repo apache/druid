@@ -82,7 +82,7 @@ public class IndexSpec
    * @param dimensionCompression compression format for dimension columns, null to use the default.
    *                             Defaults to {@link CompressionStrategy#DEFAULT_COMPRESSION_STRATEGY}
    *
-   * @param metricCompression compression format for metric columns, null to use the default.
+   * @param metricCompression compression format for primitive type metric columns, null to use the default.
    *                          Defaults to {@link CompressionStrategy#DEFAULT_COMPRESSION_STRATEGY}
    *
    * @param longEncoding encoding strategy for metric and dimension columns with type long, null to use the default.

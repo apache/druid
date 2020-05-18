@@ -123,7 +123,8 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         return new InDimFilter(
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
             Sets.newHashSet(arrayElements),
-            simpleExtractionExpr.getSimpleExtraction().getExtractionFn()
+            simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
+            null
         );
       }
     }
