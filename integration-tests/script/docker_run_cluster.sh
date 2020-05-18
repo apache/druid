@@ -19,18 +19,6 @@
   docker network create --subnet=172.172.172.0/24 druid-it-net
 }
 
-# setup all enviornment variables to be pass to the containers
-COMMON_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/common -e DRUID_INTEGRATION_TEST_GROUP"
-BROKER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/broker"
-COORDINATOR_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/coordinator"
-HISTORICAL_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/historical"
-MIDDLEMANAGER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/middlemanager"
-OVERLORD_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/overlord"
-ROUTER_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router"
-ROUTER_CUSTOM_CHECK_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-custom-check-tls"
-ROUTER_NO_CLIENT_AUTH_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-no-client-auth-tls"
-ROUTER_PERMISSIVE_TLS_ENV="--env-file=$ENVIRONMENT_CONFIGS_DIR/router-permissive-tls"
-
 if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
 then
     echo "\$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH is not set. No override config file provided"

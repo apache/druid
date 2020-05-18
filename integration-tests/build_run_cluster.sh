@@ -19,11 +19,7 @@ echo $DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH
 export DIR=$(cd $(dirname $0) && pwd)
 export HADOOP_DOCKER_DIR=$DIR/../examples/quickstart/tutorial/hadoop/docker
 export DOCKERDIR=$DIR/docker
-export SERVICE_SUPERVISORDS_DIR=$DOCKERDIR/service-supervisords
-export ENVIRONMENT_CONFIGS_DIR=$DOCKERDIR/environment-configs
 export SHARED_DIR=${HOME}/shared
-export SUPERVISORDIR=/usr/lib/druid/conf
-export RESOURCEDIR=$DIR/src/test/resources
 
 # so docker IP addr will be known during docker build
 echo ${DOCKER_IP:=127.0.0.1} > $DOCKERDIR/docker_ip
