@@ -208,8 +208,10 @@ public class TimestampParserTest
     expectedDt = DateTimes.of("2020-05-15T20:20:40.000Z");
 
     parser = TimestampParser.createObjectTimestampParser("millis");
-    Assert.assertEquals("Timestamp of format millis not parsed correctly",
+    Assert.assertEquals("Timestamp of format millis as long not parsed correctly",
                         expectedDt, parser.apply(millis));
+    Assert.assertEquals("Timestamp of format millis as string not parsed correctly",
+                        expectedDt, parser.apply(String.valueOf(millis)));
     parser = TimestampParser.createObjectTimestampParser("auto");
     Assert.assertEquals("Timestamp of format auto not parsed correctly",
                         expectedDt, parser.apply(millis));
