@@ -122,11 +122,12 @@ public class TimestampParser
   {
     final Function<String, DateTime> stringFun = createTimestampParser(format);
     final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
+    final boolean isNumericFormat = isNumericFormat(format);
 
     return o -> {
       Preconditions.checkNotNull(o, "null timestamp");
 
-      if (o instanceof Number && isNumericFormat(format)) {
+      if (o instanceof Number && isNumericFormat) {
         return numericFun.apply((Number) o);
       } else {
         return stringFun.apply(o.toString());
