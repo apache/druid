@@ -98,6 +98,10 @@ public class SQLAuditManager implements AuditManager
             .setDimension("key", auditEntry.getKey())
             .setDimension("type", auditEntry.getType())
             .setDimension("author", auditEntry.getAuditInfo().getAuthor())
+            .setDimension("comment", auditEntry.getAuditInfo().getComment())
+            .setDimension("remote_address", auditEntry.getAuditInfo().getIp())
+            .setDimension("created_date", auditEntry.getAuditTime().toString())
+            .setDimension("payload", auditEntry.getPayload())
             .build("config/audit", 1)
     );
 
