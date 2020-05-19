@@ -33,7 +33,6 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -1001,10 +1000,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   static InputFormat getInputFormat(ParallelIndexIngestionSpec ingestionSchema)
   {
-    final InputRowParser parser = ingestionSchema.getDataSchema().getParser();
-    return ingestionSchema.getIOConfig().getNonNullInputFormat(
-        parser == null ? null : parser.getParseSpec()
-    );
+    return ingestionSchema.getIOConfig().getNonNullInputFormat();
   }
 
   /**

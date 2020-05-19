@@ -264,7 +264,6 @@ public class ExpressionSelectors
           @Override
           protected String getValue()
           {
-
             return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
           }
 

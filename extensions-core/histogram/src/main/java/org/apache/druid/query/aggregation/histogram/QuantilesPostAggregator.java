@@ -122,4 +122,28 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
         .appendFloatArray(probabilities)
         .build();
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    QuantilesPostAggregator that = (QuantilesPostAggregator) o;
+    return Arrays.equals(probabilities, that.probabilities);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + Arrays.hashCode(probabilities);
+    return result;
+  }
 }

@@ -47,7 +47,7 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
   @Test
   public void testKinesisIndexDataWithLosingCoordinator() throws Exception
   {
-    doTestIndexDataWithLosingCoordinator(false);
+    doTestIndexDataWithLosingCoordinator(null);
   }
 
   /**
@@ -56,7 +56,7 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
   @Test
   public void testKinesisIndexDataWithLosingOverlord() throws Exception
   {
-    doTestIndexDataWithLosingOverlord(false);
+    doTestIndexDataWithLosingOverlord(null);
   }
 
   /**
@@ -65,6 +65,6 @@ public class ITKinesisIndexingServiceSerializedTest extends AbstractKinesisIndex
   @Test
   public void testKinesisIndexDataWithLosingHistorical() throws Exception
   {
-    doTestIndexDataWithLosingHistorical(false);
+    doTestIndexDataWithLosingHistorical(null);
   }
 }

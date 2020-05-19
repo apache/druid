@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -102,20 +101,10 @@ public abstract class SeekableStreamSupervisorIOConfig
   }
 
   @Nullable
-  @JsonProperty("inputFormat")
-  private InputFormat getGivenInputFormat()
+  @JsonProperty()
+  public InputFormat getInputFormat()
   {
     return inputFormat;
-  }
-
-  @Nullable
-  public InputFormat getInputFormat(@Nullable ParseSpec parseSpec)
-  {
-    if (inputFormat == null) {
-      return Preconditions.checkNotNull(parseSpec, "parseSpec").toInputFormat();
-    } else {
-      return inputFormat;
-    }
   }
 
   @JsonProperty

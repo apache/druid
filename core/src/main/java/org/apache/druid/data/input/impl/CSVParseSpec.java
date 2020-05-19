@@ -22,7 +22,6 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.CSVParser;
 import org.apache.druid.java.util.common.parsers.Parser;
 
@@ -95,12 +94,6 @@ public class CSVParseSpec extends ParseSpec
   public Parser<String, Object> makeParser()
   {
     return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
-  }
-
-  @Override
-  public InputFormat toInputFormat()
-  {
-    return new CsvInputFormat(columns, listDelimiter, null, hasHeaderRow, skipHeaderRows);
   }
 
   @Override

@@ -22,7 +22,6 @@ package org.apache.druid.indexing.seekablestream;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
-import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -63,7 +62,13 @@ public class StreamChunkParserTest
   public void testWithParserAndNullInputformatParseProperly() throws IOException
   {
     final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new NotConvertibleToInputFormatParseSpec(),
+        new JSONParseSpec(
+            TIMESTAMP_SPEC,
+            DimensionsSpec.EMPTY,
+            JSONPathSpec.DEFAULT,
+            Collections.emptyMap(),
+            false
+        ),
         StringUtils.UTF8_STRING
     );
     final StreamChunkParser chunkParser = new StreamChunkParser(
@@ -80,7 +85,7 @@ public class StreamChunkParserTest
   @Test
   public void testWithNullParserAndInputformatParseProperly() throws IOException
   {
-    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap());
+    final JsonInputFormat inputFormat = new JsonInputFormat(JSONPathSpec.DEFAULT, Collections.emptyMap(), null);
     final StreamChunkParser chunkParser = new StreamChunkParser(
         null,
         inputFormat,
@@ -109,7 +114,13 @@ public class StreamChunkParserTest
   public void testBothParserAndInputFormatParseProperlyUsingInputFormat() throws IOException
   {
     final InputRowParser<ByteBuffer> parser = new StringInputRowParser(
-        new NotConvertibleToInputFormatParseSpec(),
+        new JSONParseSpec(
+            TIMESTAMP_SPEC,
+            DimensionsSpec.EMPTY,
+            JSONPathSpec.DEFAULT,
+            Collections.emptyMap(),
+            false
+        ),
         StringUtils.UTF8_STRING
     );
     final TrackingJsonInputFormat inputFormat = new TrackingJsonInputFormat(
@@ -138,32 +149,13 @@ public class StreamChunkParserTest
     Assert.assertEquals("val2", Iterables.getOnlyElement(row.getDimension("met")));
   }
 
-  private static class NotConvertibleToInputFormatParseSpec extends JSONParseSpec
-  {
-    private NotConvertibleToInputFormatParseSpec()
-    {
-      super(
-          TIMESTAMP_SPEC,
-          DimensionsSpec.EMPTY,
-          JSONPathSpec.DEFAULT,
-          Collections.emptyMap()
-      );
-    }
-
-    @Override
-    public InputFormat toInputFormat()
-    {
-      return null;
-    }
-  }
-
   private static class TrackingJsonInputFormat extends JsonInputFormat
   {
     private boolean used;
 
     private TrackingJsonInputFormat(@Nullable JSONPathSpec flattenSpec, @Nullable Map<String, Boolean> featureSpec)
     {
-      super(flattenSpec, featureSpec);
+      super(flattenSpec, featureSpec, null);
     }
 
     @Override

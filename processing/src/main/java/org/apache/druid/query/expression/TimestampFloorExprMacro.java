@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
@@ -108,6 +109,28 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
       List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
 
       return shuttle.visit(new TimestampFloorExpr(newArgs));
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      if (!super.equals(o)) {
+        return false;
+      }
+      TimestampFloorExpr that = (TimestampFloorExpr) o;
+      return Objects.equals(granularity, that.granularity);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(super.hashCode(), granularity);
     }
   }
 
