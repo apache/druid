@@ -65,9 +65,11 @@ import './query-view.scss';
 
 const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
 
-const parser = memoizeOne((sql: string) => {
+const parser = memoizeOne((sql: string): SqlQuery | undefined => {
   try {
-    return parserRaw(sql);
+    const parsed = parserRaw(sql);
+    if (!(parsed instanceof SqlQuery)) return;
+    return parsed;
   } catch {
     return;
   }
@@ -87,7 +89,7 @@ export interface QueryViewProps {
 
 export interface QueryViewState {
   queryString: string;
-  parsedQuery: SqlQuery;
+  parsedQuery?: SqlQuery;
   queryContext: QueryContext;
   wrapQueryLimit: number | undefined;
   autoRun: boolean;
@@ -479,18 +481,22 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const { queryString, queryContext, loading, result, error, columnMetadata } = this.state;
     const emptyQuery = QueryView.isEmptyQuery(queryString);
 
-    let currentSchema;
-    let currentTable;
+    let currentSchema: string | undefined;
+    let currentTable: string | undefined;
 
-    if (result && result.parsedQuery instanceof SqlQuery) {
+    if (result && result.parsedQuery) {
       currentSchema = result.parsedQuery.getSchema();
       currentTable = result.parsedQuery.getTableName();
     } else if (localStorageGet(LocalStorageKeys.QUERY_KEY)) {
       const defaultQueryString = localStorageGet(LocalStorageKeys.QUERY_KEY);
-      const tempAst = defaultQueryString ? parser(defaultQueryString) : undefined;
-      if (tempAst) {
-        currentSchema = tempAst.getSchema();
-        currentTable = tempAst.getTableName();
+
+      const defaultQueryAst: SqlQuery | undefined = defaultQueryString
+        ? parser(defaultQueryString)
+        : undefined;
+
+      if (defaultQueryAst) {
+        currentSchema = defaultQueryAst.getSchema();
+        currentTable = defaultQueryAst.getTableName();
       }
     }
 
