@@ -39,6 +39,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -196,6 +197,19 @@ public class MaterializedViewQuery<T> implements Query<T>
   public String getId()
   {
     return query.getId();
+  }
+
+  @Override
+  public Query<T> withSubQueryId(String subQueryId)
+  {
+    return new MaterializedViewQuery<>(query.withSubQueryId(subQueryId), optimizer);
+  }
+
+  @Nullable
+  @Override
+  public String getSubQueryId()
+  {
+    return query.getSubQueryId();
   }
 
   @Override

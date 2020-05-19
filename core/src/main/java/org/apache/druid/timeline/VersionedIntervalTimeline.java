@@ -22,12 +22,12 @@ package org.apache.druid.timeline;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.timeline.partition.ImmutablePartitionHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.utils.CollectionUtils;
@@ -158,14 +158,17 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
   /**
    * Computes a set with all objects falling within the specified interval which are at least partially "visible" in
    * this interval (that is, are not fully overshadowed within this interval).
+   *
+   * Note that this method returns a set of {@link ObjectType}. Duplicate objects in different time chunks will be
+   * removed in the result.
    */
   public Set<ObjectType> findNonOvershadowedObjectsInInterval(Interval interval, Partitions completeness)
   {
-    return lookup(interval, completeness)
-        .stream()
-        .flatMap(timelineObjectHolder -> timelineObjectHolder.getObject().stream())
-        .map(PartitionChunk::getObject)
-        .collect(Collectors.toSet());
+    return FluentIterable
+        .from(lookup(interval, completeness))
+        .transformAndConcat(TimelineObjectHolder::getObject)
+        .transform(PartitionChunk::getObject)
+        .toSet();
   }
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
@@ -278,7 +281,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
           TimelineEntry foundEntry = entry.getValue().get(version);
           if (foundEntry != null) {
-            return new ImmutablePartitionHolder<>(foundEntry.getPartitionHolder());
+            return foundEntry.getPartitionHolder().asImmutable();
           }
         }
       }
@@ -362,7 +365,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         entry.getTrueInterval(),
         entry.getTrueInterval(),
         entry.getVersion(),
-        new PartitionHolder<>(entry.getPartitionHolder())
+        PartitionHolder.copyWithOnlyVisibleChunks(entry.getPartitionHolder())
     );
   }
 
@@ -381,9 +384,13 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       final Set<TimelineObjectHolder<VersionType, ObjectType>> overshadowedObjects = overshadowedPartitionsTimeline
           .values()
           .stream()
-          .flatMap(
-              (Map<VersionType, TimelineEntry> entry) -> entry.values().stream().map(this::timelineEntryToObjectHolder)
-          )
+          .flatMap((Map<VersionType, TimelineEntry> entry) -> entry.values().stream())
+          .map(entry -> new TimelineObjectHolder<>(
+              entry.getTrueInterval(),
+              entry.getTrueInterval(),
+              entry.getVersion(),
+              PartitionHolder.deepCopy(entry.getPartitionHolder())
+          ))
           .collect(Collectors.toSet());
 
       // 2. Visible timelineEntries can also have overshadowed objects. Add them to the result too.
@@ -482,7 +489,12 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
         if (versionCompare > 0) {
           return false;
         } else if (versionCompare == 0) {
-          if (timelineEntry.partitionHolder.stream().noneMatch(chunk -> chunk.getObject().overshadows(object))) {
+          // Intentionally use the Iterators API instead of the stream API for performance.
+          //noinspection ConstantConditions
+          final boolean nonOvershadowedObject = Iterators.all(
+              timelineEntry.partitionHolder.iterator(), chunk -> !chunk.getObject().overshadows(object)
+          );
+          if (nonOvershadowedObject) {
             return false;
           }
         }
@@ -724,7 +736,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
                 timelineInterval,
                 val.getTrueInterval(),
                 val.getVersion(),
-                new PartitionHolder<>(val.getPartitionHolder())
+                PartitionHolder.copyWithOnlyVisibleChunks(val.getPartitionHolder())
             )
         );
       }

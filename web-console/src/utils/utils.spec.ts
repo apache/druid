@@ -30,31 +30,33 @@ import { applyCache, headerFromSampleResponse } from './sampler';
 describe('test-utils', () => {
   const ingestionSpec: IngestionSpec = {
     type: 'index_parallel',
-    ioConfig: {
-      type: 'index_parallel',
-      inputSource: {
-        type: 'http',
-        uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+    spec: {
+      ioConfig: {
+        type: 'index_parallel',
+        inputSource: {
+          type: 'http',
+          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+        },
+        inputFormat: {
+          type: 'json',
+        },
       },
-      inputFormat: {
-        type: 'json',
+      tuningConfig: {
+        type: 'index_parallel',
       },
-    },
-    tuningConfig: {
-      type: 'index_parallel',
-    },
-    dataSchema: {
-      dataSource: 'wikipedia',
-      granularitySpec: {
-        type: 'uniform',
-        segmentGranularity: 'DAY',
-        queryGranularity: 'HOUR',
+      dataSchema: {
+        dataSource: 'wikipedia',
+        granularitySpec: {
+          type: 'uniform',
+          segmentGranularity: 'DAY',
+          queryGranularity: 'HOUR',
+        },
+        timestampSpec: {
+          column: 'timestamp',
+          format: 'iso',
+        },
+        dimensionsSpec: {},
       },
-      timestampSpec: {
-        column: 'timestamp',
-        format: 'iso',
-      },
-      dimensionsSpec: {},
     },
   };
 
@@ -72,14 +74,12 @@ describe('test-utils', () => {
   it('spec-utils applyCache', () => {
     expect(
       applyCache(
-        {
-          type: 'index_parallel',
-          spec: ingestionSpec,
+        Object.assign({}, ingestionSpec, {
           samplerConfig: {
             numRows: 500,
             timeoutMs: 15000,
           },
-        },
+        }),
         [{ make: 'Honda', model: 'Accord' }, { make: 'Toyota', model: 'Prius' }],
       ),
     ).toMatchInlineSnapshot(`
@@ -157,31 +157,33 @@ describe('test-utils', () => {
 describe('druid-type.ts', () => {
   const ingestionSpec: IngestionSpec = {
     type: 'index_parallel',
-    ioConfig: {
-      type: 'index_parallel',
-      inputSource: {
-        type: 'http',
-        uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+    spec: {
+      ioConfig: {
+        type: 'index_parallel',
+        inputSource: {
+          type: 'http',
+          uris: ['https://static.imply.io/data/wikipedia.json.gz'],
+        },
+        inputFormat: {
+          type: 'json',
+        },
       },
-      inputFormat: {
-        type: 'json',
+      tuningConfig: {
+        type: 'index_parallel',
       },
-    },
-    tuningConfig: {
-      type: 'index_parallel',
-    },
-    dataSchema: {
-      dataSource: 'wikipedia',
-      granularitySpec: {
-        type: 'uniform',
-        segmentGranularity: 'DAY',
-        queryGranularity: 'HOUR',
+      dataSchema: {
+        dataSource: 'wikipedia',
+        granularitySpec: {
+          type: 'uniform',
+          segmentGranularity: 'DAY',
+          queryGranularity: 'HOUR',
+        },
+        timestampSpec: {
+          column: 'timestamp',
+          format: 'iso',
+        },
+        dimensionsSpec: {},
       },
-      timestampSpec: {
-        column: 'timestamp',
-        format: 'iso',
-      },
-      dimensionsSpec: {},
     },
   };
 
@@ -219,44 +221,46 @@ describe('druid-type.ts', () => {
       updateSchemaWithSample(ingestionSpec, { header: ['header'], rows: [] }, 'specific', true),
     ).toMatchInlineSnapshot(`
       Object {
-        "dataSchema": Object {
-          "dataSource": "wikipedia",
-          "dimensionsSpec": Object {
-            "dimensions": Array [
-              "header",
-            ],
-          },
-          "granularitySpec": Object {
-            "queryGranularity": "HOUR",
-            "rollup": true,
-            "segmentGranularity": "DAY",
-            "type": "uniform",
-          },
-          "metricsSpec": Array [
-            Object {
-              "name": "count",
-              "type": "count",
+        "spec": Object {
+          "dataSchema": Object {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": Object {
+              "dimensions": Array [
+                "header",
+              ],
             },
-          ],
-          "timestampSpec": Object {
-            "column": "timestamp",
-            "format": "iso",
-          },
-        },
-        "ioConfig": Object {
-          "inputFormat": Object {
-            "type": "json",
-          },
-          "inputSource": Object {
-            "type": "http",
-            "uris": Array [
-              "https://static.imply.io/data/wikipedia.json.gz",
+            "granularitySpec": Object {
+              "queryGranularity": "HOUR",
+              "rollup": true,
+              "segmentGranularity": "DAY",
+              "type": "uniform",
+            },
+            "metricsSpec": Array [
+              Object {
+                "name": "count",
+                "type": "count",
+              },
             ],
+            "timestampSpec": Object {
+              "column": "timestamp",
+              "format": "iso",
+            },
           },
-          "type": "index_parallel",
-        },
-        "tuningConfig": Object {
-          "type": "index_parallel",
+          "ioConfig": Object {
+            "inputFormat": Object {
+              "type": "json",
+            },
+            "inputSource": Object {
+              "type": "http",
+              "uris": Array [
+                "https://static.imply.io/data/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": Object {
+            "type": "index_parallel",
+          },
         },
         "type": "index_parallel",
       }

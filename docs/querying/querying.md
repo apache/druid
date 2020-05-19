@@ -1,7 +1,6 @@
 ---
 id: querying
 title: "Native queries"
-sidebar_label: "Making native queries"
 ---
 
 <!--
@@ -24,8 +23,10 @@ sidebar_label: "Making native queries"
   -->
 
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and native queries. Druid SQL
-> queries are planned into native queries. This document describes the native query language.
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the
+> native query language. For information about how Druid SQL chooses which native query types to use when
+> it runs a SQL query, refer to the [SQL documentation](sql.md#query-types).
 
 Native queries in Druid are JSON objects and are typically issued to the Broker or Router processes. Queries can be
 posted like this:
@@ -70,15 +71,16 @@ Druid has numerous query types for various use cases. Queries are composed of va
 * [SegmentMetadata](../querying/segmentmetadataquery.md)
 * [DatasourceMetadata](../querying/datasourcemetadataquery.md)
 
-### Search queries
+### Other queries
 
+* [Scan](../querying/scan-query.md)
 * [Search](../querying/searchquery.md)
 
-## Which query should I use?
+## Which query type should I use?
 
-Where possible, we recommend using [Timeseries]() and [TopN]() queries instead of [GroupBy](). GroupBy is the most flexible Druid query, but also has the poorest performance.
- Timeseries are significantly faster than groupBy queries for aggregations that don't require grouping over dimensions. For grouping and sorting over a single dimension,
- topN queries are much more optimized than groupBys.
+For aggregation queries, if more than one would satisfy your needs, we generally recommend using Timeseries or TopN
+whenever possible, as they are specifically optimized for their use cases. If neither is a good fit, you should use
+the GroupBy query, which is the most flexible.
 
 ## Query cancellation
 
@@ -108,6 +110,8 @@ If a query fails, you will get an HTTP 500 response containing a JSON object wit
   "host" : "druid1.example.com:8083"
 }
 ```
+
+If a query request fails due to being limited by the [query scheduler laning configuration](../configuration/index.md#broker), an HTTP 429 response with the same JSON object schema as an error response, but with `errorMessage` of the form: "Total query capacity exceeded" or "Query capacity exceeded for lane 'low'".
 
 The fields in the response are:
 

@@ -48,10 +48,10 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -510,24 +510,20 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public List<String> resultArrayFields(TopNQuery query)
+  public RowSignature resultArraySignature(TopNQuery query)
   {
-    final List<String> fields = new ArrayList<>(
-        2 + query.getAggregatorSpecs().size() + query.getPostAggregatorSpecs().size()
-    );
-
-    fields.add(ColumnHolder.TIME_COLUMN_NAME);
-    fields.add(query.getDimensionSpec().getOutputName());
-    query.getAggregatorSpecs().stream().map(AggregatorFactory::getName).forEach(fields::add);
-    query.getPostAggregatorSpecs().stream().map(PostAggregator::getName).forEach(fields::add);
-
-    return fields;
+    return RowSignature.builder()
+                       .addTimeColumn()
+                       .addDimensions(Collections.singletonList(query.getDimensionSpec()))
+                       .addAggregators(query.getAggregatorSpecs())
+                       .addPostAggregators(query.getPostAggregatorSpecs())
+                       .build();
   }
 
   @Override
   public Sequence<Object[]> resultsAsArrays(TopNQuery query, Sequence<Result<TopNResultValue>> resultSequence)
   {
-    final List<String> fields = resultArrayFields(query);
+    final List<String> fields = resultArraySignature(query).getColumnNames();
 
     return resultSequence.flatMap(
         result -> {

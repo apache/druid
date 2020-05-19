@@ -65,7 +65,7 @@
     "d3-axis": "^1.0.12",
     "d3-scale": "^3.2.0",
     "d3-selection": "^1.4.0",
-    "druid-query-toolkit": "^0.3.29",
+    "druid-query-toolkit": "^0.4.3",
     "file-saver": "^2.0.2",
     "has-own-prop": "^2.0.0",
     "hjson": "^3.2.1",

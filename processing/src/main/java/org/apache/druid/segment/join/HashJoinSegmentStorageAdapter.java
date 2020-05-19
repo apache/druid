@@ -19,16 +19,13 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
@@ -38,6 +35,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -55,32 +53,22 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
-  private final boolean enableFilterPushDown;
+  private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
   /**
-   * @param baseAdapter A StorageAdapter for the left-hand side base segment
-   * @param clauses The right-hand side clauses. The caller is responsible for ensuring that there are no
-   *                duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param enableFilterPushDown Whether to enable filter push down optimizations to the base segment
+   * @param baseAdapter          A StorageAdapter for the left-hand side base segment
+   * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
+   *                             duplicate prefixes or prefixes that shadow each other across the clauses
    */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
-      final boolean enableFilterPushDown
+      final JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
-    this.enableFilterPushDown = enableFilterPushDown;
-  }
-
-  @VisibleForTesting
-  HashJoinSegmentStorageAdapter(
-      StorageAdapter baseAdapter,
-      List<JoinableClause> clauses
-  )
-  {
-    this(baseAdapter, clauses, QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN);
+    this.joinFilterPreAnalysis = joinFilterPreAnalysis;
   }
 
   @Override
@@ -157,16 +145,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     }
   }
 
-  @Override
-  public Capabilities getCapabilities()
-  {
-    // Dictionaries in the joinables may not be sorted. Unfortunately this API does not let us be granular about what
-    // is and isn't sorted, so return false globally. At the time of this writing, the only query affected by this
-    // is a topN with lexicographic sort and 'previousStop' set (it will not be able to skip values based on
-    // dictionary code).
-    return Capabilities.builder().dimensionValuesSorted(false).build();
-  }
-
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
@@ -229,21 +207,16 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
-    final Set<String> baseColumns = determineBaseColumnsWithPreAndPostJoinVirtualColumns(
+
+    determineBaseColumnsWithPreAndPostJoinVirtualColumns(
         virtualColumns,
         preJoinVirtualColumns,
         postJoinVirtualColumns
     );
 
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-        this,
-        baseColumns,
-        filter,
-        enableFilterPushDown
-    );
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
@@ -263,6 +236,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     return Sequences.map(
         baseCursorSequence,
         cursor -> {
+          assert cursor != null;
           Cursor retVal = cursor;
 
           for (JoinableClause clause : clauses) {
@@ -278,11 +252,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     );
   }
 
-  public List<JoinableClause> getClauses()
-  {
-    return clauses;
-  }
-
   /**
    * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
    * (i.e. if it does not start with any of their prefixes).
@@ -290,11 +259,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   public boolean isBaseColumn(final String column)
   {
     return !getClauseForColumn(column).isPresent();
-  }
-
-  public boolean isEnableFilterPushDown()
-  {
-    return enableFilterPushDown;
   }
 
   /**
@@ -305,9 +269,10 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    * will add each VirtualColumn in the provided virtualColumns to either preJoinVirtualColumns or
    * postJoinVirtualColumns based on whether the virtual column is pre-join or post-join.
    *
-   * @param virtualColumns List of virtual columns from the query
-   * @param preJoinVirtualColumns If provided, virtual columns determined to be pre-join will be added to this list
+   * @param virtualColumns         List of virtual columns from the query
+   * @param preJoinVirtualColumns  If provided, virtual columns determined to be pre-join will be added to this list
    * @param postJoinVirtualColumns If provided, virtual columns determined to be post-join will be added to this list
+   *
    * @return The set of base column names, including any pre-join virtual columns.
    */
   public Set<String> determineBaseColumnsWithPreAndPostJoinVirtualColumns(

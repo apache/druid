@@ -36,6 +36,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
   private static final byte VERSION = V3CompressedVSizeColumnarMultiIntsSupplier.VERSION;
 
   public static V3CompressedVSizeColumnarMultiIntsSerializer create(
+      final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
@@ -43,7 +44,9 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
   )
   {
     return new V3CompressedVSizeColumnarMultiIntsSerializer(
+        columnName,
         new CompressedColumnarIntsSerializer(
+            columnName,
             segmentWriteOutMedium,
             filenameBase,
             CompressedColumnarIntsSupplier.MAX_INTS_IN_BUFFER,
@@ -51,6 +54,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
             compression
         ),
         new CompressedVSizeColumnarIntsSerializer(
+            columnName,
             segmentWriteOutMedium,
             filenameBase,
             maxValue,
@@ -61,16 +65,19 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
     );
   }
 
+  private final String columnName;
   private final CompressedColumnarIntsSerializer offsetWriter;
   private final CompressedVSizeColumnarIntsSerializer valueWriter;
   private int offset;
   private boolean lastOffsetWritten = false;
 
   V3CompressedVSizeColumnarMultiIntsSerializer(
+      String columnName,
       CompressedColumnarIntsSerializer offsetWriter,
       CompressedVSizeColumnarIntsSerializer valueWriter
   )
   {
+    this.columnName = columnName;
     this.offsetWriter = offsetWriter;
     this.valueWriter = valueWriter;
     this.offset = 0;
@@ -95,6 +102,9 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
       valueWriter.addValue(ints.get(i));
     }
     offset += numValues;
+    if (offset < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

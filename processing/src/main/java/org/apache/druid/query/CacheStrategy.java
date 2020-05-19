@@ -30,13 +30,15 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 /**
+ * Handles caching-related tasks for a particular query type.
  *
+ * Generally returned by the toolchest method {@link QueryToolChest#getCacheStrategy}.
  */
 @ExtensionPoint
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
   /**
-   * Returns the given query is cacheable or not.
+   * Returns whether the given query is cacheable or not.
    * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
    *
    * @param query            the query to be cached
@@ -48,21 +50,27 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
   boolean isCacheable(QueryType query, boolean willMergeRunners);
 
   /**
-   * Computes the cache key for the given query
+   * Computes the per-segment cache key for the given query. Because this is a per-segment cache key, it should only
+   * include parts of the query that affect the results for a specific segment (i.e., the results returned from
+   * {@link QueryRunnerFactory#createRunner}).
    *
-   * @param query the query to compute a cache key for
+   * @param query the query to be cached
    *
-   * @return the cache key
+   * @return the per-segment cache key
    */
   byte[] computeCacheKey(QueryType query);
 
   /**
-   * Computes the result level cache key for the given query.
-   * Some implementations may include query parameters that might not be used in {@code computeCacheKey} for same query
+   * Computes the result-level cache key for the given query. The result-level cache will tack on datasource and
+   * interval details, so this key does not need to include datasource and interval. But it should include anything
+   * else that might affect the results of the query.
+   *
+   * Some implementations will need to include query parameters that are not used in {@link #computeCacheKey} for the
+   * same query.
    *
    * @param query the query to be cached
    *
-   * @return the result level cache key
+   * @return the result-level cache key
    */
   byte[] computeResultLevelCacheKey(QueryType query);
 

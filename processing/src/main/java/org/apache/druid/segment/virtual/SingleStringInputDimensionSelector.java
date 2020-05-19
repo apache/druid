@@ -48,11 +48,6 @@ public class SingleStringInputDimensionSelector implements DimensionSelector
       final Expr expression
   )
   {
-    // Verify expression has just one binding.
-    if (expression.analyzeInputs().getRequiredBindings().size() != 1) {
-      throw new ISE("WTF?! Expected expression with just one binding");
-    }
-
     // Verify selector has a working dictionary.
     if (selector.getValueCardinality() == DimensionDictionarySelector.CARDINALITY_UNKNOWN
         || !selector.nameLookupPossibleInAdvance()) {

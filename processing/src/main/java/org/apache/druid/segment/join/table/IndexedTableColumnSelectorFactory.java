@@ -46,7 +46,7 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
   @Nullable
   static ColumnCapabilities columnCapabilities(final IndexedTable table, final String columnName)
   {
-    final ValueType valueType = table.rowSignature().get(columnName);
+    final ValueType valueType = table.rowSignature().getColumnType(columnName).orElse(null);
 
     if (valueType != null) {
       final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(valueType);
@@ -55,6 +55,9 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
         // IndexedTables are not _really_ dictionary-encoded, but we fake it using the row number as the dict. code.
         capabilities.setDictionaryEncoded(true);
       }
+
+      capabilities.setDictionaryValuesSorted(false);
+      capabilities.setDictionaryValuesUnique(false);
 
       return capabilities.setIsComplete(true);
     } else {
@@ -66,7 +69,7 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public DimensionSelector makeDimensionSelector(final DimensionSpec dimensionSpec)
   {
-    final int columnNumber = table.allColumns().indexOf(dimensionSpec.getDimension());
+    final int columnNumber = table.rowSignature().indexOf(dimensionSpec.getDimension());
 
     if (columnNumber < 0) {
       return dimensionSpec.decorate(DimensionSelector.constant(null, dimensionSpec.getExtractionFn()));
@@ -86,7 +89,7 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnValueSelector makeColumnValueSelector(final String columnName)
   {
-    final int columnNumber = table.allColumns().indexOf(columnName);
+    final int columnNumber = table.rowSignature().indexOf(columnName);
 
     if (columnNumber < 0) {
       return NilColumnValueSelector.instance();

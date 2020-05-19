@@ -41,6 +41,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -262,13 +263,29 @@ public class CoordinatorResourceTestClient
     return results2;
   }
 
+  @Nullable
   private Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> getLookupLoadStatus()
   {
     String url = StringUtils.format("%slookups/nodeStatus", getCoordinatorURL());
 
     Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, url);
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, new URL(url)),
+          responseHandler
+      ).get();
+
+      if (response.getStatus().getCode() == HttpResponseStatus.NOT_FOUND.getCode()) {
+        return null;
+      }
+      if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+      }
 
       status = jsonMapper.readValue(
           response.getContent(), new TypeReference<Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>>>()
@@ -285,6 +302,10 @@ public class CoordinatorResourceTestClient
   public boolean areLookupsLoaded(String lookup)
   {
     final Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status = getLookupLoadStatus();
+
+    if (status == null) {
+      return false;
+    }
 
     final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> defaultTier = status.get("__default");
 

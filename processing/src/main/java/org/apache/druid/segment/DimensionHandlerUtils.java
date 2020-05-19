@@ -34,6 +34,7 @@ import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
@@ -54,14 +55,16 @@ public final class DimensionHandlerUtils
   public static final Float ZERO_FLOAT = 0.0f;
   public static final Long ZERO_LONG = 0L;
 
+  public static final ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
+      new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                  .setDictionaryEncoded(false)
+                                  .setDictionaryValuesUnique(false)
+                                  .setDictionaryValuesSorted(false)
+                                  .setHasBitmapIndexes(false);
+
   private DimensionHandlerUtils()
   {
   }
-
-  public static final ColumnCapabilities DEFAULT_STRING_CAPABILITIES =
-      new ColumnCapabilitiesImpl().setType(ValueType.STRING)
-                                  .setDictionaryEncoded(true)
-                                  .setHasBitmapIndexes(true);
 
   public static DimensionHandler<?, ?, ?> getHandlerFromCapabilities(
       String dimensionName,
@@ -219,7 +222,16 @@ public final class DimensionHandlerUtils
     // Currently, all extractionFns output Strings, so the column will return String values via a
     // DimensionSelector if an extractionFn is present.
     if (dimSpec.getExtractionFn() != null) {
-      capabilities = DEFAULT_STRING_CAPABILITIES;
+      ExtractionFn fn = dimSpec.getExtractionFn();
+      capabilities = ColumnCapabilitiesImpl.copyOf(capabilities)
+                                           .setType(ValueType.STRING)
+                                           .setDictionaryValuesUnique(
+                                               capabilities.isDictionaryEncoded() &&
+                                               fn.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
+                                           )
+                                           .setDictionaryValuesSorted(
+                                               capabilities.isDictionaryEncoded() && fn.preservesOrdering()
+                                           );
     }
 
     // DimensionSpec's decorate only operates on DimensionSelectors, so if a spec mustDecorate(),
@@ -518,10 +530,5 @@ public final class DimensionHandlerUtils
   public static Float nullToZero(@Nullable Float number)
   {
     return number == null ? ZERO_FLOAT : number;
-  }
-
-  public static Number nullToZero(@Nullable Number number)
-  {
-    return number == null ? ZERO_DOUBLE : number;
   }
 }

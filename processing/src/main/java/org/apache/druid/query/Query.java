@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -36,6 +37,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -129,6 +131,18 @@ public interface Query<T>
   @Nullable
   String getId();
 
+  /**
+   * Returns a copy of this query with a new subQueryId (see {@link #getSubQueryId()}.
+   */
+  Query<T> withSubQueryId(String subQueryId);
+
+  /**
+   * Returns the subQueryId of this query. This is set by ClientQuerySegmentWalker (the entry point for the Broker's
+   * query stack) on any subqueries that it issues. It is null for the main query.
+   */
+  @Nullable
+  String getSubQueryId();
+
   default Query<T> withSqlQueryId(String sqlQueryId)
   {
     return this;
@@ -145,5 +159,20 @@ public interface Query<T>
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
     return this;
+  }
+
+  default Query<T> withPriority(int priority)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.PRIORITY_KEY, priority));
+  }
+
+  default Query<T> withLane(String lane)
+  {
+    return withOverriddenContext(ImmutableMap.of(QueryContexts.LANE_KEY, lane));
+  }
+
+  default VirtualColumns getVirtualColumns()
+  {
+    return VirtualColumns.EMPTY;
   }
 }

@@ -41,6 +41,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.util.HashSet;
@@ -189,7 +190,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       // 1) if something overlaps our timestamp, use that
       // 2) otherwise try preferredSegmentGranularity & going progressively smaller
 
-      final Interval rowInterval = queryGranularity.bucket(timestamp);
+      final Interval rowInterval = queryGranularity.bucket(timestamp).withChronology(ISOChronology.getInstanceUTC());
 
       final Set<DataSegment> usedSegmentsForRow =
           new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));

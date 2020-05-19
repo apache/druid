@@ -53,6 +53,7 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -61,7 +62,6 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.sql.calcite.view.DruidViewMacro;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
@@ -592,9 +592,13 @@ public class DruidSchema extends AbstractSchema
         for (AvailableSegmentMetadata availableSegmentMetadata : segmentMap.values()) {
           final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
           if (rowSignature != null) {
-            for (String column : rowSignature.getRowOrder()) {
+            for (String column : rowSignature.getColumnNames()) {
               // Newer column types should override older ones.
-              columnTypes.putIfAbsent(column, rowSignature.getColumnType(column));
+              final ValueType columnType =
+                  rowSignature.getColumnType(column)
+                              .orElseThrow(() -> new ISE("Encountered null type for column[%s]", column));
+
+              columnTypes.putIfAbsent(column, columnType);
             }
           }
         }

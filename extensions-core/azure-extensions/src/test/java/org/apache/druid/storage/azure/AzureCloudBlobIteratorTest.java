@@ -20,6 +20,7 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.microsoft.azure.storage.ResultContinuation;
 import com.microsoft.azure.storage.ResultSegment;
 import com.microsoft.azure.storage.StorageException;
@@ -127,10 +128,12 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     blobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItem.class);
     cloudBlobItemPrefixWithOnlyCloudBlobs1 = createMock(ListBlobItemHolder.class);
     cloudBlobDruidPrefixWithOnlyCloudBlobs1 = createMock(CloudBlobHolder.class);
+    EasyMock.expect(cloudBlobDruidPrefixWithOnlyCloudBlobs1.getBlobLength()).andReturn(10L).anyTimes();
 
     blobItemPrefixWithOnlyCloudBlobs2 = createMock(ListBlobItem.class);
     cloudBlobItemPrefixWithOnlyCloudBlobs2 = createMock(ListBlobItemHolder.class);
     cloudBlobDruidPrefixWithOnlyCloudBlobs2 = createMock(CloudBlobHolder.class);
+    EasyMock.expect(cloudBlobDruidPrefixWithOnlyCloudBlobs2.getBlobLength()).andReturn(10L).anyTimes();
 
     blobItemPrefixWithCloudBlobsAndDirectories1 = createMock(ListBlobItem.class);
     directoryItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemHolder.class);
@@ -138,6 +141,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     blobItemPrefixWithCloudBlobsAndDirectories2 = createMock(ListBlobItem.class);
     cloudBlobItemPrefixWithCloudBlobsAndDirectories = createMock(ListBlobItemHolder.class);
     cloudBlobDruidPrefixWithCloudBlobsAndDirectories = createMock(CloudBlobHolder.class);
+    EasyMock.expect(cloudBlobDruidPrefixWithCloudBlobsAndDirectories.getBlobLength()).andReturn(10L).anyTimes();
 
     blobItemPrefixWithCloudBlobsAndDirectories3 = createMock(ListBlobItem.class);
     directoryItemPrefixWithCloudBlobsAndDirectories3 = createMock(ListBlobItemHolder.class);
@@ -163,13 +167,13 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     EasyMock.expect(config.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
     EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.isCloudBlob()).andReturn(true);
     EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.getCloudBlob()).andReturn(
-        cloudBlobDruidPrefixWithOnlyCloudBlobs1);
+        cloudBlobDruidPrefixWithOnlyCloudBlobs1).anyTimes();
     EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithOnlyCloudBlobs1)).andReturn(
         cloudBlobItemPrefixWithOnlyCloudBlobs1);
 
     EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs2.isCloudBlob()).andReturn(true);
     EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs2.getCloudBlob()).andReturn(
-        cloudBlobDruidPrefixWithOnlyCloudBlobs2);
+        cloudBlobDruidPrefixWithOnlyCloudBlobs2).anyTimes();
     EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithOnlyCloudBlobs2)).andReturn(
         cloudBlobItemPrefixWithOnlyCloudBlobs2);
 
@@ -179,7 +183,7 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
 
     EasyMock.expect(cloudBlobItemPrefixWithCloudBlobsAndDirectories.isCloudBlob()).andReturn(true);
     EasyMock.expect(cloudBlobItemPrefixWithCloudBlobsAndDirectories.getCloudBlob()).andReturn(
-        cloudBlobDruidPrefixWithCloudBlobsAndDirectories);
+        cloudBlobDruidPrefixWithCloudBlobsAndDirectories).anyTimes();
     EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithCloudBlobsAndDirectories2)).andReturn(
         cloudBlobItemPrefixWithCloudBlobsAndDirectories);
 
@@ -268,6 +272,57 @@ public class AzureCloudBlobIteratorTest extends EasyMockSupport
     while (azureCloudBlobIterator.hasNext()) {
       actualBlobItems.add(azureCloudBlobIterator.next());
     }
+    Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
+    Assert.assertTrue(expectedBlobItems.containsAll(actualBlobItems));
+    verifyAll();
+  }
+
+  @Test
+  public void test_next_emptyObjects_skipEmptyObjects() throws URISyntaxException, StorageException
+  {
+    EasyMock.expect(config.getMaxTries()).andReturn(MAX_TRIES).atLeastOnce();
+    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.isCloudBlob()).andReturn(true);
+    EasyMock.expect(cloudBlobItemPrefixWithOnlyCloudBlobs1.getCloudBlob()).andReturn(
+        cloudBlobDruidPrefixWithOnlyCloudBlobs1).anyTimes();
+    EasyMock.expect(blobItemDruidFactory.create(blobItemPrefixWithOnlyCloudBlobs1)).andReturn(
+        cloudBlobItemPrefixWithOnlyCloudBlobs1);
+
+    ListBlobItem emptyBlobItem = createMock(ListBlobItem.class);
+    ListBlobItemHolder emptyBlobItemHolder = createMock(ListBlobItemHolder.class);
+    CloudBlobHolder emptyBlobHolder = createMock(CloudBlobHolder.class);
+    EasyMock.expect(emptyBlobHolder.getBlobLength()).andReturn(0L).anyTimes();
+    EasyMock.expect(emptyBlobItemHolder.isCloudBlob()).andReturn(true);
+    EasyMock.expect(emptyBlobItemHolder.getCloudBlob()).andReturn(emptyBlobHolder).anyTimes();
+
+    EasyMock.expect(blobItemDruidFactory.create(emptyBlobItem)).andReturn(emptyBlobItemHolder);
+
+    EasyMock.expect(storage.listBlobsWithPrefixInContainerSegmented(
+        CONTAINER1,
+        PREFIX_ONLY_CLOUD_BLOBS,
+        nullResultContinuationToken,
+        MAX_LISTING_LENGTH
+    )).andReturn(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1);
+
+    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1.getContinuationToken())
+            .andReturn(nullResultContinuationToken);
+    ArrayList<ListBlobItem> resultBlobItemsPrefixWithOnlyCloudBlobs1 = new ArrayList<>();
+    resultBlobItemsPrefixWithOnlyCloudBlobs1.add(blobItemPrefixWithOnlyCloudBlobs1);
+    resultBlobItemsPrefixWithOnlyCloudBlobs1.add(emptyBlobItem);
+    EasyMock.expect(resultSegmentPrefixOnlyAndFailLessThanMaxTriesCloudBlobs1.getResults())
+            .andReturn(resultBlobItemsPrefixWithOnlyCloudBlobs1);
+
+    replayAll();
+
+    azureCloudBlobIterator = new AzureCloudBlobIterator(
+        storage,
+        blobItemDruidFactory,
+        config,
+        ImmutableList.of(PREFIX_ONLY_CLOUD_BLOBS_URI),
+        MAX_LISTING_LENGTH
+    );
+
+    List<CloudBlobHolder> expectedBlobItems = ImmutableList.of(cloudBlobDruidPrefixWithOnlyCloudBlobs1);
+    List<CloudBlobHolder> actualBlobItems = Lists.newArrayList(azureCloudBlobIterator);
     Assert.assertEquals(expectedBlobItems.size(), actualBlobItems.size());
     Assert.assertTrue(expectedBlobItems.containsAll(actualBlobItems));
     verifyAll();

@@ -43,6 +43,7 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
       .writeInt(x -> CompressedPools.BUFFER_SIZE / Double.BYTES)
       .writeByte(x -> x.compression.getId());
 
+  private final String columnName;
   private final GenericIndexedWriter<ByteBuffer> flattener;
   private final CompressionStrategy compression;
 
@@ -51,12 +52,14 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
   private ByteBuffer endBuffer;
 
   BlockLayoutColumnarDoublesSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(
         segmentWriteOutMedium,
         filenameBase,
@@ -76,6 +79,12 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
   }
 
   @Override
+  public int size()
+  {
+    return numInserted;
+  }
+
+  @Override
   public void add(double value) throws IOException
   {
     if (endBuffer == null) {
@@ -89,6 +98,9 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
 
     endBuffer.putDouble(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

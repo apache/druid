@@ -150,7 +150,7 @@ public class AzureCloudBlobIterator implements Iterator<CloudBlobHolder>
       while (blobItemIterator.hasNext()) {
         ListBlobItemHolder blobItem = blobItemDruidFactory.create(blobItemIterator.next());
         /* skip directory objects */
-        if (blobItem.isCloudBlob()) {
+        if (blobItem.isCloudBlob() && blobItem.getCloudBlob().getBlobLength() > 0) {
           currentBlobItem = blobItem.getCloudBlob();
           return;
         }

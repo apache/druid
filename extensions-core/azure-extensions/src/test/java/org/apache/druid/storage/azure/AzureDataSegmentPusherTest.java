@@ -52,9 +52,9 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   private static final String ACCOUNT = "account";
   private static final String CONTAINER_NAME = "container";
   private static final String PREFIX = "prefix";
-  private static final String BLOB_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+  private static final String BLOB_PATH = " Россия 한국 中国!?/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
   private static final DataSegment DATA_SEGMENT = new DataSegment(
-      "test",
+      " Россия 한국 中国!?",
       Intervals.of("2015-04-12/2015-04-13"),
       "1",
       ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),

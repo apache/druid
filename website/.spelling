@@ -218,11 +218,14 @@ dbcp
 denormalization
 denormalize
 denormalized
+deprioritization
+deprioritizes
 dequeued
 deserialization
 deserialize
 deserialized
 downtimes
+druid
 e.g.
 encodings
 endian
@@ -260,6 +263,7 @@ javadoc
 kerberos
 keystore
 keytab
+laning
 lifecycle
 localhost
 log4j
@@ -341,6 +345,7 @@ runtime
 schemas
 searchable
 servlet
+simple-client-sslcontext
 sharded
 sharding
 skipHeaderRows
@@ -642,6 +647,11 @@ maximumSize
 onHeapPolling
 pollPeriod
 reverseLoadingCacheSpec
+ - ../docs/development/extensions-core/druid-pac4j.md
+OAuth
+Okta
+OpenID
+pac4j
  - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
@@ -820,7 +830,6 @@ jvm-global
 kafka-emitter
 org.apache.druid.extensions.contrib.
 pull-deps
-simple-client-sslcontext
 sqlserver-metadata-storage
 statsd-emitter
  - ../docs/development/geo.md
@@ -1582,6 +1591,7 @@ _default_tier
 addr
 affinityConfig
 allowAll
+ANDed
 array_mod
 batch_index_task
 cgroup
@@ -1609,6 +1619,7 @@ druid_supervisors
 druid_taskLock
 druid_taskLog
 druid_tasks
+DruidQueryRel
 ec2
 equalDistribution
 extractionFn
@@ -1625,6 +1636,7 @@ hdfs
 httpRemote
 indexTask
 info_dir
+inlining
 java.class.path
 java.io.tmpdir
 javaOpts
@@ -1641,6 +1653,7 @@ middlemanager
 minTimeMs
 minmax
 mins
+nullable
 orderby
 orderbys
 org.apache.druid
@@ -1649,6 +1662,7 @@ org.apache.hadoop
 overlord.html
 pendingSegments
 pre-flight
+preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
@@ -1670,6 +1684,7 @@ tmp
 tmpfs
 truststore
 tuningConfig
+unioning
 useIndexes
 user.timezone
 v0.12.0
