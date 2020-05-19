@@ -17,23 +17,6 @@ RETVAL=$?
 if [ "${RETVAL}" -ne 0 ]; then
     echo "********* EXECUTION ERROR ************"
     echo "The process completed with return code $RETVAL. See logs for more details."
-    exit ${RETVAL}
-fi
-
-# Even though we might have gotten a return value of 0, it still could have failed.  Scan the last 250 lines of the log for valid INFO/WARN/ERROR messages.
-ERROR_LINES=$(tail -n 250 stdout.log | grep -E -e '^([[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}[[:space:]][[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}).*' | awk '{print $3}' | grep 'ERROR' | wc -l)
-if [ "${ERROR_LINES}" -ne 0 ]; then
-    echo "********* EXECUTION FAILURE ************"
-    echo "The process completed with a successful return code but errors were found in the logs. See logs for more details."
-    RETVAL=1
-fi
-
-# Even though we might have gotten a return value of 0, it still could have failed.  Scan the last 250 lines of the log for valid INFO/WARN/ERROR messages.
-ERROR_LINES=$(tail -n 250 stderr.log | grep -E -e '^([[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}[[:space:]][[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}).*' | awk '{print $3}' | grep 'ERROR' | wc -l)
-if [ "${ERROR_LINES}" -ne 0 ]; then
-    echo "********* EXECUTION FAILURE ************"
-    echo "The process completed with a successful return code but errors were found in the logs. See logs for more details."
-    RETVAL=1
 fi
 
 exit ${RETVAL}
