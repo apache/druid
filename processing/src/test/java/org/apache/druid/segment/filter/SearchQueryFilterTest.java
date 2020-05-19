@@ -184,6 +184,23 @@ public class SearchQueryFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(SearchQueryFilter.class)
+                  .withIgnoredFields("predicateFactory")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testEqualsContractForSearchQueryDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(SearchQueryFilter.SearchQueryDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
   public void testRequiredColumnRewrite()
   {
     Filter filter = new SearchQueryDimFilter("dim0", specForValue("a"), null).toFilter();
@@ -198,15 +215,5 @@ public class SearchQueryFilterTest extends BaseFilterTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
     filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
-  }
-
-  @Test
-  public void test_equals()
-  {
-    EqualsVerifier.forClass(SearchQueryFilter.class)
-                  .usingGetClass()
-                  .withNonnullFields("dimension", "query")
-                  .withIgnoredFields("predicateFactory")
-                  .verify();
   }
 }

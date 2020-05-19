@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexer;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
@@ -30,6 +31,8 @@ import java.util.regex.Pattern;
 public class TaskIdUtils
 {
   private static final Pattern INVALIDCHARS = Pattern.compile("(?s).*[^\\S ].*");
+
+  private static final Joiner UNDERSCORE_JOINER = Joiner.on("_");
 
   public static void validateId(String thingToValidate, String stringToValidate)
   {
@@ -59,5 +62,10 @@ public class TaskIdUtils
       suffix.append((char) ('a' + ((ThreadLocalRandom.current().nextInt() >>> (i * 4)) & 0x0F)));
     }
     return suffix.toString();
+  }
+
+  public static String getRandomIdWithPrefix(String prefix)
+  {
+    return UNDERSCORE_JOINER.join(prefix, TaskIdUtils.getRandomId());
   }
 }

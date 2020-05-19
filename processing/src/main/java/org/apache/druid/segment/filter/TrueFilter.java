@@ -119,4 +119,16 @@ public class TrueFilter implements Filter
   {
     return "true";
   }
+
+  @Override
+  public final int hashCode()
+  {
+    return TrueFilter.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof TrueFilter;
+  }
 }

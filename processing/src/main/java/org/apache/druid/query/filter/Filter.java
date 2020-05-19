@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
@@ -31,6 +32,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import java.util.Map;
 import java.util.Set;
 
+@SubclassesMustOverrideEqualsAndHashCode
 public interface Filter
 {
   /**
