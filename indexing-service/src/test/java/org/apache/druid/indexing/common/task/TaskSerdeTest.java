@@ -186,6 +186,16 @@ public class TaskSerdeTest
   }
 
   @Test
+  public void testTaskResourceWithNullAvailabilityGroupShouldFail() throws Exception
+  {
+    thrown.expectCause(CoreMatchers.isA(NullPointerException.class));
+    jsonMapper.readValue(
+        "{\"availabilityGroup\":null, \"requiredCapacity\":10}",
+        TaskResource.class
+    );
+  }
+
+  @Test
   public void testIndexTaskSerde() throws Exception
   {
     final IndexTask task = new IndexTask(
