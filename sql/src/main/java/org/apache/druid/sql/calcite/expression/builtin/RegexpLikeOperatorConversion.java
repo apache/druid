@@ -19,32 +19,37 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.Expr;
-import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.RegexDimFilter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
-public class RegexpExtractOperatorConversion implements SqlOperatorConversion
+import javax.annotation.Nullable;
+import java.util.List;
+
+public class RegexpLikeOperatorConversion implements SqlOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("REGEXP_EXTRACT")
-      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
+      .operatorBuilder("REGEXP_LIKE")
+      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(2)
-      .literalOperands(1, 2)
-      .nullableReturnType(SqlTypeName.VARCHAR)
+      .literalOperands(1)
+      .returnType(SqlTypeName.BOOLEAN)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
-
-  private static final int DEFAULT_INDEX = 0;
 
   @Override
   public SqlFunction calciteOperator()
@@ -63,31 +68,49 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        StringUtils.toLowerCase(calciteOperator().getName()),
-        inputExpressions -> {
-          final DruidExpression arg = inputExpressions.get(0);
-          final Expr patternExpr = inputExpressions.get(1).parse(plannerContext.getExprMacroTable());
-          final Expr indexExpr = inputExpressions.size() > 2
-                                 ? inputExpressions.get(2).parse(plannerContext.getExprMacroTable())
-                                 : null;
-
-          if (arg.isSimpleExtraction() && patternExpr.isLiteral() && (indexExpr == null || indexExpr.isLiteral())) {
-            final String pattern = (String) patternExpr.getLiteralValue();
-
-            return arg.getSimpleExtraction().cascade(
-                new RegexDimExtractionFn(
-                    // Undo the empty-to-null conversion from patternExpr parsing (patterns cannot be null, even in
-                    // non-SQL-compliant null handling mode).
-                    StringUtils.nullToEmptyNonDruidDataString(pattern),
-                    indexExpr == null ? DEFAULT_INDEX : ((Number) indexExpr.getLiteralValue()).intValue(),
-                    true,
-                    null
-                )
-            );
-          } else {
-            return null;
-          }
-        }
+        operands -> DruidExpression.fromFunctionCall("regexp_like", operands)
     );
+  }
+
+  @Nullable
+  @Override
+  public DimFilter toDruidFilter(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      @Nullable final VirtualColumnRegistry virtualColumnRegistry,
+      final RexNode rexNode
+  )
+  {
+    final List<RexNode> operands = ((RexCall) rexNode).getOperands();
+    final DruidExpression druidExpression = Expressions.toDruidExpression(
+        plannerContext,
+        rowSignature,
+        operands.get(0)
+    );
+
+    if (druidExpression == null) {
+      return null;
+    }
+
+    final String pattern = RexLiteral.stringValue(operands.get(1));
+
+    if (druidExpression.isSimpleExtraction()) {
+      return new RegexDimFilter(
+          druidExpression.getSimpleExtraction().getColumn(),
+          pattern,
+          druidExpression.getSimpleExtraction().getExtractionFn(),
+          null
+      );
+    } else if (virtualColumnRegistry != null) {
+      VirtualColumn v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
+          plannerContext,
+          druidExpression,
+          operands.get(0).getType().getSqlTypeName()
+      );
+
+      return new RegexDimFilter(v.getOutputName(), pattern, null, null);
+    } else {
+      return null;
+    }
   }
 }

@@ -32,15 +32,19 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
@@ -59,6 +63,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Map;
 
 public class ExpressionsTest extends ExpressionTestBase
@@ -75,6 +80,7 @@ public class ExpressionsTest extends ExpressionTestBase
       .add("hexstr", ValueType.STRING)
       .add("intstr", ValueType.STRING)
       .add("spacey", ValueType.STRING)
+      .add("newliney", ValueType.STRING)
       .add("tstr", ValueType.STRING)
       .add("dstr", ValueType.STRING)
       .build();
@@ -90,6 +96,7 @@ public class ExpressionsTest extends ExpressionTestBase
       .put("hexstr", "EF")
       .put("intstr", "-100")
       .put("spacey", "  hey there  ")
+      .put("newliney", "beep\nboop")
       .put("tstr", "2000-02-03 04:05:06")
       .put("dstr", "2000-02-03")
       .build();
@@ -135,6 +142,34 @@ public class ExpressionsTest extends ExpressionTestBase
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("x(.)"),
+            testHelper.makeLiteral(1)
+        ),
+        DruidExpression.of(
+            SimpleExtraction.of("s", new RegexDimExtractionFn("x(.)", 1, true, null)),
+            "regexp_extract(\"s\",'x(.)',1)"
+        ),
+        null
+    );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("Z"),
+                testHelper.makeInputRef("s")
+            ),
+            testHelper.makeLiteral("Zf(.)")
+        ),
+        DruidExpression.fromExpression("regexp_extract(concat('Z',\"s\"),'Zf(.)')"),
+        "Zfo"
+    );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
             testHelper.makeLiteral("f(.)"),
             testHelper.makeLiteral(1)
         ),
@@ -156,6 +191,211 @@ public class ExpressionsTest extends ExpressionTestBase
             "regexp_extract(\"s\",'f(.)')"
         ),
         "fo"
+    );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("")
+        ),
+        DruidExpression.of(
+            SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
+            "regexp_extract(\"s\",'')"
+        ),
+        NullHandling.emptyToNullIfNeeded("")
+    );
+  }
+
+  @Test
+  public void testRegexpLike()
+  {
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f.")
+        ),
+        DruidExpression.fromExpression("regexp_like(\"s\",'f.')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("o")
+        ),
+        // Column "s" contains an 'o', but not at the beginning, so we don't match
+        DruidExpression.fromExpression("regexp_like(\"s\",'o')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("x.")
+        ),
+        DruidExpression.fromExpression("regexp_like(\"s\",'x.')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("")
+        ),
+        DruidExpression.fromExpression("regexp_like(\"s\",'')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("beep\nboop"),
+            testHelper.makeLiteral("^beep$")
+        ),
+        DruidExpression.fromExpression("regexp_like('beep\\u000Aboop','^beep$')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeLiteral("beep\nboop"),
+            testHelper.makeLiteral("^beep\\nboop$")
+        ),
+        DruidExpression.fromExpression("regexp_like('beep\\u000Aboop','^beep\\u005Cnboop$')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("newliney"),
+            testHelper.makeLiteral("^beep$")
+        ),
+        DruidExpression.fromExpression("regexp_like(\"newliney\",'^beep$')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("newliney"),
+            testHelper.makeLiteral("^beep\\nboop$")
+        ),
+        DruidExpression.fromExpression("regexp_like(\"newliney\",'^beep\\u005Cnboop$')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("Z"),
+                testHelper.makeInputRef("s")
+            ),
+            testHelper.makeLiteral("x(.)")
+        ),
+        DruidExpression.fromExpression("regexp_like(concat('Z',\"s\"),'x(.)')"),
+        0L
+    );
+  }
+
+  @Test
+  public void testRegexpLikeAsFilter()
+  {
+    testHelper.testFilter(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f.")
+        ),
+        Collections.emptyList(),
+        new RegexDimFilter("s", "f.", null),
+        true
+    );
+
+    testHelper.testFilter(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("o")
+        ),
+        Collections.emptyList(),
+        // Column "s" contains an 'o', but not at the beginning, so we don't match
+        new RegexDimFilter("s", "o", null),
+        true
+    );
+
+    testHelper.testFilter(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("x.")
+        ),
+        Collections.emptyList(),
+        new RegexDimFilter("s", "x.", null),
+        false
+    );
+
+    testHelper.testFilter(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("")
+        ),
+        Collections.emptyList(),
+        new RegexDimFilter("s", "", null),
+        true
+    );
+
+    testHelper.testFilter(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("newliney"),
+            testHelper.makeLiteral("^beep$")
+        ),
+        Collections.emptyList(),
+        new RegexDimFilter("newliney", "^beep$", null),
+        false
+    );
+
+    testHelper.testFilter(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("newliney"),
+            testHelper.makeLiteral("^beep\\nboop$")
+        ),
+        Collections.emptyList(),
+        new RegexDimFilter("newliney", "^beep\\nboop$", null),
+        true
+    );
+
+    testHelper.testFilter(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("Z"),
+                testHelper.makeInputRef("s")
+            ),
+            testHelper.makeLiteral("x(.)")
+        ),
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "v0",
+                "concat('Z',\"s\")",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        new RegexDimFilter("v0", "x(.)", null),
+        false
     );
   }
 

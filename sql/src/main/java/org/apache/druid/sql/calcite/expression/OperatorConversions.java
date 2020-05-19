@@ -24,11 +24,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.CalciteException;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -238,6 +240,7 @@ public class OperatorConversions
     private SqlOperandTypeChecker operandTypeChecker;
     private List<SqlTypeFamily> operandTypes;
     private Integer requiredOperands = null;
+    private int[] literalOperands = null;
     private SqlOperandTypeInference operandTypeInference;
 
     private OperatorBuilder(final String name)
@@ -291,15 +294,15 @@ public class OperatorConversions
       return this;
     }
 
-    public OperatorBuilder operandTypeInference(final SqlOperandTypeInference operandTypeInference)
-    {
-      this.operandTypeInference = operandTypeInference;
-      return this;
-    }
-
     public OperatorBuilder requiredOperands(final int requiredOperands)
     {
       this.requiredOperands = requiredOperands;
+      return this;
+    }
+
+    public OperatorBuilder literalOperands(final int... literalOperands)
+    {
+      this.literalOperands = literalOperands;
       return this;
     }
 
@@ -317,7 +320,8 @@ public class OperatorConversions
         theOperandTypeChecker = new DefaultOperandTypeChecker(
             operandTypes,
             requiredOperands == null ? operandTypes.size() : requiredOperands,
-            nullableOperands
+            nullableOperands,
+            literalOperands
         );
       } else if (operandTypes == null && requiredOperands == null) {
         theOperandTypeChecker = operandTypeChecker;
@@ -430,36 +434,64 @@ public class OperatorConversions
 
   /**
    * Operand type checker that is used in 'simple' situations: there are a particular number of operands, with
-   * particular types, some of which may be optional or nullable.
+   * particular types, some of which may be optional or nullable, and some of which may be required to be literals.
    */
   private static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
   {
     private final List<SqlTypeFamily> operandTypes;
     private final int requiredOperands;
     private final IntSet nullableOperands;
+    private final IntSet literalOperands;
 
     DefaultOperandTypeChecker(
         final List<SqlTypeFamily> operandTypes,
         final int requiredOperands,
-        final IntSet nullableOperands
+        final IntSet nullableOperands,
+        @Nullable final int[] literalOperands
     )
     {
       Preconditions.checkArgument(requiredOperands <= operandTypes.size() && requiredOperands >= 0);
       this.operandTypes = Preconditions.checkNotNull(operandTypes, "operandTypes");
       this.requiredOperands = requiredOperands;
       this.nullableOperands = Preconditions.checkNotNull(nullableOperands, "nullableOperands");
+
+      if (literalOperands == null) {
+        this.literalOperands = IntSets.EMPTY_SET;
+      } else {
+        this.literalOperands = new IntArraySet();
+        Arrays.stream(literalOperands).forEach(this.literalOperands::add);
+      }
     }
 
     @Override
     public boolean checkOperandTypes(SqlCallBinding callBinding, boolean throwOnFailure)
     {
-      if (operandTypes.size() != callBinding.getOperandCount()) {
-        // Just like FamilyOperandTypeChecker: assume this is an inapplicable sub-rule of a composite rule; don't throw
-        return false;
-      }
-
       for (int i = 0; i < callBinding.operands().size(); i++) {
         final SqlNode operand = callBinding.operands().get(i);
+
+        if (literalOperands.contains(i)) {
+          // Verify that 'operand' is a literal.
+          if (!SqlUtil.isLiteral(operand)) {
+            return throwOrReturn(
+                throwOnFailure,
+                callBinding,
+                cb -> cb.getValidator()
+                        .newValidationError(
+                            operand,
+                            Static.RESOURCE.argumentMustBeLiteral(callBinding.getOperator().getName())
+                        )
+            );
+          }
+
+          if (!nullableOperands.contains(i) && SqlUtil.isNullLiteral(operand, true)) {
+            return throwOrReturn(
+                throwOnFailure,
+                callBinding,
+                cb -> cb.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal())
+            );
+          }
+        }
+
         final RelDataType operandType = callBinding.getValidator().deriveType(callBinding.getScope(), operand);
         final SqlTypeFamily expectedFamily = operandTypes.get(i);
 
@@ -470,18 +502,18 @@ public class OperatorConversions
         } else if (operandType.getSqlTypeName() == SqlTypeName.NULL) {
           // Null came in, check if operand is a nullable type.
           if (!nullableOperands.contains(i)) {
-            if (throwOnFailure) {
-              throw callBinding.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal());
-            } else {
-              return false;
-            }
+            return throwOrReturn(
+                throwOnFailure,
+                callBinding,
+                cb -> cb.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal())
+            );
           }
         } else {
-          if (throwOnFailure) {
-            throw callBinding.newValidationSignatureError();
-          } else {
-            return false;
-          }
+          return throwOrReturn(
+              throwOnFailure,
+              callBinding,
+              SqlCallBinding::newValidationSignatureError
+          );
         }
       }
 
@@ -510,6 +542,19 @@ public class OperatorConversions
     public boolean isOptional(int i)
     {
       return i + 1 > requiredOperands;
+    }
+  }
+
+  private static boolean throwOrReturn(
+      final boolean throwOnFailure,
+      final SqlCallBinding callBinding,
+      final Function<SqlCallBinding, CalciteException> exceptionMapper
+  )
+  {
+    if (throwOnFailure) {
+      throw exceptionMapper.apply(callBinding);
+    } else {
+      return false;
     }
   }
 }

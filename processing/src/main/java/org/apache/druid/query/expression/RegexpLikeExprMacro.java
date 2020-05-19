@@ -25,15 +25,16 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
+public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
 {
-  private static final String FN_NAME = "regexp_extract";
+  private static final String FN_NAME = "regexp_like";
 
   @Override
   public String name()
@@ -45,20 +46,15 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
   public Expr apply(final List<Expr> args)
   {
     if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("Function[%s] must have 2 to 3 arguments", name());
+      throw new IAE("Function[%s] must have 2 arguments", name());
     }
 
     final Expr arg = args.get(0);
     final Expr patternExpr = args.get(1);
-    final Expr indexExpr = args.size() > 2 ? args.get(2) : null;
 
     if (!patternExpr.isLiteral() ||
         !(patternExpr.getLiteralValue() == null || patternExpr.getLiteralValue() instanceof String)) {
       throw new IAE("Function[%s] pattern must be a string literal", name());
-    }
-
-    if (indexExpr != null && (!indexExpr.isLiteral() || !(indexExpr.getLiteralValue() instanceof Number))) {
-      throw new IAE("Function[%s] index must be a numeric literal", name());
     }
 
     // Precompile the pattern.
@@ -66,11 +62,9 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
         StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
     );
 
-    final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
-
-    class RegexpExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class RegexpLikeExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
-      private RegexpExtractExpr(Expr arg)
+      private RegexpLikeExpr(Expr arg)
       {
         super(FN_NAME, arg);
       }
@@ -81,32 +75,22 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       {
         final String s = arg.eval(bindings).asString();
         final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
-        final String retVal = matcher.find() ? matcher.group(index) : null;
-        return ExprEval.of(retVal);
+        return ExprEval.of(matcher.find(), ExprType.LONG);
       }
 
       @Override
       public Expr visit(Shuttle shuttle)
       {
         Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new RegexpExtractExpr(newArg));
+        return shuttle.visit(new RegexpLikeExpr(newArg));
       }
 
       @Override
       public String stringify()
       {
-        if (indexExpr != null) {
-          return StringUtils.format(
-              "%s(%s, %s, %s)",
-              FN_NAME,
-              arg.stringify(),
-              patternExpr.stringify(),
-              indexExpr.stringify()
-          );
-        }
         return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
       }
     }
-    return new RegexpExtractExpr(arg);
+    return new RegexpLikeExpr(arg);
   }
 }
