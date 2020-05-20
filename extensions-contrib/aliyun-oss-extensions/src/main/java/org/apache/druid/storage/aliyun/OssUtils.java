@@ -264,7 +264,6 @@ public class OssUtils
    * Uploads a file to aliyun-oss if possible. First trying to set ACL to give the bucket owner full control of the file before uploading.
    *
    * @param client     aliyun OSS client
-   * @param disableAcl true if ACL shouldn't be set for the file
    * @param key        The key under which to store the new object.
    * @param file       The path of the file to upload to aliyun-oss.
    */
