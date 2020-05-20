@@ -57,7 +57,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
 
   private static final String BATCH_TASK = "/hadoop/batch_hadoop_indexer.json";
   private static final String BATCH_QUERIES_RESOURCE = "/hadoop/batch_hadoop_queries.json";
-  private static final String BATCH_DATASOURCE = "batchHadoop";
+  private static final String BATCH_DATASOURCE = "batchLegacyHadoop";
 
   private static final String INDEX_TASK = "/hadoop/wikipedia_hadoop_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
@@ -85,8 +85,9 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   @Test
   public void testLegacyITHadoopIndexTest() throws Exception
   {
+    String indexDatasource = BATCH_DATASOURCE + "_" + UUID.randomUUID();
     try (
-        final Closeable ignored0 = unloader(BATCH_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored0 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       final Function<String, String> specPathsTransform = spec -> {
         try {
@@ -105,7 +106,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
       };
 
       doIndexTest(
-          BATCH_DATASOURCE,
+          indexDatasource,
           BATCH_TASK,
           specPathsTransform,
           BATCH_QUERIES_RESOURCE,

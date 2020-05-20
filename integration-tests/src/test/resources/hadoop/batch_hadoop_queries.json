@@ -3,7 +3,7 @@
     "description": "segmentMetadata_query",
     "query": {
       "queryType": "segmentMetadata",
-      "dataSource": "batchHadoop",
+      "dataSource": "%%DATASOURCE%%",
       "merge": "true",
       "intervals": "2014-10/2014-12"
     },
@@ -73,7 +73,7 @@
     "description": "time_boundary_query",
     "query": {
       "queryType": "timeBoundary",
-      "dataSource": "batchHadoop"
+      "dataSource": "%%DATASOURCE%%"
     },
     "expectedResults": [
       {
@@ -90,7 +90,7 @@
     "query": {
       "queryType": "groupBy",
       "dataSource": {
-        "name": "batchHadoop",
+        "name": "%%DATASOURCE%%",
         "type": "table"
       },
       "dimensions": [],
