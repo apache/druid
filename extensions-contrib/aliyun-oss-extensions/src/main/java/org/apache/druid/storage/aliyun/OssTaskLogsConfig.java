@@ -24,9 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 
 import javax.validation.constraints.NotNull;
 
-/**
- * @author frank.chen021@outlook.com
- */
 public class OssTaskLogsConfig
 {
   @JsonProperty

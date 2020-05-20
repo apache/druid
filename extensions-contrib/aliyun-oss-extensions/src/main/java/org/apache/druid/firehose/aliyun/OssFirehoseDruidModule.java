@@ -28,9 +28,6 @@ import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
 
-/**
- * @author frank.chen021@outlook.com
- */
 public class OssFirehoseDruidModule implements DruidModule
 {
   @Override

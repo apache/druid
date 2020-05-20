@@ -53,7 +53,6 @@ import java.net.URI;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
- * @author frank.chen021@outlook.com
  */
 public class OssDataSegmentPuller implements URIDataPuller
 {

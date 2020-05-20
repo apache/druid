@@ -31,7 +31,6 @@ import java.util.Objects;
 /**
  * Contains properties for aliyun-oss input source.
  * Properties can be specified by ingestionSpec which will override system default.
- * @author frank.chen021@outlook.com
  */
 public class OssClientConfig
 {

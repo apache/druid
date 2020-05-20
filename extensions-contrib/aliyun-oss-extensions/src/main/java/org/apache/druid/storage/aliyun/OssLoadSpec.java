@@ -30,9 +30,6 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 
 import java.io.File;
 
-/**
- * @author frank.chen021@outlook.com
- */
 @JsonTypeName(OssStorageDruidModule.SCHEME_ZIP)
 public class OssLoadSpec implements LoadSpec
 {

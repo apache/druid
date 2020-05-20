@@ -26,7 +26,6 @@ import javax.validation.constraints.Min;
 /**
  * Stores the configuration for options related to reading
  * input data from aliyun-oss into Druid
- * @author frank.chen021@outlook.com
  */
 public class OssInputDataConfig
 {

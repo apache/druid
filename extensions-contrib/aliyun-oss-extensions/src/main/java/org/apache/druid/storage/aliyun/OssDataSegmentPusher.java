@@ -37,9 +37,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
-/**
- * @author frank.chen021@outlook.com
- */
 public class OssDataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(OssDataSegmentPusher.class);

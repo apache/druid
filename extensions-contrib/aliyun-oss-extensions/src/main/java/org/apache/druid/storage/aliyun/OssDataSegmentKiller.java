@@ -33,9 +33,6 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.IOException;
 import java.util.Map;
 
-/**
- * @author frank.chen021@outlook.com
- */
 public class OssDataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(OssDataSegmentKiller.class);

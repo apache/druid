@@ -34,9 +34,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
-/**
- * @author frank.chen021@outlook.com
- */
 public class OssEntity extends RetryingInputEntity
 {
   private final OSS ossClient;

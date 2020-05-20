@@ -45,9 +45,6 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.IOException;
 import java.util.Map;
 
-/**
- * @author frank.chen021@outlook.com
- */
 public class OssDataSegmentMover implements DataSegmentMover
 {
   private static final Logger log = new Logger(OssDataSegmentMover.class);

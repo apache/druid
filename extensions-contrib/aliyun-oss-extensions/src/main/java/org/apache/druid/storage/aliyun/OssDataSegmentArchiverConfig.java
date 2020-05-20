@@ -21,9 +21,6 @@ package org.apache.druid.storage.aliyun;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- * @author frank.chen021@outlook.com
- */
 public class OssDataSegmentArchiverConfig
 {
   @JsonProperty
