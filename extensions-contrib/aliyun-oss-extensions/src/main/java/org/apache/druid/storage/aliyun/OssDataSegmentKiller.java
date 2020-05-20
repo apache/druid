@@ -63,17 +63,10 @@ public class OssDataSegmentKiller implements DataSegmentKiller
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String bucket = MapUtils.getString(loadSpec, "bucket");
       String path = MapUtils.getString(loadSpec, "key");
-      String descriptorPath = DataSegmentKiller.descriptorPath(path);
 
       if (client.doesObjectExist(bucket, path)) {
         log.info("Removing index file[aliyun-oss://%s/%s] from aliyun OSS!", bucket, path);
         client.deleteObject(bucket, path);
-      }
-      // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
-      // anymore, but we still delete them if exists.
-      if (client.doesObjectExist(bucket, descriptorPath)) {
-        log.info("Removing descriptor file[aliyun-oss://%s/%s] from aliyun OSS!", bucket, descriptorPath);
-        client.deleteObject(bucket, descriptorPath);
       }
     }
     catch (OSSException e) {
