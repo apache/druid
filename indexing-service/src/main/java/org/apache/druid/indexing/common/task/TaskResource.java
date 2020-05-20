@@ -37,6 +37,7 @@ public class TaskResource
   )
   {
     this.availabilityGroup = Preconditions.checkNotNull(availabilityGroup, "availabilityGroup");
+    Preconditions.checkArgument(requiredCapacity > 0);
     this.requiredCapacity = requiredCapacity;
   }
 
