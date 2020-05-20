@@ -220,6 +220,13 @@
           <skip>true</skip>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <configuration>
+          <skip>true</skip> <!-- ignore non-production code -->
+        </configuration>
+      </plugin>
     </plugins>
     <pluginManagement>
       <plugins>
