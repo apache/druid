@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -101,9 +102,9 @@ public class OssTaskLogsTest extends EasyMockSupport
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET);
-    deleteRequest1.setKeys(Arrays.asList(KEY_1));
+    deleteRequest1.setKeys(Collections.singletonList(KEY_1));
     DeleteObjectsRequest deleteRequest2 = new DeleteObjectsRequest(TEST_BUCKET);
-    deleteRequest2.setKeys(Arrays.asList(KEY_2));
+    deleteRequest2.setKeys(Collections.singletonList(KEY_2));
 
     OssTestUtils.mockClientDeleteObjects(
         ossClient,
@@ -138,7 +139,7 @@ public class OssTaskLogsTest extends EasyMockSupport
     );
 
     DeleteObjectsRequest expectedRequest = new DeleteObjectsRequest(TEST_BUCKET);
-    expectedRequest.setKeys(Arrays.asList(KEY_1));
+    expectedRequest.setKeys(Collections.singletonList(KEY_1));
     OssTestUtils.mockClientDeleteObjects(
         ossClient,
         ImmutableList.of(expectedRequest),
@@ -172,7 +173,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       );
 
       DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET);
-      deleteRequest1.setKeys(Arrays.asList(KEY_1));
+      deleteRequest1.setKeys(Collections.singletonList(KEY_1));
       OssTestUtils.mockClientDeleteObjects(
           ossClient,
           ImmutableList.of(),
@@ -211,7 +212,7 @@ public class OssTaskLogsTest extends EasyMockSupport
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET);
-    deleteRequest1.setKeys(Arrays.asList(KEY_1));
+    deleteRequest1.setKeys(Collections.singletonList(KEY_1));
 
     OssTestUtils.mockClientDeleteObjects(ossClient, ImmutableList.of(deleteRequest1), ImmutableMap.of());
 
@@ -240,7 +241,7 @@ public class OssTaskLogsTest extends EasyMockSupport
     );
 
     DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET);
-    deleteRequest1.setKeys(Arrays.asList(KEY_1));
+    deleteRequest1.setKeys(Collections.singletonList(KEY_1));
 
     OssTestUtils.mockClientDeleteObjects(
         ossClient,
@@ -274,7 +275,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       );
 
       DeleteObjectsRequest deleteRequest1 = new DeleteObjectsRequest(TEST_BUCKET);
-      deleteRequest1.setKeys(Arrays.asList(KEY_1));
+      deleteRequest1.setKeys(Collections.singletonList(KEY_1));
       OssTestUtils.mockClientDeleteObjects(
           ossClient,
           ImmutableList.of(),
