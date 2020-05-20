@@ -113,8 +113,8 @@ public class DataSchema
           throw new IAE("duplicate aggregators found with name [%s].", factory.getName());
         }
       }
-    } else if (this.granularitySpec.isRollup()) {
-      log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
+    } else if (aggregators == null && this.granularitySpec.isRollup()) {
+      log.warn("Rollup is enabled but no metricsSpec has been specified. Are you sure this is what you want?");
     }
   }
 
