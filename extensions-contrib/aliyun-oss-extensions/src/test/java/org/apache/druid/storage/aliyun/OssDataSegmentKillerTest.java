@@ -19,10 +19,11 @@
 
 package org.apache.druid.storage.aliyun;
 
+import com.aliyun.oss.ClientException;
 import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.DeleteObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
-import com.amazonaws.SdkClientException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
@@ -50,8 +51,8 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final int MAX_KEYS = 1;
-  private static final Exception RECOVERABLE_EXCEPTION = new SdkClientException(new IOException());
-  private static final Exception NON_RECOVERABLE_EXCEPTION = new SdkClientException(new NullPointerException());
+  private static final Exception RECOVERABLE_EXCEPTION = new ClientException(new IOException());
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new ClientException(new NullPointerException());
 
   @Mock
   private OSS client;
