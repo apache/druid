@@ -27,7 +27,7 @@ To use this Apache Druid extension, make sure to [include](../../development/ext
 
 ## Deep Storage
 
-[Aliyun](https://www.aliyun.com) is the 3rd largest cloud infrasture provider in the world. It also provides its own storage solution, that is OSS, [Object Storage Service](https://www.aliyun.com/product/oss). 
+[Aliyun](https://www.aliyun.com) is the 3rd largest cloud infrastructure provider in the world. It also provides its own storage solution, that is OSS, [Object Storage Service](https://www.aliyun.com/product/oss). 
 
 To use aliyun OSS, first config the OSS as below
 
