@@ -23,8 +23,8 @@ import {
   HeaderRows,
   isFirstRowHeader,
   normalizeQueryResult,
+  parseSqlQuery,
   shouldIncludeTimestamp,
-  sqlParserFactory,
   SqlQuery,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
@@ -32,7 +32,6 @@ import memoizeOne from 'memoize-one';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
-import { SQL_FUNCTIONS } from '../../../lib/sql-docs';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
@@ -63,13 +62,9 @@ import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
 
-const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
-
 const parser = memoizeOne((sql: string): SqlQuery | undefined => {
   try {
-    const parsed = parserRaw(sql);
-    if (!(parsed instanceof SqlQuery)) return;
-    return parsed;
+    return parseSqlQuery(sql);
   } catch {
     return;
   }
