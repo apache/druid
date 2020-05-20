@@ -75,25 +75,25 @@ describe('rule editor', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-    it('matches snapshot with existing tier and non existing tier in rule', () => {
-      const ruleEditor = (
-        <RuleEditor
-          rule={{
-            type: 'loadByInterval',
-            period: '2010-01-01/2015-01-01',
-            tieredReplicants: {
-              test1: 2,
-              nonexist: 1,
-            },
-          }}
-          tiers={['test1', 'test2', 'test3']}
-          onChange={() => {}}
-          onDelete={() => {}}
-          moveUp={null}
-          moveDown={null}
-        />
-      );
-      const { container } = render(ruleEditor);
-      expect(container.firstChild).toMatchSnapshot();
-    });
+  it('matches snapshot with existing tier and non existing tier in rule', () => {
+    const ruleEditor = (
+      <RuleEditor
+        rule={{
+          type: 'loadByInterval',
+          period: '2010-01-01/2015-01-01',
+          tieredReplicants: {
+            test1: 2,
+            nonexist: 1,
+          },
+        }}
+        tiers={['test1', 'test2', 'test3']}
+        onChange={() => {}}
+        onDelete={() => {}}
+        moveUp={null}
+        moveDown={null}
+      />
+    );
+    const { container } = render(ruleEditor);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });
