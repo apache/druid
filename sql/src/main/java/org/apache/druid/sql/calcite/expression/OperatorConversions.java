@@ -224,6 +224,10 @@ public class OperatorConversions
     }
   }
 
+  /**
+   * Returns a builder that helps {@link SqlOperatorConversion} implementations create the {@link SqlFunction}
+   * objects they need to return from {@link SqlOperatorConversion#calciteOperator()}.
+   */
   public static OperatorBuilder operatorBuilder(final String name)
   {
     return new OperatorBuilder(name);
@@ -248,64 +252,140 @@ public class OperatorConversions
       this.name = Preconditions.checkNotNull(name, "name");
     }
 
+    /**
+     * Sets the {@link SqlKind} of the operator.
+     *
+     * The default, if not provided, is {@link SqlKind#OTHER_FUNCTION}.
+     */
     public OperatorBuilder kind(final SqlKind kind)
     {
       this.kind = kind;
       return this;
     }
 
-    public OperatorBuilder returnType(final SqlTypeName typeName)
+    /**
+     * Sets the return type of the operator to "typeName", marked as non-nullable.
+     *
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, or
+     * {@link #returnTypeInference(SqlReturnTypeInference)} must be used before calling {@link #build()}. These methods
+     * cannot be mixed; you must call exactly one.
+     */
+    public OperatorBuilder returnTypeNonNull(final SqlTypeName typeName)
     {
+      if (this.returnTypeInference != null) {
+        throw new ISE("Cannot set return type multiple times");
+      }
+
       this.returnTypeInference = ReturnTypes.explicit(
           factory -> Calcites.createSqlType(factory, typeName)
       );
       return this;
     }
 
-    public OperatorBuilder nullableReturnType(final SqlTypeName typeName)
+    /**
+     * Sets the return type of the operator to "typeName", marked as nullable.
+     *
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, or
+     * {@link #returnTypeInference(SqlReturnTypeInference)} must be used before calling {@link #build()}. These methods
+     * cannot be mixed; you must call exactly one.
+     */
+    public OperatorBuilder returnTypeNullable(final SqlTypeName typeName)
     {
+      if (this.returnTypeInference != null) {
+        throw new ISE("Cannot set return type multiple times");
+      }
+
       this.returnTypeInference = ReturnTypes.explicit(
           factory -> Calcites.createSqlTypeWithNullability(factory, typeName, true)
       );
       return this;
     }
 
+    /**
+     * Provides customized return type inference logic.
+     *
+     * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, or
+     * {@link #returnTypeInference(SqlReturnTypeInference)} must be used before calling {@link #build()}. These methods
+     * cannot be mixed; you must call exactly one.
+     */
     public OperatorBuilder returnTypeInference(final SqlReturnTypeInference returnTypeInference)
     {
+      if (this.returnTypeInference != null) {
+        throw new ISE("Cannot set return type multiple times");
+      }
+
       this.returnTypeInference = returnTypeInference;
       return this;
     }
 
+    /**
+     * Sets the {@link SqlKind} of the operator.
+     *
+     * The default, if not provided, is {@link SqlFunctionCategory#USER_DEFINED_FUNCTION}.
+     */
     public OperatorBuilder functionCategory(final SqlFunctionCategory functionCategory)
     {
       this.functionCategory = functionCategory;
       return this;
     }
 
+    /**
+     * Provides customized operand type checking logic.
+     *
+     * One of {@link #operandTypes(SqlTypeFamily...)} or {@link #operandTypeChecker(SqlOperandTypeChecker)} must be used
+     * before calling {@link #build()}. These methods cannot be mixed; you must call exactly one.
+     */
     public OperatorBuilder operandTypeChecker(final SqlOperandTypeChecker operandTypeChecker)
     {
       this.operandTypeChecker = operandTypeChecker;
       return this;
     }
 
+    /**
+     * Signifies that a function accepts operands of type family given by {@param operandTypes}.
+     *
+     * May be used in conjunction with {@link #requiredOperands(int)} and {@link #literalOperands(int...)} in order
+     * to further refine operand checking logic.
+     *
+     * For deeper control, use {@link #operandTypeChecker(SqlOperandTypeChecker)} instead.
+     */
     public OperatorBuilder operandTypes(final SqlTypeFamily... operandTypes)
     {
       this.operandTypes = Arrays.asList(operandTypes);
       return this;
     }
 
+    /**
+     * Signifies that the first {@code requiredOperands} operands are required, and all later operands are optional.
+     *
+     * Required operands are not allowed to be null. Optional operands can either be skipped or explicitly provided as
+     * literal NULLs. For example, if {@code requiredOperands == 1}, then {@code F(x, NULL)} and  {@code F(x)} are both
+     * accepted, and {@code x} must not be null.
+     *
+     * Must be used in conjunction with {@link #operandTypes(SqlTypeFamily...)}; this method is not compatible with
+     * {@link #operandTypeChecker(SqlOperandTypeChecker)}.
+     */
     public OperatorBuilder requiredOperands(final int requiredOperands)
     {
       this.requiredOperands = requiredOperands;
       return this;
     }
 
+    /**
+     * Signifies that the operands at positions given by {@code literalOperands} must be literals.
+     *
+     * Must be used in conjunction with {@link #operandTypes(SqlTypeFamily...)}; this method is not compatible with
+     * {@link #operandTypeChecker(SqlOperandTypeChecker)}.
+     */
     public OperatorBuilder literalOperands(final int... literalOperands)
     {
       this.literalOperands = literalOperands;
       return this;
     }
 
+    /**
+     * Creates a {@link SqlFunction} from this builder.
+     */
     public SqlFunction build()
     {
       // Create "nullableOperands" set including all optional arguments.
@@ -323,11 +403,11 @@ public class OperatorConversions
             nullableOperands,
             literalOperands
         );
-      } else if (operandTypes == null && requiredOperands == null) {
+      } else if (operandTypes == null && requiredOperands == null && literalOperands == null) {
         theOperandTypeChecker = operandTypeChecker;
       } else {
         throw new ISE(
-            "Cannot have both 'operandTypeChecker' and 'operandTypes' / 'requiredOperands'"
+            "Cannot have both 'operandTypeChecker' and 'operandTypes' / 'requiredOperands' / 'literalOperands'"
         );
       }
 
@@ -482,14 +562,6 @@ public class OperatorConversions
                         )
             );
           }
-
-          if (!nullableOperands.contains(i) && SqlUtil.isNullLiteral(operand, true)) {
-            return throwOrReturn(
-                throwOnFailure,
-                callBinding,
-                cb -> cb.getValidator().newValidationError(operand, Static.RESOURCE.nullIllegal())
-            );
-          }
         }
 
         final RelDataType operandType = callBinding.getValidator().deriveType(callBinding.getScope(), operand);
@@ -499,7 +571,7 @@ public class OperatorConversions
           // ANY matches anything. This operand is all good; do nothing.
         } else if (expectedFamily.getTypeNames().contains(operandType.getSqlTypeName())) {
           // Operand came in with one of the expected types.
-        } else if (operandType.getSqlTypeName() == SqlTypeName.NULL) {
+        } else if (operandType.getSqlTypeName() == SqlTypeName.NULL || SqlUtil.isNullLiteral(operand, true)) {
           // Null came in, check if operand is a nullable type.
           if (!nullableOperands.contains(i)) {
             return throwOrReturn(

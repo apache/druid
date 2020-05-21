@@ -40,7 +40,7 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
       .requiredOperands(2)
       .literalOperands(1, 2)
-      .nullableReturnType(SqlTypeName.VARCHAR)
+      .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
 

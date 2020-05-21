@@ -77,6 +77,7 @@ The following built-in functions are available.
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
+|regexp_like|regexp_like(expr, pattern) returns whether `expr` matches regular expression `pattern`. The pattern must match starting at the beginning of `expr`, but does not need to match the entire string.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
 |right|right(expr, length) returns the rightmost length characters from a string|
