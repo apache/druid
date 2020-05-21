@@ -32,11 +32,11 @@ apt-get install -y supervisor
 
 # Zookeeper
 ZK_VERSION=3.5.8
-wget -q -O /tmp/zookeeper-$ZK_VERSION.tar.gz "https://apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/zookeeper-$ZK_VERSION.tar.gz"
-tar -xzf /tmp/zookeeper-$ZK_VERSION.tar.gz -C /usr/local
-cp /usr/local/zookeeper-$ZK_VERSION/conf/zoo_sample.cfg /usr/local/zookeeper-$ZK_VERSION/conf/zoo.cfg
-ln -s /usr/local/zookeeper-$ZK_VERSION /usr/local/zookeeper
-rm /tmp/zookeeper-$ZK_VERSION.tar.gz
+wget -q -O /tmp/apache-zookeeper-$ZK_VERSION-bin.tar.gz "https://apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/apache-zookeeper-$ZK_VERSION-bin.tar.gz"
+tar -xzf /tmp/apache-zookeeper-$ZK_VERSION-bin.tar.gz -C /usr/local
+cp /usr/local/apache-zookeeper-$ZK_VERSION-bin/conf/zoo_sample.cfg /usr/local/apache-zookeeper-$ZK_VERSION-bin/conf/zoo.cfg
+ln -s /usr/local/apache-zookeeper-$ZK_VERSION-bin /usr/local/zookeeper
+rm /tmp/apache-zookeeper-$ZK_VERSION-bin.tar.gz
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
