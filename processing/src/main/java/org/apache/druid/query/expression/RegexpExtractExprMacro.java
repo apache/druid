@@ -79,10 +79,16 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        final String s = arg.eval(bindings).asString();
-        final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
-        final String retVal = matcher.find() ? matcher.group(index) : null;
-        return ExprEval.of(retVal);
+        final String s = NullHandling.nullToEmptyIfNeeded(arg.eval(bindings).asString());
+
+        if (s == null) {
+          // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
+          return ExprEval.of(null);
+        } else {
+          final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
+          final String retVal = matcher.find() ? matcher.group(index) : null;
+          return ExprEval.of(retVal);
+        }
       }
 
       @Override

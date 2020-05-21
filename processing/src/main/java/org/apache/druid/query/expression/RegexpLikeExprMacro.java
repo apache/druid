@@ -45,7 +45,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() == 2) {
+    if (args.size() != 2) {
       throw new IAE("Function[%s] must have 2 arguments", name());
     }
 
@@ -73,9 +73,15 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        final String s = arg.eval(bindings).asString();
-        final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
-        return ExprEval.of(matcher.find(), ExprType.LONG);
+        final String s = NullHandling.nullToEmptyIfNeeded(arg.eval(bindings).asString());
+
+        if (s == null) {
+          // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
+          return ExprEval.of(false, ExprType.LONG);
+        } else {
+          final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
+          return ExprEval.of(matcher.find(), ExprType.LONG);
+        }
       }
 
       @Override

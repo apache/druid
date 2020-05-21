@@ -155,6 +155,22 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         new RegexpExtractOperatorConversion().calciteOperator(),
         ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("(o)"),
+            testHelper.makeLiteral(1)
+        ),
+        DruidExpression.of(
+            SimpleExtraction.of("s", new RegexDimExtractionFn("(o)", 1, true, null)),
+            "regexp_extract(\"s\",'(o)',1)"
+        ),
+
+        // Column "s" contains an 'o', but not at the beginning; we do match this.
+        "o"
+    );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
             testHelper.makeCall(
                 SqlStdOperatorTable.CONCAT,
                 testHelper.makeLiteral("Z"),
@@ -205,6 +221,49 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         NullHandling.emptyToNullIfNeeded("")
     );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("")
+        ),
+        DruidExpression.of(
+            SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
+            "regexp_extract(\"s\",'')"
+        ),
+        NullHandling.emptyToNullIfNeeded("")
+    );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
+            testHelper.makeLiteral("(.)")
+        ),
+        DruidExpression.fromExpression("regexp_extract(null,'(.)')"),
+        null
+    );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
+            testHelper.makeLiteral("")
+        ),
+        DruidExpression.fromExpression("regexp_extract(null,'')"),
+        null
+    );
+
+    testHelper.testExpression(
+        new RegexpExtractOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
+            testHelper.makeLiteral("null")
+        ),
+        DruidExpression.fromExpression("regexp_extract(null,'null')"),
+        null
+    );
   }
 
   @Test
@@ -226,8 +285,9 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeInputRef("s"),
             testHelper.makeLiteral("o")
         ),
-        // Column "s" contains an 'o', but not at the beginning, so we don't match
         DruidExpression.fromExpression("regexp_like(\"s\",'o')"),
+
+        // Column "s" contains an 'o', but not at the beginning; we do match this.
         1L
     );
 
@@ -294,6 +354,26 @@ public class ExpressionsTest extends ExpressionTestBase
     testHelper.testExpression(
         new RegexpLikeOperatorConversion().calciteOperator(),
         ImmutableList.of(
+            testHelper.makeInputRef("newliney"),
+            testHelper.makeLiteral("boo")
+        ),
+        DruidExpression.fromExpression("regexp_like(\"newliney\",'boo')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("newliney"),
+            testHelper.makeLiteral("^boo")
+        ),
+        DruidExpression.fromExpression("regexp_like(\"newliney\",'^boo')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
             testHelper.makeCall(
                 SqlStdOperatorTable.CONCAT,
                 testHelper.makeLiteral("Z"),
@@ -302,6 +382,38 @@ public class ExpressionsTest extends ExpressionTestBase
             testHelper.makeLiteral("x(.)")
         ),
         DruidExpression.fromExpression("regexp_like(concat('Z',\"s\"),'x(.)')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
+            testHelper.makeLiteral("(.)")
+        ),
+        DruidExpression.fromExpression("regexp_like(null,'(.)')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
+            testHelper.makeLiteral("")
+        ),
+        DruidExpression.fromExpression("regexp_like(null,'')"),
+
+        // In SQL-compatible mode, nulls don't match anything. Otherwise, they match like empty strings.
+        NullHandling.sqlCompatible() ? 0L : 1L
+    );
+
+    testHelper.testExpression(
+        new RegexpLikeOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeNullLiteral(SqlTypeName.VARCHAR),
+            testHelper.makeLiteral("null")
+        ),
+        DruidExpression.fromExpression("regexp_like(null,'null')"),
         0L
     );
   }
