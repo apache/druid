@@ -60,11 +60,11 @@ function _download_zookeeper() {
   zk_version="$(_get_zookeeper_version)"
 
   _log "Downloading zookeeper"
-  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/zookeeper-${zk_version}.tar.gz" \
+  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/apache-zookeeper-${zk_version}-bin.tar.gz" \
     | tar xz \
   && rm -rf "$dest" \
-  && mv "zookeeper-${zk_version}" "$dest" \
-  && rm -f "zookeeper-${zk_version}"
+  && mv "apache-zookeeper-${zk_version}-bin" "$dest" \
+  && rm -f "apache-zookeeper-${zk_version}-bin"
 }
 
 function _build_distribution() {
