@@ -61,6 +61,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningC
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -98,11 +99,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -524,10 +524,28 @@ public class CompactionTask extends AbstractBatchIndexTask
                                  .add(p)
       );
 
-      final List<ParallelIndexIngestionSpec> specs = new ArrayList<>(intervalToSegments.size());
-      for (Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
-        final Interval interval = entry.getKey();
-        final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.getValue();
+      // unify overlapping intervals to ensure overlapping segments compacting in the same indexSpec
+      List<Pair<Interval, List<Pair<QueryableIndex, DataSegment>>>> intervalToSegmentsUnified = new ArrayList<>();
+      Iterator<Interval> iterator = intervalToSegments.keySet().iterator();
+      Interval union = iterator.next();
+      List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>(intervalToSegments.get(union));
+      while (iterator.hasNext()) {
+        Interval cur = iterator.next();
+        if (union.overlaps(cur)) {
+          union = Intervals.utc(union.getStartMillis(), Math.max(union.getEndMillis(), cur.getEndMillis()));
+          segments.addAll(intervalToSegments.get(cur));
+        } else {
+          intervalToSegmentsUnified.add(Pair.of(union, segments));
+          union = cur;
+          segments = new ArrayList<>(intervalToSegments.get(cur));
+        }
+      }
+      intervalToSegmentsUnified.add(Pair.of(union, segments));
+
+      final List<ParallelIndexIngestionSpec> specs = new ArrayList<>(intervalToSegmentsUnified.size());
+      for (Pair<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegmentsUnified) {
+        final Interval interval = entry.lhs;
+        final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.rhs;
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
             segmentsToCompact,
@@ -710,20 +728,8 @@ public class CompactionTask extends AbstractBatchIndexTask
     // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
     // frequently, and thus the performance should be optimized for recent ones rather than old ones.
 
-    // timelineSegments are sorted in order of interval, but we do a sanity check here.
-    final Comparator<Interval> intervalComparator = Comparators.intervalsByStartThenEnd();
-    for (int i = 0; i < queryableIndices.size() - 1; i++) {
-      final Interval shouldBeSmaller = queryableIndices.get(i).lhs.getDataInterval();
-      final Interval shouldBeLarger = queryableIndices.get(i + 1).lhs.getDataInterval();
-      Preconditions.checkState(
-          intervalComparator.compare(shouldBeSmaller, shouldBeLarger) <= 0,
-          "QueryableIndexes are not sorted! Interval[%s] of segment[%s] is laster than interval[%s] of segment[%s]",
-          shouldBeSmaller,
-          queryableIndices.get(i).rhs.getId(),
-          shouldBeLarger,
-          queryableIndices.get(i + 1).rhs.getId()
-      );
-    }
+    // sort timelineSegments in order of interval.
+    queryableIndices.sort((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.rhs.getInterval(), o2.rhs.getInterval()));
 
     int index = 0;
     for (Pair<QueryableIndex, DataSegment> pair : Lists.reverse(queryableIndices)) {

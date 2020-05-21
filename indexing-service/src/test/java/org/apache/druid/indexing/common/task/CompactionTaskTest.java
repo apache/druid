@@ -73,7 +73,6 @@ import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -160,7 +159,11 @@ public class CompactionTaskTest
       Intervals.of("2017-03-01/2017-04-01"),
       Intervals.of("2017-04-01/2017-05-01"),
       Intervals.of("2017-05-01/2017-06-01"),
-      Intervals.of("2017-06-01/2017-07-01")
+      Intervals.of("2017-06-01/2017-07-01"),
+      // overlapping intervals
+      Intervals.of("2017-06-01/2017-06-02"),
+      Intervals.of("2017-06-15/2017-06-16"),
+      Intervals.of("2017-06-30/2017-07-01")
   );
   private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = new HashMap<>();
   private static final ParallelIndexTuningConfig TUNING_CONFIG = createTuningConfig();
@@ -191,12 +194,17 @@ public class CompactionTaskTest
     MIXED_TYPE_COLUMN_MAP.put(Intervals.of("2017-05-01/2017-06-01"), new DoubleDimensionSchema(MIXED_TYPE_COLUMN));
     MIXED_TYPE_COLUMN_MAP.put(Intervals.of("2017-06-01/2017-07-01"), new DoubleDimensionSchema(MIXED_TYPE_COLUMN));
 
+    MIXED_TYPE_COLUMN_MAP.put(Intervals.of("2017-06-01/2017-06-02"), new DoubleDimensionSchema(MIXED_TYPE_COLUMN));
+    MIXED_TYPE_COLUMN_MAP.put(Intervals.of("2017-06-15/2017-06-16"), new DoubleDimensionSchema(MIXED_TYPE_COLUMN));
+    MIXED_TYPE_COLUMN_MAP.put(Intervals.of("2017-06-30/2017-07-01"), new DoubleDimensionSchema(MIXED_TYPE_COLUMN));
+
     DIMENSIONS = new HashMap<>();
     AGGREGATORS = new ArrayList<>();
 
     DIMENSIONS.put(ColumnHolder.TIME_COLUMN_NAME, new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME));
     DIMENSIONS.put(TIMESTAMP_COLUMN, new LongDimensionSchema(TIMESTAMP_COLUMN));
-    for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
+    int num = 6;
+    for (int i = 0; i < num; i++) {
       final StringDimensionSchema schema = new StringDimensionSchema(
           "string_dim_" + i,
           null,
@@ -204,15 +212,15 @@ public class CompactionTaskTest
       );
       DIMENSIONS.put(schema.getName(), schema);
     }
-    for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
+    for (int i = 0; i < num; i++) {
       final LongDimensionSchema schema = new LongDimensionSchema("long_dim_" + i);
       DIMENSIONS.put(schema.getName(), schema);
     }
-    for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
+    for (int i = 0; i < num; i++) {
       final FloatDimensionSchema schema = new FloatDimensionSchema("float_dim_" + i);
       DIMENSIONS.put(schema.getName(), schema);
     }
-    for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
+    for (int i = 0; i < num; i++) {
       final DoubleDimensionSchema schema = new DoubleDimensionSchema("double_dim_" + i);
       DIMENSIONS.put(schema.getName(), schema);
     }
@@ -224,14 +232,13 @@ public class CompactionTaskTest
     AGGREGATORS.add(new DoubleLastAggregatorFactory("agg_4", "double_dim_4"));
 
     for (int i = 0; i < SEGMENT_INTERVALS.size(); i++) {
-      final Interval segmentInterval = Intervals.of(StringUtils.format("2017-0%d-01/2017-0%d-01", (i + 1), (i + 2)));
       SEGMENT_MAP.put(
           new DataSegment(
               DATA_SOURCE,
-              segmentInterval,
-              "version",
+              SEGMENT_INTERVALS.get(i),
+              "version_" + i,
               ImmutableMap.of(),
-              findDimensions(i, segmentInterval),
+              findDimensions(i, SEGMENT_INTERVALS.get(i)),
               AGGREGATORS.stream().map(AggregatorFactory::getName).collect(Collectors.toList()),
               new NumberedShardSpec(0, 1),
               0,
@@ -285,7 +292,7 @@ public class CompactionTaskTest
     dimensions.add(TIMESTAMP_COLUMN);
     for (int i = 0; i < 6; i++) {
       int postfix = i + startIndex;
-      postfix = postfix >= 6 ? postfix - 6 : postfix;
+      postfix = postfix % 6;
       dimensions.add("string_dim_" + postfix);
       dimensions.add("long_dim_" + postfix);
       dimensions.add("float_dim_" + postfix);
