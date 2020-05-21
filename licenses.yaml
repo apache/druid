@@ -1588,6 +1588,7 @@ license_name: Apache License version 2.0
 version: 3.5.8
 libraries:
   - org.apache.zookeeper: zookeeper
+  - org.apache.zookeeper: zookeeper-jute
 notices:
   - zookeeper: |
       Apache ZooKeeper
