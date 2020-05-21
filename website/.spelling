@@ -451,6 +451,8 @@ v9
 DskipTests
 Papache-release
 Pdist
+Ddruid.console.skip
+yaml
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -1750,5 +1752,3 @@ CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
 bin.tar.gz
-Ddruid.console.skip
-yaml
