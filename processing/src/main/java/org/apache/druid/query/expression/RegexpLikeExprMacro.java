@@ -45,7 +45,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 3) {
+    if (args.size() == 2) {
       throw new IAE("Function[%s] must have 2 arguments", name());
     }
 
