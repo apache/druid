@@ -31,12 +31,18 @@ apt-get install -y mysql-server
 apt-get install -y supervisor
 
 # Zookeeper
-ZK_VERSION=3.5.8
-wget -q -O /tmp/apache-zookeeper-$ZK_VERSION-bin.tar.gz "https://apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/apache-zookeeper-$ZK_VERSION-bin.tar.gz"
-tar -xzf /tmp/apache-zookeeper-$ZK_VERSION-bin.tar.gz -C /usr/local
-cp /usr/local/apache-zookeeper-$ZK_VERSION-bin/conf/zoo_sample.cfg /usr/local/apache-zookeeper-$ZK_VERSION-bin/conf/zoo.cfg
-ln -s /usr/local/apache-zookeeper-$ZK_VERSION-bin /usr/local/zookeeper
-rm /tmp/apache-zookeeper-$ZK_VERSION-bin.tar.gz
+
+#ZK_VERSION=3.5.8
+#ZK_TAR=apache-zookeeper-$ZK_VERSION-bin
+
+ZK_VERISON=3.4.14
+ZK_TAR=zookeeper-$ZK_VERSION
+
+wget -q -O /tmp/$ZK_TAR.tar.gz "https://apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
+tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
+cp /usr/local/$ZK_TAR/conf/zoo_sample.cfg /usr/local/$ZK_TAR/conf/zoo.cfg
+ln -s /usr/local/$ZK_TAR /usr/local/zookeeper
+rm /tmp/$ZK_TAR.tar.gz
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor

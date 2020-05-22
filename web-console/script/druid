@@ -58,13 +58,15 @@ function _download_zookeeper() {
   local dest="$1"
   local zk_version
   zk_version="$(_get_zookeeper_version)"
+  #zk_tar=apache-zookeeper-${zk_version}-bin # for zk 3.5.x
+  zk_tar=zookeeper-${zk_version} # for zk 3.4.x
 
   _log "Downloading zookeeper"
-  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/apache-zookeeper-${zk_version}-bin.tar.gz" \
+  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/$zk_tar.tar.gz" \
     | tar xz \
   && rm -rf "$dest" \
-  && mv "apache-zookeeper-${zk_version}-bin" "$dest" \
-  && rm -f "apache-zookeeper-${zk_version}-bin"
+  && mv "$zk_tar" "$dest" \
+  && rm -f "$zk_tar"
 }
 
 function _build_distribution() {

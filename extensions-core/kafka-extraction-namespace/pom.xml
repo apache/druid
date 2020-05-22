@@ -136,6 +136,13 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.apache.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+      <!-- Kafka brokers requires zookeeper 3.5.x clients for testing -->
+      <version>3.5.8</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka_2.12</artifactId>
       <version>${apache.kafka.version}</version>
