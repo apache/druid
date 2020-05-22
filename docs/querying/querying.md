@@ -37,7 +37,7 @@ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:applica
 
 You can also enter them directly in the Druid console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
 
-![Native query](../assets/tutorial-query-07.png "Native query")
+![Native query](../assets/native-queries-01.png "Native query")
 
 
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different
