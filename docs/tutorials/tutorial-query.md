@@ -159,23 +159,23 @@ Here is a collection of queries to try out:
 ### Query over time
 
 ```sql
-SELECT FLOOR(__time to HOUR) AS HourTime, SUM(sum_deleted) AS LinesDeleted
+SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
 FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
 GROUP BY 1
 ```
 
-![Query example](../assets/tutorial-query-03.png "Query example")
+![Query example](../assets/tutorial-query-07.png "Query example")
 
 ### General group by
 
 ```sql
-SELECT channel, page, SUM(sum_added)
+SELECT channel, page, SUM(added)
 FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
 GROUP BY channel, page
 ORDER BY SUM(added) DESC
 ```
 
-![Query example](../assets/tutorial-query-04.png "Query example")
+![Query example](../assets/tutorial-query-08.png "Query example")
 
 
 ## Other ways to invoke SQL queries
