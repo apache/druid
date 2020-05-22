@@ -389,7 +389,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 ```
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
--Djava.io.tmpdir=<something other than /tmp which might be mounted to volatile tmpfs file system>
+-Djava.io.tmpdir=<should not be volatile tmpfs and also has good read and write speed. Recommended to use local fs>
 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Dorg.jboss.logging.provider=slf4j
 -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.SLF4JLogger
