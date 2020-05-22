@@ -567,6 +567,13 @@ thriftJar
  - ../docs/development/extensions-contrib/time-min-max.md
 timeMax
 timeMin
+ - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Aliyun
+aliyun
+OSS
+AccessKey
+aliyun-oss
+url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
@@ -1750,8 +1757,3 @@ CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
 bin.tar.gz
-Aliyun
-aliyun
-OSS
-AccessKey
-aliyun-oss

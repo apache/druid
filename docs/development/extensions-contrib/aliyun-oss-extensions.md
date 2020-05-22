@@ -29,13 +29,13 @@ To use this Apache Druid extension, make sure to [include](../../development/ext
 
 [Aliyun](https://www.aliyun.com) is the 3rd largest cloud infrastructure provider in the world. It also provides its own storage solution, that is OSS, [Object Storage Service](https://www.aliyun.com/product/oss). 
 
-To use aliyun OSS, first config the OSS as below
+To use aliyun OSS, first config as below
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
 |`druid.aliyun-oss.accessKey`|the 'AccessKey ID' of your account which can be used to access the bucket||Must be set.|
 |`druid.aliyun-oss.secretKey`|the 'AccessKey Secret' of your account which can be used to access the bucket| |Must be set. |
-|`druid.aliyun-oss.endpoint`|the endpoint url of your oss storage| |Must be set.|
+|`druid.aliyun-oss.endpoint`|the endpoint url of your OSS storage| |Must be set.|
 
 if you want to use OSS as deep storage, use the configurations below
 
@@ -43,7 +43,7 @@ if you want to use OSS as deep storage, use the configurations below
 |--------|---------------|-----------|-------|
 |`druid.storage.type`| | aliyun-oss|Must be set.|
 |`druid.aliyun-oss.storage.bucket`||storage bucket name.|Must be set.|
-|`druid.aliyun-oss.storage.prefix`|a prefix string prepended to the file names for the segments published to aliyun oss deep storage| druid/segments | |
+|`druid.aliyun-oss.storage.prefix`|a prefix string prepended to the file names for the segments published to Aliyun OSS deep storage| druid/segments | |
 
 To save index logs to OSS, apply the configurations below:
 

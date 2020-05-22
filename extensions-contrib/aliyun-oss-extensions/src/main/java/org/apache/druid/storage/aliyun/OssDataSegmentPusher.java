@@ -116,9 +116,6 @@ public class OssDataSegmentPusher implements DataSegmentPusher
     return makeLoadSpec(finalIndexZipFilePath.getHost(), finalIndexZipFilePath.getPath().substring(1));
   }
 
-  /**
-   * Any change in loadSpec need to be reflected {@link org.apache.druid.indexer.JobHelper#getURIFromSegment()}
-   */
   private Map<String, Object> makeLoadSpec(String bucket, String key)
   {
     return ImmutableMap.of(

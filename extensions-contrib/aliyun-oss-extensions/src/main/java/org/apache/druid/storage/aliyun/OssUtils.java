@@ -110,7 +110,7 @@ public class OssUtils
    * <p>
    * For each provided prefix URI, the iterator will walk through all objects that are in the same bucket as the
    * provided URI and whose keys start with that URI's path, except for directory placeholders (which will be
-   * ignored). The iterator is computed incrementally by calling {@link OssClientHelper#listObjectsV2} for
+   * ignored). The iterator is computed incrementally by calling {@link OSS#listObjects} for
    * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
    * constructed.
    */

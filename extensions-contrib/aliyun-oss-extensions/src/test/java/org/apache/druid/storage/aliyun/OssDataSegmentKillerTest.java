@@ -21,7 +21,6 @@ package org.apache.druid.storage.aliyun;
 
 import com.aliyun.oss.ClientException;
 import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.DeleteObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.google.common.collect.ImmutableList;

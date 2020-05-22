@@ -45,10 +45,9 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RunWith(EasyMockRunner.class)
 public class OssTaskLogsTest extends EasyMockSupport
@@ -332,6 +331,6 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     taskLogs.pushTaskLog(taskId, logFile);
 
-    return aclExpected.getGrants().stream().collect(Collectors.toList());
+    return new ArrayList<>(aclExpected.getGrants());
   }
 }
