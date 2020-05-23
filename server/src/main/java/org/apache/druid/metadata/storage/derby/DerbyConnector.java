@@ -33,7 +33,9 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.logging.SLF4JLog;
 import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.slf4j.LoggerFactory;
 
 @ManageLifecycle
 public class DerbyConnector extends SQLMetadataConnector
@@ -71,6 +73,8 @@ public class DerbyConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     this.dbi = dbi;
+    this.dbi.setSQLLog(new SLF4JLog(LoggerFactory.getLogger(DBI.class),
+                                    SLF4JLog.Level.INFO)); // allow output the sql and its execution time
     this.storage = storage;
   }
 

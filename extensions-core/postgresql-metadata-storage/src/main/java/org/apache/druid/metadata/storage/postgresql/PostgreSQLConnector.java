@@ -34,8 +34,10 @@ import org.postgresql.util.PSQLException;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
+import org.skife.jdbi.v2.logging.SLF4JLog;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
+import org.slf4j.LoggerFactory;
 
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
@@ -115,6 +117,9 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     }
 
     this.dbi = new DBI(datasource);
+    this.dbi.setSQLLog(new SLF4JLog(LoggerFactory.getLogger(DBI.class),
+                                    SLF4JLog.Level.INFO)); // allow output the sql and its execution time
+
     this.dbTableSchema = tablesConfig.getDbTableSchema();
     
     log.info("Configured PostgreSQL as metadata storage");
