@@ -117,6 +117,64 @@ public class MaterializedViewQueryQueryToolChestTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
         .build();
+
+    QueryToolChest queryToolChest =
+        new MaterializedViewQueryQueryToolChest(new MapQueryToolChestWarehouse(
+            ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null))
+                .build()
+        ));
+
+    ObjectMapper objectMapper = queryToolChest.decorateObjectMapper(JSON_MAPPER, realQuery);
+
+    List<ResultRow> results = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            realQuery,
+            "2011-04-01",
+            "alias",
+            "automotive",
+            "rows",
+            1L,
+            "idx",
+            135L
+
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            realQuery,
+            "2011-04-01",
+            "alias",
+            "business",
+            "rows",
+            1L,
+            "idx",
+            118L
+        )
+    );
+    List<MapBasedRow> expectedResults = results.stream()
+        .map(resultRow -> resultRow.toMapBasedRow(realQuery))
+        .collect(Collectors.toList());
+
+    Assert.assertEquals(
+        "decorate-object-mapper",
+        JSON_MAPPER.writerFor(new TypeReference<List<MapBasedRow>>(){}).writeValueAsString(expectedResults),
+        objectMapper.writeValueAsString(results)
+    );
+  }
+
+  @Test
+  public void testDecorateObjectMapperMaterializedViewQuery() throws IOException
+  {
+    GroupByQuery realQuery = GroupByQuery.builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+        .build();
     MaterializedViewQuery materializedViewQuery = new MaterializedViewQuery(realQuery, null);
 
     QueryToolChest materializedViewQueryQueryToolChest =
