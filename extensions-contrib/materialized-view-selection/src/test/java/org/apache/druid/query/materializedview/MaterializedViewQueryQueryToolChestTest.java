@@ -219,4 +219,30 @@ public class MaterializedViewQueryQueryToolChestTest
         objectMapper.writeValueAsString(results)
     );
   }
+
+  @Test
+  public void testGetRealQuery()
+  {
+    GroupByQuery realQuery = GroupByQuery.builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new LongSumAggregatorFactory("idx", "index")
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+        .build();
+    MaterializedViewQuery materializedViewQuery = new MaterializedViewQuery(realQuery, null);
+
+    MaterializedViewQueryQueryToolChest materializedViewQueryQueryToolChest =
+        new MaterializedViewQueryQueryToolChest(new MapQueryToolChestWarehouse(
+            ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+                .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null))
+                .build()
+        ));
+
+    Assert.assertEquals(realQuery, materializedViewQueryQueryToolChest.getRealQuery(materializedViewQuery));
+  }
 }
