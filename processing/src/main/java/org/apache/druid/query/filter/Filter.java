@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
@@ -28,8 +29,10 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import java.util.Map;
 import java.util.Set;
 
+@SubclassesMustOverrideEqualsAndHashCode
 public interface Filter
 {
   /**
@@ -162,4 +165,29 @@ public interface Filter
    * can be expected to have a bitmap index retrievable via {@link BitmapIndexSelector#getBitmapIndex(String)}
    */
   Set<String> getRequiredColumns();
+
+  /**
+   * Returns true is this filter is able to return a copy of this filter that is identical to this filter except that it
+   * operates on different columns, based on a renaming map.
+   */
+  default boolean supportsRequiredColumnRewrite()
+  {
+    return false;
+  }
+
+  /**
+   * Return a copy of this filter that is identical to the this filter except that it operates on different columns,
+   * based on a renaming map where the key is the column to be renamed in the filter, and the value is the new
+   * column name.
+   *
+   * For example, if I have a filter (A = hello), and I have a renaming map (A -> B),
+   * this should return the filter (B = hello)
+   *
+   * @param columnRewrites Column rewrite map
+   * @return Copy of this filter that operates on new columns based on the rewrite map
+   */
+  default Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    throw new UnsupportedOperationException("Required column rewrite is not supported by this filter.");
+  }
 }

@@ -43,7 +43,7 @@ public class PartialHashSegmentGenerateTaskTest
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private static final ParallelIndexIngestionSpec INGESTION_SPEC = ParallelIndexTestingFactory.createIngestionSpec(
       new LocalInputSource(new File("baseDir"), "filer"),
-      new JsonInputFormat(null, null),
+      new JsonInputFormat(null, null, null),
       new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
       ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS)
   );

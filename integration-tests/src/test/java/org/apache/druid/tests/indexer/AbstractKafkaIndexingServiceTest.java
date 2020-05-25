@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -40,9 +41,9 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   }
 
   @Override
-  public StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, boolean transactionEnabled)
+  public StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, Boolean transactionEnabled)
   {
-    return new KafkaEventWriter(config, transactionEnabled);
+    return new KafkaEventWriter(config, Preconditions.checkNotNull(transactionEnabled, "transactionEnabled"));
   }
 
   @Override

@@ -85,7 +85,7 @@ public class ITKinesisIndexingServiceDataFormatTest extends AbstractKinesisIndex
   public void testIndexData(String serializerPath, String parserType, String specPath)
       throws Exception
   {
-    doTestIndexDataStableState(false, serializerPath, parserType, specPath);
+    doTestIndexDataStableState(null, serializerPath, parserType, specPath);
   }
 
   @Override

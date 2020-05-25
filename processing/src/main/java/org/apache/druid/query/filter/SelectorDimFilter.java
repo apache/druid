@@ -96,7 +96,7 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    return new InDimFilter(dimension, Collections.singletonList(value), extractionFn, filterTuning).optimize();
+    return new InDimFilter(dimension, Collections.singleton(value), extractionFn, filterTuning).optimize();
   }
 
   @Override

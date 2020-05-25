@@ -60,21 +60,27 @@ public class KinesisEventWriter implements StreamEventWriter
   }
 
   @Override
-  public boolean isTransactionEnabled()
+  public boolean supportTransaction()
   {
     return false;
   }
 
   @Override
+  public boolean isTransactionEnabled()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void initTransaction()
   {
-    // No-Op as Kinesis does not support transaction
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public void commitTransaction()
   {
-    // No-Op as Kinesis does not support transaction
+    throw new UnsupportedOperationException();
   }
 
   @Override

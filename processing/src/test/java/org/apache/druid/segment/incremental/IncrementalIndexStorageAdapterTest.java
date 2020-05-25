@@ -713,6 +713,13 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
       return Collections.emptySet();
     }
 
+    @Override
+    public int hashCode()
+    {
+      // Test code, hashcode and equals isn't important
+      return super.hashCode();
+    }
+
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory
     {
       @Override
