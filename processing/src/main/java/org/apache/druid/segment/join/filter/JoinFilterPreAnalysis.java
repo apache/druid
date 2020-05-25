@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join.filter;
 
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
@@ -204,9 +203,6 @@ public class JoinFilterPreAnalysis
 
     public Map<String, Set<Expr>> computeEquiconditionsFromJoinableClauses()
     {
-      if (equiconditions != null) {
-        throw new RE("Equiconditions already set! Incorrect call to compute equiconditions");
-      }
       this.equiconditions = new HashMap<>();
       for (JoinableClause clause : joinableClauses) {
         for (Equality equality : clause.getCondition().getEquiConditions()) {
