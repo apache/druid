@@ -89,7 +89,7 @@ public class SQLProfileLogger implements SQLLog
           builder.delete(builder.length() - 2, builder.length());
         }
         builder.append("]");
-        logger.info("{} took {} millis", builder.toString(), time);
+        logger.info("{} took {} millis", builder, time);
       }
     };
   }
