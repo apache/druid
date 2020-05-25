@@ -31,12 +31,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SQLProfileLogger;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.logging.SLF4JLog;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.sql.SQLException;
@@ -145,8 +144,7 @@ public class MySQLConnector extends SQLMetadataConnector
     datasource.setConnectionInitSqls(ImmutableList.of("SET sql_mode='ANSI_QUOTES'"));
 
     this.dbi = new DBI(datasource);
-    this.dbi.setSQLLog(new SLF4JLog(LoggerFactory.getLogger(DBI.class),
-                                    SLF4JLog.Level.INFO)); // allow output the sql and its execution time
+    this.dbi.setSQLLog(new SQLProfileLogger());
 
     log.info("Configured MySQL as metadata storage");
   }

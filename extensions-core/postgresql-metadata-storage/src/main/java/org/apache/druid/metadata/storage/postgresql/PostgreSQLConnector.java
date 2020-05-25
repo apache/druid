@@ -26,6 +26,7 @@ import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataCASUpdate;
+import org.apache.druid.metadata.SQLProfileLogger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
@@ -34,10 +35,8 @@ import org.postgresql.util.PSQLException;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
-import org.skife.jdbi.v2.logging.SLF4JLog;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
-import org.slf4j.LoggerFactory;
 
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
@@ -117,8 +116,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     }
 
     this.dbi = new DBI(datasource);
-    this.dbi.setSQLLog(new SLF4JLog(LoggerFactory.getLogger(DBI.class),
-                                    SLF4JLog.Level.INFO)); // allow output the sql and its execution time
+    this.dbi.setSQLLog(new SQLProfileLogger()); // allow output the sql and its execution time
 
     this.dbTableSchema = tablesConfig.getDbTableSchema();
     

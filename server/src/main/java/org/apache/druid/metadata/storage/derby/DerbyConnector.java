@@ -31,11 +31,10 @@ import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SQLProfileLogger;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.logging.SLF4JLog;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.slf4j.LoggerFactory;
 
 @ManageLifecycle
 public class DerbyConnector extends SQLMetadataConnector
@@ -60,6 +59,8 @@ public class DerbyConnector extends SQLMetadataConnector
     datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
 
     this.dbi = new DBI(datasource);
+    this.dbi.setSQLLog(new SQLProfileLogger());
+
     this.storage = storage;
     log.info("Derby connector instantiated with metadata storage [%s].", this.storage.getClass().getName());
   }
@@ -73,8 +74,8 @@ public class DerbyConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     this.dbi = dbi;
-    this.dbi.setSQLLog(new SLF4JLog(LoggerFactory.getLogger(DBI.class),
-                                    SLF4JLog.Level.INFO)); // allow output the sql and its execution time
+    this.dbi.setSQLLog(new SQLProfileLogger());
+
     this.storage = storage;
   }
 
