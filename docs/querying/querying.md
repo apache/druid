@@ -35,7 +35,7 @@ posted like this:
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
 ```
 
-> Replace `<queryable_host>:<port>` with the appropriate address and port for your system. If running Druid in the quickstart configuration, replace `<queryable_host>:<port>` with localhost:8888. 
+> Replace `<queryable_host>:<port>` with the appropriate address and port for your system. For example, if running the quickstart configuration, replace `<queryable_host>:<port>` with localhost:8888. 
 
 You can also enter them directly in the Druid console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
 
