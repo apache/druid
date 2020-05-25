@@ -45,6 +45,7 @@ import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -61,6 +62,7 @@ import java.util.stream.Collectors;
  */
 public class Filters
 {
+  private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
   /**
    * Convert a list of DimFilters to a list of Filters.
@@ -542,5 +544,12 @@ public class Filters
       normalizedOrClauses = Collections.singleton(normalizedFilter);
     }
     return normalizedOrClauses;
+  }
+
+
+  public static boolean filterMatchesNull(Filter filter)
+  {
+    ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
+    return valueMatcher.matches();
   }
 }
