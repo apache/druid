@@ -9330,7 +9330,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("j0.k", "j0.v", "m1")
-                  .context(queryContext)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of()
@@ -14091,6 +14091,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           new ImmutableMap.Builder<String, Object>()
               .putAll(QUERY_CONTEXT_DEFAULT)
               .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
               .build(),
           // rewrite values enabled but filter re-writes disabled.
           // This should be drive the same behavior as the previous config
