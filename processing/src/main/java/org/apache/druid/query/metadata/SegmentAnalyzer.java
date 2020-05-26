@@ -106,7 +106,8 @@ public class SegmentAnalyzer
       if (columnHolder != null) {
         capabilities = columnHolder.getCapabilities();
       } else {
-        // if
+        // this can be removed if we get to the point where IncrementalIndexStorageAdapter.getColumnCapabilities
+        // accurately reports the capabilities
         if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
           capabilities = ((IncrementalIndexStorageAdapter) storageAdapter).getSnapshotColumnCapabilities(columnName);
         } else {
