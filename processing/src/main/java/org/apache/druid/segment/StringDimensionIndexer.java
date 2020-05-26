@@ -630,8 +630,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
-        // name lookup is possible in advance if we got a value for every row (setSparseIndexed was not called on this column)
-        // or we've encountered an actual null value and it is present in our dictionary
+        // name lookup is possible in advance if we got a value for every row (setSparseIndexed was not called on this
+        // column) or we've encountered an actual null value and it is present in our dictionary
         return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
       }
 
