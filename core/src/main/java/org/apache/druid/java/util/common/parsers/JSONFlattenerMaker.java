@@ -53,7 +53,14 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
 
+  private final boolean keepNullValues;
+
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
+
+  public JSONFlattenerMaker(boolean keepNullValues)
+  {
+    this.keepNullValues = keepNullValues;
+  }
 
   @Override
   public Iterable<String> discoverRootFields(final JsonNode obj)
@@ -62,7 +69,8 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                          .filter(
                              entry -> {
                                final JsonNode val = entry.getValue();
-                               return !(val.isObject() || val.isNull() || (val.isArray() && !isFlatList(val)));
+                               // If the keepNullValues is set on the JSONParseSpec then null values should not be filtered out
+                               return !(val.isObject() || (!keepNullValues && val.isNull()) || (val.isArray() && !isFlatList(val)));
                              }
                          )
                          .transform(Map.Entry::getKey);

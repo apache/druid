@@ -31,6 +31,15 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
+  public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
+  {
+    final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+    capabilities.merge(other);
+    capabilities.setFilterable(other.isFilterable());
+    capabilities.setIsComplete(other.isComplete());
+    return capabilities;
+  }
+
   @Nullable
   private ValueType type = null;
 
@@ -40,22 +49,15 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private boolean hasSpatialIndexes = false;
   private boolean hasMultipleValues = false;
 
-  // This is a query time concept and not persisted in the segment files.
+  // These capabilities are computed at query time and not persisted in the segment files.
+  @JsonIgnore
+  private Capable dictionaryValuesSorted = Capable.UNKNOWN;
+  @JsonIgnore
+  private Capable dictionaryValuesUnique = Capable.UNKNOWN;
   @JsonIgnore
   private boolean filterable;
-
-
   @JsonIgnore
   private boolean complete = false;
-
-  public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
-  {
-    final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-    capabilities.merge(other);
-    capabilities.setFilterable(other.isFilterable());
-    capabilities.setIsComplete(other.isComplete());
-    return capabilities;
-  }
 
   @Override
   @JsonProperty
@@ -80,6 +82,30 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setDictionaryEncoded(boolean dictionaryEncoded)
   {
     this.dictionaryEncoded = dictionaryEncoded;
+    return this;
+  }
+
+  @Override
+  public Capable areDictionaryValuesSorted()
+  {
+    return dictionaryValuesSorted;
+  }
+
+  public ColumnCapabilitiesImpl setDictionaryValuesSorted(boolean dictionaryValuesSorted)
+  {
+    this.dictionaryValuesSorted = Capable.of(dictionaryValuesSorted);
+    return this;
+  }
+
+  @Override
+  public Capable areDictionaryValuesUnique()
+  {
+    return dictionaryValuesUnique;
+  }
+
+  public ColumnCapabilitiesImpl setDictionaryValuesUnique(boolean dictionaryValuesUnique)
+  {
+    this.dictionaryValuesUnique = Capable.of(dictionaryValuesUnique);
     return this;
   }
 
@@ -123,6 +149,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return hasMultipleValues;
   }
 
+  public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
+  {
+    this.hasMultipleValues = hasMultipleValues;
+    return this;
+  }
+
   @Override
   public boolean isFilterable()
   {
@@ -133,22 +165,16 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
            filterable;
   }
 
-  @Override
-  public boolean isComplete()
-  {
-    return complete;
-  }
-
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)
   {
     this.filterable = filterable;
     return this;
   }
 
-  public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
+  @Override
+  public boolean isComplete()
   {
-    this.hasMultipleValues = hasMultipleValues;
-    return this;
+    return complete;
   }
 
   public ColumnCapabilitiesImpl setIsComplete(boolean complete)
@@ -178,5 +204,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.hasMultipleValues |= other.hasMultipleValues();
     this.complete &= other.isComplete(); // these should always be the same?
     this.filterable &= other.isFilterable();
+    this.dictionaryValuesSorted = this.dictionaryValuesSorted.and(other.areDictionaryValuesSorted());
+    this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
   }
 }

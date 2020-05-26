@@ -23,8 +23,8 @@ import {
   HeaderRows,
   isFirstRowHeader,
   normalizeQueryResult,
+  parseSqlQuery,
   shouldIncludeTimestamp,
-  sqlParserFactory,
   SqlQuery,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
@@ -32,7 +32,6 @@ import memoizeOne from 'memoize-one';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
 
-import { SQL_FUNCTIONS } from '../../../lib/sql-docs';
 import { QueryPlanDialog } from '../../dialogs';
 import { EditContextDialog } from '../../dialogs/edit-context-dialog/edit-context-dialog';
 import { QueryHistoryDialog } from '../../dialogs/query-history-dialog/query-history-dialog';
@@ -63,11 +62,9 @@ import { RunButton } from './run-button/run-button';
 
 import './query-view.scss';
 
-const parserRaw = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
-
-const parser = memoizeOne((sql: string) => {
+const parser = memoizeOne((sql: string): SqlQuery | undefined => {
   try {
-    return parserRaw(sql);
+    return parseSqlQuery(sql);
   } catch {
     return;
   }
@@ -87,7 +84,7 @@ export interface QueryViewProps {
 
 export interface QueryViewState {
   queryString: string;
-  parsedQuery: SqlQuery;
+  parsedQuery?: SqlQuery;
   queryContext: QueryContext;
   wrapQueryLimit: number | undefined;
   autoRun: boolean;
@@ -479,18 +476,22 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const { queryString, queryContext, loading, result, error, columnMetadata } = this.state;
     const emptyQuery = QueryView.isEmptyQuery(queryString);
 
-    let currentSchema;
-    let currentTable;
+    let currentSchema: string | undefined;
+    let currentTable: string | undefined;
 
-    if (result && result.parsedQuery instanceof SqlQuery) {
+    if (result && result.parsedQuery) {
       currentSchema = result.parsedQuery.getSchema();
       currentTable = result.parsedQuery.getTableName();
     } else if (localStorageGet(LocalStorageKeys.QUERY_KEY)) {
       const defaultQueryString = localStorageGet(LocalStorageKeys.QUERY_KEY);
-      const tempAst = defaultQueryString ? parser(defaultQueryString) : undefined;
-      if (tempAst) {
-        currentSchema = tempAst.getSchema();
-        currentTable = tempAst.getTableName();
+
+      const defaultQueryAst: SqlQuery | undefined = defaultQueryString
+        ? parser(defaultQueryString)
+        : undefined;
+
+      if (defaultQueryAst) {
+        currentSchema = defaultQueryAst.getSchema();
+        currentTable = defaultQueryAst.getTableName();
       }
     }
 

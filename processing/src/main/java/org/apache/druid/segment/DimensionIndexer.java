@@ -241,6 +241,10 @@ public interface DimensionIndexer
    *
    * Refer to StringDimensionIndexer.compareUnsortedEncodedKeyComponents() for a reference implementation.
    *
+   * The comparison rules used by this method should match the rules used by
+   * {@link DimensionHandler#getEncodedValueSelectorComparator()}, otherwise incorrect ordering/merging of rows
+   * can occur during ingestion, causing issues such as imperfect rollup.
+   *
    * @param lhs dimension value array from a Row key
    * @param rhs dimension value array from a Row key
    * @return comparison of the two arrays

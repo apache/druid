@@ -49,17 +49,50 @@ import java.util.function.Function;
 
 public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
+  public enum InputFormatDetails
+  {
+    ORC("orc", ".orc", "/orc"),
+    JSON("json", ".json", "/json"),
+    PARQUET("parquet", ".parquet", "/parquet");
+
+    private final String inputFormatType;
+    private final String fileExtension;
+    private final String folderSuffix;
+
+    InputFormatDetails(String inputFormatType, String fileExtension, String folderSuffix)
+    {
+      this.inputFormatType = inputFormatType;
+      this.fileExtension = fileExtension;
+      this.folderSuffix = folderSuffix;
+    }
+
+    public String getInputFormatType()
+    {
+      return inputFormatType;
+    }
+
+    public String getFileExtension()
+    {
+      return fileExtension;
+    }
+
+    public String getFolderSuffix()
+    {
+      return folderSuffix;
+    }
+  }
+
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
-  IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
   @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath,
@@ -71,7 +104,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion, runTestQueries, waitForSegmentsToLoad);
   }
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       Function<String, String> taskSpecTransform,
@@ -118,7 +151,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  void doReindexTest(
+  protected void doReindexTest(
       String baseDataSource,
       String reindexDataSource,
       String reindexTaskFilePath,

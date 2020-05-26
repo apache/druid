@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.TestObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
@@ -57,7 +58,8 @@ public class JSONParseSpecTest
                 new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
             )
         ),
-        null
+        null,
+        false
     );
 
     final Map<String, Object> expected = new HashMap<>();
@@ -95,7 +97,8 @@ public class JSONParseSpecTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
             )
         ),
-        null
+        null,
+        false
     );
 
     final Map<String, Object> expected = new HashMap<>();
@@ -119,7 +122,8 @@ public class JSONParseSpecTest
         new TimestampSpec("timestamp", "iso", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
         null,
-        feature
+        feature,
+        false
     );
 
     final JSONParseSpec serde = (JSONParseSpec) jsonMapper.readValue(
@@ -131,5 +135,24 @@ public class JSONParseSpecTest
 
     Assert.assertEquals(Arrays.asList("bar", "foo"), serde.getDimensionsSpec().getDimensionNames());
     Assert.assertEquals(feature, serde.getFeatureSpec());
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(JSONParseSpec.class)
+              .usingGetClass()
+              .withPrefabValues(
+                DimensionsSpec.class,
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("baz", "buzz")), null, null)
+              )
+              .withPrefabValues(
+              ObjectMapper.class,
+              new ObjectMapper(),
+              new ObjectMapper()
+              )
+              .withIgnoredFields("objectMapper")
+              .verify();
   }
 }

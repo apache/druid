@@ -20,15 +20,21 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 
 
-<suite name="IntegrationTestSuite">
-<listeners>
-  <listener class-name="org.apache.druid.testing.utils.LoggerListener" />
-</listeners>
-<test name="AllTests">
-<packages>
-  <package name="org.apache.druid.tests.*">
-    <exclude name="org.apache.druid.tests.hadoop"/>
-  </package>
-</packages>
-</test>
+<suite name="IntegrationTestSuite" data-provider-thread-count="2">
+  <listeners>
+    <listener class-name="org.apache.druid.testing.utils.LoggerListener" />
+    <listener class-name="org.apache.druid.testing.utils.SuiteListener" />
+  </listeners>
+  <test name="AllSerializedTests">
+    <packages>
+      <package name="org.apache.druid.tests.*">
+        <exclude name="org.apache.druid.tests.parallelized"/>
+      </package>
+    </packages>
+  </test>
+  <test name="AllParallelizedTests" parallel="methods" thread-count="2">
+    <packages>
+      <package name="org.apache.druid.tests.parallelized.*"/>
+    </packages>
+  </test>
 </suite>

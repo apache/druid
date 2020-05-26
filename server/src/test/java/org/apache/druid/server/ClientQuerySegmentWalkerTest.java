@@ -56,7 +56,11 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -70,6 +74,8 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -105,6 +111,7 @@ public class ClientQuerySegmentWalkerTest
 
   private static final String FOO = "foo";
   private static final String BAR = "bar";
+  private static final String MULTI = "multi";
 
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
@@ -138,6 +145,20 @@ public class ClientQuerySegmentWalkerTest
                   .build()
   );
 
+  private static final InlineDataSource MULTI_VALUE_INLINE = InlineDataSource.fromIterable(
+      ImmutableList.<Object[]>builder()
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "b"), 1})
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("a", "c"), 2})
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("b"), 3})
+          .add(new Object[]{INTERVAL.getStartMillis(), ImmutableList.of("c"), 4})
+          .build(),
+      RowSignature.builder()
+                  .addTimeColumn()
+                  .add("s", ValueType.STRING)
+                  .add("n", ValueType.LONG)
+                  .build()
+  );
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -151,12 +172,20 @@ public class ClientQuerySegmentWalkerTest
   // version VERSION, and shard spec SHARD_SPEC.
   private ClientQuerySegmentWalker walker;
 
+  private ObservableQueryScheduler scheduler;
+
   @Before
   public void setUp()
   {
     closer = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
-    initWalker(ImmutableMap.of());
+    scheduler = new ObservableQueryScheduler(
+        8,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        NoQueryLaningStrategy.INSTANCE,
+        new ServerConfig()
+    );
+    initWalker(ImmutableMap.of(), scheduler);
   }
 
   @After
@@ -182,6 +211,11 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(ExpectedQuery.cluster(query)),
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
     );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -200,6 +234,11 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(ExpectedQuery.local(query)),
         ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
     );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -236,6 +275,13 @@ public class ClientQuerySegmentWalkerTest
         ),
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -263,6 +309,11 @@ public class ClientQuerySegmentWalkerTest
         ImmutableList.of(ExpectedQuery.cluster(subquery)),
         ImmutableList.of(new Object[]{3L})
     );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -299,6 +350,13 @@ public class ClientQuerySegmentWalkerTest
             new Object[]{"z", 1L}
         )
     );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -351,6 +409,122 @@ public class ClientQuerySegmentWalkerTest
         ),
         ImmutableList.of(new Object[]{"y", "y", 1L})
     );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testGroupByOnScanMultiValue()
+  {
+    ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
+                                                      .columns("s", "n")
+                                                      .intervals(
+                                                          new MultipleIntervalSegmentSpec(
+                                                              ImmutableList.of(Intervals.ETERNITY)
+                                                          )
+                                                      )
+                                                      .legacy(false)
+                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                      .build();
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource(new QueryDataSource(subquery))
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ONLY_ETERNITY)
+                    .setDimensions(DefaultDimensionSpec.of("s"))
+                    .setAggregatorSpecs(new LongSumAggregatorFactory("sum_n", "n"))
+                    .build();
+
+    testQuery(
+        query,
+        // GroupBy handles its own subqueries; only the inner one will go to the cluster.
+        ImmutableList.of(
+            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.local(
+                query.withDataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(
+                            new Object[]{ImmutableList.of("a", "b"), 1},
+                            new Object[]{ImmutableList.of("a", "c"), 2},
+                            new Object[]{ImmutableList.of("b"), 3},
+                            new Object[]{ImmutableList.of("c"), 4}
+                        ),
+                        RowSignature.builder().add("s", null).add("n", null).build()
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 3L},
+            new Object[]{"b", 4L},
+            new Object[]{"c", 6L}
+        )
+    );
+
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTopNScanMultiValue()
+  {
+    ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
+                                                      .columns("s", "n")
+                                                      .intervals(
+                                                          new MultipleIntervalSegmentSpec(
+                                                              ImmutableList.of(Intervals.ETERNITY)
+                                                          )
+                                                      )
+                                                      .legacy(false)
+                                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                      .build();
+    final TopNQuery query =
+        new TopNQueryBuilder().dataSource(new QueryDataSource(subquery))
+                              .granularity(Granularities.ALL)
+                              .intervals(Intervals.ONLY_ETERNITY)
+                              .dimension(DefaultDimensionSpec.of("s"))
+                              .metric("sum_n")
+                              .threshold(100)
+                              .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                              .build();
+
+    testQuery(
+        query,
+        // GroupBy handles its own subqueries; only the inner one will go to the cluster.
+        ImmutableList.of(
+            ExpectedQuery.cluster(subquery),
+            ExpectedQuery.local(
+                query.withDataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(
+                            new Object[]{ImmutableList.of("a", "b"), 1},
+                            new Object[]{ImmutableList.of("a", "c"), 2},
+                            new Object[]{ImmutableList.of("b"), 3},
+                            new Object[]{ImmutableList.of("c"), 4}
+                        ),
+                        RowSignature.builder().add("s", null).add("n", null).build()
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(
+            new Object[]{Intervals.ETERNITY.getStartMillis(), "c", 6L},
+            new Object[]{Intervals.ETERNITY.getStartMillis(), "b", 4L},
+            new Object[]{Intervals.ETERNITY.getStartMillis(), "a", 3L}
+        )
+    );
+
+    Assert.assertEquals(2, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(2, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -408,9 +582,17 @@ public class ClientQuerySegmentWalkerTest
   }
 
   /**
-   * Initialize (or reinitialize) our {@link #walker} and {@link #closer}.
+   * Initialize (or reinitialize) our {@link #walker} and {@link #closer} with default scheduler.
    */
   private void initWalker(final Map<String, String> serverProperties)
+  {
+    initWalker(serverProperties, QueryStackTests.DEFAULT_NOOP_SCHEDULER);
+  }
+
+  /**
+   * Initialize (or reinitialize) our {@link #walker} and {@link #closer}.
+   */
+  private void initWalker(final Map<String, String> serverProperties, QueryScheduler schedulerForTest)
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final ServerConfig serverConfig = jsonMapper.convertValue(serverProperties, ServerConfig.class);
@@ -468,11 +650,12 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createClusterQuerySegmentWalker(
                 ImmutableMap.of(
                     FOO, makeTimeline(FOO, FOO_INLINE),
-                    BAR, makeTimeline(BAR, BAR_INLINE)
+                    BAR, makeTimeline(BAR, BAR_INLINE),
+                    MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE)
                 ),
                 joinableFactory,
                 conglomerate,
-                null /* QueryScheduler */
+                schedulerForTest
             ),
             ClusterOrLocal.CLUSTER
         ),
@@ -480,8 +663,9 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createLocalQuerySegmentWalker(
                 conglomerate,
                 segmentWrangler,
-                joinableFactory
-            ),
+                joinableFactory,
+                schedulerForTest
+                ),
             ClusterOrLocal.LOCAL
         ),
         conglomerate,

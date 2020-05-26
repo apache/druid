@@ -198,7 +198,7 @@ public class IncrementalIndexReadBenchmark
   private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     return sa.makeCursors(
-        filter.toFilter(),
+        filter == null ? null : filter.toFilter(),
         schemaInfo.getDataInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,

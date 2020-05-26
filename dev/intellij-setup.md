@@ -42,8 +42,17 @@ Use of other databases such as Postgres or Derby are entirely reasonable, but do
 ## ZooKeeper
 This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
 
+On macOS, you can also achieve this through the following commands
+
+1. `brew install zookeeper`
+2. `brew services start zookeeper`
+
 ## Initial Build
-Before running the apps, you should do a `mvn clean install -DskipTests` in the Druid source in order to make sure directories are populated correctly.
+Before running or debugging the apps, you should do a `mvn clean install -Pdist -DskipTests` in the Druid source in order to make sure directories are populated correctly.
+
+`-Pdist` is required because it puts all core extensions under `distribution\target\extensions` directory, where `runConfigurations` below could load extensions from.
+
+You may also add `-Ddruid.console.skip=true` to the command if you're focusing on backend servers instead of frontend project. This option saves great building time.
 
 ## XML App Def
 You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in `.idea/runConfigurations` in the Druid source code.
@@ -89,3 +98,8 @@ You can configure application definitions in XML for import into IntelliJ. Below
   </configuration>
 </component>
 ```
+## property files
+
+You can also provide a property file for running or debugging the application through intellij. 
+
+For example, put a file named as `common.properties` under `.idea/conf` directory, then add `-Ddruid.properties.file=$PROJECT_DIR$/.idea/conf/common.properties` to `VM_PARAMETERS` in the App Def file.

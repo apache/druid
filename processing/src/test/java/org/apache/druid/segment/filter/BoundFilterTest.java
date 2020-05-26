@@ -21,19 +21,25 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -59,6 +65,9 @@ public class BoundFilterTest extends BaseFilterTest
   {
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -724,11 +733,39 @@ public class BoundFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testRequiredColumnRewrite()
+  {
+    BoundFilter filter = new BoundFilter(
+        new BoundDimFilter("dim0", "", "", false, false, true, null, StringComparators.ALPHANUMERIC)
+    );
+    BoundFilter filter2 = new BoundFilter(
+        new BoundDimFilter("dim1", "", "", false, false, true, null, StringComparators.ALPHANUMERIC)
+    );
+    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+
+    Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
+    Assert.assertEquals(filter2, rewrittenFilter);
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
+  }
+
+  @Test
   public void test_equals()
   {
     EqualsVerifier.forClass(BoundFilter.class)
                   .usingGetClass()
-                  .withNonnullFields("boundDimFilter", "comparator")
+                  .withNonnullFields("boundDimFilter")
+                  .verify();
+  }
+
+  @Test
+  public void test_equals_boundDimFilterDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(BoundFilter.BoundDimFilterDruidPredicateFactory.class)
+                  .usingGetClass()
                   .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
                   .verify();
   }

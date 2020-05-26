@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.StorageExtendedErrorInformation;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -146,6 +147,33 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
     killer.kill(DATA_SEGMENT);
 
     verifyAll();
+  }
+
+  @Test
+  public void test_killAll_segmentConfigWithNullContainerAndPrefix_throwsISEException() throws Exception
+  {
+    EasyMock.expect(segmentConfig.getContainer()).andReturn(null).atLeastOnce();
+    EasyMock.expect(segmentConfig.getPrefix()).andReturn(null).anyTimes();
+
+    boolean thrownISEException = false;
+
+    try {
+      AzureDataSegmentKiller killer = new AzureDataSegmentKiller(
+          segmentConfig,
+          inputDataConfig,
+          accountConfig,
+          azureStorage,
+          azureCloudBlobIterableFactory
+      );
+      EasyMock.replay(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
+      killer.killAll();
+    }
+    catch (ISE e) {
+      thrownISEException = true;
+    }
+
+    Assert.assertTrue(thrownISEException);
+    EasyMock.verify(segmentConfig, inputDataConfig, accountConfig, azureStorage, azureCloudBlobIterableFactory);
   }
 
   @Test

@@ -40,7 +40,6 @@ Core extensions are maintained by Druid committers.
 |druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-core/azure.md)|
 |druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.md)|
 |druid-bloom-filter|Support for providing Bloom filters in druid queries.|[link](../development/extensions-core/bloom-filter.md)|
-|druid-caffeine-cache|A local cache implementation backed by Caffeine.|[link](../configuration/index.md#cache-configuration)|
 |druid-datasketches|Support for approximate counts and set operations with [DataSketches](https://datasketches.github.io/).|[link](../development/extensions-core/datasketches-extension.md)|
 |druid-google-extensions|Google Cloud Storage deep storage.|[link](../development/extensions-core/google.md)|
 |druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.md)|
@@ -54,6 +53,7 @@ Core extensions are maintained by Druid committers.
 |druid-orc-extensions|Support for data in Apache Orc data format.|[link](../development/extensions-core/orc.md)|
 |druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.md)|
 |druid-protobuf-extensions| Support for data in Protobuf data format.|[link](../development/extensions-core/protobuf.md)|
+|druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-core/druid-ranger-security.md)|
 |druid-s3-extensions|Interfacing with data in AWS S3, and using S3 as deep storage.|[link](../development/extensions-core/s3.md)|
 |druid-ec2-extensions|Interfacing with AWS EC2 for autoscaling middle managers|UNDOCUMENTED|
 |druid-stats|Statistics related module including variance and standard deviation.|[link](../development/extensions-core/stats.md)|
@@ -90,6 +90,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-influxdb-emitter|InfluxDB metrics emitter|[link](../development/extensions-contrib/influxdb-emitter.md)|
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
+|gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
 
 ## Promoting community extensions to core extensions
 

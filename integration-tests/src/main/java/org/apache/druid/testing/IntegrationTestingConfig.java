@@ -88,4 +88,12 @@ public interface IntegrationTestingConfig
   String getCloudBucket();
 
   String getCloudPath();
+
+  String getCloudRegion();
+
+  String getAzureKey();
+
+  String getHadoopGcsCredentialsPath();
+
+  String getStreamEndpoint();
 }

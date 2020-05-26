@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,6 +31,23 @@ import java.util.Map;
 
 public class QuantilePostAggregatorTest extends InitializedNullHandlingTest
 {
+  @Test
+  public void testSerde() throws Exception
+  {
+    QuantilePostAggregator there =
+        new QuantilePostAggregator("max", "test_field", 0.5f);
+
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    QuantilePostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        QuantilePostAggregator.class
+    );
+
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+  }
+
   @Test
   public void testComparator()
   {
@@ -53,5 +72,26 @@ public class QuantilePostAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(0, comp.compare(before, before));
     Assert.assertEquals(0, comp.compare(after, after));
     Assert.assertEquals(1, comp.compare(after, before));
+  }
+
+  @Test
+  public void testToString()
+  {
+    QuantilePostAggregator postAgg =
+        new QuantilePostAggregator("quantile", "testField", 0.9f);
+
+    Assert.assertEquals(
+        "QuantilePostAggregator{name='quantile', fieldName='testField', probability=0.9}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(QuantilePostAggregator.class)
+                  .withNonnullFields("name", "fieldName")
+                  .usingGetClass()
+                  .verify();
   }
 }

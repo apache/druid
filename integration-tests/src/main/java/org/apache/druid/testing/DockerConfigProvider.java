@@ -34,10 +34,6 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   private String dockerIp;
 
   @JsonProperty
-  @NotNull
-  private String hadoopDir;
-
-  @JsonProperty
   private String extraDatasourceNameSuffix = "";
 
   @JsonProperty
@@ -45,6 +41,18 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
 
   @JsonProperty
   private String cloudBucket;
+
+  @JsonProperty
+  private String cloudRegion;
+
+  @JsonProperty
+  private String hadoopGcsCredentialsPath;
+
+  @JsonProperty
+  private String azureKey;
+
+  @JsonProperty
+  private String streamEndpoint;
 
   @Override
   public IntegrationTestingConfig get()
@@ -182,9 +190,6 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getProperty(String prop)
       {
-        if ("hadoopTestDir".equals(prop)) {
-          return hadoopDir;
-        }
         throw new UnsupportedOperationException("DockerConfigProvider does not support property " + prop);
       }
 
@@ -228,6 +233,30 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getCloudPath()
       {
         return cloudPath;
+      }
+
+      @Override
+      public String getCloudRegion()
+      {
+        return cloudRegion;
+      }
+
+      @Override
+      public String getAzureKey()
+      {
+        return azureKey;
+      }
+
+      @Override
+      public String getHadoopGcsCredentialsPath()
+      {
+        return hadoopGcsCredentialsPath;
+      }
+
+      @Override
+      public String getStreamEndpoint()
+      {
+        return streamEndpoint;
       }
     };
   }

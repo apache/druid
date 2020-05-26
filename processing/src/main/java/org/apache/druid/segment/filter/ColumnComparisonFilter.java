@@ -163,6 +163,26 @@ public class ColumnComparisonFilter implements Filter
     throw new UnsupportedOperationException();
   }
 
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ColumnComparisonFilter that = (ColumnComparisonFilter) o;
+    return Objects.equals(dimensions, that.dimensions);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimensions);
+  }
+
   private static class ColumnComparisonReaderFactory implements ColumnProcessorFactory<Supplier<String[]>>
   {
     private static final ColumnComparisonReaderFactory INSTANCE = new ColumnComparisonReaderFactory();

@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Objects;
 
 public class ParquetInputFormat extends NestedInputFormat
@@ -69,7 +68,7 @@ public class ParquetInputFormat extends NestedInputFormat
       InputRowSchema inputRowSchema,
       InputEntity source,
       File temporaryDirectory
-  ) throws IOException
+  )
   {
     return new ParquetReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
   }

@@ -22,6 +22,7 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.HttpResponseException;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -104,6 +105,10 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
   @Override
   public void killAll() throws IOException
   {
+    if (accountConfig.getBucket() == null || accountConfig.getPrefix() == null) {
+      throw new ISE(
+          "Cannot delete all segment files from Google Deep Storage since druid.google.bucket and druid.google.prefix are not both set.");
+    }
     LOG.info(
         "Deleting all segment files from gs location [bucket: '%s' prefix: '%s']",
         accountConfig.getBucket(),

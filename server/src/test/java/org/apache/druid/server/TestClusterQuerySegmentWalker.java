@@ -165,11 +165,13 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
     // Wrap baseRunner in a runner that rewrites the QuerySegmentSpec to mention the specific segments.
     // This mimics what CachingClusteredClient on the Broker does, and is required for certain queries (like Scan)
-    // to function properly.
+    // to function properly. SegmentServerSelector does not currently mimic CachingClusteredClient, it is using
+    // the LocalQuerySegmentWalker constructor instead since this walker is not mimic remote DruidServer objects
+    // to actually serve the queries
     return (theQuery, responseContext) -> {
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();
-        specs.forEach(spec -> segments.add(new SegmentServerSelector(null, spec)));
+        specs.forEach(spec -> segments.add(new SegmentServerSelector(spec)));
         return scheduler.run(
             scheduler.prioritizeAndLaneQuery(theQuery, segments),
             new LazySequence<>(

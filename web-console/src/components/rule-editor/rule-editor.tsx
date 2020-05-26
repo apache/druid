@@ -102,8 +102,11 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               onChange(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
             }
           >
+            <option key={tier} value={tier}>
+              {tier}
+            </option>
             {tiers
-              .filter(t => t === tier || !tieredReplicants[t])
+              .filter(t => t !== tier && !tieredReplicants[t])
               .map(t => {
                 return (
                   <option key={t} value={t}>

@@ -117,7 +117,7 @@ public abstract class ExprEval<T>
   }
 
   // Cached String values
-  private boolean stringValueValid = false;
+  private boolean stringValueCached = false;
   @Nullable
   private String stringValue;
 
@@ -137,17 +137,35 @@ public abstract class ExprEval<T>
     return value;
   }
 
+  void cacheStringValue(@Nullable String value)
+  {
+    stringValue = value;
+    stringValueCached = true;
+  }
+
+  @Nullable
+  String getCachedStringValue()
+  {
+    assert stringValueCached;
+    return stringValue;
+  }
+
+  boolean isStringValueCached()
+  {
+    return stringValueCached;
+  }
+
   @Nullable
   public String asString()
   {
-    if (!stringValueValid) {
+    if (!stringValueCached) {
       if (value == null) {
         stringValue = null;
       } else {
         stringValue = String.valueOf(value);
       }
 
-      stringValueValid = true;
+      stringValueCached = true;
     }
 
     return stringValue;
@@ -244,7 +262,7 @@ public abstract class ExprEval<T>
   {
     private DoubleExprEval(@Nullable Number value)
     {
-      super(value == null ? NullHandling.defaultDoubleValue() : value);
+      super(value == null ? NullHandling.defaultDoubleValue() : (Double) value.doubleValue());
     }
 
     @Override
@@ -304,7 +322,7 @@ public abstract class ExprEval<T>
   {
     private LongExprEval(@Nullable Number value)
     {
-      super(value == null ? NullHandling.defaultLongValue() : value);
+      super(value == null ? NullHandling.defaultLongValue() : (Long) value.longValue());
     }
 
     @Override
@@ -565,6 +583,21 @@ public abstract class ExprEval<T>
     private ArrayExprEval(@Nullable T[] value)
     {
       super(value);
+    }
+
+    @Override
+    @Nullable
+    public String asString()
+    {
+      if (!isStringValueCached()) {
+        if (value == null) {
+          cacheStringValue(null);
+        } else {
+          cacheStringValue(Arrays.toString(value));
+        }
+      }
+
+      return getCachedStringValue();
     }
 
     @Override

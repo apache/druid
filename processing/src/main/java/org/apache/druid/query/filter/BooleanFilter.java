@@ -23,12 +23,13 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public interface BooleanFilter extends Filter
 {
-  List<Filter> getFilters();
+  ValueMatcher[] EMPTY_VALUE_MATCHER_ARRAY = new ValueMatcher[0];
+
+  Set<Filter> getFilters();
 
   /**
    * Get a ValueMatcher that applies this filter to row values.

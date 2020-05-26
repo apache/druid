@@ -23,17 +23,28 @@ import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.filter.vector.TrueVectorMatcher;
+import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 /**
  */
 public class TrueFilter implements Filter
 {
-  public TrueFilter()
+  private static final TrueFilter INSTANCE = new TrueFilter();
+
+  public static TrueFilter instance()
+  {
+    return INSTANCE;
+  }
+
+  private TrueFilter()
   {
   }
 
@@ -47,6 +58,12 @@ public class TrueFilter implements Filter
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
     return TrueValueMatcher.instance();
+  }
+
+  @Override
+  public VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
+  {
+    return new TrueVectorMatcher(factory.getVectorSizeInspector());
   }
 
   @Override
@@ -68,9 +85,27 @@ public class TrueFilter implements Filter
   }
 
   @Override
+  public boolean canVectorizeMatcher()
+  {
+    return true;
+  }
+
+  @Override
   public Set<String> getRequiredColumns()
   {
     return Collections.emptySet();
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    return this;
   }
 
   @Override
@@ -83,5 +118,17 @@ public class TrueFilter implements Filter
   public String toString()
   {
     return "true";
+  }
+
+  @Override
+  public final int hashCode()
+  {
+    return TrueFilter.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof TrueFilter;
   }
 }

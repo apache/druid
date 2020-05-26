@@ -40,6 +40,7 @@ CORS
 CPUs
 CSVs
 Ceph
+CNF
 ColumnDescriptor
 Corretto
 DDL
@@ -132,6 +133,7 @@ MiddleManagers
 Montréal
 Murmur3
 NFS
+OCF
 OLAP
 OOMs
 OpenJDK
@@ -307,6 +309,8 @@ pre-computation
 pre-compute
 pre-computing
 pre-configured
+pre-filtered
+pre-filtering
 pre-generated
 pre-made
 pre-processing
@@ -318,6 +322,7 @@ prepend
 prepended
 prepending
 prepends
+prepopulated
 preprocessing
 priori
 programmatically
@@ -345,6 +350,7 @@ runtime
 schemas
 searchable
 servlet
+simple-client-sslcontext
 sharded
 sharding
 skipHeaderRows
@@ -379,6 +385,8 @@ unmergeable
 unmerged
 unparseable
 unparsed
+unsetting
+useFilterCNF
 uptime
 uris
 useFieldDiscovery
@@ -443,6 +451,8 @@ v9
 DskipTests
 Papache-release
 Pdist
+Ddruid.console.skip
+yaml
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -833,7 +843,6 @@ jvm-global
 kafka-emitter
 org.apache.druid.extensions.contrib.
 pull-deps
-simple-client-sslcontext
 sqlserver-metadata-storage
 statsd-emitter
  - ../docs/development/geo.md
@@ -1548,6 +1557,7 @@ EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
+GCE
 HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
@@ -1556,6 +1566,7 @@ JRE8u60
 KeyManager
 L1
 L2
+ListManagedInstances
 LoadSpec
 LoggingEmitter
 Los_Angeles
@@ -1595,7 +1606,10 @@ _default_tier
 addr
 affinityConfig
 allowAll
+ANDed
 array_mod
+autoscale
+autoscalers
 batch_index_task
 cgroup
 classloader
@@ -1622,6 +1636,7 @@ druid_supervisors
 druid_taskLock
 druid_taskLog
 druid_tasks
+DruidQueryRel
 ec2
 equalDistribution
 extractionFn
@@ -1632,12 +1647,15 @@ floatMax
 floatMin
 floatSum
 freeSpacePercent
+gce
+gce-extensions
 getCanonicalHostName
 groupBy
 hdfs
 httpRemote
 indexTask
 info_dir
+inlining
 java.class.path
 java.io.tmpdir
 javaOpts
@@ -1654,6 +1672,7 @@ middlemanager
 minTimeMs
 minmax
 mins
+nullable
 orderby
 orderbys
 org.apache.druid
@@ -1662,6 +1681,7 @@ org.apache.hadoop
 overlord.html
 pendingSegments
 pre-flight
+preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
@@ -1683,6 +1703,7 @@ tmp
 tmpfs
 truststore
 tuningConfig
+unioning
 useIndexes
 user.timezone
 v0.12.0
@@ -1727,3 +1748,11 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+ - ../docs/development/extensions-core/druid-ranger-security.md
+json
+metastore
+UserGroupInformation
+CVE-2019-17571
+CVE-2019-12399
+CVE-2018-17196
+bin.tar.gz

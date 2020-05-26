@@ -27,6 +27,7 @@ import com.google.common.primitives.Doubles;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
+import java.util.Objects;
 
 public class DoubleMeanHolder
 {
@@ -66,6 +67,26 @@ public class DoubleMeanHolder
     buf.putDouble(0, sum);
     buf.putLong(Double.BYTES, count);
     return buf.array();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DoubleMeanHolder that = (DoubleMeanHolder) o;
+    return Double.compare(that.sum, sum) == 0 &&
+           count == that.count;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(sum, count);
   }
 
   public static DoubleMeanHolder fromBytes(byte[] data)

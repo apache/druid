@@ -42,15 +42,11 @@ import org.apache.calcite.rel.rules.AggregateValuesRule;
 import org.apache.calcite.rel.rules.CalcRemoveRule;
 import org.apache.calcite.rel.rules.ExchangeRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
-import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.IntersectToDistinctRule;
-import org.apache.calcite.rel.rules.JoinCommuteRule;
-import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
-import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.MatchRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
@@ -66,7 +62,6 @@ import org.apache.calcite.rel.rules.SortRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.TableScanRule;
-import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
@@ -79,6 +74,7 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
+import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 
@@ -95,6 +91,8 @@ public class Rules
   // 2) AggregateReduceFunctionsRule (it'll be added back for the Bindable rule set, but we don't want it for Druid
   //    rules since it expands AVG, STDDEV, VAR, etc, and we have aggregators specifically designed for those
   //    functions).
+  // 3) JoinCommuteRule (we don't support reordering joins yet).
+  // 4) JoinPushThroughJoinRule (we don't support reordering joins yet).
   private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           AggregateStarTableRule.INSTANCE,
@@ -104,15 +102,11 @@ public class Rules
           FilterTableScanRule.INSTANCE,
           ProjectFilterTransposeRule.INSTANCE,
           FilterProjectTransposeRule.INSTANCE,
-          FilterJoinRule.FILTER_ON_JOIN,
           JoinPushExpressionsRule.INSTANCE,
           AggregateCaseToFilterRule.INSTANCE,
           FilterAggregateTransposeRule.INSTANCE,
           ProjectWindowTransposeRule.INSTANCE,
           MatchRule.INSTANCE,
-          JoinCommuteRule.SWAP_OUTER,
-          JoinPushThroughJoinRule.RIGHT,
-          JoinPushThroughJoinRule.LEFT,
           SortProjectTransposeRule.INSTANCE,
           SortJoinTransposeRule.INSTANCE,
           SortRemoveConstantKeysRule.INSTANCE,
@@ -145,6 +139,8 @@ public class Rules
 
   // Rules from RelOptUtil's registerAbstractRules.
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
+  // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
+  // expensive in terms of planning time.
   private static final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
@@ -159,20 +155,19 @@ public class Rules
           PruneEmptyRules.JOIN_LEFT_INSTANCE,
           PruneEmptyRules.JOIN_RIGHT_INSTANCE,
           PruneEmptyRules.SORT_FETCH_ZERO_INSTANCE,
-          UnionMergeRule.INSTANCE,
-          UnionMergeRule.INTERSECT_INSTANCE,
-          UnionMergeRule.MINUS_INSTANCE,
           ProjectToWindowRule.PROJECT,
           FilterMergeRule.INSTANCE,
           IntersectToDistinctRule.INSTANCE
       );
 
-  // Rules from RelOptUtil's registerAbstractRelationalRules, except AggregateMergeRule. (It causes
-  // testDoubleNestedGroupBy2 to fail).
+  // Rules from RelOptUtil's registerAbstractRelationalRules, minus:
+  //
+  // 1) AggregateMergeRule (it causes testDoubleNestedGroupBy2 to fail)
+  // 2) SemiJoinRule.PROJECT and SemiJoinRule.JOIN (we don't need to detect semi-joins, because they are handled
+  //    fine as-is by DruidJoinRule).
+  // 3) JoinCommuteRule (we don't support reordering joins yet).
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
-          FilterJoinRule.FILTER_ON_JOIN,
-          FilterJoinRule.JOIN,
           AbstractConverter.ExpandConversionRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
           UnionToDistinctRule.INSTANCE,
@@ -183,13 +178,6 @@ public class Rules
           SortRemoveRule.INSTANCE
       );
 
-  // Rules that pull projections up above a join. This lets us eliminate some subqueries.
-  private static final List<RelOptRule> JOIN_PROJECT_TRANSPOSE_RULES =
-      ImmutableList.of(
-          JoinProjectTransposeRule.RIGHT_PROJECT,
-          JoinProjectTransposeRule.LEFT_PROJECT
-      );
-
   private Rules()
   {
     // No instantiation.
@@ -197,15 +185,17 @@ public class Rules
 
   public static List<Program> programs(final PlannerContext plannerContext, final QueryMaker queryMaker)
   {
-    final Program hepProgram =
+    // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
+    final Program preProgram =
         Programs.sequence(
             Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
-            new DecorrelateAndTrimFieldsProgram(),
+            DecorrelateAndTrimFieldsProgram.INSTANCE,
             Programs.hep(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE)
         );
+
     return ImmutableList.of(
-        Programs.sequence(hepProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
-        Programs.sequence(hepProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
+        Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
+        Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
     );
   }
 
@@ -242,7 +232,6 @@ public class Rules
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
-    rules.addAll(JOIN_PROJECT_TRANSPOSE_RULES);
 
     if (!plannerConfig.isUseApproximateCountDistinct()) {
       // For some reason, even though we support grouping sets, using AggregateExpandDistinctAggregatesRule.INSTANCE
@@ -251,6 +240,7 @@ public class Rules
     }
 
     // Rules that we wrote.
+    rules.add(FilterJoinExcludePushToChildRule.FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD);
     rules.add(SortCollapseRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
 
@@ -261,6 +251,8 @@ public class Rules
   // accessible through Programs.standard (which we don't want, since it also adds Enumerable rules).
   private static class DecorrelateAndTrimFieldsProgram implements Program
   {
+    private static final DecorrelateAndTrimFieldsProgram INSTANCE = new DecorrelateAndTrimFieldsProgram();
+
     @Override
     public RelNode run(
         RelOptPlanner planner,
@@ -270,8 +262,8 @@ public class Rules
         List<RelOptLattice> lattices
     )
     {
-      final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel);
-      final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(decorrelatedRel.getCluster(), null);
+      final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
+      final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
       return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
     }
   }

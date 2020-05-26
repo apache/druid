@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
@@ -43,7 +44,8 @@ public class DoublesSketchToHistogramPostAggregatorTest
     final PostAggregator postAgg = new DoublesSketchToHistogramPostAggregator(
         "histogram",
         new FieldAccessPostAggregator("field", "sketch"),
-        new double[] {3.5}
+        new double[] {3.5},
+        null
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
@@ -54,7 +56,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
   }
 
   @Test
-  public void normalCase()
+  public void splitPoints()
   {
     final double[] values = new double[] {1, 2, 3, 4, 5, 6};
     final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
@@ -72,7 +74,8 @@ public class DoublesSketchToHistogramPostAggregatorTest
     final PostAggregator postAgg = new DoublesSketchToHistogramPostAggregator(
         "histogram",
         new FieldAccessPostAggregator("field", "sketch"),
-        new double[] {3.5} // splits distribution in two buckets of equal mass 
+        new double[] {3.5}, // splits distribution into two bins of equal mass
+        null
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
@@ -80,5 +83,43 @@ public class DoublesSketchToHistogramPostAggregatorTest
     Assert.assertEquals(2, histogram.length);
     Assert.assertEquals(3.0, histogram[0], 0);
     Assert.assertEquals(3.0, histogram[1], 0);
+  }
+
+  @Test
+  public void numBins()
+  {
+    final double[] values = new double[] {1, 2, 3, 4, 5, 6};
+    final TestDoubleColumnSelectorImpl selector = new TestDoubleColumnSelectorImpl(values);
+
+    final Aggregator agg = new DoublesSketchBuildAggregator(selector, 8);
+    //noinspection ForLoopReplaceableByForEach
+    for (int i = 0; i < values.length; i++) {
+      agg.aggregate();
+      selector.increment();
+    }
+
+    final Map<String, Object> fields = new HashMap<>();
+    fields.put("sketch", agg.get());
+
+    final PostAggregator postAgg = new DoublesSketchToHistogramPostAggregator(
+        "histogram",
+        new FieldAccessPostAggregator("field", "sketch"),
+        null,
+        2 // two bins of equal mass
+    );
+
+    final double[] histogram = (double[]) postAgg.compute(fields);
+    Assert.assertNotNull(histogram);
+    Assert.assertEquals(2, histogram.length);
+    Assert.assertEquals(3.0, histogram[0], 0);
+    Assert.assertEquals(3.0, histogram[1], 0);
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(DoublesSketchToHistogramPostAggregator.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

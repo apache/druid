@@ -30,10 +30,12 @@ import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.server.initialization.ServerConfig;
 
@@ -138,6 +140,17 @@ public class QueryScheduler implements QueryWatcher
   {
     List<Bulkhead> bulkheads = acquireLanes(query);
     return resultSequence.withBaggage(() -> finishLanes(bulkheads));
+  }
+
+  /**
+   * Returns a {@link QueryRunner} that will call {@link QueryScheduler#run} when {@link QueryRunner#run} is called.
+   */
+  public <T> QueryRunner<T> wrapQueryRunner(QueryRunner<T> baseRunner)
+  {
+    return (queryPlus, responseContext) ->
+        QueryScheduler.this.run(
+            queryPlus.getQuery(), new LazySequence<>(() -> baseRunner.run(queryPlus, responseContext))
+        );
   }
 
   /**

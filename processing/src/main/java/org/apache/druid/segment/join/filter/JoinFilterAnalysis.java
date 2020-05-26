@@ -19,12 +19,9 @@
 
 package org.apache.druid.segment.join.filter;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.VirtualColumn;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,19 +37,16 @@ public class JoinFilterAnalysis
   private final boolean retainAfterJoin;
   private final Filter originalFilter;
   private final Optional<Filter> pushDownFilter;
-  private final List<VirtualColumn> pushDownVirtualColumns;
 
   public JoinFilterAnalysis(
       boolean retainAfterJoin,
       Filter originalFilter,
-      @Nullable Filter pushDownFilter,
-      List<VirtualColumn> pushDownVirtualColumns
+      @Nullable Filter pushDownFilter
   )
   {
     this.retainAfterJoin = retainAfterJoin;
     this.originalFilter = originalFilter;
     this.pushDownFilter = pushDownFilter == null ? Optional.empty() : Optional.of(pushDownFilter);
-    this.pushDownVirtualColumns = pushDownVirtualColumns;
   }
 
   public boolean isCanPushDown()
@@ -75,11 +69,6 @@ public class JoinFilterAnalysis
     return pushDownFilter;
   }
 
-  public List<VirtualColumn> getPushDownVirtualColumns()
-  {
-    return pushDownVirtualColumns;
-  }
-
   /**
    * Utility method for generating an analysis that represents: "Filter cannot be pushed down"
    *
@@ -92,8 +81,7 @@ public class JoinFilterAnalysis
     return new JoinFilterAnalysis(
         true,
         originalFilter,
-        null,
-        ImmutableList.of()
+        null
     );
   }
 }
