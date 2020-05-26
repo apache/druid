@@ -11943,6 +11943,79 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testInnerJoinWithIsNullFilter(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT dim1, l.v from druid.foo f inner join lookup.lookyloo l on f.dim1 = l.k where f.dim2 is null",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new LookupDataSource("lookyloo"),
+                        "j0.",
+                        equalsCondition(
+                            DruidExpression.fromColumn("dim1"),
+                            DruidExpression.fromColumn("j0.k")
+                        ),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(selector("dim2", null, null))
+                .columns("dim1", "j0.v")
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc", "xabc"}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  @Ignore // regression test for https://github.com/apache/druid/issues/9924
+  public void testInnerJoinOnMultiValueColumn(Map<String, Object> queryContext) throws Exception
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT dim3, l.v, count(*) from druid.foo f inner join lookup.lookyloo l on f.dim3 = l.k "
+        + "group by 1, 2",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(
+                                    DruidExpression.fromColumn("dim3"),
+                                    DruidExpression.fromColumn("j0.k")
+                                ),
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("dim3", "d0"),
+                                new DefaultDimensionSpec("j0.v", "d1")
+                            )
+                        )
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"2", "x2", 1L}
+        )
+    );
+  }
+
+  @Test
   public void testUsingSubqueryWithLimit() throws Exception
   {
     expectedException.expect(CannotBuildQueryException.class);
