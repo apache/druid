@@ -96,7 +96,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
     } else {
       final ValueType valueType = rowSignature.getColumnType(columnName).orElse(null);
 
@@ -106,7 +106,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       // is nonnumeric), set isComplete false to compensate.
       if (valueType != null) {
         if (valueType.isNumeric()) {
-          return ColumnCapabilitiesImpl.createSimpleNumericColumn(valueType);
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
         }
         return new ColumnCapabilitiesImpl()
             .setType(valueType)

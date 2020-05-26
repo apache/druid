@@ -157,7 +157,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.hasMultipleValues().isUnknown());
     // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
     // coercing any 'UNKNOWN' values to false
-    Assert.assertFalse(ColumnCapabilitiesImpl.complete(caps, false).hasMultipleValues().isMaybeTrue());
+    Assert.assertFalse(ColumnCapabilitiesImpl.snapshot(caps).hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
 
     caps = MMAP_INDEX.getColumnHolder("d1").getCapabilities();

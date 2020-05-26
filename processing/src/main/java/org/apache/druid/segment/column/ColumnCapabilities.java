@@ -60,9 +60,9 @@ public interface ColumnCapabilities
       return this == UNKNOWN;
     }
 
-    public Capable complete(boolean convertUnknownToTrue)
+    public Capable coerceUnknownToBoolean(boolean unknownIsTrue)
     {
-      return this == UNKNOWN ? Capable.of(convertUnknownToTrue) : this;
+      return this == UNKNOWN ? Capable.of(unknownIsTrue) : this;
     }
 
     public Capable and(Capable other)

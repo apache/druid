@@ -49,22 +49,29 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
-   * Used at indexing time to finalize all {@link ColumnCapabilities.Capable#UNKNOWN} values to
-   * {@link ColumnCapabilities.Capable#FALSE}, in order to present a snapshot of the state of the this column
+   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
+   * {@link Capable#FALSE}, in order to present a snapshot of the state of the this column
    */
   @Nullable
-  public static ColumnCapabilitiesImpl complete(
-      @Nullable final ColumnCapabilities capabilities,
-      boolean convertUnknownToTrue
-  )
+  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities)
+  {
+    return snapshot(capabilities, false);
+  }
+
+  /**
+   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
+   * {@link Capable#FALSE} or {@link Capable#TRUE}, in order to present a snapshot of the state of the this column
+   */
+  @Nullable
+  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities, boolean unknownIsTrue)
   {
     if (capabilities == null) {
       return null;
     }
     ColumnCapabilitiesImpl copy = copyOf(capabilities);
-    copy.hasMultipleValues = copy.hasMultipleValues.complete(convertUnknownToTrue);
-    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.complete(convertUnknownToTrue);
-    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.complete(convertUnknownToTrue);
+    copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(unknownIsTrue);
+    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(unknownIsTrue);
+    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(unknownIsTrue);
     return copy;
   }
 
@@ -72,7 +79,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   /**
    * Create a no frills, simple column with {@link ValueType} set and everything else false
    */
-  public static ColumnCapabilitiesImpl createSimpleNumericColumn(ValueType valueType)
+  public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(ValueType valueType)
   {
     return new ColumnCapabilitiesImpl().setType(valueType)
                                        .setHasMultipleValues(false)

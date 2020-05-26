@@ -417,7 +417,7 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
     @Override
     public ColumnCapabilities capabilities(String columnName)
     {
-      return ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
     }
 
     @Override

@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -101,9 +102,17 @@ public class SegmentAnalyzer
 
     for (String columnName : columnNames) {
       final ColumnHolder columnHolder = index == null ? null : index.getColumnHolder(columnName);
-      final ColumnCapabilities capabilities = columnHolder != null
-                                              ? columnHolder.getCapabilities()
-                                              : storageAdapter.getColumnCapabilities(columnName);
+      final ColumnCapabilities capabilities;
+      if (columnHolder != null) {
+        capabilities = columnHolder.getCapabilities();
+      } else {
+        // if
+        if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
+          capabilities = ((IncrementalIndexStorageAdapter) storageAdapter).getSnapshotColumnCapabilities(columnName);
+        } else {
+          capabilities = storageAdapter.getColumnCapabilities(columnName);
+        }
+      }
 
       final ColumnAnalysis analysis;
       final ValueType type = capabilities.getType();
@@ -138,7 +147,7 @@ public class SegmentAnalyzer
     // Add time column too
     ColumnCapabilities timeCapabilities = storageAdapter.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
     if (timeCapabilities == null) {
-      timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG);
+      timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
     }
     columns.put(
         ColumnHolder.TIME_COLUMN_NAME,

@@ -718,14 +718,14 @@ public class IndexMergerV9 implements IndexMerger
       for (String dimension : adapter.getDimensionNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
         capabilitiesMap.compute(dimension, (d, existingCapabilities) ->
-            ColumnCapabilitiesImpl.complete(capabilities, false)
-                                  .merge(ColumnCapabilitiesImpl.complete(existingCapabilities, false)));
+            ColumnCapabilitiesImpl.snapshot(capabilities)
+                                  .merge(ColumnCapabilitiesImpl.snapshot(existingCapabilities)));
       }
       for (String metric : adapter.getMetricNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(metric);
         capabilitiesMap.compute(metric, (m, existingCapabilities) ->
-            ColumnCapabilitiesImpl.complete(capabilities, false)
-                                  .merge(ColumnCapabilitiesImpl.complete(existingCapabilities, false)));
+            ColumnCapabilitiesImpl.snapshot(capabilities)
+                                  .merge(ColumnCapabilitiesImpl.snapshot(existingCapabilities)));
         metricsValueTypes.put(metric, capabilities.getType());
         metricTypeNames.put(metric, adapter.getMetricType(metric));
       }

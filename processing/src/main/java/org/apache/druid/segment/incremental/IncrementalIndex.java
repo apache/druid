@@ -331,7 +331,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     //__time capabilities
     columnCapabilities.put(
         ColumnHolder.TIME_COLUMN_NAME,
-        ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG)
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG)
     );
 
     // This should really be more generic
@@ -938,7 +938,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                                          .setDictionaryValuesUnique(true)
                                          .setDictionaryValuesSorted(false);
     } else {
-      return ColumnCapabilitiesImpl.createSimpleNumericColumn(type);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }
   }
 
@@ -1133,17 +1133,17 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
       String typeInfo = factory.getTypeName();
       if ("float".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.FLOAT);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
         this.type = typeInfo;
       } else if ("long".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.LONG);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
         this.type = typeInfo;
       } else if ("double".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.DOUBLE);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
         this.type = typeInfo;
       } else {
         // in an ideal world complex type reports its actual column capabilities...
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumn(ValueType.COMPLEX);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX);
         this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
       }
     }
