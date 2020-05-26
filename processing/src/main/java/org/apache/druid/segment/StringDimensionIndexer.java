@@ -233,8 +233,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   private final DimensionDictionary dimLookup;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
-  private boolean hasMultipleValues = false;
-  private boolean isSparse = false;
+  private volatile boolean hasMultipleValues = false;
+  private volatile boolean isSparse = false;
 
   @Nullable
   private SortedDimensionDictionary sortedLookup;
