@@ -154,7 +154,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final String DUMMY_SQL_ID = "dummy";
   public static final String LOS_ANGELES = "America/Los_Angeles";
 
-  static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
+  private static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
       ImmutableMap.<String, Object>builder()
                   .put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")

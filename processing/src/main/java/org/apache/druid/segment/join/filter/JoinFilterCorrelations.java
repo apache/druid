@@ -155,7 +155,7 @@ public class JoinFilterCorrelations
           correlationForPrefix.getValue().getCorrelatedValuesMap().computeIfAbsent(
               Pair.of(rhsRewriteCandidate.getRhsColumn(), rhsRewriteCandidate.getValueForRewrite()),
               (rhsVal) -> {
-                Set<String> correlatedValues = getCorrelatedValuesForPushDown(
+                Optional<Set<String>> correlatedValues = getCorrelatedValuesForPushDown(
                     rhsRewriteCandidate.getRhsColumn(),
                     rhsRewriteCandidate.getValueForRewrite(),
                     correlationForPrefix.getValue().getJoinColumn(),
@@ -163,12 +163,7 @@ public class JoinFilterCorrelations
                     enableRewriteValueColumnFilters,
                     filterRewriteMaxSize
                 );
-
-                if (correlatedValues.isEmpty()) {
-                  return Optional.empty();
-                } else {
-                  return Optional.of(correlatedValues);
-                }
+                return correlatedValues;
               }
           );
         }
@@ -247,9 +242,9 @@ public class JoinFilterCorrelations
    *                               with a column on the base table
    * @param clauseForFilteredTable The joinable clause that corresponds to the join table being filtered on
    * @return A list of values of the correlatedJoinColumn that appear in rows where filterColumn = filterValue
-   * Returns an empty set if we cannot determine the correlated values.
+   * Returns absent if we cannot determine the correlated values.
    */
-  private static Set<String> getCorrelatedValuesForPushDown(
+  private static Optional<Set<String>> getCorrelatedValuesForPushDown(
       String filterColumn,
       String filterValue,
       String correlatedJoinColumn,

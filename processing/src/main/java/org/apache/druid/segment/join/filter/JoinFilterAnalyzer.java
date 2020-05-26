@@ -28,6 +28,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -442,10 +443,20 @@ public class JoinFilterAnalyzer
           return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
         }
 
+        Set<String> newFilterValues = correlatedValues.get();
+        // in nothing => match nothing
+        if (newFilterValues.isEmpty()) {
+          return new JoinFilterAnalysis(
+              true,
+              selectorFilter,
+              FalseFilter.instance()
+          );
+        }
+
         for (String correlatedBaseColumn : correlationAnalysis.getBaseColumns()) {
           Filter rewrittenFilter = new InDimFilter(
               correlatedBaseColumn,
-              correlatedValues.get(),
+              newFilterValues,
               null,
               null
           ).toFilter();
@@ -468,7 +479,7 @@ public class JoinFilterAnalyzer
 
           Filter rewrittenFilter = new InDimFilter(
               pushDownVirtualColumn.getOutputName(),
-              correlatedValues.get(),
+              newFilterValues,
               null,
               null
           ).toFilter();

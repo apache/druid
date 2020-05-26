@@ -8075,6 +8075,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdownMatchesNothig() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+    Map<String, Object> queryRewriteValueColumnFiltersContext =
+        ImmutableMap.<String, Object>builder()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .build();
+
+    testQuery(
+        "SELECT lookyloo.k, COUNT(*)\n"
+        + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
+        + "WHERE lookyloo.v = '123'\n"
+        + "GROUP BY lookyloo.k",
+        queryRewriteValueColumnFiltersContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("j0.v", "123", null))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.k", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(queryRewriteValueColumnFiltersContext)
+                        .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
   public void testFilterAndGroupByLookupUsingJoinOperatorAllowNulls() throws Exception
   {
     // Cannot vectorize JOIN operator.
@@ -8199,9 +8239,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Cannot vectorize JOIN operator.
     cannotVectorize();
-    Map<String, Object> queryRewriteValueColumnFiltersContext = DEFAULT_QUERY_CONTEXT_BUILDER
-        .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-        .build();
+    Map<String, Object> queryRewriteValueColumnFiltersContext =
+        ImmutableMap.<String, Object>builder()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .build();
     testQuery(
         "SELECT lookyloo.k, COUNT(*)\n"
         + "FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k\n"
