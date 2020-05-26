@@ -176,7 +176,7 @@ jobs:
           --type jacoco
           --line-coverage 65
           --branch-coverage 65
-          --function-coverage 80
+          --function-coverage 0
           --
           || { printf "\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\n" && false; }
           fi
