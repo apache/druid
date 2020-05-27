@@ -19,38 +19,30 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
+import org.junit.Test;
 
-import java.util.List;
-
-public abstract class MacroTestBase extends InitializedNullHandlingTest
+public class RegexpLikeExprMacroTest extends MacroTestBase
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  private final ExprMacroTable.ExprMacro macro;
-
-  protected MacroTestBase(ExprMacroTable.ExprMacro macro)
+  public RegexpLikeExprMacroTest()
   {
-    this.macro = macro;
+    super(new RegexpLikeExprMacro());
   }
 
-  protected void expectException(Class<? extends Throwable> type, String message)
+  @Test
+  public void testErrorZeroArguments()
   {
-    expectedException.expect(type);
-    expectedException.expectMessage(message);
+    expectException(IllegalArgumentException.class, "Function[regexp_like] must have 2 arguments");
   }
 
-  protected void testEval(
-      final 
-  )
-
-  protected Expr apply(final List<Expr> args)
+  @Test
+  public void testErrorThreeArguments()
   {
-    return macro.apply(args);
+    expectException(IllegalArgumentException.class, "Function[regexp_like] must have 2 arguments");
+  }
+
+  @Test
+  public void testNullPattern()
+  {
+
   }
 }
