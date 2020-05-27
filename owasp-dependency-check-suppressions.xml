@@ -53,6 +53,9 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-keystone@.*$</packageUrl>
     <cve>CVE-2015-7546</cve>
+    <cve>CVE-2020-12689</cve>
+    <cve>CVE-2020-12690</cve>
+    <cve>CVE-2020-12691</cve>
   </suppress>
 
   <!-- FIXME: These are suppressed so that CI can enforce that no new vulnerable dependencies are added. -->

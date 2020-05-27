@@ -2676,28 +2676,34 @@ function guessInputFormat(sampleData: string[]): InputFormat {
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
 
-    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-      return inputFormatFromType('json');
-    }
+    // First check for magic byte sequences as they rarely yield false positives
 
-    if (sampleDatum.split('\t').length > 3) {
-      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
-    }
-
-    if (sampleDatum.split(',').length > 3) {
-      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
-    }
-
+    // Parquet 4 byte magic header: https://github.com/apache/parquet-format#file-format
     if (sampleDatum.startsWith('PAR1')) {
       return inputFormatFromType('parquet');
     }
-
+    // ORC 3 byte magic header: https://orc.apache.org/specification/ORCv1/
     if (sampleDatum.startsWith('ORC')) {
       return inputFormatFromType('orc');
     }
-
+    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
     if (sampleDatum.startsWith('Obj1')) {
       return inputFormatFromType('avro_ocf');
+    }
+
+    // After checking for magic byte sequences perform heuristics to deduce string formats
+
+    // If the string starts and ends with curly braces assume JSON
+    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
+      return inputFormatFromType('json');
+    }
+    // Contains more than 3 tabs assume TSV
+    if (sampleDatum.split('\t').length > 3) {
+      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
+    }
+    // Contains more than 3 commas assume CSV
+    if (sampleDatum.split(',').length > 3) {
+      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
     }
   }
 
