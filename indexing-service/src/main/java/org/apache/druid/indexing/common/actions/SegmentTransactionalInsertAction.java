@@ -191,25 +191,34 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     }
 
     try {
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
-          task,
-          allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
-          CriticalAction.<SegmentPublishResult>builder()
-              .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
-                      segments,
-                      startMetadata,
-                      endMetadata
-                  )
+      CriticalAction<SegmentPublishResult> criticalAction = CriticalAction.<SegmentPublishResult>builder()
+          .onValidLocks(
+              () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+                  segments,
+                  startMetadata,
+                  endMetadata
               )
-              .onInvalidLocks(
-                  () -> SegmentPublishResult.fail(
-                      "Invalid task locks. Maybe they are revoked by a higher priority task."
+          )
+          .onInvalidLocks(
+              () -> SegmentPublishResult.fail(
+                  "Invalid task locks. Maybe they are revoked by a higher priority task."
                       + " Please check the overlord log for details."
-                  )
               )
-              .build()
-      );
+          )
+          .build();
+      if (startMetadata == null && endMetadata == null) {
+        retVal = toolbox.getTaskLockbox().doOfflineSegmentTransactionalInsertAction(
+            task,
+            allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+            criticalAction
+        );
+      } else {
+        retVal = toolbox.getTaskLockbox().doInCriticalSection(
+            task,
+            allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+            criticalAction
+            );
+      }
     }
     catch (Exception e) {
       throw new RuntimeException(e);

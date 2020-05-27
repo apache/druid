@@ -89,6 +89,7 @@ public class TaskLockbox
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
+  private final ReentrantLock offlineSegmentTransactionalInsertLock = new ReentrantLock(true);
 
   private static final EmittingLogger log = new EmittingLogger(TaskLockbox.class);
 
@@ -562,6 +563,19 @@ public class TaskLockbox
       giant.unlock();
     }
   }
+
+  public <T> T doOfflineSegmentTransactionalInsertAction(Task task, List<Interval> intervals, CriticalAction<T> action) throws Exception
+  {
+    offlineSegmentTransactionalInsertLock.lock();
+
+    try {
+      return action.perform(isTaskLocksValid(task, intervals));
+    }
+    finally {
+      offlineSegmentTransactionalInsertLock.unlock();
+    }
+  }
+
 
   /**
    * Check all locks task acquired are still valid.
