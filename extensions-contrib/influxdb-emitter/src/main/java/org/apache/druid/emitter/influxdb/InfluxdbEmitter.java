@@ -28,11 +28,18 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -56,7 +63,7 @@ public class InfluxdbEmitter implements Emitter
   public InfluxdbEmitter(InfluxdbEmitterConfig influxdbEmitterConfig)
   {
     this.influxdbEmitterConfig = influxdbEmitterConfig;
-    this.influxdbClient = HttpClientBuilder.create().build();
+    this.influxdbClient = buildInfluxdbClient();
     this.eventsQueue = new LinkedBlockingQueue<>(influxdbEmitterConfig.getMaxQueueSize());
     this.dimensionWhiteList = influxdbEmitterConfig.getDimensionWhitelist();
     log.info("constructed influxdb emitter");
@@ -96,7 +103,8 @@ public class InfluxdbEmitter implements Emitter
   public void postToInflux(String payload)
   {
     HttpPost post = new HttpPost(
-        "http://" + influxdbEmitterConfig.getHostname()
+        influxdbEmitterConfig.getProtocol() + "://"
+        + influxdbEmitterConfig.getHostname()
         + ":" + influxdbEmitterConfig.getPort()
         + "/write?db=" + influxdbEmitterConfig.getDatabaseName()
         + "&u=" + influxdbEmitterConfig.getInfluxdbUserName()
@@ -209,6 +217,48 @@ public class InfluxdbEmitter implements Emitter
       payload.append(transformForInfluxSystems(eventsQueue.poll()));
     }
     postToInflux(payload.toString());
+  }
+
+  private HttpClient buildInfluxdbClient()
+  {
+    if ("https".equals(influxdbEmitterConfig.getProtocol())) {
+      SSLContext sslContext = null;
+      if (influxdbEmitterConfig.getTrustStorePath() == null || influxdbEmitterConfig.getTrustStorePassword() == null) {
+        String msg = "Can't load TrustStore. Truststore path or password is not set.";
+        log.error(msg);
+        throw new IllegalStateException(msg);
+      }
+
+      FileInputStream in = null;
+
+      try {
+        in = new FileInputStream(new File(influxdbEmitterConfig.getTrustStorePath()));
+        KeyStore store = KeyStore.getInstance(influxdbEmitterConfig.getTrustStoreType() == null
+                                              ? KeyStore.getDefaultType()
+                                              : influxdbEmitterConfig.getTrustStoreType());
+        store.load(in, influxdbEmitterConfig.getTrustStorePassword().toCharArray());
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(store);
+        sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, tmf.getTrustManagers(), null);
+      }
+      catch (Exception ex) {
+        log.error("Unable to load TrustStore");
+      }
+      finally {
+        if (in != null) {
+          try {
+            in.close();
+          }
+          catch (IOException ex) {
+            log.error("Unable to load TrustStore");
+          }
+        }
+      }
+      return HttpClients.custom().setSSLContext(sslContext).setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE).build();
+    } else {
+      return HttpClientBuilder.create().build();
+    }
   }
 
 }

@@ -36,11 +36,20 @@ public class InfluxdbEmitterConfig
   private static final int DEFAULT_QUEUE_SIZE = Integer.MAX_VALUE;
   private static final int DEFAULT_FLUSH_PERIOD = 60000; // milliseconds
   private static final List<String> DEFAULT_DIMENSION_WHITELIST = Arrays.asList("dataSource", "type", "numMetrics", "numDimensions", "threshold", "dimension", "taskType", "taskStatus", "tier");
+  private static final String DEFAULT_PROTOCOL = "http";
 
   @JsonProperty
   private final String hostname;
   @JsonProperty
   private final Integer port;
+  @JsonProperty
+  private final String protocol;
+  @JsonProperty
+  private final String trustStorePath;
+  @JsonProperty
+  private final String trustStoreType;
+  @JsonProperty
+  private final String trustStorePassword;
   @JsonProperty
   private final String databaseName;
   @JsonProperty
@@ -62,6 +71,10 @@ public class InfluxdbEmitterConfig
   public InfluxdbEmitterConfig(
       @JsonProperty("hostname") String hostname,
       @JsonProperty("port") Integer port,
+      @JsonProperty("protocol") String protocol,
+      @JsonProperty("trustStorePath") String trustStorePath,
+      @JsonProperty("trustStoreType") String trustStoreType,
+      @JsonProperty("trustStorePassword") String trustStorePassword,
       @JsonProperty("databaseName") String databaseName,
       @JsonProperty("maxQueueSize") Integer maxQueueSize,
       @JsonProperty("flushPeriod") Integer flushPeriod,
@@ -73,6 +86,10 @@ public class InfluxdbEmitterConfig
   {
     this.hostname = Preconditions.checkNotNull(hostname, "hostname can not be null");
     this.port = port == null ? DEFAULT_PORT : port;
+    this.protocol = protocol == null ? DEFAULT_PROTOCOL : protocol;
+    this.trustStorePath = trustStorePath;
+    this.trustStoreType = trustStoreType;
+    this.trustStorePassword = trustStorePassword;
     this.databaseName = Preconditions.checkNotNull(databaseName, "databaseName can not be null");
     this.maxQueueSize = maxQueueSize == null ? DEFAULT_QUEUE_SIZE : maxQueueSize;
     this.flushPeriod = flushPeriod == null ? DEFAULT_FLUSH_PERIOD : flushPeriod;
@@ -121,6 +138,18 @@ public class InfluxdbEmitterConfig
     if (!getDimensionWhitelist().equals(that.getDimensionWhitelist())) {
       return false;
     }
+    if (!getProtocol().equals(that.getProtocol())) {
+      return false;
+    }
+    if (getTrustStorePath() != null ? !getTrustStorePath().equals(that.getTrustStorePath()) : that.getTrustStorePath() != null) {
+      return false;
+    }
+    if (getTrustStoreType() != null ? !getTrustStoreType().equals(that.getTrustStoreType()) : that.getTrustStoreType() != null) {
+      return false;
+    }
+    if (getTrustStorePassword() != null ? !getTrustStorePassword().equals(that.getTrustStorePassword()) : that.getTrustStorePassword() != null) {
+      return false;
+    }
     return true;
 
   }
@@ -130,6 +159,10 @@ public class InfluxdbEmitterConfig
   {
     int result = getHostname().hashCode();
     result = 31 * result + getPort();
+    result = 31 * result + getProtocol().hashCode();
+    result = 31 * result + (getTrustStorePath() != null ? getTrustStorePath().hashCode() : 0);
+    result = 31 * result + (getTrustStoreType() != null ? getTrustStoreType().hashCode() : 0);
+    result = 31 * result + (getTrustStorePassword() != null ? getTrustStorePassword().hashCode() : 0);
     result = 31 * result + getDatabaseName().hashCode();
     result = 31 * result + getFlushPeriod();
     result = 31 * result + getMaxQueueSize();
@@ -150,6 +183,30 @@ public class InfluxdbEmitterConfig
   public int getPort()
   {
     return port;
+  }
+
+  @JsonProperty
+  public String getProtocol()
+  {
+    return protocol;
+  }
+
+  @JsonProperty
+  public String getTrustStorePath()
+  {
+    return trustStorePath;
+  }
+
+  @JsonProperty
+  public String getTrustStoreType()
+  {
+    return trustStoreType;
+  }
+
+  @JsonProperty
+  public String getTrustStorePassword()
+  {
+    return trustStorePassword;
   }
 
   @JsonProperty

@@ -66,6 +66,10 @@ public class InfluxdbEmitterTest
     InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -107,6 +111,10 @@ public class InfluxdbEmitterTest
     InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -149,6 +157,10 @@ public class InfluxdbEmitterTest
     InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
@@ -191,6 +203,10 @@ public class InfluxdbEmitterTest
     InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
         "localhost",
         8086,
+        null,
+        null,
+        null,
+        null,
         "dbname",
         10000,
         15000,
