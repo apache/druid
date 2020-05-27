@@ -24,8 +24,7 @@ sidebar_label: "Querying data"
   -->
 
 
-This tutorial demonstrates how to query data in Apache Druid using Druid SQL, a SQL-like language
-for querying data in Druid.   
+This tutorial demonstrates how to query data in Apache Druid using SQL.  
 
 It assumes that you've completed the [Quickstart](../tutorials/index.md) 
 or one of the following tutorials, since we'll query datasources that you would have created
@@ -51,8 +50,8 @@ browser.
 
    ![Query view](../assets/tutorial-query-01.png "Query view")
 
-   You can write queries directly in the edit pane, but we'll generate a starter query 
-   using query builder controls. 
+   You can always write queries directly in the edit pane, but the Query view also provides 
+   facilities to help you construct SQL queries, which we will use to generate a starter query. 
 
 3. Expand the wikipedia datasource tree in the left pane. We'll
 create a query for the page dimension.  
@@ -274,6 +273,6 @@ The following results should be returned:
 
 ## Further reading
 
-See the [Queries documentation](../querying/querying.md) for more information on Druid native query.
-
 See the [Druid SQL documentation](../querying/sql.md) for more information on using Druid SQL queries.
+
+See the [Queries documentation](../querying/querying.md) for more information on Druid native queries.
