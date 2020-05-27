@@ -244,5 +244,7 @@ public class MaterializedViewQueryQueryToolChestTest
         ));
 
     Assert.assertEquals(realQuery, materializedViewQueryQueryToolChest.getRealQuery(materializedViewQuery));
+    
   }
+  
 }
