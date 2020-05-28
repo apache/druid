@@ -9088,7 +9088,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .build()
                         ),
                         "j0.",
-                        "0",
+                        equalsCondition(DruidExpression.fromColumn("dim1"), DruidExpression.fromColumn("j0.d0")),
                         JoinType.INNER
                     )
                 )
