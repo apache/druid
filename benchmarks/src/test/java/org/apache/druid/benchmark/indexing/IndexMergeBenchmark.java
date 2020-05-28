@@ -21,9 +21,9 @@ package org.apache.druid.benchmark.indexing;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -96,7 +96,7 @@ public class IndexMergeBenchmark
   }
 
   private List<QueryableIndex> indexesToMerge;
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
   private File tmpDir;
   private IndexMergerV9 indexMergerV9;
 
@@ -121,10 +121,10 @@ public class IndexMergeBenchmark
 
     indexesToMerge = new ArrayList<>();
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
     for (int i = 0; i < numSegments; i++) {
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+      DataGenerator gen = new DataGenerator(
           schemaInfo.getColumnSchemas(),
           RNG_SEED + i,
           schemaInfo.getDataInterval(),

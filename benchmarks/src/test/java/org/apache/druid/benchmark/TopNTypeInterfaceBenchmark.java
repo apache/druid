@@ -20,9 +20,9 @@
 package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
@@ -125,7 +125,7 @@ public class TopNTypeInterfaceBenchmark
   private List<QueryableIndex> qIndexes;
 
   private QueryRunnerFactory factory;
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
   private TopNQueryBuilder queryBuilder;
   private TopNQuery stringQuery;
   private TopNQuery longQuery;
@@ -153,7 +153,7 @@ public class TopNTypeInterfaceBenchmark
   {
     // queries for the basic schema
     Map<String, TopNQueryBuilder> basicQueries = new LinkedHashMap<>();
-    BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
 
     { // basic.A
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
@@ -241,7 +241,7 @@ public class TopNTypeInterfaceBenchmark
 
     setupQueries();
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
     queryBuilder = SCHEMA_QUERY_MAP.get("basic").get("string");
     queryBuilder.threshold(threshold);
     stringQuery = queryBuilder.build();
@@ -258,7 +258,7 @@ public class TopNTypeInterfaceBenchmark
     for (int i = 0; i < numSegments; i++) {
       log.info("Generating rows for segment " + i);
 
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+      DataGenerator gen = new DataGenerator(
           schemaInfo.getColumnSchemas(),
           RNG_SEED + i,
           schemaInfo.getDataInterval(),

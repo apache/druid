@@ -17,10 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark;
+package org.apache.druid.segment.generator;
 
-import org.apache.druid.benchmark.datagen.BenchmarkColumnSchema;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.column.ValueType;
@@ -34,16 +32,16 @@ import java.util.List;
 import java.util.Map;
 
 // Doesn't assert behavior right now, just generates rows and prints out some distribution numbers
-public class BenchmarkDataGeneratorTest
+public class DataGeneratorTest
 {
   @Test
   public void testSequential()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
-        BenchmarkColumnSchema.makeSequential(
+        GeneratorColumnSchema.makeSequential(
             "dimA",
             ValueType.STRING,
             false,
@@ -55,7 +53,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeEnumeratedSequential(
+        GeneratorColumnSchema.makeEnumeratedSequential(
             "dimB",
             ValueType.STRING,
             false,
@@ -66,7 +64,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeSequential(
+        GeneratorColumnSchema.makeSequential(
             "dimC",
             ValueType.STRING,
             false,
@@ -77,7 +75,7 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, 0, 0, 1000.0);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("S-ROW: " + row);
@@ -89,11 +87,11 @@ public class BenchmarkDataGeneratorTest
   @Test
   public void testDiscreteUniform()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
-        BenchmarkColumnSchema.makeDiscreteUniform(
+        GeneratorColumnSchema.makeDiscreteUniform(
             "dimA",
             ValueType.STRING,
             false,
@@ -105,7 +103,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeEnumeratedDiscreteUniform(
+        GeneratorColumnSchema.makeEnumeratedDiscreteUniform(
             "dimB",
             ValueType.STRING,
             false,
@@ -116,7 +114,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeDiscreteUniform(
+        GeneratorColumnSchema.makeDiscreteUniform(
             "dimC",
             ValueType.STRING,
             false,
@@ -128,7 +126,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeDiscreteUniform(
+        GeneratorColumnSchema.makeDiscreteUniform(
             "dimD",
             ValueType.FLOAT,
             false,
@@ -139,7 +137,7 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, 0, 0, 1000.0);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("U-ROW: " + row);
@@ -154,11 +152,11 @@ public class BenchmarkDataGeneratorTest
   @Test
   public void testRoundedNormal()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
-        BenchmarkColumnSchema.makeNormal(
+        GeneratorColumnSchema.makeNormal(
             "dimA",
             ValueType.FLOAT,
             false,
@@ -171,7 +169,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeNormal(
+        GeneratorColumnSchema.makeNormal(
             "dimB",
             ValueType.STRING,
             false,
@@ -183,7 +181,7 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, 0, 0, 1000.0);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 1000000; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("N-ROW: " + row);
@@ -197,11 +195,11 @@ public class BenchmarkDataGeneratorTest
   @Test
   public void testZipf()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
-        BenchmarkColumnSchema.makeZipf(
+        GeneratorColumnSchema.makeZipf(
             "dimA",
             ValueType.STRING,
             false,
@@ -214,7 +212,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeZipf(
+        GeneratorColumnSchema.makeZipf(
             "dimB",
             ValueType.FLOAT,
             false,
@@ -227,7 +225,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeEnumeratedZipf(
+        GeneratorColumnSchema.makeEnumeratedZipf(
             "dimC",
             ValueType.STRING,
             false,
@@ -238,7 +236,7 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, 0, 0, 1000.0);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("Z-ROW: " + row);
@@ -252,11 +250,11 @@ public class BenchmarkDataGeneratorTest
   @Test
   public void testEnumerated()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
-        BenchmarkColumnSchema.makeEnumerated(
+        GeneratorColumnSchema.makeEnumerated(
             "dimA",
             ValueType.STRING,
             false,
@@ -267,7 +265,7 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, 0, 0, 1000.0);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 10000; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("Z-ROW: " + row);
@@ -281,11 +279,11 @@ public class BenchmarkDataGeneratorTest
   @Test
   public void testNormal()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
-        BenchmarkColumnSchema.makeNormal(
+        GeneratorColumnSchema.makeNormal(
             "dimA",
             ValueType.FLOAT,
             false,
@@ -298,7 +296,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeNormal(
+        GeneratorColumnSchema.makeNormal(
             "dimB",
             ValueType.STRING,
             false,
@@ -310,7 +308,7 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, 0, 0, 1000.0);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("N-ROW: " + row);
@@ -324,11 +322,11 @@ public class BenchmarkDataGeneratorTest
   @Test
   public void testRealUniform()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
     RowValueTracker tracker = new RowValueTracker();
 
     schemas.add(
-        BenchmarkColumnSchema.makeContinuousUniform(
+        GeneratorColumnSchema.makeContinuousUniform(
             "dimA",
             ValueType.STRING,
             false,
@@ -340,7 +338,7 @@ public class BenchmarkDataGeneratorTest
     );
 
     schemas.add(
-        BenchmarkColumnSchema.makeContinuousUniform(
+        GeneratorColumnSchema.makeContinuousUniform(
             "dimB",
             ValueType.FLOAT,
             false,
@@ -351,7 +349,7 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, 0, 0, 1000.0);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, 0, 0, 1000.0);
     for (int i = 0; i < 100; i++) {
       InputRow row = dataGenerator.nextRow();
       //System.out.println("U-ROW: " + row);
@@ -365,10 +363,10 @@ public class BenchmarkDataGeneratorTest
   @Test
   public void testIntervalBasedTimeGeneration()
   {
-    List<BenchmarkColumnSchema> schemas = new ArrayList<>();
+    List<GeneratorColumnSchema> schemas = new ArrayList<>();
 
     schemas.add(
-        BenchmarkColumnSchema.makeEnumeratedSequential(
+        GeneratorColumnSchema.makeEnumeratedSequential(
             "dimB",
             ValueType.STRING,
             false,
@@ -378,12 +376,12 @@ public class BenchmarkDataGeneratorTest
         )
     );
 
-    BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(schemas, 9999, Intervals.utc(50000, 600000), 100);
+    DataGenerator dataGenerator = new DataGenerator(schemas, 9999, Intervals.utc(50000, 600000), 100);
     for (int i = 0; i < 100; i++) {
       dataGenerator.nextRow();
     }
 
-    BenchmarkDataGenerator dataGenerator2 = new BenchmarkDataGenerator(schemas, 9999, Intervals.utc(50000, 50001), 100);
+    DataGenerator dataGenerator2 = new DataGenerator(schemas, 9999, Intervals.utc(50000, 50001), 100);
     for (int i = 0; i < 100; i++) {
       dataGenerator2.nextRow();
     }

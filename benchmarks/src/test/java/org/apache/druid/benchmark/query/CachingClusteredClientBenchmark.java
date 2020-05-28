@@ -27,8 +27,8 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.benchmark.datagen.SegmentGenerator;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
@@ -180,7 +180,7 @@ public class CachingClusteredClientBenchmark
 
   private final Closer closer = Closer.create();
 
-  private final BenchmarkSchemaInfo basicSchema = BenchmarkSchemas.SCHEMA_MAP.get("basic");
+  private final GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
   private final QuerySegmentSpec basicSchemaIntervalSpec = new MultipleIntervalSegmentSpec(
       Collections.singletonList(basicSchema.getDataInterval())
   );
@@ -204,7 +204,7 @@ public class CachingClusteredClientBenchmark
 
     parallelCombine = parallelism > 0;
 
-    BenchmarkSchemaInfo schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schemaName);
+    GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
 
     Map<DataSegment, QueryableIndex> queryableIndexes = Maps.newHashMapWithExpectedSize(numServers);
 
