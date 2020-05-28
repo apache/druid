@@ -61,7 +61,10 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
 
     this.sqls = sqls;
     this.foldCase = foldCase;
-    this.sqlFirehoseDatabaseConnector = sqlFirehoseDatabaseConnector;
+    this.sqlFirehoseDatabaseConnector = Preconditions.checkNotNull(
+        sqlFirehoseDatabaseConnector,
+        "SQL Metadata Connector not configured!"
+    );
     this.objectMapper = objectMapper;
   }
 
@@ -137,13 +140,12 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
     SqlInputSource that = (SqlInputSource) o;
     return foldCase == that.foldCase &&
            sqls.equals(that.sqls) &&
-           sqlFirehoseDatabaseConnector.equals(that.sqlFirehoseDatabaseConnector) &&
-           objectMapper.equals(that.objectMapper);
+           sqlFirehoseDatabaseConnector.equals(that.sqlFirehoseDatabaseConnector);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sqls, sqlFirehoseDatabaseConnector, objectMapper, foldCase);
+    return Objects.hash(sqls, sqlFirehoseDatabaseConnector, foldCase);
   }
 }

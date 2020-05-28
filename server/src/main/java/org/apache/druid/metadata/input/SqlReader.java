@@ -38,6 +38,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Reader exclusively for {@link SqlEntity}
+ */
 public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
   private final InputRowSchema inputRowSchema;
@@ -63,6 +66,7 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {
     final Closer closer = Closer.create();
+    //The results are fetched into local storage as this avoids having to keep a persistent database connection for a long time
     final InputEntity.CleanableFile resultFile = closer.register(source.fetch(temporaryDirectory, null));
     FileInputStream inputStream = new FileInputStream(resultFile.file());
     JsonIterator<Map<String, Object>> jsonIterator = new JsonIterator<>(new TypeReference<Map<String, Object>>()

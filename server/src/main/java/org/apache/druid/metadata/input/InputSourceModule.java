@@ -28,6 +28,9 @@ import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
 
+/**
+ * Module that installs {@link org.apache.druid.data.input.InputSource} implementations
+ */
 public class InputSourceModule implements DruidModule
 {
   @Override

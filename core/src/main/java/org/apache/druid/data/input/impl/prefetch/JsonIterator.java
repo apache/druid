@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -39,7 +40,7 @@ import java.util.NoSuchElementException;
  *
  * @param <T> the type of object returned by this iterator
  */
-public class JsonIterator<T> implements Iterator<T>, Closeable
+public class JsonIterator<T> implements CloseableIterator<T>
 {
   private JsonParser jp;
   private ObjectCodec objectCodec;

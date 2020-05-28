@@ -53,7 +53,7 @@ The detailed behavior of the Parallel task is different depending on the [`parti
 See each `partitionsSpec` for more details.
 
 To use this task, the [`inputSource`](#input-sources) in the `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set to larger than 1 in the `tuningConfig`.
-Otherwise, this task runs sequentially; the `index_paralllel` task reads each input file one by one and creates segments by itself.
+Otherwise, this task runs sequentially; the `index_parallel` task reads each input file one by one and creates segments by itself.
 The supported splittable input formats for now are:
 
 - [`s3`](#s3-input-source) reads data from AWS S3 storage.
@@ -1311,7 +1311,7 @@ A spec that applies a filter and reads a subset of the original datasource's col
 This spec above will only return the `page`, `user` dimensions and `added` metric.
 Only rows where `page` = `Druid` will be returned.
 
-### Sql Input Source
+### SQL Input Source
 
 The SQL input source is used to read data directly from RDBMS.
 The SQL input source is _splittable_ and can be used by the [Parallel task](#parallel-task), where each worker task will read from one SQL query from the list of queries.
@@ -1320,7 +1320,7 @@ Since this input source has a fixed input format for reading events, no `inputFo
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "sql".|Yes|
-|database|Specifies the database connection details.|Yes|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support and this extension must be loaded into Druid. For database types `mysql` and `postgresql`, the `connectorConfig` support is provided by [mysql-metadata-storage](../development/extensions-core/mysql.md) and [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extensions respectively.|Yes|
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
 
@@ -1345,8 +1345,21 @@ An example SqlInputSource spec is shown below:
 ...
 ```
 
-The spec above will read all events from two separate sqls
-within the interval `2013-01-01/2013-01-02`.
+The spec above will read all events from two separate SQLs within the interval `2013-01-01/2013-01-02`.
+Each of the SQL queries will be run in its own sub-task and thus for the above example, there would be two sub-tasks.
+
+Compared to the other native batch InputSources, SQL InputSource behaves differently in terms of reading the input data and so it would be helpful to consider the following points before using this InputSource in a production environment:
+
+* During indexing, each task would execute one of the SQL queries and the results are stored locally on disk. The tasks then proceed to read the data from these local input files and generate segments. Presently, there isn’t a restriction on the size of the generated files and this would require the MiddleManagers or Indexers to have sufficient disk capacity based on the volume of data being indexed.
+
+* Filtering the SQL queries based on the intervals specified in the `granularitySpec` can avoid unwanted data being retrieved and stored by the indexing process.
+
+* Pagination may be used on the SQL queries to ensure that each query pulls a similar amount of data, thereby improving the efficiency of the sub-tasks.
+
+* Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
+
+
+###
 
 ## Firehoses (Deprecated)
 

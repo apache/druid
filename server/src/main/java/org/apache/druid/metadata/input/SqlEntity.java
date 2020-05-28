@@ -42,6 +42,9 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Represents a rdbms based input resource and knows how to read query results from the resource using SQL queries.
+ */
 public class SqlEntity implements InputEntity
 {
   private static final Logger LOG = new Logger(SqlEntity.class);
@@ -59,7 +62,10 @@ public class SqlEntity implements InputEntity
   )
   {
     this.sql = sql;
-    this.sqlFirehoseDatabaseConnector = sqlFirehoseDatabaseConnector;
+    this.sqlFirehoseDatabaseConnector = Preconditions.checkNotNull(
+        sqlFirehoseDatabaseConnector,
+        "SQL Metadata Connector not configured!"
+    );
     this.foldCase = foldCase;
     this.objectMapper = objectMapper;
   }
@@ -99,9 +105,11 @@ public class SqlEntity implements InputEntity
   )
       throws IOException
   {
-    Preconditions.checkNotNull(sqlFirehoseDatabaseConnector, "SQL Metadata Connector not configured!");
     try (FileOutputStream fos = new FileOutputStream(tempFile)) {
       final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos);
+
+      // Execute the sql query and lazily retrieve the results into the file in json format.
+      // foldCase is useful to handle differences in case sensitivity behavior across databases.
       sqlFirehoseDatabaseConnector.retryWithHandle(
           (handle) -> {
             ResultIterator<Map<String, Object>> resultIterator = handle.createQuery(

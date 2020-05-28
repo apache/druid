@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputFormat;
@@ -34,7 +35,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
@@ -47,9 +47,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.File;
 import java.io.IOException;
@@ -92,7 +90,7 @@ public class SqlInputSourceTest
   @Before
   public void setUp()
   {
-    for (Module jacksonModule : new FirehoseModule().getJacksonModules()) {
+    for (Module jacksonModule : new InputSourceModule().getJacksonModules()) {
       mapper.registerModule(jacksonModule);
     }
   }
@@ -136,54 +134,6 @@ public class SqlInputSourceTest
     return firehoseTempDir;
   }
 
-  private void dropTable(final String tableName)
-  {
-    derbyConnector.getDBI().withHandle(
-        (HandleCallback<Void>) handle -> {
-          handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
-                .execute();
-          return null;
-        }
-    );
-  }
-
-  private void createAndUpdateTable(final String tableName)
-  {
-    derbyConnector = derbyConnectorRule.getConnector();
-    derbyFirehoseConnector = new SqlInputSourceTest.TestDerbyFirehoseConnector(
-        new MetadataStorageConnectorConfig(),
-        derbyConnector.getDBI()
-    );
-    derbyConnector.createTable(
-        tableName,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  timestamp varchar(255) NOT NULL,\n"
-                + "  a VARCHAR(255) NOT NULL,\n"
-                + "  b VARCHAR(255) NOT NULL\n"
-                + ")",
-                tableName
-            )
-        )
-    );
-
-    derbyConnector.getDBI().withHandle(
-        (handle) -> {
-          Batch batch = handle.createBatch();
-          for (int i = 0; i < 10; i++) {
-            String timestampSt = StringUtils.format("2011-01-12T00:0%s:00.000Z", i);
-            batch.add(StringUtils.format("INSERT INTO %1$s (timestamp, a, b) VALUES ('%2$s', '%3$s', '%4$s')",
-                                         tableName, timestampSt,
-                                         i, i
-            ));
-          }
-          batch.execute();
-          return null;
-        }
-    );
-  }
-
   @Test
   public void testSerde() throws IOException
   {
@@ -199,9 +149,11 @@ public class SqlInputSourceTest
   @Test
   public void testSingleSplit() throws Exception
   {
-    createAndUpdateTable(TABLE_NAME_1);
+    SqlTestUtils testUtils = new SqlTestUtils();
+    derbyConnector = derbyConnectorRule.getConnector();
+    testUtils.createAndUpdateTable(TABLE_NAME_1, derbyConnector, 10);
     final File tempDir = createFirehoseTmpDir("testSingleSplit");
-    SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST1, true, derbyFirehoseConnector, mapper);
+    SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST1, true, testUtils.getDerbyFirehoseConnector(), mapper);
     InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
     CloseableIterator<InputRow> resultIterator = sqlReader.read();
     final List<Row> rows = new ArrayList<>();
@@ -209,15 +161,17 @@ public class SqlInputSourceTest
       rows.add(resultIterator.next());
     }
     assertResult(rows, SQLLIST1);
-    dropTable(TABLE_NAME_1);
+    testUtils.dropTable(TABLE_NAME_1, derbyConnector);
   }
 
 
   @Test
   public void testMultipleSplits() throws Exception
   {
-    createAndUpdateTable(TABLE_NAME_1);
-    createAndUpdateTable(TABLE_NAME_2);
+    SqlTestUtils testUtils = new SqlTestUtils();
+    derbyConnector = derbyConnectorRule.getConnector();
+    testUtils.createAndUpdateTable(TABLE_NAME_1, derbyConnector, 10);
+    testUtils.createAndUpdateTable(TABLE_NAME_2, derbyConnector, 10);
     final File tempDir = createFirehoseTmpDir("testMultipleSplit");
     SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST2, true, derbyFirehoseConnector, mapper);
     InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
@@ -227,8 +181,8 @@ public class SqlInputSourceTest
       rows.add(resultIterator.next());
     }
     assertResult(rows, SQLLIST2);
-    dropTable(TABLE_NAME_1);
-    dropTable(TABLE_NAME_2);
+    testUtils.dropTable(TABLE_NAME_1, derbyConnector);
+    testUtils.dropTable(TABLE_NAME_2, derbyConnector);
   }
 
   @Test
@@ -241,7 +195,22 @@ public class SqlInputSourceTest
     Assert.assertEquals(2, sqlInputSource.estimateNumSplits(inputFormat, null));
   }
 
-  private static class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(SqlInputSource.class)
+                  .withPrefabValues(
+                      ObjectMapper.class,
+                      new ObjectMapper(),
+                      new ObjectMapper()
+                  )
+                  .withIgnoredFields("objectMapper")
+                  .withNonnullFields("sqls", "sqlFirehoseDatabaseConnector")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  protected static class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
   {
     private final DBI dbi;
 

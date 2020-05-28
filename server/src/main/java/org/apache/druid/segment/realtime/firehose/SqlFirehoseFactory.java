@@ -77,7 +77,10 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
 
     this.sqls = sqls;
     this.objectMapper = objectMapper;
-    this.sqlFirehoseDatabaseConnector = sqlFirehoseDatabaseConnector;
+    this.sqlFirehoseDatabaseConnector = Preconditions.checkNotNull(
+        sqlFirehoseDatabaseConnector,
+        "SQL Metadata Connector not configured!"
+    );
     this.foldCase = foldCase;
     this.connectorConfig = null;
   }
