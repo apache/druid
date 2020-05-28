@@ -34,6 +34,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -427,30 +428,36 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
   /**
    * Returns a stream of {@link SegmentWithState} for the given sequenceNames.
+   *
+   * Note: it is not enough to synchronize on segments to access to this method,
+   * any operation on the resulting stream must also be synchronized on segments.
    */
+  @GuardedBy("segments")
   Stream<SegmentWithState> getSegmentWithStates(Collection<String> sequenceNames)
   {
-    synchronized (segments) {
-      return sequenceNames
-          .stream()
-          .map(segments::get)
-          .filter(Objects::nonNull)
-          .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
-          .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
-    }
+    return sequenceNames
+        .stream()
+        .map(segments::get)
+        .filter(Objects::nonNull)
+        .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
+        .flatMap(segmentsOfInterval -> segmentsOfInterval.getAllSegments().stream());
+
   }
 
+  /**
+   * Note: it is not enough to synchronize on segments to access to this method,
+   * any operation on the resulting stream must also be synchronized on segments.
+   */
+  @GuardedBy("segments")
   Stream<SegmentWithState> getAppendingSegments(Collection<String> sequenceNames)
   {
-    synchronized (segments) {
-      return sequenceNames
-          .stream()
-          .map(segments::get)
-          .filter(Objects::nonNull)
-          .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
-          .map(segmentsOfInterval -> segmentsOfInterval.appendingSegment)
-          .filter(Objects::nonNull);
-    }
+    return sequenceNames
+        .stream()
+        .map(segments::get)
+        .filter(Objects::nonNull)
+        .flatMap(segmentsForSequence -> segmentsForSequence.intervalToSegmentStates.values().stream())
+        .map(segmentsOfInterval -> segmentsOfInterval.appendingSegment)
+        .filter(Objects::nonNull);
   }
 
   /**

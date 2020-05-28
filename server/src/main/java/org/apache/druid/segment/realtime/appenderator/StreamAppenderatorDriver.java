@@ -271,9 +271,12 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    final List<SegmentIdWithShardSpec> theSegments = getSegmentWithStates(sequenceNames)
-        .map(SegmentWithState::getSegmentIdentifier)
-        .collect(Collectors.toList());
+    final List<SegmentIdWithShardSpec> theSegments;
+    synchronized (segments) {
+      theSegments = getSegmentWithStates(sequenceNames)
+          .map(SegmentWithState::getSegmentIdentifier)
+          .collect(Collectors.toList());
+    }
 
     final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = ListenableFutures.transformAsync(
         // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
