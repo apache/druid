@@ -166,7 +166,8 @@ jobs:
           project_files="$(echo "${all_files}" | grep "${regex}" || [[ $? == 1 ]])";
           fi
         - for f in ${project_files}; do echo $f; done  # for debugging
-        # Check diff code coverage for the maven projects being tested (retry install in case of network error)
+        # Check diff code coverage for the maven projects being tested (retry install in case of network error).
+        # Currently, the function coverage check is not reliable, so it is disabled.
         - >
           if [ -n "${project_files}" ]; then
           travis_retry npm install @connectis/diff-test-coverage@1.5.3
@@ -176,7 +177,7 @@ jobs:
           --type jacoco
           --line-coverage 65
           --branch-coverage 65
-          --function-coverage 80
+          --function-coverage 0
           --
           || { printf "\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\n" && false; }
           fi
