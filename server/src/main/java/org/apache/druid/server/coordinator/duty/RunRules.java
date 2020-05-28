@@ -28,11 +28,13 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
+import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -101,6 +103,7 @@ public class RunRules implements CoordinatorDuty
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
+    final Set<String> broadcastDatasources = new HashSet<>();
     for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment.getId())) {
         // Skipping overshadowed segments
@@ -112,6 +115,9 @@ public class RunRules implements CoordinatorDuty
         if (rule.appliesTo(segment, now)) {
           stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
           foundMatchingRule = true;
+          if (rule instanceof BroadcastDistributionRule) {
+            broadcastDatasources.add(segment.getDataSource());
+          }
           break;
         }
       }
@@ -131,6 +137,9 @@ public class RunRules implements CoordinatorDuty
          .emit();
     }
 
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
+    return params.buildFromExisting()
+                 .withCoordinatorStats(stats)
+                 .withBroadcastDatasources(broadcastDatasources)
+                 .build();
   }
 }

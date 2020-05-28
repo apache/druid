@@ -191,6 +191,12 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return (queryPlus, responseContext) -> queryPlus.run(getRunner().getAppenderator(), responseContext);
   }
 
+  @Override
+  public boolean supportsQueries()
+  {
+    return true;
+  }
+
   public Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
     return appenderatorsManager.createRealtimeAppenderatorForTask(

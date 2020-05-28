@@ -109,8 +109,11 @@ import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffN
 import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.ZkCoordinator;
+import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -154,6 +157,10 @@ public class CliPeon extends GuiceRunnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String serverType = "indexer-executor";
 
+
+  @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
+  public String loadBroadcastSegments = "false";
+
   private static final Logger log = new Logger(CliPeon.class);
 
   @Inject
@@ -174,6 +181,7 @@ public class CliPeon extends GuiceRunnable
         new JoinableFactoryModule(),
         new Module()
         {
+          @SuppressForbidden(reason = "System#out, System#err")
           @Override
           public void configure(Binder binder)
           {
@@ -218,6 +226,13 @@ public class CliPeon extends GuiceRunnable
             Jerseys.addResource(binder, SegmentListerResource.class);
             binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
+
+            if ("true".equals(loadBroadcastSegments)) {
+              binder.bind(SegmentManager.class).in(LazySingleton.class);
+              binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+              Jerseys.addResource(binder, HistoricalResource.class);
+              LifecycleModule.register(binder, ZkCoordinator.class);
+            }
           }
 
           @Provides

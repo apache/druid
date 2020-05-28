@@ -769,7 +769,7 @@ public class DataSourcesResource
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
           && Iterables.any(
-          segmentLoadInfo.getServers(), DruidServerMetadata::segmentReplicatable
+          segmentLoadInfo.getServers(), DruidServerMetadata::isSegmentReplicationTarget
       )) {
         return true;
       }

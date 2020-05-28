@@ -35,9 +35,16 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
 {
   private final DataSegment segment;
 
+  public SegmentChangeRequestLoad(
+      DataSegment segment
+  )
+  {
+    this.segment = segment;
+  }
+
   @JsonCreator
   public SegmentChangeRequestLoad(
-      @JsonUnwrapped DataSegment segment
+      @JsonUnwrapped UnprunedDataSegment segment
   )
   {
     this.segment = segment;

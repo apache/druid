@@ -42,9 +42,11 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
@@ -52,7 +54,11 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.BrokerResource;
+import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -123,6 +129,12 @@ public class CliBroker extends ServerRunnable
           Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
           LifecycleModule.register(binder, Server.class);
+          binder.bind(SegmentManager.class).in(LazySingleton.class);
+          binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+          binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
+          Jerseys.addResource(binder, HistoricalResource.class);
+
+          LifecycleModule.register(binder, ZkCoordinator.class);
 
           bindNodeRoleAndAnnouncer(
               binder,

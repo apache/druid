@@ -327,6 +327,11 @@ public class ForkingTaskRunner
                           command.add(nodeType);
                         }
 
+                        if (task.supportsQueries()) {
+                          command.add("--loadBroadcastSegments");
+                          command.add("true");
+                        }
+
                         if (!taskFile.exists()) {
                           jsonMapper.writeValue(taskFile, task);
                         }
