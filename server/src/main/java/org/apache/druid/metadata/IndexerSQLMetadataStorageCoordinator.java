@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
@@ -939,7 +940,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     final Set<DataSegment> toInsertSegments = new HashSet<>();
     try {
-      List<String> existedSegments = segmentExistsBatch(handle, segments);
+      Set<String> existedSegments = segmentExistsBatch(handle, segments);
       for (DataSegment segment : segments) {
         if (existedSegments.contains(segment.getId().toString())) {
           log.info("Found [%s] in DB, not updating DB", segment.getId());
@@ -1008,15 +1009,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return toInsertSegments;
   }
 
-  private List<String> segmentExistsBatch(final Handle handle, final Set<DataSegment> segments)
+  private Set<String> segmentExistsBatch(final Handle handle, final Set<DataSegment> segments)
   {
-    String segmentIds = segments.stream()
-        .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
-        .collect(Collectors.joining(","));
-    return handle
-        .createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
-        .map(String.class)
-        .list();
+    Set<String> existedSegments = new HashSet<>();
+
+    List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), ANNOUNCE_HISTORICAL_SEGMENG_BATCH);
+    for (List<DataSegment> segmentList : segmentsLists) {
+      String segmentIds = segmentList.stream()
+          .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
+          .collect(Collectors.joining(","));
+      List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
+          .mapTo(String.class)
+          .list();
+      existedSegments.addAll(existIds);
+    }
+    return existedSegments;
   }
 
   /**
