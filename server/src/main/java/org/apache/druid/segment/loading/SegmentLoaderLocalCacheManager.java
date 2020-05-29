@@ -158,6 +158,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     }
   }
 
+  @VisibleForTesting
   protected SegmentizerFactory loadSegmentizerFactory(File segmentFiles) throws SegmentLoadingException
   {
     File factoryJson = new File(segmentFiles, "factory.json");
