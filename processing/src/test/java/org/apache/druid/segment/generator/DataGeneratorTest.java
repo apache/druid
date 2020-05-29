@@ -19,9 +19,11 @@
 
 package org.apache.druid.segment.generator;
 
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.column.ValueType;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -387,6 +389,33 @@ public class DataGeneratorTest
     }
   }
 
+  @Test
+  public void testCanMakeTestCoverageCheckNotFailForGeneratorBasicSchemas()
+  {
+    Assert.assertEquals(9, GeneratorBasicSchemas.SCHEMA_MAP.size());
+  }
+
+  @Test
+  public void testCanMakeTestCoverageCheckNotFailForGeneratorSchemaInfo()
+  {
+    GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
+    Assert.assertEquals(13, basicSchema.getColumnSchemas().size());
+    Assert.assertEquals(6, basicSchema.getAggs().size());
+    Assert.assertEquals(6, basicSchema.getAggsArray().length);
+    Assert.assertNotNull(basicSchema.getDimensionsSpec());
+    Assert.assertNotNull(basicSchema.getDataInterval());
+    Assert.assertTrue(basicSchema.isWithRollup());
+  }
+
+  @Test
+  public void testCanMakeTestCoverageCheckNotFailForRealRoundingDistribution()
+  {
+    RealRoundingDistribution dist = new RealRoundingDistribution(new NormalDistribution());
+    Assert.assertEquals(0, dist.getSupportLowerBound());
+    Assert.assertEquals(0, dist.getSupportUpperBound());
+    Assert.assertEquals(0, dist.getNumericalMean(), 0);
+    Assert.assertEquals(0, dist.getNumericalVariance(), 0);
+  }
 
   private static class RowValueTracker
   {

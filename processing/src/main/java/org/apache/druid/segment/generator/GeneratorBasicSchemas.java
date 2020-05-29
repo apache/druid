@@ -20,6 +20,7 @@
 package org.apache.druid.segment.generator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -34,13 +35,12 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class GeneratorBasicSchemas
 {
-  public static final Map<String, GeneratorSchemaInfo> SCHEMA_MAP = new LinkedHashMap<>();
+  private static final ImmutableMap.Builder<String, GeneratorSchemaInfo> SCHEMA_INFO_BUILDER = ImmutableMap.builder();
 
   static {
     // basic schema
@@ -121,8 +121,8 @@ public class GeneratorBasicSchemas
         true
     );
 
-    SCHEMA_MAP.put("basic", basicSchema);
-    SCHEMA_MAP.put("expression", basicSchemaExpression);
+    SCHEMA_INFO_BUILDER.put("basic", basicSchema);
+    SCHEMA_INFO_BUILDER.put("expression", basicSchemaExpression);
   }
 
   static { // simple single string column and count agg schema, no rollup
@@ -142,7 +142,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_MAP.put("simple", basicSchema);
+    SCHEMA_INFO_BUILDER.put("simple", basicSchema);
   }
 
   static {
@@ -164,7 +164,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_MAP.put("simpleLong", basicSchema);
+    SCHEMA_INFO_BUILDER.put("simpleLong", basicSchema);
   }
 
   static {
@@ -186,7 +186,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_MAP.put("simpleFloat", basicSchema);
+    SCHEMA_INFO_BUILDER.put("simpleFloat", basicSchema);
   }
 
   static {
@@ -237,7 +237,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         true
     );
-    SCHEMA_MAP.put("rollo", rolloSchema);
+    SCHEMA_INFO_BUILDER.put("rollo", rolloSchema);
   }
 
   static {
@@ -267,7 +267,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_MAP.put("nulls", nullsSchema);
+    SCHEMA_INFO_BUILDER.put("nulls", nullsSchema);
   }
 
   static {
@@ -308,7 +308,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_MAP.put("nulls-and-non-nulls", nullsSchema);
+    SCHEMA_INFO_BUILDER.put("nulls-and-non-nulls", nullsSchema);
   }
 
   static {
@@ -413,6 +413,8 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_MAP.put("wide", nullsSchema);
+    SCHEMA_INFO_BUILDER.put("wide", nullsSchema);
   }
+
+  public static final Map<String, GeneratorSchemaInfo> SCHEMA_MAP = SCHEMA_INFO_BUILDER.build();
 }

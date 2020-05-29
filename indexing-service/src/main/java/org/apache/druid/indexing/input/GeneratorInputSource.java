@@ -42,7 +42,6 @@ import org.apache.druid.segment.generator.GeneratorColumnSchema;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -58,7 +57,7 @@ import java.util.stream.Stream;
  * will be instead used to pick a new seed for each split, allowing the splits to produce a different set of data,
  * but still in a stable manner.
  */
-public class GeneratorInputSource  extends AbstractInputSource implements SplittableInputSource<Long>
+public class GeneratorInputSource extends AbstractInputSource implements SplittableInputSource<Long>
 {
   private static final int DEFAULT_NUM_ROWS = 1000;
   private static final int DEFAULT_NUM_SPLITS = 1;
@@ -117,7 +116,7 @@ public class GeneratorInputSource  extends AbstractInputSource implements Splitt
   }
 
   @Override
-  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
+  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     return numSplits;
   }

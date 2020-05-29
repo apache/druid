@@ -23,12 +23,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class GeneratorInputSourceTest
 {
@@ -89,5 +97,69 @@ public class GeneratorInputSourceTest
   public void testEquals()
   {
     EqualsVerifier.forClass(GeneratorInputSource.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void testReader() throws IOException
+  {
+    final long seed = 1024L;
+    final long millis = DateTimes.nowUtc().getMillis();
+    final int numConsecutiveTimestamps = 1000;
+    final double timestampIncrement = 1.0;
+    final int numRows = 1000;
+    GeneratorInputSource inputSource = new GeneratorInputSource(
+        "basic",
+        null,
+        numRows,
+        2,
+        seed,
+        millis,
+        numConsecutiveTimestamps,
+        timestampIncrement
+    );
+
+    DataGenerator generator = new DataGenerator(
+        GeneratorBasicSchemas.SCHEMA_MAP.get("basic").getColumnSchemas(),
+        seed,
+        millis,
+        numConsecutiveTimestamps,
+        timestampIncrement
+    );
+
+    InputSourceReader reader = inputSource.fixedFormatReader(null, null);
+    CloseableIterator<InputRow> iterator = reader.read();
+
+    InputRow first = iterator.next();
+    InputRow generatorFirst = generator.nextRow();
+    Assert.assertEquals(generatorFirst, first);
+    Assert.assertTrue(iterator.hasNext());
+    int i;
+    for (i = 1; iterator.hasNext();i++) {
+      iterator.next();
+    }
+    Assert.assertEquals(numRows, i);
+  }
+
+  @Test
+  public void testSplits()
+  {
+    GeneratorInputSource inputSource = new GeneratorInputSource(
+        "basic",
+        null,
+        1000,
+        2,
+        1024L,
+        DateTimes.nowUtc().getMillis(),
+        1000,
+        1.0
+    );
+
+    Assert.assertEquals(2,inputSource.estimateNumSplits(null, null));
+    Assert.assertEquals(false, inputSource.needsFormat());
+    Assert.assertEquals(2, inputSource.createSplits(null, null).count());
+    Assert.assertEquals(
+        new Long(2048L),
+        ((GeneratorInputSource) inputSource.withSplit(new InputSplit<>(2048L))).getSeed()
+    );
   }
 }
