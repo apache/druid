@@ -390,13 +390,7 @@ public class DataGeneratorTest
   }
 
   @Test
-  public void testCanMakeTestCoverageCheckNotFailForGeneratorBasicSchemas()
-  {
-    Assert.assertEquals(9, GeneratorBasicSchemas.SCHEMA_MAP.size());
-  }
-
-  @Test
-  public void testCanMakeTestCoverageCheckNotFailForGeneratorSchemaInfo()
+  public void testCanMakeTestCoverageCheckNotFailForGeneratorBasicSchemasAndGeneratorSchemaInfo()
   {
     GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
     Assert.assertEquals(13, basicSchema.getColumnSchemas().size());
