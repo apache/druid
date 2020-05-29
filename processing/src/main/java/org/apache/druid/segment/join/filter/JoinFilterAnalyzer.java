@@ -142,8 +142,6 @@ public class JoinFilterAnalyzer
     // build the equicondition map, used for determining how the tables are connected through joins
     Equiconditions equiconditions = preAnalysisBuilder.computeEquiconditionsFromJoinableClauses();
 
-
-
     JoinFilterCorrelations correlations = JoinFilterCorrelations.computeJoinFilterCorrelations(
         normalizedJoinTableClauses,
         equiconditions,
