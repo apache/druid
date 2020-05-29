@@ -14048,6 +14048,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT dim1 FROM foo WHERE dim1 IN (SELECT dim1 FROM foo WHERE dim1 = '10.1')\n",
+        queryContext,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -14062,7 +14063,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         )
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
-                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .setContext(queryContext)
                                         .build()
                         ),
                         "j0.",
@@ -14073,7 +14074,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
                 .columns("v0")
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of(
@@ -14092,6 +14093,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1' AND \"__time\" >= '1999'\n"
         + ")\n"
         + "SELECT t1.dim1, t1.\"__time\" from abc as t1 LEFT JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'\n",
+        queryContext,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -14111,7 +14113,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
                                 .columns(ImmutableList.of("__time", "v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         new QueryDataSource(
@@ -14129,7 +14131,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
                                 .columns(ImmutableList.of("v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         "j0.",
@@ -14141,7 +14143,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
                 .columns("__time", "_v0")
                 .filters(new SelectorDimFilter("v0", "10.1", null))
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of(
@@ -14160,6 +14162,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
         + ")\n"
         + "SELECT t1.dim1, t1.\"__time\" from abc as t1 LEFT JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'\n",
+        queryContext,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -14172,7 +14175,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
                                 .columns(ImmutableList.of("__time", "v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         new QueryDataSource(
@@ -14182,7 +14185,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .filters(new SelectorDimFilter("dim1", "10.1", null))
                                 .columns(ImmutableList.of("dim1"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         "j0.",
@@ -14194,7 +14197,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
                 .columns("__time", "_v0")
                 .filters(new SelectorDimFilter("v0", "10.1", null))
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of(
@@ -14213,6 +14216,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
         + ")\n"
         + "SELECT t1.dim1, t1.\"__time\" from abc as t1 LEFT JOIN abc as t2 on t1.dim1 = t2.dim1\n",
+        queryContext,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -14225,7 +14229,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
                                 .columns(ImmutableList.of("__time", "v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         new QueryDataSource(
@@ -14235,7 +14239,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .filters(new SelectorDimFilter("dim1", "10.1", null))
                                 .columns(ImmutableList.of("dim1"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         "j0.",
@@ -14246,7 +14250,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
                 .columns("__time", "_v0")
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of(
@@ -14265,6 +14269,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
         + ")\n"
         + "SELECT t1.dim1, t1.\"__time\" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'\n",
+        queryContext,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -14277,7 +14282,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
                                 .columns(ImmutableList.of("__time", "v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         new QueryDataSource(
@@ -14287,7 +14292,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .filters(new SelectorDimFilter("dim1", "10.1", null))
                                 .columns(ImmutableList.of("dim1"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         "j0.",
@@ -14299,7 +14304,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
                 .columns("__time", "_v0")
                 .filters(new NotDimFilter(new SelectorDimFilter("v0", null, null)))
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of(
@@ -14318,6 +14323,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  SELECT dim1, \"__time\", m1 from foo WHERE \"dim1\" = '10.1'\n"
         + ")\n"
         + "SELECT t1.dim1, t1.\"__time\" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1\n",
+        queryContext,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -14330,7 +14336,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .virtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ValueType.STRING))
                                 .columns(ImmutableList.of("__time", "v0"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         new QueryDataSource(
@@ -14340,7 +14346,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .filters(new SelectorDimFilter("dim1", "10.1", null))
                                 .columns(ImmutableList.of("dim1"))
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                .context(QUERY_CONTEXT_DEFAULT)
+                                .context(queryContext)
                                 .build()
                         ),
                         "j0.",
@@ -14351,7 +14357,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ValueType.STRING))
                 .columns("__time", "_v0")
-                .context(QUERY_CONTEXT_DEFAULT)
+                .context(queryContext)
                 .build()
         ),
         ImmutableList.of(
@@ -14373,6 +14379,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         query,
+        queryContext,
         ImmutableList.of(),
         ImmutableList.of()
     );
