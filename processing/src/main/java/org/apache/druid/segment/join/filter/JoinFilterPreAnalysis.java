@@ -48,7 +48,7 @@ import java.util.Set;
  */
 public class JoinFilterPreAnalysis
 {
-  private final List<JoinableClause> joinableClauses;
+  private final JoinableClauses joinableClauses;
   private final Filter originalFilter;
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
@@ -57,10 +57,10 @@ public class JoinFilterPreAnalysis
   private final boolean enableFilterPushDown;
   private final boolean enableFilterRewrite;
   private final List<VirtualColumn> postJoinVirtualColumns;
-  private final Map<String, Set<Expr>> equiconditions;
+  private final Equiconditions equiconditions;
 
   private JoinFilterPreAnalysis(
-      final List<JoinableClause> joinableClauses,
+      final JoinableClauses joinableClauses,
       final Filter originalFilter,
       final List<VirtualColumn> postJoinVirtualColumns,
       final List<Filter> normalizedBaseTableClauses,
@@ -69,7 +69,7 @@ public class JoinFilterPreAnalysis
       final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn,
       final boolean enableFilterPushDown,
       final boolean enableFilterRewrite,
-      final Map<String, Set<Expr>> equiconditions
+      final Equiconditions equiconditions
   )
   {
     this.joinableClauses = joinableClauses;
@@ -84,7 +84,7 @@ public class JoinFilterPreAnalysis
     this.equiconditions = equiconditions;
   }
 
-  public List<JoinableClause> getJoinableClauses()
+  public JoinableClauses getJoinableClauses()
   {
     return joinableClauses;
   }
@@ -129,7 +129,7 @@ public class JoinFilterPreAnalysis
     return enableFilterRewrite;
   }
 
-  public Map<String, Set<Expr>> getEquiconditions()
+  public Equiconditions getEquiconditions()
   {
     return equiconditions;
   }
@@ -139,7 +139,7 @@ public class JoinFilterPreAnalysis
    */
   public static class Builder
   {
-    @Nonnull private final List<JoinableClause> joinableClauses;
+    @Nonnull private final JoinableClauses joinableClauses;
     @Nullable private final Filter originalFilter;
     @Nullable private List<Filter> normalizedBaseTableClauses;
     @Nullable private List<Filter> normalizedJoinTableClauses;
@@ -148,10 +148,10 @@ public class JoinFilterPreAnalysis
     private boolean enableFilterPushDown = false;
     private boolean enableFilterRewrite = false;
     @Nonnull private final List<VirtualColumn> postJoinVirtualColumns;
-    @Nonnull private Map<String, Set<Expr>> equiconditions = Collections.emptyMap();
+    @Nonnull private Equiconditions equiconditions = new Equiconditions(Collections.emptyMap());
 
     public Builder(
-        @Nonnull List<JoinableClause> joinableClauses,
+        @Nonnull JoinableClauses joinableClauses,
         @Nullable Filter originalFilter,
         @Nonnull List<VirtualColumn> postJoinVirtualColumns
     )
@@ -201,18 +201,19 @@ public class JoinFilterPreAnalysis
       return this;
     }
 
-    public Map<String, Set<Expr>> computeEquiconditionsFromJoinableClauses()
+    public Equiconditions computeEquiconditionsFromJoinableClauses()
     {
-      this.equiconditions = new HashMap<>();
-      for (JoinableClause clause : joinableClauses) {
+      Map<String, Set<Expr>> equiconditionsMap = new HashMap<>();
+      for (JoinableClause clause : joinableClauses.getJoinableClauses()) {
         for (Equality equality : clause.getCondition().getEquiConditions()) {
-          Set<Expr> exprsForRhs = equiconditions.computeIfAbsent(
+          Set<Expr> exprsForRhs = equiconditionsMap.computeIfAbsent(
               clause.getPrefix() + equality.getRightColumn(),
               (rhs) -> new HashSet<>()
           );
           exprsForRhs.add(equality.getLeftExpr());
         }
       }
+      this.equiconditions = new Equiconditions(equiconditionsMap);
       return equiconditions;
     }
 
