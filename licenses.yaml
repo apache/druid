@@ -1975,7 +1975,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.0
+version: 1.7.1
 libraries:
   - org.lz4: lz4-java
 
@@ -3251,7 +3251,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.2.2
+version: 2.5.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4159,7 +4159,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.2.2
+version: 2.5.0
 libraries:
   - org.apache.kafka: kafka_2.12
   - org.apache.kafka: kafka-clients
