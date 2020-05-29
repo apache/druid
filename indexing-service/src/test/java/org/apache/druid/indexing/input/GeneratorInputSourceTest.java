@@ -134,7 +134,7 @@ public class GeneratorInputSourceTest
     Assert.assertEquals(generatorFirst, first);
     Assert.assertTrue(iterator.hasNext());
     int i;
-    for (i = 1; iterator.hasNext();i++) {
+    for (i = 1; iterator.hasNext(); i++) {
       iterator.next();
     }
     Assert.assertEquals(numRows, i);
@@ -154,7 +154,7 @@ public class GeneratorInputSourceTest
         1.0
     );
 
-    Assert.assertEquals(2,inputSource.estimateNumSplits(null, null));
+    Assert.assertEquals(2, inputSource.estimateNumSplits(null, null));
     Assert.assertEquals(false, inputSource.needsFormat());
     Assert.assertEquals(2, inputSource.createSplits(null, null).count());
     Assert.assertEquals(
