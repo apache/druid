@@ -41,8 +41,6 @@ import java.util.Set;
  * - The query's original filter (if any)
  * - A list of filter clauses from the original filter's CNF representation that only reference the base table
  * - A list of filter clauses from the original filter's CNF representation that reference RHS join tables
- * - A mapping of RHS filtering columns -> List<JoinFilterColumnCorrelationAnalysis>, used for filter rewrites
- * - A second mapping of RHS filtering columns -> List<JoinFilterColumnCorrelationAnalysis>, used for direct filter rewrites
  * - A list of virtual columns that can only be computed post-join
  * - Control flag booleans for whether filter push down and RHS rewrites are enabled.
  */
@@ -52,8 +50,7 @@ public class JoinFilterPreAnalysis
   private final Filter originalFilter;
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
-  private final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn;
-  private final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn;
+  private final JoinFilterCorrelations correlations;
   private final boolean enableFilterPushDown;
   private final boolean enableFilterRewrite;
   private final List<VirtualColumn> postJoinVirtualColumns;
@@ -65,8 +62,7 @@ public class JoinFilterPreAnalysis
       final List<VirtualColumn> postJoinVirtualColumns,
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
-      final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn,
-      final Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn,
+      JoinFilterCorrelations correlations,
       final boolean enableFilterPushDown,
       final boolean enableFilterRewrite,
       final Equiconditions equiconditions
@@ -77,8 +73,7 @@ public class JoinFilterPreAnalysis
     this.postJoinVirtualColumns = postJoinVirtualColumns;
     this.normalizedBaseTableClauses = normalizedBaseTableClauses;
     this.normalizedJoinTableClauses = normalizedJoinTableClauses;
-    this.correlationsByFilteringColumn = correlationsByFilteringColumn;
-    this.correlationsByDirectFilteringColumn = correlationsByDirectFilteringColumn;
+    this.correlations = correlations;
     this.enableFilterPushDown = enableFilterPushDown;
     this.enableFilterRewrite = enableFilterRewrite;
     this.equiconditions = equiconditions;
@@ -111,12 +106,12 @@ public class JoinFilterPreAnalysis
 
   public Map<String, List<JoinFilterColumnCorrelationAnalysis>> getCorrelationsByFilteringColumn()
   {
-    return correlationsByFilteringColumn;
+    return correlations.getCorrelationsByFilteringColumn();
   }
 
   public Map<String, List<JoinFilterColumnCorrelationAnalysis>> getCorrelationsByDirectFilteringColumn()
   {
-    return correlationsByDirectFilteringColumn;
+    return correlations.getCorrelationsByDirectFilteringColumn();
   }
 
   public boolean isEnableFilterPushDown()
@@ -143,8 +138,7 @@ public class JoinFilterPreAnalysis
     @Nullable private final Filter originalFilter;
     @Nullable private List<Filter> normalizedBaseTableClauses;
     @Nullable private List<Filter> normalizedJoinTableClauses;
-    @Nullable private Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn;
-    @Nullable private Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn;
+    @Nullable private JoinFilterCorrelations correlations;
     private boolean enableFilterPushDown = false;
     private boolean enableFilterRewrite = false;
     @Nonnull private final List<VirtualColumn> postJoinVirtualColumns;
@@ -173,19 +167,11 @@ public class JoinFilterPreAnalysis
       return this;
     }
 
-    public Builder withCorrelationsByFilteringColumn(
-        Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn
+    public Builder withCorrelations(
+        JoinFilterCorrelations correlations
     )
     {
-      this.correlationsByFilteringColumn = correlationsByFilteringColumn;
-      return this;
-    }
-
-    public Builder withCorrelationsByDirectFilteringColumn(
-        Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn
-    )
-    {
-      this.correlationsByDirectFilteringColumn = correlationsByDirectFilteringColumn;
+      this.correlations = correlations;
       return this;
     }
 
@@ -225,8 +211,7 @@ public class JoinFilterPreAnalysis
           postJoinVirtualColumns,
           normalizedBaseTableClauses,
           normalizedJoinTableClauses,
-          correlationsByFilteringColumn,
-          correlationsByDirectFilteringColumn,
+          correlations,
           enableFilterPushDown,
           enableFilterRewrite,
           equiconditions
