@@ -133,20 +133,8 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         unlock(segment, lock);
       }
     }
-    File factoryJson = new File(segmentFiles, "factory.json");
-    final SegmentizerFactory factory;
 
-    if (factoryJson.exists()) {
-      try {
-        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
-      }
-      catch (IOException e) {
-        throw new SegmentLoadingException(e, "%s", e.getMessage());
-      }
-    } else {
-      factory = new MMappedQueryableSegmentizerFactory(indexIO);
-    }
-
+    SegmentizerFactory factory = loadSegmentizerFactory(segmentFiles);
     return factory.factorize(segment, segmentFiles, lazy);
   }
 
@@ -168,6 +156,24 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         unlock(segment, lock);
       }
     }
+  }
+
+  protected SegmentizerFactory loadSegmentizerFactory(File segmentFiles) throws SegmentLoadingException
+  {
+    File factoryJson = new File(segmentFiles, "factory.json");
+    final SegmentizerFactory factory;
+
+    if (factoryJson.exists()) {
+      try {
+        factory = jsonMapper.readValue(factoryJson, SegmentizerFactory.class);
+      }
+      catch (IOException e) {
+        throw new SegmentLoadingException(e, "%s", e.getMessage());
+      }
+    } else {
+      factory = new MMappedQueryableSegmentizerFactory(indexIO);
+    }
+    return factory;
   }
 
   /**
@@ -273,6 +279,16 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         for (StorageLocation location : locations) {
           File localStorageDir = new File(location.getPath(), DataSegmentPusher.getDefaultStorageDir(segment, false));
           if (localStorageDir.exists()) {
+            // unload the segment through the SegmentizerFactory in the event it needs to perform any custom
+            // unloading, eat any SegmentLoadingException exceptions in the event the file is not there or the unable
+            // to be deserialized and unfactorized
+            try {
+              SegmentizerFactory factory = loadSegmentizerFactory(localStorageDir);
+              factory.unfactorize(segment, localStorageDir);
+            }
+            catch (SegmentLoadingException e) {
+              log.warn("Unable to unload segmentizer factory for: %s", segment.getId());
+            }
             // Druid creates folders of the form dataSource/interval/version/partitionNum.
             // We need to clean up all these directories if they are all empty.
             cleanupCacheFiles(location.getPath(), localStorageDir);

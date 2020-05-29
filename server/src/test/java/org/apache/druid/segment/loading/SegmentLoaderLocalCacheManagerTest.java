@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -34,6 +35,7 @@ import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -66,12 +68,14 @@ public class SegmentLoaderLocalCacheManagerTest
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
   private File localSegmentCacheFolder;
+  private List<StorageLocationConfig> locations;
   private SegmentLoaderLocalCacheManager manager;
 
   public SegmentLoaderLocalCacheManagerTest(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
     jsonMapper = new DefaultObjectMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
+    jsonMapper.registerSubtypes(new NamedType(CustomSegmentizerFactory.class, "customSegmentizer"));
     jsonMapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             LocalDataSegmentPuller.class,
@@ -87,9 +91,8 @@ public class SegmentLoaderLocalCacheManagerTest
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     localSegmentCacheFolder = tmpFolder.newFolder("segment_cache_folder");
 
-    final List<StorageLocationConfig> locations = new ArrayList<>();
-    final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheFolder, 10000000000L, null);
-    locations.add(locationConfig);
+    locations = new ArrayList<>();
+    locations.add(new StorageLocationConfig(localSegmentCacheFolder, 10000000000L, null));
 
     manager = new SegmentLoaderLocalCacheManager(
         TestHelper.getTestIndexIO(),
@@ -142,10 +145,31 @@ public class SegmentLoaderLocalCacheManagerTest
 
     Assert.assertFalse("Expect cache miss before downloading segment", manager.isSegmentLoaded(segmentToDownload));
 
-    manager.getSegmentFiles(segmentToDownload);
+    CustomSegmentizerFactory segmentizerFactorizer = new CustomSegmentizerFactory();
+    manager = new SegmentLoaderLocalCacheManager(
+        TestHelper.getTestIndexIO(),
+        new SegmentLoaderConfig().withLocations(locations),
+        jsonMapper
+    )
+    {
+      @Override
+      protected SegmentizerFactory loadSegmentizerFactory(File segmentFiles)
+      {
+        return segmentizerFactorizer;
+      }
+    };
+
+    File f = manager.getSegmentFiles(segmentToDownload);
+    File factoryJson = new File(f, "factory.json");
+    jsonMapper.writeValue(factoryJson, segmentizerFactorizer);
+
+    manager.getSegment(segmentToDownload, false);
+    Assert.assertEquals(1, segmentizerFactorizer.loadCount);
+
     Assert.assertTrue("Expect cache hit after downloading segment", manager.isSegmentLoaded(segmentToDownload));
 
     manager.cleanup(segmentToDownload);
+    Assert.assertEquals(1, segmentizerFactorizer.unloadCount);
     Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentLoaded(segmentToDownload));
   }
 
@@ -760,4 +784,22 @@ public class SegmentLoaderLocalCacheManagerTest
     Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentLoaded(segmentToDownload3));
   }
 
+  private static class CustomSegmentizerFactory implements SegmentizerFactory
+  {
+    private int loadCount = 0;
+    private int unloadCount = 0;
+
+    @Override
+    public Segment factorize(DataSegment segment, File parentDir, boolean lazy) throws SegmentLoadingException
+    {
+      loadCount++;
+      return EasyMock.createMock(Segment.class);
+    }
+
+    @Override
+    public void unfactorize(DataSegment segment, File parentDir)
+    {
+      unloadCount++;
+    }
+  }
 }

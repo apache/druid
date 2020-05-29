@@ -32,4 +32,9 @@ import java.io.File;
 public interface SegmentizerFactory
 {
   Segment factorize(DataSegment segment, File parentDir, boolean lazy) throws SegmentLoadingException;
+
+  default void unfactorize(DataSegment segment, File parentDir)
+  {
+    // do nothing by default
+  }
 }
