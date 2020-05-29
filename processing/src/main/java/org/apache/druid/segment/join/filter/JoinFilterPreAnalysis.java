@@ -22,8 +22,14 @@ package org.apache.druid.segment.join.filter;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.join.Equality;
 import org.apache.druid.segment.join.JoinableClause;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +59,7 @@ public class JoinFilterPreAnalysis
   private final List<VirtualColumn> postJoinVirtualColumns;
   private final Map<String, Set<Expr>> equiconditions;
 
-  public JoinFilterPreAnalysis(
+  private JoinFilterPreAnalysis(
       final List<JoinableClause> joinableClauses,
       final Filter originalFilter,
       final List<VirtualColumn> postJoinVirtualColumns,
@@ -126,6 +132,106 @@ public class JoinFilterPreAnalysis
   public Map<String, Set<Expr>> getEquiconditions()
   {
     return equiconditions;
+  }
+
+  /**
+   * A Builder class to build {@link JoinFilterPreAnalysis}
+   */
+  public static class Builder
+  {
+    @Nonnull private final List<JoinableClause> joinableClauses;
+    @Nullable private final Filter originalFilter;
+    @Nullable private List<Filter> normalizedBaseTableClauses;
+    @Nullable private List<Filter> normalizedJoinTableClauses;
+    @Nullable private Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn;
+    @Nullable private Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn;
+    private boolean enableFilterPushDown = false;
+    private boolean enableFilterRewrite = false;
+    @Nonnull private final List<VirtualColumn> postJoinVirtualColumns;
+    @Nonnull private Map<String, Set<Expr>> equiconditions = Collections.emptyMap();
+
+    public Builder(
+        @Nonnull List<JoinableClause> joinableClauses,
+        @Nullable Filter originalFilter,
+        @Nonnull List<VirtualColumn> postJoinVirtualColumns
+    )
+    {
+      this.joinableClauses = joinableClauses;
+      this.originalFilter = originalFilter;
+      this.postJoinVirtualColumns = postJoinVirtualColumns;
+    }
+
+    public Builder withNormalizedBaseTableClauses(List<Filter> normalizedBaseTableClauses)
+    {
+      this.normalizedBaseTableClauses = normalizedBaseTableClauses;
+      return this;
+    }
+
+    public Builder withNormalizedJoinTableClauses(List<Filter> normalizedJoinTableClauses)
+    {
+      this.normalizedJoinTableClauses = normalizedJoinTableClauses;
+      return this;
+    }
+
+    public Builder withCorrelationsByFilteringColumn(
+        Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByFilteringColumn
+    )
+    {
+      this.correlationsByFilteringColumn = correlationsByFilteringColumn;
+      return this;
+    }
+
+    public Builder withCorrelationsByDirectFilteringColumn(
+        Map<String, List<JoinFilterColumnCorrelationAnalysis>> correlationsByDirectFilteringColumn
+    )
+    {
+      this.correlationsByDirectFilteringColumn = correlationsByDirectFilteringColumn;
+      return this;
+    }
+
+    public Builder withEnableFilterPushDown(boolean enableFilterPushDown)
+    {
+      this.enableFilterPushDown = enableFilterPushDown;
+      return this;
+    }
+
+    public Builder withEnableFilterRewrite(boolean enableFilterRewrite)
+    {
+      this.enableFilterRewrite = enableFilterRewrite;
+      return this;
+    }
+
+    public Map<String, Set<Expr>> computeEquiconditionsFromJoinableClauses()
+    {
+      this.equiconditions = new HashMap<>();
+      for (JoinableClause clause : joinableClauses) {
+        for (Equality equality : clause.getCondition().getEquiConditions()) {
+          Set<Expr> exprsForRhs = equiconditions.computeIfAbsent(
+              clause.getPrefix() + equality.getRightColumn(),
+              (rhs) -> new HashSet<>()
+          );
+          exprsForRhs.add(equality.getLeftExpr());
+        }
+      }
+      return equiconditions;
+    }
+
+    public JoinFilterPreAnalysis build()
+    {
+      return new JoinFilterPreAnalysis(
+          joinableClauses,
+          originalFilter,
+          postJoinVirtualColumns,
+          normalizedBaseTableClauses,
+          normalizedJoinTableClauses,
+          correlationsByFilteringColumn,
+          correlationsByDirectFilteringColumn,
+          enableFilterPushDown,
+          enableFilterRewrite,
+          equiconditions
+      );
+    }
+
   }
 }
 
