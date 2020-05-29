@@ -26,6 +26,7 @@ import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -72,8 +73,12 @@ public class LookupJoinMatcher implements JoinMatcher
             if (row.size() == 1) {
               return selector.lookupName(row.get(0));
             } else {
-              // Multi-valued rows are not handled by the join system right now; treat them as nulls.
-              return null;
+              // Multi-valued rows are not handled by the join system right now
+              // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
+              throw new QueryException("Unsupported query",
+                                       "Unsupported query on multi-valued column",
+                                       QueryException.class.getName(),
+                                       null);
             }
           };
         }

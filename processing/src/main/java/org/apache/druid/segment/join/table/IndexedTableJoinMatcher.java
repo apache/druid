@@ -30,6 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -327,8 +328,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             IntList rowNumbers = getRowNumbers(selector, dimensionId);
             return rowNumbers.iterator();
           } else {
-            // Multi-valued rows are not handled by the join system right now; treat them as nulls.
-            return IntIterators.EMPTY_ITERATOR;
+            // Multi-valued rows are not handled by the join system right now
+            // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
+            throw new QueryException("Unsupported query",
+                                     "Unsupported query on multi-valued column",
+                                     QueryException.class.getName(),
+                                     null);
           }
         };
       } else {
@@ -342,8 +347,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             IntList rowNumbers = getAndCacheRowNumbers(selector, dimensionId);
             return rowNumbers.iterator();
           } else {
-            // Multi-valued rows are not handled by the join system right now; treat them as nulls.
-            return IntIterators.EMPTY_ITERATOR;
+            // Multi-valued rows are not handled by the join system right now
+            // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
+            throw new QueryException("Unsupported query",
+                                     "Unsupported query on multi-valued column",
+                                     QueryException.class.getName(),
+                                     null);
           }
         };
       }

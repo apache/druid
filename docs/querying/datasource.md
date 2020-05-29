@@ -348,3 +348,5 @@ future versions:
 always be correct.
 - Performance-related optimizations as mentioned in the [previous section](#join-performance).
 - Join algorithms other than broadcast hash-joins.
+- JOIN containing constant value inside the condition
+- JOIN on multi-valued column
