@@ -323,6 +323,12 @@ public class PartialDruidQuery
       // always collapse these, so we have to (one example: testSemiJoinWithOuterTimeExtract). See
       // withSelectProject for the code here that handles this.
       return true;
+    } else if (aggregate != null && stage == Stage.AGGREGATE) {
+      return false;
+    } else if (sort != null && stage == Stage.SORT) {
+      return false;
+    } else if (aggregate == null && currentStage.compareTo(Stage.SORT) >= 0 && stage == Stage.AGGREGATE) {
+      return true;
     } else if (stage.compareTo(currentStage) <= 0) {
       // Cannot go backwards.
       return false;

@@ -30,6 +30,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
@@ -39,7 +40,9 @@ import java.util.function.BiFunction;
 
 public class DruidRules
 {
-  public static final Predicate<DruidRel> CAN_BUILD_ON = druidRel -> druidRel.getPartialDruidQuery() != null;
+  public static final Predicate<DruidRel> CAN_BUILD_ON_ANY_WITH_PARTIAL_DRUID_QUERY = druidRel -> druidRel.getPartialDruidQuery() != null;
+  public static final Predicate<DruidRel> CAN_BUILD_ON_NON_JOIN_WITH_PARTIAL_DRUID_QUERY = druidRel -> druidRel.getPartialDruidQuery() != null && !(druidRel instanceof DruidJoinQueryRel);
+
 
   private DruidRules()
   {
@@ -107,7 +110,7 @@ public class DruidRules
     )
     {
       super(
-          operand(relClass, operand(DruidRel.class, null, CAN_BUILD_ON, any())),
+          operand(relClass, operand(DruidRel.class, null, CAN_BUILD_ON_ANY_WITH_PARTIAL_DRUID_QUERY, any())),
           StringUtils.format("%s(%s)", DruidQueryRule.class.getSimpleName(), stage)
       );
       this.stage = stage;
@@ -139,7 +142,7 @@ public class DruidRules
   public abstract static class DruidOuterQueryRule extends RelOptRule
   {
     public static final RelOptRule AGGREGATE = new DruidOuterQueryRule(
-        operand(Aggregate.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())),
+        operand(Aggregate.class, operand(DruidRel.class, null, CAN_BUILD_ON_NON_JOIN_WITH_PARTIAL_DRUID_QUERY, any())),
         "AGGREGATE"
     )
     {
@@ -161,7 +164,8 @@ public class DruidRules
     };
 
     public static final RelOptRule FILTER_AGGREGATE = new DruidOuterQueryRule(
-        operand(Aggregate.class, operand(Filter.class, operand(DruidRel.class, null, CAN_BUILD_ON, any()))),
+        operand(Aggregate.class, operand(Filter.class, operand(DruidRel.class, null,
+                                                               CAN_BUILD_ON_NON_JOIN_WITH_PARTIAL_DRUID_QUERY, any()))),
         "FILTER_AGGREGATE"
     )
     {
@@ -187,7 +191,8 @@ public class DruidRules
     public static final RelOptRule FILTER_PROJECT_AGGREGATE = new DruidOuterQueryRule(
         operand(
             Aggregate.class,
-            operand(Project.class, operand(Filter.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())))
+            operand(Project.class, operand(Filter.class, operand(DruidRel.class, null,
+                                                                 CAN_BUILD_ON_NON_JOIN_WITH_PARTIAL_DRUID_QUERY, any())))
         ),
         "FILTER_PROJECT_AGGREGATE"
     )
@@ -214,7 +219,8 @@ public class DruidRules
     };
 
     public static final RelOptRule PROJECT_AGGREGATE = new DruidOuterQueryRule(
-        operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, null, CAN_BUILD_ON, any()))),
+        operand(Aggregate.class, operand(Project.class, operand(DruidRel.class, null,
+                                                                CAN_BUILD_ON_NON_JOIN_WITH_PARTIAL_DRUID_QUERY, any()))),
         "PROJECT_AGGREGATE"
     )
     {
@@ -240,7 +246,8 @@ public class DruidRules
     public static final RelOptRule AGGREGATE_SORT_PROJECT = new DruidOuterQueryRule(
         operand(
             Project.class,
-            operand(Sort.class, operand(Aggregate.class, operand(DruidRel.class, null, CAN_BUILD_ON, any())))
+            operand(Sort.class, operand(Aggregate.class, operand(DruidRel.class, null,
+                                                                 CAN_BUILD_ON_NON_JOIN_WITH_PARTIAL_DRUID_QUERY, any())))
         ),
         "AGGREGATE_SORT_PROJECT"
     )

@@ -157,6 +157,57 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testXXX() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT dim2, AVG(m2) FROM (SELECT * FROM foo AS t1 INNER JOIN foo AS t2 ON t1.m1 = t2.m1 LIMIT 10) AS t3 GROUP BY dim2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testXXX2() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT m2, AVG(dim1) FROM (SELECT * FROM foo AS t1 INNER JOIN foo AS t2 ON t1.m1 = t2.m1) AS t3 GROUP BY m2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testXXX3() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT t1.m2, AVG(t1.dim1) FROM (SELECT * FROM foo LIMIT 10) AS t1 INNER JOIN foo AS t2 ON t1.m1 = t2.m1 GROUP BY t1.m2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testXXX4() throws Exception
+  {
+    // Cannot vectorize ANY aggregator.
+    skipVectorize();
+
+    testQuery(
+        "SELECT m2, dim1 FROM (SELECT * FROM foo AS t1 INNER JOIN foo AS t2 ON t1.m1 = t2.m1 LIMIT 10) AS t3",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
 
   @Test
   public void testSelectCountStart() throws Exception
