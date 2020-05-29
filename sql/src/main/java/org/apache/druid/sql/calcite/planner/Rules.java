@@ -123,7 +123,11 @@ public class Rules
           ProjectTableScanRule.INTERPRETER
       );
 
-  // Rules from RelOptUtil's registerReductionRules.
+  // Rules from RelOptUtil's registerReductionRules, minus:
+  //
+  // 1) ReduceExpressionsRule.JOIN_INSTANCE
+  //    Removed by https://github.com/apache/druid/pull/9941 due to issue in https://github.com/apache/druid/issues/9942
+  //    TODO: Re-enable when https://github.com/apache/druid/issues/9942 is fixed
   private static final List<RelOptRule> REDUCTION_RULES =
       ImmutableList.of(
           ReduceExpressionsRule.PROJECT_INSTANCE,
@@ -165,6 +169,9 @@ public class Rules
   // 2) SemiJoinRule.PROJECT and SemiJoinRule.JOIN (we don't need to detect semi-joins, because they are handled
   //    fine as-is by DruidJoinRule).
   // 3) JoinCommuteRule (we don't support reordering joins yet).
+  // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
+  //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
+  //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,

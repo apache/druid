@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
@@ -14194,6 +14195,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"10.1", 946771200000L}
         )
+    );
+  }
+
+  // This query is expected to fail as we do not support join with constant in the on condition
+  // (see issue https://github.com/apache/druid/issues/9942 for more information)
+  @Test(expected = RelOptPlanner.CannotPlanException.class)
+  public void testJoinOnConstantShouldFail() throws Exception
+  {
+    cannotVectorize();
+
+    final String query = "SELECT t1.dim1 from foo as t1 LEFT JOIN foo as t2 on t1.dim1 = '10.1'";
+
+    testQuery(
+        query,
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
