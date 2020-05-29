@@ -85,7 +85,6 @@ public class SqlInputSourceTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
   private TestDerbyConnector derbyConnector;
-  private SqlInputSourceTest.TestDerbyFirehoseConnector derbyFirehoseConnector;
 
   @Before
   public void setUp()
@@ -149,9 +148,9 @@ public class SqlInputSourceTest
   @Test
   public void testSingleSplit() throws Exception
   {
-    SqlTestUtils testUtils = new SqlTestUtils();
     derbyConnector = derbyConnectorRule.getConnector();
-    testUtils.createAndUpdateTable(TABLE_NAME_1, derbyConnector, 10);
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
     final File tempDir = createFirehoseTmpDir("testSingleSplit");
     SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST1, true, testUtils.getDerbyFirehoseConnector(), mapper);
     InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
@@ -161,19 +160,19 @@ public class SqlInputSourceTest
       rows.add(resultIterator.next());
     }
     assertResult(rows, SQLLIST1);
-    testUtils.dropTable(TABLE_NAME_1, derbyConnector);
+    testUtils.dropTable(TABLE_NAME_1);
   }
 
 
   @Test
   public void testMultipleSplits() throws Exception
   {
-    SqlTestUtils testUtils = new SqlTestUtils();
     derbyConnector = derbyConnectorRule.getConnector();
-    testUtils.createAndUpdateTable(TABLE_NAME_1, derbyConnector, 10);
-    testUtils.createAndUpdateTable(TABLE_NAME_2, derbyConnector, 10);
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
+    testUtils.createAndUpdateTable(TABLE_NAME_2, 10);
     final File tempDir = createFirehoseTmpDir("testMultipleSplit");
-    SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST2, true, derbyFirehoseConnector, mapper);
+    SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST2, true, testUtils.getDerbyFirehoseConnector(), mapper);
     InputSourceReader sqlReader = sqlInputSource.fixedFormatReader(INPUT_ROW_SCHEMA, tempDir);
     CloseableIterator<InputRow> resultIterator = sqlReader.read();
     final List<Row> rows = new ArrayList<>();
@@ -181,14 +180,16 @@ public class SqlInputSourceTest
       rows.add(resultIterator.next());
     }
     assertResult(rows, SQLLIST2);
-    testUtils.dropTable(TABLE_NAME_1, derbyConnector);
-    testUtils.dropTable(TABLE_NAME_2, derbyConnector);
+    testUtils.dropTable(TABLE_NAME_1);
+    testUtils.dropTable(TABLE_NAME_2);
   }
 
   @Test
   public void testNumSplits()
   {
-    SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST2, true, derbyFirehoseConnector, mapper);
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    SqlInputSource sqlInputSource = new SqlInputSource(SQLLIST2, true, testUtils.getDerbyFirehoseConnector(), mapper);
     InputFormat inputFormat = EasyMock.createMock(InputFormat.class);
     Stream<InputSplit<String>> sqlSplits = sqlInputSource.createSplits(inputFormat, null);
     Assert.assertEquals(SQLLIST2, sqlSplits.map(InputSplit::get).collect(Collectors.toList()));
@@ -208,27 +209,6 @@ public class SqlInputSourceTest
                   .withNonnullFields("sqls", "sqlFirehoseDatabaseConnector")
                   .usingGetClass()
                   .verify();
-  }
-
-  protected static class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
-  {
-    private final DBI dbi;
-
-    private TestDerbyFirehoseConnector(
-        @JsonProperty("connectorConfig") MetadataStorageConnectorConfig metadataStorageConnectorConfig, DBI dbi
-    )
-    {
-      final BasicDataSource datasource = getDatasource(metadataStorageConnectorConfig);
-      datasource.setDriverClassLoader(getClass().getClassLoader());
-      datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
-      this.dbi = dbi;
-    }
-
-    @Override
-    public DBI getDBI()
-    {
-      return dbi;
-    }
   }
 
   @JsonTypeName("test")

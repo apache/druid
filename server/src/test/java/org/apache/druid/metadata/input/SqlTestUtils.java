@@ -35,7 +35,17 @@ public class SqlTestUtils
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-  private TestDerbyFirehoseConnector derbyFirehoseConnector;
+  private final TestDerbyFirehoseConnector derbyFirehoseConnector;
+  private final TestDerbyConnector derbyConnector;
+
+  public SqlTestUtils(TestDerbyConnector derbyConnector)
+  {
+    this.derbyConnector = derbyConnector;
+    this.derbyFirehoseConnector = new SqlTestUtils.TestDerbyFirehoseConnector(
+        new MetadataStorageConnectorConfig(),
+        derbyConnector.getDBI()
+    );
+  }
 
   private static class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
   {
@@ -58,12 +68,8 @@ public class SqlTestUtils
     }
   }
 
-  public void createAndUpdateTable(final String tableName, TestDerbyConnector derbyConnector, int numEntries)
+  public void createAndUpdateTable(final String tableName, int numEntries)
   {
-    derbyFirehoseConnector = new SqlTestUtils.TestDerbyFirehoseConnector(
-        new MetadataStorageConnectorConfig(),
-        derbyConnector.getDBI()
-    );
     derbyConnector.createTable(
         tableName,
         ImmutableList.of(
@@ -94,7 +100,7 @@ public class SqlTestUtils
     );
   }
 
-  public void dropTable(final String tableName, TestDerbyConnector derbyConnector)
+  public void dropTable(final String tableName)
   {
     derbyConnector.getDBI().withHandle(
         (HandleCallback<Void>) handle -> {

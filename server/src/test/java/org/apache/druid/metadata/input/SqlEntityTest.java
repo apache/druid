@@ -61,9 +61,9 @@ public class SqlEntityTest
   @Test
   public void testExecuteQuery() throws IOException
   {
-    SqlTestUtils testUtils = new SqlTestUtils();
     derbyConnector = derbyConnectorRule.getConnector();
-    testUtils.createAndUpdateTable(TABLE_NAME_1, derbyConnector, 1);
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 1);
     File tmpFile = File.createTempFile(
         "testQueryResults",
         ""
@@ -79,6 +79,6 @@ public class SqlEntityTest
     String actualJson = IOUtils.toString(queryInputStream, StandardCharsets.UTF_8);
 
     Assert.assertEquals(actualJson, resultJson);
-    testUtils.dropTable(TABLE_NAME_1, derbyConnector);
+    testUtils.dropTable(TABLE_NAME_1);
   }
 }

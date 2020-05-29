@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
