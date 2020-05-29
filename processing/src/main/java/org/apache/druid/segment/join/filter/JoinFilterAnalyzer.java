@@ -30,7 +30,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -42,7 +41,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -76,7 +74,7 @@ import java.util.Set;
  * 
  * The result of this pre-analysis method should be passed into the next step of join filter analysis, described below.
  * 
- * The {@link #splitFilter(JoinFilterPreAnalysis)} method takes the pre-analysis result and optionally applies the\
+ * The {@link #splitFilter(JoinFilterPreAnalysis)} method takes the pre-analysis result and optionally applies the
  * filter rewrite and push down operations on a per-segment level.
  */
 public class JoinFilterAnalyzer
@@ -118,34 +116,15 @@ public class JoinFilterAnalyzer
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
 
     splitVirtualColumns(joinableClauses, virtualColumns, preJoinVirtualColumns, postJoinVirtualColumns);
-
+    JoinFilterPreAnalysis.Builder preAnalysisBuilder =
+        new JoinFilterPreAnalysis.Builder(joinableClauses, originalFilter, postJoinVirtualColumns)
+            .withEnableFilterPushDown(enableFilterPushDown)
+            .withEnableFilterRewrite(enableFilterRewrite);
     if (originalFilter == null || !enableFilterPushDown) {
-      return new JoinFilterPreAnalysis(
-          joinableClauses,
-          originalFilter,
-          postJoinVirtualColumns,
-          null,
-          null,
-          null,
-          null,
-          enableFilterPushDown,
-          enableFilterRewrite,
-          Collections.emptyMap()
-      );
+      return preAnalysisBuilder.build();
     }
 
-    Filter normalizedFilter = Filters.toCnf(originalFilter);
-
-    // List of candidates for pushdown
-    // CNF normalization will generate either
-    // - an AND filter with multiple subfilters
-    // - or a single non-AND subfilter which cannot be split further
-    Set<Filter> normalizedOrClauses;
-    if (normalizedFilter instanceof AndFilter) {
-      normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
-    } else {
-      normalizedOrClauses = Collections.singleton(normalizedFilter);
-    }
+    Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(originalFilter);
 
     List<Filter> normalizedBaseTableClauses = new ArrayList<>();
     List<Filter> normalizedJoinTableClauses = new ArrayList<>();
@@ -161,68 +140,17 @@ public class JoinFilterAnalyzer
         normalizedBaseTableClauses.add(orClause);
       }
     }
-
+    preAnalysisBuilder
+        .withNormalizedBaseTableClauses(normalizedBaseTableClauses)
+        .withNormalizedJoinTableClauses(normalizedJoinTableClauses);
     if (!enableFilterRewrite) {
-      return new JoinFilterPreAnalysis(
-          joinableClauses,
-          originalFilter,
-          postJoinVirtualColumns,
-          normalizedBaseTableClauses,
-          normalizedJoinTableClauses,
-          null,
-          null,
-          enableFilterPushDown,
-          enableFilterRewrite,
-          Collections.emptyMap()
-      );
+      return preAnalysisBuilder.build();
     }
 
     // build the equicondition map, used for determining how the tables are connected through joins
-    Map<String, Set<Expr>> equiconditions = new HashMap<>();
-    for (JoinableClause clause : joinableClauses) {
-      for (Equality equality : clause.getCondition().getEquiConditions()) {
-        Set<Expr> exprsForRhs = equiconditions.computeIfAbsent(
-            clause.getPrefix() + equality.getRightColumn(),
-            (rhs) -> new HashSet<>()
-        );
-        exprsForRhs.add(equality.getLeftExpr());
-      }
-    }
+    Map<String, Set<Expr>> equiconditions = preAnalysisBuilder.computeEquiconditionsFromJoinableClauses();
 
-    // Determine candidates for filter rewrites.
-    // A candidate is an RHS column that appears in a filter, along with the value being filtered on, plus
-    // the joinable clause associated with the table that the RHS column is from.
-    Set<RhsRewriteCandidate> rhsRewriteCandidates = new LinkedHashSet<>();
-    for (Filter orClause : normalizedJoinTableClauses) {
-      if (filterMatchesNull(orClause)) {
-        continue;
-      }
-
-      if (orClause instanceof OrFilter) {
-        for (Filter subFilter : ((OrFilter) orClause).getFilters()) {
-          Optional<RhsRewriteCandidate> rhsRewriteCandidate = determineRhsRewriteCandidatesForSingleFilter(
-              subFilter,
-              equiconditions,
-              joinableClauses
-          );
-
-          if (rhsRewriteCandidate.isPresent()) {
-            rhsRewriteCandidates.add(rhsRewriteCandidate.get());
-          }
-        }
-        continue;
-      }
-
-      Optional<RhsRewriteCandidate> rhsRewriteCandidate = determineRhsRewriteCandidatesForSingleFilter(
-          orClause,
-          equiconditions,
-          joinableClauses
-      );
-
-      if (rhsRewriteCandidate.isPresent()) {
-        rhsRewriteCandidates.add(rhsRewriteCandidate.get());
-      }
-    }
+    Set<RhsRewriteCandidate> rhsRewriteCandidates = getRhsRewriteCandidates(normalizedJoinTableClauses, equiconditions, joinableClauses);
 
     // Build a map of RHS table prefix -> JoinFilterColumnCorrelationAnalysis based on the RHS rewrite candidates
     Map<String, Optional<Map<String, JoinFilterColumnCorrelationAnalysis>>> correlationsByPrefix = new HashMap<>();
@@ -248,7 +176,6 @@ public class JoinFilterAnalyzer
                 assert (baseColumnAnalysis != null);
                 return Optional.of(correlatedBaseTableColumns.get().get(c));
               }
-
             }
         );
       } else {
@@ -280,9 +207,7 @@ public class JoinFilterAnalyzer
         List<JoinFilterColumnCorrelationAnalysis> perColumnCorrelations =
             correlationsByDirectFilteringColumn.computeIfAbsent(
                 rhsRewriteCandidate.getRhsColumn(),
-                (rhsCol) -> {
-                  return new ArrayList<>();
-                }
+                (rhsCol) -> new ArrayList<>()
             );
         perColumnCorrelations.add(
             directRewriteCorrelations.get(rhsRewriteCandidate.getRhsColumn()).get()
@@ -299,9 +224,7 @@ public class JoinFilterAnalyzer
           List<JoinFilterColumnCorrelationAnalysis> perColumnCorrelations =
               correlationsByFilteringColumn.computeIfAbsent(
                   rhsRewriteCandidate.getRhsColumn(),
-                  (rhsCol) -> {
-                    return new ArrayList<>();
-                  }
+                  (rhsCol) -> new ArrayList<>()
               );
           perColumnCorrelations.add(correlationForPrefix.getValue());
           correlationForPrefix.getValue().getCorrelatedValuesMap().computeIfAbsent(
@@ -348,20 +271,10 @@ public class JoinFilterAnalyzer
         correlationsByDirectFilteringColumn.put(correlation.getKey(), dedupList);
       }
     }
+    preAnalysisBuilder.withCorrelationsByFilteringColumn(correlationsByFilteringColumn)
+                      .withCorrelationsByDirectFilteringColumn(correlationsByDirectFilteringColumn);
 
-
-    return new JoinFilterPreAnalysis(
-        joinableClauses,
-        originalFilter,
-        postJoinVirtualColumns,
-        normalizedBaseTableClauses,
-        normalizedJoinTableClauses,
-        correlationsByFilteringColumn,
-        correlationsByDirectFilteringColumn,
-        enableFilterPushDown,
-        enableFilterRewrite,
-        equiconditions
-    );
+    return preAnalysisBuilder.build();
   }
 
   private static Optional<RhsRewriteCandidate> determineRhsRewriteCandidatesForSingleFilter(
@@ -414,9 +327,7 @@ public class JoinFilterAnalyzer
   {
     if (requiredColumns.size() == 1) {
       String reqColumn = requiredColumns.iterator().next();
-      if (equiconditions.containsKey(reqColumn)) {
-        return true;
-      }
+      return equiconditions.containsKey(reqColumn);
     }
     return false;
   }
@@ -1052,6 +963,57 @@ public class JoinFilterAnalyzer
     }
   }
 
+  /**
+   * Determine candidates for filter rewrites.
+   * A candidate is an RHS column that appears in a filter, along with the value being filtered on, plus
+   * the joinable clause associated with the table that the RHS column is from.
+   *
+   * These candidates are redued to filter rewrite correlations.
+   *
+   * @param normalizedJoinTableClauses
+   * @param equiconditions
+   * @param joinableClauses
+   * @return A set of candidates for filter rewrites.
+   */
+  private static Set<RhsRewriteCandidate> getRhsRewriteCandidates(
+      List<Filter> normalizedJoinTableClauses,
+      Map<String, Set<Expr>> equiconditions,
+      List<JoinableClause> joinableClauses)
+  {
+    Set<RhsRewriteCandidate> rhsRewriteCandidates = new LinkedHashSet<>();
+    for (Filter orClause : normalizedJoinTableClauses) {
+      if (filterMatchesNull(orClause)) {
+        continue;
+      }
+
+      if (orClause instanceof OrFilter) {
+        for (Filter subFilter : ((OrFilter) orClause).getFilters()) {
+          Optional<RhsRewriteCandidate> rhsRewriteCandidate = determineRhsRewriteCandidatesForSingleFilter(
+              subFilter,
+              equiconditions,
+              joinableClauses
+          );
+
+          rhsRewriteCandidate.ifPresent(rhsRewriteCandidates::add);
+        }
+        continue;
+      }
+
+      Optional<RhsRewriteCandidate> rhsRewriteCandidate = determineRhsRewriteCandidatesForSingleFilter(
+          orClause,
+          equiconditions,
+          joinableClauses
+      );
+
+      rhsRewriteCandidate.ifPresent(rhsRewriteCandidates::add);
+    }
+    return rhsRewriteCandidates;
+  }
+
+  /**
+   * A candidate is an RHS column that appears in a filter, along with the value being filtered on, plus
+   * the joinable clause associated with the table that the RHS column is from.
+   */
   private static class RhsRewriteCandidate
   {
     private final boolean isDirectRewrite;

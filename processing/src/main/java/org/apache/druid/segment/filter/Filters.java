@@ -49,6 +49,7 @@ import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -520,5 +521,26 @@ public class Filters
     }
 
     return new OrFilter(filterSet);
+  }
+
+  /**
+   * @param filter the filter.
+   * @return The normalized or clauses for the provided filter.
+   */
+  public static Set<Filter> toNormalizedOrClauses(Filter filter)
+  {
+    Filter normalizedFilter = Filters.toCnf(filter);
+
+    // List of candidates for pushdown
+    // CNF normalization will generate either
+    // - an AND filter with multiple subfilters
+    // - or a single non-AND subfilter which cannot be split further
+    Set<Filter> normalizedOrClauses;
+    if (normalizedFilter instanceof AndFilter) {
+      normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
+    } else {
+      normalizedOrClauses = Collections.singleton(normalizedFilter);
+    }
+    return normalizedOrClauses;
   }
 }
