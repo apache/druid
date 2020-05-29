@@ -1793,12 +1793,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   // (see issue https://github.com/apache/druid/issues/9924 for more information)
   // TODO: Remove expected Exception when https://github.com/apache/druid/issues/9924 is fixed
   @Test(expected = QueryException.class)
-  public void testJoinOnMultiValuedColumnShouldThrowException() throws Exception
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinOnMultiValuedColumnShouldThrowException(Map<String, Object> queryContext) throws Exception
   {
     final String query = "SELECT dim3, l.v from druid.foo f inner join lookup.lookyloo l on f.dim3 = l.k\n";
 
     testQuery(
         query,
+        queryContext,
         ImmutableList.of(),
         ImmutableList.of()
     );
