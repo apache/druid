@@ -136,13 +136,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       long pushAndClearTimeoutMs
   ) throws InterruptedException, ExecutionException, TimeoutException
   {
-    final Set<SegmentIdWithShardSpec> requestedSegmentIdsForSequences;
-    synchronized (segments) {
-      requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
-          .map(SegmentWithState::getSegmentIdentifier)
-          .collect(Collectors.toSet());
-    }
-
+    final Set<SegmentIdWithShardSpec> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames);
 
     final ListenableFuture<SegmentsAndCommitMetadata> future = ListenableFutures.transformAsync(
         pushInBackground(null, requestedSegmentIdsForSequences, false),
