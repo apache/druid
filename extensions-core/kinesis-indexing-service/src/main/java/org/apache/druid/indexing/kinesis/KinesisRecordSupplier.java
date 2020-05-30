@@ -560,16 +560,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     assign(ImmutableSet.of());
 
-    scheduledExec.shutdown();
+    if (scheduledExec != null) {
+      scheduledExec.shutdown();
 
-    try {
-      if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
-        scheduledExec.shutdownNow();
+      try {
+        if (!scheduledExec.awaitTermination(EXCEPTION_RETRY_DELAY_MS, TimeUnit.MILLISECONDS)) {
+          scheduledExec.shutdownNow();
+        }
       }
-    }
-    catch (InterruptedException e) {
-      log.warn(e, "InterruptedException while shutting down");
-      throw new RuntimeException(e);
+      catch (InterruptedException e) {
+        log.warn(e, "InterruptedException while shutting down");
+        throw new RuntimeException(e);
+      }
     }
 
     this.closed = true;
