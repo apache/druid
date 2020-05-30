@@ -39,16 +39,19 @@ public class JsonInputFormat extends NestedInputFormat
 {
   private final Map<String, Boolean> featureSpec;
   private final ObjectMapper objectMapper;
+  private final boolean keepNullColumns;
 
   @JsonCreator
   public JsonInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
-      @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec
+      @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec,
+      @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns
   )
   {
     super(flattenSpec);
     this.featureSpec = featureSpec == null ? Collections.emptyMap() : featureSpec;
     this.objectMapper = new ObjectMapper();
+    this.keepNullColumns = keepNullColumns == null ? false : keepNullColumns;
     for (Entry<String, Boolean> entry : this.featureSpec.entrySet()) {
       Feature feature = Feature.valueOf(entry.getKey());
       objectMapper.configure(feature, entry.getValue());
@@ -70,7 +73,7 @@ public class JsonInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper);
+    return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
   }
 
   @Override
@@ -86,12 +89,12 @@ public class JsonInputFormat extends NestedInputFormat
       return false;
     }
     JsonInputFormat that = (JsonInputFormat) o;
-    return Objects.equals(featureSpec, that.featureSpec);
+    return Objects.equals(featureSpec, that.featureSpec) && Objects.equals(keepNullColumns, that.keepNullColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), featureSpec);
+    return Objects.hash(super.hashCode(), featureSpec, keepNullColumns);
   }
 }

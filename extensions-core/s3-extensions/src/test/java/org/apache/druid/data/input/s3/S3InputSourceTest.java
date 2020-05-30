@@ -363,7 +363,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         null
     );
 
@@ -389,7 +389,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         new MaxSizeSplitHintSpec(1L) // set maxSplitSize to 1 so that each inputSplit has only one object
     );
 
@@ -416,7 +416,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         new MaxSizeSplitHintSpec(CONTENT.length * 3L)
     );
 
@@ -446,7 +446,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         null
     );
     Assert.assertEquals(
@@ -480,7 +480,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     );
 
     inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         null
     ).collect(Collectors.toList());
   }

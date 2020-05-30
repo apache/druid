@@ -186,6 +186,48 @@ public class TaskSerdeTest
   }
 
   @Test
+  public void testTaskResourceValid() throws Exception
+  {
+    TaskResource actual = jsonMapper.readValue(
+        "{\"availabilityGroup\":\"index_xxx_mmm\", \"requiredCapacity\":1}",
+        TaskResource.class
+    );
+    Assert.assertNotNull(actual);
+    Assert.assertNotNull(actual.getAvailabilityGroup());
+    Assert.assertTrue(actual.getRequiredCapacity() > 0);
+  }
+
+  @Test
+  public void testTaskResourceWithNullAvailabilityGroupShouldFail() throws Exception
+  {
+    thrown.expectCause(CoreMatchers.isA(NullPointerException.class));
+    jsonMapper.readValue(
+        "{\"availabilityGroup\":null, \"requiredCapacity\":10}",
+        TaskResource.class
+    );
+  }
+
+  @Test
+  public void testTaskResourceWithZeroRequiredCapacityShouldFail() throws Exception
+  {
+    thrown.expectCause(CoreMatchers.isA(NullPointerException.class));
+    jsonMapper.readValue(
+        "{\"availabilityGroup\":null, \"requiredCapacity\":0}",
+        TaskResource.class
+    );
+  }
+
+  @Test
+  public void testTaskResourceWithNegativeRequiredCapacityShouldFail() throws Exception
+  {
+    thrown.expectCause(CoreMatchers.isA(NullPointerException.class));
+    jsonMapper.readValue(
+        "{\"availabilityGroup\":null, \"requiredCapacity\":-1}",
+        TaskResource.class
+    );
+  }
+
+  @Test
   public void testIndexTaskSerde() throws Exception
   {
     final IndexTask task = new IndexTask(

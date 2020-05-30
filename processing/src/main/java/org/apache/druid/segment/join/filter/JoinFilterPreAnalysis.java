@@ -19,13 +19,20 @@
 
 package org.apache.druid.segment.join.filter;
 
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.join.Equality;
 import org.apache.druid.segment.join.JoinableClause;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 
 /**
  * A JoinFilterPreAnalysis contains filter push down/rewrite information that does not have per-segment dependencies.
@@ -34,30 +41,31 @@ import java.util.Optional;
  * - The query's original filter (if any)
  * - A list of filter clauses from the original filter's CNF representation that only reference the base table
  * - A list of filter clauses from the original filter's CNF representation that reference RHS join tables
- * - A mapping of RHS filtering columns -> List<JoinFilterColumnCorrelationAnalysis>, used for filter rewrites
  * - A list of virtual columns that can only be computed post-join
  * - Control flag booleans for whether filter push down and RHS rewrites are enabled.
  */
 public class JoinFilterPreAnalysis
 {
-  private final List<JoinableClause> joinableClauses;
+  private final JoinableClauses joinableClauses;
   private final Filter originalFilter;
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
-  private final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn;
+  private final JoinFilterCorrelations correlations;
   private final boolean enableFilterPushDown;
   private final boolean enableFilterRewrite;
   private final List<VirtualColumn> postJoinVirtualColumns;
+  private final Equiconditions equiconditions;
 
-  public JoinFilterPreAnalysis(
-      final List<JoinableClause> joinableClauses,
+  private JoinFilterPreAnalysis(
+      final JoinableClauses joinableClauses,
       final Filter originalFilter,
       final List<VirtualColumn> postJoinVirtualColumns,
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
-      final Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> correlationsByFilteringColumn,
+      JoinFilterCorrelations correlations,
       final boolean enableFilterPushDown,
-      final boolean enableFilterRewrite
+      final boolean enableFilterRewrite,
+      final Equiconditions equiconditions
   )
   {
     this.joinableClauses = joinableClauses;
@@ -65,12 +73,13 @@ public class JoinFilterPreAnalysis
     this.postJoinVirtualColumns = postJoinVirtualColumns;
     this.normalizedBaseTableClauses = normalizedBaseTableClauses;
     this.normalizedJoinTableClauses = normalizedJoinTableClauses;
-    this.correlationsByFilteringColumn = correlationsByFilteringColumn;
+    this.correlations = correlations;
     this.enableFilterPushDown = enableFilterPushDown;
     this.enableFilterRewrite = enableFilterRewrite;
+    this.equiconditions = equiconditions;
   }
 
-  public List<JoinableClause> getJoinableClauses()
+  public JoinableClauses getJoinableClauses()
   {
     return joinableClauses;
   }
@@ -95,9 +104,14 @@ public class JoinFilterPreAnalysis
     return normalizedJoinTableClauses;
   }
 
-  public Map<String, Optional<List<JoinFilterColumnCorrelationAnalysis>>> getCorrelationsByFilteringColumn()
+  public Map<String, List<JoinFilterColumnCorrelationAnalysis>> getCorrelationsByFilteringColumn()
   {
-    return correlationsByFilteringColumn;
+    return correlations.getCorrelationsByFilteringColumn();
+  }
+
+  public Map<String, List<JoinFilterColumnCorrelationAnalysis>> getCorrelationsByDirectFilteringColumn()
+  {
+    return correlations.getCorrelationsByDirectFilteringColumn();
   }
 
   public boolean isEnableFilterPushDown()
@@ -108,6 +122,102 @@ public class JoinFilterPreAnalysis
   public boolean isEnableFilterRewrite()
   {
     return enableFilterRewrite;
+  }
+
+  public Equiconditions getEquiconditions()
+  {
+    return equiconditions;
+  }
+
+  /**
+   * A Builder class to build {@link JoinFilterPreAnalysis}
+   */
+  public static class Builder
+  {
+    @Nonnull private final JoinableClauses joinableClauses;
+    @Nullable private final Filter originalFilter;
+    @Nullable private List<Filter> normalizedBaseTableClauses;
+    @Nullable private List<Filter> normalizedJoinTableClauses;
+    @Nullable private JoinFilterCorrelations correlations;
+    private boolean enableFilterPushDown = false;
+    private boolean enableFilterRewrite = false;
+    @Nonnull private final List<VirtualColumn> postJoinVirtualColumns;
+    @Nonnull private Equiconditions equiconditions = new Equiconditions(Collections.emptyMap());
+
+    public Builder(
+        @Nonnull JoinableClauses joinableClauses,
+        @Nullable Filter originalFilter,
+        @Nonnull List<VirtualColumn> postJoinVirtualColumns
+    )
+    {
+      this.joinableClauses = joinableClauses;
+      this.originalFilter = originalFilter;
+      this.postJoinVirtualColumns = postJoinVirtualColumns;
+    }
+
+    public Builder withNormalizedBaseTableClauses(List<Filter> normalizedBaseTableClauses)
+    {
+      this.normalizedBaseTableClauses = normalizedBaseTableClauses;
+      return this;
+    }
+
+    public Builder withNormalizedJoinTableClauses(List<Filter> normalizedJoinTableClauses)
+    {
+      this.normalizedJoinTableClauses = normalizedJoinTableClauses;
+      return this;
+    }
+
+    public Builder withCorrelations(
+        JoinFilterCorrelations correlations
+    )
+    {
+      this.correlations = correlations;
+      return this;
+    }
+
+    public Builder withEnableFilterPushDown(boolean enableFilterPushDown)
+    {
+      this.enableFilterPushDown = enableFilterPushDown;
+      return this;
+    }
+
+    public Builder withEnableFilterRewrite(boolean enableFilterRewrite)
+    {
+      this.enableFilterRewrite = enableFilterRewrite;
+      return this;
+    }
+
+    public Equiconditions computeEquiconditionsFromJoinableClauses()
+    {
+      Map<String, Set<Expr>> equiconditionsMap = new HashMap<>();
+      for (JoinableClause clause : joinableClauses.getJoinableClauses()) {
+        for (Equality equality : clause.getCondition().getEquiConditions()) {
+          Set<Expr> exprsForRhs = equiconditionsMap.computeIfAbsent(
+              clause.getPrefix() + equality.getRightColumn(),
+              (rhs) -> new HashSet<>()
+          );
+          exprsForRhs.add(equality.getLeftExpr());
+        }
+      }
+      this.equiconditions = new Equiconditions(equiconditionsMap);
+      return equiconditions;
+    }
+
+    public JoinFilterPreAnalysis build()
+    {
+      return new JoinFilterPreAnalysis(
+          joinableClauses,
+          originalFilter,
+          postJoinVirtualColumns,
+          normalizedBaseTableClauses,
+          normalizedJoinTableClauses,
+          correlations,
+          enableFilterPushDown,
+          enableFilterRewrite,
+          equiconditions
+      );
+    }
+
   }
 }
 

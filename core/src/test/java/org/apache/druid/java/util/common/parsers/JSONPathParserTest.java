@@ -56,7 +56,7 @@ public class JSONPathParserTest
   public void testSimple()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(JSON);
     Assert.assertEquals(
         "jsonMap",
@@ -69,7 +69,7 @@ public class JSONPathParserTest
   public void testWithNumbers()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NUMBERS_JSON);
     Assert.assertEquals(
         "jsonMap",
@@ -82,7 +82,7 @@ public class JSONPathParserTest
   public void testWithWhackyCharacters()
   {
     List<JSONPathFieldSpec> fields = new ArrayList<>();
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(WHACKY_CHARACTER_JSON);
     Assert.assertEquals(
         "jsonMap",
@@ -112,7 +112,7 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
 
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
@@ -173,7 +173,7 @@ public class JSONPathParserTest
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-heybarx0", ".hey[0].barx"));
     fields.add(new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq-met-array", ".met.a"));
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
     final Map<String, Object> jsonMap = jsonParser.parseToMap(NESTED_JSON);
 
     // Root fields
@@ -210,7 +210,7 @@ public class JSONPathParserTest
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
     jsonParser.parseToMap(NESTED_JSON);
   }
 
@@ -224,7 +224,7 @@ public class JSONPathParserTest
     thrown.expect(IllegalArgumentException.class);
     thrown.expectMessage("Cannot have duplicate field definition: met-array");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(false, fields), null, false);
     jsonParser.parseToMap(NESTED_JSON);
   }
 
@@ -236,7 +236,7 @@ public class JSONPathParserTest
     thrown.expect(ParseException.class);
     thrown.expectMessage("Unable to parse row [" + NOT_JSON + "]");
 
-    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null);
+    final Parser<String, Object> jsonParser = new JSONPathParser(new JSONPathSpec(true, fields), null, false);
     jsonParser.parseToMap(NOT_JSON);
   }
 }

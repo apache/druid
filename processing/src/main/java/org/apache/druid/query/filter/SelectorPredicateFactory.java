@@ -24,6 +24,7 @@ import com.google.common.base.Predicates;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * A {@link DruidPredicateFactory} that checks if input values equal a specific, provided value. Initialization work
@@ -146,5 +147,24 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
         doublePredicate = input -> Double.doubleToLongBits(input) == bits;
       }
     }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SelectorPredicateFactory that = (SelectorPredicateFactory) o;
+    return Objects.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(value);
   }
 }

@@ -710,7 +710,7 @@ name: com.nimbusds lang-tag
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 1.4.4
+version: 1.5
 libraries:
   - com.nimbusds: lang-tag
 
@@ -1975,7 +1975,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.0
+version: 1.7.1
 libraries:
   - org.lz4: lz4-java
 
@@ -3211,7 +3211,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.2.0-incubating
+version: 1.1.0-incubating
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3251,7 +3251,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.2.2
+version: 2.5.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -4086,9 +4086,19 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev79-1.22.0
+version: v1-rev158-1.25.0
 libraries:
   - com.google.apis: google-api-services-storage
+
+---
+
+name: Google Compute Engine API
+license_category: binary
+module: extensions/gce-extensions
+license_name: Apache License version 2.0
+version: v1-rev214-1.25.0
+libraries:
+  - com.google.apis: google-api-services-compute
 
 ---
 
@@ -4106,7 +4116,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.0
+version: 1.25.0
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4116,7 +4126,7 @@ name: Google HTTP Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.22.0
+version: 1.25.0
 libraries:
   - com.google.http-client: google-http-client
   - com.google.http-client: google-http-client-jackson2
@@ -4149,7 +4159,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.2.2
+version: 2.5.0
 libraries:
   - org.apache.kafka: kafka_2.12
   - org.apache.kafka: kafka-clients
@@ -4697,7 +4707,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.3.29
+version: 0.6.1
 
 ---
 

@@ -101,6 +101,9 @@
       "development/extensions-contrib/distinctcount": {
         "title": "DistinctCount Aggregator"
       },
+      "development/extensions-contrib/gce-extensions": {
+        "title": "GCE Extensions"
+      },
       "development/extensions-contrib/graphite": {
         "title": "Graphite Emitter"
       },
@@ -421,7 +424,7 @@
         "sidebar_label": "Multitenancy"
       },
       "querying/post-aggregations": {
-        "title": "Postaggregations"
+        "title": "Post-aggregations"
       },
       "querying/query-context": {
         "title": "Query context",

@@ -52,7 +52,7 @@ public class FirehoseFactoryToInputSourceAdaptorTest
     }
     final TestFirehoseFactory firehoseFactory = new TestFirehoseFactory(lines);
     final StringInputRowParser inputRowParser = new StringInputRowParser(
-        new UnimplementedInputFormatCsvParseSpec(
+        new CSVParseSpec(
             new TimestampSpec(null, "yyyyMMdd", null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "name", "score"))),
             ",",
@@ -92,28 +92,6 @@ public class FirehoseFactoryToInputSourceAdaptorTest
           StringUtils.format("%d", i + 100),
           Iterables.getOnlyElement(result.get(i).getDimension("score"))
       );
-    }
-  }
-
-  private static class UnimplementedInputFormatCsvParseSpec extends CSVParseSpec
-  {
-    private UnimplementedInputFormatCsvParseSpec(
-        TimestampSpec timestampSpec,
-        DimensionsSpec dimensionsSpec,
-        String listDelimiter,
-        List<String> columns,
-        boolean hasHeaderRow,
-        int skipHeaderRows
-    )
-    {
-      super(timestampSpec, dimensionsSpec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
-    }
-
-    @Nullable
-    @Override
-    public InputFormat toInputFormat()
-    {
-      return null;
     }
   }
 

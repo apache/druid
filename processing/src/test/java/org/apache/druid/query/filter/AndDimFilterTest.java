@@ -65,4 +65,39 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(expected, dimFilter.toFilter());
   }
+
+  @Test
+  public void testOptimieShortCircuitWithFalseFilter()
+  {
+    DimFilter filter = DimFilterTestUtils.and(
+        DimFilterTestUtils.selector("col1", "1"),
+        FalseDimFilter.instance()
+    );
+    Assert.assertTrue(filter.optimize() instanceof FalseDimFilter);
+  }
+
+  @Test
+  public void testOptimizeOringTrueFilters()
+  {
+    DimFilter filter = DimFilterTestUtils.and(TrueDimFilter.instance(), TrueDimFilter.instance());
+    Assert.assertSame(TrueDimFilter.instance(), filter.optimize());
+  }
+
+  @Test
+  public void testOptimizeAndOfSingleFilterUnwrapAnd()
+  {
+    DimFilter expected = DimFilterTestUtils.selector("col1", "1");
+    DimFilter filter = DimFilterTestUtils.and(expected);
+    Assert.assertEquals(expected, filter.optimize());
+  }
+
+  @Test
+  public void testOptimizeAndOfMultipleFiltersReturningAsItIs()
+  {
+    DimFilter filter = DimFilterTestUtils.and(
+        DimFilterTestUtils.selector("col1", "1"),
+        DimFilterTestUtils.selector("col1", "2")
+    );
+    Assert.assertEquals(filter, filter.optimize());
+  }
 }
