@@ -394,14 +394,16 @@ ORDER BY "start" DESC`;
   onTimeSpanChange = (e: any) => {
     const dStart = new Date();
     const dEnd = new Date();
-    dStart.setMonth(dStart.getMonth() - e);
+    const capabilities = this.props.capabilities;
+    const timeSpan = parseInt(e, 10) || 3;
+    dStart.setMonth(dStart.getMonth() - timeSpan);
     this.setState({
-      timeSpan: e,
+      timeSpan: timeSpan,
       loading: true,
       dStart,
       dEnd,
     });
-    this.dataQueryManager.rerunLastQuery();
+    this.dataQueryManager.runQuery({ capabilities, timeSpan });
   };
 
   formatTick = (n: number) => {
