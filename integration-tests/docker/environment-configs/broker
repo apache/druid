@@ -21,7 +21,7 @@ DRUID_SERVICE=broker
 DRUID_LOG_PATH=/shared/logs/broker.log
 
 # JAVA OPTS
-SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:NewSize=256m -XX:MaxNewSize=256m -XX:+UseG1GC
+SERVICE_DRUID_JAVA_OPTS=-server -Xmx512m -Xms512m -XX:NewSize=256m -XX:MaxNewSize=256m -XX:+UseG1GC -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
 
 # Druid configs
 druid_processing_buffer_sizeBytes=25000000
@@ -37,3 +37,5 @@ druid_cache_sizeInBytes=40000000
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/broker
 druid_sql_avatica_enable=true
 druid_server_https_crlPath=/tls/revocations.crl
+druid_query_scheduler_laning_strategy=manual
+druid_query_scheduler_laning_lanes_one=1

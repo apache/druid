@@ -48,6 +48,7 @@ import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -201,7 +202,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
       RowAdapters.standardRow(),
       CURRENT_ROW::get,
-      null,
+      RowSignature.empty(),
       false
   );
 
@@ -742,7 +743,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.LONG),
+            RowSignature.builder().add("x", ValueType.LONG).build(),
             false
         ),
         Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
@@ -765,7 +766,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.DOUBLE),
+            RowSignature.builder().add("x", ValueType.DOUBLE).build(),
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -788,7 +789,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
         RowBasedColumnSelectorFactory.create(
             RowAdapters.standardRow(),
             CURRENT_ROW::get,
-            ImmutableMap.of("x", ValueType.FLOAT),
+            RowSignature.builder().add("x", ValueType.FLOAT).build(),
             false
         ),
         Parser.parse(SCALE_FLOAT.getExpression(), TestExprMacroTable.INSTANCE)
@@ -802,5 +803,29 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       Assert.assertTrue(selector.isNull());
       Assert.assertTrue(selector.getObject().isNumericNull());
     }
+  }
+
+  @Test
+  public void testCapabilities()
+  {
+    ColumnCapabilities caps = X_PLUS_Y.capabilities("expr");
+    Assert.assertEquals(ValueType.FLOAT, caps.getType());
+    Assert.assertFalse(caps.hasBitmapIndexes());
+    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertFalse(caps.isComplete());
+
+    caps = Z_CONCAT_X.capabilities("expr");
+    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertFalse(caps.hasBitmapIndexes());
+    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertFalse(caps.isComplete());
   }
 }

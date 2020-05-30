@@ -28,6 +28,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -58,7 +59,7 @@ public class Transformer
                                       RowBasedColumnSelectorFactory.create(
                                           RowAdapters.standardRow(),
                                           rowSupplierForValueMatcher::get,
-                                          null,
+                                          RowSignature.empty(),
                                           false
                                       )
                                   );
@@ -155,6 +156,7 @@ public class Transformer
     {
       final RowFunction transform = transforms.get(ColumnHolder.TIME_COLUMN_NAME);
       if (transform != null) {
+        //noinspection ConstantConditions time column is never null
         return Rows.objectToNumber(ColumnHolder.TIME_COLUMN_NAME, transform.eval(row), true).longValue();
       } else {
         return row.getTimestampFromEpoch();

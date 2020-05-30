@@ -50,10 +50,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -171,12 +171,12 @@ public class OperatorConversions
   /**
    * Translate a Calcite {@code RexNode} to a Druid PostAggregator
    *
-   * @param plannerContext SQL planner context
-   * @param rowSignature   signature of the rows to be extracted from
-   * @param rexNode        expression meant to be applied on top of the rows
-   *
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          signature of the rows to be extracted from
+   * @param rexNode               expression meant to be applied on top of the rows
    * @param postAggregatorVisitor visitor that manages postagg names and tracks postaggs that were created
    *                              by the translation
+   *
    * @return rexNode referring to fields in rowOrder, or null if not possible
    */
   @Nullable
@@ -191,7 +191,7 @@ public class OperatorConversions
     if (kind == SqlKind.INPUT_REF) {
       // Translate field references.
       final RexInputRef ref = (RexInputRef) rexNode;
-      final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
+      final String columnName = rowSignature.getColumnName(ref.getIndex());
       if (columnName == null) {
         throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
       }

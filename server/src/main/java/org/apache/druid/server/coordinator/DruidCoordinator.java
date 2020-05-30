@@ -525,6 +525,13 @@ public class DruidCoordinator
     }
   }
 
+  public void runCompactSegmentsDuty()
+  {
+    final int startingLeaderCounter = coordLeaderSelector.localTerm();
+    DutiesRunnable compactSegmentsDuty = new DutiesRunnable(makeCompactSegmentsDuty(), startingLeaderCounter);
+    compactSegmentsDuty.run();
+  }
+
   private void becomeLeader()
   {
     synchronized (lock) {
@@ -623,7 +630,7 @@ public class DruidCoordinator
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new LogUsedSegments());
-    duties.add(compactSegments);
+    duties.addAll(makeCompactSegmentsDuty());
     duties.addAll(indexingServiceDuties);
 
     log.debug(
@@ -633,13 +640,18 @@ public class DruidCoordinator
     return ImmutableList.copyOf(duties);
   }
 
-  public class DutiesRunnable implements Runnable
+  private List<CoordinatorDuty> makeCompactSegmentsDuty()
+  {
+    return ImmutableList.of(compactSegments);
+  }
+
+  private class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
 
-    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
+    private DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
     {
       this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;

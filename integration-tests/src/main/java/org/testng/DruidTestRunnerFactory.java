@@ -19,26 +19,15 @@
 
 package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.guice.TestClient;
-import org.apache.druid.testing.utils.ITRetryUtil;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.druid.testing.utils.SuiteListener;
 import org.testng.internal.IConfiguration;
+import org.testng.internal.Systematiser;
 import org.testng.internal.annotations.IAnnotationFinder;
 import org.testng.xml.XmlTest;
 
-import java.net.URL;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,95 +36,70 @@ import java.util.List;
 public class DruidTestRunnerFactory implements ITestRunnerFactory
 {
   private static final Logger LOG = new Logger(DruidTestRunnerFactory.class);
+  private static final SuiteListener SUITE_LISTENER = new SuiteListener();
 
   @Override
-  public TestRunner newTestRunner(ISuite suite, XmlTest test, List<IInvokedMethodListener> listeners)
+  public TestRunner newTestRunner(ISuite suite,
+                                  XmlTest test,
+                                  Collection<IInvokedMethodListener> methodListeners,
+                                  List<IClassListener> classListeners)
   {
     IConfiguration configuration = TestNG.getDefault().getConfiguration();
     String outputDirectory = suite.getOutputDirectory();
     IAnnotationFinder annotationFinder = configuration.getAnnotationFinder();
     Boolean skipFailedInvocationCounts = suite.getXmlSuite().skipFailedInvocationCounts();
     return new DruidTestRunner(
-      configuration,
-      suite,
-      test,
-      outputDirectory,
-      annotationFinder,
-      skipFailedInvocationCounts,
-      listeners
+        configuration,
+        suite,
+        test,
+        outputDirectory,
+        annotationFinder,
+        skipFailedInvocationCounts,
+        methodListeners,
+        classListeners
     );
   }
 
   private static class DruidTestRunner extends TestRunner
   {
-
-    protected DruidTestRunner(
+    DruidTestRunner(
         IConfiguration configuration,
         ISuite suite,
         XmlTest test,
         String outputDirectory,
         IAnnotationFinder finder,
         boolean skipFailedInvocationCounts,
-        List<IInvokedMethodListener> invokedMethodListeners
+        Collection<IInvokedMethodListener> methodListeners,
+        List<IClassListener> classListeners
     )
     {
-      super(configuration, suite, test, outputDirectory, finder, skipFailedInvocationCounts, invokedMethodListeners);
+      super(configuration, suite, test, outputDirectory, finder, skipFailedInvocationCounts, methodListeners, classListeners, Systematiser.getComparator(), Collections.emptyMap());
     }
 
     @Override
     public void run()
     {
-      Injector injector = DruidTestModuleFactory.getInjector();
-      IntegrationTestingConfig config = injector.getInstance(IntegrationTestingConfig.class);
-      HttpClient client = injector.getInstance(Key.get(HttpClient.class, TestClient.class));
-
-      waitUntilInstanceReady(client, config.getCoordinatorUrl());
-      waitUntilInstanceReady(client, config.getIndexerUrl());
-      waitUntilInstanceReady(client, config.getBrokerUrl());
-      String routerHost = config.getRouterUrl();
-      if (null != routerHost) {
-        waitUntilInstanceReady(client, config.getRouterUrl());
-      }
-      Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       try {
-        lifecycle.start();
+        // IntegrationTestSuite is run when -Dit.test is not specify in maven command.
+        // IntegrationTestSuite uses the configuration from integration-tests/src/test/resources/testng.xml
+        // which already handle suite onStart and onFinish automatically
+        if (!"IntegrationTestSuite".equals(getSuite().getName())) {
+          SUITE_LISTENER.onStart(getSuite());
+        }
         runTests();
       }
-      catch (Exception e) {
-        LOG.error(e, "");
-        throw new RuntimeException(e);
-      }
       finally {
-        lifecycle.stop();
+        // IntegrationTestSuite uses the configuration from integration-tests/src/test/resources/testng.xml
+        // which already handle suite onStart and onFinish automatically
+        if (!"IntegrationTestSuite".equals(getSuite().getName())) {
+          SUITE_LISTENER.onFinish(getSuite());
+        }
       }
-
     }
 
     private void runTests()
     {
       super.run();
-    }
-
-    public void waitUntilInstanceReady(final HttpClient client, final String host)
-    {
-      ITRetryUtil.retryUntilTrue(
-          () -> {
-            try {
-              StatusResponseHolder response = client.go(
-                  new Request(HttpMethod.GET, new URL(StringUtils.format("%s/status/health", host))),
-                  StatusResponseHandler.getInstance()
-              ).get();
-
-              LOG.info("%s %s", response.getStatus(), response.getContent());
-              return response.getStatus().equals(HttpResponseStatus.OK);
-            }
-            catch (Throwable e) {
-              LOG.error(e, "");
-              return false;
-            }
-          },
-          "Waiting for instance to be ready: [" + host + "]"
-      );
     }
   }
 }

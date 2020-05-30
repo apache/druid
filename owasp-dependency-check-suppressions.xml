@@ -53,6 +53,9 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-keystone@.*$</packageUrl>
     <cve>CVE-2015-7546</cve>
+    <cve>CVE-2020-12689</cve>
+    <cve>CVE-2020-12690</cve>
+    <cve>CVE-2020-12691</cve>
   </suppress>
 
   <!-- FIXME: These are suppressed so that CI can enforce that no new vulnerable dependencies are added. -->
@@ -122,17 +125,8 @@
     <notes><![CDATA[
    file name: jackson-mapper-asl-1.9.13.jar
    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@.*$</packageUrl>
-    <cve>CVE-2017-7525</cve>
-    <cve>CVE-2017-15095</cve>
-    <cve>CVE-2017-17485</cve>
-    <cve>CVE-2018-5968</cve>
-    <cve>CVE-2018-7489</cve>
-    <cve>CVE-2018-14718</cve>
-    <cve>CVE-2019-10172</cve>
-    <cve>CVE-2019-14540</cve>
-    <cve>CVE-2019-16335</cve>
-    <cve>CVE-2019-17267</cve>
+    <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@1.9.13$</packageUrl>
+    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13 ince it is via curator-x-discovery -->
   </suppress>
   <suppress>
     <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
@@ -183,5 +177,49 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@2.9.10$</packageUrl>
     <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-databind:2.9.0 since it is via parquet transitive dependencies -->
+  </suppress>
+  <suppress>
+     <notes><![CDATA[
+     file name: node-sass:4.13.1
+
+     The vulnerability is fixed in 4.13.1: https://github.com/sass/node-sass/issues/2816#issuecomment-575136455
+
+     But the dependency check plugin thinks it's still broken as the affected/fixed versions has not been updated on
+     Sonatype OSS Index: https://ossindex.sonatype.org/vuln/c97f4ae7-be1f-4f71-b238-7c095b126e74
+     ]]></notes>
+     <packageUrl regex="true">^pkg:npm/node\-sass@.*$</packageUrl>
+     <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
+  </suppress>
+  <suppress>
+    <!--
+      ~ TODO: Fix when Apache Ranger 2.1 is released
+      -->
+    <notes><![CDATA[
+    file name: kafka_2.11-2.0.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka_2.11@2.0.0$</packageUrl>
+    <cve>CVE-2019-12399</cve>
+    <cve>CVE-2018-17196</cve>
+  </suppress>
+  <suppress>
+    <!--
+      ~ TODO: Fix when Apache Ranger 2.1 is released
+      -->
+    <notes><![CDATA[
+    file name: kafka-clients-2.0.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka-clients@2.0.0$</packageUrl>
+    <cve>CVE-2019-12399</cve>
+    <cve>CVE-2018-17196</cve>
+  </suppress>
+  <suppress>
+    <!--
+      ~ TODO: Fix when Apache Ranger is released with updated log4j
+      -->
+    <notes><![CDATA[
+    file name: log4j-1.2.17.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/log4j/log4j@1.2.17$</packageUrl>
+    <cve>CVE-2019-17571</cve>
   </suppress>
 </suppressions>

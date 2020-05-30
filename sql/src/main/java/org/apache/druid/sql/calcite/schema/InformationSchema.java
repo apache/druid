@@ -46,13 +46,14 @@ import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -169,7 +170,7 @@ public class InformationSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(final RelDataTypeFactory typeFactory)
     {
-      return SCHEMATA_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(SCHEMATA_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -262,7 +263,7 @@ public class InformationSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(final RelDataTypeFactory typeFactory)
     {
-      return TABLES_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(TABLES_SIGNATURE, typeFactory);
     }
 
     @Override
@@ -359,7 +360,7 @@ public class InformationSchema extends AbstractSchema
     @Override
     public RelDataType getRowType(final RelDataTypeFactory typeFactory)
     {
-      return COLUMNS_SIGNATURE.getRelDataType(typeFactory);
+      return RowSignatures.toRelDataType(COLUMNS_SIGNATURE, typeFactory);
     }
 
     @Override

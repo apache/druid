@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
@@ -29,7 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -42,10 +41,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 /**
  * Helps tests make segments.
@@ -198,7 +195,7 @@ public class IndexBuilder
         SegmentId.dummy("IndexBuilder"),
         rows,
         RowAdapters.standardRow(),
-        ImmutableMap.of()
+        RowSignature.empty()
     );
   }
 
@@ -206,22 +203,17 @@ public class IndexBuilder
   {
     // Determine row signature by building an mmapped index first.
     try (final QueryableIndex index = buildMMappedIndex()) {
-      final Map<String, ValueType> rowSignature =
-          index.getColumnNames().stream().collect(
-              Collectors.toMap(
-                  column -> column,
-                  column -> {
-                    final ColumnCapabilities capabilities = index.getColumnHolder(column).getCapabilities();
-                    return capabilities.getType();
-                  }
-              )
-          );
+      final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+      for (final String columnName : index.getColumnNames()) {
+        final ColumnCapabilities capabilities = index.getColumnHolder(columnName).getCapabilities();
+        rowSignatureBuilder.add(columnName, capabilities.getType());
+      }
 
       return new RowBasedSegment<>(
           SegmentId.dummy("IndexBuilder"),
           rows,
           RowAdapters.standardRow(),
-          rowSignature
+          rowSignatureBuilder.build()
       );
     }
   }

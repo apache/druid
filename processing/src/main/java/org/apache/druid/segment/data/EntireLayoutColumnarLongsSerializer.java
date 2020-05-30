@@ -38,6 +38,7 @@ public class EntireLayoutColumnarLongsSerializer implements ColumnarLongsSeriali
       .writeInt(x -> 0)
       .writeSomething(CompressionFactory.longEncodingWriter(x -> x.writer, x -> CompressionStrategy.NONE));
 
+  private final String columnName;
   private final CompressionFactory.LongEncodingWriter writer;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private WriteOutBytes valuesOut;
@@ -45,10 +46,12 @@ public class EntireLayoutColumnarLongsSerializer implements ColumnarLongsSeriali
   private int numInserted = 0;
 
   EntireLayoutColumnarLongsSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       CompressionFactory.LongEncodingWriter writer
   )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.writer = writer;
   }
@@ -71,6 +74,9 @@ public class EntireLayoutColumnarLongsSerializer implements ColumnarLongsSeriali
   {
     writer.write(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
   }
 
   @Override

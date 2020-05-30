@@ -204,6 +204,15 @@ public class S3Utils
     return objectSummary;
   }
 
+  /**
+   * Delete the files from S3 in a specified bucket, matching a specified prefix and filter
+   * @param s3Client s3 client
+   * @param config   specifies the configuration to use when finding matching files in S3 to delete
+   * @param bucket   s3 bucket
+   * @param prefix   the file prefix
+   * @param filter   function which returns true if the prefix file found should be deleted and false otherwise.
+   * @throws Exception
+   */
   public static void deleteObjectsInPath(
       ServerSideEncryptingAmazonS3 s3Client,
       S3InputDataConfig config,
@@ -238,7 +247,7 @@ public class S3Utils
     }
   }
 
-  public static void deleteBucketKeys(
+  private static void deleteBucketKeys(
       ServerSideEncryptingAmazonS3 s3Client,
       String bucket,
       List<DeleteObjectsRequest.KeyVersion> keysToDelete

@@ -37,12 +37,27 @@ const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');
 
 interface ConsoleConfig {
+  // A custom title for the page
   title?: string;
+
+  // An alternative URL which to use for the stem of an AJAX call
   baseURL?: string;
+
+  // A custom header name/value to set on every AJAX request
   customHeaderName?: string;
   customHeaderValue?: string;
+
+  // A set of custom headers name/value to set on every AJAX request
   customHeaders?: Record<string, string>;
+
+  // The URL for where to load the example manifest, a JSON document that tells the console where to find all the example datasets
   exampleManifestsUrl?: string;
+
+  // The query context to set if the user does not have one saved in local storage, defaults to {}
+  defaultQueryContext?: Record<string, any>;
+
+  // Extra context properties that will be added to all query requests
+  mandatoryQueryContext?: Record<string, any>;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -64,6 +79,8 @@ if (consoleConfig.customHeaders) {
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
+    defaultQueryContext: consoleConfig.defaultQueryContext,
+    mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
   }) as any,
   container,
 );

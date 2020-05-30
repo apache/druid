@@ -20,20 +20,21 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Utility methods for working with {@link Joinable} related classes.
@@ -77,65 +78,49 @@ public class Joinables
    *                             callers to remember to track metrics on CPU time required for creation of Joinables
    * @param enableFilterPushDown whether to enable filter push down optimizations to the base segment. In production
    *                             this should generally be {@code QueryContexts.getEnableJoinFilterPushDown(query)}.
+   * @param enableFilterRewrite whether to enable filter rewrite optimizations for RHS columns. In production
+   *                             this should generally be {@code QueryContexts.getEnableJoinFilterRewrite(query)}.
+   * @param enableRewriteValueColumnFilters whether to enable filter rewrite optimizations for RHS columns that are not
+   *                                        key columns. In production this should generally
+   *                                        be {@code QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query)}.
+   * @param filterRewriteMaxSize the max allowed size of correlated value sets for RHS rewrites. In production
+   *                             this should generally be {@code QueryContexts.getJoinFilterRewriteMaxSize(query)}.
+   * @param originalFilter The original filter from the query.
+   * @param virtualColumns The virtual columns from the query.
    */
   public static Function<Segment, Segment> createSegmentMapFn(
       final List<PreJoinableClause> clauses,
       final JoinableFactory joinableFactory,
       final AtomicLong cpuTimeAccumulator,
       final boolean enableFilterPushDown,
-      final boolean enableFilterRewrite
+      final boolean enableFilterRewrite,
+      final boolean enableRewriteValueColumnFilters,
+      final long filterRewriteMaxSize,
+      final Filter originalFilter,
+      final VirtualColumns virtualColumns
   )
   {
+    // compute column correlations here and RHS correlated values
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
         () -> {
           if (clauses.isEmpty()) {
             return Function.identity();
           } else {
-            final List<JoinableClause> joinableClauses = createJoinableClauses(clauses, joinableFactory);
-            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses, enableFilterPushDown, enableFilterRewrite);
+            final JoinableClauses joinableClauses = JoinableClauses.createClauses(clauses, joinableFactory);
+            JoinFilterPreAnalysis jfpa = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+                joinableClauses,
+                virtualColumns,
+                originalFilter,
+                enableFilterPushDown,
+                enableFilterRewrite,
+                enableRewriteValueColumnFilters,
+                filterRewriteMaxSize
+            );
+            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses.getJoinableClauses(), jfpa);
           }
         }
     );
-  }
-
-  /**
-   * Returns a list of {@link JoinableClause} corresponding to a list of {@link PreJoinableClause}. This will call
-   * {@link JoinableFactory#build} on each one and therefore may be an expensive operation.
-   */
-  private static List<JoinableClause> createJoinableClauses(
-      final List<PreJoinableClause> clauses,
-      final JoinableFactory joinableFactory
-  )
-  {
-    // Since building a JoinableClause can be expensive, check for prefix conflicts before building
-    checkPreJoinableClausesForDuplicatesAndShadowing(clauses);
-
-    return clauses.stream().map(preJoinableClause -> {
-      final Optional<Joinable> joinable = joinableFactory.build(
-          preJoinableClause.getDataSource(),
-          preJoinableClause.getCondition()
-      );
-
-      return new JoinableClause(
-          preJoinableClause.getPrefix(),
-          joinable.orElseThrow(() -> new ISE("dataSource is not joinable: %s", preJoinableClause.getDataSource())),
-          preJoinableClause.getJoinType(),
-          preJoinableClause.getCondition()
-      );
-    }).collect(Collectors.toList());
-  }
-
-  private static void checkPreJoinableClausesForDuplicatesAndShadowing(
-      final List<PreJoinableClause> preJoinableClauses
-  )
-  {
-    List<String> prefixes = new ArrayList<>();
-    for (PreJoinableClause clause : preJoinableClauses) {
-      prefixes.add(clause.getPrefix());
-    }
-
-    checkPrefixesForDuplicatesAndShadowing(prefixes);
   }
 
   /**

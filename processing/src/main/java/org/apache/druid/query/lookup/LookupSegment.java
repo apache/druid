@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.lookup;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
 import org.apache.druid.timeline.SegmentId;
@@ -37,10 +37,11 @@ import java.util.function.ToLongFunction;
  */
 public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
 {
-  private static final Map<String, ValueType> ROW_SIGNATURE = ImmutableMap.of(
-      LookupColumnSelectorFactory.KEY_COLUMN, ValueType.STRING,
-      LookupColumnSelectorFactory.VALUE_COLUMN, ValueType.STRING
-  );
+  private static final RowSignature ROW_SIGNATURE =
+      RowSignature.builder()
+                  .add(LookupColumnSelectorFactory.KEY_COLUMN, ValueType.STRING)
+                  .add(LookupColumnSelectorFactory.VALUE_COLUMN, ValueType.STRING)
+                  .build();
 
   public LookupSegment(final String lookupName, final LookupExtractorFactory lookupExtractorFactory)
   {

@@ -95,11 +95,9 @@ public class OrHavingSpec implements HavingSpec
   @Override
   public String toString()
   {
-    final StringBuilder sb = new StringBuilder();
-    sb.append("OrHavingSpec");
-    sb.append("{havingSpecs=").append(havingSpecs);
-    sb.append('}');
-    return sb.toString();
+    return "OrHavingSpec{" +
+           "havingSpecs=" + havingSpecs +
+           '}';
   }
 
   @Override

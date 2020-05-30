@@ -165,8 +165,10 @@ public class S3TaskLogs implements TaskLogs
   @Override
   public void killAll() throws IOException
   {
-    log.info("Deleting all task logs from s3 location [bucket: %s    prefix: %s].",
-             config.getS3Bucket(), config.getS3Prefix()
+    log.info(
+        "Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'].",
+        config.getS3Bucket(),
+        config.getS3Prefix()
     );
 
     long now = timeSupplier.getAsLong();
@@ -176,8 +178,11 @@ public class S3TaskLogs implements TaskLogs
   @Override
   public void killOlderThan(long timestamp) throws IOException
   {
-    log.info("Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'] older than %s.",
-             config.getS3Bucket(), config.getS3Prefix(), new Date(timestamp)
+    log.info(
+        "Deleting all task logs from s3 location [bucket: '%s' prefix: '%s'] older than %s.",
+        config.getS3Bucket(),
+        config.getS3Prefix(),
+        new Date(timestamp)
     );
     try {
       S3Utils.deleteObjectsInPath(

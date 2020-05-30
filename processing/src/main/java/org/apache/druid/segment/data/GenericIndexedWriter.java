@@ -296,7 +296,7 @@ public class GenericIndexedWriter<T> implements Serializer
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     if (requireMultipleFiles) {
       // for multi-file version (version 2), getSerializedSize() returns number of bytes in meta file.
@@ -321,10 +321,10 @@ public class GenericIndexedWriter<T> implements Serializer
     final long numBytesWritten = headerOut.size() + valuesOut.size();
 
     Preconditions.checkState(
-        headerOut.size() == (numWritten * 4),
+        headerOut.size() == (numWritten * 4L),
         "numWritten[%s] number of rows should have [%s] bytes written to headerOut, had[%s]",
         numWritten,
-        numWritten * 4,
+        numWritten * 4L,
         headerOut.size()
     );
     Preconditions.checkState(
@@ -394,7 +394,7 @@ public class GenericIndexedWriter<T> implements Serializer
    *
    * @throws IOException
    */
-  private int bagSizePower() throws IOException
+  private int bagSizePower()
   {
     long avgObjectSize = (valuesOut.size() + numWritten - 1) / numWritten;
 
@@ -421,7 +421,7 @@ public class GenericIndexedWriter<T> implements Serializer
    *
    * @throws IOException
    */
-  private boolean actuallyFits(int powerTwo) throws IOException
+  private boolean actuallyFits(int powerTwo)
   {
     long lastValueOffset = 0;
     long currentValueOffset = 0;
@@ -459,7 +459,7 @@ public class GenericIndexedWriter<T> implements Serializer
     long relativeRefBytes = 0;
     long relativeNumBytes;
     try (SmooshedWriter smooshChannel = smoosher
-        .addWithSmooshedWriter(generateHeaderFileName(filenameBase), numWritten * Integer.BYTES)) {
+        .addWithSmooshedWriter(generateHeaderFileName(filenameBase), ((long) numWritten) * Integer.BYTES)) {
 
       // following block converts long header indexes into int header indexes.
       for (int pos = 0; pos < numWritten; pos++) {

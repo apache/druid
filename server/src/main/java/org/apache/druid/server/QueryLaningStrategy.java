@@ -21,10 +21,12 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ManualQueryLaningStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 
 import java.util.Optional;
@@ -34,7 +36,8 @@ import java.util.Set;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = NoQueryLaningStrategy.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "none", value = NoQueryLaningStrategy.class),
-    @JsonSubTypes.Type(name = "hilo", value = HiLoQueryLaningStrategy.class)
+    @JsonSubTypes.Type(name = "hilo", value = HiLoQueryLaningStrategy.class),
+    @JsonSubTypes.Type(name = "manual", value = ManualQueryLaningStrategy.class)
 })
 public interface QueryLaningStrategy
 {
@@ -50,4 +53,9 @@ public interface QueryLaningStrategy
    * This method must be thread safe
    */
   <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments);
+
+  default int computeLimitFromPercent(int totalLimit, int value)
+  {
+    return Ints.checkedCast((long) Math.ceil(totalLimit * ((double) value / 100)));
+  }
 }

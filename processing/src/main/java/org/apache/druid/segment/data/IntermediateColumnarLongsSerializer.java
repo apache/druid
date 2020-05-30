@@ -40,6 +40,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class IntermediateColumnarLongsSerializer implements ColumnarLongsSerializer
 {
+  private final String columnName;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final String filenameBase;
   private final ByteOrder order;
@@ -59,12 +60,14 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   private ColumnarLongsSerializer delegate;
 
   IntermediateColumnarLongsSerializer(
+      String columnName,
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
       CompressionStrategy compression
   )
   {
+    this.columnName = columnName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.filenameBase = filenameBase;
     this.order = order;
@@ -92,6 +95,9 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
     }
     tempOut.add(value);
     ++numInserted;
+    if (numInserted < 0) {
+      throw new ColumnCapacityExceededException(columnName);
+    }
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
       uniqueValues.put(value, uniqueValues.size());
       valuesAddedInOrder.add(value);
@@ -127,9 +133,10 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
     }
 
     if (compression == CompressionStrategy.NONE) {
-      delegate = new EntireLayoutColumnarLongsSerializer(segmentWriteOutMedium, writer);
+      delegate = new EntireLayoutColumnarLongsSerializer(columnName, segmentWriteOutMedium, writer);
     } else {
       delegate = new BlockLayoutColumnarLongsSerializer(
+          columnName,
           segmentWriteOutMedium,
           filenameBase,
           order,

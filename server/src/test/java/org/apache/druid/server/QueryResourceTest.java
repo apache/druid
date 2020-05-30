@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -47,7 +46,9 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
+import org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -73,6 +74,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -80,15 +82,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-/**
- *
- */
 public class QueryResourceTest
 {
-
   private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(ImmutableMap.of());
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-  private static final AuthenticationResult AUTHENTICATION_RESULT = new AuthenticationResult("druid", "druid", null, null);
+  private static final AuthenticationResult AUTHENTICATION_RESULT =
+      new AuthenticationResult("druid", "druid", null, null);
 
   private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
 
@@ -123,6 +122,22 @@ public class QueryResourceTest
       + "    ]\n"
       + "}";
 
+  private static final String SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL =
+      "{\n"
+      + "    \"queryType\": \"timeseries\",\n"
+      + "    \"dataSource\": \"mmx_metrics\",\n"
+      + "    \"granularity\": \"hour\",\n"
+      + "    \"intervals\": [\n"
+      + "      \"2014-12-17/2014-12-30\"\n"
+      + "    ],\n"
+      + "    \"aggregations\": [\n"
+      + "      {\n"
+      + "        \"type\": \"count\",\n"
+      + "        \"name\": \"rows\"\n"
+      + "      }\n"
+      + "    ]\n"
+      + "}";
+
   private static final String SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY =
       "{\n"
       + "    \"queryType\": \"timeseries\",\n"
@@ -139,6 +154,7 @@ public class QueryResourceTest
       + "    ],\n"
       + "    \"context\": { \"priority\": -1 }"
       + "}";
+
 
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
 
@@ -159,7 +175,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-    queryScheduler = new QueryScheduler(8, NoQueryLaningStrategy.INSTANCE, new ServerConfig());
+    queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
@@ -193,7 +209,7 @@ public class QueryResourceTest
     expectPermissiveHappyPathAuth();
 
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -225,7 +241,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -260,7 +276,7 @@ public class QueryResourceTest
 
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -299,7 +315,7 @@ public class QueryResourceTest
 
     EasyMock.replay(smileRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         smileRequest
     );
@@ -315,7 +331,7 @@ public class QueryResourceTest
   {
     EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes("UTF-8")),
+        new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -385,7 +401,7 @@ public class QueryResourceTest
 
     try {
       queryResource.doPost(
-          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes("UTF-8")),
+          new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
           null /*pretty*/,
           testServletRequest
       );
@@ -395,7 +411,7 @@ public class QueryResourceTest
     }
 
     Response response = queryResource.doPost(
-        new ByteArrayInputStream("{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}".getBytes("UTF-8")),
+        new ByteArrayInputStream("{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}".getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
@@ -511,7 +527,7 @@ public class QueryResourceTest
           {
             try {
               Response response = queryResource.doPost(
-                  new ByteArrayInputStream(queryString.getBytes("UTF-8")),
+                  new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
                   null,
                   testServletRequest
               );
@@ -634,7 +650,7 @@ public class QueryResourceTest
             try {
               startAwaitLatch.countDown();
               Response response = queryResource.doPost(
-                  new ByteArrayInputStream(queryString.getBytes("UTF-8")),
+                  new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
                   null,
                   testServletRequest
               );
@@ -677,7 +693,12 @@ public class QueryResourceTest
 
     final CountDownLatch waitTwoScheduled = new CountDownLatch(2);
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
-    final QueryScheduler laningScheduler = new QueryScheduler(2, NoQueryLaningStrategy.INSTANCE, new ServerConfig());
+    final QueryScheduler laningScheduler = new QueryScheduler(
+        2,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        NoQueryLaningStrategy.INSTANCE,
+        new ServerConfig()
+    );
 
     createScheduledQueryResource(laningScheduler, Collections.emptyList(), ImmutableList.of(waitTwoScheduled));
     assertResponseAndCountdownOrBlockForever(
@@ -703,7 +724,7 @@ public class QueryResourceTest
           catch (IOException e) {
             throw new RuntimeException(e);
           }
-          Assert.assertEquals(QueryCapacityExceededException.ERROR_MESSAGE, ex.getMessage());
+          Assert.assertEquals(QueryCapacityExceededException.makeTotalErrorMessage(2), ex.getMessage());
           Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
         }
     );
@@ -717,7 +738,12 @@ public class QueryResourceTest
     final CountDownLatch waitTwoStarted = new CountDownLatch(2);
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
     final CountDownLatch waitAllFinished = new CountDownLatch(3);
-    final QueryScheduler scheduler = new QueryScheduler(40, new HiLoQueryLaningStrategy(1), new ServerConfig());
+    final QueryScheduler scheduler = new QueryScheduler(
+        40,
+        ManualQueryPrioritizationStrategy.INSTANCE,
+        new HiLoQueryLaningStrategy(2),
+        new ServerConfig()
+    );
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
@@ -740,10 +766,7 @@ public class QueryResourceTest
             throw new RuntimeException(e);
           }
           Assert.assertEquals(
-              StringUtils.format(
-                  QueryCapacityExceededException.ERROR_MESSAGE_TEMPLATE,
-                  HiLoQueryLaningStrategy.LOW
-              ),
+              QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
               ex.getMessage()
           );
           Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
@@ -753,6 +776,57 @@ public class QueryResourceTest
     waitTwoStarted.await();
     assertResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+
+    waitAllFinished.await();
+  }
+
+  @Test(timeout = 10_000L)
+  public void testTooManyQueryInLaneImplicitFromDurationThreshold() throws InterruptedException
+  {
+    expectPermissiveHappyPathAuth();
+    final CountDownLatch waitTwoStarted = new CountDownLatch(2);
+    final CountDownLatch waitOneScheduled = new CountDownLatch(1);
+    final CountDownLatch waitAllFinished = new CountDownLatch(3);
+    final QueryScheduler scheduler = new QueryScheduler(
+        40,
+        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null),
+        new HiLoQueryLaningStrategy(1),
+        new ServerConfig()
+    );
+
+    createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
+
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+    );
+    waitOneScheduled.await();
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY,
+        waitAllFinished,
+        response -> {
+          Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
+          QueryCapacityExceededException ex;
+          try {
+            ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          Assert.assertEquals(
+              QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
+              ex.getMessage()
+          );
+          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+        }
+    );
+    waitTwoStarted.await();
+    assertResponseAndCountdownOrBlockForever(
+        SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
@@ -776,7 +850,7 @@ public class QueryResourceTest
           beforeScheduler.forEach(CountDownLatch::countDown);
 
           return scheduler.run(
-              scheduler.laneQuery(queryPlus, ImmutableSet.of()),
+              scheduler.prioritizeAndLaneQuery(queryPlus, ImmutableSet.of()),
               new LazySequence<T>(() -> {
                 inScheduler.forEach(CountDownLatch::countDown);
                 try {
@@ -823,7 +897,7 @@ public class QueryResourceTest
     Executors.newSingleThreadExecutor().submit(() -> {
       try {
         Response response = queryResource.doPost(
-            new ByteArrayInputStream(query.getBytes("UTF-8")),
+            new ByteArrayInputStream(query.getBytes(StandardCharsets.UTF_8)),
             null,
             testServletRequest
         );

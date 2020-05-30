@@ -602,14 +602,13 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                       and(
                           bound("l1", "3", null, true, false, null, StringComparators.NUMERIC),
                           selector("f1", useDefault ? "0.0" : null, null)
-
                       )
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ) : ImmutableList.of(),
-        useDefault ? ImmutableList.of() : ImmutableList.of(new Object[]{0L}),
+        ImmutableList.of(),
         ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L), new SqlParameter(SqlType.VARCHAR, "wat"))
     );
   }

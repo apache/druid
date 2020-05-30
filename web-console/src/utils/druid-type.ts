@@ -88,28 +88,28 @@ export function updateSchemaWithSample(
   let newSpec = spec;
 
   if (dimensionMode === 'auto-detect') {
-    newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec.dimensions', []);
+    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', []);
   } else {
-    newSpec = deepDelete(newSpec, 'dataSchema.dimensionsSpec.dimensionExclusions');
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
 
     const dimensions = getDimensionSpecs(headerAndRows, rollup);
     if (dimensions) {
-      newSpec = deepSet(newSpec, 'dataSchema.dimensionsSpec.dimensions', dimensions);
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
     }
   }
 
   if (rollup) {
-    newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.queryGranularity', 'HOUR');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'HOUR');
 
     const metrics = getMetricSecs(headerAndRows);
     if (metrics) {
-      newSpec = deepSet(newSpec, 'dataSchema.metricsSpec', metrics);
+      newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }
   } else {
-    newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.queryGranularity', 'NONE');
-    newSpec = deepDelete(newSpec, 'dataSchema.metricsSpec');
+    newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'NONE');
+    newSpec = deepDelete(newSpec, 'spec.dataSchema.metricsSpec');
   }
 
-  newSpec = deepSet(newSpec, 'dataSchema.granularitySpec.rollup', rollup);
+  newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.rollup', rollup);
   return newSpec;
 }

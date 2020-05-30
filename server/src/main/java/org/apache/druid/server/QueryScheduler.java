@@ -30,10 +30,12 @@ import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.server.initialization.ServerConfig;
 
@@ -55,9 +57,10 @@ import java.util.Set;
  */
 public class QueryScheduler implements QueryWatcher
 {
-  private static final int NO_CAPACITY = -1;
-  static final String TOTAL = "default";
+  public static final int UNAVAILABLE = -1;
+  public static final String TOTAL = "total";
   private final int totalCapacity;
+  private final QueryPrioritizationStrategy prioritizationStrategy;
   private final QueryLaningStrategy laningStrategy;
   private final BulkheadRegistry laneRegistry;
   /**
@@ -69,8 +72,14 @@ public class QueryScheduler implements QueryWatcher
    */
   private final SetMultimap<String, String> queryDatasources;
 
-  public QueryScheduler(int totalNumThreads, QueryLaningStrategy laningStrategy, ServerConfig serverConfig)
+  public QueryScheduler(
+      int totalNumThreads,
+      QueryPrioritizationStrategy prioritizationStrategy,
+      QueryLaningStrategy laningStrategy,
+      ServerConfig serverConfig
+  )
   {
+    this.prioritizationStrategy = prioritizationStrategy;
     this.laningStrategy = laningStrategy;
     this.queryFutures = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     this.queryDatasources = Multimaps.synchronizedSetMultimap(HashMultimap.create());
@@ -105,12 +114,14 @@ public class QueryScheduler implements QueryWatcher
   }
 
   /**
-   * Assign a query a lane (if not set)
+   * Assign a query a priority and lane (if not set)
    */
-  public <T> Query<T> laneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
+  public <T> Query<T> prioritizeAndLaneQuery(QueryPlus<T> queryPlus, Set<SegmentServerSelector> segments)
   {
     Query<T> query = queryPlus.getQuery();
-    Optional<String> lane = laningStrategy.computeLane(queryPlus, segments);
+    Optional<Integer> priority = prioritizationStrategy.computePriority(queryPlus, segments);
+    query = priority.map(query::withPriority).orElse(query);
+    Optional<String> lane = laningStrategy.computeLane(queryPlus.withQuery(query), segments);
     return lane.map(query::withLane).orElse(query);
   }
 
@@ -129,6 +140,17 @@ public class QueryScheduler implements QueryWatcher
   {
     List<Bulkhead> bulkheads = acquireLanes(query);
     return resultSequence.withBaggage(() -> finishLanes(bulkheads));
+  }
+
+  /**
+   * Returns a {@link QueryRunner} that will call {@link QueryScheduler#run} when {@link QueryRunner#run} is called.
+   */
+  public <T> QueryRunner<T> wrapQueryRunner(QueryRunner<T> baseRunner)
+  {
+    return (queryPlus, responseContext) ->
+        QueryScheduler.this.run(
+            queryPlus.getQuery(), new LazySequence<>(() -> baseRunner.run(queryPlus, responseContext))
+        );
   }
 
   /**
@@ -164,7 +186,7 @@ public class QueryScheduler implements QueryWatcher
   {
     return laneRegistry.getConfiguration(TOTAL)
                        .map(config -> laneRegistry.bulkhead(TOTAL, config).getMetrics().getAvailableConcurrentCalls())
-                       .orElse(NO_CAPACITY);
+                       .orElse(UNAVAILABLE);
   }
 
   /**
@@ -175,7 +197,7 @@ public class QueryScheduler implements QueryWatcher
   {
     return laneRegistry.getConfiguration(lane)
                        .map(config -> laneRegistry.bulkhead(lane, config).getMetrics().getAvailableConcurrentCalls())
-                       .orElse(NO_CAPACITY);
+                       .orElse(UNAVAILABLE);
   }
 
   /**
@@ -193,7 +215,7 @@ public class QueryScheduler implements QueryWatcher
       laneConfig.ifPresent(config -> {
         Bulkhead laneLimiter = laneRegistry.bulkhead(lane, config);
         if (!laneLimiter.tryAcquirePermission()) {
-          throw new QueryCapacityExceededException(lane);
+          throw new QueryCapacityExceededException(lane, config.getMaxConcurrentCalls());
         }
         hallPasses.add(laneLimiter);
       });
@@ -205,7 +227,7 @@ public class QueryScheduler implements QueryWatcher
       totalConfig.ifPresent(config -> {
         Bulkhead totalLimiter = laneRegistry.bulkhead(TOTAL, config);
         if (!totalLimiter.tryAcquirePermission()) {
-          throw new QueryCapacityExceededException();
+          throw new QueryCapacityExceededException(config.getMaxConcurrentCalls());
         }
         hallPasses.add(totalLimiter);
       });

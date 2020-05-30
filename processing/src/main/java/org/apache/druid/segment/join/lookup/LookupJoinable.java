@@ -31,7 +31,9 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class LookupJoinable implements Joinable
@@ -87,26 +89,38 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public Set<String> getCorrelatedColumnValues(
+  public Optional<Set<String>> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
-      String retrievalColumnName
+      String retrievalColumnName,
+      long maxCorrelationSetSize,
+      boolean allowNonKeyColumnSearch
   )
   {
+    if (!ALL_COLUMNS.contains(searchColumnName) || !ALL_COLUMNS.contains(retrievalColumnName)) {
+      return Optional.empty();
+    }
     Set<String> correlatedValues;
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
       if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
         correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
-        correlatedValues = ImmutableSet.of(extractor.apply(searchColumnName));
+        // This should not happen in practice because the column to be joined on must be a key.
+        correlatedValues = Collections.singleton(extractor.apply(searchColumnValue));
       }
     } else {
+      if (!allowNonKeyColumnSearch) {
+        return Optional.empty();
+      }
       if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
+        // This should not happen in practice because the column to be joined on must be a key.
         correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
+        // Lookup extractor unapply only provides a list of strings, so we can't respect
+        // maxCorrelationSetSize easily. This should be handled eventually.
         correlatedValues = ImmutableSet.copyOf(extractor.unapply(searchColumnValue));
       }
     }
-    return correlatedValues;
+    return Optional.of(correlatedValues);
   }
 }

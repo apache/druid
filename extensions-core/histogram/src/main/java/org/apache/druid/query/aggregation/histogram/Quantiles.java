@@ -28,10 +28,10 @@ import java.util.Arrays;
 @JsonTypeName("quantiles")
 public class Quantiles
 {
-  float[] probabilities;
-  float[] quantiles;
-  float min;
-  float max;
+  final float[] probabilities;
+  final float[] quantiles;
+  final float min;
+  final float max;
 
   @JsonCreator
   public Quantiles(
@@ -80,23 +80,11 @@ public class Quantiles
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     Quantiles quantiles1 = (Quantiles) o;
-
-    if (Float.compare(quantiles1.max, max) != 0) {
-      return false;
-    }
-    if (Float.compare(quantiles1.min, min) != 0) {
-      return false;
-    }
-    if (!Arrays.equals(probabilities, quantiles1.probabilities)) {
-      return false;
-    }
-    if (!Arrays.equals(quantiles, quantiles1.quantiles)) {
-      return false;
-    }
-
-    return true;
+    return Float.compare(quantiles1.min, min) == 0 &&
+           Float.compare(quantiles1.max, max) == 0 &&
+           Arrays.equals(probabilities, quantiles1.probabilities) &&
+           Arrays.equals(quantiles, quantiles1.quantiles);
   }
 
   @Override

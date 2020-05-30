@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
 
@@ -33,20 +34,22 @@ import org.apache.druid.query.QueryException;
  */
 public class QueryCapacityExceededException extends QueryException
 {
+  private static final String TOTAL_ERROR_MESSAGE_TEMPLATE =
+      "Too many concurrent queries, total query capacity of %s exceeded. Please try your query again later.";
+  private static final String LANE_ERROR_MESSAGE_TEMPLATE =
+      "Too many concurrent queries for lane '%s', query capacity of %s exceeded. Please try your query again later.";
   private static final String ERROR_CLASS = QueryCapacityExceededException.class.getName();
   public static final String ERROR_CODE = "Query capacity exceeded";
-  public static final String ERROR_MESSAGE = "Total query capacity exceeded";
-  public static final String ERROR_MESSAGE_TEMPLATE = "Query capacity exceeded for lane '%s'";
   public static final int STATUS_CODE = 429;
 
-  public QueryCapacityExceededException()
+  public QueryCapacityExceededException(int capacity)
   {
-    super(ERROR_CODE, ERROR_MESSAGE, ERROR_CLASS, null);
+    super(ERROR_CODE, makeTotalErrorMessage(capacity), ERROR_CLASS, null);
   }
 
-  public QueryCapacityExceededException(String lane)
+  public QueryCapacityExceededException(String lane, int capacity)
   {
-    super(ERROR_CODE, StringUtils.format(ERROR_MESSAGE_TEMPLATE, lane), ERROR_CLASS, null);
+    super(ERROR_CODE, makeLaneErrorMessage(lane, capacity), ERROR_CLASS, null);
   }
 
   @JsonCreator
@@ -56,5 +59,17 @@ public class QueryCapacityExceededException extends QueryException
       @JsonProperty("errorClass") String errorClass)
   {
     super(errorCode, errorMessage, errorClass, null);
+  }
+
+  @VisibleForTesting
+  public static String makeTotalErrorMessage(int capacity)
+  {
+    return StringUtils.format(TOTAL_ERROR_MESSAGE_TEMPLATE, capacity);
+  }
+
+  @VisibleForTesting
+  public static String makeLaneErrorMessage(String lane, int capacity)
+  {
+    return StringUtils.format(LANE_ERROR_MESSAGE_TEMPLATE, lane, capacity);
   }
 }

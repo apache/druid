@@ -20,13 +20,12 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Map;
 
 /**
  * A {@link Segment} that is based on a stream of objects.
@@ -57,7 +56,7 @@ public class RowBasedSegment<RowType> extends AbstractSegment
       final SegmentId segmentId,
       final Iterable<RowType> rowIterable,
       final RowAdapter<RowType> rowAdapter,
-      final Map<String, ValueType> rowSignature
+      final RowSignature rowSignature
   )
   {
     this.segmentId = Preconditions.checkNotNull(segmentId, "segmentId");

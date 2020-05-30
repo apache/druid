@@ -176,6 +176,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             getObjectMapper(),
             tmpDir,
             CompactionTaskRunTest.DEFAULT_PARSE_SPEC,
+            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,

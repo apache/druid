@@ -176,7 +176,7 @@ public class CliIndexer extends ServerRunnable
                 config.getIp(),
                 config.getCapacity(),
                 config.getVersion(),
-                WorkerConfig.DEFAULT_CATEGORY
+                config.getCategory()
             );
           }
 
@@ -188,7 +188,7 @@ public class CliIndexer extends ServerRunnable
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
                 workerConfig.getVersion(),
-                WorkerConfig.DEFAULT_CATEGORY
+                workerConfig.getCategory()
             );
           }
 

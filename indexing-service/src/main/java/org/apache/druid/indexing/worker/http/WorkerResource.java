@@ -29,6 +29,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.curator.ZkEnablementConfig;
+import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.worker.Worker;
@@ -198,10 +199,11 @@ public class WorkerResource
   @Produces(HttpMediaType.TEXT_PLAIN_UTF8)
   @ResourceFilters(StateResourceFilter.class)
   public Response doGetLog(
-      @PathParam("taskid") String taskid,
+      @PathParam("taskid") String taskId,
       @QueryParam("offset") @DefaultValue("0") long offset
   )
   {
+    TaskIdUtils.validateId("taskId", taskId);
     if (!(taskRunner instanceof TaskLogStreamer)) {
       return Response.status(501)
                      .entity(StringUtils.format(
@@ -211,7 +213,7 @@ public class WorkerResource
                      .build();
     }
     try {
-      final Optional<ByteSource> stream = ((TaskLogStreamer) taskRunner).streamTaskLog(taskid, offset);
+      final Optional<ByteSource> stream = ((TaskLogStreamer) taskRunner).streamTaskLog(taskId, offset);
 
       if (stream.isPresent()) {
         return Response.ok(stream.get().openStream()).build();
@@ -220,7 +222,7 @@ public class WorkerResource
       }
     }
     catch (IOException e) {
-      log.warn(e, "Failed to read log for task: %s", taskid);
+      log.warn(e, "Failed to read log for task: %s", taskId);
       return Response.serverError().build();
     }
   }

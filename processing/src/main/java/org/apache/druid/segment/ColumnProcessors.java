@@ -20,10 +20,12 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
@@ -90,6 +92,8 @@ public class ColumnProcessors
 
             return new ColumnCapabilitiesImpl()
                 .setType(ValueType.STRING)
+                .setDictionaryValuesSorted(dimensionSpec.getExtractionFn().preservesOrdering())
+                .setDictionaryValuesUnique(dimensionSpec.getExtractionFn().getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE)
                 .setHasMultipleValues(dimensionSpec.mustDecorate() || mayBeMultiValue(dimensionCapabilities));
           } else {
             // No transformation. Pass through.
@@ -121,12 +125,17 @@ public class ColumnProcessors
       final ColumnSelectorFactory selectorFactory
   )
   {
+    Preconditions.checkNotNull(exprTypeHint, "'exprTypeHint' must be nonnull");
+
     if (expr.getBindingIfIdentifier() != null) {
       // If expr is an identifier, treat this the same way as a direct column reference.
       return makeProcessor(expr.getBindingIfIdentifier(), processorFactory, selectorFactory);
     } else {
       return makeProcessorInternal(
-          factory -> new ColumnCapabilitiesImpl().setType(exprTypeHint).setHasMultipleValues(true),
+          factory -> new ColumnCapabilitiesImpl().setType(exprTypeHint)
+                                                 .setHasMultipleValues(true)
+                                                 .setDictionaryValuesUnique(false)
+                                                 .setDictionaryValuesSorted(false),
           factory -> ExpressionSelectors.makeDimensionSelector(factory, expr, null),
           factory -> ExpressionSelectors.makeColumnValueSelector(factory, expr),
           processorFactory,

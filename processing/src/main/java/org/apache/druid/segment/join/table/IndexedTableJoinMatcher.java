@@ -61,6 +61,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 {
   private static final int UNINITIALIZED_CURRENT_ROW = -1;
 
+  // Key column type to use when the actual key type is unknown.
+  static final ValueType DEFAULT_KEY_TYPE = ValueType.STRING;
+
   private final IndexedTable table;
   private final List<Supplier<IntIterator>> conditionMatchers;
   private final IntIterator[] currentMatchedRows;
@@ -122,14 +125,17 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       throw new IAE("Cannot build hash-join matcher on non-key-based condition: %s", condition);
     }
 
-    final int keyColumnNumber = table.allColumns().indexOf(condition.getRightColumn());
-    final ValueType keyColumnType = table.rowSignature().get(condition.getRightColumn());
+    final int keyColumnNumber = table.rowSignature().indexOf(condition.getRightColumn());
+
+    final ValueType keyType =
+        table.rowSignature().getColumnType(condition.getRightColumn()).orElse(DEFAULT_KEY_TYPE);
+
     final IndexedTable.Index index = table.columnIndex(keyColumnNumber);
 
     return ColumnProcessors.makeProcessor(
         condition.getLeftExpr(),
-        keyColumnType,
-        new ConditionMatcherFactory(keyColumnType, index),
+        keyType,
+        new ConditionMatcherFactory(keyType, index),
         selectorFactory
     );
   }

@@ -231,7 +231,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       if (!responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Error while fetching the status of the last complete task");
+        throw new ISE("Error while fetching the status of tasks");
       }
 
       return jsonMapper.readValue(

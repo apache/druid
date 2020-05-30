@@ -28,13 +28,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ServerInventoryView;
-import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -52,8 +50,6 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -61,12 +57,8 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
-import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -76,29 +68,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.LookupExprMacro;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
-import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
-import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.scan.ScanQueryConfig;
-import org.apache.druid.query.scan.ScanQueryEngine;
-import org.apache.druid.query.scan.ScanQueryQueryToolChest;
-import org.apache.druid.query.scan.ScanQueryRunnerFactory;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
-import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
-import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
-import org.apache.druid.query.topn.TopNQuery;
-import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.query.topn.TopNQueryQueryToolChest;
-import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
@@ -107,6 +77,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
@@ -143,7 +114,6 @@ import org.joda.time.chrono.ISOChronology;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -154,6 +124,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 
 /**
  * Utility functions for Calcite tests.
@@ -237,7 +208,7 @@ public class CalciteTests
   private static final String TIMESTAMP_COLUMN = "t";
 
   private static final Injector INJECTOR = Guice.createInjector(
-      (Module) binder -> {
+      binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
 
         // This Module is just to get a LookupExtractorFactoryContainerProvider with a usable "lookyloo" lookup.
@@ -247,7 +218,8 @@ public class CalciteTests
                 ImmutableMap.of(
                     "a", "xa",
                     "abc", "xabc",
-                    "nosuchkey", "mysteryvalue"
+                    "nosuchkey", "mysteryvalue",
+                    "6", "x6"
                 )
             );
         binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupProvider);
@@ -270,7 +242,7 @@ public class CalciteTests
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
               ImmutableList.<DimensionSchema>builder()
-                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
+                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4", "dim5")))
                   .add(new DoubleDimensionSchema("d1"))
                   .add(new DoubleDimensionSchema("d2"))
                   .add(new FloatDimensionSchema("f1"))
@@ -338,177 +310,178 @@ public class CalciteTests
       .withRollup(false)
       .build();
 
-  public static final List<InputRow> ROWS1 = ImmutableList.of(
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01")
-              .put("m1", "1.0")
-              .put("m2", "1.0")
-              .put("dim1", "")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of("a", "b"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-02")
-              .put("m1", "2.0")
-              .put("m2", "2.0")
-              .put("dim1", "10.1")
-              .put("dim2", ImmutableList.of())
-              .put("dim3", ImmutableList.of("b", "c"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-03")
-              .put("m1", "3.0")
-              .put("m2", "3.0")
-              .put("dim1", "2")
-              .put("dim2", ImmutableList.of(""))
-              .put("dim3", ImmutableList.of("d"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-01")
-              .put("m1", "4.0")
-              .put("m2", "4.0")
-              .put("dim1", "1")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of(""))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-02")
-              .put("m1", "5.0")
-              .put("m2", "5.0")
-              .put("dim1", "def")
-              .put("dim2", ImmutableList.of("abc"))
-              .put("dim3", ImmutableList.of())
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-03")
-              .put("m1", "6.0")
-              .put("m2", "6.0")
-              .put("dim1", "abc")
-              .build()
-      )
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS1 = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("m1", "1.0")
+          .put("m2", "1.0")
+          .put("dim1", "")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of("a", "b"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-02")
+          .put("m1", "2.0")
+          .put("m2", "2.0")
+          .put("dim1", "10.1")
+          .put("dim2", ImmutableList.of())
+          .put("dim3", ImmutableList.of("b", "c"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-03")
+          .put("m1", "3.0")
+          .put("m2", "3.0")
+          .put("dim1", "2")
+          .put("dim2", ImmutableList.of(""))
+          .put("dim3", ImmutableList.of("d"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-01")
+          .put("m1", "4.0")
+          .put("m2", "4.0")
+          .put("dim1", "1")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of(""))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-02")
+          .put("m1", "5.0")
+          .put("m2", "5.0")
+          .put("dim1", "def")
+          .put("dim2", ImmutableList.of("abc"))
+          .put("dim3", ImmutableList.of())
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-03")
+          .put("m1", "6.0")
+          .put("m2", "6.0")
+          .put("dim1", "abc")
+          .build()
   );
+  public static final List<InputRow> ROWS1 =
+      RAW_ROWS1.stream().map(CalciteTests::createRow).collect(Collectors.toList());
 
-  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01")
-              .put("m1", "1.0")
-              .put("m2", "1.0")
-              .put("d1", 1.0)
-              .put("f1", 1.0f)
-              .put("l1", 7L)
-              .put("dim1", "")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of("a", "b"))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-02")
-              .put("m1", "2.0")
-              .put("m2", "2.0")
-              .put("d1", 1.7)
-              .put("d2", 1.7)
-              .put("f1", 0.1f)
-              .put("f2", 0.1f)
-              .put("l1", 325323L)
-              .put("l2", 325323L)
-              .put("dim1", "10.1")
-              .put("dim2", ImmutableList.of())
-              .put("dim3", ImmutableList.of("b", "c"))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-03")
-              .put("m1", "3.0")
-              .put("m2", "3.0")
-              .put("d1", 0.0)
-              .put("d2", 0.0)
-              .put("f1", 0.0)
-              .put("f2", 0.0)
-              .put("l1", 0)
-              .put("l2", 0)
-              .put("dim1", "2")
-              .put("dim2", ImmutableList.of(""))
-              .put("dim3", ImmutableList.of("d"))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-01")
-              .put("m1", "4.0")
-              .put("m2", "4.0")
-              .put("dim1", "1")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of(""))
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-02")
-              .put("m1", "5.0")
-              .put("m2", "5.0")
-              .put("dim1", "def")
-              .put("dim2", ImmutableList.of("abc"))
-              .put("dim3", ImmutableList.of())
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-03")
-              .put("m1", "6.0")
-              .put("m2", "6.0")
-              .put("dim1", "abc")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      )
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("m1", "1.0")
+          .put("m2", "1.0")
+          .put("d1", 1.0)
+          .put("f1", 1.0f)
+          .put("l1", 7L)
+          .put("dim1", "")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of("a", "b"))
+          .put("dim4", "a")
+          .put("dim5", "aa")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-02")
+          .put("m1", "2.0")
+          .put("m2", "2.0")
+          .put("d1", 1.7)
+          .put("d2", 1.7)
+          .put("f1", 0.1f)
+          .put("f2", 0.1f)
+          .put("l1", 325323L)
+          .put("l2", 325323L)
+          .put("dim1", "10.1")
+          .put("dim2", ImmutableList.of())
+          .put("dim3", ImmutableList.of("b", "c"))
+          .put("dim4", "a")
+          .put("dim5", "ab")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-03")
+          .put("m1", "3.0")
+          .put("m2", "3.0")
+          .put("d1", 0.0)
+          .put("d2", 0.0)
+          .put("f1", 0.0)
+          .put("f2", 0.0)
+          .put("l1", 0)
+          .put("l2", 0)
+          .put("dim1", "2")
+          .put("dim2", ImmutableList.of(""))
+          .put("dim3", ImmutableList.of("d"))
+          .put("dim4", "a")
+          .put("dim5", "ba")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-01")
+          .put("m1", "4.0")
+          .put("m2", "4.0")
+          .put("dim1", "1")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of(""))
+          .put("dim4", "b")
+          .put("dim5", "ad")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-02")
+          .put("m1", "5.0")
+          .put("m2", "5.0")
+          .put("dim1", "def")
+          .put("dim2", ImmutableList.of("abc"))
+          .put("dim3", ImmutableList.of())
+          .put("dim4", "b")
+          .put("dim5", "aa")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-03")
+          .put("m1", "6.0")
+          .put("m2", "6.0")
+          .put("dim1", "abc")
+          .put("dim4", "b")
+          .put("dim5", "ab")
+          .build()
   );
+  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
+      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, PARSER_NUMERIC_DIMS)).collect(Collectors.toList());
 
-  public static final List<InputRow> ROWS2 = ImmutableList.of(
-      createRow("2000-01-01", "דרואיד", "he", 1.0),
-      createRow("2000-01-01", "druid", "en", 1.0),
-      createRow("2000-01-01", "друид", "ru", 1.0)
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS2 = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("dim1", "דרואיד")
+          .put("dim2", "he")
+          .put("m1", 1.0)
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("dim1", "druid")
+          .put("dim2", "en")
+          .put("m1", 1.0)
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("dim1", "друид")
+          .put("dim2", "ru")
+          .put("m1", 1.0)
+          .build()
   );
+  public static final List<InputRow> ROWS2 =
+      RAW_ROWS2.stream().map(CalciteTests::createRow).collect(Collectors.toList());
 
-  public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01T10:51:45.695Z")
-              .put("m1", "1.0")
-              .put("m2", "1.0")
-              .put("dim1", "")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of("a", "b"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-18T10:51:45.695Z")
-              .put("m1", "2.0")
-              .put("m2", "2.0")
-              .put("dim1", "10.1")
-              .put("dim2", ImmutableList.of())
-              .put("dim3", ImmutableList.of("b", "c"))
-              .build()
-      )
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01T10:51:45.695Z")
+          .put("m1", "1.0")
+          .put("m2", "1.0")
+          .put("dim1", "")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of("a", "b"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-18T10:51:45.695Z")
+          .put("m1", "2.0")
+          .put("m2", "2.0")
+          .put("dim1", "10.1")
+          .put("dim2", ImmutableList.of())
+          .put("dim3", ImmutableList.of("b", "c"))
+          .build()
   );
+  public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP =
+      RAW_ROWS1_WITH_FULL_TIMESTAMP.stream().map(CalciteTests::createRow).collect(Collectors.toList());
 
 
   public static final List<InputRow> FORBIDDEN_ROWS = ImmutableList.of(
@@ -560,106 +533,6 @@ public class CalciteTests
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
-  /**
-   * Returns a new {@link QueryRunnerFactoryConglomerate} and a {@link Closer} which should be closed at the end of the
-   * test.
-   */
-  public static Pair<QueryRunnerFactoryConglomerate, Closer> createQueryRunnerFactoryConglomerate()
-  {
-    final Closer resourceCloser = Closer.create();
-    final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
-        "TopNQueryRunnerFactory-bufferPool",
-        () -> ByteBuffer.allocate(10 * 1024 * 1024)
-    );
-    resourceCloser.register(stupidPool);
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest
-        .makeQueryRunnerFactory(
-            GroupByQueryRunnerTest.DEFAULT_MAPPER,
-            new GroupByQueryConfig()
-            {
-              @Override
-              public String getDefaultStrategy()
-              {
-                return GroupByStrategySelector.STRATEGY_V2;
-              }
-            },
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int intermediateComputeSizeBytes()
-              {
-                return 10 * 1024 * 1024;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                // Only use 1 thread for tests.
-                return 1;
-              }
-
-              @Override
-              public int getNumMergeBuffers()
-              {
-                // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-                // Two buffers for the broker and one for the queryable
-                return 3;
-              }
-            }
-        );
-    final GroupByQueryRunnerFactory factory = factoryCloserPair.lhs;
-    resourceCloser.register(factoryCloserPair.rhs);
-
-    final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-            .put(
-                SegmentMetadataQuery.class,
-                new SegmentMetadataQueryRunnerFactory(
-                    new SegmentMetadataQueryQueryToolChest(
-                        new SegmentMetadataQueryConfig("P1W")
-                    ),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(
-                ScanQuery.class,
-                new ScanQueryRunnerFactory(
-                    new ScanQueryQueryToolChest(
-                        new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory()
-                    ),
-                    new ScanQueryEngine(),
-                    new ScanQueryConfig()
-                )
-            )
-            .put(
-                TimeseriesQuery.class,
-                new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(),
-                    new TimeseriesQueryEngine(),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(
-                TopNQuery.class,
-                new TopNQueryRunnerFactory(
-                    stupidPool,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
-            )
-            .put(GroupByQuery.class, factory)
-            .build()
-    );
-    return Pair.of(conglomerate, resourceCloser);
-  }
-
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
       final QuerySegmentWalker walker,
       final QueryRunnerFactoryConglomerate conglomerate
@@ -702,13 +575,13 @@ public class CalciteTests
       final File tmpDir
   )
   {
-    return createMockWalker(conglomerate, tmpDir, null);
+    return createMockWalker(conglomerate, tmpDir, QueryStackTests.DEFAULT_NOOP_SCHEDULER);
   }
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
-      @Nullable final QueryScheduler scheduler
+      final QueryScheduler scheduler
   )
   {
     final QueryableIndex index1 = IndexBuilder
@@ -890,7 +763,10 @@ public class CalciteTests
         new FakeHttpClient(),
         provider,
         NodeRole.COORDINATOR,
-        "/simple/leader"
+        "/simple/leader",
+        () -> {
+          throw new UnsupportedOperationException();
+        }
     );
 
     return new SystemSchema(

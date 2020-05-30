@@ -23,9 +23,11 @@ LC_ALL=C.UTF-8
 
 # JAVA OPTS
 COMMON_DRUID_JAVA_OPTS=-Duser.timezone=UTC -Dfile.encoding=UTF-8 -Dlog4j.configurationFile=/shared/docker/lib/log4j2.xml
-DRUID_DEP_LIB_DIR=/shared/docker/lib/*:/usr/local/druid/lib/mysql-connector-java.jar
+DRUID_DEP_LIB_DIR=/shared/hadoop_xml:/shared/docker/lib/*:/usr/local/druid/lib/mysql-connector-java.jar
 
 # Druid configs
+druid_extensions_loadList=[]
+druid_extensions_directory=/shared/docker/extensions
 druid_auth_authenticator_basic_authorizerName=basic
 druid_auth_authenticator_basic_initialAdminPassword=priest
 druid_auth_authenticator_basic_initialInternalClientPassword=warlock
@@ -62,3 +64,4 @@ druid_zk_service_host=druid-zookeeper-kafka
 druid_auth_basic_common_maxSyncRetries=20
 druid_indexer_logs_directory=/shared/tasklogs
 druid_sql_enable=true
+druid_extensions_hadoopDependenciesDir=/shared/hadoop-dependencies

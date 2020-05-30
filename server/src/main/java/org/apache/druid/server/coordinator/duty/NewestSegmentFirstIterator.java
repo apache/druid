@@ -41,6 +41,7 @@ import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.Streams;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -240,9 +241,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       if (holders.isEmpty()) {
         throw new NoSuchElementException();
       }
-      return FluentIterable.from(holders.remove(holders.size() - 1).getObject())
-                           .transform(PartitionChunk::getObject)
-                           .toList();
+      return Streams.sequentialStreamFrom(holders.remove(holders.size() - 1).getObject())
+                    .map(PartitionChunk::getObject)
+                    .collect(Collectors.toList());
     }
   }
 
