@@ -69,4 +69,6 @@ public class DerbyMetadataStorageDruidModule extends SQLMetadataStorageDruidModu
             .to(DerbyMetadataStorageActionHandlerFactory.class)
             .in(LazySingleton.class);
   }
+
+
 }

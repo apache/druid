@@ -31,9 +31,9 @@ import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SQLProfileLogger;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.TimingCollector;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 @ManageLifecycle
@@ -49,7 +49,8 @@ public class DerbyConnector extends SQLMetadataConnector
   public DerbyConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
-      Supplier<MetadataStorageTablesConfig> dbTables
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      TimingCollector collector
   )
   {
     super(config, dbTables);
@@ -59,12 +60,15 @@ public class DerbyConnector extends SQLMetadataConnector
     datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
 
     this.dbi = new DBI(datasource);
-    this.dbi.setSQLLog(new SQLProfileLogger());
+    this.dbi.setTimingCollector(collector);
 
     this.storage = storage;
     log.info("Derby connector instantiated with metadata storage [%s].", this.storage.getClass().getName());
   }
 
+  /**
+   * for test
+   */
   public DerbyConnector(
       MetadataStorage storage,
       Supplier<MetadataStorageConnectorConfig> config,
@@ -74,7 +78,6 @@ public class DerbyConnector extends SQLMetadataConnector
   {
     super(config, dbTables);
     this.dbi = dbi;
-    this.dbi.setSQLLog(new SQLProfileLogger());
 
     this.storage = storage;
   }

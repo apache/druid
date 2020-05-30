@@ -27,12 +27,12 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SQLProfileLogger;
 import org.skife.jdbi.v2.Binding;
 import org.skife.jdbi.v2.ColonPrefixNamedParamStatementRewriter;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;
+import org.skife.jdbi.v2.TimingCollector;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.RewrittenStatement;
 import org.skife.jdbi.v2.tweak.StatementRewriter;
@@ -133,7 +133,9 @@ public class SQLServerConnector extends SQLMetadataConnector
   ));
 
   @Inject
-  public SQLServerConnector(Supplier<MetadataStorageConnectorConfig> config, Supplier<MetadataStorageTablesConfig> dbTables)
+  public SQLServerConnector(Supplier<MetadataStorageConnectorConfig> config,
+                            Supplier<MetadataStorageTablesConfig> dbTables,
+                            TimingCollector collector)
   {
     super(config, dbTables);
 
@@ -142,7 +144,7 @@ public class SQLServerConnector extends SQLMetadataConnector
     datasource.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
     this.dbi = new DBI(datasource);
-    this.dbi.setSQLLog(new SQLProfileLogger());
+    this.dbi.setTimingCollector(collector);
     this.dbi.setStatementRewriter(new CustomStatementRewriter());
 
     log.info("Configured Sql Server as metadata storage");

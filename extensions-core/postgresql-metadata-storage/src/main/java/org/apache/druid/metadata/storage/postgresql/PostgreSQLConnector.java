@@ -29,11 +29,11 @@ import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
-import org.apache.druid.metadata.SQLProfileLogger;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PSQLException;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.TimingCollector;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
@@ -64,7 +64,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       PostgreSQLConnectorConfig connectorConfig,
-      PostgreSQLTablesConfig tablesConfig
+      PostgreSQLTablesConfig tablesConfig,
+      TimingCollector collector
   )
   {
     super(config, dbTables);
@@ -116,7 +117,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     }
 
     this.dbi = new DBI(datasource);
-    this.dbi.setSQLLog(new SQLProfileLogger()); // allow output the sql and its execution time
+    this.dbi.setTimingCollector(collector);
 
     this.dbTableSchema = tablesConfig.getDbTableSchema();
     

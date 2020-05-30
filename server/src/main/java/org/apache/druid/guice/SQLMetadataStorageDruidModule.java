@@ -41,6 +41,7 @@ import org.apache.druid.metadata.SQLMetadataRuleManagerProvider;
 import org.apache.druid.metadata.SQLMetadataSegmentPublisher;
 import org.apache.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import org.apache.druid.metadata.SQLMetadataSupervisorManager;
+import org.apache.druid.metadata.SQLMetadataTimingCollector;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
@@ -49,6 +50,7 @@ import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
 import org.apache.druid.server.audit.SQLAuditManagerProvider;
+import org.skife.jdbi.v2.TimingCollector;
 
 public class SQLMetadataStorageDruidModule implements Module
 {
@@ -85,6 +87,7 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManager.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(AuditManagerProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(TimingCollector.class), defaultValue);
   }
 
   @Override
@@ -145,6 +148,11 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.optionBinder(binder, Key.get(MetadataSupervisorManager.class))
             .addBinding(type)
             .to(SQLMetadataSupervisorManager.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(TimingCollector.class))
+            .addBinding(type)
+            .to(SQLMetadataTimingCollector.class)
             .in(LazySingleton.class);
   }
 }

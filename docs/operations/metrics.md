@@ -220,6 +220,14 @@ If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configurati
 `org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics` will have extra information on balancing
 decisions.
 
+### Metadata Storage
+
+These metrics are for the Druid Coordinator and are reset each time the Coordinator runs the coordination logic.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`metadataStorage/sql/time`|Milliseconds taken to complete a SQL on metadata storage database.| sql, uri.|< 1s|
+
 ## General Health
 
 ### Historical

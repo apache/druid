@@ -24,6 +24,7 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.junit.Assert;
 import org.junit.Test;
+import org.skife.jdbi.v2.TimingCollector;
 
 import java.sql.SQLException;
 
@@ -50,7 +51,8 @@ public class SQLServerConnectorTest
                 null,
                 null
             )
-        )
+        ),
+        TimingCollector.NOP_TIMING_COLLECTOR
     );
 
     Assert.assertTrue(connector.isTransientException(new SQLException("Resource Failure!", "08DIE")));
