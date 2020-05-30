@@ -19,10 +19,14 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
@@ -55,6 +59,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
@@ -82,8 +87,16 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     this.useInputFormatApi = useInputFormatApi;
   }
 
+  boolean isUseInputFormatApi()
+  {
+    return useInputFormatApi;
+  }
+
   Set<DataSegment> runTestTask(
-      ParseSpec parseSpec,
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable DimensionsSpec dimensionsSpec,
+      @Nullable InputFormat inputFormat,
+      @Nullable ParseSpec parseSpec,
       Interval interval,
       File inputDir,
       String filter,
@@ -93,6 +106,9 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   )
   {
     final ParallelIndexSupervisorTask task = newTask(
+        timestampSpec,
+        dimensionsSpec,
+        inputFormat,
         parseSpec,
         interval,
         inputDir,
@@ -108,7 +124,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   }
 
   private ParallelIndexSupervisorTask newTask(
-      ParseSpec parseSpec,
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable DimensionsSpec dimensionsSpec,
+      @Nullable InputFormat inputFormat,
+      @Nullable ParseSpec parseSpec,
       Interval interval,
       File inputDir,
       String filter,
@@ -154,17 +173,18 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     final ParallelIndexIngestionSpec ingestionSpec;
 
     if (useInputFormatApi) {
+      Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           null,
           new LocalInputSource(inputDir, filter),
-          parseSpec.toInputFormat(),
+          inputFormat,
           false
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
               "dataSource",
-              parseSpec.getTimestampSpec(),
-              parseSpec.getDimensionsSpec(),
+              timestampSpec,
+              dimensionsSpec,
               new AggregatorFactory[]{
                   new LongSumAggregatorFactory("val", "val")
               },
@@ -175,6 +195,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           tuningConfig
       );
     } else {
+      Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           new LocalFirehoseFactory(inputDir, filter, null),
           false

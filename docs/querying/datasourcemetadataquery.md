@@ -23,6 +23,9 @@ sidebar_label: "DatasourceMetadata"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes a query
+> type that is only available in the native language.
 
 Data Source Metadata queries return metadata information for a dataSource.  These queries return information about:
 

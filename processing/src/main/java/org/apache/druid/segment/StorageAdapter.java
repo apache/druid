@@ -47,7 +47,6 @@ public interface StorageAdapter extends CursorFactory
   Comparable getMinValue(String column);
   @Nullable
   Comparable getMaxValue(String column);
-  Capabilities getCapabilities();
 
   /**
    * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if

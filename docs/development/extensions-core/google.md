@@ -26,7 +26,7 @@ title: "Google Cloud Storage"
 
 This extension allows you to do 2 things:
 * [Ingest data](#reading-data-from-google-cloud-storage) from files stored in Google Cloud Storage.
-* Write segments to [deep storage](#deep-storage) in S3.
+* Write segments to [deep storage](#deep-storage) in GCS.
 
 To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-google-extensions` extension.
 

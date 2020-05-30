@@ -25,6 +25,7 @@ import com.carrotsearch.junitbenchmarks.Clock;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -42,8 +43,10 @@ import java.util.Random;
 
 /**
  * TODO rewrite this benchmark to JMH
+ * If you want to run locally, remove @Ignore on the class.
  */
 @BenchmarkOptions(clock = Clock.NANO_TIME, benchmarkRounds = 50)
+@Ignore
 public class BitmapBenchmark
 {
   public static final int LENGTH = 500_000;

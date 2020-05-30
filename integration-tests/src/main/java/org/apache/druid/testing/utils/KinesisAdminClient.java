@@ -42,7 +42,7 @@ import java.io.FileInputStream;
 import java.util.Map;
 import java.util.Properties;
 
-public class KinesisAdminClient
+public class KinesisAdminClient implements StreamAdminClient
 {
   private AmazonKinesis amazonKinesis;
 
@@ -70,6 +70,7 @@ public class KinesisAdminClient
                               )).build();
   }
 
+  @Override
   public void createStream(String streamName, int shardCount, Map<String, String> tags)
   {
     CreateStreamResult createStreamResult = amazonKinesis.createStream(streamName, shardCount);
@@ -88,6 +89,7 @@ public class KinesisAdminClient
 
   }
 
+  @Override
   public void deleteStream(String streamName)
   {
     DeleteStreamResult deleteStreamResult = amazonKinesis.deleteStream(streamName);
@@ -101,9 +103,10 @@ public class KinesisAdminClient
    * If {@param blocksUntilStarted} is set to true, then this method will blocks until the resharding
    * started (but not nessesary finished), otherwise, the method will returns right after issue the reshard command
    */
-  public void updateShardCount(String streamName, int newShardCount, boolean blocksUntilStarted)
+  @Override
+  public void updatePartitionCount(String streamName, int newShardCount, boolean blocksUntilStarted)
   {
-    int originalShardCount = getStreamShardCount(streamName);
+    int originalShardCount = getStreamPartitionCount(streamName);
     UpdateShardCountRequest updateShardCountRequest = new UpdateShardCountRequest();
     updateShardCountRequest.setStreamName(streamName);
     updateShardCountRequest.setTargetShardCount(newShardCount);
@@ -129,17 +132,30 @@ public class KinesisAdminClient
     }
   }
 
+  @Override
   public boolean isStreamActive(String streamName)
   {
     StreamDescription streamDescription = getStreamDescription(streamName);
     return verifyStreamStatus(streamDescription, StreamStatus.ACTIVE);
   }
 
-  public int getStreamShardCount(String streamName)
+  @Override
+  public int getStreamPartitionCount(String streamName)
   {
     StreamDescription streamDescription = getStreamDescription(streamName);
     return getStreamShardCount(streamDescription);
   }
+
+  @Override
+  public boolean verfiyPartitionCountUpdated(String streamName, int oldShardCount, int newShardCount)
+  {
+    int actualShardCount = getStreamPartitionCount(streamName);
+    // Kinesis does not immediately drop the old shards after the resharding and hence,
+    // would still returns both open shards and closed shards from the API call.
+    // To verify, we sum the old count (closed shareds) and the expected new count (open shards)
+    return actualShardCount == oldShardCount + newShardCount;
+  }
+
 
   private boolean verifyStreamStatus(StreamDescription streamDescription, StreamStatus streamStatusToCheck)
   {

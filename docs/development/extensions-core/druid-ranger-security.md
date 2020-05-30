@@ -30,6 +30,16 @@ Make sure to [include](../../development/extensions.md#loading-extensions) `drui
 
 Please see [Authentication and Authorization](../../design/auth.md) for more information on the extension interfaces being implemented.
 
+---
+**NOTE**
+
+The latest release of Apache Ranger is at the time of writing version 2.0. This version has a dependency
+on `log4j 1.2.17` which has a vulnerability if you configure it to use a `SocketServer` (CVE-2019-17571). Next to that,
+it also includes Kafka 2.0.0 which has 2 known vulnerabilities (CVE-2019-12399, CVE-2018-17196). Kafka can be used
+by the audit component in Ranger, but is not required. 
+
+---
+
 ## Configuration
 
 Support for Apache Ranger authorization consists of three elements: configuration of the extension 

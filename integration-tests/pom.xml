@@ -38,6 +38,14 @@
             <version>0.13.1</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-kinesis</artifactId>
             <version>${aws.sdk.version}</version>
@@ -67,6 +75,24 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
             <version>${aws.sdk.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-orc-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-parquet-extensions</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-avro-extensions</artifactId>
+            <version>${project.parent.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -222,11 +248,6 @@
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.101tec</groupId>
-            <artifactId>zkclient</artifactId>
-            <version>0.10</version>
-        </dependency>
-        <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
         </dependency>
@@ -292,21 +313,6 @@
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.12</artifactId>
-            <version>${apache.kafka.version}</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>log4j</artifactId>
-                    <groupId>log4j</groupId>
-                </exclusion>
-                <exclusion>
-                    <artifactId>slf4j-log4j12</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
     </dependencies>
 
     <build>
@@ -355,8 +361,11 @@
             <id>integration-tests</id>
             <properties>
                 <start.hadoop.docker>false</start.hadoop.docker>
+                <skip.start.docker>false</skip.start.docker>
+                <skip.stop.docker>false</skip.stop.docker>
                 <override.config.path></override.config.path>
                 <resource.file.dir.path></resource.file.dir.path>
+                <extra.datasource.name.suffix>\ Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
             </properties>
             <build>
                 <plugins>
@@ -373,6 +382,7 @@
                                 <configuration>
                                     <environmentVariables>
                                     <DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>${start.hadoop.docker}</DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER>
+                                    <DRUID_INTEGRATION_TEST_SKIP_START_DOCKER>${skip.start.docker}</DRUID_INTEGRATION_TEST_SKIP_START_DOCKER>
                                     <DRUID_INTEGRATION_TEST_JVM_RUNTIME>${jvm.runtime}</DRUID_INTEGRATION_TEST_JVM_RUNTIME>
                                     <DRUID_INTEGRATION_TEST_GROUP>${groups}</DRUID_INTEGRATION_TEST_GROUP>
                                     <DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>${override.config.path}</DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH>
@@ -388,6 +398,9 @@
                                 </goals>
                                 <phase>post-integration-test</phase>
                                 <configuration>
+                                    <environmentVariables>
+                                        <DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>${skip.stop.docker}</DRUID_INTEGRATION_TEST_SKIP_STOP_DOCKER>
+                                    </environmentVariables>
                                     <executable>${project.basedir}/stop_cluster.sh</executable>
                                 </configuration>
                             </execution>
@@ -418,7 +431,7 @@
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
-                                -Ddruid.test.config.extraDatasourceNameSuffix=\ Россия\ 한국\ 中国!?
+                                -Ddruid.test.config.extraDatasourceNameSuffix=${extra.datasource.name.suffix}
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
                                 -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
                                 -Ddruid.client.https.trustStorePassword=druid123

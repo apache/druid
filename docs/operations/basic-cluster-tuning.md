@@ -389,7 +389,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 ```
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
--Djava.io.tmpdir=<something other than /tmp which might be mounted to volatile tmpfs file system>
+-Djava.io.tmpdir=<should not be volatile tmpfs and also has good read and write speed. Strongly recommended to avoid using NFS mount>
 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Dorg.jboss.logging.provider=slf4j
 -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.SLF4JLogger
@@ -407,14 +407,14 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 -XX:+ExitOnOutOfMemoryError
 -XX:+HeapDumpOnOutOfMemoryError
 -XX:HeapDumpPath=/var/logs/druid/historical.hprof
--XX:MaxDirectMemorySize=10240g
+-XX:MaxDirectMemorySize=1g
 ```
+> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate 
+for your specific scenario and be sure to test any changes in staging environments.
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
 `MaxDirectMemorySize` restricts JVM from allocating more than specified limit, by setting it to unlimited JVM restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include `druid.processing.numThreads`, `druid.processing.numMergeBuffers`, and `druid.processing.buffer.sizeBytes`.
-
-Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
 
 Additionally, for large JVM heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
 

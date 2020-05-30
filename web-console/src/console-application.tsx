@@ -63,8 +63,8 @@ export class ConsoleApplication extends React.PureComponent<
       timeout: 120000,
       message: (
         <>
-          It appears that the the service serving this console is not responding. The console will
-          not function at the moment
+          It appears that the service serving this console is not responding. The console will not
+          function at the moment.
         </>
       ),
     });

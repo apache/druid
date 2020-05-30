@@ -27,6 +27,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
@@ -82,13 +83,13 @@ public class HashJoinSegmentTest
     );
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClauses,
+        JoinableClauses.fromList(joinableClauses),
         VirtualColumns.EMPTY,
         null,
         true,
         true,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
 
     hashJoinSegment = new HashJoinSegment(
@@ -107,13 +108,13 @@ public class HashJoinSegmentTest
     List<JoinableClause> joinableClauses = ImmutableList.of();
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClauses,
+        JoinableClauses.fromList(joinableClauses),
         VirtualColumns.EMPTY,
         null,
         true,
         true,
         true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE_KEY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
 
     final HashJoinSegment ignored = new HashJoinSegment(

@@ -25,7 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
 import org.apache.druid.common.config.NullValueHandlingConfig;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -79,15 +81,22 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   private static final String LIST_DELIMITER = "|";
   private static final List<String> DIMS = ImmutableList.of(DIM1, DIM2);
   private static final String TEST_FILE_NAME_PREFIX = "test_";
+  private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec(TIME, "auto", null);
+  private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+      DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))
+  );
   private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec(
-          TIME,
-          "auto",
-          null
-      ),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))),
+      TIMESTAMP_SPEC,
+      DIMENSIONS_SPEC,
       LIST_DELIMITER,
       Arrays.asList(TIME, DIM1, DIM2, "val"),
+      false,
+      0
+  );
+  private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
+      Arrays.asList(TIME, DIM1, DIM2, "val"),
+      LIST_DELIMITER,
+      false,
       false,
       0
   );
@@ -192,20 +201,44 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   public void createsCorrectRangePartitions() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
-    final Set<DataSegment> publishedSegments = runTestTask(
-        PARSE_SPEC,
-        INTERVAL_TO_INDEX,
-        inputDir,
-        TEST_FILE_NAME_PREFIX + "*",
-        new SingleDimensionPartitionsSpec(
-            targetRowsPerSegment,
-            null,
-            DIM1,
-            false
-        ),
-        maxNumConcurrentSubTasks,
-        useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS
-    );
+    final Set<DataSegment> publishedSegments;
+    if (isUseInputFormatApi()) {
+      publishedSegments = runTestTask(
+          TIMESTAMP_SPEC,
+          DIMENSIONS_SPEC,
+          INPUT_FORMAT,
+          null,
+          INTERVAL_TO_INDEX,
+          inputDir,
+          TEST_FILE_NAME_PREFIX + "*",
+          new SingleDimensionPartitionsSpec(
+              targetRowsPerSegment,
+              null,
+              DIM1,
+              false
+          ),
+          maxNumConcurrentSubTasks,
+          useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS
+      );
+    } else {
+      publishedSegments = runTestTask(
+          null,
+          null,
+          null,
+          PARSE_SPEC,
+          INTERVAL_TO_INDEX,
+          inputDir,
+          TEST_FILE_NAME_PREFIX + "*",
+          new SingleDimensionPartitionsSpec(
+              targetRowsPerSegment,
+              null,
+              DIM1,
+              false
+          ),
+          maxNumConcurrentSubTasks,
+          useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS
+      );
+    }
 
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);

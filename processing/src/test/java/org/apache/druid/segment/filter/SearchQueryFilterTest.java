@@ -21,18 +21,25 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.search.SearchQuerySpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -51,6 +58,9 @@ public class SearchQueryFilterTest extends BaseFilterTest
   {
     super(testName, DEFAULT_ROWS, indexBuilder, finisher, cnf, optimize);
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -171,5 +181,39 @@ public class SearchQueryFilterTest extends BaseFilterTest
 
     assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("ANYMORE"), changeNullFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
     assertFilterMatches(new SearchQueryDimFilter("dim4", specForValue("a"), changeNullFn), ImmutableList.of());
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(SearchQueryFilter.class)
+                  .withIgnoredFields("predicateFactory")
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testEqualsContractForSearchQueryDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(SearchQueryFilter.SearchQueryDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testRequiredColumnRewrite()
+  {
+    Filter filter = new SearchQueryDimFilter("dim0", specForValue("a"), null).toFilter();
+    Filter filter2 = new SearchQueryDimFilter("dim1", specForValue("a"), null).toFilter();
+
+    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+
+    Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
+    Assert.assertEquals(filter2, rewrittenFilter);
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
   }
 }

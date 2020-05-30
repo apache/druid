@@ -78,6 +78,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
@@ -186,6 +187,8 @@ public class JettyTest extends BaseJettyTest
       throw new RuntimeException(e);
     }
 
+    final int ephemeralPort = ThreadLocalRandom.current().nextInt(49152, 65535);
+
     latchedRequestState = new LatchedRequestStateHolder();
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -198,7 +201,7 @@ public class JettyTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", false, 9988, 9999, true, true)
+                    new DruidNode("test", "localhost", false, ephemeralPort, ephemeralPort + 1, true, true)
                 );
                 binder.bind(TLSServerConfig.class).toInstance(tlsConfig);
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
@@ -450,6 +453,7 @@ public class JettyTest extends BaseJettyTest
 
     JettyServerModule jsm = injector.getInstance(JettyServerModule.class);
     latchedRequestState.reset();
+    waitForJettyServerModuleActiveConnectionsZero(jsm);
 
     Assert.assertEquals(0, jsm.getActiveConnections());
     ListenableFuture<InputStream> go = client.go(
@@ -489,6 +493,7 @@ public class JettyTest extends BaseJettyTest
     JettyServerModule jsm = injector.getInstance(JettyServerModule.class);
     latchedRequestState.reset();
 
+    waitForJettyServerModuleActiveConnectionsZero(jsm);
     Assert.assertEquals(0, jsm.getActiveConnections());
     ListenableFuture<InputStream> go = client.go(
         request,
@@ -506,10 +511,13 @@ public class JettyTest extends BaseJettyTest
   {
     // it can take a bit to close the connection, so maybe sleep for a while and hope it closes
     final int sleepTimeMills = 10;
-    final int totalSleeps = 5_000 / sleepTimeMills;
+    final int totalSleeps = 10_000 / sleepTimeMills;
     int count = 0;
     while (jsm.getActiveConnections() > 0 && count++ < totalSleeps) {
       Thread.sleep(sleepTimeMills);
+    }
+    if (jsm.getActiveConnections() > 0) {
+      throw new RuntimeException("Connections greater than 0");
     }
   }
 }

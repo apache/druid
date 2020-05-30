@@ -71,7 +71,9 @@ public class ProtobufInputRowParserTest
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "foobar", "$.foo.bar"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar0", "$.bar[0].bar")
             )
-        ), null
+        ),
+        null,
+        null
     );
 
   }

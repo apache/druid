@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.collections.spatial.ImmutablePoint;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  */
@@ -194,5 +195,31 @@ public class PolygonBound extends RectangularBound
         .put(CACHE_TYPE_ID);
 
     return cacheKey.array();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    PolygonBound that = (PolygonBound) o;
+    return Arrays.equals(abscissa, that.abscissa) &&
+           Arrays.equals(ordinate, that.ordinate);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + Arrays.hashCode(abscissa);
+    result = 31 * result + Arrays.hashCode(ordinate);
+    return result;
   }
 }

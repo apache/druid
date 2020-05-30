@@ -1,6 +1,7 @@
 ---
 id: granularities
-title: "Aggregation Granularity"
+title: "Query granularities"
+sidebar_label: "Granularities"
 ---
 
 <!--
@@ -22,6 +23,10 @@ title: "Aggregation Granularity"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the native
+> language. For information about time functions available in SQL, refer to the
+> [SQL documentation](sql.md#time-functions).
 
 The granularity field determines how data gets bucketed across the time dimension, or how it gets aggregated by hour, day, minute, etc.
 

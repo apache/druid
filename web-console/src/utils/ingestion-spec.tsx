@@ -230,6 +230,7 @@ export interface InputFormat {
   pattern?: string;
   function?: string;
   flattenSpec?: FlattenSpec;
+  keepNullColumns?: boolean;
 }
 
 export type DimensionMode = 'specific' | 'auto-detect';
@@ -310,7 +311,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'type',
     label: 'Input format',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf'],
     info: (
       <>
         <p>The parser used to parse the data.</p>
@@ -383,7 +384,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc',
+    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc' || p.type === 'avro_ocf',
     info: (
       <>
         Specifies if the bytes parquet column which is not logically marked as a string or enum type
@@ -414,7 +415,12 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
   const inputFormatType = inputFormat.type;
-  return inputFormatType === 'json' || inputFormatType === 'parquet' || inputFormatType === 'orc';
+  return (
+    inputFormatType === 'json' ||
+    inputFormatType === 'parquet' ||
+    inputFormatType === 'orc' ||
+    inputFormatType === 'avro_ocf'
+  );
 }
 
 export interface TimestampSpec {
@@ -1087,7 +1093,16 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'File filter',
           type: 'string',
           required: true,
-          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv', '*.parquet', '*.orc'],
+          suggestions: [
+            '*',
+            '*.json',
+            '*.json.gz',
+            '*.csv',
+            '*.tsv',
+            '*.parquet',
+            '*.orc',
+            '*.avro',
+          ],
           info: (
             <>
               <ExternalLink
@@ -2420,7 +2435,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
-    info: <>Compression format for metric columns.</>,
+    info: <>Compression format for primitive type metric columns.</>,
   },
   {
     name: 'indexSpec.longEncoding',
@@ -2661,24 +2676,34 @@ function guessInputFormat(sampleData: string[]): InputFormat {
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
 
-    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-      return inputFormatFromType('json');
-    }
+    // First check for magic byte sequences as they rarely yield false positives
 
-    if (sampleDatum.split('\t').length > 3) {
-      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
-    }
-
-    if (sampleDatum.split(',').length > 3) {
-      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
-    }
-
+    // Parquet 4 byte magic header: https://github.com/apache/parquet-format#file-format
     if (sampleDatum.startsWith('PAR1')) {
       return inputFormatFromType('parquet');
     }
-
+    // ORC 3 byte magic header: https://orc.apache.org/specification/ORCv1/
     if (sampleDatum.startsWith('ORC')) {
       return inputFormatFromType('orc');
+    }
+    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
+    if (sampleDatum.startsWith('Obj1')) {
+      return inputFormatFromType('avro_ocf');
+    }
+
+    // After checking for magic byte sequences perform heuristics to deduce string formats
+
+    // If the string starts and ends with curly braces assume JSON
+    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
+      return inputFormatFromType('json');
+    }
+    // Contains more than 3 tabs assume TSV
+    if (sampleDatum.split('\t').length > 3) {
+      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
+    }
+    // Contains more than 3 commas assume CSV
+    if (sampleDatum.split(',').length > 3) {
+      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
     }
   }
 
