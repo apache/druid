@@ -284,30 +284,19 @@ public class TaskQueue
           }
         }
         // Kill tasks that shouldn't be running
-        final Set<String> tasksToKill = Sets.difference(
-            runnerTaskFutures.keySet(),
-            ImmutableSet.copyOf(
-                Lists.transform(
-                    tasks,
-                    new Function<Task, Object>()
-                    {
-                      @Override
-                      public String apply(Task task)
-                      {
-                        return task.getId();
-                      }
-                    }
-                )
-            )
-        );
+        final Set<String> knownTaskIds = tasks
+            .stream()
+            .map(Task::getId)
+            .collect(Collectors.toSet());
+        final Set<String> tasksToKill = Sets.difference(runnerTaskFutures.keySet(), knownTaskIds);
         if (!tasksToKill.isEmpty()) {
           log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
           for (final String taskId : tasksToKill) {
             try {
               taskRunner.shutdown(
                   taskId,
-                  "task is not in runnerTaskFutures[%s]",
-                  runnerTaskFutures.keySet()
+                  "task is not in knownTaskIds[%s]",
+                  knownTaskIds
               );
             }
             catch (Exception e) {
