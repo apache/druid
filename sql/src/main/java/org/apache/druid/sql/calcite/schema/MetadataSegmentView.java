@@ -230,8 +230,7 @@ public class MetadataSegmentView
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper,
-        null
+        jsonMapper
     );
   }
 

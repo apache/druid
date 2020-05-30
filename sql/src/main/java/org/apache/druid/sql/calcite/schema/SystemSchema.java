@@ -773,8 +773,7 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper,
-        null
+        jsonMapper
     );
   }
 
@@ -944,8 +943,7 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper,
-        null
+        jsonMapper
     );
   }
 
