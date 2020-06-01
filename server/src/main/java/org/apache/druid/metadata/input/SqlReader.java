@@ -72,26 +72,7 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
     JsonIterator<Map<String, Object>> jsonIterator = new JsonIterator<>(new TypeReference<Map<String, Object>>()
     {
     }, inputStream, closer, objectMapper);
-    return new CloseableIterator<Map<String, Object>>()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        jsonIterator.close();
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return jsonIterator.hasNext();
-      }
-
-      @Override
-      public Map<String, Object> next()
-      {
-        return jsonIterator.next();
-      }
-    };
+    return jsonIterator;
   }
 
   @Override

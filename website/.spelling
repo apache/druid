@@ -98,6 +98,7 @@ IndexTask
 InfluxDB
 InputFormat
 InputSource
+InputSources
 Integer.MAX_VALUE
 JBOD
 JDBC

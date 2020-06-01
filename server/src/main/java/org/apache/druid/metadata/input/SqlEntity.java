@@ -96,6 +96,18 @@ public class SqlEntity implements InputEntity
 
   }
 
+  /**
+   * Executes a SQL query on the specified database and fetches the result into the given file.
+   * The result file is deleted if the query execution or the file write fails.
+   *
+   * @param sql                          The SQL query to be executed
+   * @param sqlFirehoseDatabaseConnector The database connector
+   * @param objectMapper                 An object mapper, used for deserialization
+   * @param foldCase                     A boolean flag used to enable or disabling case sensitivity while handling database column names
+   *
+   * @return A {@link org.apache.druid.data.input.InputEntity.CleanableFile} object that wraps the file containing the SQL results
+   */
+
   public static CleanableFile openCleanableFile(
       String sql,
       SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector,
@@ -105,8 +117,8 @@ public class SqlEntity implements InputEntity
   )
       throws IOException
   {
-    try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-      final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos);
+    try (FileOutputStream fos = new FileOutputStream(tempFile);
+         final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos);) {
 
       // Execute the sql query and lazily retrieve the results into the file in json format.
       // foldCase is useful to handle differences in case sensitivity behavior across databases.
@@ -154,23 +166,29 @@ public class SqlEntity implements InputEntity
             return sqlFirehoseDatabaseConnector.isTransientException(exception) && !(isStatementException);
           }
       );
-    }
-    return new CleanableFile()
-    {
-      @Override
-      public File file()
+      return new CleanableFile()
       {
-        return tempFile;
-      }
-
-      @Override
-      public void close()
-      {
-        if (!tempFile.delete()) {
-          LOG.warn("Failed to remove file[%s]", tempFile.getAbsolutePath());
+        @Override
+        public File file()
+        {
+          return tempFile;
         }
+
+        @Override
+        public void close()
+        {
+          if (!tempFile.delete()) {
+            LOG.warn("Failed to remove file[%s]", tempFile.getAbsolutePath());
+          }
+        }
+      };
+    }
+    catch (Exception e) {
+      if (!tempFile.delete()) {
+        LOG.warn("Failed to remove file[%s]", tempFile.getAbsolutePath());
       }
-    };
+      throw new IOException(e);
+    }
   }
 
   private static class CaseFoldedMap extends HashMap<String, Object>

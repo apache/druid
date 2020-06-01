@@ -40,11 +40,13 @@ public class SqlEntityTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
   private TestDerbyConnector derbyConnector;
   String TABLE_NAME_1 = "FOOS_TABLE";
 
-  String TEST_SQL = "SELECT timestamp,a,b FROM FOOS_TABLE";
+  String VALID_SQL = "SELECT timestamp,a,b FROM FOOS_TABLE";
+  String INVALID_SQL = "DONT SELECT timestamp,a,b FROM FOOS_TABLE";
   String resultJson = "[{\"a\":\"0\","
                       + "\"b\":\"0\","
                       + "\"timestamp\":\"2011-01-12T00:00:00.000Z\""
@@ -69,7 +71,7 @@ public class SqlEntityTest
         ""
     );
     InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
-        TEST_SQL,
+        VALID_SQL,
         testUtils.getDerbyFirehoseConnector(),
         mapper,
         true,
@@ -80,5 +82,53 @@ public class SqlEntityTest
 
     Assert.assertEquals(actualJson, resultJson);
     testUtils.dropTable(TABLE_NAME_1);
+  }
+
+  @Test(expected = IOException.class)
+  public void testFailOnInvalidQuery() throws IOException
+  {
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 1);
+    File tmpFile = File.createTempFile(
+        "testQueryResults",
+        ""
+    );
+    InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
+        INVALID_SQL,
+        testUtils.getDerbyFirehoseConnector(),
+        mapper,
+        true,
+        tmpFile
+    );
+
+    Assert.assertTrue(tmpFile.exists());
+  }
+
+  @Test
+  public void testFileDeleteOnInvalidQuery() throws IOException
+  {
+    //The test parameters here are same as those used for testFailOnInvalidQuery().
+    //The only difference is that this test checks if the temporary file is deleted upon failure.
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 1);
+    File tmpFile = File.createTempFile(
+        "testQueryResults",
+        ""
+    );
+    try {
+      SqlEntity.openCleanableFile(
+          INVALID_SQL,
+          testUtils.getDerbyFirehoseConnector(),
+          mapper,
+          true,
+          tmpFile
+      );
+    }
+    // Lets catch the exception so as to test temporary file deletion.
+    catch (IOException e) {
+      Assert.assertFalse(tmpFile.exists());
+    }
   }
 }
