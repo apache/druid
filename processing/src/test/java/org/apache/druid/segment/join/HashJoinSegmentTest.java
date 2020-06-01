@@ -27,6 +27,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
@@ -82,7 +83,7 @@ public class HashJoinSegmentTest
     );
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClauses,
+        JoinableClauses.fromList(joinableClauses),
         VirtualColumns.EMPTY,
         null,
         true,
@@ -107,7 +108,7 @@ public class HashJoinSegmentTest
     List<JoinableClause> joinableClauses = ImmutableList.of();
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClauses,
+        JoinableClauses.fromList(joinableClauses),
         VirtualColumns.EMPTY,
         null,
         true,

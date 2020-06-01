@@ -22,10 +22,12 @@ package org.apache.druid.segment.join.filter;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -39,9 +41,9 @@ import java.util.Set;
 public class JoinFilterColumnCorrelationAnalysis
 {
   private final String joinColumn;
-  private final List<String> baseColumns;
-  private final List<Expr> baseExpressions;
-  private Map<Pair<String, String>, Optional<Set<String>>> correlatedValuesMap;
+  @Nonnull private final List<String> baseColumns;
+  @Nonnull private final List<Expr> baseExpressions;
+  private final Map<Pair<String, String>, Optional<Set<String>>> correlatedValuesMap;
 
   public JoinFilterColumnCorrelationAnalysis(
       String joinColumn,
@@ -61,11 +63,13 @@ public class JoinFilterColumnCorrelationAnalysis
     return joinColumn;
   }
 
+  @Nonnull
   public List<String> getBaseColumns()
   {
     return baseColumns;
   }
 
+  @Nonnull
   public List<Expr> getBaseExpressions()
   {
     return baseExpressions;
@@ -79,5 +83,27 @@ public class JoinFilterColumnCorrelationAnalysis
   public boolean supportsPushDown()
   {
     return !baseColumns.isEmpty() || !baseExpressions.isEmpty();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    JoinFilterColumnCorrelationAnalysis that = (JoinFilterColumnCorrelationAnalysis) o;
+    return Objects.equals(joinColumn, that.joinColumn) &&
+           baseColumns.equals(that.baseColumns) &&
+           baseExpressions.equals(that.baseExpressions) &&
+           Objects.equals(correlatedValuesMap, that.correlatedValuesMap);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(joinColumn, baseColumns, baseExpressions, correlatedValuesMap);
   }
 }
