@@ -48,6 +48,7 @@ public class Parser
   private static final Logger log = new Logger(Parser.class);
   private static final Map<String, Function> FUNCTIONS;
   private static final Map<String, ApplyFunction> APPLY_FUNCTIONS;
+  private static final Expr.Shuttle PARSER_SHUTTLE;
 
   static {
     Map<String, Function> functionMap = new HashMap<>();
@@ -77,6 +78,35 @@ public class Parser
       }
     }
     APPLY_FUNCTIONS = ImmutableMap.copyOf(applyFunctionMap);
+    PARSER_SHUTTLE = childExpr -> {
+      if (childExpr instanceof BinaryOpExprBase) {
+        BinaryOpExprBase binary = (BinaryOpExprBase) childExpr;
+        if (Evals.isAllConstants(binary.left, binary.right)) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof UnaryExpr) {
+        UnaryExpr unary = (UnaryExpr) childExpr;
+
+        if (unary.expr instanceof ConstantExpr) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof FunctionExpr) {
+        FunctionExpr functionExpr = (FunctionExpr) childExpr;
+        List<Expr> args = functionExpr.args;
+        if (Evals.isAllConstants(args)) {
+          return childExpr.eval(null).toExpr();
+        }
+      } else if (childExpr instanceof ApplyFunctionExpr) {
+        ApplyFunctionExpr applyFunctionExpr = (ApplyFunctionExpr) childExpr;
+        List<Expr> args = applyFunctionExpr.argsExpr;
+        if (Evals.isAllConstants(args)) {
+          if (applyFunctionExpr.analyzeInputs().getFreeVariables().size() == 0) {
+            return childExpr.eval(null).toExpr();
+          }
+        }
+      }
+      return childExpr;
+    };
   }
 
   /**
@@ -130,35 +160,7 @@ public class Parser
    */
   public static Expr flatten(Expr expr)
   {
-    return expr.visit(childExpr -> {
-      if (childExpr instanceof BinaryOpExprBase) {
-        BinaryOpExprBase binary = (BinaryOpExprBase) childExpr;
-        if (Evals.isAllConstants(binary.left, binary.right)) {
-          return childExpr.eval(null).toExpr();
-        }
-      } else if (childExpr instanceof UnaryExpr) {
-        UnaryExpr unary = (UnaryExpr) childExpr;
-
-        if (unary.expr instanceof ConstantExpr) {
-          return childExpr.eval(null).toExpr();
-        }
-      } else if (childExpr instanceof FunctionExpr) {
-        FunctionExpr functionExpr = (FunctionExpr) childExpr;
-        List<Expr> args = functionExpr.args;
-        if (Evals.isAllConstants(args)) {
-          return childExpr.eval(null).toExpr();
-        }
-      } else if (childExpr instanceof ApplyFunctionExpr) {
-        ApplyFunctionExpr applyFunctionExpr = (ApplyFunctionExpr) childExpr;
-        List<Expr> args = applyFunctionExpr.argsExpr;
-        if (Evals.isAllConstants(args)) {
-          if (applyFunctionExpr.analyzeInputs().getFreeVariables().size() == 0) {
-            return childExpr.eval(null).toExpr();
-          }
-        }
-      }
-      return childExpr;
-    });
+    return expr.visit(PARSER_SHUTTLE);
   }
 
   /**
