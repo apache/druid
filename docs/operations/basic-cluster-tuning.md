@@ -23,7 +23,7 @@ title: "Basic cluster tuning"
   -->
 
 
-This document provides basic guidelines for configuration properties and cluster architecture considerations related to performance tuning of an Apache Druid (incubating) deployment.
+This document provides basic guidelines for configuration properties and cluster architecture considerations related to performance tuning of an Apache Druid deployment.
 
 Please note that this document provides general guidelines and rules-of-thumb: these are not absolute, universal rules for cluster tuning, and this introductory guide is not an exhaustive description of all Druid tuning properties, which are described in the [configuration reference](../configuration/index.md).
 
@@ -143,14 +143,6 @@ On the Broker, the amount of direct memory needed depends on how many merge buff
 - `druid.processing.buffer.sizeBytes` can be set to 500MB.
 - `druid.processing.numThreads`: set this to 1 (the minimum allowed)
 - `druid.processing.numMergeBuffers`: set this to the same value as on Historicals or a bit higher
-
-##### Note on the deprecated `chunkPeriod`
-
-There is one exception to the Broker not needing processing threads and processing buffers:
-
-If the deprecated `chunkPeriod` property in the [query context](../querying/query-context.md) is set, GroupBy V1 queries will use processing threads and processing buffers on the Broker.
-
-Both `chunkPeriod` and GroupBy V1 are deprecated (use GroupBy V2 instead) and will be removed in the future, we do not recommend using them. The presence of the deprecated `chunkPeriod` feature is why a minimum of 1 processing thread must be configured, even if it's unused.
 
 #### Connection pool sizing
 
@@ -397,7 +389,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 ```
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
--Djava.io.tmpdir=<something other than /tmp which might be mounted to volatile tmpfs file system>
+-Djava.io.tmpdir=<should not be volatile tmpfs and also has good read and write speed. Strongly recommended to avoid using NFS mount>
 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Dorg.jboss.logging.provider=slf4j
 -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.SLF4JLogger
@@ -415,14 +407,14 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 -XX:+ExitOnOutOfMemoryError
 -XX:+HeapDumpOnOutOfMemoryError
 -XX:HeapDumpPath=/var/logs/druid/historical.hprof
--XX:MaxDirectMemorySize=10240g
+-XX:MaxDirectMemorySize=1g
 ```
+> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate 
+for your specific scenario and be sure to test any changes in staging environments.
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
 `MaxDirectMemorySize` restricts JVM from allocating more than specified limit, by setting it to unlimited JVM restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include `druid.processing.numThreads`, `druid.processing.numMergeBuffers`, and `druid.processing.buffer.sizeBytes`.
-
-Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
 
 Additionally, for large JVM heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
 

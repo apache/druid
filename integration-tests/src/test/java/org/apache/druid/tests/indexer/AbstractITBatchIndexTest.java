@@ -19,10 +19,14 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -45,32 +49,69 @@ import java.util.function.Function;
 
 public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
+  public enum InputFormatDetails
+  {
+    ORC("orc", ".orc", "/orc"),
+    JSON("json", ".json", "/json"),
+    PARQUET("parquet", ".parquet", "/parquet");
+
+    private final String inputFormatType;
+    private final String fileExtension;
+    private final String folderSuffix;
+
+    InputFormatDetails(String inputFormatType, String fileExtension, String folderSuffix)
+    {
+      this.inputFormatType = inputFormatType;
+      this.fileExtension = fileExtension;
+      this.folderSuffix = folderSuffix;
+    }
+
+    public String getInputFormatType()
+    {
+      return inputFormatType;
+    }
+
+    public String getFileExtension()
+    {
+      return fileExtension;
+    }
+
+    public String getFolderSuffix()
+    {
+      return folderSuffix;
+    }
+  }
+
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
-  IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
   @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath,
-      boolean waitForNewVersion
+      boolean waitForNewVersion,
+      boolean runTestQueries,
+      boolean waitForSegmentsToLoad
   ) throws IOException
   {
-    doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion);
+    doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion, runTestQueries, waitForSegmentsToLoad);
   }
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       Function<String, String> taskSpecTransform,
       String queryFilePath,
-      boolean waitForNewVersion
+      boolean waitForNewVersion,
+      boolean runTestQueries,
+      boolean waitForSegmentsToLoad
   ) throws IOException
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
@@ -82,33 +123,35 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         )
     );
 
-    submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion);
-    try {
-
-      String queryResponseTemplate;
+    submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion, waitForSegmentsToLoad);
+    if (runTestQueries) {
       try {
-        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-      }
-      catch (IOException e) {
-        throw new ISE(e, "could not read query file: %s", queryFilePath);
-      }
 
-      queryResponseTemplate = StringUtils.replace(
-          queryResponseTemplate,
-          "%%DATASOURCE%%",
-          fullDatasourceName
-      );
-      queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+        String queryResponseTemplate;
+        try {
+          InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
+          queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
+        }
+        catch (IOException e) {
+          throw new ISE(e, "could not read query file: %s", queryFilePath);
+        }
 
-    }
-    catch (Exception e) {
-      LOG.error(e, "Error while testing");
-      throw new RuntimeException(e);
+        queryResponseTemplate = StringUtils.replace(
+            queryResponseTemplate,
+            "%%DATASOURCE%%",
+            fullDatasourceName
+        );
+        queryHelper.testQueriesFromString(queryResponseTemplate, 2);
+
+      }
+      catch (Exception e) {
+        LOG.error(e, "Error while testing");
+        throw new RuntimeException(e);
+      }
     }
   }
 
-  void doReindexTest(
+  protected void doReindexTest(
       String baseDataSource,
       String reindexDataSource,
       String reindexTaskFilePath,
@@ -143,7 +186,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     taskSpec = taskSpecTransform.apply(taskSpec);
 
-    submitTaskAndWait(taskSpec, fullReindexDatasourceName, false);
+    submitTaskAndWait(taskSpec, fullReindexDatasourceName, false, true);
     try {
       String queryResponseTemplate;
       try {
@@ -187,7 +230,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullDatasourceName
     );
 
-    submitTaskAndWait(taskSpec, fullDatasourceName, false);
+    submitTaskAndWait(taskSpec, fullDatasourceName, false, true);
     try {
       sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
     }
@@ -197,7 +240,12 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private void submitTaskAndWait(String taskSpec, String dataSourceName, boolean waitForNewVersion)
+  private void submitTaskAndWait(
+      String taskSpec,
+      String dataSourceName,
+      boolean waitForNewVersion,
+      boolean waitForSegmentsToLoad
+  )
   {
     final List<DataSegment> oldVersions = waitForNewVersion ? coordinator.getAvailableSegments(dataSourceName) : null;
 
@@ -223,7 +271,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       );
     }
 
-    // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
+    // IT*ParallelIndexTest do a second round of ingestion to replace segements in an existing
     // data source. For that second round we need to make sure the coordinator actually learned
     // about the new segments befor waiting for it to report that all segments are loaded; otherwise
     // this method could return too early because the coordinator is merely reporting that all the
@@ -236,19 +284,23 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
             );
 
             final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(Intervals.ETERNITY);
-            return holders
-                .stream()
-                .flatMap(holder -> holder.getObject().stream())
-                .anyMatch(chunk -> oldVersions.stream()
-                                              .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment)));
+            return FluentIterable
+                .from(holders)
+                .transformAndConcat(TimelineObjectHolder::getObject)
+                .anyMatch(
+                    chunk -> FluentIterable.from(oldVersions)
+                                           .anyMatch(oldSegment -> chunk.getObject().overshadows(oldSegment))
+                );
           },
           "See a new version"
       );
     }
 
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinator.areSegmentsLoaded(dataSourceName), "Segment Load"
-    );
+    if (waitForSegmentsToLoad) {
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinator.areSegmentsLoaded(dataSourceName), "Segment Load"
+      );
+    }
   }
 
   private long countCompleteSubTasks(final String dataSource, final boolean perfectRollup)
@@ -260,7 +312,10 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                       return t.getType().equals(SinglePhaseSubTask.TYPE);
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
-                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE);
+                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
+                             || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);
                     }
                   })
                   .count();

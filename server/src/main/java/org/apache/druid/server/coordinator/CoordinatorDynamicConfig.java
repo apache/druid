@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,15 +58,11 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
 
-  /**
-   * If true, {@link org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller} sends kill tasks for
-   * unused segments in all data sources.
-   */
+  /** If true {@link KillUnusedSegments} sends kill tasks for unused segments in all data sources. */
   private final boolean killUnusedSegmentsInAllDataSources;
 
   /**
-   * List of specific data sources for which kill tasks are sent in {@link
-   * org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller}.
+   * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
    */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
   private final Set<String> decommissioningNodes;
@@ -73,10 +70,10 @@ public class CoordinatorDynamicConfig
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@link
-   * DruidCoordinatorCleanupPendingSegments}. In other words, segments in these data sources are "protected".
+   * KillStalePendingSegments}. In other words, segments in these data sources are "protected".
    *
    * Pending segments are considered "stale" when their created_time is older than {@link
-   * DruidCoordinatorCleanupPendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
+   * KillStalePendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
    */
   private final Set<String> dataSourcesToNotKillStalePendingSegmentsIn;
 
@@ -87,11 +84,12 @@ public class CoordinatorDynamicConfig
    * See {@link LoadQueuePeon}, {@link org.apache.druid.server.coordinator.rules.LoadRule#run}
    */
   private final int maxSegmentsInNodeLoadingQueue;
+  private final boolean pauseCoordination;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
       // Keeping the legacy 'millisToWaitBeforeDeleting' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("millisToWaitBeforeDeleting")
           long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
@@ -102,21 +100,22 @@ public class CoordinatorDynamicConfig
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
       // Type is Object here so that we can support both string and list as Coordinator console can not send array of
-      // strings in the update request. See https://github.com/apache/incubator-druid/issues/3055.
+      // strings in the update request. See https://github.com/apache/druid/issues/3055.
       // Keeping the legacy 'killDataSourceWhitelist' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killDataSourceWhitelist") Object specificDataSourcesToKillUnusedSegmentsIn,
       // Keeping the legacy 'killAllDataSources' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killAllDataSources") boolean killUnusedSegmentsInAllDataSources,
       // Type is Object here so that we can support both string and list as Coordinator console can not send array of
       // strings in the update request, as well as for specificDataSourcesToKillUnusedSegmentsIn.
       // Keeping the legacy 'killPendingSegmentsSkipList' property name for backward compatibility. When the project is
-      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+      // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("killPendingSegmentsSkipList") Object dataSourcesToNotKillStalePendingSegmentsIn,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
-      @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove
+      @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove,
+      @JsonProperty("pauseCoordination") boolean pauseCoordination
   )
   {
     this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -145,6 +144,7 @@ public class CoordinatorDynamicConfig
           "can't have killUnusedSegmentsInAllDataSources and non-empty specificDataSourcesToKillUnusedSegmentsIn"
       );
     }
+    this.pauseCoordination = pauseCoordination;
   }
 
   private static Set<String> parseJsonStringOrArray(Object jsonStringOrArray)
@@ -287,6 +287,12 @@ public class CoordinatorDynamicConfig
     return decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
+  @JsonProperty
+  public boolean getPauseCoordination()
+  {
+    return pauseCoordination;
+  }
+
   @Override
   public String toString()
   {
@@ -306,6 +312,7 @@ public class CoordinatorDynamicConfig
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", decommissioningNodes=" + decommissioningNodes +
            ", decommissioningMaxPercentOfMaxSegmentsToMove=" + decommissioningMaxPercentOfMaxSegmentsToMove +
+           ", pauseCoordination=" + pauseCoordination +
            '}';
   }
 
@@ -361,6 +368,9 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(decommissioningNodes, that.decommissioningNodes)) {
       return false;
     }
+    if (pauseCoordination != that.pauseCoordination) {
+      return false;
+    }
     return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
@@ -381,7 +391,8 @@ public class CoordinatorDynamicConfig
         specificDataSourcesToKillUnusedSegmentsIn,
         dataSourcesToNotKillStalePendingSegmentsIn,
         decommissioningNodes,
-        decommissioningMaxPercentOfMaxSegmentsToMove
+        decommissioningMaxPercentOfMaxSegmentsToMove,
+        pauseCoordination
     );
   }
 
@@ -404,6 +415,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_KILL_UNUSED_SEGMENTS_IN_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
+    private static final boolean DEFAULT_PAUSE_COORDINATION = false;
 
     private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
@@ -419,6 +431,7 @@ public class CoordinatorDynamicConfig
     private Integer maxSegmentsInNodeLoadingQueue;
     private Object decommissioningNodes;
     private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
+    private Boolean pauseCoordination;
 
     public Builder()
     {
@@ -441,7 +454,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
         @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove")
-        @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove
+        @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove,
+        @JsonProperty("pauseCoordination") @Nullable Boolean pauseCoordination
     )
     {
       this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
@@ -459,6 +473,7 @@ public class CoordinatorDynamicConfig
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
       this.decommissioningNodes = decommissioningNodes;
       this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
+      this.pauseCoordination = pauseCoordination;
     }
 
     public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
@@ -539,6 +554,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withPauseCoordination(boolean pauseCoordination)
+    {
+      this.pauseCoordination = pauseCoordination;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -563,7 +584,8 @@ public class CoordinatorDynamicConfig
           decommissioningNodes,
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT
-          : decommissioningMaxPercentOfMaxSegmentsToMove
+          : decommissioningMaxPercentOfMaxSegmentsToMove,
+          pauseCoordination == null ? DEFAULT_PAUSE_COORDINATION : pauseCoordination
       );
     }
 
@@ -595,7 +617,8 @@ public class CoordinatorDynamicConfig
           decommissioningNodes == null ? defaults.getDecommissioningNodes() : decommissioningNodes,
           decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? defaults.getDecommissioningMaxPercentOfMaxSegmentsToMove()
-          : decommissioningMaxPercentOfMaxSegmentsToMove
+          : decommissioningMaxPercentOfMaxSegmentsToMove,
+          pauseCoordination == null ? defaults.getPauseCoordination() : pauseCoordination
       );
     }
   }

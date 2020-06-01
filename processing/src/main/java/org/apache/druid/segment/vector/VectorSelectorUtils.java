@@ -22,6 +22,7 @@ package org.apache.druid.segment.vector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 
 public class VectorSelectorUtils
 {
@@ -57,6 +58,7 @@ public class VectorSelectorUtils
         final int row = i + startOffset;
         nullIterator.advanceIfNeeded(row);
         if (!nullIterator.hasNext()) {
+          Arrays.fill(retVal, i, offset.getCurrentVectorSize(), false);
           break;
         }
         retVal[i] = row == nullIterator.peekNext();
@@ -71,6 +73,7 @@ public class VectorSelectorUtils
         final int row = currentOffsets[i];
         nullIterator.advanceIfNeeded(row);
         if (!nullIterator.hasNext()) {
+          Arrays.fill(retVal, i, offset.getCurrentVectorSize(), false);
           break;
         }
         retVal[i] = row == nullIterator.peekNext();

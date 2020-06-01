@@ -115,7 +115,7 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
             split.get(),
             httpAuthenticationUsername,
             httpAuthenticationPasswordProvider
-        )),
+        )).iterator(),
         temporaryDirectory
     );
   }

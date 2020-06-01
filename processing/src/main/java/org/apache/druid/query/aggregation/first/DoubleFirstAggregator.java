@@ -20,42 +20,29 @@
 package org.apache.druid.query.aggregation.first;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
-public class DoubleFirstAggregator implements Aggregator
+public class DoubleFirstAggregator extends NumericFirstAggregator<BaseDoubleColumnValueSelector>
 {
-
-  private final BaseDoubleColumnValueSelector valueSelector;
-  private final BaseLongColumnValueSelector timeSelector;
-
-  protected long firstTime;
-  protected double firstValue;
+  double firstValue;
 
   public DoubleFirstAggregator(BaseLongColumnValueSelector timeSelector, BaseDoubleColumnValueSelector valueSelector)
   {
-    this.valueSelector = valueSelector;
-    this.timeSelector = timeSelector;
-
-    firstTime = Long.MAX_VALUE;
+    super(timeSelector, valueSelector);
     firstValue = 0;
   }
 
   @Override
-  public void aggregate()
+  void setCurrentValue()
   {
-    long time = timeSelector.getLong();
-    if (time < firstTime) {
-      firstTime = time;
-      firstValue = valueSelector.getDouble();
-    }
+    firstValue = valueSelector.getDouble();
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(firstTime, firstValue);
+    return new SerializablePair<>(firstTime, rhsNull ? null : firstValue);
   }
 
   @Override
@@ -74,12 +61,6 @@ public class DoubleFirstAggregator implements Aggregator
   public long getLong()
   {
     return (long) firstValue;
-  }
-
-  @Override
-  public void close()
-  {
-
   }
 }
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.orc.guice.Orc;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -68,7 +69,7 @@ public class OrcExtensionsModule implements DruidModule
     conf.setClassLoader(getClass().getClassLoader());
 
     // Ensure that FileSystem class level initialization happens with correct CL
-    // See https://github.com/apache/incubator-druid/issues/1714
+    // See https://github.com/apache/druid/issues/1714
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -89,6 +90,6 @@ public class OrcExtensionsModule implements DruidModule
       }
     }
 
-    binder.bind(Configuration.class).toInstance(conf);
+    binder.bind(Configuration.class).annotatedWith(Orc.class).toInstance(conf);
   }
 }

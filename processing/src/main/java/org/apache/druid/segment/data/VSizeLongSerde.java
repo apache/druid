@@ -37,8 +37,8 @@ import java.nio.ByteOrder;
 public class VSizeLongSerde
 {
 
-  public static final int SUPPORTED_SIZES[] = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
-  public static final byte EMPTY[] = {0, 0, 0, 0};
+  public static final int[] SUPPORTED_SIZES = {1, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
+  public static final byte[] EMPTY = {0, 0, 0, 0};
 
   public static int getBitsForMax(long value)
   {

@@ -50,6 +50,7 @@ export interface RunButtonProps {
   queryContext: QueryContext;
   onQueryContextChange: (newQueryContext: QueryContext) => void;
   onRun: (() => void) | undefined;
+  loading: boolean;
   onExplain: (() => void) | undefined;
   onEditContext: () => void;
   onHistory: () => void;
@@ -142,14 +143,14 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           />
         )}
         {runeMode && (
-          <MenuItem icon={IconNames.PRINT} text="Pretty print JSON" onClick={onPrettier} />
+          <MenuItem icon={IconNames.ALIGN_LEFT} text="Prettify JSON" onClick={onPrettier} />
         )}
       </Menu>
     );
   }
 
   render(): JSX.Element {
-    const { runeMode, onRun } = this.props;
+    const { runeMode, onRun, loading } = this.props;
     const runButtonText = 'Run' + (runeMode ? 'e' : '');
 
     return (
@@ -157,6 +158,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         {onRun ? (
           <Tooltip content="Control + Enter" hoverOpenDelay={900}>
             <Button
+              disabled={loading}
               icon={IconNames.CARET_RIGHT}
               onClick={this.handleRun}
               text={runButtonText}

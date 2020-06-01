@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.parquet.avro.ParquetAvroHadoopInputRowParser;
+import org.apache.druid.data.input.parquet.guice.Parquet;
 import org.apache.druid.data.input.parquet.simple.ParquetHadoopInputRowParser;
 import org.apache.druid.data.input.parquet.simple.ParquetParseSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -77,7 +78,7 @@ public class ParquetExtensionsModule implements DruidModule
     conf.setClassLoader(getClass().getClassLoader());
 
     // Ensure that FileSystem class level initialization happens with correct CL
-    // See https://github.com/apache/incubator-druid/issues/1714
+    // See https://github.com/apache/druid/issues/1714
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -98,6 +99,6 @@ public class ParquetExtensionsModule implements DruidModule
       }
     }
 
-    binder.bind(Configuration.class).toInstance(conf);
+    binder.bind(Configuration.class).annotatedWith(Parquet.class).toInstance(conf);
   }
 }

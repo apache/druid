@@ -113,7 +113,7 @@ public class Bucket
     return size;
   }
 
-  public static final Pair<Bucket, byte[]> fromGroupKey(byte[] keyBytes)
+  public static Pair<Bucket, byte[]> fromGroupKey(byte[] keyBytes)
   {
     ByteBuffer buf = ByteBuffer.wrap(keyBytes);
 

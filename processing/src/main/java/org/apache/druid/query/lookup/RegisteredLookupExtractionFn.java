@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 
@@ -145,11 +146,11 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
-          final LookupExtractor factory = Preconditions.checkNotNull(
-              manager.get(getLookup()),
-              "Lookup [%s] not found",
-              getLookup()
-          ).getLookupExtractorFactory().get();
+          final LookupExtractor factory =
+              manager.get(getLookup())
+                     .orElseThrow(() -> new ISE("Lookup [%s] not found", getLookup()))
+                     .getLookupExtractorFactory()
+                     .get();
 
           delegate = new LookupExtractionFn(
               factory,

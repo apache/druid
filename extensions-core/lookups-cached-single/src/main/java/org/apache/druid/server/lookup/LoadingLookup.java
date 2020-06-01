@@ -29,6 +29,7 @@ import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -91,7 +92,7 @@ public class LoadingLookup extends LookupExtractor
       // valueEquivalent is null only for SQL Compatible Null Behavior
       // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
       // null value maps to empty list when SQL Compatible
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
     final List<String> retList;
     try {
@@ -100,25 +101,20 @@ public class LoadingLookup extends LookupExtractor
     }
     catch (ExecutionException e) {
       LOGGER.debug("list of keys not found for value [%s]", value);
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList();
     }
   }
 
-  public synchronized void close()
+  @Override
+  public boolean canIterate()
   {
-    if (isOpen.getAndSet(false)) {
-      LOGGER.info("Closing loading cache [%s]", id);
-      loadingCache.close();
-      reverseLoadingCache.close();
-    } else {
-      LOGGER.info("Closing already closed lookup");
-      return;
-    }
+    return false;
   }
 
-  public boolean isOpen()
+  @Override
+  public Iterable<Map.Entry<String, String>> iterable()
   {
-    return isOpen.get();
+    throw new UnsupportedOperationException("Cannot iterate");
   }
 
   @Override
@@ -143,6 +139,22 @@ public class LoadingLookup extends LookupExtractor
       // avoid returning null and return an empty string to cache it.
       return NullHandling.nullToEmptyIfNeeded(dataFetcher.fetch(key));
     }
+  }
+
+  public synchronized void close()
+  {
+    if (isOpen.getAndSet(false)) {
+      LOGGER.info("Closing loading cache [%s]", id);
+      loadingCache.close();
+      reverseLoadingCache.close();
+    } else {
+      LOGGER.info("Closing already closed lookup");
+    }
+  }
+
+  public boolean isOpen()
+  {
+    return isOpen.get();
   }
 
   private class UnapplyCallable implements Callable<List<String>>

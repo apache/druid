@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
@@ -33,15 +34,17 @@ import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
@@ -50,6 +53,7 @@ import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.http.BrokerResource;
+import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
@@ -60,8 +64,6 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 
-/**
- */
 @Command(
     name = "broker",
     description = "Runs a broker node, see https://druid.apache.org/docs/latest/Broker.html for a description"
@@ -82,6 +84,8 @@ public class CliBroker extends ServerRunnable
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new SegmentWranglerModule(),
+        new JoinableFactoryModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
               TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
@@ -120,14 +124,17 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
 
-
-          bindAnnouncer(
+          bindNodeRoleAndAnnouncer(
               binder,
-              DiscoverySideEffectsProvider.builder(NodeType.BROKER)
-                                          .serviceClasses(ImmutableList.of(LookupNodeService.class))
-                                          .useLegacyAnnouncer(true)
-                                          .build()
+              DiscoverySideEffectsProvider
+                  .builder(NodeRole.BROKER)
+                  .serviceClasses(ImmutableList.of(LookupNodeService.class))
+                  .useLegacyAnnouncer(true)
+                  .build()
           );
+
+          Jerseys.addResource(binder, SelfDiscoveryResource.class);
+          LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
         },
         new LookupModule(),
         new SqlModule()

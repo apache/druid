@@ -62,6 +62,9 @@ public class DoublesSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public synchronized void aggregate(final ByteBuffer buffer, final int position)
   {
+    if (selector.isNull()) {
+      return;
+    }
     final UpdateDoublesSketch sketch = sketches.get(buffer).get(position);
     sketch.update(selector.getDouble());
   }

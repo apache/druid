@@ -138,6 +138,12 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
     return targetRowsPerSegment;
   }
 
+  @Override
+  public SecondaryPartitionType getType()
+  {
+    return SecondaryPartitionType.RANGE;
+  }
+
   @JsonIgnore
   @Override
   @NotNull
@@ -175,7 +181,11 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
   @Override
   public String getForceGuaranteedRollupIncompatiblityReason()
   {
-    return NAME + " partitions unsupported";
+    if (getPartitionDimension() == null) {
+      return PARITION_DIMENSION + " must be specified";
+    }
+
+    return FORCE_GUARANTEED_ROLLUP_COMPATIBLE;
   }
 
   @Override

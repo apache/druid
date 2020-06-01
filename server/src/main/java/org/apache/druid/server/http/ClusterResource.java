@@ -28,7 +28,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -62,26 +62,26 @@ public class ClusterResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getClusterServers(@QueryParam("full") boolean full)
   {
-    ImmutableMap.Builder<NodeType, Object> entityBuilder = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<NodeRole, Object> entityBuilder = new ImmutableMap.Builder<>();
 
-    entityBuilder.put(NodeType.COORDINATOR, getNodes(NodeType.COORDINATOR, full));
-    entityBuilder.put(NodeType.OVERLORD, getNodes(NodeType.OVERLORD, full));
-    entityBuilder.put(NodeType.BROKER, getNodes(NodeType.BROKER, full));
-    entityBuilder.put(NodeType.HISTORICAL, getNodes(NodeType.HISTORICAL, full));
+    entityBuilder.put(NodeRole.COORDINATOR, getNodes(NodeRole.COORDINATOR, full));
+    entityBuilder.put(NodeRole.OVERLORD, getNodes(NodeRole.OVERLORD, full));
+    entityBuilder.put(NodeRole.BROKER, getNodes(NodeRole.BROKER, full));
+    entityBuilder.put(NodeRole.HISTORICAL, getNodes(NodeRole.HISTORICAL, full));
 
-    Collection<Object> mmNodes = getNodes(NodeType.MIDDLE_MANAGER, full);
+    Collection<Object> mmNodes = getNodes(NodeRole.MIDDLE_MANAGER, full);
     if (!mmNodes.isEmpty()) {
-      entityBuilder.put(NodeType.MIDDLE_MANAGER, mmNodes);
+      entityBuilder.put(NodeRole.MIDDLE_MANAGER, mmNodes);
     }
 
-    Collection<Object> indexerNodes = getNodes(NodeType.INDEXER, full);
+    Collection<Object> indexerNodes = getNodes(NodeRole.INDEXER, full);
     if (!indexerNodes.isEmpty()) {
-      entityBuilder.put(NodeType.INDEXER, indexerNodes);
+      entityBuilder.put(NodeRole.INDEXER, indexerNodes);
     }
 
-    Collection<Object> routerNodes = getNodes(NodeType.ROUTER, full);
+    Collection<Object> routerNodes = getNodes(NodeRole.ROUTER, full);
     if (!routerNodes.isEmpty()) {
-      entityBuilder.put(NodeType.ROUTER, routerNodes);
+      entityBuilder.put(NodeRole.ROUTER, routerNodes);
     }
 
     return Response.status(Response.Status.OK).entity(entityBuilder.build()).build();
@@ -89,22 +89,22 @@ public class ClusterResource
 
   @GET
   @Produces({MediaType.APPLICATION_JSON})
-  @Path("/{nodeType}")
-  public Response getClusterServers(@PathParam("nodeType") NodeType nodeType, @QueryParam("full") boolean full)
+  @Path("/{nodeRole}")
+  public Response getClusterServers(@PathParam("nodeRole") NodeRole nodeRole, @QueryParam("full") boolean full)
   {
-    if (nodeType == null) {
+    if (nodeRole == null) {
       return Response.serverError()
                      .status(Response.Status.BAD_REQUEST)
-                     .entity("Invalid nodeType of null. Valid node types are " + Arrays.toString(NodeType.values()))
+                     .entity("Invalid nodeRole of null. Valid node roles are " + Arrays.toString(NodeRole.values()))
                      .build();
     } else {
-      return Response.status(Response.Status.OK).entity(getNodes(nodeType, full)).build();
+      return Response.status(Response.Status.OK).entity(getNodes(nodeRole, full)).build();
     }
   }
 
-  private Collection<Object> getNodes(NodeType nodeType, boolean full)
+  private Collection<Object> getNodes(NodeRole nodeRole, boolean full)
   {
-    Collection<DiscoveryDruidNode> discoveryDruidNodes = druidNodeDiscoveryProvider.getForNodeType(nodeType)
+    Collection<DiscoveryDruidNode> discoveryDruidNodes = druidNodeDiscoveryProvider.getForNodeRole(nodeRole)
                                                                                    .getAllNodes();
     if (full) {
       return (Collection) discoveryDruidNodes;

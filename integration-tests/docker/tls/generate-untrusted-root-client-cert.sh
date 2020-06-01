@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 cat <<EOT > csr_another_root.conf
 [req]
@@ -48,7 +50,7 @@ DNS.2 = localhost
 EOT
 
 # Generate a client certificate for this machine
-openssl genrsa -out client_another_root.key 1024 -sha256
+openssl genrsa -out client_another_root.key 1024
 openssl req -new -out client_another_root.csr -key client_another_root.key -reqexts req_ext -config csr_another_root.conf
 openssl x509 -req -days 3650 -in client_another_root.csr -CA untrusted_root.pem -CAkey untrusted_root.key -set_serial 0x11111114 -out client_another_root.pem -sha256 -extfile csr_another_root.conf -extensions req_ext
 

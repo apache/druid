@@ -24,7 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A WindowedSegment represents a segment plus the list of intervals inside it which contribute to a timeline.
@@ -47,6 +49,11 @@ public class WindowedSegmentId
     this.intervals = Preconditions.checkNotNull(intervals, "null intervals");
   }
 
+  public void addInterval(Interval interval)
+  {
+    this.intervals.add(interval);
+  }
+
   @JsonProperty
   public String getSegmentId()
   {
@@ -56,6 +63,35 @@ public class WindowedSegmentId
   @JsonProperty
   public List<Interval> getIntervals()
   {
-    return intervals;
+    return Collections.unmodifiableList(intervals);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    WindowedSegmentId segmentId1 = (WindowedSegmentId) o;
+    return Objects.equals(segmentId, segmentId1.segmentId) &&
+           Objects.equals(intervals, segmentId1.intervals);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(segmentId, intervals);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowedSegmentId{" +
+           "segmentId='" + segmentId + '\'' +
+           ", intervals=" + intervals +
+           '}';
   }
 }

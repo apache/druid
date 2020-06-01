@@ -51,6 +51,11 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
   private static final Logger LOG = new Logger(ITRealtimeIndexTaskTest.class);
   private static final String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_index_task.json";
   private static final String REALTIME_QUERIES_RESOURCE = "/indexer/wikipedia_realtime_index_queries.json";
+  /**
+   * The expected number of rows ingested for this test.
+   * The total number of rows of raw data is 22, but two rows will be rolled up into one row.
+   */
+  private static final int EXPECTED_NUM_ROWS = 21;
 
   @Test
   public void testRealtimeIndexTask()
@@ -68,6 +73,12 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
   String getQueriesResource()
   {
     return REALTIME_QUERIES_RESOURCE;
+  }
+
+  @Override
+  int getNumExpectedRowsIngested()
+  {
+    return EXPECTED_NUM_ROWS;
   }
 
   @Override

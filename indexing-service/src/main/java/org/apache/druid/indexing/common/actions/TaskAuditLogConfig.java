@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * The configuration for task audit logging.
- * This class will be removed in future releases. See https://github.com/apache/incubator-druid/issues/5859.
+ * This class will be removed in future releases. See https://github.com/apache/druid/issues/5859.
  */
 @Deprecated
 public class TaskAuditLogConfig

@@ -153,14 +153,26 @@ public class ParallelIndexSupervisorTaskSerdeTest
   }
 
   @Test
-  public void forceGuaranteedRollupWithSingleDimPartitionsInvalid()
+  public void forceGuaranteedRollupWithSingleDimPartitionsMissingDimension()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(
-        "forceGuaranteedRollup is incompatible with partitionsSpec: single_dim partitions unsupported"
-    );
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("partitionDimension must be specified");
 
     new ParallelIndexSupervisorTaskBuilder()
+        .ingestionSpec(
+            new ParallelIndexIngestionSpecBuilder()
+                .forceGuaranteedRollup(true)
+                .partitionsSpec(new SingleDimensionPartitionsSpec(1, null, null, true))
+                .inputIntervals(INTERVALS)
+                .build()
+        )
+        .build();
+  }
+
+  @Test
+  public void forceGuaranteedRollupWithSingleDimPartitionsValid()
+  {
+    ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTaskBuilder()
         .ingestionSpec(
             new ParallelIndexIngestionSpecBuilder()
                 .forceGuaranteedRollup(true)
@@ -169,6 +181,9 @@ public class ParallelIndexSupervisorTaskSerdeTest
                 .build()
         )
         .build();
+
+    PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
+    Assert.assertThat(partitionsSpec, CoreMatchers.instanceOf(SingleDimensionPartitionsSpec.class));
   }
 
   private static class ParallelIndexSupervisorTaskBuilder

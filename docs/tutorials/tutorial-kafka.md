@@ -26,7 +26,7 @@ sidebar_label: "Load from Apache Kafka"
 
 ## Getting started
 
-This tutorial demonstrates how to load data into Apache Druid (incubating) from a Kafka stream, using Druid's Kafka indexing service.
+This tutorial demonstrates how to load data into Apache Druid from a Kafka stream, using Druid's Kafka indexing service.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in
 the [quickstart](index.html) using the `micro-quickstart` single-machine configuration and have it
@@ -89,7 +89,7 @@ Select `Apache Kafka` and click `Connect data`.
 
 Enter `localhost:9092` as the bootstrap server and `wikipedia` as the topic.
 
-Click `Preview` and make sure that the data you are seeing is correct.
+Click `Apply` and make sure that the data you are seeing is correct.
 
 Once the data is located, you can click "Next: Parse data" to go to the next step.
 
@@ -183,38 +183,32 @@ Paste in this spec and click `Submit`.
   "spec" : {
     "dataSchema": {
       "dataSource": "wikipedia",
-      "parser": {
-        "type": "string",
-        "parseSpec": {
-          "format": "json",
-          "timestampSpec": {
-            "column": "time",
-            "format": "auto"
-          },
-          "dimensionsSpec": {
-            "dimensions": [
-              "channel",
-              "cityName",
-              "comment",
-              "countryIsoCode",
-              "countryName",
-              "isAnonymous",
-              "isMinor",
-              "isNew",
-              "isRobot",
-              "isUnpatrolled",
-              "metroCode",
-              "namespace",
-              "page",
-              "regionIsoCode",
-              "regionName",
-              "user",
-              { "name": "added", "type": "long" },
-              { "name": "deleted", "type": "long" },
-              { "name": "delta", "type": "long" }
-            ]
-          }
-        }
+      "timestampSpec": {
+        "column": "time",
+        "format": "auto"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          "channel",
+          "cityName",
+          "comment",
+          "countryIsoCode",
+          "countryName",
+          "isAnonymous",
+          "isMinor",
+          "isNew",
+          "isRobot",
+          "isUnpatrolled",
+          "metroCode",
+          "namespace",
+          "page",
+          "regionIsoCode",
+          "regionName",
+          "user",
+          { "name": "added", "type": "long" },
+          { "name": "deleted", "type": "long" },
+          { "name": "delta", "type": "long" }
+        ]
       },
       "metricsSpec" : [],
       "granularitySpec": {
@@ -230,6 +224,9 @@ Paste in this spec and click `Submit`.
     },
     "ioConfig": {
       "topic": "wikipedia",
+      "inputFormat": {
+        "type": "json"
+      },
       "replicas": 2,
       "taskDuration": "PT10M",
       "completionTimeout": "PT20M",
@@ -267,7 +264,14 @@ Please follow the [query tutorial](../tutorials/tutorial-query.md) to run some e
 
 ## Cleanup
 
-If you wish to go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package, as the other tutorials will write to the same "wikipedia" datasource.
+To go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory in the Druid home, as the other tutorials will write to the same "wikipedia" datasource.
+
+You should additionally clear out any Kafka state. Do so by shutting down the Kafka broker with CTRL-C before stopping ZooKeeper and the Druid services, and then deleting the Kafka log directory at `/tmp/kafka-logs`:
+
+```bash
+rm -rf /tmp/kafka-logs
+```
+
 
 ## Further reading
 

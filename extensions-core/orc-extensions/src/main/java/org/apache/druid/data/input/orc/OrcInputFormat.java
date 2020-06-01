@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.data.input.orc.guice.Orc;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.hadoop.conf.Configuration;
 
@@ -42,7 +43,7 @@ public class OrcInputFormat extends NestedInputFormat
   public OrcInputFormat(
       @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
       @JsonProperty("binaryAsString") @Nullable Boolean binaryAsString,
-      @JacksonInject Configuration conf
+      @JacksonInject @Orc Configuration conf
   )
   {
     super(flattenSpec);

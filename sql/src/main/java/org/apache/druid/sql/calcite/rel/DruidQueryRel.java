@@ -34,23 +34,13 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
-import javax.annotation.Nonnull;
-import java.util.List;
+import java.util.Set;
 
 /**
- * DruidRel that uses a "table" dataSource.
+ * DruidRel that operates on top of a {@link DruidTable} directly (no joining or subqueries).
  */
 public class DruidQueryRel extends DruidRel<DruidQueryRel>
 {
-  // Factors used for computing cost (see computeSelfCost). These are intended to encourage pushing down filters
-  // and limits through stacks of nested queries when possible.
-  private static final double COST_BASE = 1.0;
-  private static final double COST_PER_COLUMN = 0.001;
-  private static final double COST_FILTER_MULTIPLIER = 0.1;
-  private static final double COST_GROUPING_MULTIPLIER = 0.5;
-  private static final double COST_LIMIT_MULTIPLIER = 0.5;
-  private static final double COST_HAVING_MULTIPLIER = 5.0;
-
   private final RelOptTable table;
   private final DruidTable druidTable;
   private final PartialDruidQuery partialQuery;
@@ -91,7 +81,6 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  @Nonnull
   public DruidQuery toDruidQuery(final boolean finalizeAggregations)
   {
     return partialQuery.build(
@@ -123,9 +112,9 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  public List<String> getDataSourceNames()
+  public Set<String> getDataSourceNames()
   {
-    return druidTable.getDataSource().getNames();
+    return druidTable.getDataSource().getTableNames();
   }
 
   @Override
@@ -148,12 +137,6 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  public int getQueryCount()
-  {
-    return 1;
-  }
-
-  @Override
   public Sequence<Object[]> runQuery()
   {
     // runQuery doesn't need to finalize aggregations, because the fact that runQuery is happening suggests this
@@ -161,6 +144,11 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
     // finalize aggregations for the outermost query even if we don't explicitly ask it to.
 
     return getQueryMaker().runQuery(toDruidQuery(false));
+  }
+
+  public DruidTable getDruidTable()
+  {
+    return druidTable;
   }
 
   @Override
@@ -195,38 +183,6 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   @Override
   public RelOptCost computeSelfCost(final RelOptPlanner planner, final RelMetadataQuery mq)
   {
-    double cost = COST_BASE;
-
-    if (partialQuery.getSelectProject() != null) {
-      cost += COST_PER_COLUMN * partialQuery.getSelectProject().getChildExps().size();
-    }
-
-    if (partialQuery.getWhereFilter() != null) {
-      cost *= COST_FILTER_MULTIPLIER;
-    }
-
-    if (partialQuery.getAggregate() != null) {
-      cost *= COST_GROUPING_MULTIPLIER;
-      cost += COST_PER_COLUMN * partialQuery.getAggregate().getGroupSet().size();
-      cost += COST_PER_COLUMN * partialQuery.getAggregate().getAggCallList().size();
-    }
-
-    if (partialQuery.getAggregateProject() != null) {
-      cost += COST_PER_COLUMN * partialQuery.getAggregateProject().getChildExps().size();
-    }
-
-    if (partialQuery.getSort() != null && partialQuery.getSort().fetch != null) {
-      cost *= COST_LIMIT_MULTIPLIER;
-    }
-
-    if (partialQuery.getSortProject() != null) {
-      cost += COST_PER_COLUMN * partialQuery.getSortProject().getChildExps().size();
-    }
-
-    if (partialQuery.getHavingFilter() != null) {
-      cost *= COST_HAVING_MULTIPLIER;
-    }
-
-    return planner.getCostFactory().makeCost(cost, 0, 0);
+    return planner.getCostFactory().makeCost(partialQuery.estimateCost(), 0, 0);
   }
 }

@@ -193,8 +193,7 @@ public class DerivativeDataSourceManager
     
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> newDerivatives = new ConcurrentHashMap<>();
     for (DerivativeDataSource derivative : derivativeDataSources) {
-      newDerivatives.putIfAbsent(derivative.getBaseDataSource(), new TreeSet<>());
-      newDerivatives.get(derivative.getBaseDataSource()).add(derivative);
+      newDerivatives.computeIfAbsent(derivative.getBaseDataSource(), ds -> new TreeSet<>()).add(derivative);
     }
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> current;
     do {
@@ -246,7 +245,7 @@ public class DerivativeDataSourceManager
                       return null;
                     }
                 )
-                .first();
+                .list();
             return intervals.isEmpty() ? 0L : totalSize / intervals.size();
           }
         }

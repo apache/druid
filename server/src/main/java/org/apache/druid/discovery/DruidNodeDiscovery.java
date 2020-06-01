@@ -22,7 +22,7 @@ package org.apache.druid.discovery;
 import java.util.Collection;
 
 /**
- * Interface for discovering Druid Nodes announced by DruidNodeAnnouncer.
+ * Interface for discovering Druid nodes announced by {@link DruidNodeAnnouncer}.
  */
 public interface DruidNodeDiscovery
 {
@@ -30,9 +30,9 @@ public interface DruidNodeDiscovery
   void registerListener(Listener listener);
 
   /**
-   * Listener for watching nodes in a DruidNodeDiscovery instance obtained via DruidNodeDiscoveryProvider.getXXX().
-   * DruidNodeDiscovery implementation should assume that Listener is not threadsafe and never call methods in
-   * Listener concurrently.
+   * Listener for watching nodes in a DruidNodeDiscovery instance obtained via {@link
+   * DruidNodeDiscoveryProvider}.getXXX(). DruidNodeDiscovery implementation should assume that Listener is not
+   * thread-safe and never call methods in Listener concurrently.
    *
    * Implementation of Listener must ensure to not do any time consuming work or block in any of the methods.
    */

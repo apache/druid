@@ -29,7 +29,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.ISE;
@@ -43,6 +42,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -180,7 +180,7 @@ public class DefaultLimitSpec implements LimitSpec
 
     // Materialize the Comparator first for fast-fail error checking.
     final Ordering<ResultRow> ordering = makeComparator(
-        query.getResultRowPositionLookup(),
+        query.getResultRowSignature(),
         query.getResultRowHasTimestamp(),
         query.getDimensions(),
         query.getAggregatorSpecs(),
@@ -222,7 +222,7 @@ public class DefaultLimitSpec implements LimitSpec
   }
 
   private Ordering<ResultRow> makeComparator(
-      Object2IntMap<String> rowOrderLookup,
+      RowSignature rowSignature,
       boolean hasTimestamp,
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggs,
@@ -265,7 +265,7 @@ public class DefaultLimitSpec implements LimitSpec
       String columnName = columnSpec.getDimension();
       Ordering<ResultRow> nextOrdering = null;
 
-      final int columnIndex = rowOrderLookup.applyAsInt(columnName);
+      final int columnIndex = rowSignature.indexOf(columnName);
 
       if (columnIndex >= 0) {
         if (postAggregatorsMap.containsKey(columnName)) {

@@ -20,42 +20,29 @@
 package org.apache.druid.query.aggregation.last;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 
-public class DoubleLastAggregator implements Aggregator
+public class DoubleLastAggregator extends NumericLastAggregator<BaseDoubleColumnValueSelector>
 {
-
-  private final BaseDoubleColumnValueSelector valueSelector;
-  private final BaseLongColumnValueSelector timeSelector;
-
-  protected long lastTime;
-  protected double lastValue;
+  double lastValue;
 
   public DoubleLastAggregator(BaseLongColumnValueSelector timeSelector, BaseDoubleColumnValueSelector valueSelector)
   {
-    this.valueSelector = valueSelector;
-    this.timeSelector = timeSelector;
-
-    lastTime = Long.MIN_VALUE;
+    super(timeSelector, valueSelector);
     lastValue = 0;
   }
 
   @Override
-  public void aggregate()
+  void setCurrentValue()
   {
-    long time = timeSelector.getLong();
-    if (time >= lastTime) {
-      lastTime = time;
-      lastValue = valueSelector.getDouble();
-    }
+    lastValue = valueSelector.getDouble();
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, lastValue);
+    return new SerializablePair<>(lastTime, rhsNull ? null : lastValue);
   }
 
   @Override
@@ -74,11 +61,5 @@ public class DoubleLastAggregator implements Aggregator
   public double getDouble()
   {
     return lastValue;
-  }
-
-  @Override
-  public void close()
-  {
-
   }
 }

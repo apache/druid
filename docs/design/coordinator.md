@@ -25,7 +25,7 @@ title: "Coordinator Process"
 
 ### Configuration
 
-For Apache Druid (incubating) Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.html#coordinator).
+For Apache Druid Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.html#coordinator).
 
 ### HTTP endpoints
 
@@ -33,11 +33,24 @@ For a list of API endpoints supported by the Coordinator, see [Coordinator API](
 
 ### Overview
 
-The Druid Coordinator process is primarily responsible for segment management and distribution. More specifically, the Druid Coordinator process communicates to Historical processes to load or drop segments based on configurations. The Druid Coordinator is responsible for loading new segments, dropping outdated segments, managing segment replication, and balancing segment load.
+The Druid Coordinator process is primarily responsible for segment management and distribution. More specifically, the
+Druid Coordinator process communicates to Historical processes to load or drop segments based on configurations. The
+Druid Coordinator is responsible for loading new segments, dropping outdated segments, ensuring that segments are
+"replicated" (that is, loaded on multiple different Historical nodes) proper (configured) number of times, and moving
+("balancing") segments between Historical nodes to keep the latter evenly loaded.
 
-The Druid Coordinator runs periodically and the time between each run is a configurable parameter. Each time the Druid Coordinator runs, it assesses the current state of the cluster before deciding on the appropriate actions to take. Similar to the Broker and Historical processes, the Druid Coordinator maintains a connection to a Zookeeper cluster for current cluster information. The Coordinator also maintains a connection to a database containing information about available segments and rules. Available segments are stored in a segment table and list all segments that should be loaded in the cluster. Rules are stored in a rule table and indicate how segments should be handled.
+The Druid Coordinator runs its duties periodically and the time between each run is a configurable parameter. On each
+run, the Coordinator assesses the current state of the cluster before deciding on the appropriate actions to take.
+Similar to the Broker and Historical processes, the Druid Coordinator maintains a connection to a Zookeeper cluster for
+current cluster information. The Coordinator also maintains a connection to a database containing information about
+"used" segments (that is, the segments that *should* be loaded in the cluster) and the loading rules.
 
-Before any unassigned segments are serviced by Historical processes, the available Historical processes for each tier are first sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always assigned to the processes with least capacity to maintain a level of balance between processes. The Coordinator does not directly communicate with a historical process when assigning it a new segment; instead the Coordinator creates some temporary information about the new segment under load queue path of the historical process. Once this request is seen, the historical process will load the segment and begin servicing it.
+Before any unassigned segments are serviced by Historical processes, the Historical processes for each tier are first
+sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always
+assigned to the processes with least capacity to maintain a level of balance between processes. The Coordinator does not
+directly communicate with a historical process when assigning it a new segment; instead the Coordinator creates some
+temporary information about the new segment under load queue path of the historical process. Once this request is seen,
+the historical process will load the segment and begin servicing it.
 
 ### Running
 
@@ -51,7 +64,12 @@ Segments can be automatically loaded and dropped from the cluster based on a set
 
 ### Cleaning up segments
 
-Each run, the Druid coordinator compares the list of available database segments in the database with the current segments in the cluster. Segments that are not in the database but are still being served in the cluster are flagged and appended to a removal list. Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are also dropped.
+On each run, the Druid Coordinator compares the set of used segments in the database with the segments served by some
+Historical nodes in the cluster. Coordinator sends requests to Historical nodes to unload unused segments or segments
+that are removed from the database.
+
+Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are
+marked as unused. During the next Coordinator's run, they will be unloaded from Historical nodes in the cluster.
 
 ### Segment availability
 

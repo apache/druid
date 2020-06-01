@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 cat <<EOT > expired_csr.conf
 [req]
@@ -116,7 +118,7 @@ rm -rf certs.seq
 echo 11111115 > certs.seq
 
 # Generate a client certificate for this machine
-openssl genrsa -out expired_client.key 1024 -sha256
+openssl genrsa -out expired_client.key 1024
 openssl req -new -out expired_client.csr -key expired_client.key -reqexts req_ext -config expired_csr.conf
 openssl ca -batch -config root_for_expired_client.cnf -policy policy_loose -out expired_client.pem -outdir . -startdate 101010000000Z -enddate 101011000000Z -extensions v3_ca -cert root.pem -keyfile root.key -infiles expired_client.csr
 

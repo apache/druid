@@ -31,7 +31,9 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.lookup.LookupsState;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
@@ -40,8 +42,8 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -73,9 +75,14 @@ public class CoordinatorResourceTestClient
     );
   }
 
-  private String getMetadataSegmentsURL(String dataSource)
+  private String getSegmentsMetadataURL(String dataSource)
   {
     return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
+  }
+
+  private String getFullSegmentsMetadataURL(String dataSource)
+  {
+    return StringUtils.format("%smetadata/datasources/%s/segments?full", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
   private String getIntervalsURL(String dataSource)
@@ -93,12 +100,12 @@ public class CoordinatorResourceTestClient
     return StringUtils.format("%s%s", getCoordinatorURL(), "loadstatus");
   }
 
-  // return a list of the segment dates for the specified datasource
-  public List<String> getMetadataSegments(final String dataSource)
+  /** return a list of the segment dates for the specified data source */
+  public List<String> getSegments(final String dataSource)
   {
-    ArrayList<String> segments;
+    List<String> segments;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, getMetadataSegmentsURL(dataSource));
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getSegmentsMetadataURL(dataSource));
 
       segments = jsonMapper.readValue(
           response.getContent(), new TypeReference<List<String>>()
@@ -112,10 +119,28 @@ public class CoordinatorResourceTestClient
     return segments;
   }
 
+  public List<DataSegment> getFullSegmentsMetadata(final String dataSource)
+  {
+    List<DataSegment> segments;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsMetadataURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<DataSegment>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return segments;
+  }
+
   // return a list of the segment dates for the specified datasource
   public List<String> getSegmentIntervals(final String dataSource)
   {
-    ArrayList<String> segments;
+    List<String> segments;
     try {
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
 
@@ -166,6 +191,14 @@ public class CoordinatorResourceTestClient
     return status;
   }
 
+  /**
+   * Warning: This API reads segments from {@link SqlSegmentsMetadataManager} of the Coordinator which
+   * caches segments in memory and periodically updates them. Hence, there can be a race condition as
+   * this API implementation compares segments metadata from cache with segments in historicals.
+   * Particularly, when number of segment changes after the first initial load of the datasource.
+   * Workaround is to verify the number of segments matches expected from {@link #getSegments(String) getSegments}
+   * before calling this method (since, that would wait until the cache is updated with expected data)
+   */
   public boolean areSegmentsLoaded(String dataSource)
   {
     final Map<String, Integer> status = getLoadStatus();
@@ -262,13 +295,29 @@ public class CoordinatorResourceTestClient
     return results2;
   }
 
+  @Nullable
   private Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> getLookupLoadStatus()
   {
     String url = StringUtils.format("%slookups/nodeStatus", getCoordinatorURL());
 
     Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, url);
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, new URL(url)),
+          responseHandler
+      ).get();
+
+      if (response.getStatus().getCode() == HttpResponseStatus.NOT_FOUND.getCode()) {
+        return null;
+      }
+      if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+      }
 
       status = jsonMapper.readValue(
           response.getContent(), new TypeReference<Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>>>()
@@ -286,6 +335,10 @@ public class CoordinatorResourceTestClient
   {
     final Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>> status = getLookupLoadStatus();
 
+    if (status == null) {
+      return false;
+    }
+
     final Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> defaultTier = status.get("__default");
 
     boolean isLoaded = true;
@@ -294,6 +347,41 @@ public class CoordinatorResourceTestClient
     }
 
     return isLoaded;
+  }
+
+  public void postDynamicConfig(CoordinatorDynamicConfig coordinatorDynamicConfig) throws Exception
+  {
+    String url = StringUtils.format("%sconfig", getCoordinatorURL());
+    StatusResponseHolder response = httpClient.go(
+        new Request(HttpMethod.POST, new URL(url)).setContent(
+            "application/json",
+            jsonMapper.writeValueAsBytes(coordinatorDynamicConfig)
+        ), responseHandler
+    ).get();
+
+    if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+      throw new ISE(
+          "Error while setting dynamic config[%s] status[%s] content[%s]",
+          url,
+          response.getStatus(),
+          response.getContent()
+      );
+    }
+  }
+
+  public CoordinatorDynamicConfig getDynamicConfig()
+  {
+    String url = StringUtils.format("%sconfig", getCoordinatorURL());
+    CoordinatorDynamicConfig config;
+
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, url);
+      config = jsonMapper.readValue(response.getContent(), CoordinatorDynamicConfig.class);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return config;
   }
 
   private StatusResponseHolder makeRequest(HttpMethod method, String url)

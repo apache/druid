@@ -56,10 +56,10 @@ public class WorkerConfig
   private Period intermediaryPartitionTimeout = new Period("P1D");
 
   @JsonProperty
-  private final long globalIngestionHeapLimitBytes = (long) (Runtime.getRuntime().maxMemory() / 6);
+  private final long globalIngestionHeapLimitBytes = Runtime.getRuntime().maxMemory() / 6;
 
   @JsonProperty
-  private final int numConcurrentMerges = (int) Math.max(1, capacity / 2);
+  private final int numConcurrentMerges = Math.max(1, capacity / 2);
 
   public String getIp()
   {

@@ -26,6 +26,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.UUIDUtils;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -56,11 +57,15 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
   private final ObjectMapper jsonMapper;
 
   // We lazily initialize fullQualifiedStorageDirectory to avoid potential issues with Hadoop namenode HA.
-  // Please see https://github.com/apache/incubator-druid/pull/5684
+  // Please see https://github.com/apache/druid/pull/5684
   private final Supplier<String> fullyQualifiedStorageDirectory;
 
   @Inject
-  public HdfsDataSegmentPusher(HdfsDataSegmentPusherConfig config, Configuration hadoopConfig, ObjectMapper jsonMapper)
+  public HdfsDataSegmentPusher(
+      HdfsDataSegmentPusherConfig config,
+      @Hdfs Configuration hadoopConfig,
+      ObjectMapper jsonMapper
+  )
   {
     this.hadoopConfig = hadoopConfig;
     this.jsonMapper = jsonMapper;

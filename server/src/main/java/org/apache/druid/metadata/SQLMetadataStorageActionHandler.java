@@ -59,10 +59,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
-  private final TypeReference entryType;
-  private final TypeReference statusType;
-  private final TypeReference logType;
-  private final TypeReference lockType;
+  private final TypeReference<EntryType> entryType;
+  private final TypeReference<StatusType> statusType;
+  private final TypeReference<LogType> logType;
+  private final TypeReference<LockType> lockType;
 
   private final String entryTypeName;
   private final String entryTable;
@@ -107,7 +107,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return jsonMapper;
   }
 
-  protected TypeReference getStatusType()
+  protected TypeReference<StatusType> getStatusType()
   {
     return statusType;
   }
@@ -127,7 +127,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return entryTypeName;
   }
 
-  public TypeReference getEntryType()
+  public TypeReference<EntryType> getEntryType()
   {
     return entryType;
   }

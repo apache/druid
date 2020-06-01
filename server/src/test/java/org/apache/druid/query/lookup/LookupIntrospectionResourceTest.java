@@ -36,6 +36,7 @@ import org.junit.Test;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.util.Optional;
 
 public class LookupIntrospectionResourceTest
 {
@@ -65,19 +66,25 @@ public class LookupIntrospectionResourceTest
     EasyMock.reset(mockLookupExtractorFactory);
     EasyMock.reset(mockLookupIntrospectHandler);
     EasyMock.expect(mockLookupExtractorFactoryContainerProvider.get("lookupId")).andReturn(
-        new LookupExtractorFactoryContainer(
-            "v0",
-            mockLookupExtractorFactory
+        Optional.of(
+            new LookupExtractorFactoryContainer(
+                "v0",
+                mockLookupExtractorFactory
+            )
         )
     ).anyTimes();
     EasyMock.expect(mockLookupExtractorFactoryContainerProvider.get("lookupId1")).andReturn(
-        new LookupExtractorFactoryContainer(
-            "v0",
-            actualLookupExtractorFactory
+        Optional.of(
+            new LookupExtractorFactoryContainer(
+                "v0",
+                actualLookupExtractorFactory
+            )
         )
     ).anyTimes();
 
-    EasyMock.expect(mockLookupExtractorFactoryContainerProvider.get(EasyMock.anyString())).andReturn(null).anyTimes();
+    EasyMock.expect(mockLookupExtractorFactoryContainerProvider.get(EasyMock.anyString()))
+            .andReturn(Optional.empty())
+            .anyTimes();
     EasyMock.replay(mockLookupExtractorFactoryContainerProvider);
 
     baseUri = WebserverTestUtils.createBaseUri();
@@ -124,7 +131,8 @@ public class LookupIntrospectionResourceTest
     );
   }
 
-  @Test public void testExistingLookup()
+  @Test
+  public void testExistingLookup()
   {
     EasyMock.expect(mockLookupExtractorFactory.getIntrospectHandler()).andReturn(mockLookupIntrospectHandler);
     EasyMock.expect(mockLookupExtractorFactory.get())

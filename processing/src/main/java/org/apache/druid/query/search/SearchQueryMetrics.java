@@ -27,7 +27,7 @@ public interface SearchQueryMetrics extends QueryMetrics<SearchQuery>
    * Sets the granularity of {@link SearchQuery#getGranularity()} of the given query as dimension.
    *
    * This method is going to be used in "full" metrics impl,
-   * see https://github.com/apache/incubator-druid/pull/4570#issuecomment-319458229
+   * see https://github.com/apache/druid/pull/4570#issuecomment-319458229
    */
   @SuppressWarnings("unused")
   void granularity(SearchQuery query);

@@ -26,4 +26,4 @@ Overview
 
 Documentation 
 =============
-See the druid.apache.org website or under [Druid Github Repo](https://github.com/apache/incubator-druid/tree/master/docs/content/development/extensions-contrib/moving-average-query.md).
+See the druid.apache.org website or under [Druid Github Repo](https://github.com/apache/druid/tree/master/docs/development/extensions-contrib/moving-average-query.md).

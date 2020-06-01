@@ -75,6 +75,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -95,7 +96,15 @@ public class HadoopDruidIndexerConfig
   static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
-
+  /**
+   * Hadoop tasks running in an Indexer process need a reference to the Properties instance created
+   * in PropertiesModule so that the task sees properties that were specified in Druid's config files.
+   *
+   * This is not strictly necessary for Peon-based tasks which have all properties, including config file properties,
+   * specified on their command line by ForkingTaskRunner (so they could use System.getProperties() only),
+   * but we always use the injected Properties for consistency.
+   */
+  public static final Properties PROPERTIES;
 
   static {
     INJECTOR = Initialization.makeInjectorWithModules(
@@ -117,6 +126,7 @@ public class HadoopDruidIndexerConfig
     INDEX_MERGER_V9 = INJECTOR.getInstance(IndexMergerV9.class);
     HADOOP_KERBEROS_CONFIG = INJECTOR.getInstance(HadoopKerberosConfig.class);
     DATA_SEGMENT_PUSHER = INJECTOR.getInstance(DataSegmentPusher.class);
+    PROPERTIES = INJECTOR.getInstance(Properties.class);
   }
 
   public enum IndexJobCounters
@@ -369,11 +379,24 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getMaxParseExceptions();
   }
 
+  public Map<String, String> getAllowedProperties()
+  {
+    Map<String, String> allowedPropertiesMap = new HashMap<>();
+    for (String propName : PROPERTIES.stringPropertyNames()) {
+      for (String prefix : allowedHadoopPrefix) {
+        if (propName.equals(prefix) || propName.startsWith(prefix + ".")) {
+          allowedPropertiesMap.put(propName, PROPERTIES.getProperty(propName));
+          break;
+        }
+      }
+    }
+    return allowedPropertiesMap;
+  }
+
   boolean isUseYarnRMJobStatusFallback()
   {
     return schema.getTuningConfig().isUseYarnRMJobStatusFallback();
   }
-
 
   void setHadoopJobIdFileName(String hadoopJobIdFileName)
   {
@@ -586,10 +609,5 @@ public class HadoopDruidIndexerConfig
     Preconditions.checkNotNull(schema.getTuningConfig().getWorkingPath(), "workingPath");
     Preconditions.checkNotNull(schema.getIOConfig().getSegmentOutputPath(), "segmentOutputPath");
     Preconditions.checkNotNull(schema.getTuningConfig().getVersion(), "version");
-  }
-
-  List<String> getAllowedHadoopPrefix()
-  {
-    return allowedHadoopPrefix;
   }
 }

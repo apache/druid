@@ -24,6 +24,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
+import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.initialization.Initialization;
 import org.testng.IModuleFactory;
 import org.testng.ITestContext;
@@ -48,14 +49,14 @@ public class DruidTestModuleFactory implements IModuleFactory
   {
     return ImmutableList.of(
         new DruidTestModule(),
-        new IndexingServiceFirehoseModule()
+        new IndexingServiceFirehoseModule(),
+        new IndexingServiceInputSourceModule()
     );
   }
 
   @Override
   public Module createModule(ITestContext context, Class<?> testClass)
   {
-    context.addGuiceModule(DruidTestModule.class, MODULE);
     context.addInjector(Collections.singletonList(MODULE), INJECTOR);
     return MODULE;
   }

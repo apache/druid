@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -51,7 +52,7 @@ public class HdfsTaskLogs implements TaskLogs
   private final Configuration hadoopConfig;
 
   @Inject
-  public HdfsTaskLogs(HdfsTaskLogsConfig config, Configuration hadoopConfig)
+  public HdfsTaskLogs(HdfsTaskLogsConfig config, @Hdfs Configuration hadoopConfig)
   {
     this.config = config;
     this.hadoopConfig = hadoopConfig;

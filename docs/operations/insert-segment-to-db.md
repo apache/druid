@@ -23,7 +23,7 @@ title: "insert-segment-to-db tool"
   -->
 
 
-In older versions of Apache Druid (incubating), `insert-segment-to-db` was a tool that could scan deep storage and
+In older versions of Apache Druid, `insert-segment-to-db` was a tool that could scan deep storage and
 insert data from there into Druid metadata storage. It was intended to be used to update the segment table in the
 metadata storage after manually migrating segments from one place to another, or even to recover lost metadata storage
 by telling it where the segments are stored.

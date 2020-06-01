@@ -27,6 +27,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -36,18 +37,20 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +71,18 @@ class ParallelIndexTestingFactory
   static final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> TASK_CLIENT_FACTORY =
       TestUtils.TASK_CLIENT_FACTORY;
   static final AppenderatorsManager APPENDERATORS_MANAGER = TestUtils.APPENDERATORS_MANAGER;
-  static final HttpClient SHUFFLE_CLIENT = TestUtils.SHUFFLE_CLIENT;
+  static final ShuffleClient SHUFFLE_CLIENT = new ShuffleClient()
+  {
+    @Override
+    public <T, P extends PartitionLocation<T>> File fetchSegmentFile(
+        File partitionDir,
+        String supervisorTaskId,
+        P location
+    )
+    {
+      return null;
+    }
+  };
   static final List<Interval> INPUT_INTERVALS = Collections.singletonList(Intervals.ETERNITY);
   static final String TASK_EXECUTOR_HOST = "task-executor-host";
   static final int TASK_EXECUTOR_PORT = 1;
@@ -96,6 +110,11 @@ class ParallelIndexTestingFactory
   static ObjectMapper createObjectMapper()
   {
     return TEST_UTILS.getTestObjectMapper();
+  }
+
+  static IndexIO getIndexIO()
+  {
+    return TEST_UTILS.getTestIndexIO();
   }
 
   @SuppressWarnings("SameParameterValue")
@@ -229,7 +248,14 @@ class ParallelIndexTestingFactory
 
   static IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> createTaskClientFactory()
   {
-    return TASK_CLIENT_FACTORY;
+    return (taskInfoProvider, callerId, numThreads, httpTimeout, numRetries) -> createTaskClient();
+  }
+
+  private static ParallelIndexSupervisorTaskClient createTaskClient()
+  {
+    ParallelIndexSupervisorTaskClient taskClient = EasyMock.niceMock(ParallelIndexSupervisorTaskClient.class);
+    EasyMock.replay(taskClient);
+    return taskClient;
   }
 
   static String createRow(long timestamp, Object dimensionValue)
@@ -243,5 +269,10 @@ class ParallelIndexTestingFactory
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  static InputFormat getInputFormat()
+  {
+    return new JsonInputFormat(null, null, null);
   }
 }

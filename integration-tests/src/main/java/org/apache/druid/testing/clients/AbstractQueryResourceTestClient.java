@@ -35,13 +35,13 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 public abstract class AbstractQueryResourceTestClient<QueryType>
 {
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  protected final String routerUrl;
-  private final StatusResponseHandler responseHandler;
+  final String routerUrl;
 
   @Inject
   AbstractQueryResourceTestClient(
@@ -53,7 +53,6 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.routerUrl = config.getRouterUrl();
-    this.responseHandler = StatusResponseHandler.getInstance();
   }
 
   public abstract String getBrokerURL();
@@ -65,8 +64,8 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
           new Request(HttpMethod.POST, new URL(url)).setContent(
               "application/json",
               jsonMapper.writeValueAsBytes(query)
-          ), responseHandler
-
+          ),
+          StatusResponseHandler.getInstance()
       ).get();
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -89,4 +88,19 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     }
   }
 
+  public Future<StatusResponseHolder> queryAsync(String url, QueryType query)
+  {
+    try {
+      return httpClient.go(
+          new Request(HttpMethod.POST, new URL(url)).setContent(
+              "application/json",
+              jsonMapper.writeValueAsBytes(query)
+          ),
+          StatusResponseHandler.getInstance()
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

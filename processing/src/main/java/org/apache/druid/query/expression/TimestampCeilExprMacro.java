@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -30,14 +31,17 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_ceil";
+
   @Override
   public String name()
   {
-    return "timestamp_ceil";
+    return FN_NAME;
   }
 
   @Override
@@ -54,13 +58,14 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     }
   }
 
-  private static class TimestampCeilExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  @VisibleForTesting
+  static class TimestampCeilExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final Granularity granularity;
 
     TimestampCeilExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
       this.granularity = getGranularity(args, ExprUtils.nilBindings());
     }
 
@@ -87,6 +92,28 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
       List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
       return shuttle.visit(new TimestampCeilExpr(newArgs));
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      if (!super.equals(o)) {
+        return false;
+      }
+      TimestampCeilExpr that = (TimestampCeilExpr) o;
+      return Objects.equals(granularity, that.granularity);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(super.hashCode(), granularity);
+    }
   }
 
   private static PeriodGranularity getGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
@@ -99,11 +126,12 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     );
   }
 
-  private static class TimestampCeilDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  @VisibleForTesting
+  static class TimestampCeilDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     TimestampCeilDynamicExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
     }
 
     @Nonnull

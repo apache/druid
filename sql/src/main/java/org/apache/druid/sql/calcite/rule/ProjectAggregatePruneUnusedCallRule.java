@@ -51,13 +51,6 @@ public class ProjectAggregatePruneUnusedCallRule extends RelOptRule
   }
 
   @Override
-  public boolean matches(final RelOptRuleCall call)
-  {
-    final Aggregate aggregate = call.rel(1);
-    return !aggregate.indicator && aggregate.getGroupSets().size() == 1;
-  }
-
-  @Override
   public void onMatch(final RelOptRuleCall call)
   {
     final Project project = call.rel(0);
@@ -90,7 +83,6 @@ public class ProjectAggregatePruneUnusedCallRule extends RelOptRule
       final Aggregate newAggregate = aggregate.copy(
           aggregate.getTraitSet(),
           aggregate.getInput(),
-          aggregate.indicator,
           aggregate.getGroupSet(),
           aggregate.getGroupSets(),
           newAggregateCalls
@@ -100,14 +92,13 @@ public class ProjectAggregatePruneUnusedCallRule extends RelOptRule
       final List<RexNode> fixUpProjects = new ArrayList<>();
       final RexBuilder rexBuilder = aggregate.getCluster().getRexBuilder();
 
-      // Project the group unchanged.
+      // Project the group set unchanged.
       for (int i = 0; i < aggregate.getGroupCount(); i++) {
         fixUpProjects.add(rexBuilder.makeInputRef(newAggregate, i));
       }
 
       // Replace pruned-out aggregators with NULLs.
-      int j = aggregate.getGroupCount();
-      for (int i = aggregate.getGroupCount(); i < fieldCount; i++) {
+      for (int i = aggregate.getGroupCount(), j = aggregate.getGroupCount(); i < fieldCount; i++) {
         if (callsToKeep.get(i)) {
           fixUpProjects.add(rexBuilder.makeInputRef(newAggregate, j++));
         } else {

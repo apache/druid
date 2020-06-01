@@ -44,8 +44,8 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataSegmentManager;
-import org.apache.druid.metadata.UnknownSegmentIdException;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -98,7 +98,7 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
 
   private final CoordinatorServerView serverInventoryView;
-  private final MetadataSegmentManager segmentsMetadata;
+  private final SegmentsMetadataManager segmentsMetadataManager;
   private final MetadataRuleManager metadataRuleManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthorizerMapper authorizerMapper;
@@ -106,14 +106,14 @@ public class DataSourcesResource
   @Inject
   public DataSourcesResource(
       CoordinatorServerView serverInventoryView,
-      MetadataSegmentManager segmentsMetadata,
+      SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
-    this.segmentsMetadata = segmentsMetadata;
+    this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataRuleManager = metadataRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authorizerMapper = authorizerMapper;
@@ -122,8 +122,8 @@ public class DataSourcesResource
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getQueryableDataSources(
-      @QueryParam("full") String full,
-      @QueryParam("simple") String simple,
+      @QueryParam("full") @Nullable String full,
+      @QueryParam("simple") @Nullable String simple,
       @Context final HttpServletRequest req
   )
   {
@@ -168,7 +168,7 @@ public class DataSourcesResource
 
   private interface MarkSegments
   {
-    int markSegments() throws UnknownSegmentIdException;
+    int markSegments() throws UnknownSegmentIdsException;
   }
 
   @POST
@@ -177,7 +177,7 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    MarkSegments markSegments = () -> segmentsMetadata.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    MarkSegments markSegments = () -> segmentsMetadataManager.markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
     return doMarkSegments("markAsUsedAllNonOvershadowedSegments", dataSourceName, markSegments);
   }
 
@@ -193,10 +193,10 @@ public class DataSourcesResource
     MarkSegments markSegments = () -> {
       final Interval interval = payload.getInterval();
       if (interval != null) {
-        return segmentsMetadata.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
+        return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval);
       } else {
         final Set<String> segmentIds = payload.getSegmentIds();
-        return segmentsMetadata.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
+        return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
       }
     };
     return doMarkSegmentsWithPayload("markAsUsedNonOvershadowedSegments", dataSourceName, payload, markSegments);
@@ -215,10 +215,10 @@ public class DataSourcesResource
     MarkSegments markSegments = () -> {
       final Interval interval = payload.getInterval();
       if (interval != null) {
-        return segmentsMetadata.markAsUnusedSegmentsInInterval(dataSourceName, interval);
+        return segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval);
       } else {
         final Set<String> segmentIds = payload.getSegmentIds();
-        return segmentsMetadata.markSegmentsAsUnused(dataSourceName, segmentIds);
+        return segmentsMetadataManager.markSegmentsAsUnused(dataSourceName, segmentIds);
       }
     };
     return doMarkSegmentsWithPayload("markSegmentsAsUnused", dataSourceName, payload, markSegments);
@@ -259,7 +259,7 @@ public class DataSourcesResource
       int numChangedSegments = markSegments.markSegments();
       return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
-    catch (UnknownSegmentIdException e) {
+    catch (UnknownSegmentIdsException e) {
       log.warn("Segment ids %s are not found", e.getUnknownSegmentIds());
       return Response
           .status(Response.Status.NOT_FOUND)
@@ -279,15 +279,15 @@ public class DataSourcesResource
    * When this method is removed, a new method needs to be introduced corresponding to
    * the end point "DELETE /druid/coordinator/v1/datasources/{dataSourceName}" (with no query parameters).
    * Ultimately we want to have no method with kill parameter -
-   * DELETE `{dataSourceName}` will be used to mark all segments belonging to a data source as unused, and
-   * DELETE `{dataSourceName}/intervals/{interval}` will be used to kill segments within an interval
+   * DELETE `{dataSourceName}` to mark all segments belonging to a data source as unused, and
+   * DELETE `{dataSourceName}/intervals/{interval}` to kill unused segments within an interval
    */
   @DELETE
   @Deprecated
   @Path("/{dataSourceName}")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response markAsUnusedAllSegmentsOrKillSegmentsInInterval(
+  public Response markAsUnusedAllSegmentsOrKillUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
       @QueryParam("interval") final String interval
@@ -299,9 +299,9 @@ public class DataSourcesResource
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
-      return killSegmentsInInterval(dataSourceName, interval);
+      return killUnusedSegmentsInInterval(dataSourceName, interval);
     } else {
-      MarkSegments markSegments = () -> segmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSourceName);
+      MarkSegments markSegments = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
       return doMarkSegments("markAsUnusedAllSegments", dataSourceName, markSegments);
     }
   }
@@ -310,7 +310,7 @@ public class DataSourcesResource
   @Path("/{dataSourceName}/intervals/{interval}")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response killSegmentsInInterval(
+  public Response killUnusedSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @PathParam("interval") final String interval
   )
@@ -323,7 +323,7 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      indexingServiceClient.killSegments(dataSourceName, theInterval);
+      indexingServiceClient.killUnusedSegments(dataSourceName, theInterval);
       return Response.ok().build();
     }
     catch (Exception e) {
@@ -502,7 +502,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(segmentId);
+    boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUnused(segmentId);
     return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
@@ -515,7 +515,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUsed(segmentId);
+    boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUsed(segmentId);
     return Response.ok().entity(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 

@@ -138,7 +138,8 @@ exports[`services view action services view 1`] = `
         Object {
           "Cell": [Function],
           "Header": "Tier",
-          "accessor": "tier",
+          "accessor": [Function],
+          "id": "tier",
           "show": true,
         },
         Object {

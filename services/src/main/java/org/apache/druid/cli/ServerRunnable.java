@@ -26,11 +26,12 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
@@ -42,6 +43,7 @@ import java.lang.annotation.Annotation;
 import java.util.List;
 
 /**
+ *
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
@@ -64,7 +66,34 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
   }
 
-  public static void bindAnnouncer(
+  public static void bindNodeRoleAndAnnouncer(Binder binder, DiscoverySideEffectsProvider discoverySideEffectsProvider)
+  {
+    Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+    selfBinder.addBinding().toInstance(discoverySideEffectsProvider.nodeRole);
+
+    bindAnnouncer(
+        binder,
+        discoverySideEffectsProvider
+    );
+  }
+
+  public static void bindNodeRoleAndAnnouncer(
+      Binder binder,
+      Class<? extends Annotation> annotation,
+      DiscoverySideEffectsProvider discoverySideEffectsProvider
+  )
+  {
+    Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
+    selfBinder.addBinding().toInstance(discoverySideEffectsProvider.nodeRole);
+
+    bindAnnouncer(
+        binder,
+        annotation,
+        discoverySideEffectsProvider
+    );
+  }
+
+  private static void bindAnnouncer(
       final Binder binder,
       final DiscoverySideEffectsProvider provider
   )
@@ -76,7 +105,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
   }
 
-  public static void bindAnnouncer(
+  private static void bindAnnouncer(
       final Binder binder,
       final Class<? extends Annotation> annotation,
       final DiscoverySideEffectsProvider provider
@@ -102,13 +131,13 @@ public abstract class ServerRunnable extends GuiceRunnable
 
     public static class Builder
     {
-      private NodeType nodeType;
+      private NodeRole nodeRole;
       private List<Class<? extends DruidService>> serviceClasses = ImmutableList.of();
       private boolean useLegacyAnnouncer;
 
-      public Builder(final NodeType nodeType)
+      public Builder(final NodeRole nodeRole)
       {
-        this.nodeType = nodeType;
+        this.nodeRole = nodeRole;
       }
 
       public Builder serviceClasses(final List<Class<? extends DruidService>> serviceClasses)
@@ -125,13 +154,13 @@ public abstract class ServerRunnable extends GuiceRunnable
 
       public DiscoverySideEffectsProvider build()
       {
-        return new DiscoverySideEffectsProvider(nodeType, serviceClasses, useLegacyAnnouncer);
+        return new DiscoverySideEffectsProvider(nodeRole, serviceClasses, useLegacyAnnouncer);
       }
     }
 
-    public static Builder builder(final NodeType nodeType)
+    public static Builder builder(final NodeRole nodeRole)
     {
-      return new Builder(nodeType);
+      return new Builder(nodeRole);
     }
 
     @Inject
@@ -150,17 +179,17 @@ public abstract class ServerRunnable extends GuiceRunnable
     @Inject
     private Injector injector;
 
-    private final NodeType nodeType;
+    private final NodeRole nodeRole;
     private final List<Class<? extends DruidService>> serviceClasses;
     private final boolean useLegacyAnnouncer;
 
     private DiscoverySideEffectsProvider(
-        final NodeType nodeType,
+        final NodeRole nodeRole,
         final List<Class<? extends DruidService>> serviceClasses,
         final boolean useLegacyAnnouncer
     )
     {
-      this.nodeType = nodeType;
+      this.nodeRole = nodeRole;
       this.serviceClasses = serviceClasses;
       this.useLegacyAnnouncer = useLegacyAnnouncer;
     }
@@ -174,7 +203,7 @@ public abstract class ServerRunnable extends GuiceRunnable
         builder.put(service.getName(), service);
       }
 
-      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeType, builder.build());
+      DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build());
 
       lifecycle.addHandler(
           new Lifecycle.Handler()

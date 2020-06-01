@@ -108,13 +108,11 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
       Preconditions.checkNotNull(metadataSpec.getType(), "type in metadataUpdateSpec must not be null");
       injector.getInstance(Properties.class).setProperty("druid.metadata.storage.type", metadataSpec.getType());
 
-      config = HadoopDruidIndexerConfig.fromSpec(
-          HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
-              config.getSchema(),
-              HadoopDruidIndexerConfig.JSON_MAPPER,
-              new MetadataStoreBasedUsedSegmentsRetriever(
-                  injector.getInstance(IndexerMetadataStorageCoordinator.class)
-              )
+      HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
+          config.getSchema(),
+          HadoopDruidIndexerConfig.JSON_MAPPER,
+          new MetadataStoreBasedUsedSegmentsRetriever(
+              injector.getInstance(IndexerMetadataStorageCoordinator.class)
           )
       );
 

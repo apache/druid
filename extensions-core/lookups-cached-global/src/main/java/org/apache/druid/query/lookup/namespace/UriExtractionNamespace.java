@@ -540,7 +540,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
                       new JSONPathFieldSpec(JSONPathFieldType.ROOT, valueFieldName, valueFieldName)
                   )
               ),
-              jsonMapper.copy()
+              jsonMapper.copy(),
+              false
           ),
           keyFieldName,
           valueFieldName

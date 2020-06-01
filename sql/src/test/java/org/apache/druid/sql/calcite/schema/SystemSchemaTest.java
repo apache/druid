@@ -46,10 +46,10 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
@@ -64,10 +64,12 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -76,7 +78,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -153,10 +155,8 @@ public class SystemSchemaTest extends CalciteTestBase
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
@@ -356,37 +356,37 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8081, null, true, false),
-      NodeType.COORDINATOR,
+      NodeRole.COORDINATOR,
       ImmutableMap.of()
   );
 
   private final DiscoveryDruidNode overlord = new DiscoveryDruidNode(
       new DruidNode("s2", "localhost", false, 8090, null, true, false),
-      NodeType.OVERLORD,
+      NodeRole.OVERLORD,
       ImmutableMap.of()
   );
 
   private final DiscoveryDruidNode broker1 = new DiscoveryDruidNode(
       new DruidNode("s3", "localhost", false, 8082, null, true, false),
-      NodeType.BROKER,
+      NodeRole.BROKER,
       ImmutableMap.of()
   );
 
   private final DiscoveryDruidNode broker2 = new DiscoveryDruidNode(
       new DruidNode("s3", "brokerHost", false, 8082, null, true, false),
-      NodeType.BROKER,
+      NodeRole.BROKER,
       ImmutableMap.of()
   );
 
   private final DiscoveryDruidNode router = new DiscoveryDruidNode(
       new DruidNode("s4", "localhost", false, 8888, null, true, false),
-      NodeType.ROUTER,
+      NodeRole.ROUTER,
       ImmutableMap.of()
   );
 
   private final DiscoveryDruidNode historical1 = new DiscoveryDruidNode(
       new DruidNode("s5", "localhost", false, 8083, null, true, false),
-      NodeType.HISTORICAL,
+      NodeRole.HISTORICAL,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
       )
@@ -394,21 +394,21 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final DiscoveryDruidNode historical2 = new DiscoveryDruidNode(
       new DruidNode("s5", "histHost", false, 8083, null, true, false),
-      NodeType.HISTORICAL,
+      NodeRole.HISTORICAL,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
   );
 
   private final DiscoveryDruidNode middleManager = new DiscoveryDruidNode(
       new DruidNode("s6", "mmHost", false, 8091, null, true, false),
-      NodeType.MIDDLE_MANAGER,
+      NodeRole.MIDDLE_MANAGER,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0))
   );
 
   private final DiscoveryDruidNode peon1 = new DiscoveryDruidNode(
       new DruidNode("s7", "localhost", false, 8080, null, true, false),
-      NodeType.PEON,
+      NodeRole.PEON,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
       )
@@ -416,14 +416,14 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private final DiscoveryDruidNode peon2 = new DiscoveryDruidNode(
       new DruidNode("s7", "peonHost", false, 8080, null, true, false),
-      NodeType.PEON,
+      NodeRole.PEON,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
   );
 
   private final DiscoveryDruidNode indexer = new DiscoveryDruidNode(
       new DruidNode("s8", "indexerHost", false, 8091, null, true, false),
-      NodeType.INDEXER,
+      NodeRole.INDEXER,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0))
   );
@@ -662,7 +662,8 @@ public class SystemSchemaTest extends CalciteTestBase
       long isPublished,
       long isAvailable,
       long isRealtime,
-      long isOvershadowed)
+      long isOvershadowed
+  )
   {
     Assert.assertEquals(segmentId, row[0].toString());
     SegmentId id = Iterables.get(SegmentId.iterateAllPossibleParsings(segmentId), 0);
@@ -702,24 +703,24 @@ public class SystemSchemaTest extends CalciteTestBase
     final DruidNodeDiscovery indexerNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
 
 
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.COORDINATOR))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.COORDINATOR))
             .andReturn(coordinatorNodeDiscovery)
             .once();
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.OVERLORD))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.OVERLORD))
             .andReturn(overlordNodeDiscovery)
             .once();
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER)).andReturn(brokerNodeDiscovery).once();
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.ROUTER)).andReturn(routerNodeDiscovery).once();
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.HISTORICAL))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER)).andReturn(brokerNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.ROUTER)).andReturn(routerNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.HISTORICAL))
             .andReturn(historicalNodeDiscovery)
             .once();
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.MIDDLE_MANAGER))
             .andReturn(mmNodeDiscovery)
             .once();
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.INDEXER))
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.INDEXER))
             .andReturn(indexerNodeDiscovery)
             .once();
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(peonNodeDiscovery).once();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(peonNodeDiscovery).once();
 
     EasyMock.expect(coordinatorNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(coordinator)).once();
     EasyMock.expect(overlordNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(overlord)).once();
@@ -731,10 +732,14 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(indexerNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(indexer)).once();
 
     final DruidServer server1 = EasyMock.createMock(DruidServer.class);
-    EasyMock.expect(serverInventoryView.getInventoryValue(historical1.toDruidServer().getName())).andReturn(server1).once();
+    EasyMock.expect(serverInventoryView.getInventoryValue(historical1.toDruidServer().getName()))
+            .andReturn(server1)
+            .once();
     EasyMock.expect(server1.getCurrSize()).andReturn(200L).once();
     final DruidServer server2 = EasyMock.createMock(DruidServer.class);
-    EasyMock.expect(serverInventoryView.getInventoryValue(historical2.toDruidServer().getName())).andReturn(server2).once();
+    EasyMock.expect(serverInventoryView.getInventoryValue(historical2.toDruidServer().getName()))
+            .andReturn(server2)
+            .once();
     EasyMock.expect(server2.getCurrSize()).andReturn(400L).once();
 
     EasyMock.replay(druidNodeDiscoveryProvider, serverInventoryView, server1, server2);
@@ -913,7 +918,8 @@ public class SystemSchemaTest extends CalciteTestBase
       String serverType,
       String tier,
       long currSize,
-      long maxSize)
+      long maxSize
+  )
   {
     Assert.assertEquals(server, row[0].toString());
     Assert.assertEquals(host, row[1]);
@@ -1124,7 +1130,12 @@ public class SystemSchemaTest extends CalciteTestBase
   {
 
     SystemSchema.SupervisorsTable supervisorTable = EasyMock.createMockBuilder(SystemSchema.SupervisorsTable.class)
-                                                            .withConstructor(client, mapper, responseHandler, authMapper)
+                                                            .withConstructor(
+                                                                client,
+                                                                mapper,
+                                                                responseHandler,
+                                                                authMapper
+                                                            )
                                                             .createMock();
     EasyMock.replay(supervisorTable);
     EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/supervisor?system", false))
@@ -1205,15 +1216,18 @@ public class SystemSchemaTest extends CalciteTestBase
 
   private static void verifyTypes(final List<Object[]> rows, final RowSignature signature)
   {
-    final RelDataType rowType = signature.getRelDataType(new JavaTypeFactoryImpl());
+    final RelDataType rowType = RowSignatures.toRelDataType(signature, new JavaTypeFactoryImpl());
 
     for (Object[] row : rows) {
-      Assert.assertEquals(row.length, signature.getRowOrder().size());
+      Assert.assertEquals(row.length, signature.size());
 
       for (int i = 0; i < row.length; i++) {
         final Class<?> expectedClass;
 
-        final ValueType columnType = signature.getColumnType(signature.getRowOrder().get(i));
+        final ValueType columnType =
+            signature.getColumnType(i)
+                     .orElseThrow(() -> new ISE("Encountered null column type"));
+
         final boolean nullable = rowType.getFieldList().get(i).getType().isNullable();
 
         switch (columnType) {
@@ -1227,7 +1241,7 @@ public class SystemSchemaTest extends CalciteTestBase
             expectedClass = Double.class;
             break;
           case STRING:
-            if (signature.getRowOrder().get(i).equals("segment_id")) {
+            if (signature.getColumnName(i).equals("segment_id")) {
               expectedClass = SegmentId.class;
             } else {
               expectedClass = String.class;
@@ -1241,7 +1255,7 @@ public class SystemSchemaTest extends CalciteTestBase
           Assert.assertTrue(
               StringUtils.format(
                   "Column[%s] is a [%s] or null (was %s)",
-                  signature.getRowOrder().get(i),
+                  signature.getColumnName(i),
                   expectedClass.getName(),
                   row[i] == null ? null : row[i].getClass().getName()
               ),
@@ -1251,7 +1265,7 @@ public class SystemSchemaTest extends CalciteTestBase
           Assert.assertTrue(
               StringUtils.format(
                   "Column[%s] is a [%s] (was %s)",
-                  signature.getRowOrder().get(i),
+                  signature.getColumnName(i),
                   expectedClass.getName(),
                   row[i] == null ? null : row[i].getClass().getName()
               ),

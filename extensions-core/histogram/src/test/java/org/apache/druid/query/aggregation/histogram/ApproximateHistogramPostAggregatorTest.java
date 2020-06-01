@@ -41,7 +41,7 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
   }
 
   @Test
-  public void testCompute()
+  public void testApproxHistogramCompute()
   {
     ApproximateHistogram ah = buildHistogram(10, VALUES);
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(VALUES);
@@ -63,5 +63,4 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
     );
     Assert.assertEquals(ah.toHistogram(5), approximateHistogramPostAggregator.compute(metricValues));
   }
-
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -36,6 +37,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperandCountRange;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlOperandTypeChecker;
@@ -48,9 +50,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -168,12 +171,12 @@ public class OperatorConversions
   /**
    * Translate a Calcite {@code RexNode} to a Druid PostAggregator
    *
-   * @param plannerContext SQL planner context
-   * @param rowSignature   signature of the rows to be extracted from
-   * @param rexNode        expression meant to be applied on top of the rows
-   *
+   * @param plannerContext        SQL planner context
+   * @param rowSignature          signature of the rows to be extracted from
+   * @param rexNode               expression meant to be applied on top of the rows
    * @param postAggregatorVisitor visitor that manages postagg names and tracks postaggs that were created
    *                              by the translation
+   *
    * @return rexNode referring to fields in rowOrder, or null if not possible
    */
   @Nullable
@@ -188,7 +191,7 @@ public class OperatorConversions
     if (kind == SqlKind.INPUT_REF) {
       // Translate field references.
       final RexInputRef ref = (RexInputRef) rexNode;
-      final String columnName = rowSignature.getRowOrder().get(ref.getIndex());
+      final String columnName = rowSignature.getColumnName(ref.getIndex());
       if (columnName == null) {
         throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
       }
@@ -235,6 +238,7 @@ public class OperatorConversions
     private SqlOperandTypeChecker operandTypeChecker;
     private List<SqlTypeFamily> operandTypes;
     private Integer requiredOperands = null;
+    private SqlOperandTypeInference operandTypeInference;
 
     private OperatorBuilder(final String name)
     {
@@ -287,6 +291,12 @@ public class OperatorConversions
       return this;
     }
 
+    public OperatorBuilder operandTypeInference(final SqlOperandTypeInference operandTypeInference)
+    {
+      this.operandTypeInference = operandTypeInference;
+      return this;
+    }
+
     public OperatorBuilder requiredOperands(final int requiredOperands)
     {
       this.requiredOperands = requiredOperands;
@@ -317,11 +327,27 @@ public class OperatorConversions
         );
       }
 
+      if (operandTypeInference == null) {
+        SqlOperandTypeInference defaultInference = new DefaultOperandTypeInference(operandTypes, nullableOperands);
+        operandTypeInference = (callBinding, returnType, types) -> {
+          for (int i = 0; i < types.length; i++) {
+            // calcite sql validate tries to do bad things to dynamic parameters if the type is inferred to be a string
+            if (callBinding.operand(i).isA(ImmutableSet.of(SqlKind.DYNAMIC_PARAM))) {
+              types[i] = new BasicSqlType(
+                  DruidTypeSystem.INSTANCE,
+                  SqlTypeName.ANY
+              );
+            } else {
+              defaultInference.inferOperandTypes(callBinding, returnType, types);
+            }
+          }
+        };
+      }
       return new SqlFunction(
           name,
           kind,
           Preconditions.checkNotNull(returnTypeInference, "returnTypeInference"),
-          new DefaultOperandTypeInference(operandTypes, nullableOperands),
+          operandTypeInference,
           theOperandTypeChecker,
           functionCategory
       );

@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.ResultLevelCacheUtil;
+import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.RE;
@@ -71,8 +71,13 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cacheConfig = cacheConfig;
     this.query = query;
     this.strategy = queryToolChest.getCacheStrategy(query);
-    this.populateResultCache = ResultLevelCacheUtil.populateResultLevelCacheOnBrokers(query, strategy, cacheConfig);
-    this.useResultCache = ResultLevelCacheUtil.useResultLevelCacheOnBrokers(query, strategy, cacheConfig);
+    this.populateResultCache = CacheUtil.isPopulateResultCache(
+        query,
+        strategy,
+        cacheConfig,
+        CacheUtil.ServerType.BROKER
+    );
+    this.useResultCache = CacheUtil.isUseResultCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
   }
 
   @Override
@@ -162,7 +167,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   )
   {
     if (useResultCache && queryCacheKey != null) {
-      return cache.get(ResultLevelCacheUtil.computeResultLevelCacheKey(queryCacheKey));
+      return cache.get(CacheUtil.computeResultLevelCacheKey(queryCacheKey));
     }
     return null;
   }
@@ -185,7 +190,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       log.error("Cached result set is null");
     }
     final Function<Object, T> pullFromCacheFunction = strategy.pullFromCache(true);
-    final TypeReference<Object> cacheObjectClazz = strategy.getCacheObjectClazz();
+    final TypeReference<T> cacheObjectClazz = strategy.getCacheObjectClazz();
     //Skip the resultsetID and its length bytes
     Sequence<T> cachedSequence = Sequences.simple(() -> {
       try {
@@ -216,7 +221,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
-          ResultLevelCacheUtil.computeResultLevelCacheKey(cacheKeyStr),
+          CacheUtil.computeResultLevelCacheKey(cacheKeyStr),
           cacheConfig,
           true
       );
@@ -292,7 +297,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
     public void populateResults()
     {
-      ResultLevelCacheUtil.populate(
+      CacheUtil.populateResultCache(
           cache,
           key,
           Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream").toByteArray()

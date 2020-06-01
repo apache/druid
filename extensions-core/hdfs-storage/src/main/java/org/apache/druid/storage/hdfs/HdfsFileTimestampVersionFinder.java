@@ -21,6 +21,7 @@ package org.apache.druid.storage.hdfs;
 
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -36,7 +37,7 @@ import java.util.regex.Pattern;
 public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
   @Inject
-  public HdfsFileTimestampVersionFinder(Configuration config)
+  public HdfsFileTimestampVersionFinder(@Hdfs Configuration config)
   {
     super(config);
   }

@@ -21,34 +21,36 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.ValueGetter;
 import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategy;
-import org.apache.druid.query.filter.ValueMatcherColumnSelectorStrategyFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnProcessorFactory;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-/**
- */
 public class ColumnComparisonFilter implements Filter
 {
   private final List<DimensionSpec> dimensions;
 
-  public ColumnComparisonFilter(
-      final List<DimensionSpec> dimensions
-  )
+  public ColumnComparisonFilter(final List<DimensionSpec> dimensions)
   {
     this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions");
   }
@@ -62,37 +64,31 @@ public class ColumnComparisonFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    final ValueGetter[] valueGetters = new ValueGetter[dimensions.size()];
+    final List<Supplier<String[]>> valueGetters = new ArrayList<>(dimensions.size());
 
-    for (int i = 0; i < dimensions.size(); i++) {
-      final ColumnSelectorPlus<ValueMatcherColumnSelectorStrategy> selector =
-          DimensionHandlerUtils.createColumnSelectorPlus(
-              ValueMatcherColumnSelectorStrategyFactory.instance(),
-              dimensions.get(i),
-              factory
-          );
-
-      valueGetters[i] = selector.getColumnSelectorStrategy().makeValueGetter(selector.getSelector());
+    for (final DimensionSpec dimension : dimensions) {
+      valueGetters.add(ColumnProcessors.makeProcessor(dimension, ColumnComparisonReaderFactory.INSTANCE, factory));
     }
 
     return makeValueMatcher(valueGetters);
   }
 
-  public static ValueMatcher makeValueMatcher(final ValueGetter[] valueGetters)
+  public static ValueMatcher makeValueMatcher(final List<Supplier<String[]>> valueGetters)
   {
-    if (valueGetters.length == 0) {
+    if (valueGetters.isEmpty()) {
       return BooleanValueMatcher.of(true);
     }
+
     return new ValueMatcher()
     {
       @Override
       public boolean matches()
       {
         // Keep all values to compare against each other.
-        String[][] values = new String[valueGetters.length][];
+        String[][] values = new String[valueGetters.size()][];
 
-        for (int i = 0; i < valueGetters.length; i++) {
-          values[i] = valueGetters[i].get();
+        for (int i = 0; i < valueGetters.size(); i++) {
+          values[i] = valueGetters.get(i).get();
           // Compare the new values to the values we already got.
           for (int j = 0; j < i; j++) {
             if (!overlap(values[i], values[j])) {
@@ -107,7 +103,7 @@ public class ColumnComparisonFilter implements Filter
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         // All value getters are likely the same or similar (in terms of runtime shape), so inspecting only one of them.
-        inspector.visit("oneValueGetter", valueGetters[0]);
+        inspector.visit("oneValueGetter", valueGetters.get(0));
       }
     };
   }
@@ -165,5 +161,94 @@ public class ColumnComparisonFilter implements Filter
   public double estimateSelectivity(BitmapIndexSelector indexSelector)
   {
     throw new UnsupportedOperationException();
+  }
+
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ColumnComparisonFilter that = (ColumnComparisonFilter) o;
+    return Objects.equals(dimensions, that.dimensions);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimensions);
+  }
+
+  private static class ColumnComparisonReaderFactory implements ColumnProcessorFactory<Supplier<String[]>>
+  {
+    private static final ColumnComparisonReaderFactory INSTANCE = new ColumnComparisonReaderFactory();
+    private static final String[] NULL_VALUE = new String[]{null};
+
+    @Override
+    public ValueType defaultType()
+    {
+      return ValueType.STRING;
+    }
+
+    @Override
+    public Supplier<String[]> makeDimensionProcessor(DimensionSelector selector, boolean multiValue)
+    {
+      return () -> {
+        final IndexedInts row = selector.getRow();
+        final int size = row.size();
+        if (size == 0) {
+          return NULL_VALUE;
+        } else {
+          String[] values = new String[size];
+          for (int i = 0; i < size; ++i) {
+            values[i] = selector.lookupName(row.get(i));
+          }
+          return values;
+        }
+      };
+    }
+
+    @Override
+    public Supplier<String[]> makeFloatProcessor(BaseFloatColumnValueSelector selector)
+    {
+      return () -> {
+        if (selector.isNull()) {
+          return NULL_VALUE;
+        }
+        return new String[]{Float.toString(selector.getFloat())};
+      };
+    }
+
+    @Override
+    public Supplier<String[]> makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
+    {
+      return () -> {
+        if (selector.isNull()) {
+          return NULL_VALUE;
+        }
+        return new String[]{Double.toString(selector.getDouble())};
+      };
+    }
+
+    @Override
+    public Supplier<String[]> makeLongProcessor(BaseLongColumnValueSelector selector)
+    {
+      return () -> {
+        if (selector.isNull()) {
+          return NULL_VALUE;
+        }
+        return new String[]{Long.toString(selector.getLong())};
+      };
+    }
+
+    @Override
+    public Supplier<String[]> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
+    {
+      return () -> NULL_VALUE;
+    }
   }
 }

@@ -152,12 +152,14 @@ public class CliIndexerServerModule implements Module
         oldConfig.getMaxIdleTime(),
         oldConfig.getDefaultQueryTimeout(),
         oldConfig.getMaxScatterGatherBytes(),
+        oldConfig.getMaxSubqueryRows(),
         oldConfig.getMaxQueryTimeout(),
         oldConfig.getMaxRequestHeaderSize(),
         oldConfig.getGracefulShutdownTimeout(),
         oldConfig.getUnannouncePropagationDelay(),
         oldConfig.getInflateBufferSize(),
-        oldConfig.getCompressionLevel()
+        oldConfig.getCompressionLevel(),
+        oldConfig.isEnableForwardedRequestCustomizer()
     );
   }
 }

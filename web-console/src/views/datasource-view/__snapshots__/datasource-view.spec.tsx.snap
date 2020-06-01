@@ -31,7 +31,7 @@ exports[`data source view matches snapshot 1`] = `
     <Blueprint3.Switch
       checked={false}
       disabled={false}
-      label="Show disabled"
+      label="Show unused"
       onChange={[Function]}
     />
     <Memo(TableColumnSelector)

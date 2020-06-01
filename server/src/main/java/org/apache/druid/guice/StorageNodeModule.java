@@ -45,16 +45,20 @@ public class StorageNodeModule implements Module
     JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
 
-    binder.bind(NodeTypeConfig.class).toProvider(Providers.of(null));
+    binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
   }
 
   @Provides
   @LazySingleton
-  public DruidServerMetadata getMetadata(@Self DruidNode node, @Nullable NodeTypeConfig nodeType, DruidServerConfig config)
+  public DruidServerMetadata getMetadata(
+      @Self DruidNode node,
+      @Nullable ServerTypeConfig serverTypeConfig,
+      DruidServerConfig config
+  )
   {
-    if (nodeType == null) {
-      throw new ProvisionException("Must override the binding for NodeTypeConfig if you want a DruidServerMetadata.");
+    if (serverTypeConfig == null) {
+      throw new ProvisionException("Must override the binding for ServerTypeConfig if you want a DruidServerMetadata.");
     }
 
     return new DruidServerMetadata(
@@ -62,7 +66,7 @@ public class StorageNodeModule implements Module
         node.getHostAndPort(),
         node.getHostAndTlsPort(),
         config.getMaxSize(),
-        nodeType.getNodeType(),
+        serverTypeConfig.getServerType(),
         config.getTier(),
         config.getPriority()
     );
@@ -70,19 +74,16 @@ public class StorageNodeModule implements Module
 
   @Provides
   @LazySingleton
-  public DataNodeService getDataNodeService(
-      @Nullable NodeTypeConfig nodeType,
-      DruidServerConfig config
-  )
+  public DataNodeService getDataNodeService(@Nullable ServerTypeConfig serverTypeConfig, DruidServerConfig config)
   {
-    if (nodeType == null) {
-      throw new ProvisionException("Must override the binding for NodeTypeConfig if you want a DruidServerMetadata.");
+    if (serverTypeConfig == null) {
+      throw new ProvisionException("Must override the binding for ServerTypeConfig if you want a DruidServerMetadata.");
     }
 
     return new DataNodeService(
         config.getTier(),
         config.getMaxSize(),
-        nodeType.getNodeType(),
+        serverTypeConfig.getServerType(),
         config.getPriority()
     );
   }

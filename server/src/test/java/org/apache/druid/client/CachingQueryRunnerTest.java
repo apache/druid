@@ -140,10 +140,7 @@ public class CachingQueryRunnerTest
         .aggregators(AGGS)
         .granularity(Granularities.ALL);
 
-    QueryToolChest toolchest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    QueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
 
     testCloseAndPopulate(expectedRes, expectedCacheRes, builder.build(), toolchest);
     testUseCache(expectedCacheRes, builder.build(), toolchest);
@@ -189,9 +186,7 @@ public class CachingQueryRunnerTest
         expectedResults = Lists.newArrayList(row1, row2);
       }
 
-      QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
-          QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-      );
+      QueryToolChest toolChest = new TimeseriesQueryQueryToolChest();
 
       testCloseAndPopulate(expectedResults, expectedResults, query, toolChest);
       testUseCache(expectedResults, query, toolChest);

@@ -31,6 +31,14 @@ java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence) @ Use on
 java.lang.String#replaceAll(java.lang.String,java.lang.String) @ Use one of the appropriate methods in StringUtils instead, or compile and cache a Pattern explicitly
 java.lang.String#replaceFirst(java.lang.String,java.lang.String) @ Use String.indexOf() and substring methods, or compile and cache a Pattern explicitly
 java.nio.file.Files#createTempDirectory(java.lang.String prefix,java.nio.file.FileAttribute...) @ Use org.apache.druid.java.util.common.FileUtils.createTempDir()
+java.util.HashMap#<init>(int) @ Use com.google.common.collect.Maps#newHashMapWithExpectedSize(int) instead
+java.util.HashMap#<init>(int, float) @ Use com.google.common.collect.Maps#newHashMapWithExpectedSize(int) instead
+java.util.LinkedHashMap#<init>(int) @ Use org.apache.druid.utils.CollectionUtils#newLinkedHashMapWithExpectedSize(int) instead
+java.util.LinkedHashMap#<init>(int, float) @ Use org.apache.druid.utils.CollectionUtils#newLinkedHashMapWithExpectedSize(int) instead
+java.util.HashSet#<init>(int) @ Use com.google.collect.Sets#newHashSetWithExpectedSize(int) instead
+java.util.HashSet#<init>(int, float) @ Use com.google.collect.Sets#newHashSetWithExpectedSize(int) instead
+java.util.LinkedHashSet#<init>(int) @ Use com.google.collect.Sets#newLinkedHashSatWithExpectedSize(int) instead
+java.util.LinkedHashSet#<init>(int, float) @ Use com.google.collect.Sets#newLinkedHashSatWithExpectedSize(int) instead
 java.util.LinkedList @ Use ArrayList or ArrayDeque instead
 java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)
 java.lang.Math#random() @ Use ThreadLocalRandom.current()

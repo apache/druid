@@ -1317,19 +1317,16 @@ public class ImmutableConciseSetTest
   @Test
   public void testComplement9()
   {
-    final List<Integer> lengths = new ArrayList<Integer>();
-    lengths.addAll(
-        Arrays.asList(
-            35,
-            31,
-            32,
-            1,
-            0,
-            31 * 3,
-            1024,
-            ConciseSetUtils.MAX_ALLOWED_INTEGER
-        )
-    );
+    final List<Integer> lengths = new ArrayList<>(Arrays.asList(
+        35,
+        31,
+        32,
+        1,
+        0,
+        31 * 3,
+        1024,
+        ConciseSetUtils.MAX_ALLOWED_INTEGER
+    ));
     final Random random = new Random(701534702L);
     for (int i = 0; i < 5; ++i) {
       lengths.add(random.nextInt(ConciseSetUtils.MAX_ALLOWED_INTEGER + 1));

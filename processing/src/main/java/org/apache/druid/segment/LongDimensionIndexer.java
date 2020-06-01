@@ -131,8 +131,8 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
-          return null;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          return NullHandling.defaultLongValue();
         }
 
         return (Long) dims[dimIndex];

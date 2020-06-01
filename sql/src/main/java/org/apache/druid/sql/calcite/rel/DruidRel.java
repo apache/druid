@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
-import java.util.List;
+import java.util.Set;
 
 public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
 {
@@ -45,13 +45,6 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   @Nullable
   public abstract PartialDruidQuery getPartialDruidQuery();
 
-  /**
-   * Return the number of Druid queries this rel involves, including sub-queries. Simple queries will return 1.
-   *
-   * @return number of nested queries
-   */
-  public abstract int getQueryCount();
-
   public abstract Sequence<Object[]> runQuery();
 
   public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);
@@ -68,30 +61,23 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   }
 
   /**
-   * Convert this DruidRel to a DruidQuery. This may be an expensive operation. For example, DruidSemiJoin needs to
-   * execute the right-hand side query in order to complete this method.
+   * Convert this DruidRel to a DruidQuery. This must be an inexpensive operation, since it is done often throughout
+   * query planning.
    *
-   * This method may return null if it knows that this rel will yield an empty result set.
+   * This method must not return null.
    *
    * @param finalizeAggregations true if this query should include explicit finalization for all of its
    *                             aggregators, where required. Useful for subqueries where Druid's native query layer
    *                             does not do this automatically.
    *
-   * @return query, or null if it is known in advance that this rel will yield an empty result set.
-   *
    * @throws CannotBuildQueryException
    */
-  @Nullable
   public abstract DruidQuery toDruidQuery(boolean finalizeAggregations);
 
   /**
-   * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation. For
-   * example, DruidSemiJoin will use a dummy dataSource in order to complete this method, rather than executing
-   * the right-hand side query.
+   * Convert this DruidRel to a DruidQuery for purposes of explaining. This must be an inexpensive operation.
    *
-   * This method may not return null.
-   *
-   * @return query
+   * This method must not return null.
    *
    * @throws CannotBuildQueryException
    */
@@ -110,7 +96,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode
   public abstract T asDruidConvention();
 
   /**
-   * Get a list of names of datasources read by this DruidRel
+   * Get the set of names of table datasources read by this DruidRel
    */
-  public abstract List<String> getDataSourceNames();
+  public abstract Set<String> getDataSourceNames();
 }

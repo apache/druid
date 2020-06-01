@@ -24,6 +24,8 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 
+import java.util.Objects;
+
 public class BoundRefKey
 {
   private final String dimension;
@@ -82,13 +84,13 @@ public class BoundRefKey
 
     BoundRefKey boundRefKey = (BoundRefKey) o;
 
-    if (dimension != null ? !dimension.equals(boundRefKey.dimension) : boundRefKey.dimension != null) {
+    if (!Objects.equals(dimension, boundRefKey.dimension)) {
       return false;
     }
-    if (extractionFn != null ? !extractionFn.equals(boundRefKey.extractionFn) : boundRefKey.extractionFn != null) {
+    if (!Objects.equals(extractionFn, boundRefKey.extractionFn)) {
       return false;
     }
-    return comparator != null ? comparator.equals(boundRefKey.comparator) : boundRefKey.comparator == null;
+    return Objects.equals(comparator, boundRefKey.comparator);
   }
 
   @Override

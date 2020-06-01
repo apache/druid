@@ -29,7 +29,7 @@ import org.apache.druid.client.selector.Server;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -127,7 +127,7 @@ public class TieredBrokerHostSelector<T>
         servers.put(entry.getValue(), new NodesHolder());
       }
 
-      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER);
+      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER);
       druidNodeDiscovery.registerListener(
           new DruidNodeDiscovery.Listener()
           {
@@ -201,7 +201,7 @@ public class TieredBrokerHostSelector<T>
 
     if (brokerServiceName == null) {
       // For Union Queries tier will be selected on the rules for first dataSource.
-      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getNames(), null));
+      List<Rule> rules = ruleManager.getRulesWithDefault(Iterables.getFirst(query.getDataSource().getTableNames(), null));
 
       // find the rule that can apply to the entire set of intervals
       DateTime now = DateTimes.nowUtc();
@@ -235,7 +235,7 @@ public class TieredBrokerHostSelector<T>
 
     if (brokerServiceName == null) {
       log.error(
-          "WTF?! No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
+          "No brokerServiceName found for datasource[%s], intervals[%s]. Using default[%s].",
           query.getDataSource(),
           query.getIntervals(),
           tierConfig.getDefaultBrokerServiceName()
@@ -247,7 +247,7 @@ public class TieredBrokerHostSelector<T>
 
     if (nodesHolder == null) {
       log.error(
-          "WTF?! No nodesHolder found for brokerServiceName[%s]. Using default selector for[%s]",
+          "No nodesHolder found for brokerServiceName[%s]. Using default selector for[%s]",
           brokerServiceName,
           tierConfig.getDefaultBrokerServiceName()
       );

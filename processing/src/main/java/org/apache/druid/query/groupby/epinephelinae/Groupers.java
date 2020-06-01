@@ -56,7 +56,7 @@ public class Groupers
    * MurmurHash3 was written by Austin Appleby, and is placed in the public domain. The author
    * hereby disclaims copyright to this source code.
    */
-  private static int smear(int hashCode)
+  public static int smear(int hashCode)
   {
     return C2 * Integer.rotateLeft(hashCode * C1, 15);
   }
@@ -84,18 +84,6 @@ public class Groupers
     // Mask off the high bit so we can use that to determine if a bucket is used or not.
     // Also apply the "smear" function, to improve distribution.
     return smear(obj.hashCode()) & USED_FLAG_MASK;
-  }
-
-  public static int hashIntArray(final int[] ints, final int start, final int length)
-  {
-    // Similar to what Arrays.hashCode would do.
-    // Also apply the "smear" function, to improve distribution.
-    int hashCode = 1;
-    for (int i = 0; i < length; i++) {
-      hashCode = 31 * hashCode + ints[start + i];
-    }
-
-    return smear(hashCode) & USED_FLAG_MASK;
   }
 
   static int getUsedFlag(int keyHash)

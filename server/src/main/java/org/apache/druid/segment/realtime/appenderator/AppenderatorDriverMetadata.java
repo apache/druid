@@ -51,8 +51,8 @@ public class AppenderatorDriverMetadata
   {
     Preconditions.checkState(
         segments != null || (activeSegments != null && publishPendingSegments != null),
-        "Metadata should either have segments with state information or both active segments and publish pending segments information. "
-        + "segments [%s], activeSegments [%s], publishPendingSegments [%s]",
+        "Metadata should either have segments with state information or both active segments and publish pending "
+        + "segments information. segments [%s], activeSegments [%s], publishPendingSegments [%s]",
         segments,
         activeSegments,
         publishPendingSegments

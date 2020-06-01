@@ -32,8 +32,6 @@ import javax.annotation.Nullable;
 @PublicApi
 public interface StorageAdapter extends CursorFactory
 {
-  @PublicApi
-  String getSegmentIdentifier();
   Interval getInterval();
   Indexed<String> getAvailableDimensions();
   Iterable<String> getAvailableMetrics();
@@ -49,7 +47,6 @@ public interface StorageAdapter extends CursorFactory
   Comparable getMinValue(String column);
   @Nullable
   Comparable getMaxValue(String column);
-  Capabilities getCapabilities();
 
   /**
    * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if

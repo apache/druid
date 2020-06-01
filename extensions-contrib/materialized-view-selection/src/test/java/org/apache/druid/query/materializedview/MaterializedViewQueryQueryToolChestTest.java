@@ -55,12 +55,7 @@ public class MaterializedViewQueryQueryToolChestTest
     QueryToolChest materializedViewQueryQueryToolChest =
         new MaterializedViewQueryQueryToolChest(new MapQueryToolChestWarehouse(
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                .put(
-                    TimeseriesQuery.class,
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
-                )
+                .put(TimeseriesQuery.class, new TimeseriesQueryQueryToolChest())
                 .build()
         ));
 

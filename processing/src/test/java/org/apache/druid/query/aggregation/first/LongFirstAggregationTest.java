@@ -29,14 +29,16 @@ import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
-public class LongFirstAggregationTest
+public class LongFirstAggregationTest extends InitializedNullHandlingTest
 {
   private LongFirstAggregatorFactory longFirstAggFactory;
   private LongFirstAggregatorFactory combiningAggFactory;
@@ -115,6 +117,18 @@ public class LongFirstAggregationTest
     SerializablePair pair1 = new SerializablePair<>(1467225000L, 1263L);
     SerializablePair pair2 = new SerializablePair<>(1467240000L, 752713L);
     Assert.assertEquals(pair1, longFirstAggFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testComparatorWithNulls()
+  {
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 1263L);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, null);
+    Comparator comparator = longFirstAggFactory.getComparator();
+    Assert.assertEquals(1, comparator.compare(pair1, pair2));
+    Assert.assertEquals(0, comparator.compare(pair1, pair1));
+    Assert.assertEquals(0, comparator.compare(pair2, pair2));
+    Assert.assertEquals(-1, comparator.compare(pair2, pair1));
   }
 
   @Test

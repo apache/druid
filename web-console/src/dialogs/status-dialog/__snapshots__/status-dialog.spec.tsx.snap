@@ -53,7 +53,7 @@ exports[`status dialog matches snapshot 1`] = `
           </button>
         </div>
         <div
-          class="status-dialog-main-area"
+          class="bp3-dialog-body"
         >
           <div
             class="loader"
@@ -93,7 +93,7 @@ exports[`status dialog matches snapshot 1`] = `
           class="bp3-dialog-footer"
         >
           <div
-            class="viewRawButton"
+            class="view-raw-button"
           >
             <button
               class="bp3-button bp3-minimal"
@@ -107,7 +107,7 @@ exports[`status dialog matches snapshot 1`] = `
             </button>
           </div>
           <div
-            class="closeButton"
+            class="close-button"
           >
             <button
               class="bp3-button bp3-intent-primary"

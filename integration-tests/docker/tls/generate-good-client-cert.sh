@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 cat <<EOT > csr.conf
 [req]
@@ -48,7 +50,7 @@ DNS.2 = localhost
 EOT
 
 # Generate a client certificate for this machine
-openssl genrsa -out client.key 1024 -sha256
+openssl genrsa -out client.key 1024
 openssl req -new -out client.csr -key client.key -reqexts req_ext -config csr.conf
 openssl x509 -req -days 3650 -in client.csr -CA root.pem -CAkey root.key -set_serial 0x11111111 -out client.pem -sha256 -extfile csr.conf -extensions req_ext
 
@@ -56,5 +58,5 @@ openssl x509 -req -days 3650 -in client.csr -CA root.pem -CAkey root.key -set_se
 openssl pkcs12 -export -in client.pem -inkey client.key -out client.p12 -name druid -CAfile root.pem -caname druid-it-root -password pass:druid123
 keytool -importkeystore -srckeystore client.p12 -srcstoretype PKCS12 -destkeystore client.jks -deststoretype JKS -srcstorepass druid123 -deststorepass druid123
 
-# Create a Java truststore with the imply test cluster root CA
+# Create a Java truststore with the druid test cluster root CA
 keytool -import -alias druid-it-root -keystore truststore.jks -file root.pem -storepass druid123 -noprompt

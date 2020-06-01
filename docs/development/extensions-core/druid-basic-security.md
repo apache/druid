@@ -23,7 +23,7 @@ title: "Basic Security"
   -->
 
 
-This Apache Druid (incubating) extension adds:
+This Apache Druid extension adds:
 
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store
 - an Authorizer which implements basic role-based access control for Druid metadata store or LDAP users and groups

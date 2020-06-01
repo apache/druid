@@ -25,7 +25,7 @@ title: "Lookups"
 
 > Lookups are an [experimental](../development/experimental.md) feature.
 
-Lookups are a concept in Apache Druid (incubating) where dimension values are (optionally) replaced with new values, allowing join-like
+Lookups are a concept in Apache Druid where dimension values are (optionally) replaced with new values, allowing join-like
 functionality. Applying lookups in Druid is similar to joining a dimension table in a data warehouse. See
 [dimension specs](../querying/dimensionspecs.md) for more information. For the purpose of these documents, a "key"
 refers to a dimension value to match, and a "value" refers to its replacement. So if you wanted to map
@@ -44,8 +44,9 @@ it will return the current account manager for that app-id REGARDLESS of the tim
 If you require data time range sensitive lookups, such a use case is not currently supported dynamically at query time,
 and such data belongs in the raw denormalized data for use in Druid.
 
-Very small lookups (count of keys on the order of a few dozen to a few hundred) can be passed at query time as a "map"
-lookup as per [dimension specs](../querying/dimensionspecs.md).
+Lookups are generally preloaded in-memory on all servers. But very small lookups (on the order of a few dozen to a few
+hundred entries) can also be passed inline in native queries time using the "map" lookup type. Refer to the
+[dimension specs](dimensionspecs.md) documentation for details.
 
 Other lookup types are available as extensions, including:
 
@@ -55,21 +56,37 @@ Other lookup types are available as extensions, including:
 Query Syntax
 ------------
 
-In [Druid SQL](sql.html), lookups can be queried using the `LOOKUP` function, for example:
+In [Druid SQL](sql.html), lookups can be queried using the [`LOOKUP` function](sql.md#string-functions), for example:
 
+```sql
+SELECT
+  LOOKUP(store, 'store_to_country') AS country,
+  SUM(revenue)
+FROM sales
+GROUP BY 1
 ```
-SELECT LOOKUP(column_name, 'lookup-name'), COUNT(*) FROM datasource GROUP BY 1
+
+They can also be queried using the [JOIN operator](datasource.md#join):
+
+```sql
+SELECT
+  store_to_country.v AS country,
+  SUM(sales.revenue) AS country_revenue
+FROM
+  sales
+  INNER JOIN lookup.store_to_country ON sales.store = store_to_country.k
+GROUP BY 1
 ```
 
 In native queries, lookups can be queried with [dimension specs or extraction functions](dimensionspecs.html).
 
 Query Execution
 ---------------
-When executing an aggregation query involving lookups, Druid can decide to apply lookups either while scanning and
-aggregating rows, or to apply them after aggregation is complete. It is more efficient to apply lookups after
-aggregation is complete, so Druid will do this if it can. Druid decides this by checking if the lookup is marked
-as "injective" or not. In general, you should set this property for any lookup that is naturally one-to-one, to allow
-Druid to run your queries as fast as possible.
+When executing an aggregation query involving lookup functions (like the SQL [`LOOKUP` function](sql.md#string-functions),
+Druid can decide to apply them while scanning and aggregating rows, or to apply them after aggregation is complete. It
+is more efficient to apply lookups after aggregation is complete, so Druid will do this if it can. Druid decides this
+by checking if the lookup is marked as "injective" or not. In general, you should set this property for any lookup that
+is naturally one-to-one, to allow Druid to run your queries as fast as possible.
 
 Injective lookups should include _all_ possible keys that may show up in your dataset, and should also map all keys to
 _unique values_. This matters because non-injective lookups may map different keys to the same value, which must be
@@ -94,6 +111,10 @@ But this one is not, since both "2" and "3" map to the same key:
 
 To tell Druid that your lookup is injective, you must specify `"injective" : true` in the lookup configuration. Druid
 will not detect this automatically.
+
+> Currently, the injective lookup optimization is not triggered when lookups are inputs to a
+> [join datasource](datasource.md#join). It is only used when lookup functions are used directly, without the join
+> operator.
 
 Dynamic Configuration
 ---------------------
@@ -326,7 +347,7 @@ These end points can be used to get the propagation status of configured lookups
 
 ### List lookup state of all processes
 
-`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers from zookeeper or configured lookup tiers are listed.
+`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers or configured lookup tiers are listed.
 
 ### List lookup state of processes in a tier
 
@@ -383,7 +404,7 @@ The return value will be the json representation of the factory.
 
 See [Lookups Dynamic Configuration](../configuration/index.md#lookups-dynamic-configuration) for Coordinator configuration.
 
-To configure a Broker / Router / Historical / Peon to announce itself as part of a lookup tier, use the `druid.zk.paths.lookupTier` property.
+To configure a Broker / Router / Historical / Peon to announce itself as part of a lookup tier, use following properties.
 
 |Property | Description | Default |
 |---------|-------------|---------|

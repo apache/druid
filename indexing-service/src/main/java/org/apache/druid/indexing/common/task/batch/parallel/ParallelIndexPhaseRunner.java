@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -29,7 +30,6 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -44,7 +44,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -196,19 +195,8 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
               if (lastStatus != null) {
                 LOG.error("Failed because of the failed sub task[%s]", lastStatus.getId());
               } else {
-                final SinglePhaseSubTaskSpec spec =
-                    (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
-                final InputRowParser inputRowParser = spec.getIngestionSpec().getDataSchema().getParser();
-                LOG.error(
-                    "Failed to run sub tasks for inputSplits[%s]",
-                    getSplitsIfSplittable(
-                        spec.getIngestionSpec().getIOConfig().getNonNullInputSource(inputRowParser),
-                        spec.getIngestionSpec().getIOConfig().getNonNullInputFormat(
-                            inputRowParser == null ? null : inputRowParser.getParseSpec()
-                        ),
-                        tuningConfig.getSplitHintSpec()
-                    )
-                );
+                final SinglePhaseSubTaskSpec spec = (SinglePhaseSubTaskSpec) taskCompleteEvent.getSpec();
+                LOG.error("Failed to run sub tasks for inputSplits[%s]", spec.getInputSplit());
               }
               break;
             default:
@@ -369,7 +357,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
           .getCompleteSubTaskSpecs();
       // Deduplicate subTaskSpecs because some subTaskSpec might exist both in runningSubTaskSpecs and
       // completeSubTaskSpecs.
-      final Map<String, SubTaskSpec<SubTaskType>> subTaskSpecMap = new HashMap<>(
+      final Map<String, SubTaskSpec<SubTaskType>> subTaskSpecMap = Maps.newHashMapWithExpectedSize(
           runningSubTaskSpecs.size() + completeSubTaskSpecs.size()
       );
       runningSubTaskSpecs.forEach(spec -> subTaskSpecMap.put(spec.getId(), spec));

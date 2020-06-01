@@ -93,8 +93,6 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
         completer: {
           insertMatch: (editor: any, data: any) => {
             editor.completer.insertMatch({ value: data.caption });
-            const pos = editor.getCursorPosition();
-            editor.gotoLine(pos.row + 1, pos.column - 1);
           },
         },
       };

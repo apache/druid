@@ -30,14 +30,14 @@ import java.util.Objects;
 
 /**
  * Representation of all information related to discovery of a node and all the other metadata associated with
- * the node per nodeType such as broker, historical etc.
- * Note that one Druid process might announce multiple DiscoveryDruidNode if it acts as multiple nodeTypes e.g.
- * coordinator would announce DiscoveryDruidNode for overlord nodeType as well when acting as overlord.
+ * the node per nodeRole such as broker, historical etc.
+ * Note that one Druid process might announce multiple DiscoveryDruidNode if it acts in multiple {@link NodeRole}s e. g.
+ * Coordinator would announce DiscoveryDruidNode for {@link NodeRole#OVERLORD} as well when acting as Overlord.
  */
 public class DiscoveryDruidNode
 {
   private final DruidNode druidNode;
-  private final NodeType nodeType;
+  private final NodeRole nodeRole;
 
   // Other metadata associated with the node e.g.
   // if its a historical node then lookup information, segment loading capacity etc.
@@ -46,12 +46,12 @@ public class DiscoveryDruidNode
   @JsonCreator
   public DiscoveryDruidNode(
       @JsonProperty("druidNode") DruidNode druidNode,
-      @JsonProperty("nodeType") NodeType nodeType,
+      @JsonProperty("nodeType") NodeRole nodeRole,
       @JsonProperty("services") Map<String, DruidService> services
   )
   {
     this.druidNode = druidNode;
-    this.nodeType = nodeType;
+    this.nodeRole = nodeRole;
 
     if (services != null && !services.isEmpty()) {
       this.services.putAll(services);
@@ -64,10 +64,14 @@ public class DiscoveryDruidNode
     return services;
   }
 
-  @JsonProperty
-  public NodeType getNodeType()
+  /**
+   * Keeping the legacy name 'nodeType' property name for backward compatibility. When the project is updated to
+   * Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152.
+   */
+  @JsonProperty("nodeType")
+  public NodeRole getNodeRole()
   {
-    return nodeType;
+    return nodeRole;
   }
 
   @JsonProperty
@@ -100,14 +104,14 @@ public class DiscoveryDruidNode
     }
     DiscoveryDruidNode that = (DiscoveryDruidNode) o;
     return Objects.equals(druidNode, that.druidNode) &&
-           Objects.equals(nodeType, that.nodeType) &&
+           Objects.equals(nodeRole, that.nodeRole) &&
            Objects.equals(services, that.services);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(druidNode, nodeType, services);
+    return Objects.hash(druidNode, nodeRole, services);
   }
 
   @Override
@@ -115,7 +119,7 @@ public class DiscoveryDruidNode
   {
     return "DiscoveryDruidNode{" +
            "druidNode=" + druidNode +
-           ", nodeType='" + nodeType + '\'' +
+           ", nodeRole='" + nodeRole + '\'' +
            ", services=" + services +
            '}';
   }

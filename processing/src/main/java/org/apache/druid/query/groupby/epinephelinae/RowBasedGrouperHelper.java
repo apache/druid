@@ -51,9 +51,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryHelper;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -66,6 +64,8 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -347,8 +347,8 @@ public class RowBasedGrouperHelper
       final Supplier<ResultRow> supplier
   )
   {
-    final RowBasedColumnSelectorFactory.RowAdapter<ResultRow> adapter =
-        new RowBasedColumnSelectorFactory.RowAdapter<ResultRow>()
+    final RowAdapter<ResultRow> adapter =
+        new RowAdapter<ResultRow>()
         {
           @Override
           public ToLongFunction<ResultRow> timestampFunction()
@@ -362,9 +362,9 @@ public class RowBasedGrouperHelper
           }
 
           @Override
-          public Function<ResultRow, Object> rawFunction(final String columnName)
+          public Function<ResultRow, Object> columnFunction(final String columnName)
           {
-            final int columnIndex = query.getResultRowPositionLookup().getInt(columnName);
+            final int columnIndex = query.getResultRowSignature().indexOf(columnName);
             if (columnIndex < 0) {
               return row -> null;
             } else {
@@ -373,7 +373,12 @@ public class RowBasedGrouperHelper
           }
         };
 
-    return RowBasedColumnSelectorFactory.create(adapter, supplier::get, GroupByQueryHelper.rowSignatureFor(query));
+    return RowBasedColumnSelectorFactory.create(
+        adapter,
+        supplier::get,
+        query.getResultRowSignature(),
+        false
+    );
   }
 
   /**
@@ -539,7 +544,7 @@ public class RowBasedGrouperHelper
 
     if (dimsToInclude != null) {
       for (String dimension : dimsToInclude) {
-        final int dimIndex = query.getResultRowPositionLookup().getInt(dimension);
+        final int dimIndex = query.getResultRowSignature().indexOf(dimension);
         if (dimIndex >= 0) {
           dimsToIncludeBitSet.set(dimIndex - resultRowDimensionStart);
         }

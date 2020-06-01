@@ -24,7 +24,7 @@ import time
 
 if len(sys.argv) != 5:
   sys.stderr.write('usage: program <github-username> <upstream-remote> <previous-release-branch> <current-release-branch>\n')
-  sys.stderr.write("  e.g., program myusername upstream 0.13.0-incubating 0.14.0-incubating")
+  sys.stderr.write("  e.g., program myusername upstream 0.17.0 0.18.0")
   sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.")
   sys.exit(1)
 
@@ -56,7 +56,7 @@ for commit_id in all_release_commits.splitlines():
         # wait 3 seconds between calls to avoid hitting the rate limit
         time.sleep(3)
 
-        search_url = "https://api.github.com/search/issues?q=type:pr+is:merged+is:closed+repo:apache/incubator-druid+SHA:{}"
+        search_url = "https://api.github.com/search/issues?q=type:pr+is:merged+is:closed+repo:apache/druid+SHA:{}"
         resp = requests.get(search_url.format(commit_id), auth=(github_username, os.environ["GIT_TOKEN"]))
         resp_json = resp.json()
 

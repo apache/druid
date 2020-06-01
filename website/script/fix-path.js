@@ -19,7 +19,7 @@
 const replace = require('replace-in-file');
 
 if (process.argv.length !== 4) {
-  console.log('Usage: node fix-path.js latest 0.16.0-incubating');
+  console.log('Usage: node fix-path.js latest 0.17.0');
   process.exit(1);
 }
 

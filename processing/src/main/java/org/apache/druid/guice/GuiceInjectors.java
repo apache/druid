@@ -58,8 +58,7 @@ public class GuiceInjectors
 
   public static Injector makeStartupInjectorWithModules(Iterable<? extends Module> modules)
   {
-    List<Module> theModules = new ArrayList<>();
-    theModules.addAll(makeDefaultStartupModules());
+    List<Module> theModules = new ArrayList<>(makeDefaultStartupModules());
     for (Module theModule : modules) {
       theModules.add(theModule);
     }

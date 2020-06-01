@@ -25,7 +25,7 @@ package org.apache.druid.timeline;
  * which has the same major version in the same time chunk.
  *
  * An Overshadowable overshadows another if its root partition range contains that of another
- * and has a higher minorVersion. For more details, check https://github.com/apache/incubator-druid/issues/7491.
+ * and has a higher minorVersion. For more details, check https://github.com/apache/druid/issues/7491.
  */
 public interface Overshadowable<T extends Overshadowable>
 {

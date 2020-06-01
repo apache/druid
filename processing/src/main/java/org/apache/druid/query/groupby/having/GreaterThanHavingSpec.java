@@ -66,7 +66,7 @@ public class GreaterThanHavingSpec implements HavingSpec
   @Override
   public void setQuery(GroupByQuery query)
   {
-    columnNumber = query.getResultRowPositionLookup().getInt(aggregationName);
+    columnNumber = query.getResultRowSignature().indexOf(aggregationName);
     aggregators = HavingSpecUtil.computeAggregatorsMap(query.getAggregatorSpecs());
   }
 
@@ -121,12 +121,10 @@ public class GreaterThanHavingSpec implements HavingSpec
   @Override
   public String toString()
   {
-    final StringBuilder sb = new StringBuilder();
-    sb.append("GreaterThanHavingSpec");
-    sb.append("{aggregationName='").append(aggregationName).append('\'');
-    sb.append(", value=").append(value);
-    sb.append('}');
-    return sb.toString();
+    return "GreaterThanHavingSpec{" +
+           "aggregationName='" + aggregationName + '\'' +
+           ", value=" + value +
+           '}';
   }
 
   @Override

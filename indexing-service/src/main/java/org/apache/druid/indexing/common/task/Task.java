@@ -28,8 +28,11 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.LegacySinglePhaseSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
+import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -50,16 +53,20 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @Type(name = "kill", value = KillTask.class),
+    @Type(name = "kill", value = KillUnusedSegmentsTask.class),
     @Type(name = "move", value = MoveTask.class),
     @Type(name = "archive", value = ArchiveTask.class),
     @Type(name = "restore", value = RestoreTask.class),
     @Type(name = "index", value = IndexTask.class),
     @Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
     @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
-    @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class), // for backward compatibility
+    // for backward compatibility
+    @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class),
     @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
     @Type(name = PartialHashSegmentMergeTask.TYPE, value = PartialHashSegmentMergeTask.class),
+    @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
+    @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
+    @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
     @Type(name = "index_hadoop", value = HadoopIndexTask.class),
     @Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),

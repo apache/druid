@@ -23,7 +23,7 @@ import { compact } from '../../utils';
 
 export interface ArrayInputProps {
   className?: string;
-  values: string[];
+  values: string[] | undefined;
   onChange: (newValues: string[] | undefined) => void;
   placeholder?: string;
   large?: boolean;
@@ -40,8 +40,11 @@ export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps)
     const stringValue = e.target.value;
     const newValues: string[] = stringValue.split(/[,\s]+/).map((v: string) => v.trim());
     const newValuesFiltered = compact(newValues);
-    if (newValues.length === newValuesFiltered.length) {
-      onChange(stringValue === '' ? undefined : newValuesFiltered);
+    if (stringValue === '') {
+      onChange(undefined);
+      setStringValue(undefined);
+    } else if (newValues.length === newValuesFiltered.length) {
+      onChange(newValuesFiltered);
       setStringValue(undefined);
     } else {
       setStringValue(stringValue);
@@ -51,7 +54,7 @@ export const ArrayInput = React.memo(function ArrayInput(props: ArrayInputProps)
   return (
     <TextArea
       className={className}
-      value={stringValue || props.values.join(', ')}
+      value={stringValue || (props.values || []).join(', ')}
       onChange={handleChange}
       placeholder={placeholder}
       large={large}

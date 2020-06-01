@@ -90,12 +90,12 @@ public class TaskMonitor<T extends Task>
   @GuardedBy("taskCountLock")
   private int numFailedTasks;
   /**
-   * This metric is used only for unit tests because the current task status system doesn't track the killed task
-   * status. Currently, this metric only represents number of killed tasks by {@link ParallelIndexTaskRunner}.
+   * This metric is used only for unit tests because the current task status system doesn't track the canceled task
+   * status. Currently, this metric only represents the number of canceled tasks by {@link ParallelIndexTaskRunner}.
    * See {@link #stop()}, {@link ParallelIndexPhaseRunner#run()}, and
    * {@link ParallelIndexPhaseRunner#stopGracefully()}.
    */
-  private int numKilledTasks;
+  private int numCanceledTasks;
 
   @GuardedBy("startStopLock")
   private boolean running = false;
@@ -185,7 +185,7 @@ public class TaskMonitor<T extends Task>
   }
 
   /**
-   * Stop task monitoring and kill all running tasks.
+   * Stop task monitoring and cancel all running tasks.
    */
   public void stop()
   {
@@ -194,6 +194,7 @@ public class TaskMonitor<T extends Task>
         running = false;
         taskStatusChecker.shutdownNow();
 
+
         synchronized (taskCountLock) {
           if (numRunningTasks > 0) {
             final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
@@ -201,15 +202,15 @@ public class TaskMonitor<T extends Task>
               final MonitorEntry entry = iterator.next();
               iterator.remove();
               final String taskId = entry.runningTask.getId();
-              log.info("Request to kill subtask[%s]", taskId);
-              indexingServiceClient.killTask(taskId);
+              log.info("Request to cancel subtask[%s]", taskId);
+              indexingServiceClient.cancelTask(taskId);
               numRunningTasks--;
-              numKilledTasks++;
+              numCanceledTasks++;
             }
 
             if (numRunningTasks > 0) {
               log.warn(
-                  "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
+                  "Inconsistent state: numRunningTasks[%d] is still not zero after trying to cancel all running tasks.",
                   numRunningTasks
               );
             }
@@ -343,9 +344,9 @@ public class TaskMonitor<T extends Task>
   }
 
   @VisibleForTesting
-  int getNumKilledTasks()
+  int getNumCanceledTasks()
   {
-    return numKilledTasks;
+    return numCanceledTasks;
   }
 
   ParallelIndexingPhaseProgress getProgress()

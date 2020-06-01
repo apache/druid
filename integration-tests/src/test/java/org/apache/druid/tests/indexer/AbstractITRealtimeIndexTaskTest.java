@@ -24,6 +24,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -68,6 +69,9 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   DateTime dtLast;             // timestamp of last event
   DateTime dtGroupBy;          // timestamp for expected response for groupBy query
 
+  static final int NUM_RETRIES = 60;
+  static final long DELAY_FOR_RETRIES_MS = 10000;
+
   @Inject
   ServerDiscoveryFactory factory;
   @Inject
@@ -85,19 +89,18 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
     LOG.info("Starting test: %s", this.getClass().getSimpleName());
     try (final Closeable ignored = unloader(fullDatasourceName)) {
-      // the task will run for 3 minutes and then shutdown itself
+      // the task will run for 5 minutes and then shutdown itself
       String task = setShutOffTime(
           getResourceAsString(getTaskResource()),
-          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
+          DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5))
       );
       task = StringUtils.replace(task, "%%DATASOURCE%%", fullDatasourceName);
 
       LOG.info("indexerSpec: [%s]\n", task);
       String taskID = indexer.submitTask(task);
 
-
       // sleep for a while to let peons finish starting up
-      TimeUnit.SECONDS.sleep(5);
+      TimeUnit.SECONDS.sleep(60);
 
       // this posts 22 events, one every 4 seconds
       // each event contains the current time as its timestamp except
@@ -105,8 +108,17 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       //   the timestamp for the 18th event is 2 seconds earlier than the 17th
       postEvents();
 
-      // sleep for a while to let the events be ingested
-      TimeUnit.SECONDS.sleep(5);
+      // wait for a while to let the events be ingested
+      ITRetryUtil.retryUntil(
+          () -> {
+            final int countRows = queryHelper.countRows(fullDatasourceName, Intervals.ETERNITY.toString());
+            return countRows == getNumExpectedRowsIngested();
+          },
+          true,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
+          "Waiting all events are ingested"
+      );
 
       // put the timestamps into the query structure
       String query_response_template;
@@ -146,8 +158,8 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       ITRetryUtil.retryUntil(
           () -> coordinator.areSegmentsLoaded(fullDatasourceName),
           true,
-          10000,
-          60,
+          DELAY_FOR_RETRIES_MS,
+          NUM_RETRIES,
           "Real-time generated segments loaded"
       );
 
@@ -176,4 +188,6 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   abstract String getQueriesResource();
 
   abstract void postEvents() throws Exception;
+
+  abstract int getNumExpectedRowsIngested();
 }

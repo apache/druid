@@ -37,6 +37,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.junit.Assert;
@@ -89,6 +90,7 @@ public class FireDepartmentTest
                             null
                         ),
                         null,
+                        null,
                         null
                     ),
                     null
@@ -112,6 +114,7 @@ public class FireDepartmentTest
                 null,
                 null,
                 null,
+                NoopJoinableFactory.INSTANCE,
                 TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance()),
                 TestHelper.getTestIndexIO(),
                 MapCache.create(0),

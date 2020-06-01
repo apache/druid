@@ -35,6 +35,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 public final class Rows
 {
@@ -75,25 +76,30 @@ public final class Rows
   }
 
   /**
-   * Convert an object to a number. Nulls are treated as zeroes unless
-   * druid.generic.useDefaultValueForNull is set to false.
+   * Convert an object to a number.
    *
-   * @param name       field name of the object being converted (may be used for exception messages)
-   * @param inputValue the actual object being converted
+   * If {@link NullHandling#replaceWithDefault()} is true, this method will never return null. If false, it will return
+   * {@link NullHandling#defaultLongValue()} instead of null.
    *
-   * @return a number
+   * @param name                 field name of the object being converted (may be used for exception messages)
+   * @param inputValue           the actual object being converted
+   * @param throwParseExceptions whether this method should throw a {@link ParseException} or use a default/null value
+   *                             when {@param inputValue} is not numeric
    *
-   * @throws NullPointerException if the string is null
-   * @throws ParseException       if the column cannot be converted to a number
+   * @return a Number; will not necessarily be the same type as {@param zeroClass}
+   *
+   * @throws ParseException if the input cannot be converted to a number and {@code throwParseExceptions} is true
    */
   @Nullable
-  public static Number objectToNumber(final String name, final Object inputValue)
+  public static <T extends Number> Number objectToNumber(
+      final String name,
+      final Object inputValue,
+      final boolean throwParseExceptions
+  )
   {
     if (inputValue == null) {
       return NullHandling.defaultLongValue();
-    }
-
-    if (inputValue instanceof Number) {
+    } else if (inputValue instanceof Number) {
       return (Number) inputValue;
     } else if (inputValue instanceof String) {
       try {
@@ -109,10 +115,18 @@ public final class Rows
         }
       }
       catch (Exception e) {
-        throw new ParseException(e, "Unable to parse value[%s] for field[%s]", inputValue, name);
+        if (throwParseExceptions) {
+          throw new ParseException(e, "Unable to parse value[%s] for field[%s]", inputValue, name);
+        } else {
+          return NullHandling.defaultLongValue();
+        }
       }
     } else {
-      throw new ParseException("Unknown type[%s] for field[%s]", inputValue.getClass(), name);
+      if (throwParseExceptions) {
+        throw new ParseException("Unknown type[%s] for field[%s]", inputValue.getClass(), name);
+      } else {
+        return NullHandling.defaultLongValue();
+      }
     }
   }
 

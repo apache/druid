@@ -67,6 +67,7 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
     selector = new TestFloatColumnSelector(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
   }
 

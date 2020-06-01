@@ -41,6 +41,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -63,6 +64,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -142,7 +144,7 @@ public class IngestSegmentFirehoseFactoryTest
       private final Set<DataSegment> published = new HashSet<>();
 
       @Override
-      public List<DataSegment> getUsedSegmentsForIntervals(
+      public List<DataSegment> retrieveUsedSegmentsForIntervals(
           String dataSource,
           List<Interval> interval,
           Segments visibility
@@ -152,7 +154,7 @@ public class IngestSegmentFirehoseFactoryTest
       }
 
       @Override
-      public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
+      public List<DataSegment> retrieveUnusedSegmentsForInterval(String dataSource, Interval interval)
       {
         return ImmutableList.of();
       }
@@ -211,7 +213,10 @@ public class IngestSegmentFirehoseFactoryTest
     final CoordinatorClient cc = new CoordinatorClient(null, null)
     {
       @Override
-      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
         return ImmutableSet.copyOf(SEGMENT_SET);
       }
@@ -234,6 +239,7 @@ public class IngestSegmentFirehoseFactoryTest
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
                     ImmutableList.of()
                 ),
+                null,
                 null,
                 null
             )
@@ -308,6 +314,7 @@ public class IngestSegmentFirehoseFactoryTest
                       public void configure(Binder binder)
                       {
                         binder.bind(LocalDataSegmentPuller.class);
+                        binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
                       }
                     }
                 )
@@ -598,11 +605,11 @@ public class IngestSegmentFirehoseFactoryTest
     };
     Assert.assertEquals(
         Arrays.asList(expectedDims),
-        IngestSegmentFirehoseFactory.getUniqueDimensions(timelineSegments, null)
+        ReingestionTimelineUtils.getUniqueDimensions(timelineSegments, null)
     );
     Assert.assertEquals(
         Arrays.asList(expectedMetrics),
-        IngestSegmentFirehoseFactory.getUniqueMetrics(timelineSegments)
+        ReingestionTimelineUtils.getUniqueMetrics(timelineSegments)
     );
   }
 

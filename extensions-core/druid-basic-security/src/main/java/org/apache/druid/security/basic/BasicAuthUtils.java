@@ -67,32 +67,32 @@ public class BasicAuthUtils
   public static final int KEY_LENGTH = 512;
   public static final String ALGORITHM = "PBKDF2WithHmacSHA512";
 
-  public static final TypeReference AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthenticatorUser>> AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthenticatorUser>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_USER_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerUser>> AUTHORIZER_USER_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerUser>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerGroupMapping>> AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerGroupMapping>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<Map<String, BasicAuthorizerRole>> AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerRole>>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<UserAndRoleMap> AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<UserAndRoleMap>()
       {
       };
 
-  public static final TypeReference AUTHORIZER_GROUP_MAPPING_AND_ROLE_MAP_TYPE_REFERENCE =
+  public static final TypeReference<GroupMappingAndRoleMap> AUTHORIZER_GROUP_MAPPING_AND_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<GroupMappingAndRoleMap>()
       {
       };
@@ -112,8 +112,8 @@ public class BasicAuthUtils
       return key.getEncoded();
     }
     catch (InvalidKeySpecException ikse) {
-      log.error("WTF? invalid keyspec");
-      throw new RuntimeException("WTF? invalid keyspec", ikse);
+      log.error("Invalid keyspec");
+      throw new RuntimeException("Invalid keyspec", ikse);
     }
     catch (NoSuchAlgorithmException nsae) {
       log.error("%s not supported on this system.", ALGORITHM);
@@ -123,7 +123,7 @@ public class BasicAuthUtils
 
   public static byte[] generateSalt()
   {
-    byte salt[] = new byte[SALT_LENGTH];
+    byte[] salt = new byte[SALT_LENGTH];
     SECURE_RANDOM.nextBytes(salt);
     return salt;
   }

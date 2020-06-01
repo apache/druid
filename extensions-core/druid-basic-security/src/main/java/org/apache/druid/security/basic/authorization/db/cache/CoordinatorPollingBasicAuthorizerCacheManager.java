@@ -51,6 +51,7 @@ import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -418,6 +419,15 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
         req,
         new BytesFullResponseHandler()
     );
+
+    // cachedSerializedGroupMappingMap is a new endpoint introduced in Druid 0.17.0. For backwards compatibility, if we
+    // get a 404 from the coordinator we stop retrying. This can happen during a rolling upgrade when a process
+    // running 0.17.0+ tries to access this endpoint on an older coordinator.
+    if (responseHolder.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+      LOG.warn("cachedSerializedGroupMappingMap is not available from the coordinator, skipping fetch of group mappings for now.");
+      return null;
+    }
+
     byte[] groupRoleMapBytes = responseHolder.getContent();
 
     GroupMappingAndRoleMap groupMappingAndRoleMap = objectMapper.readValue(

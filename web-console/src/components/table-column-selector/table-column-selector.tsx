@@ -34,18 +34,23 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
   props: TableColumnSelectorProps,
 ) {
   const { columns, onChange, tableColumnsHidden } = props;
+
+  const isColumnShown = (column: string) => !tableColumnsHidden.includes(column);
+
   const checkboxes = (
     <Menu className="table-column-selector-menu">
       {columns.map(column => (
         <MenuCheckbox
           label={column}
           key={column}
-          checked={!tableColumnsHidden.includes(column)}
+          checked={isColumnShown(column)}
           onChange={() => onChange(column)}
         />
       ))}
     </Menu>
   );
+
+  const counterText = `(${columns.filter(isColumnShown).length}/${columns.length})`;
 
   return (
     <Popover
@@ -53,7 +58,9 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
       content={checkboxes}
       position={Position.BOTTOM_RIGHT}
     >
-      <Button rightIcon={IconNames.CARET_DOWN} text="Columns" />
+      <Button rightIcon={IconNames.CARET_DOWN}>
+        Columns <span className="counter">{counterText}</span>
+      </Button>
     </Popover>
   );
 });

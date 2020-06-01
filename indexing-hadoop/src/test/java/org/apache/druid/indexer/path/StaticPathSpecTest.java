@@ -82,7 +82,7 @@ public class StaticPathSpecTest
     Assert.assertEquals(path, pathSpec.getPaths());
   }
 
-  public static final PathSpec readWriteRead(String jsonStr, ObjectMapper jsonMapper) throws Exception
+  public static PathSpec readWriteRead(String jsonStr, ObjectMapper jsonMapper) throws Exception
   {
     return jsonMapper.readValue(
         jsonMapper.writeValueAsString(

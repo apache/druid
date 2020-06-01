@@ -25,12 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TaskPayloadResponse
 {
   private final String task;
-  private final ClientQuery payload;
+  private final ClientTaskQuery payload;
 
   @JsonCreator
   public TaskPayloadResponse(
       @JsonProperty("task") final String task,
-      @JsonProperty("payload") final ClientQuery payload
+      @JsonProperty("payload") final ClientTaskQuery payload
   )
   {
     this.task = task;
@@ -44,7 +44,7 @@ public class TaskPayloadResponse
   }
 
   @JsonProperty
-  public ClientQuery getPayload()
+  public ClientTaskQuery getPayload()
   {
     return payload;
   }

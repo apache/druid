@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
 /**
+ *
  */
 public class ServerConfig
 {
@@ -48,12 +49,14 @@ public class ServerConfig
       @NotNull Period maxIdleTime,
       long defaultQueryTimeout,
       long maxScatterGatherBytes,
+      int maxSubqueryRows,
       long maxQueryTimeout,
       int maxRequestHeaderSize,
       @NotNull Period gracefulShutdownTimeout,
       @NotNull Period unannouncePropagationDelay,
       int inflateBufferSize,
-      int compressionLevel
+      int compressionLevel,
+      boolean enableForwardedRequestCustomizer
   )
   {
     this.numThreads = numThreads;
@@ -62,12 +65,14 @@ public class ServerConfig
     this.maxIdleTime = maxIdleTime;
     this.defaultQueryTimeout = defaultQueryTimeout;
     this.maxScatterGatherBytes = maxScatterGatherBytes;
+    this.maxSubqueryRows = maxSubqueryRows;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
     this.unannouncePropagationDelay = unannouncePropagationDelay;
     this.inflateBufferSize = inflateBufferSize;
     this.compressionLevel = compressionLevel;
+    this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
   }
 
   public ServerConfig()
@@ -100,6 +105,10 @@ public class ServerConfig
 
   @JsonProperty
   @Min(1)
+  private int maxSubqueryRows = 100000;
+
+  @JsonProperty
+  @Min(1)
   private long maxQueryTimeout = Long.MAX_VALUE;
 
   @JsonProperty
@@ -121,6 +130,9 @@ public class ServerConfig
   @Min(-1)
   @Max(9)
   private int compressionLevel = Deflater.DEFAULT_COMPRESSION;
+
+  @JsonProperty
+  private boolean enableForwardedRequestCustomizer = false;
 
   public int getNumThreads()
   {
@@ -150,6 +162,11 @@ public class ServerConfig
   public long getMaxScatterGatherBytes()
   {
     return maxScatterGatherBytes;
+  }
+
+  public int getMaxSubqueryRows()
+  {
+    return maxSubqueryRows;
   }
 
   public long getMaxQueryTimeout()
@@ -182,6 +199,10 @@ public class ServerConfig
     return compressionLevel;
   }
 
+  public boolean isEnableForwardedRequestCustomizer()
+  {
+    return enableForwardedRequestCustomizer;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -198,19 +219,20 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
-           Objects.equals(maxIdleTime, that.maxIdleTime) &&
-           Objects.equals(gracefulShutdownTimeout, that.gracefulShutdownTimeout) &&
-           Objects.equals(unannouncePropagationDelay, that.unannouncePropagationDelay);
+           enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           maxIdleTime.equals(that.maxIdleTime) &&
+           gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
+           unannouncePropagationDelay.equals(that.unannouncePropagationDelay);
   }
 
   @Override
   public int hashCode()
   {
-
     return Objects.hash(
         numThreads,
         queueSize,
@@ -218,12 +240,14 @@ public class ServerConfig
         maxIdleTime,
         defaultQueryTimeout,
         maxScatterGatherBytes,
+        maxSubqueryRows,
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
         unannouncePropagationDelay,
         inflateBufferSize,
-        compressionLevel
+        compressionLevel,
+        enableForwardedRequestCustomizer
     );
   }
 
@@ -237,12 +261,14 @@ public class ServerConfig
            ", maxIdleTime=" + maxIdleTime +
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
+           ", maxSubqueryRows=" + maxSubqueryRows +
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
            ", unannouncePropagationDelay=" + unannouncePropagationDelay +
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
+           ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
            '}';
   }
 

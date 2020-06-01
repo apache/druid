@@ -42,8 +42,9 @@ import java.util.concurrent.ExecutorService;
 /**
  * This module is used to fulfill dependency injection of query processing and caching resources: buffer pools and
  * thread pools on Router Druid node type. Router needs to inject those resources, because it depends on
- * {@link org.apache.druid.query.QueryToolChest}s, and they couple query type aspects not related to processing and caching,
- * which Router uses, and related to processing and caching, which Router doesn't use, but they inject the resources.
+ * {@link org.apache.druid.query.QueryToolChest}s, and they couple query type aspects not related to processing and
+ * caching, which Router uses, and related to processing and caching, which Router doesn't use, but they inject the
+ * resources.
  */
 public class RouterProcessingModule implements Module
 {

@@ -24,9 +24,6 @@ apt-get update
 # wget
 apt-get install -y wget
 
-# Java
-apt-get install -y openjdk-8-jdk
-
 # MySQL (Metadata store)
 apt-get install -y mysql-server
 
@@ -34,18 +31,26 @@ apt-get install -y mysql-server
 apt-get install -y supervisor
 
 # Zookeeper
-wget -q -O /tmp/zookeeper-3.4.14.tar.gz "https://apache.org/dist/zookeeper/zookeeper-3.4.14/zookeeper-3.4.14.tar.gz"
-tar -xzf /tmp/zookeeper-3.4.14.tar.gz -C /usr/local
-cp /usr/local/zookeeper-3.4.14/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.14/conf/zoo.cfg
-ln -s /usr/local/zookeeper-3.4.14 /usr/local/zookeeper
-rm /tmp/zookeeper-3.4.14.tar.gz
+
+#ZK_VERSION=3.5.8
+#ZK_TAR=apache-zookeeper-$ZK_VERSION-bin
+
+ZK_VERISON=3.4.14
+ZK_TAR=zookeeper-$ZK_VERSION
+
+wget -q -O /tmp/$ZK_TAR.tar.gz "https://apache.org/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
+tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
+cp /usr/local/$ZK_TAR/conf/zoo_sample.cfg /usr/local/$ZK_TAR/conf/zoo.cfg
+ln -s /usr/local/$ZK_TAR /usr/local/zookeeper
+rm /tmp/$ZK_TAR.tar.gz
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
-wget -q -O /tmp/kafka_2.12-2.1.1.tgz "https://apache.org/dist/kafka/2.1.1/kafka_2.12-2.1.1.tgz"
-tar -xzf /tmp/kafka_2.12-2.1.1.tgz -C /usr/local
-ln -s /usr/local/kafka_2.12-2.1.1 /usr/local/kafka
-rm /tmp/kafka_2.12-2.1.1.tgz
+KAFKA_VERSION=2.5.0
+wget -q -O /tmp/kafka_2.12-$KAFKA_VERSION.tgz "https://apache.org/dist/kafka/$KAFKA_VERSION/kafka_2.12-$KAFKA_VERSION.tgz"
+tar -xzf /tmp/kafka_2.12-$KAFKA_VERSION.tgz -C /usr/local
+ln -s /usr/local/kafka_2.12-$KAFKA_VERSION /usr/local/kafka
+rm /tmp/kafka_2.12-$KAFKA_VERSION.tgz
 
 # Druid system user
 adduser --system --group --no-create-home druid \

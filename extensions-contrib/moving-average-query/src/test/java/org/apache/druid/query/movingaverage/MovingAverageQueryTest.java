@@ -38,7 +38,6 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -50,7 +49,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -63,9 +61,11 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.test.TestConfig;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
@@ -85,6 +85,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
@@ -99,7 +100,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   private final RetryQueryRunnerConfig retryConfig;
   private final ServerConfig serverConfig;
 
-  private final List<Row> groupByResults = new ArrayList<>();
+  private final List<ResultRow> groupByResults = new ArrayList<>();
   private final List<Result<TimeseriesResultValue>> timeseriesResults = new ArrayList<>();
 
   private final TestConfig config;
@@ -222,9 +223,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     return MovingAverageQuery.class;
   }
 
-  private TypeReference<?> getExpectedResultType()
+  private TypeReference<List<MapBasedRow>> getExpectedResultType()
   {
-    return new TypeReference<List<Row>>()
+    return new TypeReference<List<MapBasedRow>>()
     {
     };
   }
@@ -306,9 +307,9 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new TimelineServerView()
         {
           @Override
-          public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
+          public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
           {
-            return null;
+            return Optional.empty();
           }
 
           @Override
@@ -361,7 +362,8 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
             return null;
           }
         },
-        ForkJoinPool.commonPool()
+        ForkJoinPool.commonPool(),
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
 
     ClientQuerySegmentWalker walker = new ClientQuerySegmentWalker(
@@ -372,7 +374,14 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
           {
           }
         },
-        baseClient, warehouse, retryConfig, jsonMapper, serverConfig, null, new CacheConfig()
+        baseClient,
+        null /* local client; unused in this test, so pass in null */,
+        warehouse,
+        retryConfig,
+        jsonMapper,
+        serverConfig,
+        null,
+        new CacheConfig()
     );
 
     defineMocks();

@@ -24,8 +24,8 @@ volumes:
   historical_var: {}
   broker_var: {}
   coordinator_var: {}
-  overlord_var: {}
   router_var: {}
+
 
 services:
   postgres:
@@ -46,22 +46,23 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: apache/incubator-druid
+    image: apache/druid:0.17.0
     container_name: coordinator
     volumes:
+      - ./storage:/opt/data
       - coordinator_var:/opt/druid/var
     depends_on: 
       - zookeeper
       - postgres
     ports:
-      - "3001:8081"
+      - "8081:8081"
     command:
       - coordinator
     env_file:
       - environment
 
   broker:
-    image: apache/incubator-druid
+    image: apache/druid:0.17.0
     container_name: broker
     volumes:
       - broker_var:/opt/druid/var
@@ -70,61 +71,48 @@ services:
       - postgres
       - coordinator
     ports:
-      - "3002:8082"
+      - "8082:8082"
     command:
       - broker
     env_file:
       - environment
 
   historical:
-    image: apache/incubator-druid
+    image: apache/druid:0.17.0
     container_name: historical
     volumes:
+      - ./storage:/opt/data
       - historical_var:/opt/druid/var
     depends_on: 
       - zookeeper
       - postgres
       - coordinator
     ports:
-      - "3003:8083"
+      - "8083:8083"
     command:
       - historical
     env_file:
       - environment
 
-  overlord:
-    image: apache/incubator-druid
-    container_name: overlord
-    volumes:
-      - overlord_var:/opt/druid/var
-    depends_on: 
-      - zookeeper
-      - postgres
-    ports:
-      - "4000:8090"
-    command:
-      - overlord
-    env_file:
-      - environment
-
   middlemanager:
-    image: apache/incubator-druid
+    image: apache/druid:0.17.0
     container_name: middlemanager
     volumes:
+      - ./storage:/opt/data
       - middle_var:/opt/druid/var
     depends_on: 
       - zookeeper
       - postgres
       - coordinator
     ports:
-      - "4001:8091"
+      - "8091:8091"
     command:
       - middleManager
     env_file:
       - environment
 
   router:
-    image: apache/incubator-druid
+    image: apache/druid:0.17.0
     container_name: router
     volumes:
       - router_var:/opt/druid/var
@@ -133,7 +121,7 @@ services:
       - postgres
       - coordinator
     ports:
-      - "4008:8888"
+      - "8888:8888"
     command:
       - router
     env_file:

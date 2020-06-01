@@ -24,7 +24,7 @@ sidebar_label: "JavaScript functionality"
   -->
 
 
-This page discusses how to use JavaScript to extend Apache Druid (incubating).
+This page discusses how to use JavaScript to extend Apache Druid.
 
 ## Examples
 
@@ -34,7 +34,7 @@ JavaScript can be used to extend Druid in a variety of ways:
 - [Extraction functions](../querying/dimensionspecs.html#javascript-extraction-function)
 - [Filters](../querying/filters.html#javascript-filter)
 - [Post-aggregators](../querying/post-aggregations.html#javascript-post-aggregator)
-- [Input parsers](../ingestion/data-formats.html#javascript)
+- [Input parsers](../ingestion/data-formats.html#javascript-parsespec)
 - [Router strategy](../design/router.html#javascript)
 - [Worker select strategy](../configuration/index.html#javascript-worker-select-strategy)
 

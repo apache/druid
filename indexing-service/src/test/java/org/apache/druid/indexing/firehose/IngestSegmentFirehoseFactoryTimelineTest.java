@@ -95,6 +95,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
                   null
               ),
               null,
+              null,
               null
           )
       )
@@ -321,7 +322,10 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final CoordinatorClient cc = new CoordinatorClient(null, null)
       {
         @Override
-        public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+        public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+            String dataSource,
+            List<Interval> intervals
+        )
         {
           // Expect the interval we asked for
           if (intervals.equals(ImmutableList.of(testCase.interval))) {
@@ -332,7 +336,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         }
 
         @Override
-        public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
+        public DataSegment fetchUsedSegment(String dataSource, String segmentId)
         {
           return testCase.segments
               .stream()
@@ -345,7 +349,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           DATA_SOURCE,
           testCase.interval,
           null,
-          new TrueDimFilter(),
+          TrueDimFilter.instance(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
           // Split as much as possible

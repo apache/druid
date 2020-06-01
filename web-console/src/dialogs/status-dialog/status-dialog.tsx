@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, InputGroup, Intent } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import axios from 'axios';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
@@ -83,10 +83,10 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
 
     if (response) {
       return (
-        <>
-          <FormGroup label="Version" labelFor="version" inline>
-            <InputGroup id="version" defaultValue={response.version} readOnly />
-          </FormGroup>
+        <div className="main-container">
+          <div className="version">
+            Version:&nbsp;<strong>{response.version}</strong>
+          </div>
           <ReactTable
             data={response.modules}
             columns={[
@@ -113,7 +113,7 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
             filterable
             defaultFilterMethod={StatusDialog.anywhereMatcher}
           />
-        </>
+        </div>
       );
     }
 
@@ -124,17 +124,17 @@ export class StatusDialog extends React.PureComponent<StatusDialogProps, StatusD
     const { onClose } = this.props;
 
     return (
-      <Dialog className={'status-dialog'} onClose={onClose} isOpen title="Status">
-        <div className={'status-dialog-main-area'}>{this.renderContent()}</div>
+      <Dialog className="status-dialog" onClose={onClose} isOpen title="Status">
+        <div className={Classes.DIALOG_BODY}>{this.renderContent()}</div>
         <div className={Classes.DIALOG_FOOTER}>
-          <div className="viewRawButton">
+          <div className="view-raw-button">
             <Button
               text="View raw"
               minimal
               onClick={() => window.open(UrlBaser.base(`/status`), '_blank')}
             />
           </div>
-          <div className="closeButton">
+          <div className="close-button">
             <Button text="Close" intent={Intent.PRIMARY} onClick={onClose} />
           </div>
         </div>

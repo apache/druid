@@ -32,6 +32,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -65,6 +66,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
       ExecutorService queryExecutorService,
+      JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats

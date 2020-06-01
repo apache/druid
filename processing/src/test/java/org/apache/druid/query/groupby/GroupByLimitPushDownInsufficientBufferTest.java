@@ -47,7 +47,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
@@ -396,18 +395,12 @@ public class GroupByLimitPushDownInsufficientBufferTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         strategySelector,
-        new GroupByQueryQueryToolChest(
-            strategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(strategySelector)
     );
 
     tooSmallGroupByFactory = new GroupByQueryRunnerFactory(
         tooSmallStrategySelector,
-        new GroupByQueryQueryToolChest(
-            tooSmallStrategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
-        )
+        new GroupByQueryQueryToolChest(tooSmallStrategySelector)
     );
   }
 
@@ -683,28 +676,9 @@ public class GroupByLimitPushDownInsufficientBufferTest
   public static final QueryWatcher NOOP_QUERYWATCHER = new QueryWatcher()
   {
     @Override
-    public void registerQuery(Query query, ListenableFuture future)
+    public void registerQueryFuture(Query query, ListenableFuture future)
     {
 
     }
   };
-
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
-  {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null)
-    {
-      @Override
-      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate, QueryToolChest<T, ? extends Query<T>> toolChest)
-      {
-        return new QueryRunner<T>()
-        {
-          @Override
-          public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-          {
-            return delegate.run(queryPlus, responseContext);
-          }
-        };
-      }
-    };
-  }
 }

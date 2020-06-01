@@ -26,6 +26,13 @@
 
    	{"name":"someLong","type":"long"},
 		{"name":"someInt","type":"int"},
-		{"name":"someFloat","type":"float"}
+		{"name":"someFloat","type":"float"},
+		{"name":"someRecordArray","type":{
+		  "type":"array","items":{
+		   "type":"record","name":"MyNestedRecord","fields":[
+		    {"name":"nestedString","type":"string"}
+        ]
+       }
+     }}
 	]
 }]

@@ -46,9 +46,7 @@ export const AboutDialog = React.memo(function AboutDialog(props: AboutDialogPro
     >
       <div className={Classes.DIALOG_BODY}>
         <p>
-          <strong>
-            Apache Druid (incubating) is a high performance real-time analytics database.
-          </strong>
+          <strong>Apache Druid is a high performance real-time analytics database.</strong>
         </p>
         <p>
           For help and support with Druid, please refer to the{' '}

@@ -27,7 +27,7 @@ import java.util.Objects;
 /**
  * Report containing the {@link PartitionStat}s created by a {@link PartialSegmentGenerateTask}.
  * This report is collected by {@link ParallelIndexSupervisorTask} and
- * used to generate {@link PartialHashSegmentMergeIOConfig}.
+ * used to generate {@link PartialSegmentMergeIOConfig}.
  */
 abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SubTaskReport
 {

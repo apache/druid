@@ -17,7 +17,7 @@ under the License.
 
 
 
-Apache Druid (incubating) is a high performance analytics data store for event-driven data. More information about Druid
+Apache Druid is a high performance analytics data store for event-driven data. More information about Druid
 can be found on https://druid.apache.org.
 
 Documentation
@@ -29,7 +29,7 @@ You can get started with Druid with our quickstart at https://druid.apache.org/d
 
 Build from Source
 -----------------
-You can build Apache Druid (incubating) directly from source.
+You can build Apache Druid directly from source.
 
 Prerequisites:
   JDK 8, 8u92+
@@ -71,13 +71,6 @@ dev-subscribe@druid.apache.org.
 
 Contributing
 ------------
-If you find any bugs, please file a GitHub issue at https://github.com/apache/incubator-druid/issues.
+If you find any bugs, please file a GitHub issue at https://github.com/apache/druid/issues.
 
 If you wish to contribute, please follow the guidelines listed at https://druid.apache.org/community/.
-
-
-Disclaimer: Apache Druid is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the
-Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the
-infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful
-ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it
-does indicate that the project has yet to be fully endorsed by the ASF.

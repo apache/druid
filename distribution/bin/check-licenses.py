@@ -214,6 +214,7 @@ def build_compatible_license_names():
     compatible_licenses['Apache License, Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['The Apache Software License, Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2.0'] = 'Apache License version 2.0'
+    compatible_licenses['Apache-2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache Software License - Version 2.0'] = 'Apache License version 2.0'
@@ -223,6 +224,7 @@ def build_compatible_license_names():
     compatible_licenses['Apache License Version 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License v2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache License, version 2.0'] = 'Apache License version 2.0'
+    compatible_licenses['Apache 2.0 License'] = 'Apache License version 2.0'
 
     compatible_licenses['Public Domain'] = 'Public Domain'
 
@@ -239,6 +241,8 @@ def build_compatible_license_names():
     compatible_licenses['The BSD 3-Clause License'] = 'BSD-3-Clause License'
     compatible_licenses['Revised BSD'] = 'BSD-3-Clause License'
     compatible_licenses['New BSD License'] = 'BSD-3-Clause License'
+    compatible_licenses['3-Clause BSD License'] = 'BSD-3-Clause License'
+    compatible_licenses['BSD 3-Clause'] = 'BSD-3-Clause License'
 
     compatible_licenses['ICU License'] = 'ICU License'
 
@@ -248,11 +252,18 @@ def build_compatible_license_names():
     compatible_licenses['CDDL/GPLv2+CE'] = 'CDDL 1.1'
     compatible_licenses['CDDL + GPLv2 with classpath exception'] = 'CDDL 1.1'
     compatible_licenses['CDDL License'] = 'CDDL 1.1'
+    compatible_licenses['COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0'] = 'CDDL 1.0'
 
     compatible_licenses['Eclipse Public License 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['The Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License - Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
+    compatible_licenses['Eclipse Public License v1.0'] = 'Eclipse Public License 1.0'
+
+    compatible_licenses['Eclipse Distribution License 1.0'] = 'Eclipse Distribution License 1.0'
+    compatible_licenses['Eclipse Distribution License - v 1.0'] = 'Eclipse Distribution License 1.0'
+    compatible_licenses['Eclipse Distribution License v. 1.0'] = 'Eclipse Distribution License 1.0'
+    compatible_licenses['EDL 1.0'] = 'Eclipse Distribution License 1.0'
 
     compatible_licenses['Mozilla Public License Version 2.0'] = 'Mozilla Public License Version 2.0'
     compatible_licenses['Mozilla Public License, Version 2.0'] = 'Mozilla Public License Version 2.0'
@@ -264,6 +275,7 @@ def build_compatible_license_names():
 
     compatible_licenses['The MIT License'] = 'MIT License'
     compatible_licenses['MIT License'] = 'MIT License'
+    compatible_licenses['The MIT License (MIT)'] = 'MIT License'
 
     compatible_licenses['-'] = '-'
     return compatible_licenses
@@ -317,8 +329,8 @@ def check_licenses(license_yaml, dependency_reports_root):
     # Build registered license dictionary.
     registered_dep_to_licenses = {}
     skipping_licenses = {}
-    with open(license_yaml) as registry_file:
-        licenses_list = list(yaml.load_all(registry_file))
+    with open(license_yaml, encoding='utf-8') as registry_file:
+        licenses_list = list(yaml.load_all(registry_file, Loader=yaml.FullLoader))
     for license in licenses_list:
         if 'libraries' in license:
             for library in license['libraries']:

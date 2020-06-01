@@ -69,8 +69,8 @@ if every single data server is lost and re-provisioned.
 For more details, please see the [Deep storage](../dependencies/deep-storage.md) page.
 
 ### Metadata storage
-The metadata storage holds various shared system metadata such as segment availability information and task information.
-In a clustered deployment, this is typically going to be a traditional RDBMS like PostgreSQL or MySQL. In a single-server
+The metadata storage holds various shared system metadata such as segment usage information and task information. In a
+clustered deployment, this is typically going to be a traditional RDBMS like PostgreSQL or MySQL. In a single-server
 deployment, it is typically going to be a locally-stored Apache Derby database.
 
 For more details, please see the [Metadata storage](../dependencies/metadata-storage.md) page.
@@ -204,7 +204,7 @@ or a Historical process.
 You can inspect the state of currently active segments using the Druid SQL
 [`sys.segments` table](../querying/sql.md#segments-table). It includes the following flags:
 
-- `is_published`: True if segment metadata has been published to the metadata stored and `used` is true.
+- `is_published`: True if segment metadata has been published to the metadata store and `used` is true.
 - `is_available`: True if the segment is currently available for querying, either on a realtime task or Historical
 process.
 - `is_realtime`: True if the segment is _only_ available on realtime tasks. For datasources that use realtime ingestion,
@@ -233,3 +233,6 @@ So Druid uses three different techniques to maximize query performance:
 - Pruning which segments are accessed for each query.
 - Within each segment, using indexes to identify which rows must be accessed.
 - Within each segment, only reading the specific rows and columns that are relevant to a particular query.
+
+For more details about how Druid executes queries, refer to the [Query execution](../querying/query-execution.md)
+documentation.

@@ -22,53 +22,38 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class BoundFilterTest extends BaseFilterTest
 {
-  private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(null, null, null)
-      )
-  );
-
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.<String>of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "6", "dim1", "-1000", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "7", "dim1", "-10.012", "dim2", ImmutableList.of("d"))).get(0)
-  );
+  private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
+      .addAll(DEFAULT_ROWS)
+      .add(makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, 6.6, null, 10L))
+      .add(makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, null, 3.0f, null))
+      .build();
 
   public BoundFilterTest(
       String testName,
@@ -80,6 +65,9 @@ public class BoundFilterTest extends BaseFilterTest
   {
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -524,7 +512,16 @@ public class BoundFilterTest extends BaseFilterTest
     }
 
     assertFilterMatches(
-        new BoundDimFilter("dim1", "super-ab", "super-abd", true, true, false, superFn, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter(
+            "dim1",
+            "super-ab",
+            "super-abd",
+            true,
+            true,
+            false,
+            superFn,
+            StringComparators.LEXICOGRAPHIC
+        ),
         ImmutableList.of("5")
     );
 
@@ -534,7 +531,16 @@ public class BoundFilterTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter("dim2", "super-", "super-zzzzzz", false, false, false, superFn, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter(
+            "dim2",
+            "super-",
+            "super-zzzzzz",
+            false,
+            false,
+            false,
+            superFn,
+            StringComparators.LEXICOGRAPHIC
+        ),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
 
@@ -603,12 +609,30 @@ public class BoundFilterTest extends BaseFilterTest
     }
 
     assertFilterMatches(
-        new BoundDimFilter("dim3", "super-null", "super-null", false, false, false, superFn, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter(
+            "dim3",
+            "super-null",
+            "super-null",
+            false,
+            false,
+            false,
+            superFn,
+            StringComparators.LEXICOGRAPHIC
+        ),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
 
     assertFilterMatches(
-        new BoundDimFilter("dim4", "super-null", "super-null", false, false, false, superFn, StringComparators.LEXICOGRAPHIC),
+        new BoundDimFilter(
+            "dim4",
+            "super-null",
+            "super-null",
+            false,
+            false,
+            false,
+            superFn,
+            StringComparators.LEXICOGRAPHIC
+        ),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
 
@@ -616,5 +640,133 @@ public class BoundFilterTest extends BaseFilterTest
         new BoundDimFilter("dim4", "super-null", "super-null", false, false, false, superFn, StringComparators.NUMERIC),
         ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
     );
+  }
+
+  @Test
+  public void testNumericNullsAndZeros()
+  {
+    assertFilterMatches(
+        new BoundDimFilter(
+            "d0",
+            "0.0",
+            "1.0",
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "2", "7") : ImmutableList.of("0")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(
+            "f0",
+            "0.0",
+            "1.0",
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "4", "6") : ImmutableList.of("0")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(
+            "l0",
+            "0.0",
+            "1.0",
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "3", "7") : ImmutableList.of("0")
+    );
+  }
+
+  @Test
+  public void testNumericNulls()
+  {
+    assertFilterMatches(
+        new BoundDimFilter(
+            "f0",
+            "1.0",
+            null,
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        ImmutableList.of("1", "2", "3", "5", "7")
+    );
+    assertFilterMatches(
+        new BoundDimFilter(
+            "d0",
+            "1",
+            null,
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        ImmutableList.of("1", "3", "4", "5", "6")
+    );
+    assertFilterMatches(
+        new BoundDimFilter(
+            "l0",
+            "1",
+            null,
+            false,
+            false,
+            false,
+            null,
+            StringComparators.NUMERIC
+        ),
+        ImmutableList.of("1", "2", "4", "5", "6")
+    );
+  }
+
+  @Test
+  public void testRequiredColumnRewrite()
+  {
+    BoundFilter filter = new BoundFilter(
+        new BoundDimFilter("dim0", "", "", false, false, true, null, StringComparators.ALPHANUMERIC)
+    );
+    BoundFilter filter2 = new BoundFilter(
+        new BoundDimFilter("dim1", "", "", false, false, true, null, StringComparators.ALPHANUMERIC)
+    );
+    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+
+    Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
+    Assert.assertEquals(filter2, rewrittenFilter);
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(BoundFilter.class)
+                  .usingGetClass()
+                  .withNonnullFields("boundDimFilter")
+                  .verify();
+  }
+
+  @Test
+  public void test_equals_boundDimFilterDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(BoundFilter.BoundDimFilterDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .verify();
   }
 }

@@ -35,7 +35,7 @@
 # - DRUID_NEWSIZE -- set Java new size
 # - DRUID_MAXDIRECTMEMORYSIZE -- set Java max direct memory size
 #
-# - DRUID_CONFIG -- full path to a file for druid 'common' properties
+# - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 
 set -e
@@ -92,7 +92,11 @@ then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
 
-setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
+DRUID_SET_HOST=${DRUID_SET_HOST:-1}
+if [ "${DRUID_SET_HOST}" = "1" ]
+then
+    setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
+fi
 
 env | grep ^druid_ | while read evar;
 do

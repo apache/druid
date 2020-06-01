@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -30,7 +31,7 @@ import java.util.NavigableSet;
  * This interface describes the coordinator balancing strategy, which is responsible for making decisions on where
  * to place {@link DataSegment}s on historical servers (described by {@link ServerHolder}). The balancing strategy
  * is used by {@link org.apache.druid.server.coordinator.rules.LoadRule} to assign and drop segments, and by
- * {@link org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer} to migrate segments between historicals.
+ * {@link BalanceSegments} to migrate segments between historicals.
  */
 public interface BalancerStrategy
 {
@@ -77,7 +78,7 @@ public interface BalancerStrategy
 
   /**
    * Add balancing strategy stats during the 'balanceTier' operation of
-   * {@link org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer} to be included
+   * {@link BalanceSegments} to be included
    * @param tier historical tier being balanced
    * @param stats stats object to add balancing strategy stats to
    * @param serverHolderList servers in tier being balanced

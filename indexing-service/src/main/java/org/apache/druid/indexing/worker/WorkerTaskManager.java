@@ -534,7 +534,7 @@ public abstract class WorkerTaskManager
               }
             }
             catch (Exception ex) {
-              log.info(ex, "Exception while getting active tasks from overlord. will retry on next scheduled run.");
+              log.warn(ex, "Exception while getting active tasks from overlord. will retry on next scheduled run.");
 
               if (ex instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
@@ -569,7 +569,7 @@ public abstract class WorkerTaskManager
             }
           }
           catch (Throwable th) {
-            log.error(th, "WTF! Got unknown exception while running the scheduled cleanup.");
+            log.error(th, "Got unknown exception while running the scheduled cleanup.");
           }
         },
         1,

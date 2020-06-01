@@ -19,146 +19,144 @@
 
 package org.apache.druid.data.input.s3;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.InputSourceReader;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
-import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.storage.s3.S3InputDataConfig;
+import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
-import org.apache.druid.utils.CollectionUtils;
+import org.apache.druid.utils.Streams;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.net.URI;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-public class S3InputSource extends AbstractInputSource implements SplittableInputSource<CloudObjectLocation>
+public class S3InputSource extends CloudObjectInputSource
 {
-  private static final int MAX_LISTING_LENGTH = 1024;
+  // We lazily initialize ServerSideEncryptingAmazonS3 to avoid costly s3 operation when we only need S3InputSource
+  // for stored information (such as for task logs) and not for ingestion.
+  // (This cost only applies for new ServerSideEncryptingAmazonS3 created with s3InputSourceConfig given).
+  private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
+  @JsonProperty("properties")
+  private final S3InputSourceConfig s3InputSourceConfig;
+  private final S3InputDataConfig inputDataConfig;
 
-  private final ServerSideEncryptingAmazonS3 s3Client;
-  private final List<URI> uris;
-  private final List<URI> prefixes;
-  private final List<CloudObjectLocation> objects;
-
+  /**
+   * Constructor for S3InputSource
+   * @param s3Client                The default ServerSideEncryptingAmazonS3 client built with all default configs
+   *                                from Guice. This injected singleton client is use when {@param s3InputSourceConfig}
+   *                                is not provided and hence, we can skip building a new client from
+   *                                {@param s3ClientBuilder}
+   * @param s3ClientBuilder         Use for building a new s3Client to use instead of the default injected
+   *                                {@param s3Client}. The configurations of the client can be changed
+   *                                before being built
+   * @param inputDataConfig         Stores the configuration for options related to reading input data
+   * @param uris                    User provided uris to read input data
+   * @param prefixes                User provided prefixes to read input data
+   * @param objects                 User provided cloud objects values to read input data
+   * @param s3InputSourceConfig     User provided properties for overriding the default S3 configuration
+   *
+   */
   @JsonCreator
   public S3InputSource(
       @JacksonInject ServerSideEncryptingAmazonS3 s3Client,
+      @JacksonInject ServerSideEncryptingAmazonS3.Builder s3ClientBuilder,
+      @JacksonInject S3InputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
-      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects
+      @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
+      @JsonProperty("properties") @Nullable S3InputSourceConfig s3InputSourceConfig
   )
   {
-    this.s3Client = Preconditions.checkNotNull(s3Client, "s3Client");
-    this.uris = uris;
-    this.prefixes = prefixes;
-    this.objects = objects;
-
-    if (!CollectionUtils.isNullOrEmpty(objects)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(uris) || !CollectionUtils.isNullOrEmpty(prefixes));
-    } else if (!CollectionUtils.isNullOrEmpty(uris)) {
-      throwIfIllegalArgs(!CollectionUtils.isNullOrEmpty(prefixes));
-      uris.forEach(S3Utils::checkURI);
-    } else if (!CollectionUtils.isNullOrEmpty(prefixes)) {
-      prefixes.forEach(S3Utils::checkURI);
-    } else {
-      throwIfIllegalArgs(true);
-    }
-  }
-
-  @JsonProperty
-  public List<URI> getUris()
-  {
-    return uris;
-  }
-
-  @JsonProperty
-  public List<URI> getPrefixes()
-  {
-    return prefixes;
-  }
-
-  @JsonProperty
-  public List<CloudObjectLocation> getObjects()
-  {
-    return objects;
-  }
-
-  @Override
-  public Stream<InputSplit<CloudObjectLocation>> createSplits(
-      InputFormat inputFormat,
-      @Nullable SplitHintSpec splitHintSpec
-  )
-  {
-    if (objects != null) {
-      return objects.stream().map(InputSplit::new);
-    }
-
-    if (uris != null) {
-      return uris.stream().map(CloudObjectLocation::new).map(InputSplit::new);
-    }
-
-    return StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false)
-                        .map(S3Utils::summaryToCloudObjectLocation)
-                        .map(InputSplit::new);
-  }
-
-  @Override
-  public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
-  {
-    if (objects != null) {
-      return objects.size();
-    }
-
-    if (uris != null) {
-      return uris.size();
-    }
-
-    return (int) StreamSupport.stream(getIterableObjectsFromPrefixes().spliterator(), false).count();
-  }
-
-  @Override
-  public SplittableInputSource<CloudObjectLocation> withSplit(InputSplit<CloudObjectLocation> split)
-  {
-    return new S3InputSource(s3Client, null, null, ImmutableList.of(split.get()));
-  }
-
-  @Override
-  public boolean needsFormat()
-  {
-    return true;
-  }
-
-  @Override
-  protected InputSourceReader formattableReader(
-      InputRowSchema inputRowSchema,
-      InputFormat inputFormat,
-      @Nullable File temporaryDirectory
-  )
-  {
-    return new InputEntityIteratingReader(
-        inputRowSchema,
-        inputFormat,
-        // formattableReader() is supposed to be called in each task that actually creates segments.
-        // The task should already have only one split in parallel indexing,
-        // while there's no need to make splits using splitHintSpec in sequential indexing.
-        createSplits(inputFormat, null).map(split -> new S3Entity(s3Client, split.get())),
-        temporaryDirectory
+    super(S3StorageDruidModule.SCHEME, uris, prefixes, objects);
+    this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "S3DataSegmentPusherConfig");
+    Preconditions.checkNotNull(s3Client, "s3Client");
+    this.s3InputSourceConfig = s3InputSourceConfig;
+    this.s3ClientSupplier = Suppliers.memoize(
+        () -> {
+          if (s3ClientBuilder != null && s3InputSourceConfig != null) {
+            if (s3InputSourceConfig.isCredentialsConfigured()) {
+              AWSStaticCredentialsProvider credentials = new AWSStaticCredentialsProvider(
+                  new BasicAWSCredentials(
+                      s3InputSourceConfig.getAccessKeyId().getPassword(),
+                      s3InputSourceConfig.getSecretAccessKey().getPassword()
+                  )
+              );
+              s3ClientBuilder.getAmazonS3ClientBuilder().withCredentials(credentials);
+            }
+            return s3ClientBuilder.build();
+          } else {
+            return s3Client;
+          }
+        }
     );
+  }
+
+  @Nullable
+  @JsonProperty("properties")
+  public S3InputSourceConfig getS3InputSourceConfig()
+  {
+    return s3InputSourceConfig;
+  }
+
+  @Override
+  protected InputEntity createEntity(CloudObjectLocation location)
+  {
+    return new S3Entity(s3ClientSupplier.get(), location);
+  }
+
+  @Override
+  protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
+  {
+    final Iterator<List<S3ObjectSummary>> splitIterator = splitHintSpec.split(
+        getIterableObjectsFromPrefixes().iterator(),
+        object -> new InputFileAttribute(object.getSize())
+    );
+
+    return Streams.sequentialStreamFrom(splitIterator)
+                  .map(objects -> objects.stream()
+                                         .map(S3Utils::summaryToCloudObjectLocation)
+                                         .collect(Collectors.toList()))
+                  .map(InputSplit::new);
+  }
+
+  @Override
+  public SplittableInputSource<List<CloudObjectLocation>> withSplit(InputSplit<List<CloudObjectLocation>> split)
+  {
+    return new S3InputSource(
+        s3ClientSupplier.get(),
+        null,
+        inputDataConfig,
+        null,
+        null,
+        split.get(),
+        getS3InputSourceConfig()
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), s3InputSourceConfig);
   }
 
   @Override
@@ -170,37 +168,26 @@ public class S3InputSource extends AbstractInputSource implements SplittableInpu
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
     S3InputSource that = (S3InputSource) o;
-    return Objects.equals(uris, that.uris) &&
-           Objects.equals(prefixes, that.prefixes) &&
-           Objects.equals(objects, that.objects);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(uris, prefixes, objects);
+    return Objects.equals(s3InputSourceConfig, that.s3InputSourceConfig);
   }
 
   @Override
   public String toString()
   {
     return "S3InputSource{" +
-           "uris=" + uris +
-           ", prefixes=" + prefixes +
-           ", objects=" + objects +
+           "uris=" + getUris() +
+           ", prefixes=" + getPrefixes() +
+           ", objects=" + getObjects() +
+           ", s3InputSourceConfig=" + getS3InputSourceConfig() +
            '}';
   }
 
   private Iterable<S3ObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> S3Utils.lazyFetchingObjectSummariesIterator(s3Client, prefixes.iterator(), MAX_LISTING_LENGTH);
-  }
-
-  private void throwIfIllegalArgs(boolean clause) throws IllegalArgumentException
-  {
-    if (clause) {
-      throw new IllegalArgumentException("exactly one of either uris or prefixes or objects must be specified");
-    }
+    return () -> S3Utils.objectSummaryIterator(s3ClientSupplier.get(), getPrefixes(), inputDataConfig.getMaxListingLength());
   }
 }

@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DOCKER_HOST_IP=$(resolveip -s $HOSTNAME)
+tls_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=set-docker-host-ip.sh
+source "$tls_dir/set-docker-host-ip.sh"
 
 # Generate a client cert with an incorrect hostname for testing
 cat <<EOT > invalid_hostname_csr.conf
@@ -44,7 +46,7 @@ DNS.1 = thisisprobablywrongtoo
 
 EOT
 
-openssl genrsa -out invalid_hostname_client.key 1024 -sha256
+openssl genrsa -out invalid_hostname_client.key 1024
 openssl req -new -out invalid_hostname_client.csr -key invalid_hostname_client.key -reqexts req_ext -config invalid_hostname_csr.conf
 openssl x509 -req -days 3650 -in invalid_hostname_client.csr -CA root.pem -CAkey root.key -set_serial 0x11111112 -out invalid_hostname_client.pem -sha256 -extfile invalid_hostname_csr.conf -extensions req_ext
 

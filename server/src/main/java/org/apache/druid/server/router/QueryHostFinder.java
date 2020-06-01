@@ -125,7 +125,7 @@ public class QueryHostFinder
   private Server findServerInner(final Pair<String, Server> selected)
   {
     if (selected == null) {
-      log.error("Danger, Will Robinson! Unable to find any brokers!");
+      log.error("Unable to find any brokers!");
     }
 
     final String serviceName = selected == null ? hostSelector.getDefaultServiceName() : selected.lhs;
@@ -133,7 +133,7 @@ public class QueryHostFinder
 
     if (server == null) {
       log.error(
-          "WTF?! No server found for serviceName[%s]. Using backup",
+          "No server found for serviceName[%s]. Using backup",
           serviceName
       );
 
@@ -141,7 +141,7 @@ public class QueryHostFinder
 
       if (server == null) {
         log.error(
-            "WTF?! No backup found for serviceName[%s]. Using default[%s]",
+            "No backup found for serviceName[%s]. Using default[%s]",
             serviceName,
             hostSelector.getDefaultServiceName()
         );

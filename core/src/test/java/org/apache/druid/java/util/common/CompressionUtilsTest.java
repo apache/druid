@@ -702,7 +702,7 @@ public class CompressionUtilsTest
     }
 
     @Override
-    public int read(byte b[]) throws IOException
+    public int read(byte[] b) throws IOException
     {
       final int len = Math.min(b.length, GZ_BYTES.length - pos.get() % GZ_BYTES.length);
       pos.addAndGet(len);
@@ -717,7 +717,7 @@ public class CompressionUtilsTest
     }
 
     @Override
-    public int read(byte b[], int off, int len) throws IOException
+    public int read(byte[] b, int off, int len) throws IOException
     {
       final int l = Math.min(len, GZ_BYTES.length - pos.get() % GZ_BYTES.length);
       pos.addAndGet(l);

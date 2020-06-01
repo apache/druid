@@ -30,14 +30,16 @@ import org.apache.druid.query.aggregation.TestLongColumnSelector;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
-public class FloatFirstAggregationTest
+public class FloatFirstAggregationTest extends InitializedNullHandlingTest
 {
   private FloatFirstAggregatorFactory floatFirstAggregatorFactory;
   private FloatFirstAggregatorFactory combiningAggFactory;
@@ -65,8 +67,8 @@ public class FloatFirstAggregationTest
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
-    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
-    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector).atLeastOnce();
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector).atLeastOnce();
     EasyMock.replay(colSelectorFactory);
   }
 
@@ -113,9 +115,21 @@ public class FloatFirstAggregationTest
   @Test
   public void testCombine()
   {
-    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621);
-    SerializablePair pair2 = new SerializablePair<>(1467240000L, 785.4);
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621f);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, 785.4f);
     Assert.assertEquals(pair1, floatFirstAggregatorFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testComparatorWithNulls()
+  {
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621f);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, null);
+    Comparator comparator = floatFirstAggregatorFactory.getComparator();
+    Assert.assertEquals(1, comparator.compare(pair1, pair2));
+    Assert.assertEquals(0, comparator.compare(pair1, pair1));
+    Assert.assertEquals(0, comparator.compare(pair2, pair2));
+    Assert.assertEquals(-1, comparator.compare(pair2, pair1));
   }
 
   @Test

@@ -131,8 +131,8 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
-          return null;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          return NullHandling.defaultFloatValue();
         }
 
         return (Float) dims[dimIndex];

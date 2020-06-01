@@ -30,7 +30,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 @JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = PushedSegmentsReport.class)
 @JsonSubTypes(value = {
     @Type(name = PushedSegmentsReport.TYPE, value = PushedSegmentsReport.class),
-    @Type(name = GeneratedHashPartitionsReport.TYPE, value = GeneratedHashPartitionsReport.class)
+    @Type(name = GeneratedHashPartitionsReport.TYPE, value = GeneratedHashPartitionsReport.class),
+    @Type(name = DimensionDistributionReport.TYPE, value = DimensionDistributionReport.class),
+    @Type(name = GeneratedPartitionsMetadataReport.TYPE, value = GeneratedPartitionsMetadataReport.class)
 })
 public interface SubTaskReport
 {

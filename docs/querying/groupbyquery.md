@@ -23,8 +23,12 @@ sidebar_label: "GroupBy"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes a query
+> type in the native language. For information about when Druid SQL will use this query type, refer to the
+> [SQL documentation](sql.md#query-types).
 
-These types of Apache Druid (incubating) queries take a groupBy query object and return an array of JSON objects where each object represents a
+These types of Apache Druid queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
 > Note: If you are doing aggregations with time as your only grouping, or an ordered groupBy over a single dimension,
@@ -257,8 +261,6 @@ by using a finite-sized merge buffer pool. By default, the number of merge buffe
 threads. You can adjust this as necessary to balance concurrency and memory usage.
 - groupBy v1 supports caching on either the Broker or Historical processes, whereas groupBy v2 only supports caching on
 Historical processes.
-- groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the Broker, whereas groupBy v2
-ignores chunkPeriod.
 - groupBy v2 supports both array-based aggregation and hash-based aggregation. The array-based aggregation is used only
 when the grouping key is a single indexed string column. In array-based aggregation, the dictionary-encoded value is used
 as the index, so the aggregated values in the array can be accessed directly without finding buckets based on hashing.
@@ -412,7 +414,7 @@ Supported runtime properties:
 |`druid.query.groupBy.forceHashAggregation`|Force to use hash-based aggregation.|false|
 |`druid.query.groupBy.intermediateCombineDegree`|Number of intermediate nodes combined together in the combining tree. Higher degrees will need less threads which might be helpful to improve the query performance by reducing the overhead of too many threads if the server has sufficiently powerful cpu cores.|8|
 |`druid.query.groupBy.numParallelCombineThreads`|Hint for the number of parallel combining threads. This should be larger than 1 to turn on the parallel combining feature. The actual number of threads used for parallel combining is min(`druid.query.groupBy.numParallelCombineThreads`, `druid.processing.numThreads`).|1 (disabled)|
-|`druid.query.groupBy.applyLimitPushDownToSegment`|If Broker pushes limit down to queryable nodes (historicals, peons) then limit results during segment scan.|true (enabled)|
+|`druid.query.groupBy.applyLimitPushDownToSegment`|If Broker pushes limit down to queryable data server (historicals, peons) then limit results during segment scan. If typically there are a large number of segments taking part in a query on a data server, this setting may counterintuitively reduce performance if enabled.|false (disabled)|
 
 Supported query contexts:
 

@@ -27,7 +27,8 @@ import org.apache.druid.segment.indexing.IOConfig;
 import java.util.Objects;
 
 /**
- * {@link IOConfig} for {@link CompactionTask}.
+ * {@link IOConfig} for {@link CompactionTask}. Should be synchronized with {@link
+ * org.apache.druid.client.indexing.ClientCompactionIOConfig}.
  *
  * @see CompactionInputSpec
  */

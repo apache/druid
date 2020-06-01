@@ -20,18 +20,21 @@
 package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ConvertSelectorsToIns extends BottomUpTransform
 {
@@ -62,15 +65,12 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           final SelectorDimFilter selector = (SelectorDimFilter) child;
           final BoundRefKey boundRefKey = BoundRefKey.from(
               selector,
-              sourceRowSignature.naturalStringComparator(
+              RowSignatures.getNaturalStringComparator(
+                  sourceRowSignature,
                   SimpleExtraction.of(selector.getDimension(), selector.getExtractionFn())
               )
           );
-          List<SelectorDimFilter> filterList = selectors.get(boundRefKey);
-          if (filterList == null) {
-            filterList = new ArrayList<>();
-            selectors.put(boundRefKey, filterList);
-          }
+          List<SelectorDimFilter> filterList = selectors.computeIfAbsent(boundRefKey, k -> new ArrayList<>());
           filterList.add(selector);
         }
       }
@@ -80,7 +80,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
         final List<SelectorDimFilter> filterList = entry.getValue();
         if (filterList.size() > 1) {
           // We found a simplification. Remove the old filters and add new ones.
-          final List<String> values = new ArrayList<>();
+          final Set<String> values = Sets.newHashSetWithExpectedSize(filterList.size());
 
           for (final SelectorDimFilter selector : filterList) {
             values.add(selector.getValue());

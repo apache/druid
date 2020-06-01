@@ -21,10 +21,10 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.IndexSpec;
@@ -35,7 +35,6 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-@JsonTypeName("index_parallel")
 public class ParallelIndexTuningConfig extends IndexTuningConfig
 {
   private static final int DEFAULT_MAX_NUM_CONCURRENT_SUB_TASKS = 1;
@@ -187,6 +186,11 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
     Preconditions.checkArgument(this.maxNumConcurrentSubTasks > 0, "maxNumConcurrentSubTasks must be positive");
     Preconditions.checkArgument(this.maxNumSegmentsToMerge > 0, "maxNumSegmentsToMerge must be positive");
     Preconditions.checkArgument(this.totalNumMergeTasks > 0, "totalNumMergeTasks must be positive");
+    if (getPartitionsSpec() != null && getPartitionsSpec() instanceof SingleDimensionPartitionsSpec) {
+      if (((SingleDimensionPartitionsSpec) getPartitionsSpec()).getPartitionDimension() == null) {
+        throw new IAE("partitionDimension must be specified");
+      }
+    }
   }
 
   @Nullable

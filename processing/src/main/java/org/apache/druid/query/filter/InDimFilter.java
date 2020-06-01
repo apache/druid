@@ -20,26 +20,28 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Floats;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractionFn;
@@ -48,14 +50,16 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.filter.InFilter;
 
 import javax.annotation.Nullable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 public class InDimFilter implements DimFilter
 {
@@ -64,7 +68,7 @@ public class InDimFilter implements DimFilter
   public static final int NUMERIC_HASHING_THRESHOLD = 16;
 
   // Values can contain `null` object
-  private final SortedSet<String> values;
+  private final Set<String> values;
   private final String dimension;
   @Nullable
   private final ExtractionFn extractionFn;
@@ -74,10 +78,15 @@ public class InDimFilter implements DimFilter
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
 
+  @JsonIgnore
+  private byte[] cacheKey;
+
   @JsonCreator
   public InDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("values") Collection<String> values,
+      // This 'values' collection instance can be reused if possible to avoid copying a big collection.
+      // Callers should _not_ modify the collection after it is passed to this constructor.
+      @JsonProperty("values") Set<String> values,
       @JsonProperty("extractionFn") @Nullable ExtractionFn extractionFn,
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
@@ -85,9 +94,12 @@ public class InDimFilter implements DimFilter
     Preconditions.checkNotNull(dimension, "dimension can not be null");
     Preconditions.checkArgument(values != null, "values can not be null");
 
-    this.values = new TreeSet<>(Comparators.naturalNullsFirst());
-    for (String value : values) {
-      this.values.add(NullHandling.emptyToNullIfNeeded(value));
+    // The values set can be huge. Try to avoid copying the set if possible.
+    // Note that we may still need to copy values to a list for caching. See getCacheKey().
+    if ((NullHandling.sqlCompatible() || values.stream().noneMatch(NullHandling::needsEmptyToNull))) {
+      this.values = values;
+    } else {
+      this.values = values.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toSet());
     }
     this.dimension = dimension;
     this.extractionFn = extractionFn;
@@ -97,10 +109,13 @@ public class InDimFilter implements DimFilter
     this.doublePredicateSupplier = getDoublePredicateSupplier();
   }
 
+  /**
+   * This constructor should be called only in unit tests since it creates a new hash set wrapping the given values.
+   */
   @VisibleForTesting
   public InDimFilter(String dimension, Collection<String> values, @Nullable ExtractionFn extractionFn)
   {
-    this(dimension, values, extractionFn, null);
+    this(dimension, new HashSet<>(values), extractionFn, null);
   }
 
   @JsonProperty
@@ -116,6 +131,7 @@ public class InDimFilter implements DimFilter
   }
 
   @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   @JsonProperty
   public ExtractionFn getExtractionFn()
   {
@@ -133,29 +149,43 @@ public class InDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    boolean hasNull = false;
-    for (String value : values) {
-      if (value == null) {
-        hasNull = true;
-        break;
+    if (cacheKey == null) {
+      final List<String> sortedValues = new ArrayList<>(values);
+      sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
+      final Hasher hasher = Hashing.sha256().newHasher();
+      for (String v : sortedValues) {
+        if (v == null) {
+          hasher.putInt(0);
+        } else {
+          hasher.putString(v, StandardCharsets.UTF_8);
+        }
       }
+      cacheKey = new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
+          .appendString(dimension)
+          .appendByte(DimFilterUtils.STRING_SEPARATOR)
+          .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
+          .appendByte(DimFilterUtils.STRING_SEPARATOR)
+          .appendByteArray(hasher.hash().asBytes())
+          .build();
     }
-    return new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
-        .appendString(dimension)
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendByte(hasNull ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE)
-        .appendByte(DimFilterUtils.STRING_SEPARATOR)
-        .appendStrings(values).build();
+    return cacheKey;
   }
 
   @Override
   public DimFilter optimize()
   {
     InDimFilter inFilter = optimizeLookup();
+
+    if (inFilter.values.isEmpty()) {
+      return FalseDimFilter.instance();
+    }
     if (inFilter.values.size() == 1) {
-      return new SelectorDimFilter(inFilter.dimension, inFilter.values.first(), inFilter.getExtractionFn(), filterTuning);
+      return new SelectorDimFilter(
+          inFilter.dimension,
+          inFilter.values.iterator().next(),
+          inFilter.getExtractionFn(),
+          filterTuning
+      );
     }
     return inFilter;
   }
@@ -167,7 +197,7 @@ public class InDimFilter implements DimFilter
       LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
       LookupExtractor lookup = exFn.getLookup();
 
-      final List<String> keys = new ArrayList<>();
+      final Set<String> keys = new HashSet<>();
       for (String value : values) {
 
         // We cannot do an unapply()-based optimization if the selector value
@@ -211,6 +241,7 @@ public class InDimFilter implements DimFilter
     );
   }
 
+  @Nullable
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
@@ -272,151 +303,89 @@ public class InDimFilter implements DimFilter
     return Objects.hash(values, dimension, extractionFn, filterTuning);
   }
 
+  private DruidLongPredicate createLongPredicate()
+  {
+    LongArrayList longs = new LongArrayList(values.size());
+    for (String value : values) {
+      final Long longValue = DimensionHandlerUtils.convertObjectToLong(value);
+      if (longValue != null) {
+        longs.add((long) longValue);
+      }
+    }
+
+    if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
+      final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
+      return longHashSet::contains;
+    } else {
+      final long[] longArray = longs.toLongArray();
+      Arrays.sort(longArray);
+      return input -> Arrays.binarySearch(longArray, input) >= 0;
+    }
+  }
+
   // As the set of filtered values can be large, parsing them as longs should be done only if needed, and only once.
   // Pass in a common long predicate supplier to all filters created by .toFilter(), so that
   // we only compute the long hashset/array once per query.
   // This supplier must be thread-safe, since this DimFilter will be accessed in the query runners.
   private Supplier<DruidLongPredicate> getLongPredicateSupplier()
   {
-    return new Supplier<DruidLongPredicate>()
-    {
-      private final Object initLock = new Object();
-      private DruidLongPredicate predicate;
+    Supplier<DruidLongPredicate> longPredicate = this::createLongPredicate;
+    return Suppliers.memoize(longPredicate);
+  }
 
-
-      private void initLongValues()
-      {
-        if (predicate != null) {
-          return;
-        }
-
-        synchronized (initLock) {
-          if (predicate != null) {
-            return;
-          }
-
-          LongArrayList longs = new LongArrayList(values.size());
-          for (String value : values) {
-            final Long longValue = DimensionHandlerUtils.getExactLongFromDecimalString(value);
-            if (longValue != null) {
-              longs.add(longValue);
-            }
-          }
-
-          if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
-            final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
-
-            predicate = input -> longHashSet.contains(input);
-          } else {
-            final long[] longArray = longs.toLongArray();
-            Arrays.sort(longArray);
-
-            predicate = input -> Arrays.binarySearch(longArray, input) >= 0;
-          }
-        }
+  private DruidFloatPredicate createFloatPredicate()
+  {
+    IntArrayList floatBits = new IntArrayList(values.size());
+    for (String value : values) {
+      Float floatValue = DimensionHandlerUtils.convertObjectToFloat(value);
+      if (floatValue != null) {
+        floatBits.add(Float.floatToIntBits(floatValue));
       }
+    }
 
-      @Override
-      public DruidLongPredicate get()
-      {
-        initLongValues();
-        return predicate;
-      }
-    };
+    if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
+      final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
+
+      return input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
+    } else {
+      final int[] floatBitsArray = floatBits.toIntArray();
+      Arrays.sort(floatBitsArray);
+
+      return input -> Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
+    }
   }
 
   private Supplier<DruidFloatPredicate> getFloatPredicateSupplier()
   {
-    return new Supplier<DruidFloatPredicate>()
-    {
-      private final Object initLock = new Object();
-      private DruidFloatPredicate predicate;
+    Supplier<DruidFloatPredicate> floatPredicate = this::createFloatPredicate;
+    return Suppliers.memoize(floatPredicate);
+  }
 
-      private void initFloatValues()
-      {
-        if (predicate != null) {
-          return;
-        }
-
-        synchronized (initLock) {
-          if (predicate != null) {
-            return;
-          }
-
-          IntArrayList floatBits = new IntArrayList(values.size());
-          for (String value : values) {
-            Float floatValue = Floats.tryParse(value);
-            if (floatValue != null) {
-              floatBits.add(Float.floatToIntBits(floatValue));
-            }
-          }
-
-          if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
-            final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
-
-            predicate = input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
-          } else {
-            final int[] floatBitsArray = floatBits.toIntArray();
-            Arrays.sort(floatBitsArray);
-
-            predicate = input -> Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
-          }
-        }
+  private DruidDoublePredicate createDoublePredicate()
+  {
+    LongArrayList doubleBits = new LongArrayList(values.size());
+    for (String value : values) {
+      Double doubleValue = DimensionHandlerUtils.convertObjectToDouble(value);
+      if (doubleValue != null) {
+        doubleBits.add(Double.doubleToLongBits((doubleValue)));
       }
+    }
 
-      @Override
-      public DruidFloatPredicate get()
-      {
-        initFloatValues();
-        return predicate;
-      }
-    };
+    if (doubleBits.size() > NUMERIC_HASHING_THRESHOLD) {
+      final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
+
+      return input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
+    } else {
+      final long[] doubleBitsArray = doubleBits.toLongArray();
+      Arrays.sort(doubleBitsArray);
+
+      return input -> Arrays.binarySearch(doubleBitsArray, Double.doubleToLongBits(input)) >= 0;
+    }
   }
 
   private Supplier<DruidDoublePredicate> getDoublePredicateSupplier()
   {
-    return new Supplier<DruidDoublePredicate>()
-    {
-      private final Object initLock = new Object();
-      private DruidDoublePredicate predicate;
-
-      private void initDoubleValues()
-      {
-        if (predicate != null) {
-          return;
-        }
-
-        synchronized (initLock) {
-          if (predicate != null) {
-            return;
-          }
-
-          LongArrayList doubleBits = new LongArrayList(values.size());
-          for (String value : values) {
-            Double doubleValue = Doubles.tryParse(value);
-            if (doubleValue != null) {
-              doubleBits.add(Double.doubleToLongBits((doubleValue)));
-            }
-          }
-
-          if (doubleBits.size() > NUMERIC_HASHING_THRESHOLD) {
-            final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
-
-            predicate = input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
-          } else {
-            final long[] doubleBitsArray = doubleBits.toLongArray();
-            Arrays.sort(doubleBitsArray);
-
-            predicate = input -> Arrays.binarySearch(doubleBitsArray, Double.doubleToLongBits(input)) >= 0;
-          }
-        }
-      }
-      @Override
-      public DruidDoublePredicate get()
-      {
-        initDoubleValues();
-        return predicate;
-      }
-    };
+    Supplier<DruidDoublePredicate> doublePredicate = this::createDoublePredicate;
+    return Suppliers.memoize(doublePredicate);
   }
 }

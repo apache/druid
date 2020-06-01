@@ -22,6 +22,7 @@ package org.apache.druid.storage.hdfs;
 
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
+import org.apache.druid.guice.Hdfs;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -40,7 +41,7 @@ public class HdfsStorageAuthentication
   private final Configuration hadoopConf;
 
   @Inject
-  public HdfsStorageAuthentication(HdfsKerberosConfig hdfsKerberosConfig, Configuration hadoopConf)
+  public HdfsStorageAuthentication(HdfsKerberosConfig hdfsKerberosConfig, @Hdfs Configuration hadoopConf)
   {
     this.hdfsKerberosConfig = hdfsKerberosConfig;
     this.hadoopConf = hadoopConf;

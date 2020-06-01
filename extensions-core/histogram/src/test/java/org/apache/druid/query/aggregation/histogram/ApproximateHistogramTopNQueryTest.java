@@ -79,20 +79,14 @@ public class ApproximateHistogramTopNQueryTest extends InitializedNullHandlingTe
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
                     defaultPool,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             ),
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
                     customPool,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )

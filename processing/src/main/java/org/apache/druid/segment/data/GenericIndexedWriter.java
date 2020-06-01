@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -48,7 +49,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class GenericIndexedWriter<T> implements Serializer
 {
-  private static int PAGE_SIZE = 4096;
+  private static final int PAGE_SIZE = 4096;
 
   private static final MetaSerdeHelper<GenericIndexedWriter> SINGLE_FILE_META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_ONE)
@@ -148,9 +149,16 @@ public class GenericIndexedWriter<T> implements Serializer
   @Nullable
   private LongList headerOutLong;
 
+  // Used by checkedCastNonnegativeLongToInt. Will always be Integer.MAX_VALUE in production.
+  private int intMaxForCasting = Integer.MAX_VALUE;
+
   private final ByteBuffer getOffsetBuffer = ByteBuffer.allocate(Integer.BYTES);
 
-  public GenericIndexedWriter(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy<T> strategy)
+  public GenericIndexedWriter(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String filenameBase,
+      ObjectStrategy<T> strategy
+  )
   {
     this(segmentWriteOutMedium, filenameBase, strategy, Integer.MAX_VALUE & ~PAGE_SIZE);
   }
@@ -210,13 +218,18 @@ public class GenericIndexedWriter<T> implements Serializer
     objectsSorted = false;
   }
 
+  @VisibleForTesting
+  void setIntMaxForCasting(final int intMaxForCasting)
+  {
+    this.intMaxForCasting = intMaxForCasting;
+  }
+
   public void write(@Nullable T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
       objectsSorted = false;
     }
 
-    ++numWritten;
     // for compatibility with the format (see GenericIndexed javadoc for description of the format),
     // this field is used to store nullness marker, but in a better format this info can take 1 bit.
     valuesOut.writeInt(objectToWrite == null ? GenericIndexed.NULL_VALUE_SIZE_MARKER : 0);
@@ -224,15 +237,26 @@ public class GenericIndexedWriter<T> implements Serializer
       strategy.writeTo(objectToWrite, valuesOut);
     }
 
-    if (!requireMultipleFiles) {
-      headerOut.writeInt(Ints.checkedCast(valuesOut.size()));
-    } else {
-      headerOutLong.add(valuesOut.size());
-    }
-
+    // Before updating the header, check if we need to switch to multi-file mode.
     if (!requireMultipleFiles && getSerializedSize() > fileSizeLimit) {
       requireMultipleFiles = true;
       initializeHeaderOutLong();
+    }
+
+    // Increment number of values written. Important to do this after the check above, since numWritten is
+    // accessed during "initializeHeaderOutLong" to determine the length of the header.
+    ++numWritten;
+
+    if (!requireMultipleFiles) {
+      headerOut.writeInt(checkedCastNonnegativeLongToInt(valuesOut.size()));
+
+      // Check _again_ if we need to switch to multi-file mode. (We might need to after updating the header.)
+      if (getSerializedSize() > fileSizeLimit) {
+        requireMultipleFiles = true;
+        initializeHeaderOutLong();
+      }
+    } else {
+      headerOutLong.add(valuesOut.size());
     }
 
     if (objectsSorted) {
@@ -250,7 +274,7 @@ public class GenericIndexedWriter<T> implements Serializer
       startOffset = getOffset(index - 1) + Integer.BYTES;
     }
     long endOffset = getOffset(index);
-    int valueSize = Ints.checkedCast(endOffset - startOffset);
+    int valueSize = checkedCastNonnegativeLongToInt(endOffset - startOffset);
     if (valueSize == 0) {
       return null;
     }
@@ -272,7 +296,7 @@ public class GenericIndexedWriter<T> implements Serializer
   }
 
   @Override
-  public long getSerializedSize() throws IOException
+  public long getSerializedSize()
   {
     if (requireMultipleFiles) {
       // for multi-file version (version 2), getSerializedSize() returns number of bytes in meta file.
@@ -297,10 +321,10 @@ public class GenericIndexedWriter<T> implements Serializer
     final long numBytesWritten = headerOut.size() + valuesOut.size();
 
     Preconditions.checkState(
-        headerOut.size() == (numWritten * 4),
+        headerOut.size() == (numWritten * 4L),
         "numWritten[%s] number of rows should have [%s] bytes written to headerOut, had[%s]",
         numWritten,
-        numWritten * 4,
+        numWritten * 4L,
         headerOut.size()
     );
     Preconditions.checkState(
@@ -370,7 +394,7 @@ public class GenericIndexedWriter<T> implements Serializer
    *
    * @throws IOException
    */
-  private int bagSizePower() throws IOException
+  private int bagSizePower()
   {
     long avgObjectSize = (valuesOut.size() + numWritten - 1) / numWritten;
 
@@ -391,13 +415,13 @@ public class GenericIndexedWriter<T> implements Serializer
   /**
    * Checks if candidate value splits can divide value file in such a way no object/element crosses the value splits.
    *
-   * @param powerTwo   candidate value split expressed as power of 2.
+   * @param powerTwo candidate value split expressed as power of 2.
    *
    * @return true if candidate value split can hold all splits.
    *
    * @throws IOException
    */
-  private boolean actuallyFits(int powerTwo) throws IOException
+  private boolean actuallyFits(int powerTwo)
   {
     long lastValueOffset = 0;
     long currentValueOffset = 0;
@@ -410,7 +434,7 @@ public class GenericIndexedWriter<T> implements Serializer
       if (headerIndex >= numWritten) {
         return true;
       } else if (headerIndex + bagSize <= numWritten) {
-        currentValueOffset = headerOutLong.getLong(Ints.checkedCast(headerIndex + bagSize - 1));
+        currentValueOffset = headerOutLong.getLong(checkedCastNonnegativeLongToInt(headerIndex + bagSize - 1));
       } else if (numWritten < headerIndex + bagSize) {
         currentValueOffset = headerOutLong.getLong(numWritten - 1);
       }
@@ -435,7 +459,7 @@ public class GenericIndexedWriter<T> implements Serializer
     long relativeRefBytes = 0;
     long relativeNumBytes;
     try (SmooshedWriter smooshChannel = smoosher
-        .addWithSmooshedWriter(generateHeaderFileName(filenameBase), numWritten * Integer.BYTES)) {
+        .addWithSmooshedWriter(generateHeaderFileName(filenameBase), ((long) numWritten) * Integer.BYTES)) {
 
       // following block converts long header indexes into int header indexes.
       for (int pos = 0; pos < numWritten; pos++) {
@@ -446,7 +470,7 @@ public class GenericIndexedWriter<T> implements Serializer
         }
         currentNumBytes = headerOutLong.getLong(pos);
         relativeNumBytes = currentNumBytes - relativeRefBytes;
-        helperBuffer.putInt(0, Ints.checkedCast(relativeNumBytes));
+        helperBuffer.putInt(0, checkedCastNonnegativeLongToInt(relativeNumBytes));
         helperBuffer.clear();
         smooshChannel.write(helperBuffer);
       }
@@ -464,4 +488,17 @@ public class GenericIndexedWriter<T> implements Serializer
     }
   }
 
+  /**
+   * Cast a long to an int, throwing an exception if it is out of range. Uses "intMaxForCasting" as the max
+   * integer value. Only works for nonnegative "n".
+   */
+  private int checkedCastNonnegativeLongToInt(final long n)
+  {
+    if (n >= 0 && n <= intMaxForCasting) {
+      return (int) n;
+    } else {
+      // Likely bug.
+      throw new IAE("Value out of nonnegative int range");
+    }
+  }
 }

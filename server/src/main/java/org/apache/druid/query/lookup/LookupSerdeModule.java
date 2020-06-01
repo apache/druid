@@ -30,8 +30,10 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.dimension.LookupDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
 
-import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Variant of {@link LookupModule} that only supports serde of {@link org.apache.druid.query.Query} objects, to allow
@@ -66,11 +68,16 @@ public class LookupSerdeModule implements DruidModule
    */
   private static class NoopLookupExtractorFactoryContainerProvider implements LookupExtractorFactoryContainerProvider
   {
-    @Nullable
     @Override
-    public LookupExtractorFactoryContainer get(String lookupName)
+    public Set<String> getAllLookupNames()
     {
-      return null;
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+    {
+      return Optional.empty();
     }
   }
 }

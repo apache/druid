@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.BitmapIndexSelector;
@@ -27,16 +28,23 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.query.filter.vector.VectorValueMatcherColumnStrategizer;
+import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
+ * This filter is to select the rows where the {@link #dimension} has the {@link #value}. The value can be null.
+ * In SQL-compatible null handling mode, this filter is equivalent to {@code dimension = value}
+ * or {@code dimension IS NULL} when the value is null.
+ * In default null handling mode, this filter is equivalent to {@code dimension = value} or
+ * {@code dimension = ''} when the value is null.
  */
 public class SelectorFilter implements Filter
 {
@@ -81,7 +89,7 @@ public class SelectorFilter implements Filter
   {
     return DimensionHandlerUtils.makeVectorProcessor(
         dimension,
-        VectorValueMatcherColumnStrategizer.instance(),
+        VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(value);
   }
@@ -123,8 +131,64 @@ public class SelectorFilter implements Filter
   }
 
   @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public Filter rewriteRequiredColumns(Map<String, String> columnRewrites)
+  {
+    String rewriteDimensionTo = columnRewrites.get(dimension);
+
+    if (rewriteDimensionTo == null) {
+      throw new IAE(
+          "Received a non-applicable rewrite: %s, filter's dimension: %s",
+          columnRewrites,
+          dimension
+      );
+    }
+
+    return new SelectorFilter(
+        rewriteDimensionTo,
+        value
+    );
+  }
+
+  @Override
   public String toString()
   {
     return StringUtils.format("%s = %s", dimension, value);
+  }
+
+  public String getDimension()
+  {
+    return dimension;
+  }
+
+  public String getValue()
+  {
+    return value;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SelectorFilter that = (SelectorFilter) o;
+    return Objects.equals(getDimension(), that.getDimension()) &&
+           Objects.equals(getValue(), that.getValue()) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getDimension(), getValue(), filterTuning);
   }
 }

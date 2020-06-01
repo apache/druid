@@ -23,7 +23,7 @@ title: "MySQL Metadata Store"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` as an extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` as an extension.
 
 > The MySQL extension requires the MySQL Connector/J library which is not included in the Druid distribution.
 > Refer to the following section for instructions on how to install this library.
@@ -34,7 +34,7 @@ This extension uses Oracle's MySQL JDBC driver which is not included in the Drui
 installed separately. There are a few ways to obtain this library:
 
 - It can be downloaded from the MySQL site at: https://dev.mysql.com/downloads/connector/j/
-- It can be fetched from Maven Central at: http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar
+- It can be fetched from Maven Central at: https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.48/mysql-connector-java-5.1.48.jar
 - It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
 
 This should fetch a JAR file named similar to 'mysql-connector-java-x.x.xx.jar'.
@@ -108,11 +108,11 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
 
 ### MySQL Firehose
 
-The MySQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses) which can be used to ingest data into Druid from a MySQL database.
+The MySQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a MySQL database.
 
 ```json
 {
-  "type": "index",
+  "type": "index_parallel",
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
@@ -149,7 +149,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
       }
     },
     "ioConfig": {
-      "type": "index",
+      "type": "index_parallel",
       "firehose": {
         "type": "sql",
         "database": {
@@ -166,7 +166,7 @@ The MySQL extension provides an implementation of an [SqlFirehose](../../ingesti
       }
     },
     "tuningconfig": {
-      "type": "index"
+      "type": "index_parallel"
     }
   }
 }

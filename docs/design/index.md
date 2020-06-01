@@ -24,7 +24,7 @@ title: "Introduction to Apache Druid"
 
 ## What is Druid?
 
-Apache Druid (incubating) is a real-time analytics database designed for fast slice-and-dice analytics
+Apache Druid is a real-time analytics database designed for fast slice-and-dice analytics
 ("[OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing)" queries) on large data sets. Druid is most often
 used as a database for powering use cases where real-time ingest, fast query performance, and high uptime are important.
 As such, Druid is commonly used for powering GUIs of analytical applications, or as a backend for highly-concurrent APIs
@@ -61,8 +61,8 @@ updates.
 stored safely in [deep storage](architecture.html#deep-storage) (typically cloud storage, HDFS, or a shared filesystem).
 Your data can be recovered from deep storage even if every single Druid server fails. For more limited failures affecting
 just a few Druid servers, replication ensures that queries are still possible while the system recovers.
-7. **Indexes for quick filtering.** Druid uses [CONCISE](https://arxiv.org/pdf/1004.0403) or
-[Roaring](https://roaringbitmap.org/) compressed bitmap indexes to create indexes that power fast filtering and
+7. **Indexes for quick filtering.** Druid uses [Roaring](https://roaringbitmap.org/) or
+[CONCISE](https://arxiv.org/pdf/1004.0403) compressed bitmap indexes to create indexes that power fast filtering and
 searching across multiple columns.
 8. **Time-based partitioning.** Druid first partitions data by time, and can additionally partition based on other fields.
 This means time-based queries will only access the partitions that match the time range of the query. This leads to

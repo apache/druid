@@ -111,6 +111,16 @@ export function deepDelete<T extends Record<string, any>>(value: T, path: string
   return valueCopy;
 }
 
+export function deepMove<T extends Record<string, any>>(
+  value: T,
+  fromPath: string,
+  toPath: string,
+): T {
+  value = deepSet(value, toPath, deepGet(value, fromPath));
+  value = deepDelete(value, fromPath);
+  return value;
+}
+
 export function deepExtend<T extends Record<string, any>>(target: T, diff: Record<string, any>): T {
   if (typeof target !== 'object') throw new TypeError(`Invalid target`);
   if (typeof diff !== 'object') throw new TypeError(`Invalid diff`);

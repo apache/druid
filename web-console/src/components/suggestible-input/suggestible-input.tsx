@@ -35,10 +35,12 @@ export interface SuggestionGroup {
   suggestions: string[];
 }
 
+export type Suggestion = undefined | string | SuggestionGroup;
+
 export interface SuggestibleInputProps extends HTMLInputProps {
-  onValueChange: (newValue: string) => void;
+  onValueChange: (newValue: undefined | string) => void;
   onFinalize?: () => void;
-  suggestions?: (string | SuggestionGroup)[];
+  suggestions?: Suggestion[];
   large?: boolean;
   intent?: Intent;
 }
@@ -51,7 +53,7 @@ export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps>
     // this.state = {};
   }
 
-  public handleSuggestionSelect(suggestion: string) {
+  public handleSuggestionSelect(suggestion: undefined | string) {
     const { onValueChange, onFinalize } = this.props;
     onValueChange(suggestion);
     if (onFinalize) onFinalize();
@@ -64,7 +66,15 @@ export class SuggestibleInput extends React.PureComponent<SuggestibleInputProps>
     return (
       <Menu>
         {suggestions.map(suggestion => {
-          if (typeof suggestion === 'string') {
+          if (typeof suggestion === 'undefined') {
+            return (
+              <MenuItem
+                key="__undefined__"
+                text="(none)"
+                onClick={() => this.handleSuggestionSelect(suggestion)}
+              />
+            );
+          } else if (typeof suggestion === 'string') {
             return (
               <MenuItem
                 key={suggestion}

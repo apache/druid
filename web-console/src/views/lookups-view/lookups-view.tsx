@@ -32,6 +32,8 @@ import {
   ViewControlBar,
 } from '../../components';
 import { AsyncActionDialog, LookupEditDialog } from '../../dialogs/';
+import { LookupSpec } from '../../dialogs/lookup-edit-dialog/lookup-edit-dialog';
+import { LookupTableActionDialog } from '../../dialogs/lookup-table-action-dialog/lookup-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import { getDruidErrorMessage, LocalStorageKeys, QueryManager } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
@@ -54,7 +56,7 @@ export interface LookupsViewState {
   lookupEditName: string;
   lookupEditTier: string;
   lookupEditVersion: string;
-  lookupEditSpec: string;
+  lookupEditSpec: LookupSpec;
   isEdit: boolean;
   allLookupTiers: string[];
 
@@ -62,6 +64,9 @@ export interface LookupsViewState {
   deleteLookupTier?: string;
 
   hiddenColumns: LocalStorageBackedArray<string>;
+
+  lookupTableActionDialogId?: string;
+  actions: BasicAction[];
 }
 
 export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsViewState> {
@@ -77,9 +82,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       lookupEditTier: '',
       lookupEditName: '',
       lookupEditVersion: '',
-      lookupEditSpec: '',
+      lookupEditSpec: { type: '' },
       isEdit: false,
       allLookupTiers: [],
+      actions: [],
 
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION,
@@ -157,7 +163,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         lookupEditName: '',
         lookupEditTier: prevState.allLookupTiers[0],
         lookupEditDialogOpen: true,
-        lookupEditSpec: '',
+        lookupEditSpec: { type: '' },
         lookupEditVersion: new Date().toISOString(),
         isEdit: false,
       }));
@@ -166,20 +172,20 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         lookupEditName: id,
         lookupEditTier: tier,
         lookupEditDialogOpen: true,
-        lookupEditSpec: JSON.stringify(target.spec, null, 2),
+        lookupEditSpec: target.spec,
         lookupEditVersion: target.version,
         isEdit: true,
       });
     }
   }
 
-  private handleChangeLookup = (field: string, value: string) => {
+  private handleChangeLookup = (field: string, value: string | LookupSpec) => {
     this.setState({
       [field]: value,
     } as any);
   };
 
-  private async submitLookupEdit() {
+  private async submitLookupEdit(updatelookupEditVersion: boolean) {
     const {
       lookupEditTier,
       lookupEditName,
@@ -187,20 +193,21 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
       lookupEditVersion,
       isEdit,
     } = this.state;
+    const version = updatelookupEditVersion ? new Date().toISOString() : lookupEditVersion;
     let endpoint = '/druid/coordinator/v1/lookups/config';
-    const specJson: any = JSON.parse(lookupEditSpec);
+    const specJson: any = lookupEditSpec;
     let dataJson: any;
     if (isEdit) {
       endpoint = `${endpoint}/${lookupEditTier}/${lookupEditName}`;
       dataJson = {
-        version: lookupEditVersion,
+        version: version,
         lookupExtractorFactory: specJson,
       };
     } else {
       dataJson = {
         [lookupEditTier]: {
           [lookupEditName]: {
-            version: lookupEditVersion,
+            version: version,
             lookupExtractorFactory: specJson,
           },
         },
@@ -333,7 +340,17 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                 const lookupId = row.value.id;
                 const lookupTier = row.value.tier;
                 const lookupActions = this.getLookupActions(lookupTier, lookupId);
-                return <ActionCell actions={lookupActions} />;
+                return (
+                  <ActionCell
+                    onDetail={() => {
+                      this.setState({
+                        lookupTableActionDialogId: lookupId,
+                        actions: lookupActions,
+                      });
+                    }}
+                    actions={lookupActions}
+                  />
+                );
               },
               show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
             },
@@ -359,7 +376,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     return (
       <LookupEditDialog
         onClose={() => this.setState({ lookupEditDialogOpen: false })}
-        onSubmit={() => this.submitLookupEdit()}
+        onSubmit={updateLookupVersion => this.submitLookupEdit(updateLookupVersion)}
         onChange={this.handleChangeLookup}
         lookupSpec={lookupEditSpec}
         lookupName={lookupEditName}
@@ -372,7 +389,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   }
 
   render(): JSX.Element {
-    const { lookupsError, hiddenColumns } = this.state;
+    const { lookupsError, hiddenColumns, lookupTableActionDialogId, actions } = this.state;
 
     return (
       <div className="lookups-view app-view">
@@ -401,6 +418,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         {this.renderLookupsTable()}
         {this.renderLookupEditDialog()}
         {this.renderDeleteLookupAction()}
+        {lookupTableActionDialogId && (
+          <LookupTableActionDialog
+            lookupId={lookupTableActionDialogId}
+            actions={actions}
+            onClose={() => this.setState({ lookupTableActionDialogId: undefined })}
+          />
+        )}
       </div>
     );
   }

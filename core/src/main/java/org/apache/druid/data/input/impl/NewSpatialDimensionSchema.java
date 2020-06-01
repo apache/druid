@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * NOTE: 
  * This class should be deprecated after Druid supports configurable index types on dimensions.
- * When that exists, this should be the implementation: https://github.com/apache/incubator-druid/issues/2622
+ * When that exists, this should be the implementation: https://github.com/apache/druid/issues/2622
  * 
  * This is a stop-gap solution to consolidate the dimension specs and remove the separate spatial 
  * section in DimensionsSpec.

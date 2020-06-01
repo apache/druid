@@ -70,20 +70,14 @@ public class TopNUnionQueryTest
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(
                     defaultPool,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             ),
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(
                     customPool,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )

@@ -34,6 +34,8 @@ import javax.ws.rs.core.Response;
 
 /**
  * Collection of http endpoits to introspect state of HttpRemoteTaskRunner instance for debugging.
+ * Also, generic TaskRunner state can be introspected by the endpoints in
+ * {@link org.apache.druid.indexing.overlord.http.OverlordResource}
  */
 @Path("/druid-internal/v1/httpRemoteTaskRunner")
 @ResourceFilters(StateResourceFilter.class)
@@ -48,15 +50,42 @@ public class HttpRemoteTaskRunnerResource
   }
 
   @GET
+  @Path("/knownTasks")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getDebugInfo()
+  public Response getAllKnownTasks()
   {
     HttpRemoteTaskRunner httpRemoteTaskRunner = getHttpRemoteTaskRunner();
     if (httpRemoteTaskRunner == null) {
       return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
     }
 
-    return Response.ok().entity(httpRemoteTaskRunner.getDebugInfo()).build();
+    return Response.ok().entity(httpRemoteTaskRunner.getKnownTasks()).build();
+  }
+
+  @GET
+  @Path("/pendingTasksQueue")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getPendingTasksQueue()
+  {
+    HttpRemoteTaskRunner httpRemoteTaskRunner = getHttpRemoteTaskRunner();
+    if (httpRemoteTaskRunner == null) {
+      return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
+    }
+
+    return Response.ok().entity(httpRemoteTaskRunner.getPendingTasksList()).build();
+  }
+
+  @GET
+  @Path("/workerSyncerDebugInfo")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getWorkerSyncerDebugInfo()
+  {
+    HttpRemoteTaskRunner httpRemoteTaskRunner = getHttpRemoteTaskRunner();
+    if (httpRemoteTaskRunner == null) {
+      return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
+    }
+
+    return Response.ok().entity(httpRemoteTaskRunner.getWorkerSyncerDebugInfo()).build();
   }
 
   @GET
@@ -70,6 +99,45 @@ public class HttpRemoteTaskRunnerResource
     }
 
     return Response.ok().entity(httpRemoteTaskRunner.getBlacklistedWorkers()).build();
+  }
+
+  @GET
+  @Path("/lazyWorkers")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLazyWorkers()
+  {
+    HttpRemoteTaskRunner httpRemoteTaskRunner = getHttpRemoteTaskRunner();
+    if (httpRemoteTaskRunner == null) {
+      return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
+    }
+
+    return Response.ok().entity(httpRemoteTaskRunner.getLazyWorkers()).build();
+  }
+
+  @GET
+  @Path("/workersWithUnacknowledgedTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getWorkersWithUnacknowledgedTasks()
+  {
+    HttpRemoteTaskRunner httpRemoteTaskRunner = getHttpRemoteTaskRunner();
+    if (httpRemoteTaskRunner == null) {
+      return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
+    }
+
+    return Response.ok().entity(httpRemoteTaskRunner.getWorkersWithUnacknowledgedTasks()).build();
+  }
+
+  @GET
+  @Path("/workersEilgibleToRunTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getWorkersEilgibleToRunTasks()
+  {
+    HttpRemoteTaskRunner httpRemoteTaskRunner = getHttpRemoteTaskRunner();
+    if (httpRemoteTaskRunner == null) {
+      return Response.status(Response.Status.FORBIDDEN).entity("HttpRemoteTaskRunner is NULL.").build();
+    }
+
+    return Response.ok().entity(httpRemoteTaskRunner.getWorkersEligibleToRunTasks()).build();
   }
 
   private HttpRemoteTaskRunner getHttpRemoteTaskRunner()

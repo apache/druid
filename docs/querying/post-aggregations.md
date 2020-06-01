@@ -1,6 +1,6 @@
 ---
 id: post-aggregations
-title: "Post-Aggregations"
+title: "Post-aggregations"
 ---
 
 <!--
@@ -22,8 +22,12 @@ title: "Post-Aggregations"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the native
+> language. For information about functions available in SQL, refer to the
+> [SQL documentation](sql.md#aggregation-functions).
 
-Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Apache Druid (incubating). If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
+Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Apache Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
 There are several post-aggregators available.
 

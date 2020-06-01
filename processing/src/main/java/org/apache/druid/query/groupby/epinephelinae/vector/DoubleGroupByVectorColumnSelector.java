@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
+import org.apache.datasketches.memory.Memory;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.vector.VectorValueSelector;
-
-import java.nio.ByteBuffer;
 
 public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSelector
 {
@@ -36,12 +36,12 @@ public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSel
   @Override
   public int getGroupingKeySize()
   {
-    return 2;
+    return Double.BYTES;
   }
 
   @Override
   public void writeKeys(
-      final int[] keySpace,
+      final WritableMemory keySpace,
       final int keySize,
       final int keyOffset,
       final int startRow,
@@ -50,22 +50,23 @@ public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSel
   {
     final double[] vector = selector.getDoubleVector();
 
-    for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
-      final long longValue = Double.doubleToLongBits(vector[i]);
-      keySpace[j] = (int) (longValue >>> 32);
-      keySpace[j + 1] = (int) (longValue & 0xffffffffL);
+    if (keySize == Double.BYTES) {
+      keySpace.putDoubleArray(keyOffset, vector, startRow, endRow - startRow);
+    } else {
+      for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
+        keySpace.putDouble(j, vector[i]);
+      }
     }
   }
 
   @Override
   public void writeKeyToResultRow(
-      final ByteBuffer keyBuffer,
+      final Memory keyMemory,
       final int keyOffset,
       final ResultRow resultRow,
       final int resultRowPosition
   )
   {
-    final double value = keyBuffer.getDouble(keyOffset * Integer.BYTES);
-    resultRow.set(resultRowPosition, value);
+    resultRow.set(resultRowPosition, keyMemory.getDouble(keyOffset));
   }
 }

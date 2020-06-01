@@ -20,6 +20,7 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -29,10 +30,12 @@ import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupIntrospectHandler;
-import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Separate from {@link TestExprMacroTable} since that one is in druid-processing, which doesn't have
@@ -41,6 +44,7 @@ import java.util.Collections;
 public class LookupEnabledTestExprMacroTable extends ExprMacroTable
 {
   public static final ExprMacroTable INSTANCE = new LookupEnabledTestExprMacroTable();
+  private static final String LOOKYLOO = "lookyloo";
 
   private LookupEnabledTestExprMacroTable()
   {
@@ -49,7 +53,7 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
             Iterables.concat(
                 TestExprMacroTable.INSTANCE.getMacros(),
                 Collections.singletonList(
-                    new LookupExprMacro(createTestLookupReferencesManager(ImmutableMap.of("foo", "xfoo")))
+                    new LookupExprMacro(createTestLookupProvider(ImmutableMap.of("foo", "xfoo")))
                 )
             )
         )
@@ -57,53 +61,64 @@ public class LookupEnabledTestExprMacroTable extends ExprMacroTable
   }
 
   /**
-   * Returns a mock {@link LookupExtractorFactoryContainerProvider} that has one lookup, "lookyloo".
+   * Returns a {@link LookupExtractorFactoryContainerProvider} that has one lookup, "lookyloo". Public so other tests
+   * can use this helper method directly.
    */
-  public static LookupExtractorFactoryContainerProvider createTestLookupReferencesManager(
-      final ImmutableMap<String, String> theLookup
-  )
+  public static LookupExtractorFactoryContainerProvider createTestLookupProvider(final Map<String, String> theLookup)
   {
-    final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider =
-        EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);
-    EasyMock.expect(lookupExtractorFactoryContainerProvider.get(EasyMock.eq("lookyloo"))).andReturn(
-        new LookupExtractorFactoryContainer(
-            "v0",
-            new LookupExtractorFactory()
-            {
-              @Override
-              public boolean start()
-              {
-                throw new UnsupportedOperationException();
-              }
+    final LookupExtractorFactoryContainer container = new LookupExtractorFactoryContainer(
+        "v0",
+        new LookupExtractorFactory()
+        {
+          @Override
+          public boolean start()
+          {
+            throw new UnsupportedOperationException();
+          }
 
-              @Override
-              public boolean close()
-              {
-                throw new UnsupportedOperationException();
-              }
+          @Override
+          public boolean close()
+          {
+            throw new UnsupportedOperationException();
+          }
 
-              @Override
-              public boolean replaces(@Nullable final LookupExtractorFactory other)
-              {
-                throw new UnsupportedOperationException();
-              }
+          @Override
+          public boolean replaces(@Nullable final LookupExtractorFactory other)
+          {
+            throw new UnsupportedOperationException();
+          }
 
-              @Override
-              public LookupIntrospectHandler getIntrospectHandler()
-              {
-                throw new UnsupportedOperationException();
-              }
+          @Override
+          public LookupIntrospectHandler getIntrospectHandler()
+          {
+            throw new UnsupportedOperationException();
+          }
 
-              @Override
-              public LookupExtractor get()
-              {
-                return new MapLookupExtractor(theLookup, false);
-              }
-            }
-        )
-    ).anyTimes();
-    EasyMock.expect(lookupExtractorFactoryContainerProvider.get(EasyMock.not(EasyMock.eq("lookyloo")))).andReturn(null).anyTimes();
-    EasyMock.replay(lookupExtractorFactoryContainerProvider);
-    return lookupExtractorFactoryContainerProvider;
+          @Override
+          public LookupExtractor get()
+          {
+            return new MapLookupExtractor(theLookup, false);
+          }
+        }
+    );
+
+    return new LookupExtractorFactoryContainerProvider()
+    {
+      @Override
+      public Set<String> getAllLookupNames()
+      {
+        return ImmutableSet.of(LOOKYLOO);
+      }
+
+      @Override
+      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+      {
+        if (LOOKYLOO.equals(lookupName)) {
+          return Optional.of(container);
+        } else {
+          return Optional.empty();
+        }
+      }
+    };
   }
 }

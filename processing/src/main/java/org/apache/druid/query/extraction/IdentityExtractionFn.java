@@ -88,7 +88,7 @@ public class IdentityExtractionFn implements ExtractionFn
     return 0;
   }
 
-  public static final IdentityExtractionFn getInstance()
+  public static IdentityExtractionFn getInstance()
   {
     return INSTANCE;
   }

@@ -49,6 +49,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.PathSegment;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
@@ -133,14 +134,9 @@ public class ResourceFilterTestHelper
     ).atLeastOnce();
   }
 
-  public static Collection<Object[]> getRequestPaths(final Class clazz)
+  public static Collection<Object[]> getRequestPathsWithAuthorizer(final AnnotatedElement classOrMethod)
   {
-    return getRequestPaths(clazz, ImmutableList.of(), ImmutableList.of());
-  }
-
-  public static Collection<Object[]> getRequestPathsWithAuthorizer(final Class clazz)
-  {
-    return getRequestPaths(clazz, ImmutableList.of(AuthorizerMapper.class), ImmutableList.of());
+    return getRequestPaths(classOrMethod, ImmutableList.of(AuthorizerMapper.class), ImmutableList.of());
   }
 
   public static Collection<Object[]> getRequestPaths(
@@ -152,17 +148,17 @@ public class ResourceFilterTestHelper
   }
 
   public static Collection<Object[]> getRequestPaths(
-      final Class clazz,
+      final AnnotatedElement classOrMethod,
       final Iterable<Class<?>> mockableInjections,
       final Iterable<Key<?>> mockableKeys
   )
   {
-    return getRequestPaths(clazz, mockableInjections, mockableKeys, ImmutableList.of());
+    return getRequestPaths(classOrMethod, mockableInjections, mockableKeys, ImmutableList.of());
   }
 
   // Feeds in an array of [ PathName, MethodName, ResourceFilter , Injector]
   public static Collection<Object[]> getRequestPaths(
-      final Class clazz,
+      final AnnotatedElement classOrMethod,
       final Iterable<Class<?>> mockableInjections,
       final Iterable<Key<?>> mockableKeys,
       final Iterable<?> injectedObjs
@@ -187,11 +183,17 @@ public class ResourceFilterTestHelper
           }
         }
     );
-    final String basepath = ((Path) clazz.getAnnotation(Path.class)).value().substring(1); //Ignore the first "/"
+    final String basepath = classOrMethod.getAnnotation(Path.class).value().substring(1); //Ignore the first "/"
     final List<Class<? extends ResourceFilter>> baseResourceFilters =
-        clazz.getAnnotation(ResourceFilters.class) == null ? Collections.emptyList() :
-        ImmutableList.copyOf(((ResourceFilters) clazz.getAnnotation(ResourceFilters.class)).value());
+        classOrMethod.getAnnotation(ResourceFilters.class) == null ? Collections.emptyList() :
+        ImmutableList.copyOf(classOrMethod.getAnnotation(ResourceFilters.class).value());
 
+    List<Method> methods;
+    if (classOrMethod instanceof Class<?>) {
+      methods = ImmutableList.copyOf(((Class<?>) classOrMethod).getDeclaredMethods());
+    } else {
+      methods = Collections.singletonList((Method) classOrMethod);
+    }
     return ImmutableList.copyOf(
         Iterables.concat(
             // Step 3 - Merge all the Objects arrays for each endpoints
@@ -206,7 +208,7 @@ public class ResourceFilterTestHelper
                     // Filter out non resource endpoint methods
                     // and also the endpoints that does not have any
                     // ResourceFilters applied to them
-                    ImmutableList.copyOf(clazz.getDeclaredMethods()),
+                    methods,
                     new Predicate<Method>()
                     {
                       @Override
@@ -239,18 +241,14 @@ public class ResourceFilterTestHelper
                             if (method.getAnnotation(Path.class) != null) {
                               return new Object[]{
                                   StringUtils.format("%s%s", basepath, method.getAnnotation(Path.class).value()),
-                                  input.getAnnotation(GET.class) == null ? (method.getAnnotation(DELETE.class) == null
-                                                                            ? "POST"
-                                                                            : "DELETE") : "GET",
+                                  httpMethodFromAnnotation(input, method),
                                   injector.getInstance(input),
                                   injector
                               };
                             } else {
                               return new Object[]{
                                   basepath,
-                                  input.getAnnotation(GET.class) == null ? (method.getAnnotation(DELETE.class) == null
-                                                                            ? "POST"
-                                                                            : "DELETE") : "GET",
+                                  httpMethodFromAnnotation(input, method),
                                   injector.getInstance(input),
                                   injector
                               };
@@ -263,5 +261,14 @@ public class ResourceFilterTestHelper
             )
         )
     );
+  }
+
+  private static String httpMethodFromAnnotation(Class<? extends ResourceFilter> input, Method method)
+  {
+    if (input.getAnnotation(GET.class) != null) {
+      return "GET";
+    } else {
+      return method.getAnnotation(DELETE.class) != null ? "DELETE" : "POST";
+    }
   }
 }

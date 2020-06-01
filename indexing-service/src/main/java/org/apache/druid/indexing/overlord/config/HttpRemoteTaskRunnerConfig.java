@@ -31,9 +31,6 @@ public class HttpRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   private int workerSyncNumThreads = 5;
 
   @JsonProperty
-  private Period waitForWorkerSlot = new Period("PT1M");
-
-  @JsonProperty
   private int shutdownRequestMaxRetries = 3;
 
   @JsonProperty
@@ -54,11 +51,6 @@ public class HttpRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   public int getWorkerSyncNumThreads()
   {
     return workerSyncNumThreads;
-  }
-
-  public Period getWaitForWorkerSlot()
-  {
-    return waitForWorkerSlot;
   }
 
   public int getShutdownRequestMaxRetries()

@@ -40,7 +40,9 @@ public class LongWrappingDimensionSelector extends BaseSingleValueDimensionSelec
   @Override
   protected String getValue()
   {
-    if (extractionFn == null) {
+    if (selector.isNull()) {
+      return null;
+    } else if (extractionFn == null) {
       return String.valueOf(selector.getLong());
     } else {
       return extractionFn.apply(selector.getLong());

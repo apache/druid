@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.parsers.ParserUtils;
 import org.apache.druid.java.util.common.parsers.Parsers;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,7 +42,7 @@ import java.util.regex.Pattern;
 public class RegexReader extends TextReader
 {
   private final String pattern;
-  private final Pattern compiled;
+  private final Pattern compiledPattern;
   private final Function<String, Object> multiValueFunction;
 
   private List<String> columns;
@@ -51,15 +50,15 @@ public class RegexReader extends TextReader
   RegexReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
-      File temporaryDirectory,
       String pattern,
+      Pattern compiledPattern,
       @Nullable String listDelimiter,
       @Nullable List<String> columns
   )
   {
-    super(inputRowSchema, source, temporaryDirectory);
+    super(inputRowSchema, source);
     this.pattern = pattern;
-    this.compiled = Pattern.compile(pattern);
+    this.compiledPattern = compiledPattern;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
     this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
     this.columns = columns;
@@ -80,7 +79,7 @@ public class RegexReader extends TextReader
   private Map<String, Object> parseLine(String line)
   {
     try {
-      final Matcher matcher = compiled.matcher(line);
+      final Matcher matcher = compiledPattern.matcher(line);
 
       if (!matcher.matches()) {
         throw new ParseException("Incorrect Regex: %s . No match found.", pattern);

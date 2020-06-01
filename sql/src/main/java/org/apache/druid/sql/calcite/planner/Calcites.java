@@ -20,15 +20,14 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -43,10 +42,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.InformationSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -55,8 +50,15 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.ISODateTimeFormat;
 
+import javax.annotation.Nullable;
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
+import java.sql.Date;
+import java.sql.JDBCType;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
@@ -102,19 +104,6 @@ public class Calcites
     return DEFAULT_CHARSET;
   }
 
-  public static SchemaPlus createRootSchema(
-      final DruidSchema druidSchema,
-      final SystemSchema systemSchema,
-      final AuthorizerMapper authorizerMapper
-  )
-  {
-    final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    rootSchema.add(DruidSchema.NAME, druidSchema);
-    rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema, authorizerMapper));
-    rootSchema.add(SystemSchema.NAME, systemSchema);
-    return rootSchema;
-  }
-
   public static String escapeStringLiteral(final String s)
   {
     Preconditions.checkNotNull(s);
@@ -137,6 +126,7 @@ public class Calcites
 
   }
 
+  @Nullable
   public static ValueType getValueTypeForSqlTypeName(SqlTypeName sqlTypeName)
   {
     if (SqlTypeName.FLOAT == sqlTypeName) {
@@ -345,23 +335,23 @@ public class Calcites
   }
 
   /**
-   * Checks if a RexNode is a literal int or not. If this returns true, then {@code RexLiteral.intValue(literal)} can be
-   * used to get the value of the literal.
-   *
-   * @param rexNode the node
-   *
-   * @return true if this is an int
+   * Find a string that is either equal to "basePrefix", or basePrefix prepended by underscores, and where nothing in
+   * "strings" starts with prefix plus a digit.
    */
-  public static boolean isIntLiteral(final RexNode rexNode)
+  public static String findUnusedPrefixForDigits(final String basePrefix, final Iterable<String> strings)
   {
-    return rexNode instanceof RexLiteral && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName());
-  }
+    final NavigableSet<String> navigableStrings;
 
-  public static String findUnusedPrefix(final String basePrefix, final NavigableSet<String> strings)
-  {
+    if (strings instanceof NavigableSet) {
+      navigableStrings = (NavigableSet<String>) strings;
+    } else {
+      navigableStrings = new TreeSet<>();
+      Iterables.addAll(navigableStrings, strings);
+    }
+
     String prefix = basePrefix;
 
-    while (!isUnusedPrefix(prefix, strings)) {
+    while (!isUnusedPrefix(prefix, navigableStrings)) {
       prefix = "_" + prefix;
     }
 
@@ -411,5 +401,46 @@ public class Calcites
       fetch = Math.max(0, Math.min(innerFetch - outerOffset, outerFetch));
     }
     return fetch;
+  }
+
+  public static Class<?> sqlTypeNameJdbcToJavaClass(SqlTypeName typeName)
+  {
+    // reference: https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
+    JDBCType jdbcType = JDBCType.valueOf(typeName.getJdbcOrdinal());
+    switch (jdbcType) {
+      case CHAR:
+      case VARCHAR:
+      case LONGVARCHAR:
+        return String.class;
+      case NUMERIC:
+      case DECIMAL:
+        return BigDecimal.class;
+      case BIT:
+        return Boolean.class;
+      case TINYINT:
+        return Byte.class;
+      case SMALLINT:
+        return Short.class;
+      case INTEGER:
+        return Integer.class;
+      case BIGINT:
+        return Long.class;
+      case REAL:
+        return Float.class;
+      case FLOAT:
+      case DOUBLE:
+        return Double.class;
+      case BINARY:
+      case VARBINARY:
+        return Byte[].class;
+      case DATE:
+        return Date.class;
+      case TIME:
+        return Time.class;
+      case TIMESTAMP:
+        return Timestamp.class;
+      default:
+        return Object.class;
+    }
   }
 }

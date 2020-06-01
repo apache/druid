@@ -27,23 +27,27 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
+import java.util.Objects;
+
 /**
- * Represents a "simple" extraction of a value from a Druid row, which is defined as a column plus an extractionFn.
- * This is useful since identifying simple extractions and treating them specially can allow Druid to perform
- * additional optimizations.
+ * Represents a "simple" extraction of a value from a Druid row, which is defined as a column plus an optional
+ * extractionFn. This is useful since identifying simple extractions and treating them specially can allow Druid to
+ * perform additional optimizations.
  */
 public class SimpleExtraction
 {
   private final String column;
+  @Nullable
   private final ExtractionFn extractionFn;
 
-  public SimpleExtraction(String column, ExtractionFn extractionFn)
+  public SimpleExtraction(String column, @Nullable ExtractionFn extractionFn)
   {
     this.column = Preconditions.checkNotNull(column, "column");
     this.extractionFn = extractionFn;
   }
 
-  public static SimpleExtraction of(String column, ExtractionFn extractionFn)
+  public static SimpleExtraction of(String column, @Nullable ExtractionFn extractionFn)
   {
     return new SimpleExtraction(column, extractionFn);
   }
@@ -53,6 +57,7 @@ public class SimpleExtraction
     return column;
   }
 
+  @Nullable
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
@@ -86,22 +91,15 @@ public class SimpleExtraction
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     SimpleExtraction that = (SimpleExtraction) o;
-
-    if (column != null ? !column.equals(that.column) : that.column != null) {
-      return false;
-    }
-    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
-
+    return column.equals(that.column) &&
+           Objects.equals(extractionFn, that.extractionFn);
   }
 
   @Override
   public int hashCode()
   {
-    int result = column != null ? column.hashCode() : 0;
-    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
-    return result;
+    return Objects.hash(column, extractionFn);
   }
 
   @Override

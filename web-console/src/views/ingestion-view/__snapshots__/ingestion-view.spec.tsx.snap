@@ -514,7 +514,7 @@ exports[`tasks view matches snapshot 1`] = `
         filtered={
           Array [
             Object {
-              "id": "task_id",
+              "id": "group_id",
               "value": "test",
             },
             Object {

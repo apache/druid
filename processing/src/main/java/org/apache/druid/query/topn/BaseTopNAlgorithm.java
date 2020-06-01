@@ -25,12 +25,11 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.topn.types.TopNColumnSelectorStrategy;
-import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -79,7 +78,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       @Nullable TopNQueryMetrics queryMetrics
   )
   {
-    if (params.getCardinality() != TopNColumnSelectorStrategy.CARDINALITY_UNKNOWN) {
+    if (params.getCardinality() != TopNParams.CARDINALITY_UNKNOWN) {
       runWithCardinalityKnown(params, resultBuilder, dimValSelector, queryMetrics);
     } else {
       runWithCardinalityUnknown(params, resultBuilder, queryMetrics);
@@ -269,8 +268,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     @Override
     public void skipTo(String previousStop)
     {
-      Capabilities capabilities = storageAdapter.getCapabilities();
-      if (capabilities.dimensionValuesSorted()) {
+      ColumnCapabilities capabilities = storageAdapter.getColumnCapabilities(query.getDimensionSpec().getDimension());
+      if (capabilities != null && capabilities.areDictionaryValuesSorted().isTrue()) {
         this.previousStop = previousStop;
       }
     }

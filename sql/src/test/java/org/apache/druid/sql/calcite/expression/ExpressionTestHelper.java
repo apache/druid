@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.type.RelDataType;
@@ -31,10 +32,11 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -55,6 +57,7 @@ class ExpressionTestHelper
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
       ImmutableMap.of(),
+      ImmutableList.of(),
       CalciteTests.REGULAR_USER_AUTH_RESULT
   );
 
@@ -71,7 +74,7 @@ class ExpressionTestHelper
 
     this.typeFactory = new JavaTypeFactoryImpl();
     this.rexBuilder = new RexBuilder(typeFactory);
-    this.relDataType = rowSignature.getRelDataType(typeFactory);
+    this.relDataType = RowSignatures.toRelDataType(rowSignature, typeFactory);
   }
 
   RelDataType createSqlType(SqlTypeName sqlTypeName)
@@ -81,7 +84,7 @@ class ExpressionTestHelper
 
   RexNode makeInputRef(String columnName)
   {
-    int columnNumber = rowSignature.getRowOrder().indexOf(columnName);
+    int columnNumber = rowSignature.indexOf(columnName);
     return rexBuilder.makeInputRef(relDataType.getFieldList().get(columnNumber).getType(), columnNumber);
   }
 
@@ -128,6 +131,11 @@ class ExpressionTestHelper
   RexNode makeLiteral(BigDecimal v, SqlIntervalQualifier intervalQualifier)
   {
     return rexBuilder.makeIntervalLiteral(v, intervalQualifier);
+  }
+
+  RexNode makeLiteral(Double d)
+  {
+    return rexBuilder.makeLiteral(d, createSqlType(SqlTypeName.DOUBLE), true);
   }
 
   RexNode makeCall(SqlOperator op, RexNode... exprs)
@@ -230,7 +238,7 @@ class ExpressionTestHelper
     Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
     ExprEval result = Parser.parse(expression.getExpression(), PLANNER_CONTEXT.getExprMacroTable())
-                                  .eval(Parser.withMap(bindings));
+                            .eval(Parser.withMap(bindings));
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
 }

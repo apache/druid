@@ -4,7 +4,7 @@
   "interval": "2015-09-12/2015-09-13",
   "segmentGranularity": "DAY",
   "tuningConfig" : {
-    "type" : "index",
+    "type" : "index_parallel",
     "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true

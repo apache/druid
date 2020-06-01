@@ -195,8 +195,10 @@ public class DiscoveryModule implements Module
 
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, Coordinator.class))
             .addBinding(CURATOR_KEY)
-            .toProvider(new DruidLeaderSelectorProvider(
-                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getCoordinatorPath(), "_COORDINATOR"))
+            .toProvider(
+                new DruidLeaderSelectorProvider(
+                    zkPathsConfig -> ZKPaths.makePath(zkPathsConfig.getCoordinatorPath(), "_COORDINATOR")
+                )
             )
             .in(LazySingleton.class);
 
@@ -204,7 +206,7 @@ public class DiscoveryModule implements Module
             .addBinding(CURATOR_KEY)
             .toProvider(
                 new DruidLeaderSelectorProvider(
-                    (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getOverlordPath(), "_OVERLORD")
+                    zkPathsConfig -> ZKPaths.makePath(zkPathsConfig.getOverlordPath(), "_OVERLORD")
                 )
             )
             .in(LazySingleton.class);
@@ -477,6 +479,18 @@ public class DiscoveryModule implements Module
 
     @Override
     public ServiceProviderBuilder<T> additionalFilter(InstanceFilter<T> tInstanceFilter)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> executorService(ExecutorService executorService)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceProviderBuilder<T> executorService(CloseableExecutorService closeableExecutorService)
     {
       return this;
     }

@@ -23,4 +23,4 @@ title: "Extension Examples"
   -->
 
 
-This extension was removed in Apache Druid (incubating) 0.16.0. In prior versions, the extension provided obsolete facilities to ingest data from the Twitter 'Spritzer' data stream as well as the Wikipedia changes IRC channel.
+This extension was removed in Apache Druid 0.16.0. In prior versions, the extension provided obsolete facilities to ingest data from the Twitter 'Spritzer' data stream as well as the Wikipedia changes IRC channel.

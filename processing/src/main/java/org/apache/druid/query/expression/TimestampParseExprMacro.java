@@ -21,6 +21,7 @@ package org.apache.druid.query.expression;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -36,10 +37,12 @@ import java.util.List;
 
 public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_parse";
+
   @Override
   public String name()
   {
-    return "timestamp_parse";
+    return FN_NAME;
   }
 
   @Override
@@ -68,7 +71,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
     {
       private TimestampParseExpr(Expr arg)
       {
-        super(arg);
+        super(FN_NAME, arg);
       }
 
       @Nonnull
@@ -95,6 +98,24 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
       {
         Expr newArg = arg.visit(shuttle);
         return shuttle.visit(new TimestampParseExpr(newArg));
+      }
+
+      @Override
+      public String stringify()
+      {
+        if (args.size() > 2) {
+          return StringUtils.format(
+              "%s(%s, %s, %s)",
+              FN_NAME,
+              arg.stringify(),
+              args.get(1).stringify(),
+              args.get(2).stringify()
+          );
+        }
+        if (args.size() > 1) {
+          return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), args.get(1).stringify());
+        }
+        return super.stringify();
       }
     }
 

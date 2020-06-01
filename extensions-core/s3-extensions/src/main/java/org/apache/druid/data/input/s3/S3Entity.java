@@ -26,6 +26,7 @@ import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -47,7 +48,7 @@ public class S3Entity extends RetryingInputEntity
   @Override
   public URI getUri()
   {
-    return null;
+    return object.toUri(S3StorageDruidModule.SCHEME);
   }
 
   @Override

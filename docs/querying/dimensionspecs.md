@@ -1,6 +1,7 @@
 ---
 id: dimensionspecs
-title: "Transforming Dimension Values"
+title: "Query dimensions"
+sidebar_label: "Dimensions"
 ---
 
 <!--
@@ -22,6 +23,10 @@ title: "Transforming Dimension Values"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the native
+> language. For information about functions available in SQL, refer to the
+> [SQL documentation](sql.md#scalar-functions).
 
 The following JSON fields can be used in a query to operate on dimension values.
 
@@ -66,7 +71,7 @@ Please refer to the [Output Types](#output-types) section for more details.
 
 ### Filtered DimensionSpecs
 
-These are only useful for multi-value dimensions. If you have a row in Apache Druid (incubating) that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filters.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
+These are only useful for multi-value dimensions. If you have a row in Apache Druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filters.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
 
 It happens because "query filter" is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.md) for more details.
 Then groupBy/topN processing pipeline "explodes" all multi-value dimensions resulting 3 rows for "v1", "v2" and "v3" each.
@@ -196,7 +201,7 @@ Returns the dimension value unchanged if the regular expression matches, otherwi
 
 ### Search query extraction function
 
-Returns the dimension value unchanged if the given [`SearchQuerySpec`](../querying/searchqueryspec.md)
+Returns the dimension value unchanged if the given [`SearchQuerySpec`](../querying/searchquery.html#searchqueryspec)
 matches, otherwise returns null.
 
 ```json

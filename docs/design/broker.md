@@ -25,7 +25,7 @@ title: "Broker"
 
 ### Configuration
 
-For Apache Druid (incubating) Broker Process Configuration, see [Broker Configuration](../configuration/index.html#broker).
+For Apache Druid Broker Process Configuration, see [Broker Configuration](../configuration/index.html#broker).
 
 ### HTTP endpoints
 

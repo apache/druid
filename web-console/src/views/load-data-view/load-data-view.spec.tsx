@@ -23,7 +23,7 @@ import { LoadDataView } from './load-data-view';
 
 describe('load data view', () => {
   it('matches snapshot', () => {
-    const loadDataView = shallow(<LoadDataView goToTask={() => {}} />);
+    const loadDataView = shallow(<LoadDataView goToIngestion={() => {}} />);
     expect(loadDataView).toMatchSnapshot();
   });
 });

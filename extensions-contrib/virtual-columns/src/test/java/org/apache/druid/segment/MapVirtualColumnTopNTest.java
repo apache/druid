@@ -67,10 +67,7 @@ public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
 
     final TopNQueryRunnerFactory factory = new TopNQueryRunnerFactory(
         new StupidPool<>("map-virtual-column-test", () -> ByteBuffer.allocate(1024)),
-        new TopNQueryQueryToolChest(
-            new TopNQueryConfig(),
-            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-        ),
+        new TopNQueryQueryToolChest(new TopNQueryConfig()),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 

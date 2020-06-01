@@ -41,9 +41,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
 
 public class ParallelMergeCombiningSequenceTest
 {
+  private static final int TEST_POOL_SIZE = 4;
   private static final Logger LOG = new Logger(ParallelMergeCombiningSequenceTest.class);
 
   public static final Ordering<IntPair> INT_PAIR_ORDERING = Ordering.natural().onResultOf(p -> p.lhs);
@@ -65,7 +67,7 @@ public class ParallelMergeCombiningSequenceTest
   public void setup()
   {
     pool = new ForkJoinPool(
-        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75),
+        TEST_POOL_SIZE,
         ForkJoinPool.defaultForkJoinWorkerThreadFactory,
         (t, e) -> LOG.error(e, "Unhandled exception in thread [%s]", t),
         true
@@ -255,7 +257,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(Sequences.empty());
     assertResult(input);
 
-    // above min sequence count threshold, so will merge in parallel (if enough cores)
+    // above min sequence count threshold, so will merge in parallel
     input.add(Sequences.empty());
     input.add(Sequences.empty());
     input.add(Sequences.empty());
@@ -273,7 +275,7 @@ public class ParallelMergeCombiningSequenceTest
 
     input.clear();
 
-    // above min sequence count threshold, so will merge in parallel (if enough cores)
+    // above min sequence count threshold, so will merge in parallel
     input.add(Sequences.empty());
     input.add(Sequences.empty());
     input.add(Sequences.empty());
@@ -290,18 +292,32 @@ public class ParallelMergeCombiningSequenceTest
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(6));
-    assertResult(input, 10, 20);
+    assertResult(input, 10, 20, reportMetrics -> {
+      Assert.assertEquals(1, reportMetrics.getParallelism());
+      Assert.assertEquals(2, reportMetrics.getInputSequences());
+      Assert.assertEquals(11, reportMetrics.getInputRows());
+      // deltas because it depends how much result combining is happening, which is random
+      Assert.assertEquals(6, reportMetrics.getOutputRows(), 5);
+      Assert.assertEquals(4, reportMetrics.getTaskCount());
+    });
 
     input.clear();
 
-    // above min sequence count threshold, so will merge in parallel (if enough cores)
+    // above min sequence count threshold, so will merge in parallel
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(6));
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(8));
     input.add(nonBlockingSequence(4));
     input.add(nonBlockingSequence(6));
-    assertResult(input, 10, 20);
+    assertResult(input, 10, 20, reportMetrics -> {
+      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(6, reportMetrics.getInputSequences());
+      Assert.assertEquals(34, reportMetrics.getInputRows());
+      // deltas because it depends how much result combining is happening, which is random
+      Assert.assertEquals(16, reportMetrics.getOutputRows(), 15);
+      Assert.assertEquals(10, reportMetrics.getTaskCount(), 2);
+    });
   }
 
   @Test
@@ -311,18 +327,32 @@ public class ParallelMergeCombiningSequenceTest
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(6));
-    assertResult(input, 4, 20);
+    assertResult(input, 4, 20, reportMetrics -> {
+      Assert.assertEquals(1, reportMetrics.getParallelism());
+      Assert.assertEquals(2, reportMetrics.getInputSequences());
+      Assert.assertEquals(11, reportMetrics.getInputRows());
+      // deltas because it depends how much result combining is happening, which is random
+      Assert.assertEquals(6, reportMetrics.getOutputRows(), 5);
+      Assert.assertEquals(4, reportMetrics.getTaskCount());
+    });
 
     input.clear();
 
-    // above min sequence count threshold, so will merge in parallel (if enough cores)
+    // above min sequence count threshold, so will merge in parallel
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(6));
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(8));
     input.add(nonBlockingSequence(4));
     input.add(nonBlockingSequence(6));
-    assertResult(input, 4, 20);
+    assertResult(input, 4, 20, reportMetrics -> {
+      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(6, reportMetrics.getInputSequences());
+      Assert.assertEquals(34, reportMetrics.getInputRows());
+      // deltas because it depends how much result combining is happening, which is random
+      Assert.assertEquals(16, reportMetrics.getOutputRows(), 15);
+      Assert.assertEquals(10, reportMetrics.getTaskCount(), 2);
+    });
   }
 
 
@@ -334,7 +364,14 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(15));
     input.add(nonBlockingSequence(26));
 
-    assertResult(input, 5, 10);
+    assertResult(input, 5, 10, reportMetrics -> {
+      Assert.assertEquals(1, reportMetrics.getParallelism());
+      Assert.assertEquals(2, reportMetrics.getInputSequences());
+      Assert.assertEquals(41, reportMetrics.getInputRows());
+      // deltas because it depends how much result combining is happening, which is random
+      Assert.assertEquals(21, reportMetrics.getOutputRows(), 20);
+      Assert.assertEquals(4, reportMetrics.getTaskCount(), 2);
+    });
 
     // above min sequence count threshold, so will merge in parallel (if enough cores)
     input.add(nonBlockingSequence(15));
@@ -342,7 +379,14 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(17));
     input.add(nonBlockingSequence(14));
 
-    assertResult(input, 5, 10);
+    assertResult(input, 5, 10, reportMetrics -> {
+      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(6, reportMetrics.getInputSequences());
+      Assert.assertEquals(120, reportMetrics.getInputRows());
+      // deltas because it depends how much result combining is happening, which is random
+      Assert.assertEquals(60, reportMetrics.getOutputRows(), 59);
+      Assert.assertEquals(10, reportMetrics.getTaskCount(), 5);
+    });
   }
 
   @Test
@@ -372,14 +416,22 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(10_000));
     input.add(nonBlockingSequence(9_001));
 
-    assertResult(input, 128, 1024);
+    assertResult(input, 128, 1024, reportMetrics -> {
+      Assert.assertEquals(1, reportMetrics.getParallelism());
+      Assert.assertEquals(2, reportMetrics.getInputSequences());
+      Assert.assertEquals(19_001, reportMetrics.getInputRows());
+    });
 
     input.add(nonBlockingSequence(7_777));
     input.add(nonBlockingSequence(8_500));
     input.add(nonBlockingSequence(5_000));
     input.add(nonBlockingSequence(8_888));
 
-    assertResult(input, 128, 1024);
+    assertResult(input, 128, 1024, reportMetrics -> {
+      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(6, reportMetrics.getInputSequences());
+      Assert.assertEquals(49166, reportMetrics.getInputRows());
+    });
   }
 
   @Test
@@ -482,11 +534,28 @@ public class ParallelMergeCombiningSequenceTest
     assertResult(
         sequences,
         ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
-        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS
+        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS,
+        null
     );
   }
 
   private void assertResult(List<Sequence<IntPair>> sequences, int batchSize, int yieldAfter)
+      throws InterruptedException, IOException
+  {
+    assertResult(
+        sequences,
+        batchSize,
+        yieldAfter,
+        null
+    );
+  }
+
+  private void assertResult(
+      List<Sequence<IntPair>> sequences,
+      int batchSize,
+      int yieldAfter,
+      Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter
+  )
       throws InterruptedException, IOException
   {
     final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
@@ -503,10 +572,11 @@ public class ParallelMergeCombiningSequenceTest
         true,
         5000,
         0,
-        (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.5),
+        TEST_POOL_SIZE,
         yieldAfter,
         batchSize,
-        ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
+        ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS,
+        reporter
     );
 
     Yielder<IntPair> combiningYielder = Yielders.each(combiningSequence);
@@ -561,10 +631,11 @@ public class ParallelMergeCombiningSequenceTest
           true,
           timeout,
           0,
-          (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.5),
+          TEST_POOL_SIZE,
           yieldAfter,
           batchSize,
-          ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
+          ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS,
+          null
       );
 
       Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);

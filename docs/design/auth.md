@@ -23,7 +23,7 @@ title: "Authentication and Authorization"
   -->
 
 
-This document describes non-extension specific Apache Druid (incubating) authentication and authorization configurations.
+This document describes non-extension specific Apache Druid authentication and authorization configurations.
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|

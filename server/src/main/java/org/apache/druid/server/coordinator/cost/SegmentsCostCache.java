@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 
 /**
  * SegmentsCostCache provides faster way to calculate cost function proposed in {@link CostBalancerStrategy}.
- * See https://github.com/apache/incubator-druid/pull/2972 for more details about the cost function.
+ * See https://github.com/apache/druid/pull/2972 for more details about the cost function.
  *
  * Joint cost for two segments (you can make formulas below readable by copy-pasting to
  * https://www.codecogs.com/latex/eqneditor.php):

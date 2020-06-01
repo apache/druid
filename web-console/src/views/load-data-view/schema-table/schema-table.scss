@@ -25,7 +25,10 @@
         background: rgba(19, 129, 201, 0.5);
       }
       &.float {
-        background: rgba(25, 145, 201, 0.5);
+        background: rgba(22, 129, 201, 0.5);
+      }
+      &.double {
+        background: rgba(25, 129, 201, 0.5);
       }
     }
 
@@ -42,7 +45,10 @@
         background: rgba(19, 129, 201, 0.1);
       }
       &.float {
-        background: rgba(25, 145, 201, 0.1);
+        background: rgba(22, 129, 201, 0.1);
+      }
+      &.double {
+        background: rgba(25, 129, 201, 0.1);
       }
     }
 

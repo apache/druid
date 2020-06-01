@@ -25,7 +25,7 @@ title: "Historical Process"
 
 ### Configuration
 
-For Apache Druid (incubating) Historical Process Configuration, see [Historical Configuration](../configuration/index.html#historical).
+For Apache Druid Historical Process Configuration, see [Historical Configuration](../configuration/index.html#historical).
 
 ### HTTP endpoints
 
