@@ -23,14 +23,20 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.UnsupportedQueryException;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,10 +54,49 @@ public class IndexedTableJoinMatcherTest
   {
     public static class MakeDimensionProcessorTest
     {
+      @Mock
+      private DimensionSelector dimensionSelector;
+
       private static final String KEY = "key";
 
       static {
         NullHandling.initializeForTests();
+      }
+
+      @Test(expected = UnsupportedQueryException.class)
+      public void testMatchMultiValuedRowCardinalityUnknownShouldThrowException()
+      {
+        MockitoAnnotations.initMocks(this);
+        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
+        Mockito.doReturn(row).when(dimensionSelector).getRow();
+        Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN).when(dimensionSelector).getValueCardinality();
+
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(
+                ValueType.STRING,
+                IndexedTableJoinMatcherTest::createSingletonIntList
+            );
+        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
+        // Test match should throw exception
+        dimensionProcessor.get();
+      }
+
+      @Test(expected = UnsupportedQueryException.class)
+      public void testMatchMultiValuedRowCardinalityKnownShouldThrowException()
+      {
+        MockitoAnnotations.initMocks(this);
+        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
+        Mockito.doReturn(row).when(dimensionSelector).getRow();
+        Mockito.doReturn(3).when(dimensionSelector).getValueCardinality();
+
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(
+                ValueType.STRING,
+                IndexedTableJoinMatcherTest::createSingletonIntList
+            );
+        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
+        // Test match should throw exception
+        dimensionProcessor.get();
       }
 
       @Test

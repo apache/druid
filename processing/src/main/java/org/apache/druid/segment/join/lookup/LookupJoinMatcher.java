@@ -26,7 +26,6 @@ import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.UnsupportedQueryException;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
