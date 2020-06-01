@@ -31,8 +31,5 @@
     <Logger level="debug" name="org.apache.druid" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger level="trace" name="org.apache.calcite" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
   </Loggers>
 </Configuration>

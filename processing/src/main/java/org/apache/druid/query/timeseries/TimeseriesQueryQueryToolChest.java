@@ -48,11 +48,14 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -404,11 +407,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    return RowSignature.builder()
-                       .addTimeColumn()
-                       .addAggregators(query.getAggregatorSpecs())
-                       .addPostAggregators(query.getPostAggregatorSpecs())
-                       .build();
+
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    if (query.getDimensionSpec() != null) {
+      rowSignatureBuilder.addDimensions(Collections.singletonList(query.getDimensionSpec()));
+    } else {
+      rowSignatureBuilder.addTimeColumn();
+    }
+    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs());
+    rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
+    return rowSignatureBuilder.build();
   }
 
   @Override

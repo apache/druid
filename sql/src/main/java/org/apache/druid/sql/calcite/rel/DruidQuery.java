@@ -733,11 +733,14 @@ public class DruidQuery
 
     final Granularity queryGranularity;
     final boolean descending;
+    final DimensionSpec dimensionSpec;
     int timeseriesLimit = 0;
     if (grouping.getDimensions().isEmpty()) {
       queryGranularity = Granularities.ALL;
       descending = false;
+      dimensionSpec = null;
     } else if (grouping.getDimensions().size() == 1) {
+      dimensionSpec = Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec();
       final DimensionExpression dimensionExpression = Iterables.getOnlyElement(grouping.getDimensions());
       queryGranularity = Expressions.toQueryGranularity(
           dimensionExpression.getDruidExpression(),
@@ -791,6 +794,7 @@ public class DruidQuery
         filtration.getQuerySegmentSpec(),
         descending,
         getVirtualColumns(false),
+        dimensionSpec,
         filtration.getDimFilter(),
         queryGranularity,
         grouping.getAggregatorFactories(),

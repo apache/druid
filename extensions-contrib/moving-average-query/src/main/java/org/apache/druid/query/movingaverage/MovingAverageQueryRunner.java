@@ -156,6 +156,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
           new MultipleIntervalSegmentSpec(intervals),
           false,
           null,
+          null,
           maq.getFilter(),
           maq.getGranularity(),
           maq.getAggregatorSpecs(),

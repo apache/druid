@@ -34,6 +34,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
@@ -52,6 +53,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
 
   private final VirtualColumns virtualColumns;
+  private final DimensionSpec dimensionSpec;
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
@@ -63,6 +65,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("descending") boolean descending,
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
+      @JsonProperty("dimension") DimensionSpec dimensionSpec,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
@@ -74,6 +77,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     super(dataSource, querySegmentSpec, descending, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
+    this.dimensionSpec = dimensionSpec;
     this.dimFilter = dimFilter;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
@@ -108,6 +112,12 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
+  }
+
+  @JsonProperty("dimension")
+  public DimensionSpec getDimensionSpec()
+  {
+    return dimensionSpec;
   }
 
   @JsonProperty("filter")
@@ -193,6 +203,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   {
     return "TimeseriesQuery{" +
            "dataSource='" + getDataSource() + '\'' +
+           ", dimensionSpec=" + dimensionSpec +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", descending=" + isDescending() +
            ", virtualColumns=" + virtualColumns +
@@ -220,6 +231,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     final TimeseriesQuery that = (TimeseriesQuery) o;
     return limit == that.limit &&
            Objects.equals(virtualColumns, that.virtualColumns) &&
+           Objects.equals(dimensionSpec, that.dimensionSpec) &&
            Objects.equals(dimFilter, that.dimFilter) &&
            Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
            Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
@@ -228,6 +240,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), virtualColumns, dimFilter, aggregatorSpecs, postAggregatorSpecs, limit);
+    return Objects.hash(super.hashCode(), virtualColumns, dimensionSpec, dimFilter, aggregatorSpecs, postAggregatorSpecs, limit);
   }
 }

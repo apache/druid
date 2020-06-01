@@ -97,20 +97,7 @@ public class QueryMaker
     }
 
     final List<String> rowOrder;
-    if (query instanceof TimeseriesQuery && !druidQuery.getGrouping().getDimensions().isEmpty()) {
-      // Hack for timeseries queries: when generating them, DruidQuery.toTimeseriesQuery translates a dimension
-      // based on a timestamp_floor expression into a 'granularity'. This is not reflected in the druidQuery's
-      // output row signature, so we have to account for it here. When groupBy on timestamp_floor expressions is
-      // just as fast as a timeseries query (a noble goal) we can remove timeseries queries from the SQL layer and
-      // also remove this hack.
-      final String timeDimension = Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions()).getOutputName();
-      rowOrder = druidQuery.getOutputRowSignature().getColumnNames().stream()
-                           .map(f -> timeDimension.equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
-                           .collect(Collectors.toList());
-    } else {
-      rowOrder = druidQuery.getOutputRowSignature().getColumnNames();
-    }
-
+    rowOrder = druidQuery.getOutputRowSignature().getColumnNames();
     return execute(
         query,
         rowOrder,
