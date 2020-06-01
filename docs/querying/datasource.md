@@ -348,5 +348,5 @@ future versions:
 always be correct.
 - Performance-related optimizations as mentioned in the [previous section](#join-performance).
 - Join algorithms other than broadcast hash-joins.
-- JOIN containing constant value inside the condition
-- JOIN on multi-valued column
+- Join condition on a column compared to a constant value.
+- Join conditions on a column containing a multi-value dimension.
