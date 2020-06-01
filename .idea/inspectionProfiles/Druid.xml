@@ -387,8 +387,8 @@
         <constraint name="b" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use hashCode of Pattern.toString() instead" text="$a$.hashCode()" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
-        <constraint name="__context__" nameOfExprType="java\.util\.regex\.Pattern" within="" contains="" />
-        <constraint name="a" within="" contains="" />
+        <constraint name="__context__" within="" contains="" />
+        <constraint name="a" nameOfExprType="java\.util\.regex\.Pattern" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use Objects.hash() on Pattern.toString() instead" text="java.util.Objects.hash($b$,$a$)" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
