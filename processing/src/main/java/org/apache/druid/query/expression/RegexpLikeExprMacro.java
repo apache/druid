@@ -52,8 +52,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
     final Expr arg = args.get(0);
     final Expr patternExpr = args.get(1);
 
-    if (!patternExpr.isLiteral() ||
-        !(patternExpr.getLiteralValue() == null || patternExpr.getLiteralValue() instanceof String)) {
+    if (!ExprUtils.isStringLiteral(patternExpr)) {
       throw new IAE("Function[%s] pattern must be a string literal", name());
     }
 

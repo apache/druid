@@ -253,17 +253,6 @@ public class OperatorConversions
     }
 
     /**
-     * Sets the {@link SqlKind} of the operator.
-     *
-     * The default, if not provided, is {@link SqlKind#OTHER_FUNCTION}.
-     */
-    public OperatorBuilder kind(final SqlKind kind)
-    {
-      this.kind = kind;
-      return this;
-    }
-
-    /**
      * Sets the return type of the operator to "typeName", marked as non-nullable.
      *
      * One of {@link #returnTypeNonNull}, {@link #returnTypeNullable}, or
