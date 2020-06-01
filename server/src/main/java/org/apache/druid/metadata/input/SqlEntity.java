@@ -105,7 +105,7 @@ public class SqlEntity implements InputEntity
    * @param objectMapper                 An object mapper, used for deserialization
    * @param foldCase                     A boolean flag used to enable or disabling case sensitivity while handling database column names
    *
-   * @return A {@link org.apache.druid.data.input.InputEntity.CleanableFile} object that wraps the file containing the SQL results
+   * @return A {@link InputEntity.CleanableFile} object that wraps the file containing the SQL results
    */
 
   public static CleanableFile openCleanableFile(
