@@ -17,18 +17,14 @@
  */
 
 import { render } from '@testing-library/react';
-import { sqlParserFactory } from 'druid-query-toolkit';
+import { parseSqlQuery } from 'druid-query-toolkit';
 import React from 'react';
-
-import { SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 
 import { QueryOutput } from './query-output';
 
 describe('query output', () => {
   it('matches snapshot', () => {
-    const parser = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
-
-    const parsedQuery = parser(`SELECT
+    const parsedQuery = parseSqlQuery(`SELECT
   "language",
   COUNT(*) AS "Count", COUNT(DISTINCT "language") AS "dist_language", COUNT(*) FILTER (WHERE "language"= 'xxx') AS "language_filtered_count"
 FROM "github"

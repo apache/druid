@@ -753,7 +753,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     spec = createMock(SeekableStreamSupervisorSpec.class);
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
-
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
     EasyMock.expect(spec.getIoConfig()).andReturn(new SeekableStreamSupervisorIOConfig(
         "stream",
@@ -766,13 +765,20 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         false,
         new Period("PT30M"),
         null,
-        null, null
+        null,
+        null
     )
     {
     }).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
-    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig()).anyTimes();
+    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(new DruidMonitorSchedulerConfig() {
+      @Override
+      public Duration getEmitterPeriod()
+      {
+        return new Period("PT1S").toStandardDuration();
+      }
+    }).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(suspended).anyTimes();
     EasyMock.expect(spec.getType()).andReturn("test").anyTimes();
 
@@ -986,9 +992,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected void updateLatestSequenceFromStream(
-        RecordSupplier<String, String> recordSupplier, Set<StreamPartition<String>> streamPartitions
-    )
+    protected void updatePartitionLagFromStream()
     {
       // do nothing
     }
@@ -1219,7 +1223,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     protected void emitLag()
     {
       super.emitLag();
-      latch.countDown();
+      if (stateManager.isSteadyState()) {
+        latch.countDown();
+      }
     }
 
     @Override

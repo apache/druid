@@ -117,4 +117,16 @@ public class FalseFilter implements Filter
   {
     return "false";
   }
+
+  @Override
+  public final int hashCode()
+  {
+    return FalseFilter.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof FalseFilter;
+  }
 }

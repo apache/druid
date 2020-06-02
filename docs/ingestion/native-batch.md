@@ -1006,7 +1006,7 @@ Sample specs:
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should be `google`.|None|yes|
+|type|This should be `azure`.|None|yes|
 |uris|JSON array of URIs where Azure Blob objects to be ingested are located. Should be in form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure Blob objects to be ingested. Should be in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure Blob objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
@@ -1106,9 +1106,9 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 
 ### HTTP Input Source
 
-The HDFS input source is to support reading files directly
+The HTTP input source is to support reading files directly
 from remote sites via HTTP.
-The HDFS input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
+The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
 where each worker task of `index_parallel` will read only one file.
 
 Sample specs:

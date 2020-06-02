@@ -49,7 +49,7 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
   @Test
   public void testKinesisIndexDataWithStartStopSupervisor() throws Exception
   {
-    doTestIndexDataWithStartStopSupervisor(false);
+    doTestIndexDataWithStartStopSupervisor(null);
   }
 
   /**
@@ -59,7 +59,7 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
   @Test
   public void testKinesisIndexDataWithKinesisReshardSplit() throws Exception
   {
-    doTestIndexDataWithStreamReshardSplit(false);
+    doTestIndexDataWithStreamReshardSplit(null);
   }
 
   /**
@@ -69,6 +69,6 @@ public class ITKinesisIndexingServiceParallelizedTest extends AbstractKinesisInd
   @Test
   public void testKinesisIndexDataWithKinesisReshardMerge() throws Exception
   {
-    doTestIndexDataWithStreamReshardMerge(false);
+    doTestIndexDataWithStreamReshardMerge();
   }
 }

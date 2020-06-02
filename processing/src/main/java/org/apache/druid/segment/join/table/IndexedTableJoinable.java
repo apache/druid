@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join.table;
 
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -31,6 +30,7 @@ import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 public class IndexedTableJoinable implements Joinable
@@ -82,7 +82,7 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
-  public Set<String> getCorrelatedColumnValues(
+  public Optional<Set<String>> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
       String retrievalColumnName,
@@ -94,7 +94,7 @@ public class IndexedTableJoinable implements Joinable
     int correlatedColumnPosition = table.rowSignature().indexOf(retrievalColumnName);
 
     if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
-      return ImmutableSet.of();
+      return Optional.empty();
     }
 
     Set<String> correlatedValues = new HashSet<>();
@@ -108,13 +108,13 @@ public class IndexedTableJoinable implements Joinable
         correlatedValues.add(correlatedDimVal);
 
         if (correlatedValues.size() > maxCorrelationSetSize) {
-          return ImmutableSet.of();
+          return Optional.empty();
         }
       }
-      return correlatedValues;
+      return Optional.of(correlatedValues);
     } else {
       if (!allowNonKeyColumnSearch) {
-        return ImmutableSet.of();
+        return Optional.empty();
       }
 
       IndexedTable.Reader dimNameReader = table.columnReader(filterColumnPosition);
@@ -125,12 +125,12 @@ public class IndexedTableJoinable implements Joinable
           String correlatedDimVal = Objects.toString(correlatedColumnReader.read(i), null);
           correlatedValues.add(correlatedDimVal);
           if (correlatedValues.size() > maxCorrelationSetSize) {
-            return ImmutableSet.of();
+            return Optional.empty();
           }
         }
       }
 
-      return correlatedValues;
+      return Optional.of(correlatedValues);
     }
   }
 }

@@ -133,6 +133,7 @@ MiddleManagers
 Montréal
 Murmur3
 NFS
+OCF
 OLAP
 OOMs
 OpenJDK
@@ -450,6 +451,8 @@ v9
 DskipTests
 Papache-release
 Pdist
+Ddruid.console.skip
+yaml
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName

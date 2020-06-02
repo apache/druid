@@ -50,6 +50,7 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -140,7 +141,7 @@ public class JoinAndLookupBenchmark
         )
     );
     JoinFilterPreAnalysis preAnalysisLookupStringKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClausesLookupStringKey,
+        JoinableClauses.fromList(joinableClausesLookupStringKey),
         VirtualColumns.EMPTY,
         null,
         false,
@@ -167,7 +168,7 @@ public class JoinAndLookupBenchmark
         )
     );
     JoinFilterPreAnalysis preAnalysisLookupLongKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClausesLookupLongKey,
+        JoinableClauses.fromList(joinableClausesLookupLongKey),
         VirtualColumns.EMPTY,
         null,
         false,
@@ -194,7 +195,7 @@ public class JoinAndLookupBenchmark
         )
     );
     JoinFilterPreAnalysis preAnalysisIndexedTableStringKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClausesIndexedTableStringKey,
+        JoinableClauses.fromList(joinableClausesIndexedTableStringKey),
         VirtualColumns.EMPTY,
         null,
         false,
@@ -221,7 +222,7 @@ public class JoinAndLookupBenchmark
         )
     );
     JoinFilterPreAnalysis preAnalysisIndexedTableLongKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClausesIndexedTableLonggKey,
+        JoinableClauses.fromList(joinableClausesIndexedTableLonggKey),
         VirtualColumns.EMPTY,
         null,
         false,

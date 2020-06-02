@@ -29,6 +29,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -187,7 +188,7 @@ public class BaseHashJoinSegmentStorageAdapterTest
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {
     JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
+        JoinableClauses.fromList(ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT))),
         VirtualColumns.EMPTY,
         null,
         true,
