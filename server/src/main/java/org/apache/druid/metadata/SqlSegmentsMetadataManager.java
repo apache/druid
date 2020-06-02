@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -936,9 +937,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public Iterable<DataSegment> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
-                                                                                          Interval interval,
-                                                                                          boolean requiresLatest)
+  public Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
+                                                                                                    Interval interval,
+                                                                                                    boolean requiresLatest)
   {
     if (requiresLatest) {
       forceOrWaitOngoingDatabasePoll();
@@ -947,7 +948,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
     VersionedIntervalTimeline<String, DataSegment> usedSegmentsTimeline
         = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
-    return usedSegmentsTimeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
+    return Optional.of(usedSegmentsTimeline)
+                   .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE));
   }
 
   @Override

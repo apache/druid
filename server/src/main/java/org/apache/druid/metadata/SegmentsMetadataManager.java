@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.timeline.DataSegment;
@@ -121,9 +122,9 @@ public interface SegmentsMetadataManager
    * If {@param requiresLatest} is false then segment information from stale snapshot of up to the last periodic poll
    * period {@link SqlSegmentsMetadataManager#periodicPollDelay} will be used.
    */
-  Iterable<DataSegment> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
-                                                                                   Interval interval,
-                                                                                   boolean requiresLatest);
+  Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
+                                                                                             Interval interval,
+                                                                                             boolean requiresLatest);
 
   /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments
