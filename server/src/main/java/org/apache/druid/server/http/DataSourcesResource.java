@@ -402,7 +402,7 @@ public class DataSourcesResource
       @QueryParam("firstCheck") @Nullable final Boolean firstCheck
   )
   {
-    if (serverInventoryView == null || serverInventoryView.getSegmentLoadInfos() != null) {
+    if (serverInventoryView == null || serverInventoryView.getSegmentLoadInfos() == null) {
       return Response.ok(ImmutableMap.of("loaded", false)).build();
     }
     // Force poll
