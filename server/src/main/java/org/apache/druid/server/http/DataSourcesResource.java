@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -409,14 +410,19 @@ public class DataSourcesResource
     Interval theInterval = interval == null ? Intervals.ETERNITY : Intervals.of(interval);
     boolean requiresMetadataStorePoll = firstCheck == null ? true :firstCheck;
 
-    Iterable<DataSegment> segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+    Optional<Iterable<DataSegment>> segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
         dataSourceName,
         theInterval,
         requiresMetadataStorePoll
     );
 
+    if (!segments.isPresent()) {
+      return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+    }
+
+
     Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
-    for (DataSegment segment : segments) {
+    for (DataSegment segment : segments.get()) {
       if (!segmentLoadInfos.containsKey(segment.getId())) {
         return Response.ok(ImmutableMap.of("loaded", false)).build();
       }
