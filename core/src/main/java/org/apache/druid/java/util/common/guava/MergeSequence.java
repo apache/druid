@@ -78,10 +78,12 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
             if (!yielder.isDone()) {
               try {
                 queue.add(yielder);
-              } catch (Throwable t1) {
+              }
+              catch (Throwable t1) {
                 try {
                   yielder.close();
-                } catch (Throwable t2) {
+                }
+                catch (Throwable t2) {
                   t1.addSuppressed(t2);
                 }
 
