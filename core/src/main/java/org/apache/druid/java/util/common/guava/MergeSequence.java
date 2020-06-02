@@ -76,7 +76,17 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
             );
 
             if (!yielder.isDone()) {
-              queue.add(yielder);
+              try {
+                queue.add(yielder);
+              } catch (Throwable t1) {
+                try {
+                  yielder.close();
+                } catch (Throwable t2) {
+                  t1.addSuppressed(t2);
+                }
+
+                throw t1;
+              }
             } else {
               try {
                 yielder.close();
@@ -179,7 +189,11 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
   {
     Closer closer = Closer.create();
     while (!pQueue.isEmpty()) {
-      closer.register(pQueue.remove());
+      final Yielder<T> yielder = pQueue.poll();
+      if (yielder != null) {
+        // Note: yielder can be null if our comparator threw an exception during queue.add.
+        closer.register(yielder);
+      }
     }
     closer.close();
   }
