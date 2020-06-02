@@ -102,10 +102,18 @@ import java.util.stream.Collectors;
 
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
-  public static final String NULL_STRING = NullHandling.defaultStringValue();
-  public static final Float NULL_FLOAT = NullHandling.defaultFloatValue();
-  public static final Long NULL_LONG = NullHandling.defaultLongValue();
+  public static String NULL_STRING;
+  public static Float NULL_FLOAT;
+  public static Long NULL_LONG;
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
+
+  @BeforeClass
+  public static void setupNullValues()
+  {
+    NULL_STRING = NullHandling.defaultStringValue();
+    NULL_FLOAT = NullHandling.defaultFloatValue();
+    NULL_LONG = NullHandling.defaultLongValue();
+  }
 
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
 
@@ -154,7 +162,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final String DUMMY_SQL_ID = "dummy";
   public static final String LOS_ANGELES = "America/Los_Angeles";
 
-  static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
+  private static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
       ImmutableMap.<String, Object>builder()
                   .put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")

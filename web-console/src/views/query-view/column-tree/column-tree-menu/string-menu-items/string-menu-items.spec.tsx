@@ -17,21 +17,19 @@
  */
 
 import { render } from '@testing-library/react';
-import { sqlParserFactory } from 'druid-query-toolkit';
+import { parseSqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { StringMenuItems } from './string-menu-items';
 
 describe('string menu', () => {
-  const parser = sqlParserFactory(['COUNT']);
-
   it('matches snapshot when menu is opened for column not inside group by', () => {
     const stringMenu = (
       <StringMenuItems
         table={'table'}
         schema={'schema'}
         columnName={'cityName'}
-        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={parseSqlQuery(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );
@@ -46,7 +44,7 @@ describe('string menu', () => {
         table={'table'}
         schema={'schema'}
         columnName={'channel'}
-        parsedQuery={parser(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={parseSqlQuery(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );

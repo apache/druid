@@ -124,6 +124,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 
 /**
  * Utility functions for Calcite tests.
@@ -309,189 +310,178 @@ public class CalciteTests
       .withRollup(false)
       .build();
 
-  public static final List<InputRow> ROWS1 = ImmutableList.of(
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01")
-              .put("m1", "1.0")
-              .put("m2", "1.0")
-              .put("dim1", "")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of("a", "b"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-02")
-              .put("m1", "2.0")
-              .put("m2", "2.0")
-              .put("dim1", "10.1")
-              .put("dim2", ImmutableList.of())
-              .put("dim3", ImmutableList.of("b", "c"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-03")
-              .put("m1", "3.0")
-              .put("m2", "3.0")
-              .put("dim1", "2")
-              .put("dim2", ImmutableList.of(""))
-              .put("dim3", ImmutableList.of("d"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-01")
-              .put("m1", "4.0")
-              .put("m2", "4.0")
-              .put("dim1", "1")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of(""))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-02")
-              .put("m1", "5.0")
-              .put("m2", "5.0")
-              .put("dim1", "def")
-              .put("dim2", ImmutableList.of("abc"))
-              .put("dim3", ImmutableList.of())
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-03")
-              .put("m1", "6.0")
-              .put("m2", "6.0")
-              .put("dim1", "abc")
-              .build()
-      )
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS1 = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("m1", "1.0")
+          .put("m2", "1.0")
+          .put("dim1", "")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of("a", "b"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-02")
+          .put("m1", "2.0")
+          .put("m2", "2.0")
+          .put("dim1", "10.1")
+          .put("dim2", ImmutableList.of())
+          .put("dim3", ImmutableList.of("b", "c"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-03")
+          .put("m1", "3.0")
+          .put("m2", "3.0")
+          .put("dim1", "2")
+          .put("dim2", ImmutableList.of(""))
+          .put("dim3", ImmutableList.of("d"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-01")
+          .put("m1", "4.0")
+          .put("m2", "4.0")
+          .put("dim1", "1")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of(""))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-02")
+          .put("m1", "5.0")
+          .put("m2", "5.0")
+          .put("dim1", "def")
+          .put("dim2", ImmutableList.of("abc"))
+          .put("dim3", ImmutableList.of())
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-03")
+          .put("m1", "6.0")
+          .put("m2", "6.0")
+          .put("dim1", "abc")
+          .build()
   );
+  public static final List<InputRow> ROWS1 =
+      RAW_ROWS1.stream().map(CalciteTests::createRow).collect(Collectors.toList());
 
-  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01")
-              .put("m1", "1.0")
-              .put("m2", "1.0")
-              .put("d1", 1.0)
-              .put("f1", 1.0f)
-              .put("l1", 7L)
-              .put("dim1", "")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of("a", "b"))
-              .put("dim4", "a")
-              .put("dim5", "aa")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-02")
-              .put("m1", "2.0")
-              .put("m2", "2.0")
-              .put("d1", 1.7)
-              .put("d2", 1.7)
-              .put("f1", 0.1f)
-              .put("f2", 0.1f)
-              .put("l1", 325323L)
-              .put("l2", 325323L)
-              .put("dim1", "10.1")
-              .put("dim2", ImmutableList.of())
-              .put("dim3", ImmutableList.of("b", "c"))
-              .put("dim4", "a")
-              .put("dim5", "ab")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-03")
-              .put("m1", "3.0")
-              .put("m2", "3.0")
-              .put("d1", 0.0)
-              .put("d2", 0.0)
-              .put("f1", 0.0)
-              .put("f2", 0.0)
-              .put("l1", 0)
-              .put("l2", 0)
-              .put("dim1", "2")
-              .put("dim2", ImmutableList.of(""))
-              .put("dim3", ImmutableList.of("d"))
-              .put("dim4", "a")
-              .put("dim5", "ba")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-01")
-              .put("m1", "4.0")
-              .put("m2", "4.0")
-              .put("dim1", "1")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of(""))
-              .put("dim4", "b")
-              .put("dim5", "ad")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-02")
-              .put("m1", "5.0")
-              .put("m2", "5.0")
-              .put("dim1", "def")
-              .put("dim2", ImmutableList.of("abc"))
-              .put("dim3", ImmutableList.of())
-              .put("dim4", "b")
-              .put("dim5", "aa")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2001-01-03")
-              .put("m1", "6.0")
-              .put("m2", "6.0")
-              .put("dim1", "abc")
-              .put("dim4", "b")
-              .put("dim5", "ab")
-              .build(),
-          PARSER_NUMERIC_DIMS
-      )
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("m1", "1.0")
+          .put("m2", "1.0")
+          .put("d1", 1.0)
+          .put("f1", 1.0f)
+          .put("l1", 7L)
+          .put("dim1", "")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of("a", "b"))
+          .put("dim4", "a")
+          .put("dim5", "aa")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-02")
+          .put("m1", "2.0")
+          .put("m2", "2.0")
+          .put("d1", 1.7)
+          .put("d2", 1.7)
+          .put("f1", 0.1f)
+          .put("f2", 0.1f)
+          .put("l1", 325323L)
+          .put("l2", 325323L)
+          .put("dim1", "10.1")
+          .put("dim2", ImmutableList.of())
+          .put("dim3", ImmutableList.of("b", "c"))
+          .put("dim4", "a")
+          .put("dim5", "ab")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-03")
+          .put("m1", "3.0")
+          .put("m2", "3.0")
+          .put("d1", 0.0)
+          .put("d2", 0.0)
+          .put("f1", 0.0)
+          .put("f2", 0.0)
+          .put("l1", 0)
+          .put("l2", 0)
+          .put("dim1", "2")
+          .put("dim2", ImmutableList.of(""))
+          .put("dim3", ImmutableList.of("d"))
+          .put("dim4", "a")
+          .put("dim5", "ba")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-01")
+          .put("m1", "4.0")
+          .put("m2", "4.0")
+          .put("dim1", "1")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of(""))
+          .put("dim4", "b")
+          .put("dim5", "ad")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-02")
+          .put("m1", "5.0")
+          .put("m2", "5.0")
+          .put("dim1", "def")
+          .put("dim2", ImmutableList.of("abc"))
+          .put("dim3", ImmutableList.of())
+          .put("dim4", "b")
+          .put("dim5", "aa")
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2001-01-03")
+          .put("m1", "6.0")
+          .put("m2", "6.0")
+          .put("dim1", "abc")
+          .put("dim4", "b")
+          .put("dim5", "ab")
+          .build()
   );
+  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
+      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, PARSER_NUMERIC_DIMS)).collect(Collectors.toList());
 
-  public static final List<InputRow> ROWS2 = ImmutableList.of(
-      createRow("2000-01-01", "דרואיד", "he", 1.0),
-      createRow("2000-01-01", "druid", "en", 1.0),
-      createRow("2000-01-01", "друид", "ru", 1.0)
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS2 = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("dim1", "דרואיד")
+          .put("dim2", "he")
+          .put("m1", 1.0)
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("dim1", "druid")
+          .put("dim2", "en")
+          .put("m1", 1.0)
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01")
+          .put("dim1", "друид")
+          .put("dim2", "ru")
+          .put("m1", 1.0)
+          .build()
   );
+  public static final List<InputRow> ROWS2 =
+      RAW_ROWS2.stream().map(CalciteTests::createRow).collect(Collectors.toList());
 
-  public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-01T10:51:45.695Z")
-              .put("m1", "1.0")
-              .put("m2", "1.0")
-              .put("dim1", "")
-              .put("dim2", ImmutableList.of("a"))
-              .put("dim3", ImmutableList.of("a", "b"))
-              .build()
-      ),
-      createRow(
-          ImmutableMap.<String, Object>builder()
-              .put("t", "2000-01-18T10:51:45.695Z")
-              .put("m1", "2.0")
-              .put("m2", "2.0")
-              .put("dim1", "10.1")
-              .put("dim2", ImmutableList.of())
-              .put("dim3", ImmutableList.of("b", "c"))
-              .build()
-      )
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS1_WITH_FULL_TIMESTAMP = ImmutableList.of(
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-01T10:51:45.695Z")
+          .put("m1", "1.0")
+          .put("m2", "1.0")
+          .put("dim1", "")
+          .put("dim2", ImmutableList.of("a"))
+          .put("dim3", ImmutableList.of("a", "b"))
+          .build(),
+      ImmutableMap.<String, Object>builder()
+          .put("t", "2000-01-18T10:51:45.695Z")
+          .put("m1", "2.0")
+          .put("m2", "2.0")
+          .put("dim1", "10.1")
+          .put("dim2", ImmutableList.of())
+          .put("dim3", ImmutableList.of("b", "c"))
+          .build()
   );
+  public static final List<InputRow> ROWS1_WITH_FULL_TIMESTAMP =
+      RAW_ROWS1_WITH_FULL_TIMESTAMP.stream().map(CalciteTests::createRow).collect(Collectors.toList());
 
 
   public static final List<InputRow> FORBIDDEN_ROWS = ImmutableList.of(
