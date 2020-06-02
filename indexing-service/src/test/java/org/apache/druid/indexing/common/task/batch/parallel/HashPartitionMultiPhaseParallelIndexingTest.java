@@ -20,7 +20,9 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -54,15 +56,22 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPhaseParallelIndexingTest
 {
+  private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
+  private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+      DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim1", "dim2"))
+  );
   private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec(
-          "ts",
-          "auto",
-          null
-      ),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim1", "dim2"))),
+      TIMESTAMP_SPEC,
+      DIMENSIONS_SPEC,
       null,
       Arrays.asList("ts", "dim1", "dim2", "val"),
+      false,
+      0
+  );
+  private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
+      Arrays.asList("ts", "dim1", "dim2", "val"),
+      null,
+      false,
       false,
       0
   );
@@ -112,15 +121,34 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   @Test
   public void testRun() throws Exception
   {
-    final Set<DataSegment> publishedSegments = runTestTask(
-        PARSE_SPEC,
-        INTERVAL_TO_INDEX,
-        inputDir,
-        "test_*",
-        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
-        MAX_NUM_CONCURRENT_SUB_TASKS,
-        TaskState.SUCCESS
-    );
+    final Set<DataSegment> publishedSegments;
+    if (isUseInputFormatApi()) {
+      publishedSegments = runTestTask(
+          TIMESTAMP_SPEC,
+          DIMENSIONS_SPEC,
+          INPUT_FORMAT,
+          null,
+          INTERVAL_TO_INDEX,
+          inputDir,
+          "test_*",
+          new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+          MAX_NUM_CONCURRENT_SUB_TASKS,
+          TaskState.SUCCESS
+      );
+    } else {
+      publishedSegments = runTestTask(
+          null,
+          null,
+          null,
+          PARSE_SPEC,
+          INTERVAL_TO_INDEX,
+          inputDir,
+          "test_*",
+          new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+          MAX_NUM_CONCURRENT_SUB_TASKS,
+          TaskState.SUCCESS
+      );
+    }
     assertHashedPartition(publishedSegments);
   }
 

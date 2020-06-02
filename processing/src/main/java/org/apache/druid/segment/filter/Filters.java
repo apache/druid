@@ -498,4 +498,27 @@ public class Filters
 
     return new AndFilter(filterList);
   }
+
+  /**
+   * Create a filter representing an OR relationship across a set of filters.
+   *
+   * @param filterSet Set of filters
+   *
+   * @return If filterSet has more than one element, return an OR filter composed of the filters from filterSet
+   * If filterSet has a single element, return that element alone
+   * If filterSet is empty, return null
+   */
+  @Nullable
+  public static Filter or(Set<Filter> filterSet)
+  {
+    if (filterSet.isEmpty()) {
+      return null;
+    }
+
+    if (filterSet.size() == 1) {
+      return filterSet.iterator().next();
+    }
+
+    return new OrFilter(filterSet);
+  }
 }

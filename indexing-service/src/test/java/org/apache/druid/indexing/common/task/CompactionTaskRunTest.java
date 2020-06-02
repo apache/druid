@@ -381,6 +381,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             getObjectMapper(),
             tmpDir,
             DEFAULT_PARSE_SPEC,
+            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,
@@ -791,6 +792,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             getObjectMapper(),
             tmpDir,
             DEFAULT_PARSE_SPEC,
+            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,

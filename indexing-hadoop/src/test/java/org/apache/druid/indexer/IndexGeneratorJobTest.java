@@ -336,6 +336,7 @@ public class IndexGeneratorJobTest
                     new TimestampSpec("ts", "yyyyMMddHH", null),
                     new DimensionsSpec(null, null, null),
                     null,
+                    null,
                     null
                 ),
                 null
@@ -375,6 +376,7 @@ public class IndexGeneratorJobTest
                         "X",
                         "Y"
                     )), null, null),
+                    null,
                     null,
                     null
                 ),
