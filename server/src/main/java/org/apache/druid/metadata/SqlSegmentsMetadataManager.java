@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -80,6 +81,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static java.lang.Thread.sleep;
+
 /**
  *
  */
@@ -104,6 +107,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
      * leadership changes.
      */
     final CompletableFuture<Void> firstPollCompletionFuture = new CompletableFuture<>();
+    long lastPollStartTimestampInMs = -1;
   }
 
   /**
@@ -127,7 +131,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * called at the same time if two different threads are calling them. This might be possible if Coordinator gets and
    * drops leadership repeatedly in quick succession.
    *
-   * This lock is also used to synchronize {@link #awaitOrPerformDatabasePoll} for times when SqlSegmentsMetadataManager
+   * This lock is also used to synchronize {@link #useLatestIfWithinDelayOrPerformNewDatabasePoll} for times when SqlSegmentsMetadataManager
    * is not polling the database periodically (in other words, when the Coordinator is not the leader).
    */
   private final ReentrantReadWriteLock startStopPollLock = new ReentrantReadWriteLock();
@@ -155,7 +159,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * easy to forget to do.
    *
    * This field may be updated from {@link #exec}, or from whatever thread calling {@link #doOnDemandPoll} via {@link
-   * #awaitOrPerformDatabasePoll()} via one of the public methods of SqlSegmentsMetadataManager.
+   * #useLatestIfWithinDelayOrPerformNewDatabasePoll()} via one of the public methods of SqlSegmentsMetadataManager.
    */
   private volatile @MonotonicNonNull DataSourcesSnapshot dataSourcesSnapshot = null;
 
@@ -170,7 +174,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * Note that if there is a happens-before relationship between a call to {@link #startPollingDatabasePeriodically()}
    * (on Coordinators' leadership change) and one of the methods accessing the {@link #dataSourcesSnapshot}'s state in
    * this class the latter is guaranteed to await for the initiated periodic poll. This is because when the latter
-   * method calls to {@link #awaitLatestDatabasePoll()} via {@link #awaitOrPerformDatabasePoll}, they will
+   * method calls to {@link #useLatestSnapshotIfWithinDelay()} via {@link #useLatestIfWithinDelayOrPerformNewDatabasePoll}, they will
    * see the latest {@link PeriodicDatabasePoll} value (stored in this field, latestDatabasePoll, in {@link
    * #startPollingDatabasePeriodically()}) and to await on its {@link PeriodicDatabasePoll#firstPollCompletionFuture}.
    *
@@ -185,7 +189,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * SegmentsMetadataManager} and guarantee that it always returns consistent and relatively up-to-date data from methods
    * like {@link #getImmutableDataSourceWithUsedSegments}, while avoiding excessive repetitive polls. The last part
    * is achieved via "hooking on" other polls by awaiting on {@link PeriodicDatabasePoll#firstPollCompletionFuture} or
-   * {@link OnDemandDatabasePoll#pollCompletionFuture}, see {@link #awaitOrPerformDatabasePoll} method
+   * {@link OnDemandDatabasePoll#pollCompletionFuture}, see {@link #useLatestIfWithinDelayOrPerformNewDatabasePoll} method
    * implementation for details.
    *
    * Note: the overall implementation of periodic/on-demand polls is not completely optimal: for example, when the
@@ -194,7 +198,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * during Coordinator leadership switches is not a priority.
    *
    * This field is {@code volatile} because it's checked and updated in a double-checked locking manner in {@link
-   * #awaitOrPerformDatabasePoll()}.
+   * #useLatestIfWithinDelayOrPerformNewDatabasePoll()}.
    */
   private volatile @Nullable DatabasePoll latestDatabasePoll = null;
 
@@ -311,6 +315,21 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private Runnable createPollTaskForStartOrder(long startOrder, PeriodicDatabasePoll periodicDatabasePoll)
   {
     return () -> {
+      // If latest poll was an OnDemandDatabasePoll that started less than periodicPollDelay,
+      // We will wait for (periodicPollDelay - currentTime - LatestOnDemandDatabasePollStartTime) then check again.
+      try {
+        long periodicPollDelayNanos = TimeUnit.MILLISECONDS.toNanos(periodicPollDelay.getMillis());
+        while (latestDatabasePoll != null
+               && latestDatabasePoll instanceof OnDemandDatabasePoll
+               && ((OnDemandDatabasePoll) latestDatabasePoll).nanosElapsedFromInitiation() < periodicPollDelayNanos) {
+          long sleepNano = periodicPollDelayNanos
+                           - ((OnDemandDatabasePoll) latestDatabasePoll).nanosElapsedFromInitiation();
+          TimeUnit.NANOSECONDS.sleep(sleepNano);
+        }
+      } catch (Exception e) {
+        log.debug(e, "Exception found while waiting for next periodic poll");
+      }
+
       // poll() is synchronized together with startPollingDatabasePeriodically(), stopPollingDatabasePeriodically() and
       // isPollingDatabasePeriodically() to ensure that when stopPollingDatabasePeriodically() exits, poll() won't
       // actually run anymore after that (it could only enter the synchronized section and exit immediately because the
@@ -320,8 +339,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       lock.lock();
       try {
         if (startOrder == currentStartPollingOrder) {
+          periodicDatabasePoll.lastPollStartTimestampInMs = System.currentTimeMillis();
           poll();
           periodicDatabasePoll.firstPollCompletionFuture.complete(null);
+          latestDatabasePoll = periodicDatabasePoll;
         } else {
           log.debug("startOrder = currentStartPollingOrder = %d, skipping poll()", startOrder);
         }
@@ -381,16 +402,16 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
   }
 
-  private void awaitOrPerformDatabasePoll()
+  private void useLatestIfWithinDelayOrPerformNewDatabasePoll()
   {
-    // Double-checked locking with awaitLatestDatabasePoll() call playing the role of the "check".
-    if (awaitLatestDatabasePoll()) {
+    // Double-checked locking with useLatestSnapshotIfWithinDelay() call playing the role of the "check".
+    if (useLatestSnapshotIfWithinDelay()) {
       return;
     }
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
     lock.lock();
     try {
-      if (awaitLatestDatabasePoll()) {
+      if (useLatestSnapshotIfWithinDelay()) {
         return;
       }
       OnDemandDatabasePoll onDemandDatabasePoll = new OnDemandDatabasePoll();
@@ -403,11 +424,16 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   /**
-   * If the latest {@link DatabasePoll} is a {@link PeriodicDatabasePoll}, or an {@link OnDemandDatabasePoll} that is
-   * made not longer than {@link #periodicPollDelay} from now, awaits for it and returns true; returns false otherwise,
-   * meaning that a new on-demand database poll should be initiated.
+   * This method returns true without waiting for database poll if the latest {@link DatabasePoll} is a
+   * {@link PeriodicDatabasePoll} that has completed it's first poll, or an {@link OnDemandDatabasePoll} that is
+   * made not longer than {@link #periodicPollDelay} from current time.
+   * This method does wait untill completion for if the latest {@link DatabasePoll} is a
+   * {@link PeriodicDatabasePoll} that has not completed it's first poll, or an {@link OnDemandDatabasePoll} that is
+   * alrady in the process of polling the database.
+   * This means that any method using this check can read from snapshot that is
+   * up to {@link SqlSegmentsMetadataManager#periodicPollDelay} old.
    */
-  private boolean awaitLatestDatabasePoll()
+  private boolean useLatestSnapshotIfWithinDelay()
   {
     DatabasePoll latestDatabasePoll = this.latestDatabasePoll;
     if (latestDatabasePoll instanceof PeriodicDatabasePoll) {
@@ -428,6 +454,47 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       // No periodic database polls and no on-demand poll have been done yet, nothing to await for.
     }
     return false;
+  }
+
+  /**
+   * This method will always force a database poll if there is no ongoing database poll. This method will then
+   * waits for the new poll or the ongoing poll to completes before returning.
+   * This means that any method using this check can be sure that the latest poll for the snapshot was completed after
+   * this method was called.
+   */
+  public void forceOrWaitOngoingDatabasePoll()
+  {
+    long checkStartTime = System.currentTimeMillis();
+    ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
+    lock.lock();
+    try {
+      DatabasePoll latestDatabasePoll = this.latestDatabasePoll;
+      try {
+        //Verify if there was a periodic poll completed while we were waiting for the lock
+        if (latestDatabasePoll instanceof PeriodicDatabasePoll
+            && ((PeriodicDatabasePoll) latestDatabasePoll).lastPollStartTimestampInMs > checkStartTime) {
+          return;
+        }
+        // Verify if there was a on-demand poll completed while we were waiting for the lock
+        if (latestDatabasePoll instanceof OnDemandDatabasePoll) {
+          long checkStartTimeNanos = TimeUnit.MILLISECONDS.toNanos(checkStartTime);
+          OnDemandDatabasePoll latestOnDemandPoll = (OnDemandDatabasePoll) latestDatabasePoll;
+          if (latestOnDemandPoll.initiationTimeNanos > checkStartTimeNanos) {
+            return;
+          }
+        }
+      } catch (Exception e) {
+        // Latest poll was unsuccessful, try to do a new poll
+        log.debug(e,"Latest poll was unsuccessful. Starting a new poll...");
+      }
+      // Force a database poll
+      OnDemandDatabasePoll onDemandDatabasePoll = new OnDemandDatabasePoll();
+      this.latestDatabasePoll = onDemandDatabasePoll;
+      doOnDemandPoll(onDemandDatabasePoll);
+    }
+    finally {
+      lock.unlock();
+    }
   }
 
   private void doOnDemandPoll(OnDemandDatabasePoll onDemandPoll)
@@ -857,19 +924,30 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
-    awaitOrPerformDatabasePoll();
+    useLatestIfWithinDelayOrPerformNewDatabasePoll();
     return dataSourcesSnapshot;
   }
 
   @Override
   public Iterable<DataSegment> iterateAllUsedSegments()
   {
-    awaitOrPerformDatabasePoll();
-    return () -> dataSourcesSnapshot
-        .getDataSourcesWithAllUsedSegments()
-        .stream()
-        .flatMap(dataSource -> dataSource.getSegments().stream())
-        .iterator();
+    useLatestIfWithinDelayOrPerformNewDatabasePoll();
+    return dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot();
+  }
+
+  @Override
+  public Iterable<DataSegment> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
+                                                                                          Interval interval,
+                                                                                          boolean requiresLatest)
+  {
+    if (requiresLatest) {
+      forceOrWaitOngoingDatabasePoll();
+    } else {
+      useLatestIfWithinDelayOrPerformNewDatabasePoll();
+    }
+    VersionedIntervalTimeline<String, DataSegment> usedSegmentsTimeline
+        = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
+    return usedSegmentsTimeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE);
   }
 
   @Override

@@ -200,6 +200,10 @@ public class CoordinatorServerView implements InventoryView
     }
   }
 
+  public Map<SegmentId, SegmentLoadInfo> getSegmentLoadInfos()
+  {
+    return segmentLoadInfos;
+  }
 
   @Override
   public DruidServer getInventoryValue(String serverKey)

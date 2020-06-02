@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
@@ -389,6 +390,38 @@ public class DataSourcesResource
       return Response.ok(segmentIds).build();
     }
     return getServedSegmentsInInterval(dataSourceName, full != null, theInterval::contains);
+  }
+
+  @GET
+  @Path("/{dataSourceName}/loadstatus")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getDatasourceLoadstatus(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("interval") @Nullable final String interval,
+      @QueryParam("firstCheck") @Nullable final Boolean firstCheck
+  )
+  {
+    if (serverInventoryView == null || serverInventoryView.getSegmentLoadInfos() != null) {
+      return Response.ok(ImmutableMap.of("loaded", false)).build();
+    }
+    // Force poll
+    Interval theInterval = interval == null ? Intervals.ETERNITY : Intervals.of(interval);
+    boolean requiresMetadataStorePoll = firstCheck == null ? true :firstCheck;
+
+    Iterable<DataSegment> segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+        dataSourceName,
+        theInterval,
+        requiresMetadataStorePoll
+    );
+
+    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
+    for (DataSegment segment : segments) {
+      if (!segmentLoadInfos.containsKey(segment.getId())) {
+        return Response.ok(ImmutableMap.of("loaded", false)).build();
+      }
+    }
+    return Response.ok(ImmutableMap.of("loaded", true)).build();
   }
 
   /**

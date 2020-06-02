@@ -114,6 +114,18 @@ public interface SegmentsMetadataManager
   Iterable<DataSegment> iterateAllUsedSegments();
 
   /**
+   * Returns an iterable to go over all used and non-overshadowed segments of given data sources over given interval.
+   * The order in which segments are iterated is unspecified.
+   * If {@param requiresLatest} is true then a force metadatastore poll will be triggered. This can cause a longer
+   * response time but will ensure that the latest segment information (at the time this method is called) is returned.
+   * If {@param requiresLatest} is false then segment information from stale snapshot of up to the last periodic poll
+   * period {@link SqlSegmentsMetadataManager#periodicPollDelay} will be used.
+   */
+  Iterable<DataSegment> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
+                                                                                   Interval interval,
+                                                                                   boolean requiresLatest);
+
+  /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments
    * are used or not. If there are no segments in the database, returns an empty set.
    *
