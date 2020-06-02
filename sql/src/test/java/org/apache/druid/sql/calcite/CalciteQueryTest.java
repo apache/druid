@@ -14525,6 +14525,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testValidationErrorNullLiteralIllegal() throws Exception
+  {
+    expectedException.expectMessage("Illegal use of 'NULL'");
+
+    testQuery(
+        "SELECT REGEXP_LIKE('x', NULL)",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testValidationErrorNonLiteralIllegal() throws Exception
+  {
+    expectedException.expectMessage("Argument to function 'REGEXP_LIKE' must be a literal");
+
+    testQuery(
+        "SELECT REGEXP_LIKE('x', dim1) FROM foo",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
   /**
    * This is a provider of query contexts that should be used by join tests.
    * It tests various configs that can be passed to join queries. All the configs provided by this provider should

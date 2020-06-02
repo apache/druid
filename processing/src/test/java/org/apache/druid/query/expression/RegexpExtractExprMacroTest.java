@@ -108,6 +108,20 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   }
 
   @Test
+  public void testNumericPattern()
+  {
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
+    eval("regexp_extract(a, 1)", Parser.withMap(ImmutableMap.of("a", "foo")));
+  }
+
+  @Test
+  public void testNonLiteralPattern()
+  {
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
+    eval("regexp_extract(a, a)", Parser.withMap(ImmutableMap.of("a", "foo")));
+  }
+
+  @Test
   public void testNullPatternOnNull()
   {
     if (NullHandling.sqlCompatible()) {
