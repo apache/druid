@@ -19,12 +19,16 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.calcite.plan.RelOptPlanner;
+import junitparams.naming.TestCaseName;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
@@ -93,6 +97,7 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -112,6 +117,8 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -122,43 +129,6 @@ import java.util.Map;
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
   private final boolean useDefault = NullHandling.replaceWithDefault();
-
-  @Test
-  public void testSelectConstantExpression() throws Exception
-  {
-    // Test with a Druid-specific function, to make sure they are hooked up correctly even when not selecting
-    // from a table.
-    testQuery(
-        "SELECT REGEXP_EXTRACT('foo', '^(.)')",
-        ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{"f"}
-        )
-    );
-  }
-
-  @Test
-  public void testSelectConstantExpressionFromTable() throws Exception
-  {
-    testQuery(
-        "SELECT 1 + 1, dim1 FROM foo LIMIT 1",
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "2", ValueType.LONG))
-                .columns("dim1", "v0")
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .limit(1)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{2, ""}
-        )
-    );
-  }
-
 
   @Test
   public void testSelectCountStart() throws Exception
@@ -14456,6 +14426,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  @Parameters(source = QueryTestDataProvider.class)
+  @TestCaseName("{params}")
+  public void testSql(CalciteQueryTestData testData)
+  {
+    if (testData.cannotVectorize) {
+      cannotVectorize();
+    }
+
+    try {
+      testQuery(
+          testData.sql,
+          testData.expectedQueries,
+          testData.expectedResults
+      );
+      // If the query succeeded, we should check that an exception was not expected.
+      Assert.assertNull(testData.expectedException);
+    }
+    catch (Exception e) {
+      Assert.assertEquals("Exception thrown does not match expected exception", testData.expectedException, e.getClass());
+    }
+  }
+
   /**
    * This is a provider of query contexts that should be used by join tests.
    * It tests various configs that can be passed to join queries. All the configs provided by this provider should
@@ -14488,6 +14481,24 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
               .build(),
       };
+    }
+  }
+
+  /**
+   * A data provider that reads test configs from a json config file.
+   */
+  public static class QueryTestDataProvider
+  {
+    private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper(new YAMLFactory());
+
+    @UsedByJUnitParamsRunner
+    public static Object[] provideTestData() throws IOException
+    {
+      CalciteQueryTestData[] tests = MAPPER.readValue(
+          new File("src/test/resources/calcite/tests/calciteQueryTests.yaml"),
+          new TypeReference<CalciteQueryTestData[]>() {}
+      );
+      return tests;
     }
   }
 }

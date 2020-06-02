@@ -1,0 +1,46 @@
+# List of tests to be run.
+# Please add tests in the appropriate test block for easier maintainability.
+# Start block with a comment explaining what the block is for so similar tests can be placed alongside.
+# End each block with a delimiting comment
+
+# Select constant expressions ##############
+- "testName": "SelectConstantExpression"
+  "sql": "SELECT REGEXP_EXTRACT('foo', '^(.)')"
+  "expectedQueries": []
+  "expectedResults":
+    - ["f"]
+
+- "testName": "SelectConstantExpressionFromTable"
+  "sql": "SELECT 1 + 1, dim1 FROM foo LIMIT 1"
+  "expectedQueries":
+    - {
+        "queryType":"scan",
+        "dataSource":{
+          "type":"table","name":"foo"
+        },
+        "intervals":{
+          "type":"intervals",
+          "intervals":["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"]
+        },
+        "virtualColumns":[
+          {
+            "type":"expression",
+            "name":"v0",
+            "expression":"2",
+            "outputType":"LONG"
+          }
+        ],
+        "resultFormat":"compactedList",
+        "batchSize":20480,
+        "limit":1,
+        "order":"none",
+        "filter":null,
+        "columns":["dim1","v0"],
+        "legacy":false,
+        "descending":false,
+        "granularity":{"type":"all"}
+    }
+  "expectedResults":
+      - [2, ""]
+
+############################################

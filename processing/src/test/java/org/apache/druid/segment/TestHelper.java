@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
@@ -71,9 +73,9 @@ public class TestHelper
     return new IndexIO(JSON_MAPPER, columnConfig);
   }
 
-  public static ObjectMapper makeJsonMapper()
+  public static ObjectMapper makeJsonMapper(@Nullable JsonFactory factory)
   {
-    final ObjectMapper mapper = new DefaultObjectMapper();
+    final ObjectMapper mapper = new DefaultObjectMapper(factory);
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -81,6 +83,11 @@ public class TestHelper
             .addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT)
     );
     return mapper;
+  }
+
+  public static ObjectMapper makeJsonMapper()
+  {
+    return makeJsonMapper(null);
   }
 
   public static ObjectMapper makeSmileMapper()
