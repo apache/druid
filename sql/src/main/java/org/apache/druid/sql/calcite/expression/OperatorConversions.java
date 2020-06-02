@@ -261,9 +261,7 @@ public class OperatorConversions
      */
     public OperatorBuilder returnTypeNonNull(final SqlTypeName typeName)
     {
-      if (this.returnTypeInference != null) {
-        throw new ISE("Cannot set return type multiple times");
-      }
+      Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
       this.returnTypeInference = ReturnTypes.explicit(
           factory -> Calcites.createSqlType(factory, typeName)
@@ -280,9 +278,7 @@ public class OperatorConversions
      */
     public OperatorBuilder returnTypeNullable(final SqlTypeName typeName)
     {
-      if (this.returnTypeInference != null) {
-        throw new ISE("Cannot set return type multiple times");
-      }
+      Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
       this.returnTypeInference = ReturnTypes.explicit(
           factory -> Calcites.createSqlTypeWithNullability(factory, typeName, true)
@@ -299,9 +295,7 @@ public class OperatorConversions
      */
     public OperatorBuilder returnTypeInference(final SqlReturnTypeInference returnTypeInference)
     {
-      if (this.returnTypeInference != null) {
-        throw new ISE("Cannot set return type multiple times");
-      }
+      Preconditions.checkState(this.returnTypeInference == null, "Cannot set return type multiple times");
 
       this.returnTypeInference = returnTypeInference;
       return this;

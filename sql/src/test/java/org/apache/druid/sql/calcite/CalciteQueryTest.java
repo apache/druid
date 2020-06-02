@@ -14549,6 +14549,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testValidationErrorWrongTypeLiteral() throws Exception
+  {
+    expectedException.expectMessage("Cannot apply 'REGEXP_LIKE' to arguments");
+
+    testQuery(
+        "SELECT REGEXP_LIKE('x', 1) FROM foo",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
   /**
    * This is a provider of query contexts that should be used by join tests.
    * It tests various configs that can be passed to join queries. All the configs provided by this provider should
