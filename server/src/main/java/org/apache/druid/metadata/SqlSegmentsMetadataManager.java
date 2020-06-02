@@ -948,7 +948,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
     VersionedIntervalTimeline<String, DataSegment> usedSegmentsTimeline
         = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
-    return Optional.of(usedSegmentsTimeline)
+    return Optional.fromNullable(usedSegmentsTimeline)
                    .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(interval, Partitions.ONLY_COMPLETE));
   }
 
