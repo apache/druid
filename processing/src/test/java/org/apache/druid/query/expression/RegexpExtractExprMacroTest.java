@@ -43,7 +43,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testErrorFourArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] must have 2 arguments");
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] must have 2 to 3 arguments");
     eval("regexp_extract('a', 'b', 'c', 'd')", Parser.withMap(ImmutableMap.of()));
   }
 
@@ -71,8 +71,8 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testMatchGroup2()
   {
+    expectedException.expectMessage("No group 2");
     final ExprEval<?> result = eval("regexp_extract(a, 'f(.o)', 2)", Parser.withMap(ImmutableMap.of("a", "foo")));
-    Assert.assertEquals("foo", result.value());
   }
 
   @Test
@@ -85,7 +85,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testMatchInMiddle()
   {
-    final ExprEval<?> result = eval("regexp_extract(a, '.o')", Parser.withMap(ImmutableMap.of("a", "foo")));
+    final ExprEval<?> result = eval("regexp_extract(a, '.o$')", Parser.withMap(ImmutableMap.of("a", "foo")));
     Assert.assertEquals("oo", result.value());
   }
 
@@ -104,7 +104,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   public void testEmptyStringPattern()
   {
     final ExprEval<?> result = eval("regexp_extract(a, '')", Parser.withMap(ImmutableMap.of("a", "foo")));
-    Assert.assertEquals(NullHandling.defaultStringValue(), result.value());
+    Assert.assertEquals(NullHandling.emptyToNullIfNeeded(""), result.value());
   }
 
   @Test
@@ -122,6 +122,6 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   public void testEmptyStringPatternOnNull()
   {
     final ExprEval<?> result = eval("regexp_extract(a, '')", Parser.withSuppliers(ImmutableMap.of("a", () -> null)));
-    Assert.assertEquals(NullHandling.defaultStringValue(), result.value());
+    Assert.assertNull(result.value());
   }
 }

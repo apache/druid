@@ -52,8 +52,7 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     final Expr patternExpr = args.get(1);
     final Expr indexExpr = args.size() > 2 ? args.get(2) : null;
 
-    if (!patternExpr.isLiteral() ||
-        !(patternExpr.getLiteralValue() == null || patternExpr.getLiteralValue() instanceof String)) {
+    if (!ExprUtils.isStringLiteral(patternExpr)) {
       throw new IAE("Function[%s] pattern must be a string literal", name());
     }
 
