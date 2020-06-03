@@ -42,6 +42,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -1787,6 +1788,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             // first row of dim1 is empty string, which is null in default mode, last non-null numeric rows are zeros
             new Object[]{useDefault ? "10.1" : "", 0L, 0.0, 0.0f}
         )
+    );
+  }
+
+  // This query is expected to fail as we do not support join on multi valued column
+  // (see issue https://github.com/apache/druid/issues/9924 for more information)
+  // TODO: Remove expected Exception when https://github.com/apache/druid/issues/9924 is fixed
+  @Test(expected = QueryException.class)
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinOnMultiValuedColumnShouldThrowException(Map<String, Object> queryContext) throws Exception
+  {
+    final String query = "SELECT dim3, l.v from druid.foo f inner join lookup.lookyloo l on f.dim3 = l.k\n";
+
+    testQuery(
+        query,
+        queryContext,
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
