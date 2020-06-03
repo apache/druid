@@ -52,6 +52,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -146,11 +147,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         finalSequence = baseResults;
       }
 
+      Sequence<Result<TimeseriesResultValue>> mappedFinalSequence = finalSequence;
+
+      final Object[] grandTotals = new Object[query.getAggregatorSpecs().size()];
       if (query.isGrandTotal()) {
         // Accumulate grand totals while iterating the sequence.
-        final Object[] grandTotals = new Object[query.getAggregatorSpecs().size()];
-        final Sequence<Result<TimeseriesResultValue>> mappedSequence = Sequences.map(
-            finalSequence,
+        mappedFinalSequence = Sequences.map(
+            mappedFinalSequence,
             resultValue -> {
               for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
                 final AggregatorFactory aggregatorFactory = query.getAggregatorSpecs().get(i);
@@ -164,10 +167,25 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
               return resultValue;
             }
         );
+      }
 
-        return Sequences.concat(
+      if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
+        // Timeseries query has timestamp_floor expression on the timestamp dimension so we need to
+        // map the results to another dimension using the name (String) supplied by context key
+        mappedFinalSequence = Sequences.map(
+            mappedFinalSequence,
+            resultValue -> {
+              final DateTime timestamp = resultValue.getTimestamp();
+              resultValue.getValue().getBaseObject().put(query.getTimestampResultField(), timestamp);
+              return resultValue;
+            }
+        );
+      }
+
+      if (query.isGrandTotal() && grandTotals.length == query.getAggregatorSpecs().size()) {
+        mappedFinalSequence = Sequences.concat(
             ImmutableList.of(
-                mappedSequence,
+                mappedFinalSequence,
                 Sequences.simple(
                     () -> {
                       final Map<String, Object> totalsMap = new HashMap<>();
@@ -186,9 +204,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                 )
             )
         );
-      } else {
-        return finalSequence;
       }
+
+      return mappedFinalSequence;
     };
   }
 
@@ -287,14 +305,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             .appendCacheable(query.getVirtualColumns())
             .appendCacheables(query.getPostAggregatorSpecs())
             .appendInt(query.getLimit())
+            .appendString(query.getTimestampResultField())
             .appendBoolean(query.isGrandTotal());
-        if (query.getContext() != null
-            && query.getTimestampResultField() != null
-            && query.getTimestampResultField().lhs != null
-            && query.getTimestampResultField().rhs != null) {
-          builder.appendString(query.getTimestampResultField().lhs);
-          builder.appendString(query.getTimestampResultField().rhs.toString());
-        }
         return builder.build();
       }
 
@@ -415,11 +427,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.addTimeColumn();
-    if (query.getContext() != null
-        && query.getTimestampResultField() != null
-        && query.getTimestampResultField().lhs != null
-        && query.getTimestampResultField().rhs != null) {
-      rowSignatureBuilder.add(query.getTimestampResultField().lhs, query.getTimestampResultField().rhs);
+    if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
+      rowSignatureBuilder.add(query.getTimestampResultField(), ValueType.LONG);
     }
     rowSignatureBuilder.addAggregators(query.getAggregatorSpecs());
     rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());

@@ -111,7 +111,7 @@ public class QueryMaker
                            .collect(Collectors.toList());
       query.withOverriddenContext(ImmutableMap.of(
           TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD,
-          Pair.of(timeDimension.toDimensionSpec().getOutputName(), timeDimension.toDimensionSpec().getOutputType())
+          timeDimension.toDimensionSpec().getOutputName()
       ));
     } else {
       rowOrder = druidQuery.getOutputRowSignature().getColumnNames();

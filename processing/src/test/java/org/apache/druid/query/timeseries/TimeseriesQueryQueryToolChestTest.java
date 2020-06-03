@@ -88,7 +88,6 @@ public class TimeseriesQueryQueryToolChestTest
                 descending,
                 VirtualColumns.EMPTY,
                 null,
-                null,
                 Granularities.ALL,
                 ImmutableList.of(
                     new CountAggregatorFactory("metric1"),
