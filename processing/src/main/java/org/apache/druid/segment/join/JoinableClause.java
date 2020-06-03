@@ -22,6 +22,8 @@ package org.apache.druid.segment.join;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -33,7 +35,7 @@ import java.util.stream.Collectors;
  *
  * Created from {@link org.apache.druid.query.planning.PreJoinableClause} by {@link Joinables#createSegmentMapFn}.
  */
-public class JoinableClause
+public class JoinableClause implements Closeable
 {
   private final String prefix;
   private final Joinable joinable;
@@ -150,5 +152,11 @@ public class JoinableClause
            ", joinType=" + joinType +
            ", condition=" + condition +
            '}';
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    joinable.close();
   }
 }

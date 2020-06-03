@@ -133,7 +133,7 @@ public class FireHydrant
     }
   }
 
-  public Pair<Segment, Closeable> getAndIncrementSegment()
+  public Pair<ReferenceCountingSegment, Closeable> getAndIncrementSegment()
   {
     ReferenceCountingSegment segment = getIncrementedSegment();
     return new Pair<>(segment, segment.decrementOnceCloseable());

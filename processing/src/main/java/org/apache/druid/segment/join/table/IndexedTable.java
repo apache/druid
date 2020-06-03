@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.Set;
 
 /**
@@ -30,8 +31,10 @@ import java.util.Set;
  *
  * The main user of this class is {@link IndexedTableJoinable}, and its main purpose is to participate in joins.
  */
-public interface IndexedTable
+public interface IndexedTable extends Closeable
 {
+  String version();
+
   /**
    * Returns the columns of this table that have indexes.
    */

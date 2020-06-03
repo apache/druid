@@ -42,7 +42,7 @@ public class ReferenceCountingSegmentTest
   public void setUp()
   {
     segment = ReferenceCountingSegment.wrapRootGenerationSegment(
-        new AbstractSegment()
+        new Segment()
         {
           @Override
           public SegmentId getId()

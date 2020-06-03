@@ -20,9 +20,9 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.AbstractSegment;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
@@ -31,15 +31,16 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a deep, left-heavy join of a left-hand side baseSegment onto a series of right-hand side clauses.
  *
  * In other words, logically the operation is: join(join(join(baseSegment, clauses[0]), clauses[1]), clauses[2]) etc.
  */
-public class HashJoinSegment extends AbstractSegment
+public class HashJoinSegment implements SegmentReference
 {
-  private final Segment baseSegment;
+  private final SegmentReference baseSegment;
   private final List<JoinableClause> clauses;
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
@@ -50,7 +51,7 @@ public class HashJoinSegment extends AbstractSegment
    * @param joinFilterPreAnalysis Pre-analysis computed by {@link org.apache.druid.segment.join.filter.JoinFilterAnalyzer#computeJoinFilterPreAnalysis}
    */
   public HashJoinSegment(
-      Segment baseSegment,
+      SegmentReference baseSegment,
       List<JoinableClause> clauses,
       JoinFilterPreAnalysis joinFilterPreAnalysis
   )
@@ -97,5 +98,15 @@ public class HashJoinSegment extends AbstractSegment
   public void close() throws IOException
   {
     baseSegment.close();
+  }
+
+  @Override
+  public Optional<Closer> acquireReferences()
+  {
+    return baseSegment.acquireReferences().map(closer -> {
+      // add closers for joinable clauses
+      closer.registerAll(clauses);
+      return closer;
+    });
   }
 }

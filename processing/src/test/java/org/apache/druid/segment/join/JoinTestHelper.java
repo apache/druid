@@ -255,7 +255,8 @@ public class JoinTestHelper
             rows,
             createMapRowAdapter(COUNTRIES_SIGNATURE),
             COUNTRIES_SIGNATURE,
-            ImmutableSet.of("countryNumber", "countryIsoCode")
+            ImmutableSet.of("countryNumber", "countryIsoCode"),
+            DateTimes.nowUtc().toString()
         )
     );
   }
@@ -268,7 +269,8 @@ public class JoinTestHelper
             rows,
             createMapRowAdapter(REGIONS_SIGNATURE),
             REGIONS_SIGNATURE,
-            ImmutableSet.of("regionIsoCode", "countryIsoCode")
+            ImmutableSet.of("regionIsoCode", "countryIsoCode"),
+            DateTimes.nowUtc().toString()
         )
     );
   }

@@ -24,6 +24,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
@@ -93,7 +94,7 @@ public class HashJoinSegmentTest
     );
 
     hashJoinSegment = new HashJoinSegment(
-        baseSegment,
+        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClauses,
         joinFilterPreAnalysis
     );
@@ -118,7 +119,7 @@ public class HashJoinSegmentTest
     );
 
     final HashJoinSegment ignored = new HashJoinSegment(
-        baseSegment,
+        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClauses,
         joinFilterPreAnalysis
     );

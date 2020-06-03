@@ -49,7 +49,8 @@ public class InlineJoinableFactory implements JoinableFactory
                   inlineDataSource.getRowsAsList(),
                   inlineDataSource.rowAdapter(),
                   inlineDataSource.getRowSignature(),
-                  rightKeyColumns
+                  rightKeyColumns,
+                  "0"
               )
           )
       );

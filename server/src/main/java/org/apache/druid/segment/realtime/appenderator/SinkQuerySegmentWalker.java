@@ -57,7 +57,8 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -171,7 +172,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
         joinableFactory,
         cpuTimeAccumulator,
@@ -215,9 +216,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                     }
 
                     // Prevent the underlying segment from swapping when its being iterated
-                    final Pair<Segment, Closeable> segmentAndCloseable = hydrant.getAndIncrementSegment();
+                    final Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = hydrant.getAndIncrementSegment();
                     try {
-                      final Segment mappedSegment = segmentMapFn.apply(segmentAndCloseable.lhs);
+                      final SegmentReference mappedSegment = segmentMapFn.apply(segmentAndCloseable.lhs);
 
                       QueryRunner<T> runner = factory.createRunner(mappedSegment);
 
