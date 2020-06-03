@@ -37,7 +37,7 @@ public class ReverseOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("REVERSE")
       .operandTypes(SqlTypeFamily.CHARACTER)
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeNonNull(SqlTypeName.VARCHAR)
       .build();
 
   @Override

@@ -23,7 +23,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -35,12 +34,9 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   private static final String EXPECTED = "192.168.0.1";
   private static final String NULL = NullHandling.replaceWithDefault() ? "0.0.0.0" : null;
 
-  private IPv4AddressStringifyExprMacro target;
-
-  @Before
-  public void setUp()
+  public IPv4AddressStringifyExprMacroTest()
   {
-    target = new IPv4AddressStringifyExprMacro();
+    super(new IPv4AddressStringifyExprMacro());
   }
 
   @Test
@@ -48,7 +44,7 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "must have 1 argument");
 
-    target.apply(Collections.emptyList());
+    apply(Collections.emptyList());
   }
 
   @Test
@@ -56,7 +52,7 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "must have 1 argument");
 
-    target.apply(Arrays.asList(VALID, VALID));
+    apply(Arrays.asList(VALID, VALID));
   }
 
   @Test
@@ -150,7 +146,7 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
 
   private Object eval(Expr arg)
   {
-    Expr expr = target.apply(Collections.singletonList(arg));
+    Expr expr = apply(Collections.singletonList(arg));
     ExprEval eval = expr.eval(ExprUtils.nilBindings());
     return eval.value();
   }

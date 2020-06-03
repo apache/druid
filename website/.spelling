@@ -1073,6 +1073,7 @@ nextafter
 nvl
 parse_long
 regexp_extract
+regexp_like
 result1
 result2
 rint
