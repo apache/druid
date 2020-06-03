@@ -237,9 +237,16 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @Override
-  public void testTimeseriesWithTimestampResultFieldContext()
+  public void testTimeseriesWithTimestampResultFieldContextForArrayResponse()
   {
     // Skip this test because the timeseries test expects an extra column to be created (map from the timestamp_floor
-    // of the timestamp dimension but group by doesn't do this.
+    // of the timestamp dimension) but group by doesn't do this.
+  }
+
+  @Override
+  public void testTimeseriesWithTimestampResultFieldContextForMapResponse()
+  {
+    // Skip this test because the timeseries test expects an extra column to be created (map from the timestamp_floor
+    // of the timestamp dimension) but group by doesn't do this.
   }
 }

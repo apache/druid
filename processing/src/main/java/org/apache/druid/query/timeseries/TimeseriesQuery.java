@@ -50,10 +50,9 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
-  // This context parameter is an undocumented parameter, used internally, to allow timeseries query with
-  // timestamp_floor expression on the timestamp dimension to map the results to another dimension using the
-  // name (String) supplied by this context key. The reason this is needed is because timeseries query
-  // with timestamp_floor expression translates the timestamp_floor expression dimension into a 'granularity'.
+  // "timestampResultField" is an undocumented parameter used internally by the SQL layer.
+  // It is necessary because when the SQL layer generates a Timeseries query for a group-by-time-floor SQL query,
+  // it expects the result of the time-floor to have a specific name. That name is provided using this parameter.
   // TODO: We can remove this once https://github.com/apache/druid/issues/9974 is done.
   public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
 

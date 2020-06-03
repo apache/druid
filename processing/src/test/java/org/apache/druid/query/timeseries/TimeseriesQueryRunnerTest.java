@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.QueryPlus;
@@ -59,6 +60,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -2473,7 +2475,133 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testTimeseriesWithTimestampResultFieldContext()
+  public void testTimeseriesWithTimestampResultFieldContextForArrayResponse()
+  {
+    Granularity gran = Granularities.DAY;
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(gran)
+                                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                                  .aggregators(
+                                      QueryRunnerTestHelper.ROWS_COUNT,
+                                      QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+                                      QueryRunnerTestHelper.QUALITY_UNIQUES
+                                  )
+                                  .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+                                  .descending(descending)
+                                  .context(ImmutableMap.of(
+                                      TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME
+                                  ))
+                                  .build();
+
+    Assert.assertEquals(TIMESTAMP_RESULT_FIELD_NAME, query.getTimestampResultField());
+
+    QueryToolChest<Result<TimeseriesResultValue>, TimeseriesQuery> toolChest = new TimeseriesQueryQueryToolChest();
+
+    RowSignature rowSignature = toolChest.resultArraySignature(query);
+    Assert.assertNotNull(rowSignature);
+    List<String> columnNames = rowSignature.getColumnNames();
+    Assert.assertNotNull(columnNames);
+    Assert.assertEquals(6, columnNames.size());
+    Assert.assertEquals("__time", columnNames.get(0));
+    Assert.assertEquals(TIMESTAMP_RESULT_FIELD_NAME, columnNames.get(1));
+    Assert.assertEquals("rows", columnNames.get(2));
+    Assert.assertEquals("index", columnNames.get(3));
+    Assert.assertEquals("uniques", columnNames.get(4));
+    Assert.assertEquals("addRowsIndexConstant", columnNames.get(5));
+
+    Sequence<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query));
+    Sequence<Object[]> resultsAsArrays = toolChest.resultsAsArrays(query, results);
+
+    Assert.assertNotNull(resultsAsArrays);
+
+    final String[] expectedIndex = descending ?
+                                   QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES_DESC :
+                                   QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES;
+
+    final Long expectedLast = descending ?
+                                  QueryRunnerTestHelper.EARLIEST.getMillis() :
+                                  QueryRunnerTestHelper.LAST.getMillis();
+
+    int count = 0;
+    Object[] lastResult = null;
+    for (Object[] result : resultsAsArrays.toList()) {
+      Long current = (Long) result[0];
+      Assert.assertFalse(
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          descending ? current < expectedLast : current > expectedLast
+      );
+
+      Assert.assertEquals(
+          (Long) result[1],
+          current,
+          0
+      );
+
+      Assert.assertEquals(
+          QueryRunnerTestHelper.SKIPPED_DAY.getMillis() == current ? (Long) 0L : (Long) 13L,
+          result[2]
+      );
+
+      if (QueryRunnerTestHelper.SKIPPED_DAY.getMillis() != current) {
+        Assert.assertEquals(
+            Doubles.tryParse(expectedIndex[count]).doubleValue(),
+            (Double) result[3],
+            (Double) result[3] * 1e-6
+        );
+        Assert.assertEquals(
+            (Double) result[4],
+            9.0d,
+            0.02
+        );
+        Assert.assertEquals(
+            new Double(expectedIndex[count]) + 13L + 1L,
+            (Double) result[5],
+            (Double) result[5] * 1e-6
+        );
+      } else {
+        if (NullHandling.replaceWithDefault()) {
+          Assert.assertEquals(
+              0.0D,
+              (Double) result[3],
+              (Double) result[3] * 1e-6
+          );
+          Assert.assertEquals(
+              0.0D,
+              (Double) result[4],
+              0.02
+          );
+          Assert.assertEquals(
+              new Double(expectedIndex[count]) + 1L,
+              (Double) result[5],
+              (Double) result[5] * 1e-6
+          );
+        } else {
+          Assert.assertNull(
+              result[3]
+          );
+          Assert.assertEquals(
+              (Integer) result[4],
+              0.0,
+              0.02
+          );
+          Assert.assertNull(
+              result[5]
+          );
+        }
+      }
+
+      lastResult = result;
+      ++count;
+    }
+
+    Assert.assertEquals(expectedLast, lastResult[0]);
+
+
+  }
+
+  @Test
+  public void testTimeseriesWithTimestampResultFieldContextForMapResponse()
   {
     Granularity gran = Granularities.DAY;
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()

@@ -365,7 +365,7 @@ public class TimeseriesQueryQueryToolChestTest
   }
 
   @Test
-  public void testResultArraySignatureWithoutFloorTime()
+  public void testResultArraySignatureWithoutTimestampResultField()
   {
     final TimeseriesQuery query =
         Druids.newTimeseriesQueryBuilder()
@@ -390,7 +390,7 @@ public class TimeseriesQueryQueryToolChestTest
   }
 
   @Test
-  public void testResultArraySignatureWithFloorTime()
+  public void testResultArraySignatureWithTimestampResultField()
   {
     final TimeseriesQuery query =
         Druids.newTimeseriesQueryBuilder()

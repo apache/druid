@@ -464,8 +464,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             values.put(postAgg.getName(), postAgg.compute(values));
           }
         }
-        // Timeseries query has timestamp_floor expression on the timestamp dimension so we need to
-        // map the results to another dimension using the name (String) supplied by context key
+        // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
+        // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
+        // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
         if (StringUtils.isNotEmpty(query.getTimestampResultField()) && result.getTimestamp() != null) {
           final DateTime timestamp = result.getTimestamp();
           values.put(query.getTimestampResultField(), timestamp.getMillis());
