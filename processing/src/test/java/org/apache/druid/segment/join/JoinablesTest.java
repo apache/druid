@@ -28,8 +28,8 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -44,6 +44,13 @@ import java.util.function.Function;
 
 public class JoinablesTest
 {
+  private static final JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+  );
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -99,12 +106,8 @@ public class JoinablesTest
         ImmutableList.of(),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
+        null
     );
 
     Assert.assertSame(Function.identity(), segmentMapFn);
@@ -128,12 +131,8 @@ public class JoinablesTest
         ImmutableList.of(clause),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
+        null
     );
   }
 
@@ -165,12 +164,8 @@ public class JoinablesTest
           }
         },
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
+        null
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);

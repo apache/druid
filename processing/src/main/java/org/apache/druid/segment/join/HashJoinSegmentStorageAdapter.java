@@ -21,7 +21,6 @@ package org.apache.druid.segment.join;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -38,6 +37,7 @@ import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -47,7 +47,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -55,22 +54,23 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
-  private final JoinFilterPreAnalysis joinFilterPreAnalysis;
+  private final JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup;
 
   /**
    * @param baseAdapter          A StorageAdapter for the left-hand side base segment
    * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
-   *                             duplicate prefixes or prefixes that shadow each other across the clauses
+   * @param joinFilterPreAnalysisGroup Pre-analysis group that holds all of the JoinFilterPreAnalysis results within
+   *                                   the scope of a query
    */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
-      final JoinFilterPreAnalysis joinFilterPreAnalysis
+      final JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup
   )
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
-    this.joinFilterPreAnalysis = joinFilterPreAnalysis;
+    this.joinFilterPreAnalysisGroup = joinFilterPreAnalysisGroup;
   }
 
   @Override
@@ -209,13 +209,17 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    if (!Objects.equals(joinFilterPreAnalysis.getOriginalFilter(), filter)) {
-      throw new ISE(
-          "Filter provided to cursor [%s] does not match join pre-analysis filter [%s]",
+    JoinFilterPreAnalysis jfpa;
+    if (joinFilterPreAnalysisGroup.isSingleLevelMode()) {
+      jfpa = joinFilterPreAnalysisGroup.getPreAnalysisForSingleLevelMode();
+    } else {
+      jfpa = joinFilterPreAnalysisGroup.getAnalysis(
           filter,
-          joinFilterPreAnalysis.getOriginalFilter()
+          clauses,
+          virtualColumns
       );
     }
+
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
 
@@ -225,7 +229,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         postJoinVirtualColumns
     );
 
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(jfpa);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here

@@ -108,8 +108,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Query.TIMESERIES;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
