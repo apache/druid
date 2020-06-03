@@ -2568,7 +2568,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
           );
           Assert.assertEquals(
               0.0D,
-              (Double) result[4],
+              NullHandling.sqlCompatible() ? (Double) result[4] : (Integer) result[4],
               0.02
           );
           Assert.assertEquals(
@@ -2594,10 +2594,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       lastResult = result;
       ++count;
     }
-
     Assert.assertEquals(expectedLast, lastResult[0]);
-
-
   }
 
   @Test
