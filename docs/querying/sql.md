@@ -709,6 +709,8 @@ Druid does not support all SQL features. In particular, the following features a
 
 - JOIN between native datasources (table, lookup, subquery) and system tables.
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
+- JOIN conditions containing a constant value inside the condition.
+- JOIN conditions on a column which contains a multi-value dimension.
 - OVER clauses, and analytic functions such as `LAG` and `LEAD`.
 - OFFSET clauses.
 - DDL and DML.
