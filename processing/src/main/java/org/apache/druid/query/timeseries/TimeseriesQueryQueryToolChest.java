@@ -147,13 +147,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         finalSequence = baseResults;
       }
 
-      Sequence<Result<TimeseriesResultValue>> mappedFinalSequence = finalSequence;
-
-      final Object[] grandTotals = new Object[query.getAggregatorSpecs().size()];
       if (query.isGrandTotal()) {
         // Accumulate grand totals while iterating the sequence.
-        mappedFinalSequence = Sequences.map(
-            mappedFinalSequence,
+        final Object[] grandTotals = new Object[query.getAggregatorSpecs().size()];
+        final Sequence<Result<TimeseriesResultValue>> mappedSequence = Sequences.map(
+            finalSequence,
             resultValue -> {
               for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
                 final AggregatorFactory aggregatorFactory = query.getAggregatorSpecs().get(i);
@@ -167,25 +165,10 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
               return resultValue;
             }
         );
-      }
 
-      if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
-        // Timeseries query has timestamp_floor expression on the timestamp dimension so we need to
-        // map the results to another dimension using the name (String) supplied by context key
-        mappedFinalSequence = Sequences.map(
-            mappedFinalSequence,
-            resultValue -> {
-              final DateTime timestamp = resultValue.getTimestamp();
-              resultValue.getValue().getBaseObject().put(query.getTimestampResultField(), timestamp.getMillis());
-              return resultValue;
-            }
-        );
-      }
-
-      if (query.isGrandTotal() && grandTotals.length == query.getAggregatorSpecs().size()) {
-        mappedFinalSequence = Sequences.concat(
+        return Sequences.concat(
             ImmutableList.of(
-                mappedFinalSequence,
+                mappedSequence,
                 Sequences.simple(
                     () -> {
                       final Map<String, Object> totalsMap = new HashMap<>();
@@ -204,9 +187,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
                 )
             )
         );
+      } else {
+        return finalSequence;
       }
-
-      return mappedFinalSequence;
     };
   }
 
@@ -471,13 +454,21 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return result -> {
       final TimeseriesResultValue holder = result.getValue();
       final Map<String, Object> values = new HashMap<>(holder.getBaseObject());
-      if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
-        // put non finalized aggregators for calculating dependent post Aggregators
-        for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-          values.put(agg.getName(), holder.getMetric(agg.getName()));
+      if (calculatePostAggs) {
+        if (!query.getPostAggregatorSpecs().isEmpty()) {
+          // put non finalized aggregators for calculating dependent post Aggregators
+          for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+            values.put(agg.getName(), holder.getMetric(agg.getName()));
+          }
+          for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+            values.put(postAgg.getName(), postAgg.compute(values));
+          }
         }
-        for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-          values.put(postAgg.getName(), postAgg.compute(values));
+        // Timeseries query has timestamp_floor expression on the timestamp dimension so we need to
+        // map the results to another dimension using the name (String) supplied by context key
+        if (StringUtils.isNotEmpty(query.getTimestampResultField()) && result.getTimestamp() != null) {
+          final DateTime timestamp = result.getTimestamp();
+          values.put(query.getTimestampResultField(), timestamp.getMillis());
         }
       }
       for (AggregatorFactory agg : query.getAggregatorSpecs()) {
