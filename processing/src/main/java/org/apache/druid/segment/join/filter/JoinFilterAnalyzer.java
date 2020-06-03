@@ -32,6 +32,7 @@ import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import java.util.ArrayList;
@@ -95,6 +96,7 @@ public class JoinFilterAnalyzer
    * @return A JoinFilterPreAnalysis containing information determined in this pre-analysis step.
    */
   public static JoinFilterPreAnalysis computeJoinFilterPreAnalysis(
+      JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup,
       JoinableClauses joinableClauses,
       VirtualColumns virtualColumns,
       Filter originalFilter,
@@ -109,9 +111,7 @@ public class JoinFilterAnalyzer
 
     joinableClauses.splitVirtualColumns(virtualColumns, preJoinVirtualColumns, postJoinVirtualColumns);
     JoinFilterPreAnalysis.Builder preAnalysisBuilder =
-        new JoinFilterPreAnalysis.Builder(joinableClauses, originalFilter, postJoinVirtualColumns)
-            .withEnableFilterPushDown(enableFilterPushDown)
-            .withEnableFilterRewrite(enableFilterRewrite);
+        new JoinFilterPreAnalysis.Builder(joinFilterPreAnalysisGroup, joinableClauses, originalFilter, postJoinVirtualColumns);
     if (originalFilter == null || !enableFilterPushDown) {
       return preAnalysisBuilder.build();
     }

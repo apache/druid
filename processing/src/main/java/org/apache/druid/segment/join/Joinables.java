@@ -25,9 +25,8 @@ import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
-import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinableClauses;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -108,16 +107,14 @@ public class Joinables
             return Function.identity();
           } else {
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(clauses, joinableFactory);
-            JoinFilterPreAnalysis jfpa = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-                joinableClauses,
-                virtualColumns,
-                originalFilter,
+            final JoinFilterPreAnalysisGroup jfpag = new JoinFilterPreAnalysisGroup(
                 enableFilterPushDown,
                 enableFilterRewrite,
                 enableRewriteValueColumnFilters,
                 filterRewriteMaxSize
             );
-            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses.getJoinableClauses(), jfpa);
+
+            return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses.getJoinableClauses(), jfpag);
           }
         }
     );
