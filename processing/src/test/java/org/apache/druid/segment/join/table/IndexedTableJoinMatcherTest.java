@@ -23,7 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.UnsupportedQueryException;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -63,7 +63,8 @@ public class IndexedTableJoinMatcherTest
         NullHandling.initializeForTests();
       }
 
-      @Test(expected = UnsupportedQueryException.class)
+      @SuppressWarnings("ReturnValueIgnored")
+      @Test(expected = QueryUnsupportedException.class)
       public void testMatchMultiValuedRowCardinalityUnknownShouldThrowException()
       {
         MockitoAnnotations.initMocks(this);
@@ -81,7 +82,8 @@ public class IndexedTableJoinMatcherTest
         dimensionProcessor.get();
       }
 
-      @Test(expected = UnsupportedQueryException.class)
+      @SuppressWarnings("ReturnValueIgnored")
+      @Test(expected = QueryUnsupportedException.class)
       public void testMatchMultiValuedRowCardinalityKnownShouldThrowException()
       {
         MockitoAnnotations.initMocks(this);
@@ -97,6 +99,42 @@ public class IndexedTableJoinMatcherTest
         Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
         // Test match should throw exception
         dimensionProcessor.get();
+      }
+
+      @Test
+      public void testMatchEmptyRowCardinalityUnknown()
+      {
+        MockitoAnnotations.initMocks(this);
+        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
+        Mockito.doReturn(row).when(dimensionSelector).getRow();
+        Mockito.doReturn(DimensionDictionarySelector.CARDINALITY_UNKNOWN).when(dimensionSelector).getValueCardinality();
+
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(
+                ValueType.STRING,
+                IndexedTableJoinMatcherTest::createSingletonIntList
+            );
+        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
+        Assert.assertNotNull(dimensionProcessor.get());
+        Assert.assertFalse(dimensionProcessor.get().hasNext());
+      }
+
+      @Test
+      public void testMatchEmptyRowCardinalityKnown()
+      {
+        MockitoAnnotations.initMocks(this);
+        ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
+        Mockito.doReturn(row).when(dimensionSelector).getRow();
+        Mockito.doReturn(0).when(dimensionSelector).getValueCardinality();
+
+        IndexedTableJoinMatcher.ConditionMatcherFactory conditionMatcherFactory =
+            new IndexedTableJoinMatcher.ConditionMatcherFactory(
+                ValueType.STRING,
+                IndexedTableJoinMatcherTest::createSingletonIntList
+            );
+        Supplier<IntIterator> dimensionProcessor = conditionMatcherFactory.makeDimensionProcessor(dimensionSelector, false);
+        Assert.assertNotNull(dimensionProcessor.get());
+        Assert.assertFalse(dimensionProcessor.get().hasNext());
       }
 
       @Test

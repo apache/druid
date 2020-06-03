@@ -30,7 +30,7 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.UnsupportedQueryException;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -327,10 +327,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             int dimensionId = row.get(0);
             IntList rowNumbers = getRowNumbers(selector, dimensionId);
             return rowNumbers.iterator();
+          } else if (row.size() == 0) {
+            return IntIterators.EMPTY_ITERATOR;
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
-            throw new UnsupportedQueryException("Joining against a multi-value dimension is not supported.");
+            throw new QueryUnsupportedException("Joining against a multi-value dimension is not supported.");
           }
         };
       } else {
@@ -343,10 +345,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             int dimensionId = row.get(0);
             IntList rowNumbers = getAndCacheRowNumbers(selector, dimensionId);
             return rowNumbers.iterator();
+          } else if (row.size() == 0) {
+            return IntIterators.EMPTY_ITERATOR;
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
-            throw new UnsupportedQueryException("Joining against a multi-value dimension is not supported.");
+            throw new QueryUnsupportedException("Joining against a multi-value dimension is not supported.");
           }
         };
       }

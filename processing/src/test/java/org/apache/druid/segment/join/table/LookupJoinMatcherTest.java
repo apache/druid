@@ -22,7 +22,7 @@ package org.apache.druid.segment.join.table;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.UnsupportedQueryException;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -152,7 +152,7 @@ public class LookupJoinMatcherTest
     Assert.assertFalse(target.hasMatch());
   }
 
-  @Test(expected = UnsupportedQueryException.class)
+  @Test(expected = QueryUnsupportedException.class)
   public void testMatchMultiValuedRowShouldThrowException()
   {
     ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
@@ -167,6 +167,23 @@ public class LookupJoinMatcherTest
     target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
     // Test match should throw exception
     target.matchCondition();
+  }
+
+  @Test
+  public void testMatchEmptyRow()
+  {
+    ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
+    Mockito.doReturn(dimensionSelector).when(leftSelectorFactory).makeDimensionSelector(ArgumentMatchers.any(DimensionSpec.class));
+    Mockito.doReturn(row).when(dimensionSelector).getRow();
+
+    JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression(
+        StringUtils.format("\"%sk\" == foo", PREFIX),
+        PREFIX,
+        ExprMacroTable.nil()
+    );
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target.matchCondition();
+    Assert.assertFalse(target.hasMatch());
   }
 
   private void verifyMatch(String expectedKey, String expectedValue)
