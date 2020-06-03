@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -34,10 +35,10 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,9 +52,15 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
+  // This context parameter is an undocumented parameter, used internally, to allow timeseries query with
+  // timestamp_floor expression	on the timestamp dimension to map the results to another dimension using the
+  // name and type supplied by this context key (The value of this context key contains Pair with key=UutputName
+  // and value=OutputType i.e. Pair(String, ValueType). The reason we need this is because timeseries query
+  // with timestamp_floor expression translates the timestamp_floor expression dimension into a 'granularity'.
+  // TODO: We can remove this once https://github.com/apache/druid/issues/9974 is done.
+  public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
 
   private final VirtualColumns virtualColumns;
-  private final DimensionSpec dimensionSpec;
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
@@ -65,7 +72,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("descending") boolean descending,
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
-      @JsonProperty("dimension") DimensionSpec dimensionSpec,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") Granularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
@@ -77,7 +83,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     super(dataSource, querySegmentSpec, descending, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
-    this.dimensionSpec = dimensionSpec;
     this.dimFilter = dimFilter;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
     this.postAggregatorSpecs = Queries.prepareAggregations(
@@ -114,12 +119,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return virtualColumns;
   }
 
-  @JsonProperty("dimension")
-  public DimensionSpec getDimensionSpec()
-  {
-    return dimensionSpec;
-  }
-
   @JsonProperty("filter")
   public DimFilter getDimensionsFilter()
   {
@@ -147,6 +146,10 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public boolean isGrandTotal()
   {
     return getContextBoolean(CTX_GRAND_TOTAL, false);
+  }
+
+  public Pair<String, ValueType> getTimestampResultField() {
+    return getContextValue(CTX_TIMESTAMP_RESULT_FIELD);
   }
 
   public boolean isSkipEmptyBuckets()
@@ -203,7 +206,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   {
     return "TimeseriesQuery{" +
            "dataSource='" + getDataSource() + '\'' +
-           ", dimensionSpec=" + dimensionSpec +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", descending=" + isDescending() +
            ", virtualColumns=" + virtualColumns +
@@ -231,7 +233,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     final TimeseriesQuery that = (TimeseriesQuery) o;
     return limit == that.limit &&
            Objects.equals(virtualColumns, that.virtualColumns) &&
-           Objects.equals(dimensionSpec, that.dimensionSpec) &&
            Objects.equals(dimFilter, that.dimFilter) &&
            Objects.equals(aggregatorSpecs, that.aggregatorSpecs) &&
            Objects.equals(postAggregatorSpecs, that.postAggregatorSpecs);
@@ -240,6 +241,6 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), virtualColumns, dimensionSpec, dimFilter, aggregatorSpecs, postAggregatorSpecs, limit);
+    return Objects.hash(super.hashCode(), virtualColumns, dimFilter, aggregatorSpecs, postAggregatorSpecs, limit);
   }
 }

@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -48,14 +49,11 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -290,6 +288,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             .appendCacheables(query.getPostAggregatorSpecs())
             .appendInt(query.getLimit())
             .appendBoolean(query.isGrandTotal());
+        if (query.getContext() != null
+            && query.getTimestampResultField() != null
+            && query.getTimestampResultField().lhs != null
+            && query.getTimestampResultField().rhs != null) {
+          builder.appendString(query.getTimestampResultField().lhs);
+          builder.appendString(query.getTimestampResultField().rhs.toString());
+        }
         return builder.build();
       }
 
@@ -409,10 +414,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   {
 
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    if (query.getDimensionSpec() != null) {
-      rowSignatureBuilder.addDimensions(Collections.singletonList(query.getDimensionSpec()));
-    } else {
-      rowSignatureBuilder.addTimeColumn();
+    rowSignatureBuilder.addTimeColumn();
+    if (query.getContext() != null
+        && query.getTimestampResultField() != null
+        && query.getTimestampResultField().lhs != null
+        && query.getTimestampResultField().rhs != null) {
+      rowSignatureBuilder.add(query.getTimestampResultField().lhs, query.getTimestampResultField().rhs);
     }
     rowSignatureBuilder.addAggregators(query.getAggregatorSpecs());
     rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
