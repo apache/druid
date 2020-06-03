@@ -78,7 +78,7 @@ public class RegexpLikeExprMacro implements ExprMacroTable.ExprMacro
           // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
           return ExprEval.of(false, ExprType.LONG);
         } else {
-          final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
+          final Matcher matcher = pattern.matcher(s);
           return ExprEval.of(matcher.find(), ExprType.LONG);
         }
       }
