@@ -44,7 +44,7 @@ public class HllSketchToStringOperatorConversion extends DirectOperatorConversio
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeNonNull(SqlTypeName.VARCHAR)
       .build();
 
   public HllSketchToStringOperatorConversion()
