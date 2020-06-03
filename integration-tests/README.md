@@ -68,16 +68,38 @@ can either be 8 or 11.
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
 
+## Manual bringing up docker containers and running tests
+
+1. Build druid-cluster, druid-hadoop docker images. From root module run maven command:
+```
+mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true
+```
+
+2. Run druid cluster by docker-compose:
+
+```
+- Basic Druid cluster:
+docker-compose -f integration-tests/docker/docker-compose.yml up
+- Druid cluster with override env for cloud integration tests:
+OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up
+- Druid hadoop:
+docker-compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up
+```
+
+3. Run maven command to execute tests with -Ddocker.build.skip=true -Ddocker.run.skip=true
+
 ## Tips & tricks for debugging and developing integration tests
 
 ### Useful mvn command flags
 
-- -Dskip.start.docker=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
+- -Ddocker.build.skip=true to skip build druid containers. 
+If you do not apply any change to druid then you can do not rebuild druid. 
+This can save ~4 minutes to build druid cluster and druid hadoop.
+You need to build druid containers only once, after you can skip docker build step. 
+- -Ddocker.run.skip=true to skip starting docker containers. This can save ~3 minutes by skipping building and bringing 
 up the docker containers (Druid, Kafka, Hadoop, MYSQL, zookeeper, etc). Please make sure that you actually do have
 these containers already running if using this flag. Additionally, please make sure that the running containers
 are in the same state that the setup script (run_cluster.sh) would have brought it up in. 
-- -Dskip.stop.docker=true to skip stopping and teardowning down the docker containers. This can be useful in further
-debugging after the integration tests have finish running. 
 
 ### Debugging Druid while running tests
 
