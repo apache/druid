@@ -41,6 +41,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.server.QueryScheduler;
@@ -715,6 +716,22 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(exception.getErrorCode(), QueryInterruptedException.RESOURCE_LIMIT_EXCEEDED);
     Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
     checkSqlRequestLog(false);
+  }
+
+  @Test
+  public void testUnsupportedQueryThrowsException() throws Exception
+  {
+    String errorMessage = "This will be support in Druid 9999";
+    SqlQuery badQuery = EasyMock.createMock(SqlQuery.class);
+    EasyMock.expect(badQuery.getQuery()).andReturn("SELECT ANSWER TO LIFE");
+    EasyMock.expect(badQuery.getContext()).andReturn(ImmutableMap.of());
+    EasyMock.expect(badQuery.getParameterList()).andThrow(new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    final QueryException exception = doPost(badQuery).lhs;
+
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(exception.getErrorCode(), QueryUnsupportedException.ERROR_CODE);
+    Assert.assertEquals(exception.getErrorClass(), QueryUnsupportedException.class.getName());
   }
 
   @Test
