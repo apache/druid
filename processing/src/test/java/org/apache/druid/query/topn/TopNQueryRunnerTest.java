@@ -175,6 +175,15 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             )
         )
     );
+
+    RESOURCE_CLOSER.register(() -> {
+      // Verify that all objects have been returned to the pool.
+      Assert.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
+      Assert.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
+      defaultPool.close();
+      customPool.close();
+    });
+
     return retVal;
   }
 
