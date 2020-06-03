@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.rel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -34,7 +33,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Evals;
@@ -48,7 +46,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTime;
@@ -105,9 +102,9 @@ public class QueryMaker
       // based on a timestamp_floor expression into a 'granularity'. This is not reflected in the druidQuery's
       // output row signature, so we have to account for it here.
       // TODO: We can remove this once https://github.com/apache/druid/issues/9974 is done.
-      final DimensionExpression timeDimension = Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions());
+      final String timeDimension = Iterables.getOnlyElement(druidQuery.getGrouping().getDimensions()).getOutputName();
       rowOrder = druidQuery.getOutputRowSignature().getColumnNames().stream()
-                           .map(f -> timeDimension.getOutputName().equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
+                           .map(f -> timeDimension.equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
                            .collect(Collectors.toList());
     } else {
       rowOrder = druidQuery.getOutputRowSignature().getColumnNames();

@@ -87,6 +87,7 @@ import java.util.stream.StreamSupport;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 {
+  private static final String TIMESTAMP_RESULT_FIELD_NAME = "d0";
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -2469,6 +2470,124 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithTimestampResultFieldContext()
+  {
+    Granularity gran = Granularities.DAY;
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(gran)
+                                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                                  .aggregators(
+                                      QueryRunnerTestHelper.ROWS_COUNT,
+                                      QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+                                      QueryRunnerTestHelper.QUALITY_UNIQUES
+                                  )
+                                  .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+                                  .descending(descending)
+                                  .context(ImmutableMap.of(
+                                      TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD,
+                                      TIMESTAMP_RESULT_FIELD_NAME
+                                  ))
+                                  .build();
+
+    Assert.assertEquals(TIMESTAMP_RESULT_FIELD_NAME, query.getTimestampResultField());
+
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+
+    final String[] expectedIndex = descending ?
+                                   QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES_DESC :
+                                   QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES;
+
+    final DateTime expectedLast = descending ?
+                                  QueryRunnerTestHelper.EARLIEST :
+                                  QueryRunnerTestHelper.LAST;
+
+    int count = 0;
+    Result lastResult = null;
+    for (Result<TimeseriesResultValue> result : results) {
+      DateTime current = result.getTimestamp();
+      Assert.assertFalse(
+          StringUtils.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
+      );
+
+      final TimeseriesResultValue value = result.getValue();
+
+      Assert.assertEquals(
+          value.getLongMetric(TIMESTAMP_RESULT_FIELD_NAME),
+          current.getMillis(),
+          0
+      );
+
+      Assert.assertEquals(
+          result.toString(),
+          QueryRunnerTestHelper.SKIPPED_DAY.equals(current) ? 0L : 13L,
+          value.getLongMetric("rows").longValue()
+      );
+
+      if (!QueryRunnerTestHelper.SKIPPED_DAY.equals(current)) {
+        Assert.assertEquals(
+            result.toString(),
+            Doubles.tryParse(expectedIndex[count]).doubleValue(),
+            value.getDoubleMetric("index").doubleValue(),
+            value.getDoubleMetric("index").doubleValue() * 1e-6
+        );
+        Assert.assertEquals(
+            result.toString(),
+            new Double(expectedIndex[count]) +
+            13L + 1L,
+            value.getDoubleMetric("addRowsIndexConstant"),
+            value.getDoubleMetric("addRowsIndexConstant") * 1e-6
+        );
+        Assert.assertEquals(
+            value.getDoubleMetric("uniques"),
+            9.0d,
+            0.02
+        );
+      } else {
+        if (NullHandling.replaceWithDefault()) {
+          Assert.assertEquals(
+              result.toString(),
+              0.0D,
+              value.getDoubleMetric("index").doubleValue(),
+              value.getDoubleMetric("index").doubleValue() * 1e-6
+          );
+          Assert.assertEquals(
+              result.toString(),
+              new Double(expectedIndex[count]) + 1L,
+              value.getDoubleMetric("addRowsIndexConstant"),
+              value.getDoubleMetric("addRowsIndexConstant") * 1e-6
+          );
+          Assert.assertEquals(
+              0.0D,
+              value.getDoubleMetric("uniques"),
+              0.02
+          );
+        } else {
+          Assert.assertNull(
+              result.toString(),
+              value.getDoubleMetric("index")
+          );
+          Assert.assertNull(
+              result.toString(),
+              value.getDoubleMetric("addRowsIndexConstant")
+          );
+          Assert.assertEquals(
+              value.getDoubleMetric("uniques"),
+              0.0d,
+              0.02
+          );
+        }
+      }
+
+      lastResult = result;
+      ++count;
+    }
+
+    Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
   @Test
