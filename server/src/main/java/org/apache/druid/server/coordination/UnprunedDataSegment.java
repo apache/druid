@@ -33,6 +33,12 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A deserialization aid used by {@link SegmentChangeRequestLoad}. The broker prunes the loadSpec from segments
+ * for efficiency reasons, but the broker does need the loadSpec when it loads broadcast segments.
+ *
+ * This class always uses the non-pruning default {@link org.apache.druid.timeline.DataSegment.PruneSpecsHolder}.
+ */
 public class UnprunedDataSegment extends DataSegment
 {
   @JsonCreator

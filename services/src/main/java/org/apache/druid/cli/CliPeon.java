@@ -158,6 +158,10 @@ public class CliPeon extends GuiceRunnable
   public String serverType = "indexer-executor";
 
 
+  /**
+   * If set to "true", the peon will bind classes necessary for loading broadcast segments. This is used for
+   * queryable tasks, such as streaming ingestion tasks.
+   */
   @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
   public String loadBroadcastSegments = "false";
 
