@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -38,7 +37,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +51,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
   // This context parameter is an undocumented parameter, used internally, to allow timeseries query with
-  // timestamp_floor expression	on the timestamp dimension to map the results to another dimension using the
+  // timestamp_floor expression on the timestamp dimension to map the results to another dimension using the
   // name (String) supplied by this context key. The reason this is needed is because timeseries query
   // with timestamp_floor expression translates the timestamp_floor expression dimension into a 'granularity'.
   // TODO: We can remove this once https://github.com/apache/druid/issues/9974 is done.
@@ -147,7 +145,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return getContextBoolean(CTX_GRAND_TOTAL, false);
   }
 
-  public String getTimestampResultField() {
+  public String getTimestampResultField()
+  {
     return getContextValue(CTX_TIMESTAMP_RESULT_FIELD);
   }
 

@@ -82,7 +82,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;

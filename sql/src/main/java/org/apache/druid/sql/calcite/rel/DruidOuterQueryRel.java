@@ -34,10 +34,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
