@@ -24,6 +24,15 @@ import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * A JoinFilterPreAnalysisGroup holds all of the JoinFilterPreAnalysis objects for a given query and
+ * also stores the per-query parameters that control the filter rewrite operations (from the query context).
+ *
+ * The analyses map is keyed by Filter: each Filter in the map belongs to separate level of query
+ * (e.g. outer query, subquery level 1, etc.)
+ *
+ * A concurrent hash map is used since the per-level Filter processing occurs across multiple threads.
+ */
 public class JoinFilterPreAnalysisGroup
 {
   private final boolean enableFilterPushDown;

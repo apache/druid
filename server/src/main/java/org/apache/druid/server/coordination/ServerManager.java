@@ -201,9 +201,7 @@ public class ServerManager implements QuerySegmentWalker
         QueryContexts.getEnableJoinFilterPushDown(query),
         QueryContexts.getEnableJoinFilterRewrite(query),
         QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        QueryContexts.getJoinFilterRewriteMaxSize(query)
     );
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable

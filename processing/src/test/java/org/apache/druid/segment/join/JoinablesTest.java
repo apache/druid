@@ -28,7 +28,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.junit.Assert;
@@ -102,9 +101,7 @@ public class JoinablesTest
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
 
     Assert.assertSame(Function.identity(), segmentMapFn);
@@ -131,9 +128,7 @@ public class JoinablesTest
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
   }
 
@@ -168,9 +163,7 @@ public class JoinablesTest
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
         QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);

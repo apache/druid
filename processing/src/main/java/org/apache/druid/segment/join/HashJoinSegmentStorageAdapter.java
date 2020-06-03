@@ -60,8 +60,8 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   /**
    * @param baseAdapter          A StorageAdapter for the left-hand side base segment
    * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
-   * @param joinFilterPreAnalysisGroup
-   */
+   * @param joinFilterPreAnalysisGroup Pre-analysis group that holds all of the JoinFilterPreAnalysis results within
+   *                                   the scope of a query   */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,

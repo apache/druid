@@ -47,7 +47,8 @@ public class HashJoinSegment extends AbstractSegment
    * @param baseSegment           The left-hand side base segment
    * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
    *                              duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param joinFilterPreAnalysisGroup Pre-analysis computed by {@link org.apache.druid.segment.join.filter.JoinFilterAnalyzer#computeJoinFilterPreAnalysis}
+   * @param joinFilterPreAnalysisGroup Pre-analysis group that holds all of the JoinFilterPreAnalysis results within
+   *                                   the scope of a query
    */
   public HashJoinSegment(
       Segment baseSegment,

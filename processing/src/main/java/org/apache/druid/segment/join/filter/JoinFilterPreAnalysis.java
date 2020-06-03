@@ -39,11 +39,11 @@ import java.util.Set;
  * A JoinFilterPreAnalysis contains filter push down/rewrite information that does not have per-segment dependencies.
  * This includes:
  * - The query's JoinableClauses list
- * - The query's original filter (if any)
+ * - The original filter that an analysis was performed ons
  * - A list of filter clauses from the original filter's CNF representation that only reference the base table
  * - A list of filter clauses from the original filter's CNF representation that reference RHS join tables
  * - A list of virtual columns that can only be computed post-join
- * - Control flag booleans for whether filter push down and RHS rewrites are enabled.
+ * - The JoinFilterPreAnalysisGroup that this pre-analysis is associated with.
  */
 public class JoinFilterPreAnalysis
 {
@@ -120,16 +120,6 @@ public class JoinFilterPreAnalysis
   public boolean isEnableFilterRewrite()
   {
     return myGroup.isEnableFilterRewrite();
-  }
-
-  public boolean isEnableRewriteValueColumnFilters()
-  {
-    return myGroup.isEnableRewriteValueColumnFilters();
-  }
-
-  public long getFilterRewriteMaxSize()
-  {
-    return myGroup.getFilterRewriteMaxSize();
   }
 
   public Equiconditions getEquiconditions()

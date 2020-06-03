@@ -83,6 +83,8 @@ public class JoinFilterAnalyzer
    * 
    * See {@link JoinFilterPreAnalysis} for details on the result of this pre-analysis step.
    *
+   * @param joinFilterPreAnalysisGroup      The query-scoped pre analysis group, used to hold pre-analysis results
+   *                                        on a per-filter basis
    * @param joinableClauses                 The joinable clauses from the query
    * @param virtualColumns                  The virtual columns from the query
    * @param originalFilter                  The original filter from the query

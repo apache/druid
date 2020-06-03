@@ -2067,7 +2067,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     );
   }
 
-  /*
   @Test
   public void test_makeCursors_originalFilterDoesNotMatchPreAnalysis_shouldThrowISE()
   {
@@ -2081,24 +2080,27 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     );
     Filter filter = new SelectorFilter("page", "this matches nothing");
 
+    new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysisGroup
+    ).makeCursors(
+        filter,
+        Intervals.ETERNITY,
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    /*
     try {
-      new HashJoinSegmentStorageAdapter(
-          factSegment.asStorageAdapter(),
-          joinableClauses,
-          joinFilterPreAnalysisGroup
-      ).makeCursors(
-          filter,
-          Intervals.ETERNITY,
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+
       Assert.fail();
     }
     catch (ISE e) {
       Assert.assertTrue(e.getMessage().startsWith("Filter provided to cursor ["));
     }
+    */
   }
-  */
 }

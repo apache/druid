@@ -70,22 +70,19 @@ public class Joinables
   /**
    * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
    * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
-   *
    * @param clauses              pre-joinable clauses
    * @param joinableFactory      factory for joinables
    * @param cpuTimeAccumulator   an accumulator that we will add CPU nanos to; this is part of the function to encourage
-   *                             callers to remember to track metrics on CPU time required for creation of Joinables
+ *                             callers to remember to track metrics on CPU time required for creation of Joinables
    * @param enableFilterPushDown whether to enable filter push down optimizations to the base segment. In production
-   *                             this should generally be {@code QueryContexts.getEnableJoinFilterPushDown(query)}.
+*                             this should generally be {@code QueryContexts.getEnableJoinFilterPushDown(query)}.
    * @param enableFilterRewrite whether to enable filter rewrite optimizations for RHS columns. In production
-   *                             this should generally be {@code QueryContexts.getEnableJoinFilterRewrite(query)}.
+*                             this should generally be {@code QueryContexts.getEnableJoinFilterRewrite(query)}.
    * @param enableRewriteValueColumnFilters whether to enable filter rewrite optimizations for RHS columns that are not
-   *                                        key columns. In production this should generally
-   *                                        be {@code QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query)}.
+*                                        key columns. In production this should generally
+*                                        be {@code QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query)}.
    * @param filterRewriteMaxSize the max allowed size of correlated value sets for RHS rewrites. In production
-   *                             this should generally be {@code QueryContexts.getJoinFilterRewriteMaxSize(query)}.
-   * @param originalFilter The original filter from the query.
-   * @param virtualColumns The virtual columns from the query.
+*                             this should generally be {@code QueryContexts.getJoinFilterRewriteMaxSize(query)}.
    */
   public static Function<Segment, Segment> createSegmentMapFn(
       final List<PreJoinableClause> clauses,
@@ -94,9 +91,7 @@ public class Joinables
       final boolean enableFilterPushDown,
       final boolean enableFilterRewrite,
       final boolean enableRewriteValueColumnFilters,
-      final long filterRewriteMaxSize,
-      final Filter originalFilter,
-      final VirtualColumns virtualColumns
+      final long filterRewriteMaxSize
   )
   {
     // compute column correlations here and RHS correlated values

@@ -100,9 +100,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         QueryContexts.getEnableJoinFilterPushDown(prioritizedAndLaned),
         QueryContexts.getEnableJoinFilterRewrite(prioritizedAndLaned),
         QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(prioritizedAndLaned),
-        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned),
-        prioritizedAndLaned.getFilter() == null ? null : prioritizedAndLaned.getFilter().toFilter(),
-        prioritizedAndLaned.getVirtualColumns()
+        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned)
     );
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(prioritizedAndLaned);
