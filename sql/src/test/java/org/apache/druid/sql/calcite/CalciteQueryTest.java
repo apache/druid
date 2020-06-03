@@ -381,6 +381,122 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJoinOnTimeseriesWithFloorOnTime() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (TIME_FLOOR(__time, 'PT1H'), m1) IN\n"
+        + "   (\n"
+        + "     SELECT TIME_FLOOR(__time, 'PT1H') AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
+      + "         AND __time BETWEEN '1994-04-29 00:00:00' AND '2020-01-11 00:00:00' GROUP BY 1\n"
+        + "    )\n"
+        + "GROUP BY 1, 2\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    Druids.newTimeseriesQueryBuilder()
+                                          .dataSource(CalciteTests.DATASOURCE1)
+                                          .intervals(querySegmentSpec(Intervals.of("1994-04-29/2020-01-11T00:00:00.001Z")))
+                                          .filters(selector("dim3", "b", null))
+                                          .granularity(new PeriodGranularity(Period.hours(1), null, DateTimeZone.UTC))
+                                          .aggregators(aggregators(
+                                              new FloatMinAggregatorFactory("a0", "m1")
+                                          ))
+                                          .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_DEFAULT, "d0"))
+                                          .build()),
+                                "j0.",
+                                "((timestamp_floor(\"__time\",'PT1H',null,'UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimensions(
+                            new DefaultDimensionSpec("__time", "d0", ValueType.LONG),
+                            new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
+
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new StringAnyAggregatorFactory("a0", "dim3", 100)
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f, "[a, b]"},
+            new Object[]{946771200000L, 2.0f, "[b, c]"}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTime() throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT), m1) IN\n"
+        + "   (\n"
+        + "     SELECT CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 0 AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'\n"
+        + "         AND __time BETWEEN '1994-04-29 00:00:00' AND '2020-01-11 00:00:00' GROUP BY 1\n"
+        + "    )\n"
+        + "GROUP BY 1, 2\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new TableDataSource(CalciteTests.DATASOURCE1),
+                                new QueryDataSource(
+                                    GroupByQuery.builder()
+                                                .setDataSource(CalciteTests.DATASOURCE1)
+                                                .setInterval(querySegmentSpec(Intervals.of("1994-04-29/2020-01-11T00:00:00.001Z")))
+                                                .setVirtualColumns(
+                                                    expressionVirtualColumn(
+                                                        "v0",
+                                                        "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 0)",
+                                                        ValueType.LONG
+                                                    )
+                                                )
+                                                .setDimFilter(selector("dim3", "b", null))
+                                                .setGranularity(Granularities.ALL)
+                                                .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ValueType.LONG)))
+                                                .setAggregatorSpecs(aggregators(
+                                                    new FloatMinAggregatorFactory("a0", "m1")
+                                                ))
+                                                .setContext(QUERY_CONTEXT_DEFAULT)
+                                                .build()),
+                                "j0.",
+                                "((timestamp_floor(\"__time\",'PT1H',null,'UTC') == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+                                JoinType.INNER
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimensions(
+                            new DefaultDimensionSpec("__time", "d0", ValueType.LONG),
+                            new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
+
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new StringAnyAggregatorFactory("a0", "dim3", 100)
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f, "[a, b]"},
+            new Object[]{946771200000L, 2.0f, "[b, c]"}
+        )
+    );
+  }
+
+  @Test
   public void testSelectCountStart() throws Exception
   {
     testQuery(

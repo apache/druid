@@ -28,6 +28,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -51,6 +52,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
@@ -75,6 +77,8 @@ import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -89,6 +93,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.TIMESERIES_CONTEXT_DEFAULT;
 
 public class HllSketchSqlAggregatorTest extends CalciteTestBase
 {
@@ -355,46 +361,33 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     Query expected = GroupByQuery.builder()
                                  .setDataSource(
                                      new QueryDataSource(
-                                         GroupByQuery.builder()
-                                                     .setDataSource(CalciteTests.DATASOURCE1)
-                                                     .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(
-                                                         Filtration.eternity())))
-                                                     .setGranularity(Granularities.ALL)
-                                                     .setVirtualColumns(
-                                                         new ExpressionVirtualColumn(
-                                                             "v0",
-                                                             "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                             ValueType.LONG,
-                                                             TestExprMacroTable.INSTANCE
-                                                         )
-                                                     )
-                                                     .setDimensions(
-                                                         Collections.singletonList(
-                                                             new DefaultDimensionSpec(
-                                                                 "v0",
-                                                                 "d0",
-                                                                 ValueType.LONG
-                                                             )
-                                                         )
-                                                     )
-                                                     .setAggregatorSpecs(
-                                                         Collections.singletonList(
-                                                             new HllSketchBuildAggregatorFactory(
-                                                                 "a0:a",
-                                                                 "cnt",
-                                                                 null,
-                                                                 null,
-                                                                 ROUND
-                                                             )
-                                                         )
-                                                     )
-                                                     .setPostAggregatorSpecs(
-                                                         ImmutableList.of(
-                                                             new FinalizingFieldAccessPostAggregator("a0", "a0:a")
-                                                         )
-                                                     )
-                                                     .setContext(QUERY_CONTEXT_DEFAULT)
-                                                     .build()
+                                         Druids.newTimeseriesQueryBuilder()
+                                               .dataSource(CalciteTests.DATASOURCE1)
+                                               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(
+                                                   Filtration.eternity()
+                                               )))
+                                               .granularity(new PeriodGranularity(Period.days(1), null, DateTimeZone.UTC))
+                                               .aggregators(
+                                                   Collections.singletonList(
+                                                       new HllSketchBuildAggregatorFactory(
+                                                           "a0:a",
+                                                           "cnt",
+                                                           null,
+                                                           null,
+                                                           ROUND
+                                                       )
+                                                   )
+                                               )
+                                               .postAggregators(
+                                                   ImmutableList.of(
+                                                       new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                                   )
+                                               )
+                                               .context(BaseCalciteQueryTest.getTimeseriesContextWithFloorTime(
+                                                   ImmutableMap.of("skipEmptyBuckets", true, "sqlQueryId", "dummy"),
+                                                   "d0"
+                                               ))
+                                               .build()
                                      )
                                  )
                                  .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))

@@ -2488,8 +2488,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
                                   .context(ImmutableMap.of(
-                                      TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD,
-                                      TIMESTAMP_RESULT_FIELD_NAME
+                                      TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME
                                   ))
                                   .build();
 
