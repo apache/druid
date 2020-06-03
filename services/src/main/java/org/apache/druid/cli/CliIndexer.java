@@ -27,6 +27,7 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
@@ -187,11 +188,11 @@ public class CliIndexer extends ServerRunnable
 
           @Provides
           @LazySingleton
-          public DataNodeService getDataNodeService()
+          public DataNodeService getDataNodeService(DruidServerConfig serverConfig)
           {
             return new DataNodeService(
                 DruidServer.DEFAULT_TIER,
-                0L,
+                serverConfig.getMaxSize(),
                 ServerType.INDEXER_EXECUTOR,
                 DruidServer.DEFAULT_PRIORITY
             );
