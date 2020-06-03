@@ -1789,7 +1789,7 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testShardSpecSelectionWithNullPartitionDimension() throws Exception
+  public void testShardSpecSelectionWithNullPartitionDimension()
   {
     ShardSpec spec1 = new HashBasedNumberedShardSpec(0, 2, null, jsonMapper);
     ShardSpec spec2 = new HashBasedNumberedShardSpec(1, 2, null, jsonMapper);
