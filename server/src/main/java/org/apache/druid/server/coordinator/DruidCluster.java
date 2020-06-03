@@ -151,7 +151,6 @@ public class DruidCluster
   public Collection<ServerHolder> getAllServers()
   {
     final int historicalSize = historicals.values().stream().mapToInt(Collection::size).sum();
-    final int brokerSize = brokers.size();
     final int realtimeSize = realtimes.size();
     final List<ServerHolder> allServers = new ArrayList<>(historicalSize + realtimeSize);
 
