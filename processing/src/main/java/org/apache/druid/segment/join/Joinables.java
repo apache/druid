@@ -20,10 +20,8 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
