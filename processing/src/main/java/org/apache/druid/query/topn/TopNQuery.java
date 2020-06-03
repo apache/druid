@@ -113,7 +113,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return TOPN;
   }
 
-  @Override
   @JsonProperty
   public VirtualColumns getVirtualColumns()
   {
