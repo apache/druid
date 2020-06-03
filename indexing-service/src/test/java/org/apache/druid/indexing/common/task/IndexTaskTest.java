@@ -25,9 +25,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -55,6 +58,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -91,6 +95,7 @@ import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -1561,8 +1566,8 @@ public class IndexTaskTest extends IngestionTestBase
 
       Assert.assertTrue(
           StringUtils.format("Actual dimensions: %s", dimensions),
-          dimensions.equals(Sets.newHashSet("dim", "column_3")) ||
-          dimensions.equals(Sets.newHashSet("column_2", "column_3"))
+          dimensions.equals(Sets.newHashSet("column_2")) ||
+          dimensions.equals(Sets.newHashSet("dim", "column_2", "column_3"))
       );
 
       Assert.assertEquals(Collections.singletonList("val"), segment.getMetrics());
@@ -1781,6 +1786,36 @@ public class IndexTaskTest extends IngestionTestBase
         "partitionsSpec[org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec] is not supported"
     );
     task.isReady(createActionClient(task));
+  }
+
+  @Test
+  public void testShardSpecSelectionWithNullPartitionDimension() throws Exception
+  {
+    ShardSpec spec1 = new HashBasedNumberedShardSpec(0, 2, null, jsonMapper);
+    ShardSpec spec2 = new HashBasedNumberedShardSpec(1, 2, null, jsonMapper);
+
+    Map<Interval, List<ShardSpec>> shardSpecMap = new HashMap<>();
+    shardSpecMap.put(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), Lists.newArrayList(spec1, spec2));
+
+    IndexTask.ShardSpecs shardSpecs = new IndexTask.ShardSpecs(shardSpecMap, Granularity.fromString("HOUR"));
+    String visitor_id = "visitor_id";
+    String client_type = "client_type";
+    long timestamp1 = DateTimes.of("2014-01-01T00:00:00.000Z").getMillis();
+    InputRow row1 = new MapBasedInputRow(timestamp1,
+        Lists.newArrayList(visitor_id, client_type),
+        ImmutableMap.of(visitor_id, "0", client_type, "iphone")
+    );
+
+    long timestamp2 = DateTimes.of("2014-01-01T00:30:20.456Z").getMillis();
+    InputRow row2 = new MapBasedInputRow(timestamp2,
+        Lists.newArrayList(visitor_id, client_type),
+        ImmutableMap.of(visitor_id, "0", client_type, "iphone")
+    );
+
+    ShardSpec spec3 = shardSpecs.getShardSpec(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), row1);
+    ShardSpec spec4 = shardSpecs.getShardSpec(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), row2);
+
+    Assert.assertEquals(true, spec3 == spec4);
   }
 
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)
