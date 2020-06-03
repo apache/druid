@@ -176,7 +176,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             mappedFinalSequence,
             resultValue -> {
               final DateTime timestamp = resultValue.getTimestamp();
-              resultValue.getValue().getBaseObject().put(query.getTimestampResultField(), timestamp);
+              resultValue.getValue().getBaseObject().put(query.getTimestampResultField(), timestamp.getMillis());
               return resultValue;
             }
         );

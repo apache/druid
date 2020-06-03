@@ -109,10 +109,6 @@ public class QueryMaker
       rowOrder = druidQuery.getOutputRowSignature().getColumnNames().stream()
                            .map(f -> timeDimension.getOutputName().equals(f) ? ColumnHolder.TIME_COLUMN_NAME : f)
                            .collect(Collectors.toList());
-      query.withOverriddenContext(ImmutableMap.of(
-          TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD,
-          timeDimension.toDimensionSpec().getOutputName()
-      ));
     } else {
       rowOrder = druidQuery.getOutputRowSignature().getColumnNames();
     }

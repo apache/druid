@@ -82,6 +82,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -734,6 +735,9 @@ public class DruidQuery
     final Granularity queryGranularity;
     final boolean descending;
     int timeseriesLimit = 0;
+    final Map<String, Object> theContext = new HashMap<>();
+    theContext.put("skipEmptyBuckets", true);
+    theContext.putAll(plannerContext.getQueryContext());
     if (grouping.getDimensions().isEmpty()) {
       queryGranularity = Granularities.ALL;
       descending = false;
@@ -748,7 +752,10 @@ public class DruidQuery
         // Timeseries only applies if the single dimension is granular __time.
         return null;
       }
-
+      theContext.put(
+          TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD,
+          Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec().getOutputName()
+      );
       if (sorting != null) {
         // If there is sorting, set timeseriesLimit to given value if less than Integer.Max_VALUE
         if (sorting.isLimited()) {
@@ -782,9 +789,6 @@ public class DruidQuery
     if (sorting != null && sorting.getProjection() != null) {
       postAggregators.addAll(sorting.getProjection().getPostAggregators());
     }
-    final Map<String, Object> theContext = new HashMap<>();
-    theContext.put("skipEmptyBuckets", true);
-    theContext.putAll(plannerContext.getQueryContext());
 
     return new TimeseriesQuery(
         dataSource,
