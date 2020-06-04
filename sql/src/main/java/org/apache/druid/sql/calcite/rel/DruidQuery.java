@@ -317,7 +317,6 @@ public class DruidQuery
 
     final Subtotals subtotals = computeSubtotals(
         partialQuery,
-        plannerContext,
         rowSignature
     );
 
@@ -430,7 +429,6 @@ public class DruidQuery
    */
   private static Subtotals computeSubtotals(
       final PartialDruidQuery partialQuery,
-      final PlannerContext plannerContext,
       final RowSignature rowSignature
   )
   {
@@ -439,21 +437,7 @@ public class DruidQuery
     // dimBitMapping maps from input field position to group set position (dimension number).
     final int[] dimBitMapping;
     if (partialQuery.getSelectProject() != null) {
-      int fieldCount = 0;
-      for (final RexNode rexNode : partialQuery.getSelectProject().getChildExps()) {
-        final DruidExpression expression = Expressions.toDruidExpression(
-            plannerContext,
-            rowSignature,
-            rexNode
-        );
-
-        if (expression == null) {
-          throw new CannotBuildQueryException(partialQuery.getSelectProject(), rexNode);
-        } else {
-          fieldCount++;
-        }
-      }
-      dimBitMapping = new int[fieldCount];
+      dimBitMapping = new int[partialQuery.getSelectProject().getRowType().getFieldCount()];
     } else {
       dimBitMapping = new int[rowSignature.size()];
     }

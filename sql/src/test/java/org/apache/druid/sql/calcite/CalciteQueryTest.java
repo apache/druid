@@ -13464,7 +13464,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 "case_searched((\"_d0\" == 'b'),\"_d0\",null)",
                                 ValueType.STRING
                             )
-                        )                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("v0", "d0", ValueType.STRING),
@@ -13475,13 +13476,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
         ImmutableList.of(
-            new Object[]{"dummy", ""},
-            new Object[]{"dummy", "b"}
-        ) :
-        ImmutableList.of(
-            new Object[]{"dummy", null},
+            new Object[]{"dummy", NULL_STRING},
             new Object[]{"dummy", "b"}
         )
     );
