@@ -424,8 +424,6 @@ public class DruidQuery
 
   /**
    * Builds a {@link Subtotals} object based on {@link Aggregate#getGroupSets()}.
-   *
-   * @throws CannotBuildQueryException if subtotals cannot be computed
    */
   private static Subtotals computeSubtotals(
       final PartialDruidQuery partialQuery,
