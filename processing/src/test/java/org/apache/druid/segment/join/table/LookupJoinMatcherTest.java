@@ -22,11 +22,13 @@ package org.apache.druid.segment.join.table;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinMatcher;
@@ -147,6 +149,40 @@ public class LookupJoinMatcherTest
     verifyMatch("foo", "bar");
     // Test no more
     target.nextMatch();
+    Assert.assertFalse(target.hasMatch());
+  }
+
+  @Test(expected = QueryUnsupportedException.class)
+  public void testMatchMultiValuedRowShouldThrowException()
+  {
+    ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{2, 4, 6});
+    Mockito.doReturn(dimensionSelector).when(leftSelectorFactory).makeDimensionSelector(ArgumentMatchers.any(DimensionSpec.class));
+    Mockito.doReturn(row).when(dimensionSelector).getRow();
+
+    JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression(
+        StringUtils.format("\"%sk\" == foo", PREFIX),
+        PREFIX,
+        ExprMacroTable.nil()
+    );
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    // Test match should throw exception
+    target.matchCondition();
+  }
+
+  @Test
+  public void testMatchEmptyRow()
+  {
+    ArrayBasedIndexedInts row = new ArrayBasedIndexedInts(new int[]{});
+    Mockito.doReturn(dimensionSelector).when(leftSelectorFactory).makeDimensionSelector(ArgumentMatchers.any(DimensionSpec.class));
+    Mockito.doReturn(row).when(dimensionSelector).getRow();
+
+    JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression(
+        StringUtils.format("\"%sk\" == foo", PREFIX),
+        PREFIX,
+        ExprMacroTable.nil()
+    );
+    target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);
+    target.matchCondition();
     Assert.assertFalse(target.hasMatch());
   }
 

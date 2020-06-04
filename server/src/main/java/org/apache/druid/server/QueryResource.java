@@ -44,6 +44,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
@@ -315,6 +316,11 @@ public class QueryResource implements QueryCountStatsProvider
       queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr(), -1);
       return ioReaderWriter.gotLimited(cap);
     }
+    catch (QueryUnsupportedException unsupported) {
+      failedQueryCount.incrementAndGet();
+      queryLifecycle.emitLogsAndMetrics(unsupported, req.getRemoteAddr(), -1);
+      return ioReaderWriter.gotUnsupported(unsupported);
+    }
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
       // send an error response if this is thrown.
@@ -443,6 +449,13 @@ public class QueryResource implements QueryCountStatsProvider
     Response gotLimited(QueryCapacityExceededException e) throws IOException
     {
       return Response.status(QueryCapacityExceededException.STATUS_CODE)
+                     .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
+                     .build();
+    }
+
+    Response gotUnsupported(QueryUnsupportedException e) throws IOException
+    {
+      return Response.status(QueryUnsupportedException.STATUS_CODE)
                      .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
                      .build();
     }

@@ -19,30 +19,11 @@
 
 package org.apache.druid.collections;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public interface BlockingPool<T>
 {
   int maxSize();
-
-  /**
-   * Take a resource from the pool, waiting up to the
-   * specified wait time if necessary for an element to become available.
-   *
-   * @param timeoutMs maximum time to wait for a resource, in milliseconds.
-   *
-   * @return a resource, or null if the timeout was reached
-   */
-  @Nullable
-  ReferenceCountingResourceHolder<T> take(long timeoutMs);
-
-  /**
-   * Take a resource from the pool, waiting if necessary until an element becomes available.
-   *
-   * @return a resource
-   */
-  ReferenceCountingResourceHolder<T> take();
 
   /**
    * Take resources from the pool, waiting up to the

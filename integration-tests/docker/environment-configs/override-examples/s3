@@ -27,4 +27,4 @@ druid_storage_baseKey=druid/segments
 druid_s3_accessKey=<OVERRIDE_THIS>
 druid_s3_secretKey=<OVERRIDE_THIS>
 AWS_REGION=<OVERRIDE_THIS>
-druid_extensions_loadList=["druid-s3-extensions"]
+druid_extensions_loadList=["druid-s3-extensions","druid-hdfs-storage"]
