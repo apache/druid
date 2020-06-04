@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -41,7 +42,9 @@ import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -70,6 +73,7 @@ public class SegmentLoadDropHandlerTest
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   private SegmentLoadDropHandler segmentLoadDropHandler;
+
   private DataSegmentAnnouncer announcer;
   private File infoDir;
   private AtomicInteger announceCount;
@@ -77,8 +81,13 @@ public class SegmentLoadDropHandlerTest
   private CacheTestSegmentLoader segmentLoader;
   private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
-
+  private SegmentLoaderConfig segmentLoaderConfig;
+  private SegmentLoaderConfig segmentLoaderConfigNoLocations;
+  private ScheduledExecutorFactory scheduledExecutorFactory;
   private List<StorageLocationConfig> locations;
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setUp()
@@ -145,63 +154,90 @@ public class SegmentLoadDropHandlerTest
       }
     };
 
-    segmentLoadDropHandler = new SegmentLoadDropHandler(
-        jsonMapper,
-        new SegmentLoaderConfig()
-        {
-          @Override
-          public File getInfoDir()
-          {
-            return infoDir;
-          }
 
-          @Override
-          public int getNumLoadingThreads()
-          {
-            return 5;
-          }
+    segmentLoaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public File getInfoDir()
+      {
+        return infoDir;
+      }
 
-          @Override
-          public int getAnnounceIntervalMillis()
-          {
-            return 50;
-          }
+      @Override
+      public int getNumLoadingThreads()
+      {
+        return 5;
+      }
 
-          @Override
-          public List<StorageLocationConfig> getLocations()
-          {
-            return locations;
-          }
+      @Override
+      public int getAnnounceIntervalMillis()
+      {
+        return 50;
+      }
 
-          @Override
-          public int getDropSegmentDelayMillis()
-          {
-            return 0;
-          }
-        },
-        announcer,
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        segmentManager,
-        new ScheduledExecutorFactory()
-        {
-          @Override
-          public ScheduledExecutorService create(int corePoolSize, String nameFormat)
-          {
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return locations;
+      }
+
+      @Override
+      public int getDropSegmentDelayMillis()
+      {
+        return 0;
+      }
+    };
+
+    segmentLoaderConfigNoLocations = new SegmentLoaderConfig()
+    {
+      @Override
+      public int getNumLoadingThreads()
+      {
+        return 5;
+      }
+
+      @Override
+      public int getAnnounceIntervalMillis()
+      {
+        return 50;
+      }
+
+
+      @Override
+      public int getDropSegmentDelayMillis()
+      {
+        return 0;
+      }
+    };
+
+    scheduledExecutorFactory = new ScheduledExecutorFactory()
+    {
+      @Override
+      public ScheduledExecutorService create(int corePoolSize, String nameFormat)
+      {
             /*
                Override normal behavoir by adding the runnable to a list so that you can make sure
                all the shceduled runnables are executed by explicitly calling run() on each item in the list
              */
-            return new ScheduledThreadPoolExecutor(corePoolSize, Execs.makeThreadFactory(nameFormat))
-            {
-              @Override
-              public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
-              {
-                scheduledRunnable.add(command);
-                return null;
-              }
-            };
+        return new ScheduledThreadPoolExecutor(corePoolSize, Execs.makeThreadFactory(nameFormat))
+        {
+          @Override
+          public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)
+          {
+            scheduledRunnable.add(command);
+            return null;
           }
-        }.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        };
+      }
+    };
+
+    segmentLoadDropHandler = new SegmentLoadDropHandler(
+        jsonMapper,
+        segmentLoaderConfig,
+        announcer,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        segmentManager,
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
         new ServerTypeConfig(ServerType.HISTORICAL)
     );
   }
@@ -238,6 +274,40 @@ public class SegmentLoadDropHandlerTest
     Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
 
     segmentLoadDropHandler.stop();
+  }
+
+  @Test
+  public void testSegmentLoading1BrokerWithNoLocations() throws Exception
+  {
+    SegmentLoadDropHandler segmentLoadDropHandlerBrokerWithNoLocations = new SegmentLoadDropHandler(
+        jsonMapper,
+        segmentLoaderConfigNoLocations,
+        announcer,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        segmentManager,
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-brokerNoLocations-[%d]"),
+        new ServerTypeConfig(ServerType.BROKER)
+    );
+
+    segmentLoadDropHandlerBrokerWithNoLocations.start();
+    segmentLoadDropHandler.stop();
+  }
+
+  @Test
+  public void testSegmentLoading1HistoricalWithNoLocations() throws Exception
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Segment cache locations must be set on historicals.");
+
+    new SegmentLoadDropHandler(
+        jsonMapper,
+        segmentLoaderConfigNoLocations,
+        announcer,
+        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
+        segmentManager,
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        new ServerTypeConfig(ServerType.HISTORICAL)
+    );
   }
 
   /**
