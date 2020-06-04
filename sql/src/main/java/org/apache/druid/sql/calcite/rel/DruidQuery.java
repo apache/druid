@@ -191,7 +191,7 @@ public class DruidQuery
           computeGrouping(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(sourceRowSignature, selectProjection, null, null),
+              computeOutputRowSignature(sourceRowSignature, null, null, null),
               virtualColumnRegistry,
               rexBuilder,
               finalizeAggregations
@@ -434,15 +434,16 @@ public class DruidQuery
   {
     final Aggregate aggregate = partialQuery.getAggregate();
 
-
     // dimBitMapping maps from input field position to group set position (dimension number).
-    final int[] dimBitMapping = new int[rowSignature.size()];
+    final int[] dimBitMapping;
+    if (partialQuery.getSelectProject() != null) {
+      dimBitMapping = new int[partialQuery.getSelectProject().getRowType().getFieldCount()];
+    } else {
+      dimBitMapping = new int[rowSignature.size()];
+    }
+
     int i = 0;
     for (int dimBit : aggregate.getGroupSet()) {
-      // subtotals cannot be computed since grouping field is not contained in rowSignature
-      if (dimBit >= rowSignature.size()) {
-        throw new CannotBuildQueryException(aggregate);
-      }
       dimBitMapping[dimBit] = i++;
     }
 

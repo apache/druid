@@ -13450,26 +13450,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(new DefaultDimensionSpec("dim4", "_d0", ValueType.STRING))
-                                        .setPostAggregatorSpecs(
-                                            ImmutableList.of(
-                                                expressionPostAgg(
-                                                    "p0",
-                                                    "\'dummy\'"
-                                                ),
-                                                expressionPostAgg(
-                                                    "p1",
-                                                    "case_searched((\"_d0\" == 'b'),\"_d0\",null)"
-                                                )
-                                            )
-                                        )
                                         .setContext(QUERY_CONTEXT_DEFAULT)
                                         .build()
                         )
-                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "\'dummy\'",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "case_searched((\"_d0\" == 'b'),\"_d0\",null)",
+                                ValueType.STRING
+                            )
+                        )                        .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("p0", "d0", ValueType.STRING),
-                                new DefaultDimensionSpec("p1", "d1", ValueType.STRING)
+                                new DefaultDimensionSpec("v0", "d0", ValueType.STRING),
+                                new DefaultDimensionSpec("v1", "d1", ValueType.STRING)
                             )
                         )
                         .setGranularity(Granularities.ALL)
