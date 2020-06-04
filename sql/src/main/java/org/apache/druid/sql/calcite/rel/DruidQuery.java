@@ -424,6 +424,8 @@ public class DruidQuery
 
   /**
    * Builds a {@link Subtotals} object based on {@link Aggregate#getGroupSets()}.
+   *
+   * @throws CannotBuildQueryException if subtotals cannot be computed
    */
   private static Subtotals computeSubtotals(
       final PartialDruidQuery partialQuery,
@@ -432,10 +434,15 @@ public class DruidQuery
   {
     final Aggregate aggregate = partialQuery.getAggregate();
 
+
     // dimBitMapping maps from input field position to group set position (dimension number).
     final int[] dimBitMapping = new int[rowSignature.size()];
     int i = 0;
     for (int dimBit : aggregate.getGroupSet()) {
+      // subtotals cannot be computed since grouping field is not contained in rowSignature
+      if (dimBit >= rowSignature.size()) {
+        throw new CannotBuildQueryException(aggregate);
+      }
       dimBitMapping[dimBit] = i++;
     }
 

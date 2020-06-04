@@ -70,6 +70,7 @@ import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
+import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -13415,6 +13416,74 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"10.1", 1L},
             new Object[]{"a", 2L},
             new Object[]{"abc", 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByWithLiteralInSubqueryGrouping() throws Exception
+  {
+    testQuery(
+        "SELECT \n"
+        + "   t1, t2\n"
+        + "  FROM\n"
+        + "   ( SELECT\n"
+        + "     'dummy' as t1,\n"
+        + "     CASE\n"
+        + "       WHEN \n"
+        + "         dim4 = 'b'\n"
+        + "       THEN dim4\n"
+        + "       ELSE NULL\n"
+        + "     END AS t2\n"
+        + "     FROM\n"
+        + "       numfoo\n"
+        + "     GROUP BY\n"
+        + "       dim4\n"
+        + "   )\n"
+        + " GROUP BY\n"
+        + "   t1,t2\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE3)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec("dim4", "_d0", ValueType.STRING))
+                                        .setPostAggregatorSpecs(
+                                            ImmutableList.of(
+                                                expressionPostAgg(
+                                                    "p0",
+                                                    "\'dummy\'"
+                                                ),
+                                                expressionPostAgg(
+                                                    "p1",
+                                                    "case_searched((\"_d0\" == 'b'),\"_d0\",null)"
+                                                )
+                                            )
+                                        )
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("p0", "d0", ValueType.STRING),
+                                new DefaultDimensionSpec("p1", "d1", ValueType.STRING)
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{"dummy", ""},
+            new Object[]{"dummy", "b"}
+        ) :
+        ImmutableList.of(
+            new Object[]{"dummy", null},
+            new Object[]{"dummy", "b"}
         )
     );
   }
