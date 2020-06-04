@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
@@ -103,10 +104,20 @@ public class HashJoinSegment implements SegmentReference
   @Override
   public Optional<Closer> acquireReferences()
   {
-    return baseSegment.acquireReferences().map(closer -> {
-      // add closers for joinable clauses
-      closer.registerAll(clauses);
-      return closer;
-    });
+    Optional<Closer> baseReferences = baseSegment.acquireReferences();
+    if (baseReferences.isPresent()) {
+      return baseSegment.acquireReferences().map(closer -> {
+        // add closers for joinable clauses
+        closer.registerAll(clauses);
+        return closer;
+      });
+    } else {
+      // if we are unable to acuire the base references, go ahead and close the joinables since this query isn't going
+      // to work because the underlying segment is closed, return empty to signify references not fully acquired
+      Closer joinableCloser = Closer.create();
+      joinableCloser.registerAll(clauses);
+      CloseQuietly.close(joinableCloser);
+      return Optional.empty();
+    }
   }
 }

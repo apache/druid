@@ -172,4 +172,11 @@ public class RowBasedIndexedTableTest
     expectedException.expect(IndexOutOfBoundsException.class);
     countriesTable.columnReader(99);
   }
+
+  @Test
+  public void testVersion()
+  {
+    Assert.assertEquals(JoinTestHelper.INDEXED_TABlE_VERSION, countriesTable.version());
+    Assert.assertEquals(JoinTestHelper.INDEXED_TABlE_VERSION, regionsTable.version());
+  }
 }

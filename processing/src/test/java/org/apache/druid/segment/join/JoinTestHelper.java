@@ -142,6 +142,8 @@ public class JoinTestHelper
         }
       };
 
+  public static final String INDEXED_TABlE_VERSION = DateTimes.nowUtc().toString();
+
   private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
     return new RowAdapter<Map<String, Object>>()
@@ -256,7 +258,7 @@ public class JoinTestHelper
             createMapRowAdapter(COUNTRIES_SIGNATURE),
             COUNTRIES_SIGNATURE,
             ImmutableSet.of("countryNumber", "countryIsoCode"),
-            DateTimes.nowUtc().toString()
+            INDEXED_TABlE_VERSION
         )
     );
   }
@@ -270,7 +272,7 @@ public class JoinTestHelper
             createMapRowAdapter(REGIONS_SIGNATURE),
             REGIONS_SIGNATURE,
             ImmutableSet.of("regionIsoCode", "countryIsoCode"),
-            DateTimes.nowUtc().toString()
+            INDEXED_TABlE_VERSION
         )
     );
   }

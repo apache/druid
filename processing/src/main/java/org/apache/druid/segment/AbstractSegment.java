@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 /**
  * @deprecated use {@link Segment} directly as this does nothing
  */
+@Deprecated
 public abstract class AbstractSegment implements Segment
 {
   // i used to have a purpose

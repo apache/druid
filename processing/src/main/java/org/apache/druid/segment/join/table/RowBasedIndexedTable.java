@@ -30,7 +30,6 @@ import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -113,7 +112,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   @Override
   public String version()
   {
-    return null;
+    return version;
   }
 
   @Override
@@ -175,7 +174,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // nothing to close
   }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.join.table.IndexedTable;
@@ -50,7 +51,7 @@ public class InlineJoinableFactory implements JoinableFactory
                   inlineDataSource.rowAdapter(),
                   inlineDataSource.getRowSignature(),
                   rightKeyColumns,
-                  "0"
+                  DateTimes.nowUtc().toString()
               )
           )
       );
