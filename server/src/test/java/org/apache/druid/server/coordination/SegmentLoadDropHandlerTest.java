@@ -33,6 +33,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.CacheTestSegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -46,6 +47,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -76,6 +78,8 @@ public class SegmentLoadDropHandlerTest
   private SegmentManager segmentManager;
   private List<Runnable> scheduledRunnable;
 
+  private List<StorageLocationConfig> locations;
+
   @Before
   public void setUp()
   {
@@ -90,6 +94,14 @@ public class SegmentLoadDropHandlerTest
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+
+    locations = Collections.singletonList(
+        new StorageLocationConfig(
+            infoDir,
+            100L,
+            100d
+        )
+    );
 
     scheduledRunnable = new ArrayList<>();
 
@@ -153,6 +165,12 @@ public class SegmentLoadDropHandlerTest
           public int getAnnounceIntervalMillis()
           {
             return 50;
+          }
+
+          @Override
+          public List<StorageLocationConfig> getLocations()
+          {
+            return locations;
           }
 
           @Override
@@ -382,6 +400,12 @@ public class SegmentLoadDropHandlerTest
           public int getNumLoadingThreads()
           {
             return 5;
+          }
+
+          @Override
+          public List<StorageLocationConfig> getLocations()
+          {
+            return locations;
           }
 
           @Override

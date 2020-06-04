@@ -229,6 +229,8 @@ public class IndexTaskTest extends IngestionTestBase
         appenderatorsManager
     );
 
+    Assert.assertFalse(indexTask.supportsQueries());
+
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
     Assert.assertEquals(2, segments.size());

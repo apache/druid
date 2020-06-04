@@ -344,6 +344,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             INPUT_FORMAT
         )
     );
+    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 

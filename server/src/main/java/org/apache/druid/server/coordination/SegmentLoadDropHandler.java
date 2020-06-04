@@ -100,8 +100,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   // Threads loading/dropping segments resolve these futures as and when some segment load/drop finishes.
   private final LinkedHashSet<CustomSettableFuture> waitingFutures = new LinkedHashSet<>();
 
-  private final ServerTypeConfig serverTypeConfig;
-
   @Inject
   public SegmentLoadDropHandler(
       ObjectMapper jsonMapper,
@@ -145,7 +143,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
     this.exec = exec;
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
-    this.serverTypeConfig = serverTypeConfig;
 
     if (config.getLocations().isEmpty()) {
       if (ServerType.HISTORICAL.equals(serverTypeConfig.getServerType())) {
