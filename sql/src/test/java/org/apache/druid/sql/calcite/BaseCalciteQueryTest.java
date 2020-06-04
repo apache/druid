@@ -58,6 +58,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
@@ -202,6 +203,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
+
+  // Add additional context to the given context map for when the
+  // timeseries query has timestamp_floor expression on the timestamp dimension
+  public static Map<String, Object> getTimeseriesContextWithFloorTime(Map<String, Object> context,
+                                                                      String timestampResultField)
+  {
+    return ImmutableMap.<String, Object>builder().putAll(context)
+                                                .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
+                                                .build();
+  }
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
   public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = new HashMap<>();

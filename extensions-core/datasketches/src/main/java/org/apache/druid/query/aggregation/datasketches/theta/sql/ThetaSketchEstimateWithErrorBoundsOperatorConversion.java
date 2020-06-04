@@ -46,7 +46,7 @@ public class ThetaSketchEstimateWithErrorBoundsOperatorConversion extends Direct
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
-      .returnType(SqlTypeName.OTHER)
+      .returnTypeNonNull(SqlTypeName.OTHER)
       .build();
 
 
