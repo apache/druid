@@ -451,6 +451,8 @@ v9
 DskipTests
 Papache-release
 Pdist
+Ddruid.console.skip
+yaml
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -1067,6 +1069,7 @@ nextafter
 nvl
 parse_long
 regexp_extract
+regexp_like
 result1
 result2
 rint

@@ -58,6 +58,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
@@ -102,10 +103,18 @@ import java.util.stream.Collectors;
 
 public class BaseCalciteQueryTest extends CalciteTestBase
 {
-  public static final String NULL_STRING = NullHandling.defaultStringValue();
-  public static final Float NULL_FLOAT = NullHandling.defaultFloatValue();
-  public static final Long NULL_LONG = NullHandling.defaultLongValue();
+  public static String NULL_STRING;
+  public static Float NULL_FLOAT;
+  public static Long NULL_LONG;
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
+
+  @BeforeClass
+  public static void setupNullValues()
+  {
+    NULL_STRING = NullHandling.defaultStringValue();
+    NULL_FLOAT = NullHandling.defaultFloatValue();
+    NULL_LONG = NullHandling.defaultLongValue();
+  }
 
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
 
@@ -154,7 +163,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final String DUMMY_SQL_ID = "dummy";
   public static final String LOS_ANGELES = "America/Los_Angeles";
 
-  static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
+  private static final ImmutableMap.Builder<String, Object> DEFAULT_QUERY_CONTEXT_BUILDER =
       ImmutableMap.<String, Object>builder()
                   .put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
@@ -194,6 +203,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
+
+  // Add additional context to the given context map for when the
+  // timeseries query has timestamp_floor expression on the timestamp dimension
+  public static Map<String, Object> getTimeseriesContextWithFloorTime(Map<String, Object> context,
+                                                                      String timestampResultField)
+  {
+    return ImmutableMap.<String, Object>builder().putAll(context)
+                                                .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
+                                                .build();
+  }
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
   public static final Map<String, Object> TIMESERIES_CONTEXT_LOS_ANGELES = new HashMap<>();

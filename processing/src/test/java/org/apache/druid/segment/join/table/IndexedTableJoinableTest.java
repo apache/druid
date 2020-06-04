@@ -40,6 +40,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 
 public class IndexedTableJoinableTest
@@ -188,9 +189,9 @@ public class IndexedTableJoinableTest
   }
 
   @Test
-  public void getCorrelatedColummnValuesMissingSearchColumnShouldReturnEmptySet()
+  public void getCorrelatedColummnValuesMissingSearchColumnShouldReturnEmpty()
   {
-    Set<String> correlatedValues =
+    Optional<Set<String>> correlatedValues =
         target.getCorrelatedColumnValues(
             UNKNOWN_COLUMN,
             "foo",
@@ -198,13 +199,13 @@ public class IndexedTableJoinableTest
             MAX_CORRELATION_SET_SIZE,
             false);
 
-    Assert.assertEquals(Collections.emptySet(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
-  public void getCorrelatedColummnValuesMissingRetrievalColumnShouldReturnEmptySet()
+  public void getCorrelatedColummnValuesMissingRetrievalColumnShouldReturnEmpty()
   {
-    Set<String> correlatedValues =
+    Optional<Set<String>> correlatedValues =
         target.getCorrelatedColumnValues(
             KEY_COLUMN,
             "foo",
@@ -212,121 +213,121 @@ public class IndexedTableJoinableTest
             MAX_CORRELATION_SET_SIZE,
             false);
 
-    Assert.assertEquals(Collections.emptySet(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnShouldReturnSearchValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_VALUE,
         KEY_COLUMN,
         MAX_CORRELATION_SET_SIZE,
         false);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_KEY_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
   @Test
-  public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnAboveLimitShouldReturnEmptySet()
+  public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnAboveLimitShouldReturnEmpty()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_VALUE,
         KEY_COLUMN,
         0,
         false);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
         false);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_VALUE_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyMissingAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         KEY_COLUMN,
         SEARCH_KEY_NULL_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
         false);
-    Assert.assertEquals(Collections.singleton(null), correlatedValues);
+    Assert.assertEquals(Optional.of(Collections.singleton(null)), correlatedValues);
   }
 
   @Test
-  public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnAndNonKeyColumnSearchDisabledShouldReturnSearchValue()
+  public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnAndNonKeyColumnSearchDisabledShouldReturnEmpty()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
         false);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
     correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         KEY_COLUMN,
         10,
         false);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnShouldReturnSearchValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         VALUE_COLUMN,
         MAX_CORRELATION_SET_SIZE,
         true);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_VALUE_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnShouldReturnUnAppliedValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         KEY_COLUMN,
         10,
         true);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_KEY_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnWithMaxLimitSetShouldHonorMaxLimit()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         KEY_COLUMN,
         0,
         true);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchUnknownValueAndRetrieveKeyColumnShouldReturnNoCorrelatedValues()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         VALUE_COLUMN,
         SEARCH_VALUE_UNKNOWN,
         KEY_COLUMN,
         10,
         true);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
   }
 }

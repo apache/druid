@@ -49,6 +49,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
+import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -152,7 +153,12 @@ public class IndexMergerV9 implements IndexMerger
       progress.progress();
       startTime = System.currentTimeMillis();
       try (FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"))) {
-        mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+        SegmentizerFactory customSegmentLoader = indexSpec.getSegmentLoader();
+        if (customSegmentLoader != null) {
+          mapper.writeValue(fos, customSegmentLoader);
+        } else {
+          mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+        }
       }
       log.debug("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 

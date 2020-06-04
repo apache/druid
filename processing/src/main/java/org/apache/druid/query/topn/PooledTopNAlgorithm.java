@@ -49,6 +49,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ *
  */
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
@@ -211,10 +212,6 @@ public class PooledTopNAlgorithm
   @Override
   public PooledTopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
   {
-    ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
-    ByteBuffer resultsBuf = resultsBufHolder.get();
-    resultsBuf.clear();
-
     final DimensionSelector dimSelector = (DimensionSelector) selectorPlus.getSelector();
     final int cardinality = dimSelector.getValueCardinality();
 
@@ -243,27 +240,38 @@ public class PooledTopNAlgorithm
       }
     };
 
-    final int numBytesToWorkWith = resultsBuf.remaining();
-    final int[] aggregatorSizes = new int[query.getAggregatorSpecs().size()];
-    int numBytesPerRecord = 0;
+    final ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
 
-    for (int i = 0; i < query.getAggregatorSpecs().size(); ++i) {
-      aggregatorSizes[i] = query.getAggregatorSpecs().get(i).getMaxIntermediateSizeWithNulls();
-      numBytesPerRecord += aggregatorSizes[i];
+    try {
+      final ByteBuffer resultsBuf = resultsBufHolder.get();
+      resultsBuf.clear();
+
+      final int numBytesToWorkWith = resultsBuf.remaining();
+      final int[] aggregatorSizes = new int[query.getAggregatorSpecs().size()];
+      int numBytesPerRecord = 0;
+
+      for (int i = 0; i < query.getAggregatorSpecs().size(); ++i) {
+        aggregatorSizes[i] = query.getAggregatorSpecs().get(i).getMaxIntermediateSizeWithNulls();
+        numBytesPerRecord += aggregatorSizes[i];
+      }
+
+      final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
+
+      return PooledTopNParams.builder()
+                             .withSelectorPlus(selectorPlus)
+                             .withCursor(cursor)
+                             .withResultsBufHolder(resultsBufHolder)
+                             .withResultsBuf(resultsBuf)
+                             .withArrayProvider(arrayProvider)
+                             .withNumBytesPerRecord(numBytesPerRecord)
+                             .withNumValuesPerPass(numValuesPerPass)
+                             .withAggregatorSizes(aggregatorSizes)
+                             .build();
     }
-
-    final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
-
-    return PooledTopNParams.builder()
-                           .withSelectorPlus(selectorPlus)
-                           .withCursor(cursor)
-                           .withResultsBufHolder(resultsBufHolder)
-                           .withResultsBuf(resultsBuf)
-                           .withArrayProvider(arrayProvider)
-                           .withNumBytesPerRecord(numBytesPerRecord)
-                           .withNumValuesPerPass(numValuesPerPass)
-                           .withAggregatorSizes(aggregatorSizes)
-                           .build();
+    catch (Throwable e) {
+      resultsBufHolder.close();
+      throw e;
+    }
   }
 
 

@@ -33,6 +33,7 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class LookupJoinable implements Joinable
@@ -88,7 +89,7 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public Set<String> getCorrelatedColumnValues(
+  public Optional<Set<String>> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
       String retrievalColumnName,
@@ -97,7 +98,7 @@ public class LookupJoinable implements Joinable
   )
   {
     if (!ALL_COLUMNS.contains(searchColumnName) || !ALL_COLUMNS.contains(retrievalColumnName)) {
-      return ImmutableSet.of();
+      return Optional.empty();
     }
     Set<String> correlatedValues;
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
@@ -109,7 +110,7 @@ public class LookupJoinable implements Joinable
       }
     } else {
       if (!allowNonKeyColumnSearch) {
-        return ImmutableSet.of();
+        return Optional.empty();
       }
       if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
         // This should not happen in practice because the column to be joined on must be a key.
@@ -120,6 +121,6 @@ public class LookupJoinable implements Joinable
         correlatedValues = ImmutableSet.copyOf(extractor.unapply(searchColumnValue));
       }
     }
-    return correlatedValues;
+    return Optional.of(correlatedValues);
   }
 }

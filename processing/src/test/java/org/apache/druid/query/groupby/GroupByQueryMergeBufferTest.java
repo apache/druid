@@ -72,17 +72,6 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ReferenceCountingResourceHolder<ByteBuffer> take(final long timeout)
-    {
-      final ReferenceCountingResourceHolder<ByteBuffer> holder = super.take(timeout);
-      final int poolSize = getPoolSize();
-      if (minRemainBufferNum > poolSize) {
-        minRemainBufferNum = poolSize;
-      }
-      return holder;
-    }
-
-    @Override
     public List<ReferenceCountingResourceHolder<ByteBuffer>> takeBatch(final int maxElements, final long timeout)
     {
       final List<ReferenceCountingResourceHolder<ByteBuffer>> holder = super.takeBatch(maxElements, timeout);
