@@ -31,9 +31,9 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
+public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
 {
-  private static final String FN_NAME = "regexp_extract";
+  private static final String FN_NAME = "regexp_replace";
 
   @Override
   public String name()
@@ -42,34 +42,37 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
   }
 
   @Override
-  public Expr apply(final List<Expr> args)
+  public Expr apply(List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 3) {
-      throw new IAE("Function[%s] must have 2 to 3 arguments", name());
+    // TODO: add support for pattern flags
+    if (args.size() != 3) {
+      throw new IAE("Function[%s] must have 3 to 4 arguments", name());
     }
 
     final Expr arg = args.get(0);
     final Expr patternExpr = args.get(1);
-    final Expr indexExpr = args.size() > 2 ? args.get(2) : null;
+    final Expr replacementExpr = args.get(2);
 
     if (!ExprUtils.isStringLiteral(patternExpr)) {
       throw new IAE("Function[%s] pattern must be a string literal", name());
     }
 
-    if (indexExpr != null && (!indexExpr.isLiteral() || !(indexExpr.getLiteralValue() instanceof Number))) {
-      throw new IAE("Function[%s] index must be a numeric literal", name());
+    if (!ExprUtils.isStringLiteral(replacementExpr)) {
+      throw new IAE("Function[%s] replacement must be a string literal", name());
     }
+
+    final String replacementString = StringUtils.nullToEmptyNonDruidDataString(
+        (String) replacementExpr.getLiteralValue()
+    );
 
     // Precompile the pattern.
     final Pattern pattern = Pattern.compile(
         StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
     );
 
-    final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
-
-    class RegexpExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class RegexpReplaceExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     {
-      private RegexpExtractExpr(Expr arg)
+      private RegexpReplaceExpr(Expr arg)
       {
         super(FN_NAME, arg);
       }
@@ -85,8 +88,16 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
           return ExprEval.of(null);
         } else {
           final Matcher matcher = pattern.matcher(s);
-          final String retVal = matcher.find() ? matcher.group(index) : null;
-          return ExprEval.of(retVal);
+          StringBuffer sb = new StringBuffer();
+          if (matcher.find()) {
+            matcher.appendReplacement(sb, replacementString);
+            while (matcher.find()) {
+              matcher.appendReplacement(sb, replacementString);
+            }
+            matcher.appendTail(sb);
+            return ExprEval.of(sb.toString());
+          }
+          return ExprEval.of(s);
         }
       }
 
@@ -94,24 +105,18 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       public Expr visit(Shuttle shuttle)
       {
         Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new RegexpExtractExpr(newArg));
+        return shuttle.visit(new RegexpReplaceExpr(newArg));
       }
 
       @Override
       public String stringify()
       {
-        if (indexExpr != null) {
-          return StringUtils.format(
-              "%s(%s, %s, %s)",
-              FN_NAME,
-              arg.stringify(),
-              patternExpr.stringify(),
-              indexExpr.stringify()
-          );
-        }
-        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
+        return StringUtils.format(
+            "%s(%s, %s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify(), replacementExpr.stringify()
+        );
       }
     }
-    return new RegexpExtractExpr(arg);
+
+    return new RegexpReplaceExpr(arg);
   }
 }

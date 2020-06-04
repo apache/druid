@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "time", value = TimeDimExtractionFn.class),
     @JsonSubTypes.Type(name = "regex", value = RegexDimExtractionFn.class),
+    @JsonSubTypes.Type(name = "regex_replace", value = RegexDimReplacementFn.class),
     @JsonSubTypes.Type(name = "partial", value = MatchingDimExtractionFn.class),
     @JsonSubTypes.Type(name = "searchQuery", value = SearchQuerySpecDimExtractionFn.class),
     @JsonSubTypes.Type(name = "javascript", value = JavaScriptExtractionFn.class),

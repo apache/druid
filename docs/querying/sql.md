@@ -324,7 +324,8 @@ String functions accept strings, and return a type appropriate to the function.
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](#comparison-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
-|`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
+|`REGEXP_REPLACE(expr, pattern, replace)`|Replaces a regular expression `pattern` applied to `expr` with `replace`|
+|`REPLACE(expr, old_text, new_text)`|Replaces `old_text` with `new_text` in `expr`, and returns the result.|
 |`STRPOS(haystack, needle)`|Returns the index of needle within haystack, with indexes starting from 1. If the needle is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
 |`RIGHT(expr, [length])`|Returns the rightmost length characters from expr.|

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.expression.builtin;
+package org.apache.druid.sql.calcite.expression.builtin.regexp;
 
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;

@@ -43,8 +43,6 @@ import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
@@ -58,6 +56,8 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeFormatOperatorConvers
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.regexp.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.regexp.RegexpLikeOperatorConversion;
 import org.joda.time.Period;
 import org.junit.Before;
 import org.junit.Test;

@@ -82,8 +82,6 @@ import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
@@ -104,6 +102,9 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.TimestampToMillisOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.regexp.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.regexp.RegexpLikeOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.regexp.RegexpReplaceOperatorConversion;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -164,6 +165,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new PositionOperatorConversion())
           .add(new RegexpExtractOperatorConversion())
           .add(new RegexpLikeOperatorConversion())
+          .add(new RegexpReplaceOperatorConversion())
           .add(new RTrimOperatorConversion())
           .add(new ParseLongOperatorConversion())
           .add(new StringFormatOperatorConversion())

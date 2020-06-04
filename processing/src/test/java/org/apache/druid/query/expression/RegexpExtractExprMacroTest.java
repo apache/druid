@@ -26,6 +26,9 @@ import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class RegexpExtractExprMacroTest extends MacroTestBase
 {
   public RegexpExtractExprMacroTest()
@@ -137,5 +140,33 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   {
     final ExprEval<?> result = eval("regexp_extract(a, '')", Parser.withSuppliers(ImmutableMap.of("a", () -> null)));
     Assert.assertNull(result.value());
+  }
+
+  @Test
+  public void playground()
+  {
+    String replaced = getReplacement("ABC12345xyz", "[a-zA-Z]", "");
+    Assert.assertEquals("12345", replaced);
+    replaced = getReplacement("John Doe", "(.*) ", null);
+    Assert.assertEquals("John ", replaced);
+  }
+
+  private String getReplacement(String str, String patternStr, String replacement)
+  {
+    Pattern pattern = Pattern.compile(patternStr);
+    StringBuffer sb = new StringBuffer();
+    Matcher m = pattern.matcher(str);
+
+    if (m.find(0)) {
+      m.appendReplacement(sb, replacement);
+      while (m.find()) {
+        m.appendReplacement(sb, replacement);
+      }
+
+      m.appendTail(sb);
+      return sb.toString();
+    } else {
+      return str;
+    }
   }
 }
