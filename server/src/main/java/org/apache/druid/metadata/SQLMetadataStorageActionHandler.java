@@ -174,7 +174,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @VisibleForTesting
-  protected static boolean isStatementException(Throwable e)
+  public static boolean isStatementException(Throwable e)
   {
     return e instanceof StatementException ||
            (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);

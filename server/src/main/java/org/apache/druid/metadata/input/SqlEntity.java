@@ -26,10 +26,9 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
+import org.apache.druid.metadata.SQLMetadataStorageActionHandler;
 import org.skife.jdbi.v2.ResultIterator;
-import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.ResultSetException;
-import org.skife.jdbi.v2.exceptions.StatementException;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -159,12 +158,8 @@ public class SqlEntity implements InputEntity
             jg.close();
             return null;
           },
-          (exception) -> {
-            final boolean isStatementException = exception instanceof StatementException ||
-                                                 (exception instanceof CallbackFailedException
-                                                  && exception.getCause() instanceof StatementException);
-            return sqlFirehoseDatabaseConnector.isTransientException(exception) && !(isStatementException);
-          }
+          (exception) -> sqlFirehoseDatabaseConnector.isTransientException(exception)
+                         && !(SQLMetadataStorageActionHandler.isStatementException(exception))
       );
       return new CleanableFile()
       {
@@ -198,19 +193,19 @@ public class SqlEntity implements InputEntity
     @Override
     public Object get(Object obj)
     {
-      return super.get(StringUtils.toLowerCase((String) obj));
+      return super.get(obj == null ? null : StringUtils.toLowerCase((String) obj));
     }
 
     @Override
     public Object put(String key, Object value)
     {
-      return super.put(StringUtils.toLowerCase(key), value);
+      return super.put(key == null ? null : StringUtils.toLowerCase(key), value);
     }
 
     @Override
     public boolean containsKey(Object obj)
     {
-      return super.containsKey(StringUtils.toLowerCase((String) obj));
+      return super.containsKey(obj == null ? null : StringUtils.toLowerCase((String) obj));
     }
   }
 }
