@@ -294,7 +294,7 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
-  public void testSegmentLoading1HistoricalWithNoLocations() throws Exception
+  public void testSegmentLoading1HistoricalWithNoLocations()
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Segment cache locations must be set on historicals.");
