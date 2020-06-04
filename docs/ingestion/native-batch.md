@@ -1349,7 +1349,8 @@ An example SqlInputSource spec is shown below:
 The spec above will read all events from two separate SQLs for the interval `2013-01-01/2013-01-02`.
 Each of the SQL queries will be run in its own sub-task and thus for the above example, there would be two sub-tasks.
 
-** Recommended practices **
+**Recommended practices**
+
 Compared to the other native batch InputSources, SQL InputSource behaves differently in terms of reading the input data and so it would be helpful to consider the following points before using this InputSource in a production environment:
 
 * During indexing, each sub-task would execute one of the SQL queries and the results are stored locally on disk. The sub-tasks then proceed to read the data from these local input files and generate segments. Presently, there isn’t any restriction on the size of the generated files and this would require the MiddleManagers or Indexers to have sufficient disk capacity based on the volume of data being indexed.
