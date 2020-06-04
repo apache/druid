@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -38,15 +39,18 @@ public class SegmentLoaderFactory
 {
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
+  private final ServerTypeConfig serverTypeConfig;
 
   @Inject
   public SegmentLoaderFactory(
       IndexIO indexIO,
-      @Json ObjectMapper mapper
+      @Json ObjectMapper mapper,
+      ServerTypeConfig serverTypeConfig
   )
   {
     this.indexIO = indexIO;
     this.jsonMapper = mapper;
+    this.serverTypeConfig = serverTypeConfig;
   }
 
   public SegmentLoader manufacturate(File storageDir)

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -182,7 +183,8 @@ public class SegmentLoadDropHandlerTest
               }
             };
           }
-        }.create(5, "SegmentLoadDropHandlerTest-[%d]")
+        }.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        new ServerTypeConfig(ServerType.HISTORICAL)
     );
   }
 
@@ -388,7 +390,8 @@ public class SegmentLoadDropHandlerTest
             return 50;
           }
         },
-        announcer, EasyMock.createNiceMock(DataSegmentServerAnnouncer.class), segmentManager
+        announcer, EasyMock.createNiceMock(DataSegmentServerAnnouncer.class), segmentManager,
+        new ServerTypeConfig(ServerType.HISTORICAL)
     );
 
     Set<DataSegment> segments = new HashSet<>();
