@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
@@ -157,14 +158,16 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   }
 
   @Override
-  public boolean hasMultipleValues(final String dimension)
+  public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
   {
     if (isVirtualColumn(dimension)) {
-      return virtualColumns.getVirtualColumn(dimension).capabilities(dimension).hasMultipleValues().isMaybeTrue();
+      return virtualColumns.getVirtualColumn(dimension).capabilities(dimension).hasMultipleValues();
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
-    return columnHolder != null && columnHolder.getCapabilities().hasMultipleValues().isMaybeTrue();
+    return columnHolder != null
+           ? columnHolder.getCapabilities().hasMultipleValues()
+           : ColumnCapabilities.Capable.UNKNOWN;
   }
 
   @Override

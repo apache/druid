@@ -299,9 +299,13 @@ public final class DimensionHandlerUtils
 
     final ValueType type = effectiveCapabilites.getType();
 
+    // vector selectors should never have null column capabilities, these signify a non-existent column, and complex
+    // columns should never be treated as a multi-value column, so always use single value string processor
+    final boolean forceSingleValue =
+        originalCapabilities == null || ValueType.COMPLEX.equals(originalCapabilities.getType());
+
     if (type == ValueType.STRING) {
-      // vector selectors should never have null column capabilities, these signify a non-existent column
-      if (originalCapabilities != null && effectiveCapabilites.hasMultipleValues().isMaybeTrue()) {
+      if (!forceSingleValue && effectiveCapabilites.hasMultipleValues().isMaybeTrue()) {
         return strategyFactory.makeMultiValueDimensionProcessor(
             selectorFactory.makeMultiValueDimensionSelector(dimensionSpec)
         );
