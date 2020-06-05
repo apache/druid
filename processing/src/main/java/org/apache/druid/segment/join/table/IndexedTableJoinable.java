@@ -27,7 +27,7 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
+import java.io.Closeable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -136,8 +136,8 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
-  public void close() throws IOException
+  public Optional<Closeable> acquireReferences()
   {
-    table.close();
+    return table.acquireReferences();
   }
 }

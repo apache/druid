@@ -19,23 +19,12 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.io.Closer;
-
-import java.util.Optional;
-
 /**
  * A {@link Segment} with a associated references, such as {@link ReferenceCountingSegment} where the reference is
  * the segment itself, and {@link org.apache.druid.segment.join.HashJoinSegment} which wraps a
  * {@link ReferenceCountingSegment} and also includes the associated list of
  * {@link org.apache.druid.segment.join.JoinableClause}
  */
-public interface SegmentReference extends Segment
+public interface SegmentReference extends Segment, ReferenceCountedObject
 {
-  /**
-   * This method is expected to increment a reference count and provide a {@link Closer} that decrements the reference
-   * count when closed. This is likely just a wrapper around
-   * {@link ReferenceCountingCloseableObject#referenceResources()}, but may also include any other associated references
-   * which should be released by the closer.
-   */
-  Optional<Closer> acquireReferences();
 }

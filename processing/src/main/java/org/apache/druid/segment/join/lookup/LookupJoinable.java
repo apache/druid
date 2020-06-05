@@ -31,6 +31,7 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -125,8 +126,9 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public void close()
+  public Optional<Closeable> acquireReferences()
   {
     // nothing to close for lookup joinables, they are managed externally and have no per query accounting of usage
+    return Optional.empty();
   }
 }

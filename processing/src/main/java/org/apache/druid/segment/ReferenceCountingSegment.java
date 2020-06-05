@@ -20,13 +20,13 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.Optional;
 
 /**
@@ -168,7 +168,7 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   }
 
   @Override
-  public Optional<Closer> acquireReferences()
+  public Optional<Closeable> acquireReferences()
   {
     return referenceResources();
   }

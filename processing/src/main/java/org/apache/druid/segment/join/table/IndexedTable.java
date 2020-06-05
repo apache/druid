@@ -20,10 +20,10 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.util.Set;
 
 /**
@@ -31,7 +31,7 @@ import java.util.Set;
  *
  * The main user of this class is {@link IndexedTableJoinable}, and its main purpose is to participate in joins.
  */
-public interface IndexedTable extends Closeable
+public interface IndexedTable extends ReferenceCountedObject
 {
   String version();
 

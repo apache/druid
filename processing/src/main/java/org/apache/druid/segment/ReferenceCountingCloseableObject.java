@@ -91,7 +91,7 @@ public abstract class ReferenceCountingCloseableObject<BaseObject extends Closea
     return referents.register() >= 0;
   }
 
-  public Optional<Closer> referenceResources()
+  public Optional<Closeable> referenceResources()
   {
     final Closer closer;
     if (increment()) {

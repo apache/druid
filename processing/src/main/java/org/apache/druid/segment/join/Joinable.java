@@ -20,10 +20,10 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -34,7 +34,7 @@ import java.util.Set;
  * This class's most important method is {@link #makeJoinMatcher}. Its main user is
  * {@link HashJoinEngine#makeJoinCursor}.
  */
-public interface Joinable extends Closeable
+public interface Joinable extends ReferenceCountedObject
 {
   int CARDINALITY_UNKNOWN = -1;
 

@@ -30,6 +30,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -102,22 +103,28 @@ public class HashJoinSegment implements SegmentReference
   }
 
   @Override
-  public Optional<Closer> acquireReferences()
+  public Optional<Closeable> acquireReferences()
   {
-    Optional<Closer> baseReferences = baseSegment.acquireReferences();
-    if (baseReferences.isPresent()) {
-      return baseSegment.acquireReferences().map(closer -> {
-        // add closers for joinable clauses
-        closer.registerAll(clauses);
-        return closer;
-      });
-    } else {
-      // if we are unable to acuire the base references, go ahead and close the joinables since this query isn't going
-      // to work because the underlying segment is closed, return empty to signify references not fully acquired
-      Closer joinableCloser = Closer.create();
-      joinableCloser.registerAll(clauses);
-      CloseQuietly.close(joinableCloser);
+    Closer closer = Closer.create();
+    boolean acquireFailed = baseSegment.acquireReferences().map(closeable -> {
+      closer.register(closeable);
+      return false;
+    }).orElse(true);
+
+    for (JoinableClause claws : clauses) {
+      if (acquireFailed) {
+        break;
+      }
+      acquireFailed |= claws.acquireReferences().map(closeable -> {
+        closer.register(closeable);
+        return false;
+      }).orElse(true);
+    }
+    if (acquireFailed) {
+      CloseQuietly.close(closer);
       return Optional.empty();
+    } else {
+      return Optional.of(closer);
     }
   }
 }

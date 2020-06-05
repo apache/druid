@@ -30,11 +30,13 @@ import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -174,8 +176,8 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   }
 
   @Override
-  public void close()
+  public Optional<Closeable> acquireReferences()
   {
-    // nothing to close
+    return Optional.empty();
   }
 }
