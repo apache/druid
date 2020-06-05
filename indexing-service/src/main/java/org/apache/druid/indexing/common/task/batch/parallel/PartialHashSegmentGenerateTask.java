@@ -137,6 +137,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
         toolbox,
         getDataSource(),
         getId(),
+        granularitySpec.getQueryGranularity(),
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
         createHashPartitionAnalysisFromPartitionsSpec(granularitySpec, partitionsSpec)
     );

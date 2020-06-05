@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
