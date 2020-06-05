@@ -47,7 +47,7 @@ public class ColumnCapabilitiesImplTest
     Assert.assertTrue(cc.isDictionaryEncoded());
     Assert.assertFalse(cc.isRunLengthEncoded());
     Assert.assertTrue(cc.hasSpatialIndexes());
-    Assert.assertTrue(cc.hasMultipleValues());
+    Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
     Assert.assertFalse(cc.isFilterable());
   }
@@ -72,7 +72,7 @@ public class ColumnCapabilitiesImplTest
     Assert.assertTrue(cc.isDictionaryEncoded());
     Assert.assertTrue(cc.isRunLengthEncoded());
     Assert.assertTrue(cc.hasSpatialIndexes());
-    Assert.assertTrue(cc.hasMultipleValues());
+    Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
     Assert.assertFalse(cc.isFilterable());
   }

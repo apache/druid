@@ -321,13 +321,13 @@ public class GroupByQueryEngineV2
   /**
    * Checks whether all "dimensions" are either single-valued, or if allowed, nonexistent. Since non-existent column
    * selectors will show up as full of nulls they are effectively single valued, however they can also be null during
-   * broker merge, for example with an 'inline' datasource subquery. 'missingMeansNonexistent' is sort of a hack to let
+   * broker merge, for example with an 'inline' datasource subquery. 'missingMeansNonExistent' is sort of a hack to let
    * the vectorized engine, which only operates on actual segments, to still work in this case for non-existent columns.
    */
   public static boolean isAllSingleValueDims(
       final Function<String, ColumnCapabilities> capabilitiesFunction,
       final List<DimensionSpec> dimensions,
-      final boolean missingMeansNonexistent
+      final boolean missingMeansNonExistent
   )
   {
     return dimensions
@@ -342,8 +342,8 @@ public class GroupByQueryEngineV2
 
               // Now check column capabilities.
               final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues()) ||
-                     (missingMeansNonexistent && columnCapabilities == null);
+              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues().isMaybeTrue()) ||
+                     (missingMeansNonExistent && columnCapabilities == null);
             });
   }
 
