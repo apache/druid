@@ -33,6 +33,7 @@ import java.util.Set;
  */
 public interface IndexedTable extends ReferenceCountedObject
 {
+  @SuppressWarnings("unused")
   String version();
 
   /**

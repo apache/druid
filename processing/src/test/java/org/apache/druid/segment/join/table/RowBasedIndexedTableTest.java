@@ -176,7 +176,7 @@ public class RowBasedIndexedTableTest
   @Test
   public void testVersion()
   {
-    Assert.assertEquals(JoinTestHelper.INDEXED_TABlE_VERSION, countriesTable.version());
-    Assert.assertEquals(JoinTestHelper.INDEXED_TABlE_VERSION, regionsTable.version());
+    Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, countriesTable.version());
+    Assert.assertEquals(JoinTestHelper.INDEXED_TABLE_VERSION, regionsTable.version());
   }
 }

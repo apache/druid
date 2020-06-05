@@ -35,7 +35,10 @@ public interface ReferenceCountedObject
    * This method is expected to increment a reference count and provide a {@link Closer} that decrements the reference
    * count when closed. This is likely just a wrapper around
    * {@link ReferenceCountingCloseableObject#referenceResources()}, but may also include any other associated references
-   * which should be incremente when this method is called, and decremented/released by the closer.
+   * which should be incremented when this method is called, and decremented/released by the closer.
+   *
+   * IMPORTANT NOTE: to fulfill the contract of this method, implementors must return a closeable to indicate that the
+   * reference can be acquired, even if there is nothing to close.
    */
   Optional<Closeable> acquireReferences();
 }
