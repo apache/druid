@@ -165,9 +165,11 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     final ColumnHolder columnHolder = index.getColumnHolder(dimension);
+    // if ColumnHolder is null, the column doesn't exist, but report as not having multiple values so that
+    // the empty bitmap will be used
     return columnHolder != null
            ? columnHolder.getCapabilities().hasMultipleValues()
-           : ColumnCapabilities.Capable.UNKNOWN;
+           : ColumnCapabilities.Capable.FALSE;
   }
 
   @Override
