@@ -37,11 +37,11 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
 
   /**
    * To avoid pruning of the loadSpec on the broker, needed when the broker is loading broadcast segments,
-   * we deserialize into an {@link UnprunedDataSegment}, which never removes the loadSpec.
+   * we deserialize into an {@link LoadableDataSegment}, which never removes the loadSpec.
    */
   @JsonCreator
   public SegmentChangeRequestLoad(
-      @JsonUnwrapped UnprunedDataSegment segment
+      @JsonUnwrapped LoadableDataSegment segment
   )
   {
     this.segment = segment;

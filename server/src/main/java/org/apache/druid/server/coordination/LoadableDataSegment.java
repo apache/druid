@@ -39,10 +39,10 @@ import java.util.Map;
  *
  * This class always uses the non-pruning default {@link PruneSpecsHolder}.
  */
-public class UnprunedDataSegment extends DataSegment
+public class LoadableDataSegment extends DataSegment
 {
   @JsonCreator
-  public UnprunedDataSegment(
+  public LoadableDataSegment(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
