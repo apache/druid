@@ -728,7 +728,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
     // frequently, and thus the performance should be optimized for recent ones rather than old ones.
 
-    // sort timelineSegments in order of interval.
+    // sort timelineSegments in order of interval, see https://github.com/apache/druid/pull/9905
     queryableIndices.sort((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.rhs.getInterval(), o2.rhs.getInterval()));
 
     int index = 0;
