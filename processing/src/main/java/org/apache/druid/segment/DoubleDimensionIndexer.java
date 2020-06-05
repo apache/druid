@@ -48,6 +48,12 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   }
 
   @Override
+  public void setSparseIndexed()
+  {
+    // no-op, double columns do not have a dictionary to track null values
+  }
+
+  @Override
   public long estimateEncodedKeyComponentSize(Double key)
   {
     return Double.BYTES;

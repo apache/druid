@@ -137,9 +137,8 @@ public class IndexedTableJoinableTest
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.isDictionaryEncoded());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
-    Assert.assertFalse(capabilities.hasMultipleValues());
+    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
-    Assert.assertTrue(capabilities.isComplete());
   }
 
   @Test
@@ -149,9 +148,8 @@ public class IndexedTableJoinableTest
     Assert.assertEquals(ValueType.LONG, capabilities.getType());
     Assert.assertFalse(capabilities.isDictionaryEncoded());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
-    Assert.assertFalse(capabilities.hasMultipleValues());
+    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
-    Assert.assertTrue(capabilities.isComplete());
   }
 
   @Test

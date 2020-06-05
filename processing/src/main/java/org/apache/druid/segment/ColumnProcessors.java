@@ -197,6 +197,6 @@ public class ColumnProcessors
    */
   private static boolean mayBeMultiValue(@Nullable final ColumnCapabilities capabilities)
   {
-    return capabilities == null || !capabilities.isComplete() || capabilities.hasMultipleValues();
+    return capabilities == null || capabilities.hasMultipleValues().isMaybeTrue();
   }
 }
