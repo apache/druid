@@ -13420,6 +13420,69 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByWithLiteralInSubqueryGrouping() throws Exception
+  {
+    testQuery(
+        "SELECT \n"
+        + "   t1, t2\n"
+        + "  FROM\n"
+        + "   ( SELECT\n"
+        + "     'dummy' as t1,\n"
+        + "     CASE\n"
+        + "       WHEN \n"
+        + "         dim4 = 'b'\n"
+        + "       THEN dim4\n"
+        + "       ELSE NULL\n"
+        + "     END AS t2\n"
+        + "     FROM\n"
+        + "       numfoo\n"
+        + "     GROUP BY\n"
+        + "       dim4\n"
+        + "   )\n"
+        + " GROUP BY\n"
+        + "   t1,t2\n",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(CalciteTests.DATASOURCE3)
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(new DefaultDimensionSpec("dim4", "_d0", ValueType.STRING))
+                                        .setContext(QUERY_CONTEXT_DEFAULT)
+                                        .build()
+                        )
+                        .setVirtualColumns(
+                            expressionVirtualColumn(
+                                "v0",
+                                "\'dummy\'",
+                                ValueType.STRING
+                            ),
+                            expressionVirtualColumn(
+                                "v1",
+                                "case_searched((\"_d0\" == 'b'),\"_d0\",null)",
+                                ValueType.STRING
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ValueType.STRING),
+                                new DefaultDimensionSpec("v1", "d1", ValueType.STRING)
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"dummy", NULL_STRING},
+            new Object[]{"dummy", "b"}
+        )
+    );
+  }
+
+  @Test
   public void testMultiValueStringWorksLikeStringGroupBy() throws Exception
   {
     // Cannot vectorize due to usage of expressions.

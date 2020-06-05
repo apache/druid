@@ -25,15 +25,15 @@ export SHARED_DIR=${HOME}/shared
 echo ${DOCKER_IP:=127.0.0.1} > $DOCKERDIR/docker_ip
 
 if !($DRUID_INTEGRATION_TEST_SKIP_BUILD_DOCKER); then
-  sh ./script/copy_resources.sh
-  sh ./script/docker_build_containers.sh
+  bash ./script/copy_resources.sh
+  bash ./script/docker_build_containers.sh
 fi
 
 if !($DRUID_INTEGRATION_TEST_SKIP_RUN_DOCKER); then
-  sh ./stop_cluster.sh
-  sh ./script/docker_run_cluster.sh
+  bash ./stop_cluster.sh
+  bash ./script/docker_run_cluster.sh
 fi
 
 if ($DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER); then
-  sh ./script/copy_hadoop_resources.sh
+  bash ./script/copy_hadoop_resources.sh
 fi

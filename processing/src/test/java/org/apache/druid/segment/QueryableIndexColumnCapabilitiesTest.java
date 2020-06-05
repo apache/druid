@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -152,9 +153,12 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    // multi-value is unknown unless explicitly set to 'true'
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
+    // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
+    // coercing any 'UNKNOWN' values to false
+    Assert.assertFalse(ColumnCapabilitiesImpl.snapshot(caps).hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
 
     caps = MMAP_INDEX.getColumnHolder("d1").getCapabilities();
     Assert.assertEquals(ValueType.STRING, caps.getType());
@@ -162,9 +166,8 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.isDictionaryEncoded());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
   }
 
   @Test
@@ -176,9 +179,8 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
 
     caps = MMAP_INDEX.getColumnHolder("d2").getCapabilities();
     Assert.assertEquals(ValueType.STRING, caps.getType());
@@ -186,9 +188,8 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.isDictionaryEncoded());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
   }
 
   @Test
@@ -206,8 +207,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
   }
 }
