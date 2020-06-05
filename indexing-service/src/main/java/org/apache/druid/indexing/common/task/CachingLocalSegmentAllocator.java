@@ -26,9 +26,9 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
@@ -71,6 +71,7 @@ public class CachingLocalSegmentAllocator implements CachingSegmentAllocator
       TaskToolbox toolbox,
       String dataSource,
       String taskId,
+      Granularity queryGranularity,
       @Nullable SupervisorTaskAccess supervisorTaskAccess,
       IntervalToSegmentIdsCreator intervalToSegmentIdsCreator
   ) throws IOException
@@ -112,7 +113,7 @@ public class CachingLocalSegmentAllocator implements CachingSegmentAllocator
         sequenceNameToSegmentId.put(getSequenceName(interval, segmentIdentifier.getShardSpec()), segmentIdentifier);
       }
     }
-    shardSpecs = new ShardSpecs(shardSpecMap);
+    shardSpecs = new ShardSpecs(shardSpecMap, queryGranularity);
   }
 
   private static String findVersion(Map<Interval, String> intervalToVersion, Interval interval)
