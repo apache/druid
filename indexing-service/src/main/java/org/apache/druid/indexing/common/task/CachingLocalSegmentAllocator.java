@@ -26,7 +26,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
