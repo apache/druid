@@ -37,6 +37,7 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
@@ -73,7 +74,7 @@ public class InFilter implements Filter
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-  private final HashCode valuesHashCode;
+  private HashCode valuesHashCode;
 
   public InFilter(
       String dimension,
@@ -235,8 +236,7 @@ public class InFilter implements Filter
         values,
         longPredicateSupplier,
         floatPredicateSupplier,
-        doublePredicateSupplier,
-        valuesHashCode
+        doublePredicateSupplier
     );
   }
 
@@ -259,6 +259,9 @@ public class InFilter implements Filter
   @Override
   public int hashCode()
   {
+    if (valuesHashCode == null) {
+      valuesHashCode = InDimFilter.computeValuesHashCode(values);
+    }
     return Objects.hash(dimension, valuesHashCode, extractionFn, filterTuning);
   }
 
@@ -270,15 +273,13 @@ public class InFilter implements Filter
     private final Supplier<DruidLongPredicate> longPredicateSupplier;
     private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
     private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-    private final HashCode valuesHashCode;
 
     InFilterDruidPredicateFactory(
         ExtractionFn extractionFn,
         Set<String> values,
         Supplier<DruidLongPredicate> longPredicateSupplier,
         Supplier<DruidFloatPredicate> floatPredicateSupplier,
-        Supplier<DruidDoublePredicate> doublePredicateSupplier,
-        HashCode valuesHashCode
+        Supplier<DruidDoublePredicate> doublePredicateSupplier
     )
     {
       this.extractionFn = extractionFn;
@@ -286,7 +287,6 @@ public class InFilter implements Filter
       this.longPredicateSupplier = longPredicateSupplier;
       this.floatPredicateSupplier = floatPredicateSupplier;
       this.doublePredicateSupplier = doublePredicateSupplier;
-      this.valuesHashCode = valuesHashCode;
     }
 
     @Override
@@ -345,7 +345,7 @@ public class InFilter implements Filter
     @Override
     public int hashCode()
     {
-      return Objects.hash(extractionFn, valuesHashCode);
+      return Objects.hash(extractionFn, values);
     }
   }
 }

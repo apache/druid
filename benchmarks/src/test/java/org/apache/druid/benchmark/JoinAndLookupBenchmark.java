@@ -49,6 +49,7 @@ import org.apache.druid.segment.join.JoinTestHelper;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -139,10 +140,13 @@ public class JoinAndLookupBenchmark
         )
     );
     JoinFilterPreAnalysisGroup preAnalysisGroupLookupStringKey = new JoinFilterPreAnalysisGroup(
-        false,
-        false,
-        false,
-        0
+        new JoinFilterRewriteConfig(
+            false,
+            false,
+            false,
+            0,
+            false
+        )
     );
 
     hashJoinLookupStringKeySegment = new HashJoinSegment(
@@ -165,10 +169,13 @@ public class JoinAndLookupBenchmark
     );
 
     JoinFilterPreAnalysisGroup preAnalysisGroupLookupLongKey = new JoinFilterPreAnalysisGroup(
-        false,
-        false,
-        false,
-        0
+        new JoinFilterRewriteConfig(
+            false,
+            false,
+            false,
+            0,
+            false
+        )
     );
     hashJoinLookupLongKeySegment = new HashJoinSegment(
         baseSegment,
@@ -190,10 +197,13 @@ public class JoinAndLookupBenchmark
     );
 
     JoinFilterPreAnalysisGroup preAnalysisGroupIndexedStringKey = new JoinFilterPreAnalysisGroup(
-        false,
-        false,
-        false,
-        0
+        new JoinFilterRewriteConfig(
+            false,
+            false,
+            false,
+            0,
+            false
+        )
     );
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
         baseSegment,
@@ -214,10 +224,13 @@ public class JoinAndLookupBenchmark
         )
     );
     JoinFilterPreAnalysisGroup preAnalysisGroupIndexedLongKey = new JoinFilterPreAnalysisGroup(
-        false,
-        false,
-        false,
-        0
+        new JoinFilterRewriteConfig(
+            false,
+            false,
+            false,
+            0,
+            false
+        )
     );
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
         baseSegment,

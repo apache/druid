@@ -87,7 +87,6 @@ public class JoinFilterPreAnalysisGroup
     }
 
     JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, clauses, virtualColumns);
-
     return analyses.computeIfAbsent(
         key,
         (groupKey) -> {

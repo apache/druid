@@ -168,21 +168,6 @@ public class InDimFilter implements DimFilter
     return cacheKey;
   }
 
-  private static HashCode computeValuesHashCode(Set<String> values)
-  {
-    final List<String> sortedValues = new ArrayList<>(values);
-    sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
-    final Hasher hasher = Hashing.sha256().newHasher();
-    for (String v : sortedValues) {
-      if (v == null) {
-        hasher.putInt(0);
-      } else {
-        hasher.putString(v, StandardCharsets.UTF_8);
-      }
-    }
-    return hasher.hash();
-  }
-
   @Override
   public DimFilter optimize()
   {
@@ -316,7 +301,22 @@ public class InDimFilter implements DimFilter
     if (valuesHashCode == null) {
       valuesHashCode = computeValuesHashCode(values);
     }
-    return Objects.hash(values, dimension, extractionFn, filterTuning);
+    return Objects.hash(valuesHashCode, dimension, extractionFn, filterTuning);
+  }
+
+  public static HashCode computeValuesHashCode(Set<String> values)
+  {
+    final List<String> sortedValues = new ArrayList<>(values);
+    sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
+    final Hasher hasher = Hashing.sha256().newHasher();
+    for (String v : sortedValues) {
+      if (v == null) {
+        hasher.putInt(0);
+      } else {
+        hasher.putString(v, StandardCharsets.UTF_8);
+      }
+    }
+    return hasher.hash();
   }
 
   private DruidLongPredicate createLongPredicate()
