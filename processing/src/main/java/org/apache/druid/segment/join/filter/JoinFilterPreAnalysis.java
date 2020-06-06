@@ -24,7 +24,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.join.Equality;
 import org.apache.druid.segment.join.JoinableClause;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -43,7 +43,7 @@ import java.util.Set;
  * - A list of filter clauses from the original filter's CNF representation that only reference the base table
  * - A list of filter clauses from the original filter's CNF representation that reference RHS join tables
  * - A list of virtual columns that can only be computed post-join
- * - The JoinFilterPreAnalysisGroup that this pre-analysis is associated with.
+ * - The JoinFilterRewriteConfig that this pre-analysis is associated with.
  */
 public class JoinFilterPreAnalysis
 {
@@ -52,9 +52,9 @@ public class JoinFilterPreAnalysis
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
   private final JoinFilterCorrelations correlations;
-  private final JoinFilterPreAnalysisGroup myGroup;
   private final List<VirtualColumn> postJoinVirtualColumns;
   private final Equiconditions equiconditions;
+  private final JoinFilterRewriteConfig rewriteConfig;
 
   private JoinFilterPreAnalysis(
       final JoinableClauses joinableClauses,
@@ -63,8 +63,8 @@ public class JoinFilterPreAnalysis
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
       JoinFilterCorrelations correlations,
-      final JoinFilterPreAnalysisGroup myGroup,
-      final Equiconditions equiconditions
+      final Equiconditions equiconditions,
+      final JoinFilterRewriteConfig rewriteConfig
   )
   {
     this.joinableClauses = joinableClauses;
@@ -73,7 +73,7 @@ public class JoinFilterPreAnalysis
     this.normalizedBaseTableClauses = normalizedBaseTableClauses;
     this.normalizedJoinTableClauses = normalizedJoinTableClauses;
     this.correlations = correlations;
-    this.myGroup = myGroup;
+    this.rewriteConfig = rewriteConfig;
     this.equiconditions = equiconditions;
   }
 
@@ -114,12 +114,12 @@ public class JoinFilterPreAnalysis
 
   public boolean isEnableFilterPushDown()
   {
-    return myGroup.isEnableFilterPushDown();
+    return rewriteConfig.isEnableFilterPushDown();
   }
 
   public boolean isEnableFilterRewrite()
   {
-    return myGroup.isEnableFilterRewrite();
+    return rewriteConfig.isEnableFilterRewrite();
   }
 
   public Equiconditions getEquiconditions()
@@ -132,7 +132,7 @@ public class JoinFilterPreAnalysis
    */
   public static class Builder
   {
-    @Nonnull private final JoinFilterPreAnalysisGroup group;
+    @Nonnull private final JoinFilterRewriteConfig rewriteConfig;
     @Nonnull private final JoinableClauses joinableClauses;
     @Nullable private final Filter originalFilter;
     @Nullable private List<Filter> normalizedBaseTableClauses;
@@ -142,13 +142,13 @@ public class JoinFilterPreAnalysis
     @Nonnull private Equiconditions equiconditions = new Equiconditions(Collections.emptyMap());
 
     public Builder(
-        @Nonnull JoinFilterPreAnalysisGroup group,
+        @Nonnull JoinFilterRewriteConfig rewriteConfig,
         @Nonnull JoinableClauses joinableClauses,
         @Nullable Filter originalFilter,
         @Nonnull List<VirtualColumn> postJoinVirtualColumns
     )
     {
-      this.group = group;
+      this.rewriteConfig = rewriteConfig;
       this.joinableClauses = joinableClauses;
       this.originalFilter = originalFilter;
       this.postJoinVirtualColumns = postJoinVirtualColumns;
@@ -199,8 +199,8 @@ public class JoinFilterPreAnalysis
           normalizedBaseTableClauses,
           normalizedJoinTableClauses,
           correlations,
-          group,
-          equiconditions
+          equiconditions,
+          rewriteConfig
       );
     }
 

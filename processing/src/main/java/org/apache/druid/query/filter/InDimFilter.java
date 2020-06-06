@@ -34,6 +34,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.hash.HashCode;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -80,6 +81,9 @@ public class InDimFilter implements DimFilter
 
   @JsonIgnore
   private byte[] cacheKey;
+
+  @JsonIgnore
+  private HashCode valuesHashCode;
 
   @JsonCreator
   public InDimFilter(
@@ -149,26 +153,34 @@ public class InDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
+    if (valuesHashCode == null) {
+      valuesHashCode = computeValuesHashCode(values);
+    }
     if (cacheKey == null) {
-      final List<String> sortedValues = new ArrayList<>(values);
-      sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
-      final Hasher hasher = Hashing.sha256().newHasher();
-      for (String v : sortedValues) {
-        if (v == null) {
-          hasher.putInt(0);
-        } else {
-          hasher.putString(v, StandardCharsets.UTF_8);
-        }
-      }
       cacheKey = new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
           .appendString(dimension)
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
           .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
-          .appendByteArray(hasher.hash().asBytes())
+          .appendByteArray(valuesHashCode.asBytes())
           .build();
     }
     return cacheKey;
+  }
+
+  private static HashCode computeValuesHashCode(Set<String> values)
+  {
+    final List<String> sortedValues = new ArrayList<>(values);
+    sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
+    final Hasher hasher = Hashing.sha256().newHasher();
+    for (String v : sortedValues) {
+      if (v == null) {
+        hasher.putInt(0);
+      } else {
+        hasher.putString(v, StandardCharsets.UTF_8);
+      }
+    }
+    return hasher.hash();
   }
 
   @Override
@@ -237,7 +249,8 @@ public class InDimFilter implements DimFilter
         floatPredicateSupplier,
         doublePredicateSupplier,
         extractionFn,
-        filterTuning
+        filterTuning,
+        valuesHashCode
     );
   }
 
@@ -300,6 +313,9 @@ public class InDimFilter implements DimFilter
   @Override
   public int hashCode()
   {
+    if (valuesHashCode == null) {
+      valuesHashCode = computeValuesHashCode(values);
+    }
     return Objects.hash(values, dimension, extractionFn, filterTuning);
   }
 

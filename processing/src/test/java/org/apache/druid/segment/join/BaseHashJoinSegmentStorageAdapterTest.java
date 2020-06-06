@@ -27,6 +27,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -44,6 +45,14 @@ import java.io.IOException;
 
 public class BaseHashJoinSegmentStorageAdapterTest
 {
+  public static JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
+      true,
+      true,
+      true,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
+      false
+  );
+
   public static final String FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX = "c1.";
   public static final String FACT_TO_COUNTRY_ON_NUMBER_PREFIX = "c2.";
   public static final String FACT_TO_REGION_PREFIX = "r1.";
@@ -184,12 +193,7 @@ public class BaseHashJoinSegmentStorageAdapterTest
 
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = new JoinFilterPreAnalysisGroup(
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
-    );
+    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup();
 
     return new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
@@ -214,6 +218,13 @@ public class BaseHashJoinSegmentStorageAdapterTest
     Assert.assertEquals(
         expectedVirtualColumn.getParsedExpression().get().toString(),
         actualVirtualColumn.getParsedExpression().get().toString()
+    );
+  }
+
+  protected static JoinFilterPreAnalysisGroup makeDefaultConfigPreAnalysisGroup()
+  {
+    return new JoinFilterPreAnalysisGroup(
+        DEFAULT_JOIN_FILTER_REWRITE_CONFIG
     );
   }
 }

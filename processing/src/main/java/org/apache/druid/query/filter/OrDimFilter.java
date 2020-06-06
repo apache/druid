@@ -20,12 +20,14 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 
@@ -43,6 +45,9 @@ public class OrDimFilter implements DimFilter
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
   private final List<DimFilter> fields;
+
+  @JsonIgnore
+  private Integer fieldsHashCode;
 
   @JsonCreator
   public OrDimFilter(@JsonProperty("fields") List<DimFilter> fields)
@@ -75,7 +80,7 @@ public class OrDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return DimFilterUtils.computeCacheKey(DimFilterUtils.OR_CACHE_ID, fields);
+    return new CacheKeyBuilder(DimFilterUtils.OR_CACHE_ID).appendInt(hashCode()).build();
   }
 
   @Override
@@ -148,7 +153,10 @@ public class OrDimFilter implements DimFilter
   @Override
   public int hashCode()
   {
-    return fields != null ? fields.hashCode() : 0;
+    if (fieldsHashCode == null) {
+      fieldsHashCode = fields != null ? fields.hashCode() : 0;
+    }
+    return fieldsHashCode;
   }
 
   @Override

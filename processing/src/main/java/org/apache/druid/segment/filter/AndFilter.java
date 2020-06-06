@@ -53,6 +53,8 @@ public class AndFilter implements BooleanFilter
 
   private final Set<Filter> filters;
 
+  private Integer filtersHashCode;
+
   @VisibleForTesting
   public AndFilter(List<Filter> filters)
   {
@@ -263,6 +265,10 @@ public class AndFilter implements BooleanFilter
   @Override
   public int hashCode()
   {
-    return Objects.hash(getFilters());
+    if (filtersHashCode == null) {
+      filtersHashCode = Objects.hash(getFilters());
+    }
+
+    return filtersHashCode;
   }
 }

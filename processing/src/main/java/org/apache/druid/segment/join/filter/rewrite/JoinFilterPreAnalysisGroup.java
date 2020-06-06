@@ -20,63 +20,167 @@
 package org.apache.druid.segment.join.filter.rewrite;
 
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.JoinableClause;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinableClauses;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A JoinFilterPreAnalysisGroup holds all of the JoinFilterPreAnalysis objects for a given query and
  * also stores the per-query parameters that control the filter rewrite operations (from the query context).
  *
- * The analyses map is keyed by Filter: each Filter in the map belongs to separate level of query
- * (e.g. outer query, subquery level 1, etc.)
+ * The analyses map is keyed by (Filter, JoinableClause list, VirtualColumns): each Filter in the map belongs to a
+ * separate level of query (e.g. outer query, subquery level 1, etc.)
  *
  * A concurrent hash map is used since the per-level Filter processing occurs across multiple threads.
  */
 public class JoinFilterPreAnalysisGroup
 {
-  private final boolean enableFilterPushDown;
-  private final boolean enableFilterRewrite;
-  private final boolean enableRewriteValueColumnFilters;
-  private final long filterRewriteMaxSize;
-  private final ConcurrentHashMap<Filter, JoinFilterPreAnalysis> analyses;
+  private final JoinFilterRewriteConfig joinFilterRewriteConfig;
+  private final ConcurrentHashMap<JoinFilterPreAnalysisGroupKey, JoinFilterPreAnalysis> analyses;
+
+  /**
+   * This is an undocumented option provided as a transition tool:
+   *
+   * The join filter rewrites originally performed the pre-analysis phase prior to any per-segment processing,
+   * analyzing only the filter in the top-level of the query.
+   *
+   * This did not work for nested queries (see https://github.com/apache/druid/pull/9978), so the rewrite pre-analysis
+   * was moved into the cursor creation of the {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter}.
+   * This design requires synchronization across multiple segment processing threads; the old rewrite mode
+   * is kept temporarily available in case issues arise with the new mode, and the user does not run queries with the
+   * affected nested shape.
+   */
+  private JoinFilterPreAnalysis preAnalysisForOldRewriteMode;
 
   public JoinFilterPreAnalysisGroup(
-      boolean enableFilterPushDown,
-      boolean enableFilterRewrite,
-      boolean enableRewriteValueColumnFilters,
-      long filterRewriteMaxSize
+      JoinFilterRewriteConfig joinFilterRewriteConfig
   )
   {
-    this.enableFilterPushDown = enableFilterPushDown;
-    this.enableFilterRewrite = enableFilterRewrite;
-    this.enableRewriteValueColumnFilters = enableRewriteValueColumnFilters;
-    this.filterRewriteMaxSize = filterRewriteMaxSize;
+    this.joinFilterRewriteConfig = joinFilterRewriteConfig;
     this.analyses = new ConcurrentHashMap<>();
   }
 
-  public boolean isEnableFilterPushDown()
+  public JoinFilterRewriteConfig getJoinFilterRewriteConfig()
   {
-    return enableFilterPushDown;
+    return joinFilterRewriteConfig;
   }
 
-  public boolean isEnableFilterRewrite()
+  public JoinFilterPreAnalysis computeJoinFilterPreAnalysisIfAbsent(
+      Filter filter,
+      List<JoinableClause> clauses,
+      VirtualColumns virtualColumns
+  )
   {
-    return enableFilterRewrite;
+    // Some filters have potentially expensive hash codes that are lazily computed and cached.
+    // We call hashCode() here in a synchronized block before we attempt to use the Filter in the analyses map,
+    // to ensure that the hashCode is only computed once per Filter since the Filter interface is not thread-safe.
+    synchronized (analyses) {
+      if (filter != null) {
+        filter.hashCode();
+      }
+    }
+
+    JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, clauses, virtualColumns);
+
+    return analyses.computeIfAbsent(
+        key,
+        (groupKey) -> {
+          return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+              JoinableClauses.fromList(clauses),
+              virtualColumns,
+              filter,
+              joinFilterRewriteConfig
+          );
+        }
+    );
   }
 
-  public boolean isEnableRewriteValueColumnFilters()
+  public JoinFilterPreAnalysis getAnalysis(
+      Filter filter,
+      List<JoinableClause> clauses,
+      VirtualColumns virtualColumns
+  )
   {
-    return enableRewriteValueColumnFilters;
+    JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, clauses, virtualColumns);
+    return analyses.get(key);
   }
 
-  public long getFilterRewriteMaxSize()
+  public void performAnalysisForOldRewriteMode(
+      Filter filter,
+      List<JoinableClause> clauses,
+      VirtualColumns virtualColumns
+  )
   {
-    return filterRewriteMaxSize;
+    preAnalysisForOldRewriteMode = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        JoinableClauses.fromList(clauses),
+        virtualColumns,
+        filter,
+        joinFilterRewriteConfig
+    );
   }
 
-  public ConcurrentHashMap<Filter, JoinFilterPreAnalysis> getAnalyses()
+  public JoinFilterPreAnalysis getPreAnalysisForOldRewriteMode()
   {
-    return analyses;
+    return preAnalysisForOldRewriteMode;
+  }
+
+  private static class JoinFilterPreAnalysisGroupKey
+  {
+    private final Filter filter;
+    private final List<JoinableClause> clauses;
+    private final VirtualColumns virtualColumns;
+
+    public JoinFilterPreAnalysisGroupKey(
+        Filter filter,
+        List<JoinableClause> clauses,
+        VirtualColumns virtualColumns
+    )
+    {
+      this.filter = filter;
+      this.clauses = clauses;
+      this.virtualColumns = virtualColumns;
+    }
+
+    public Filter getFilter()
+    {
+      return filter;
+    }
+
+    public List<JoinableClause> getClauses()
+    {
+      return clauses;
+    }
+
+    public VirtualColumns getVirtualColumns()
+    {
+      return virtualColumns;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      JoinFilterPreAnalysisGroupKey that = (JoinFilterPreAnalysisGroupKey) o;
+      return Objects.equals(filter, that.filter) &&
+             Objects.equals(clauses, that.clauses) &&
+             Objects.equals(virtualColumns, that.virtualColumns);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(filter, clauses, virtualColumns);
+    }
   }
 }

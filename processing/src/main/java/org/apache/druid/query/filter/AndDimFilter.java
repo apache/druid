@@ -20,12 +20,14 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.Filters;
 
@@ -42,6 +44,9 @@ public class AndDimFilter implements DimFilter
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
   private final List<DimFilter> fields;
+
+  @JsonIgnore
+  private Integer fieldsHashCode;
 
   @JsonCreator
   public AndDimFilter(
@@ -67,7 +72,7 @@ public class AndDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return DimFilterUtils.computeCacheKey(DimFilterUtils.AND_CACHE_ID, fields);
+    return new CacheKeyBuilder(DimFilterUtils.AND_CACHE_ID).appendInt(hashCode()).build();
   }
 
   @Override
@@ -142,7 +147,10 @@ public class AndDimFilter implements DimFilter
   @Override
   public int hashCode()
   {
-    return fields != null ? fields.hashCode() : 0;
+    if (fieldsHashCode == null) {
+      fieldsHashCode = fields != null ? fields.hashCode() : 0;
+    }
+    return fieldsHashCode;
   }
 
   @Override

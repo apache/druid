@@ -20,11 +20,14 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -68,28 +71,23 @@ public class Joinables
   /**
    * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
    * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
-   * @param clauses              pre-joinable clauses
-   * @param joinableFactory      factory for joinables
-   * @param cpuTimeAccumulator   an accumulator that we will add CPU nanos to; this is part of the function to encourage
- *                             callers to remember to track metrics on CPU time required for creation of Joinables
-   * @param enableFilterPushDown whether to enable filter push down optimizations to the base segment. In production
-*                             this should generally be {@code QueryContexts.getEnableJoinFilterPushDown(query)}.
-   * @param enableFilterRewrite whether to enable filter rewrite optimizations for RHS columns. In production
-*                             this should generally be {@code QueryContexts.getEnableJoinFilterRewrite(query)}.
-   * @param enableRewriteValueColumnFilters whether to enable filter rewrite optimizations for RHS columns that are not
-*                                        key columns. In production this should generally
-*                                        be {@code QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query)}.
-   * @param filterRewriteMaxSize the max allowed size of correlated value sets for RHS rewrites. In production
-*                             this should generally be {@code QueryContexts.getJoinFilterRewriteMaxSize(query)}.
+   * @param clauses                 pre-joinable clauses
+   * @param joinableFactory         factory for joinables
+   * @param cpuTimeAccumulator      an accumulator that we will add CPU nanos to; this is part of the function to encourage
+   *                                callers to remember to track metrics on CPU time required for creation of Joinables
+   * @param joinFilterRewriteConfig                 Configuration options for the join filter rewrites
+   * @param originalTopLevelFilterForOldRewriteMode The filter from the top level of the query. Only used if
+   *                                                joinFilterRewriteConfig.isOldRewriteMode() is true.
+   * @param virtualColumnsForOldRewriteMode The virtual columns from the top level of the query. Only used if
+   *                                        joinFilterRewriteConfig.isOldRewriteMode() is true.
    */
   public static Function<Segment, Segment> createSegmentMapFn(
       final List<PreJoinableClause> clauses,
       final JoinableFactory joinableFactory,
       final AtomicLong cpuTimeAccumulator,
-      final boolean enableFilterPushDown,
-      final boolean enableFilterRewrite,
-      final boolean enableRewriteValueColumnFilters,
-      final long filterRewriteMaxSize
+      final JoinFilterRewriteConfig joinFilterRewriteConfig,
+      @Nullable final Filter originalTopLevelFilterForOldRewriteMode,
+      @Nullable final VirtualColumns virtualColumnsForOldRewriteMode
   )
   {
     // compute column correlations here and RHS correlated values
@@ -100,12 +98,16 @@ public class Joinables
             return Function.identity();
           } else {
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(clauses, joinableFactory);
-            final JoinFilterPreAnalysisGroup jfpag = new JoinFilterPreAnalysisGroup(
-                enableFilterPushDown,
-                enableFilterRewrite,
-                enableRewriteValueColumnFilters,
-                filterRewriteMaxSize
-            );
+            final JoinFilterPreAnalysisGroup jfpag = new JoinFilterPreAnalysisGroup(joinFilterRewriteConfig);
+
+            // compatiblity mode
+            if (joinFilterRewriteConfig.isOldRewriteMode()) {
+              jfpag.performAnalysisForOldRewriteMode(
+                  originalTopLevelFilterForOldRewriteMode,
+                  joinableClauses.getJoinableClauses(),
+                  virtualColumnsForOldRewriteMode
+              );
+            }
 
             return baseSegment -> new HashJoinSegment(baseSegment, joinableClauses.getJoinableClauses(), jfpag);
           }

@@ -52,6 +52,7 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_ENABLE_KEY = "enableJoinFilterRewrite";
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
+  public static final String JOIN_FILTER_REWRITE_USE_OLD_REWRITE_MODE = "joinFilterRewriteUseOldRewriteMode";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
@@ -68,6 +69,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE = true;
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
+  public static final boolean DEFAULT_JOIN_FILTER_REWRITE_USE_OLD_REWRITE_MODE = false;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
 
@@ -264,6 +266,26 @@ public class QueryContexts
     return parseBoolean(query, JOIN_FILTER_REWRITE_ENABLE_KEY, DEFAULT_ENABLE_JOIN_FILTER_REWRITE);
   }
 
+  /**
+   * This is an undocumented option provided as a transition tool:
+   *
+   * The join filter rewrites originally performed the pre-analysis phase prior to any per-segment processing,
+   * analyzing only the filter in the top-level of the query.
+   *
+   * This did not work for nested queries (see https://github.com/apache/druid/pull/9978), so the rewrite pre-analysis
+   * was moved into the cursor creation of the {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter}.
+   * This design requires synchronization across multiple segment processing threads; the old rewrite mode
+   * is kept temporarily available in case issues arise with the new mode, and the user does not run queries with the
+   * affected nested shape.
+   */
+  public static <T> boolean getUseJoinFilterRewriteOldRewriteMode(Query<T> query)
+  {
+    return parseBoolean(
+        query,
+        JOIN_FILTER_REWRITE_USE_OLD_REWRITE_MODE,
+        DEFAULT_JOIN_FILTER_REWRITE_USE_OLD_REWRITE_MODE
+    );
+  }
 
   public static <T> Query<T> withMaxScatterGatherBytes(Query<T> query, long maxScatterGatherBytesLimit)
   {

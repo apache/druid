@@ -39,6 +39,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.joda.time.Interval;
 
 import java.util.HashSet;
@@ -93,14 +94,20 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     final Query<T> prioritizedAndLaned = prioritizeAndLaneQuery(query, segments);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
+    final JoinFilterRewriteConfig joinFilterRewriteConfig = new JoinFilterRewriteConfig(
+        QueryContexts.getEnableJoinFilterPushDown(prioritizedAndLaned),
+        QueryContexts.getEnableJoinFilterRewrite(prioritizedAndLaned),
+        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(prioritizedAndLaned),
+        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned),
+        QueryContexts.getUseJoinFilterRewriteOldRewriteMode(prioritizedAndLaned)
+    );
     final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
         joinableFactory,
         cpuAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(prioritizedAndLaned),
-        QueryContexts.getEnableJoinFilterRewrite(prioritizedAndLaned),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(prioritizedAndLaned),
-        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned)
+        joinFilterRewriteConfig,
+        prioritizedAndLaned.getFilter() == null ? null : prioritizedAndLaned.getFilter().toFilter(),
+        prioritizedAndLaned.getVirtualColumns()
     );
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(prioritizedAndLaned);

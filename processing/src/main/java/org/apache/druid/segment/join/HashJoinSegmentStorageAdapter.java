@@ -37,7 +37,6 @@ import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
-import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -210,32 +209,13 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   )
   {
     JoinFilterPreAnalysis jfpa;
-    if (filter == null) {
-      jfpa = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-          joinFilterPreAnalysisGroup,
-          JoinableClauses.fromList(clauses),
-          virtualColumns,
-          null,
-          joinFilterPreAnalysisGroup.isEnableFilterPushDown(),
-          joinFilterPreAnalysisGroup.isEnableFilterRewrite(),
-          joinFilterPreAnalysisGroup.isEnableRewriteValueColumnFilters(),
-          joinFilterPreAnalysisGroup.getFilterRewriteMaxSize()
-      );
+    if (joinFilterPreAnalysisGroup.getJoinFilterRewriteConfig().isOldRewriteMode()) {
+      jfpa = joinFilterPreAnalysisGroup.getPreAnalysisForOldRewriteMode();
     } else {
-      jfpa = joinFilterPreAnalysisGroup.getAnalyses().computeIfAbsent(
+      jfpa = joinFilterPreAnalysisGroup.computeJoinFilterPreAnalysisIfAbsent(
           filter,
-          (theFilter) -> {
-            return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-                joinFilterPreAnalysisGroup,
-                JoinableClauses.fromList(clauses),
-                virtualColumns,
-                theFilter,
-                joinFilterPreAnalysisGroup.isEnableFilterPushDown(),
-                joinFilterPreAnalysisGroup.isEnableFilterRewrite(),
-                joinFilterPreAnalysisGroup.isEnableRewriteValueColumnFilters(),
-                joinFilterPreAnalysisGroup.getFilterRewriteMaxSize()
-            );
-          }
+          clauses,
+          virtualColumns
       );
     }
 

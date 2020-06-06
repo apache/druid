@@ -53,6 +53,8 @@ public class OrFilter implements BooleanFilter
 
   private final Set<Filter> filters;
 
+  private Integer filtersHashCode;
+
   @VisibleForTesting
   public OrFilter(List<Filter> filters)
   {
@@ -248,6 +250,10 @@ public class OrFilter implements BooleanFilter
   @Override
   public int hashCode()
   {
-    return Objects.hash(getFilters());
+    if (filtersHashCode == null) {
+      filtersHashCode = Objects.hash(getFilters());
+    }
+
+    return filtersHashCode;
   }
 }
