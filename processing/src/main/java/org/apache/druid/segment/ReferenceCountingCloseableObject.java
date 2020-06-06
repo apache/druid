@@ -28,12 +28,13 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * ReferenceCountingCloseableObject implements something like automatic reference count-based resource management.
+ * ReferenceCountingCloseableObject implements something like automatic reference count-based resource management,
+ * backed by a {@link Phaser}.
  *
  * ReferenceCountingCloseableObject allows consumers to call {@link #close()} before some other "users", which called
- * {@link #increment()} or {@link #referenceResources()}, but have not called {@link #decrement()} yet or the closer for
- * {@link #referenceResources()}, and the wrapped object won't be actually closed until that all references are
- * released.
+ * {@link #increment()} or {@link #incrementReferenceAndDecrementOnceCloseable()}, but have not called
+ * {@link #decrement()} yet or the closer for {@link #incrementReferenceAndDecrementOnceCloseable()}, and the wrapped
+ * object won't be actually closed until that all references are released.
  */
 public abstract class ReferenceCountingCloseableObject<BaseObject extends Closeable> implements Closeable
 {
@@ -54,7 +55,7 @@ public abstract class ReferenceCountingCloseableObject<BaseObject extends Closea
       }
       catch (Exception e) {
         try {
-          log.error(e, "Exception while closing object[%s]", baseObject);
+          log.error(e, "Exception while closing reference counted object[%s]", baseObject);
         }
         catch (Exception e2) {
           // ignore
@@ -91,7 +92,19 @@ public abstract class ReferenceCountingCloseableObject<BaseObject extends Closea
     return referents.register() >= 0;
   }
 
-  public Optional<Closeable> referenceResources()
+  /**
+   * Decrement the reference count by one.
+   */
+  public void decrement()
+  {
+    referents.arriveAndDeregister();
+  }
+
+  /**
+   * Returns an {@link Optional} of a {@link Closeable} from {@link #decrementOnceCloseable}, if it is able to
+   * successfully {@link #increment}, else nothing indicating that the reference could not be acquired.
+   */
+  public Optional<Closeable> incrementReferenceAndDecrementOnceCloseable()
   {
     final Closer closer;
     if (increment()) {
@@ -117,14 +130,6 @@ public abstract class ReferenceCountingCloseableObject<BaseObject extends Closea
         log.warn("close() is called more than once on ReferenceCountingCloseableObject.decrementOnceCloseable()");
       }
     };
-  }
-
-  /**
-   * Decrement the reference count by one.
-   */
-  public void decrement()
-  {
-    referents.arriveAndDeregister();
   }
 
   @Override

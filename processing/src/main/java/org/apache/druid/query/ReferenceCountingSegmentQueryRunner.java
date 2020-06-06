@@ -44,14 +44,14 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    return segment.acquireReferences().map(closer -> {
+    return segment.acquireReferences().map(closeable -> {
       try {
         final Sequence<T> baseSequence = factory.createRunner(segment).run(queryPlus, responseContext);
-        return Sequences.withBaggage(baseSequence, closer);
+        return Sequences.withBaggage(baseSequence, closeable);
       }
       catch (Throwable t) {
         try {
-          closer.close();
+          closeable.close();
         }
         catch (Exception e) {
           t.addSuppressed(e);

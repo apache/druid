@@ -170,6 +170,6 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
   @Override
   public Optional<Closeable> acquireReferences()
   {
-    return referenceResources();
+    return incrementReferenceAndDecrementOnceCloseable();
   }
 }
