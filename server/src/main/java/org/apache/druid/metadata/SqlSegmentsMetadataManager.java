@@ -82,8 +82,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static java.lang.Thread.sleep;
-
 /**
  *
  */
@@ -327,7 +325,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                            - ((OnDemandDatabasePoll) latestDatabasePoll).nanosElapsedFromInitiation();
           TimeUnit.NANOSECONDS.sleep(sleepNano);
         }
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.debug(e, "Exception found while waiting for next periodic poll");
       }
 
@@ -484,9 +483,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
             return;
           }
         }
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         // Latest poll was unsuccessful, try to do a new poll
-        log.debug(e,"Latest poll was unsuccessful. Starting a new poll...");
+        log.debug(e, "Latest poll was unsuccessful. Starting a new poll...");
       }
       // Force a database poll
       OnDemandDatabasePoll onDemandDatabasePoll = new OnDemandDatabasePoll();

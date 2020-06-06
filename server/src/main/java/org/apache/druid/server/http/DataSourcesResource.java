@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
@@ -408,7 +407,7 @@ public class DataSourcesResource
     }
     // Force poll
     Interval theInterval = interval == null ? Intervals.ETERNITY : Intervals.of(interval);
-    boolean requiresMetadataStorePoll = firstCheck == null ? true :firstCheck;
+    boolean requiresMetadataStorePoll = firstCheck == null ? true : firstCheck;
 
     Optional<Iterable<DataSegment>> segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
         dataSourceName,
