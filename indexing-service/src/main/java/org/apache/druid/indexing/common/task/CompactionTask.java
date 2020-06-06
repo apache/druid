@@ -100,7 +100,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -526,18 +525,20 @@ public class CompactionTask extends AbstractBatchIndexTask
 
       // unify overlapping intervals to ensure overlapping segments compacting in the same indexSpec
       List<Pair<Interval, List<Pair<QueryableIndex, DataSegment>>>> intervalToSegmentsUnified = new ArrayList<>();
-      Iterator<Interval> iterator = intervalToSegments.keySet().iterator();
-      Interval union = iterator.next();
-      List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>(intervalToSegments.get(union));
-      while (iterator.hasNext()) {
-        Interval cur = iterator.next();
-        if (union.overlaps(cur)) {
+      Interval union = null;
+      List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
+      for (Map.Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
+        Interval cur = entry.getKey();
+        if (union == null) {
+          union = cur;
+          segments.addAll(entry.getValue());
+        } else if (union.overlaps(cur)) {
           union = Intervals.utc(union.getStartMillis(), Math.max(union.getEndMillis(), cur.getEndMillis()));
-          segments.addAll(intervalToSegments.get(cur));
+          segments.addAll(entry.getValue());
         } else {
           intervalToSegmentsUnified.add(Pair.of(union, segments));
           union = cur;
-          segments = new ArrayList<>(intervalToSegments.get(cur));
+          segments = new ArrayList<>(entry.getValue());
         }
       }
       intervalToSegmentsUnified.add(Pair.of(union, segments));
