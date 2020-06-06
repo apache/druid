@@ -250,6 +250,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;

@@ -184,6 +184,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
