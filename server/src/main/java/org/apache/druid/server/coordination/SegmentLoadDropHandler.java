@@ -34,6 +34,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -104,7 +106,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
-      SegmentManager segmentManager
+      SegmentManager segmentManager,
+      ServerTypeConfig serverTypeConfig
   )
   {
     this(
@@ -116,7 +119,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         Executors.newScheduledThreadPool(
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
-        )
+        ),
+        serverTypeConfig
     );
   }
 
@@ -127,7 +131,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       DataSegmentAnnouncer announcer,
       DataSegmentServerAnnouncer serverAnnouncer,
       SegmentManager segmentManager,
-      ScheduledExecutorService exec
+      ScheduledExecutorService exec,
+      ServerTypeConfig serverTypeConfig
   )
   {
     this.jsonMapper = jsonMapper;
@@ -139,6 +144,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     this.exec = exec;
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
 
+    if (config.getLocations().isEmpty()) {
+      if (ServerType.HISTORICAL.equals(serverTypeConfig.getServerType())) {
+        throw new IAE("Segment cache locations must be set on historicals.");
+      } else {
+        log.info("Not starting SegmentLoadDropHandler with empty segment cache locations.");
+      }
+    }
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
   }
 
@@ -152,8 +164,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       log.info("Starting...");
       try {
-        loadLocalCache();
-        serverAnnouncer.announce();
+        if (!config.getLocations().isEmpty()) {
+          loadLocalCache();
+          serverAnnouncer.announce();
+        }
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
@@ -174,7 +188,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       log.info("Stopping...");
       try {
-        serverAnnouncer.unannounce();
+        if (!config.getLocations().isEmpty()) {
+          serverAnnouncer.unannounce();
+        }
       }
       catch (Exception e) {
         throw new RuntimeException(e);

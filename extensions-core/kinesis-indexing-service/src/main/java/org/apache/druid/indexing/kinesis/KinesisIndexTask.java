@@ -137,6 +137,12 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     return TYPE;
   }
 
+  @Override
+  public boolean supportsQueries()
+  {
+    return true;
+  }
+
   @VisibleForTesting
   AWSCredentialsConfig getAwsCredentialsConfig()
   {

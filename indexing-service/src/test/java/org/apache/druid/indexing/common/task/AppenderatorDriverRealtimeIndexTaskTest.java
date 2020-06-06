@@ -337,6 +337,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(1);
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
+    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.

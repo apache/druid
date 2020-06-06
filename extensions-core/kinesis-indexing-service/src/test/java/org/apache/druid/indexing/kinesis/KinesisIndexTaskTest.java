@@ -347,8 +347,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             false
         )
-
     );
+    Assert.assertTrue(task.supportsQueries());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 

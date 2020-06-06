@@ -46,23 +46,46 @@ public interface ShardSpec
 
   boolean isInChunk(long timestamp, InputRow inputRow);
 
+  /**
+   * Returns the partition ID of this segment.
+   */
   int getPartitionNum();
 
+  /**
+   * Returns the start root partition ID of the atomic update group which this segment belongs to.
+   *
+   * @see AtomicUpdateGroup
+   */
   default int getStartRootPartitionId()
   {
     return getPartitionNum();
   }
 
+  /**
+   * Returns the end root partition ID of the atomic update group which this segment belongs to.
+   *
+   * @see AtomicUpdateGroup
+   */
   default int getEndRootPartitionId()
   {
     return getPartitionNum() + 1;
   }
 
+  /**
+   * Returns the minor version associated to the atomic update group which this segment belongs to.
+   *
+   * @see AtomicUpdateGroup
+   */
   default short getMinorVersion()
   {
     return 0;
   }
 
+  /**
+   * Returns the atomic update group size which this segment belongs to.
+   *
+   * @see AtomicUpdateGroup
+   */
   default short getAtomicUpdateGroupSize()
   {
     return 1;
@@ -84,7 +107,7 @@ public interface ShardSpec
   boolean possibleInDomain(Map<String, RangeSet<String>> domain);
 
   /**
-   * Returns true if two segments of this and other shardSpecs can exist in the same timeChunk.
+   * Returns true if two segments of this and other shardSpecs can exist in the same time chunk.
    */
   boolean isCompatible(Class<? extends ShardSpec> other);
 }

@@ -29,7 +29,10 @@ import javax.annotation.Nullable;
 
 /**
  * Class to contain all information of a {@link ShardSpec} except for the partition ID.
- * This class is mainly used by the indexing tasks to allocate new segments using the Overlord.
+ * This class is used when the segment allocation is coordinated by the Overlord; when appending segments to an
+ * existing datasource (either streaming ingestion or batch append) or when using segment locking.
+ * The ingestion tasks send all information required for allocating a new segment using this class and the Overlord
+ * determins the partition ID to create a new segment.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({

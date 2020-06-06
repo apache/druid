@@ -191,4 +191,10 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   {
     return TYPE;
   }
+
+  @Override
+  public boolean supportsQueries()
+  {
+    return true;
+  }
 }
