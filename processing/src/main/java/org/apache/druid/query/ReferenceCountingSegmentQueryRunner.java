@@ -58,6 +58,6 @@ public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
         }
         throw t;
       }
-    }).orElse(new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(queryPlus, responseContext));
+    }).orElseGet(() -> new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(queryPlus, responseContext));
   }
 }

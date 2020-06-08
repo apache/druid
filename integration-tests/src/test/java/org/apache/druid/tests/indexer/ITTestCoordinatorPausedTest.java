@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITTestCoordinatorPausedTest extends AbstractITBatchIndexTest
 {
-  private static final Logger LOG = new Logger(ITUnionQueryTest.class);
+  private static final Logger LOG = new Logger(ITTestCoordinatorPausedTest.class);
   private static final String INDEX_DATASOURCE = "wikipedia_index_test";
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";

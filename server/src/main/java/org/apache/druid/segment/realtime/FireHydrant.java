@@ -24,18 +24,23 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /**
  */
 public class FireHydrant
 {
+  private static final int GET_SEGMENT_REFERENCE_ESCAPE_HATCH = 1000; // arbitrary large but not too large number
+
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
   private volatile IncrementalIndex index;
@@ -69,27 +74,6 @@ public class FireHydrant
   public Interval getSegmentDataInterval()
   {
     return adapter.get().getDataInterval();
-  }
-
-  public ReferenceCountingSegment getIncrementedSegment()
-  {
-    ReferenceCountingSegment segment = adapter.get();
-    while (true) {
-      if (segment.increment()) {
-        return segment;
-      }
-      // segment.increment() returned false, means it is closed. Since close() in swapSegment() happens after segment
-      // swap, the new segment should already be visible.
-      ReferenceCountingSegment newSegment = adapter.get();
-      if (segment == newSegment) {
-        throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
-      }
-      if (newSegment == null) {
-        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
-      }
-      segment = newSegment;
-      // Spin loop.
-    }
   }
 
   public int getCount()
@@ -133,10 +117,66 @@ public class FireHydrant
     }
   }
 
+  public ReferenceCountingSegment getIncrementedSegment()
+  {
+    ReferenceCountingSegment segment = adapter.get();
+    int counter = 0;
+    while (counter++ < GET_SEGMENT_REFERENCE_ESCAPE_HATCH) {
+      if (segment.increment()) {
+        return segment;
+      }
+      // segment.increment() returned false, means it is closed. Since close() in swapSegment() happens after segment
+      // swap, the new segment should already be visible.
+      ReferenceCountingSegment newSegment = adapter.get();
+      if (segment == newSegment) {
+        throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
+      }
+      if (newSegment == null) {
+        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
+      }
+      segment = newSegment;
+      // Spin loop.
+    }
+    throw new ISE("Unable to increment segment reference for FireHydrant (this should not happen)");
+  }
+
   public Pair<ReferenceCountingSegment, Closeable> getAndIncrementSegment()
   {
     ReferenceCountingSegment segment = getIncrementedSegment();
     return new Pair<>(segment, segment.decrementOnceCloseable());
+  }
+
+  /**
+   * This method is like a combined form of {@link #getIncrementedSegment} and {@link #getAndIncrementSegment} that
+   * deals in {@link SegmentReference} instead of directly with {@link ReferenceCountingSegment} in order to acquire
+   * reference count for both hydrant's segment and any tracked joinables taking part in the query.
+   */
+  public Optional<Pair<SegmentReference, Closeable>> getSegmentForQuery(
+      Function<SegmentReference, SegmentReference> segmentMapFn
+  )
+  {
+    ReferenceCountingSegment sinkSegment = adapter.get();
+    SegmentReference segment = segmentMapFn.apply(sinkSegment);
+    int counter = 0;
+    while (counter++ < GET_SEGMENT_REFERENCE_ESCAPE_HATCH) {
+      Optional<Closeable> reference = segment.acquireReferences();
+      if (reference.isPresent()) {
+
+        return Optional.of(new Pair<>(segment, reference.get()));
+      }
+      // segment.acquireReferences() returned false, means it is closed. Since close() in swapSegment() happens after
+      // segment swap, the new segment should already be visible.
+      ReferenceCountingSegment newSinkSegment = adapter.get();
+      if (sinkSegment == newSinkSegment) {
+        throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
+      }
+      if (newSinkSegment == null) {
+        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
+      }
+      segment = segmentMapFn.apply(newSinkSegment);
+      // Spin loop.
+    }
+    return Optional.empty();
   }
 
   @Override
