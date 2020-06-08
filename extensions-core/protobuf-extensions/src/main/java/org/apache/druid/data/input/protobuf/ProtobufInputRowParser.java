@@ -35,10 +35,12 @@ import com.google.protobuf.util.JsonFormat;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.Parser;
+import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
 import java.io.InputStream;

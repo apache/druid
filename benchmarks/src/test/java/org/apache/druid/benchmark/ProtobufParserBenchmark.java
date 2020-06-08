@@ -99,6 +99,7 @@ public class ProtobufParserBenchmark
                                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar0", "$.bar[0].bar")
                         )
                 ),
+                null,
                 null
     );
 
@@ -110,6 +111,7 @@ public class ProtobufParserBenchmark
                     new StringDimensionSchema("someOtherId"),
                     new StringDimensionSchema("isValid")
             ), null, null),
+            null,
             null,
             null
     );
