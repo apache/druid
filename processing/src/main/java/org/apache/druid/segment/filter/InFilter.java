@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.hash.HashCode;
+import com.google.errorprone.annotations.Immutable;
 import it.unimi.dsi.fastutil.ints.IntIterable;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -65,6 +65,7 @@ import java.util.Set;
  * In default null handling mode, this filter is equivalent to {@code (dimension IN [values])} or
  * {@code (dimension IN [non-null values, ''])} when {@link #values} contains nulls.
  */
+@Immutable
 public class InFilter implements Filter
 {
   private final String dimension;
@@ -74,7 +75,7 @@ public class InFilter implements Filter
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-  private HashCode valuesHashCode;
+  private Integer valuesHashCode;
 
   public InFilter(
       String dimension,
@@ -84,7 +85,7 @@ public class InFilter implements Filter
       Supplier<DruidDoublePredicate> doublePredicateSupplier,
       ExtractionFn extractionFn,
       FilterTuning filterTuning,
-      HashCode valuesHashCode
+      Integer valuesHashCode
   )
   {
     this.dimension = dimension;
@@ -250,8 +251,13 @@ public class InFilter implements Filter
       return false;
     }
     InFilter inFilter = (InFilter) o;
+
+    // make sure the hashCode is initialized for both filters
+    hashCode();
+    inFilter.hashCode();
+
     return Objects.equals(dimension, inFilter.dimension) &&
-           Objects.equals(values, inFilter.values) &&
+           Objects.equals(valuesHashCode, inFilter.valuesHashCode) &&
            Objects.equals(extractionFn, inFilter.extractionFn) &&
            Objects.equals(filterTuning, inFilter.filterTuning);
   }

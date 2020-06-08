@@ -146,21 +146,6 @@ public class JoinFilterPreAnalysisGroup
       this.virtualColumns = virtualColumns;
     }
 
-    public Filter getFilter()
-    {
-      return filter;
-    }
-
-    public List<JoinableClause> getClauses()
-    {
-      return clauses;
-    }
-
-    public VirtualColumns getVirtualColumns()
-    {
-      return virtualColumns;
-    }
-
     @Override
     public boolean equals(Object o)
     {

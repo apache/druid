@@ -34,7 +34,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.google.common.hash.HashCode;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -51,6 +50,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.filter.InFilter;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.Immutable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,6 +62,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Immutable
 public class InDimFilter implements DimFilter
 {
   // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
@@ -83,7 +84,7 @@ public class InDimFilter implements DimFilter
   private byte[] cacheKey;
 
   @JsonIgnore
-  private HashCode valuesHashCode;
+  private Integer valuesHashCode;
 
   @JsonCreator
   public InDimFilter(
@@ -162,7 +163,7 @@ public class InDimFilter implements DimFilter
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
           .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
-          .appendByteArray(valuesHashCode.asBytes())
+          .appendInt(valuesHashCode)
           .build();
     }
     return cacheKey;
@@ -288,8 +289,14 @@ public class InDimFilter implements DimFilter
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+
     InDimFilter that = (InDimFilter) o;
-    return values.equals(that.values) &&
+
+    // make sure the hashCode is initialized for both filters
+    hashCode();
+    that.hashCode();
+
+    return valuesHashCode.equals(that.valuesHashCode) &&
            dimension.equals(that.dimension) &&
            Objects.equals(extractionFn, that.extractionFn) &&
            Objects.equals(filterTuning, that.filterTuning);
@@ -304,7 +311,7 @@ public class InDimFilter implements DimFilter
     return Objects.hash(valuesHashCode, dimension, extractionFn, filterTuning);
   }
 
-  public static HashCode computeValuesHashCode(Set<String> values)
+  public static int computeValuesHashCode(Set<String> values)
   {
     final List<String> sortedValues = new ArrayList<>(values);
     sortedValues.sort(Comparator.nullsFirst(Ordering.natural()));
@@ -316,7 +323,7 @@ public class InDimFilter implements DimFilter
         hasher.putString(v, StandardCharsets.UTF_8);
       }
     }
-    return hasher.hash();
+    return hasher.hash().asInt();
   }
 
   private DruidLongPredicate createLongPredicate()

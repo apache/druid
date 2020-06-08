@@ -384,7 +384,7 @@ public class InFilterTest extends BaseFilterTest
     EqualsVerifier.forClass(InFilter.class)
                   .usingGetClass()
                   .withNonnullFields("dimension", "values")
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withIgnoredFields("values", "longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
                   .verify();
   }
 

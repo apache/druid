@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -144,4 +145,15 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final InDimFilter filter = new InDimFilter("dim", Collections.singleton("v1"), null);
     Assert.assertEquals(new SelectorDimFilter("dim", "v1", null), filter.optimize());
   }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(InDimFilter.class)
+                  .usingGetClass()
+                  .withNonnullFields("dimension", "values")
+                  .withIgnoredFields("values", "cacheKey", "longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .verify();
+  }
+
 }

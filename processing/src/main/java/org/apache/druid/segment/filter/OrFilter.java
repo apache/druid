@@ -39,6 +39,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.concurrent.Immutable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +48,7 @@ import java.util.Set;
 
 /**
  */
+@Immutable
 public class OrFilter implements BooleanFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
@@ -244,7 +246,7 @@ public class OrFilter implements BooleanFilter
       return false;
     }
     OrFilter orFilter = (OrFilter) o;
-    return Objects.equals(getFilters(), orFilter.getFilters());
+    return Objects.equals(hashCode(), orFilter.hashCode());
   }
 
   @Override

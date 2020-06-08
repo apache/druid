@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.timeline.partition.ShardSpec;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -56,29 +55,6 @@ public class DimFilterUtils
   public static final byte BLOOM_DIM_FILTER_CACHE_ID = 0x10;
 
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
-
-  static byte[] computeCacheKey(byte cacheIdKey, List<DimFilter> filters)
-  {
-    if (filters.size() == 1) {
-      return filters.get(0).getCacheKey();
-    }
-
-    byte[][] cacheKeys = new byte[filters.size()][];
-    int totalSize = 0;
-    int index = 0;
-    for (DimFilter field : filters) {
-      cacheKeys[index] = field.getCacheKey();
-      totalSize += cacheKeys[index].length;
-      ++index;
-    }
-
-    ByteBuffer retVal = ByteBuffer.allocate(1 + totalSize);
-    retVal.put(cacheIdKey);
-    for (byte[] cacheKey : cacheKeys) {
-      retVal.put(cacheKey);
-    }
-    return retVal.array();
-  }
 
   /**
    * Filter the given iterable of objects by removing any object whose ShardSpec, obtained from the converter function,

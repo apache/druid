@@ -180,6 +180,10 @@ public class AndFilterTest extends BaseFilterTest
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(AndFilter.class).usingGetClass().withNonnullFields("filters").verify();
+    EqualsVerifier.forClass(AndFilter.class)
+                  .usingGetClass()
+                  .withNonnullFields("filters")
+                  .withIgnoredFields("filters")
+                  .verify();
   }
 }
