@@ -100,16 +100,27 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       parser = parseSpec.makeParser();
       initDescriptor();
     }
-    String json;
-    try {
-      DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
-      json = JsonFormat.printer().print(message);
-    }
-    catch (InvalidProtocolBufferException e) {
-      throw new ParseException(e, "Protobuf message could not be parsed");
+    Map<String, Object> record;
+
+    if (parseSpec instanceof JSONParseSpec && ((JSONParseSpec) parseSpec).getFlattenSpec().getFields().isEmpty()) {
+      try {
+        DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
+        record = CollectionUtils.mapKeys(message.getAllFields(), k -> k.getJsonName());
+      }
+      catch (InvalidProtocolBufferException ex) {
+        throw new ParseException(ex, "Protobuf message could not be parsed");
+      }
+    } else {
+      try {
+        DynamicMessage message = DynamicMessage.parseFrom(descriptor, ByteString.copyFrom(input));
+        String json = JsonFormat.printer().print(message);
+        record = parser.parseToMap(json);
+      }
+      catch (InvalidProtocolBufferException e) {
+        throw new ParseException(e, "Protobuf message could not be parsed");
+      }
     }
 
-    Map<String, Object> record = parser.parseToMap(json);
     final List<String> dimensions;
     if (!this.dimensions.isEmpty()) {
       dimensions = this.dimensions;
