@@ -45,7 +45,7 @@ public class TimeParseOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_PARSE")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(1)
-      .nullableReturnType(SqlTypeName.TIMESTAMP)
+      .returnTypeNullable(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 

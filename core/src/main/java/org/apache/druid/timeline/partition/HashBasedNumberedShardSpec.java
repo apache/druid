@@ -76,6 +76,16 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return (((long) hash(timestamp, inputRow)) - getPartitionNum()) % getPartitions() == 0;
   }
 
+  /**
+   * This method calculates the hash based on whether {@param partitionDimensions} is null or not.
+   * If yes, then both {@param timestamp} and dimension columns in {@param inputRow} are used {@link Rows#toGroupKey}
+   * Or else, columns in {@param partitionDimensions} are used
+   *
+   * @param timestamp should be bucketed with query granularity
+   * @param inputRow row from input data
+   *
+   * @return hash value
+   */
   protected int hash(long timestamp, InputRow inputRow)
   {
     final List<Object> groupKey = getGroupKey(timestamp, inputRow);

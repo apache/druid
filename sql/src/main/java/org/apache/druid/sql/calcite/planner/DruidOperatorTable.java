@@ -83,6 +83,7 @@ import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversio
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
@@ -162,6 +163,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new LTrimOperatorConversion())
           .add(new PositionOperatorConversion())
           .add(new RegexpExtractOperatorConversion())
+          .add(new RegexpLikeOperatorConversion())
           .add(new RTrimOperatorConversion())
           .add(new ParseLongOperatorConversion())
           .add(new StringFormatOperatorConversion())

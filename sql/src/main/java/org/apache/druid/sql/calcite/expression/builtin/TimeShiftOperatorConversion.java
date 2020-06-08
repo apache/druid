@@ -45,7 +45,7 @@ public class TimeShiftOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("TIME_SHIFT")
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER, SqlTypeFamily.CHARACTER)
       .requiredOperands(3)
-      .returnType(SqlTypeName.TIMESTAMP)
+      .returnTypeNonNull(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
 
