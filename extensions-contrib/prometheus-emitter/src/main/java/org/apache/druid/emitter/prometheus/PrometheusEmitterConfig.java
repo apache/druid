@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
+import javax.xml.ws.BindingType;
 import java.util.regex.Pattern;
 
 /**
@@ -56,15 +56,15 @@ public class PrometheusEmitterConfig
 
   @JsonCreator
   public PrometheusEmitterConfig(
-      @JsonProperty("strategy") Strategy strategy,
+      @JsonProperty("strategy") @Nullable Strategy strategy,
       @JsonProperty("namespace") @Nullable String namespace,
       @JsonProperty("dimensionMapPath") @Nullable String dimensionMapPath,
-      @JsonProperty("port") @Nullable  Integer port,
+      @JsonProperty("port") @Nullable Integer port,
       @JsonProperty("pushGatewayAddress") @Nullable String pushGatewayAddress
   )
   {
 
-    this.strategy = Preconditions.checkNotNull(strategy, "Prometheus metrics expose strategy cannot be null");
+    this.strategy = strategy != null ? strategy : Strategy.exporter;
     this.namespace = namespace != null ? namespace : "druid";
     Preconditions.checkArgument(pattern.matcher(this.namespace).matches(), "Invalid namespace " + this.namespace);
     this.dimensionMapPath = dimensionMapPath;
@@ -87,11 +87,13 @@ public class PrometheusEmitterConfig
     return port;
   }
 
-  public String getPushGatewayAddress() {
+  public String getPushGatewayAddress()
+  {
     return pushGatewayAddress;
   }
 
-  public Strategy getStrategy(){
+  public Strategy getStrategy()
+  {
     return strategy;
   }
 

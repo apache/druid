@@ -67,7 +67,7 @@ public class PrometheusEmitter implements Emitter
   @Override
   public void start()
   {
-    if(strategy.equals(PrometheusEmitterConfig.Strategy.exporter)){
+    if (strategy.equals(PrometheusEmitterConfig.Strategy.exporter)) {
       if (server == null) {
         try {
           server = new HTTPServer(config.getPort());
@@ -78,7 +78,7 @@ public class PrometheusEmitter implements Emitter
       } else {
         log.error("HTTPServer is already started");
       }
-    } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)){
+    } else if (strategy.equals(PrometheusEmitterConfig.Strategy.pushgateway)) {
       pushGateway = new PushGateway(config.getPushGatewayAddress());
     }
 
@@ -131,9 +131,10 @@ public class PrometheusEmitter implements Emitter
     Map<String, DimensionsAndCollector> map = metrics.getMap();
     try {
       for (DimensionsAndCollector collector : map.values()) {
-        pushGateway.push(collector.getCollector(), config.getNamespace(),  ImmutableMap.of(config.getNamespace(), identifier));
+        pushGateway.push(collector.getCollector(), config.getNamespace(), ImmutableMap.of(config.getNamespace(), identifier));
       }
-    } catch(IOException e){
+    }
+    catch(IOException e){
       log.error(e, "Unable to push prometheus metrics to pushGateway");
     }
   }
@@ -141,7 +142,7 @@ public class PrometheusEmitter implements Emitter
   @Override
   public void close()
   {
-    if(strategy.equals(PrometheusEmitterConfig.Strategy.exporter)){
+    if (strategy.equals(PrometheusEmitterConfig.Strategy.exporter)) {
       if (server != null) {
         server.stop();
       }
