@@ -22,19 +22,33 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 final class ReservoirSegmentSampler
 {
 
-  static BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
+  static BalancerSegmentHolder getRandomBalancerSegmentHolder(
+      final List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources
+  )
   {
     ServerHolder fromServerHolder = null;
     DataSegment proposalSegment = null;
     int numSoFar = 0;
 
     for (ServerHolder server : serverHolders) {
+      if (!server.getServer().getType().isSegmentReplicationTarget()) {
+        // if the server only handles broadcast segments (which don't need to be rebalanced), we have nothing to do
+        continue;
+      }
+
       for (DataSegment segment : server.getServer().iterateAllSegments()) {
+        if (broadcastDatasources.contains(segment.getDataSource())) {
+          // we don't need to rebalance segments that were assigned via broadcast rules
+          continue;
+        }
+
         int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
         // w.p. 1 / (numSoFar+1), swap out the server and segment
         if (randNum == numSoFar) {

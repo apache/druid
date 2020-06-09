@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -211,9 +212,12 @@ public class CostBalancerStrategy implements BalancerStrategy
 
 
   @Override
-  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders)
+  public BalancerSegmentHolder pickSegmentToMove(
+      final List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources
+  )
   {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders);
+    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders, broadcastDatasources);
   }
 
   @Override
