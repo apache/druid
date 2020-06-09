@@ -11484,12 +11484,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
-  public void testNestedGroupByOnInlineDataSourceWithFilterIsNotSupported(Map<String, Object> queryContext) throws Exception
+  public void testNestedGroupByOnInlineDataSourceWithFilter(Map<String, Object> queryContext) throws Exception
   {
     try {
       testQuery(
           "with abc as"
-          + "(Run"
+          + "("
           + "  SELECT dim1, m2 from druid.foo where \"__time\" >= '2001-01-02'"
           + ")"
           + ", def as"
