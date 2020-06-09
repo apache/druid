@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -168,7 +169,12 @@ public class FireHydrant
       // segment swap, the new segment should already be visible.
       ReferenceCountingSegment newSinkSegment = adapter.get();
       if (sinkSegment == newSinkSegment) {
-        throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
+        if (newSinkSegment.isClosed()) {
+          throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
+        }
+        // if segment is not closed, but is same segment it means we are having trouble getting references for joinables
+        // of a HashJoinSegment created by segmentMapFn
+        return Optional.empty();
       }
       if (newSinkSegment == null) {
         throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
@@ -177,6 +183,12 @@ public class FireHydrant
       // Spin loop.
     }
     return Optional.empty();
+  }
+
+  @VisibleForTesting
+  public ReferenceCountingSegment getHydrantSegment()
+  {
+    return adapter.get();
   }
 
   @Override
