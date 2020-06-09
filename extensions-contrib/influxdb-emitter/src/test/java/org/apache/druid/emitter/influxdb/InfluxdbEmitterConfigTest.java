@@ -149,9 +149,9 @@ public class InfluxdbEmitterConfigTest
     InfluxdbEmitterConfig influxdbEmitterConfigComparison = new InfluxdbEmitterConfig(
         "localhost",
         8086,
-        null,
-        null,
-        null,
+        "https",
+        "/path",
+        "jks",
         "password",
         "dbname",
         10000,
@@ -246,6 +246,28 @@ public class InfluxdbEmitterConfigTest
     );
     ImmutableSet<String> expected = ImmutableSet.copyOf(Arrays.asList("dataSource", "taskType"));
     Assert.assertEquals(expected, influxdbEmitterConfig.getDimensionWhitelist());
+  }
+
+  @Test
+  public void testConfigWithNullProtocol()
+  {
+    InfluxdbEmitterConfig influxdbEmitterConfigWithNullProtocol = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        null,
+        "path",
+        "jks",
+        "pass",
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    String expectedProtocol = "http";
+    Assert.assertEquals(expectedProtocol, influxdbEmitterConfig.getProtocol());
   }
 
 }

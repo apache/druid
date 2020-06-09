@@ -43,7 +43,7 @@ All the configuration parameters for the influxdb emitter are under `druid.emitt
 |`druid.emitter.influxdb.port`|The port of the InfluxDB server.|No|8086|
 |`druid.emitter.influxdb.protocol`|The protocol used to send metrics to InfluxDB. One of http/https|No|http|
 |`druid.emitter.influxdb.trustStorePath`|The path to the trustStore to be used for https|No|none|
-|`druid.emitter.influxdb.trustStoreType`|The trustStore type to be used for https|No|jks|
+|`druid.emitter.influxdb.trustStoreType`|The trustStore type to be used for https|No|`jks`|
 |`druid.emitter.influxdb.trustStorePassword`|The trustStore password to be used for https|No|none|
 |`druid.emitter.influxdb.databaseName`|The name of the database in InfluxDB.|Yes|N/A|
 |`druid.emitter.influxdb.maxQueueSize`|The size of the queue that holds events.|No|Integer.MAX_VALUE(=2^31-1)|
