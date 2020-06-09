@@ -147,6 +147,11 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
+   * @return true if this Task type is queryable, such as streaming ingestion tasks
+   */
+  boolean supportsQueries();
+
+  /**
    * Returns an extra classpath that should be prepended to the default classpath when running this task. If no
    * extra classpath should be prepended, this should return null or the empty string.
    */

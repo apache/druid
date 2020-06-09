@@ -142,7 +142,7 @@ public class NilVectorSelector
   @Override
   public boolean nameLookupPossibleInAdvance()
   {
-    return false;
+    return true;
   }
 
   @Nullable

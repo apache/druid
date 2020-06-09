@@ -197,6 +197,12 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
+  public boolean supportsQueries()
+  {
+    return true;
+  }
+
+  @Override
   public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;

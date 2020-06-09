@@ -761,7 +761,7 @@ public class DruidCoordinator
       List<ImmutableDruidServer> currentServers = serverInventoryView
           .getInventory()
           .stream()
-          .filter(DruidServer::segmentReplicatable)
+          .filter(DruidServer::isSegmentReplicationOrBroadcastTarget)
           .map(DruidServer::toImmutableDruidServer)
           .collect(Collectors.toList());
 
