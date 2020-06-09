@@ -59,6 +59,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.http.ShuffleResource;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -202,6 +203,7 @@ public class CliIndexer extends ServerRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new IndexingServiceTuningConfigModule(),
+        new InputSourceModule(),
         new QueryablePeonModule(),
         new CliIndexerServerModule(properties),
         new LookupModule()
