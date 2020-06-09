@@ -34,7 +34,6 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 

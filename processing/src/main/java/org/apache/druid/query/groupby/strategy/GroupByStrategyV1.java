@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GroupByMergedQueryRunner;
-import org.apache.druid.query.IntervalChunkingQueryRunnerDecorator;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryWatcher;
@@ -90,16 +89,6 @@ public class GroupByStrategyV1 implements GroupByStrategy
   public boolean isCacheable(boolean willMergeRunners)
   {
     return true;
-  }
-
-  @Override
-  public QueryRunner<ResultRow> createIntervalChunkingRunner(
-      final IntervalChunkingQueryRunnerDecorator decorator,
-      final QueryRunner<ResultRow> runner,
-      final GroupByQueryQueryToolChest toolChest
-  )
-  {
-    return decorator.decorate(runner, toolChest);
   }
 
   @Override

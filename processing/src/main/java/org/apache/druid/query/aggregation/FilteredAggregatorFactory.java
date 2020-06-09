@@ -149,7 +149,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     return delegate.finalizeComputation(object);
   }
 
-  // See https://github.com/apache/incubator-druid/pull/6219#pullrequestreview-148919845
+  // See https://github.com/apache/druid/pull/6219#pullrequestreview-148919845
   @JsonProperty
   @Override
   public String getName()

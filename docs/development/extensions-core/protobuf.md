@@ -23,30 +23,23 @@ title: "Protobuf"
   -->
 
 
-This Apache Druid (incubating) extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` as an extension.
+This Apache Druid extension enables Druid to ingest and understand the Protobuf data format. Make sure to [include](../../development/extensions.md#loading-extensions) `druid-protobuf-extensions` as an extension.
 
-## Protobuf Parser
-
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| type | String | This should say `protobuf`. | no |
-| descriptor | String | Protobuf descriptor file name in the classpath or URL. | yes |
-| protoMessageType | String | Protobuf message type in the descriptor.  Both short name and fully qualified name are accepted.  The parser uses the first message type found in the descriptor if not specified. | no |
-| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data.  The format must be JSON. See [JSON ParseSpec](../../ingestion/index.md) for more configuration options.  Please note timeAndDims parseSpec is no longer supported. | yes |
+The `druid-protobuf-extensions` provides the [Protobuf Parser](../../ingestion/data-formats.md#protobuf-parser)
+for [stream ingestion](../../ingestion/index.md#streaming). See corresponding docs for details.
 
 ## Example: Load Protobuf messages from Kafka
 
-This example demonstrates how to load Protobuf messages from Kafka.  Please read the [Load from Kafka tutorial](../../tutorials/tutorial-kafka.md) first.  This example will use the same "metrics" dataset.
+This example demonstrates how to load Protobuf messages from Kafka.  Please read the [Load from Kafka tutorial](../../tutorials/tutorial-kafka.md) first, and see [Kafka Indexing Service](./kafka-ingestion.md) documentation for more details.
 
-Files used in this example are found at `./examples/quickstart/protobuf` in your Druid directory.
+The files used in this example are found at [`./examples/quickstart/protobuf` in your Druid directory](https://github.com/apache/druid/tree/master/examples/quickstart/protobuf).
 
-- We will use [Kafka Indexing Service](./kafka-ingestion.md).
-- Kafka broker host is `localhost:9092`.
-- Kafka topic is `metrics_pb` instead of `metrics`.
-- datasource name is `metrics-kafka-pb` instead of `metrics-kafka` to avoid the confusion.
+For this example:
+- Kafka broker host is `localhost:9092`
+- Kafka topic is `metrics_pb`
+- Datasource name is `metrics-protobuf`
 
-Here is the metrics JSON example.
+Here is a JSON example of the 'metrics' data schema used in the example.
 
 ```json
 {
@@ -63,7 +56,7 @@ Here is the metrics JSON example.
 
 ### Proto file
 
-The proto file should look like this.  Save it as metrics.proto.
+The corresponding proto file for our 'metrics' dataset looks like this.
 
 ```
 syntax = "proto3";
@@ -81,28 +74,27 @@ message Metrics {
 
 ### Descriptor file
 
-Using the `protoc` Protobuf compiler to generate the descriptor file.  Save the metrics.desc file either in the classpath or reachable by URL.  In this example the descriptor file was saved at /tmp/metrics.desc.
+Next, we use the `protoc` Protobuf compiler to generate the descriptor file and save it as `metrics.desc`. The descriptor file must be either in the classpath or reachable by URL.  In this example the descriptor file was saved at `/tmp/metrics.desc`, however this file is also available in the example files. From your Druid install directory:
 
 ```
-protoc -o /tmp/metrics.desc metrics.proto
+protoc -o /tmp/metrics.desc ./quickstart/protobuf/metrics.proto
 ```
 
-### Supervisor spec JSON
+## Create Kafka Supervisor
 
 Below is the complete Supervisor spec JSON to be submitted to the Overlord.
-Please make sure these keys are properly configured for successful ingestion.
+Make sure these keys are properly configured for successful ingestion.
 
-- `descriptor` for the descriptor file URL.
-- `protoMessageType` from the proto definition.
-- parseSpec `format` must be `json`.
-- `topic` to subscribe.  The topic is "metrics_pb" instead of "metrics".
-- `bootstrap.server` is the Kafka broker host.
+Important supervisor properties
+- `descriptor` for the descriptor file URL
+- `protoMessageType` from the proto definition
+- `parser` should have `type` set to `protobuf`, but note that the `format` of the `parseSpec` must be `json`
 
 ```json
 {
   "type": "kafka",
   "dataSchema": {
-    "dataSource": "metrics-kafka2",
+    "dataSource": "metrics-protobuf",
     "parser": {
       "type": "protobuf",
       "descriptor": "file:///tmp/metrics.desc",
@@ -172,18 +164,55 @@ Please make sure these keys are properly configured for successful ingestion.
 }
 ```
 
-## Kafka Producer
+## Adding Protobuf messages to Kafka
 
-Here is the sample script that publishes the metrics to Kafka in Protobuf format.
+If necessary, from your Kafka installation directory run the following command to create the Kafka topic
 
-1. Run `protoc` again with the Python binding option.  This command generates `metrics_pb2.py` file.
- ```
-  protoc -o metrics.desc metrics.proto --python_out=.
- ```
+```
+./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic metrics_pb
+```
 
-2. Create Kafka producer script.
+This example script requires `protobuf` and `kafka-python` modules. With the topic in place, messages can be inserted running the following command from your Druid installation directory
 
-This script requires `protobuf` and `kafka-python` modules.
+```
+./bin/generate-example-metrics | ./quickstart/protobuf/pb_publisher.py
+```
+
+You can confirm that data has been inserted to your Kafka topic using the following command from your Kafka installation directory
+
+```
+./bin/kafka-console-consumer --zookeeper localhost --topic metrics_pb
+```
+
+which should print messages like this
+
+```
+millisecondsGETR"2017-04-06T03:23:56Z*2002/list:request/latencyBwww1.example.com
+```
+
+If your supervisor created in the previous step is running, the indexing tasks should begin producing the messages and the data will soon be available for querying in Druid.
+
+## Generating the example files
+
+The files provided in the example quickstart can be generated in the following manner starting with only `metrics.proto`.
+
+### `metrics.desc`
+
+The descriptor file is generated using `protoc` Protobuf compiler. Given a `.proto` file, a `.desc` file can be generated like so.
+
+```
+protoc -o metrics.desc metrics.proto
+```
+
+### `metrics_pb2.py`
+`metrics_pb2.py` is also generated with `protoc`
+
+```
+ protoc -o metrics.desc metrics.proto --python_out=.
+```
+
+### `pb_publisher.py`
+After `metrics_pb2.py` is generated, another script can be constructed to parse JSON data, convert it to Protobuf, and produce to a Kafka topic
 
 ```python
 #!/usr/bin/env python
@@ -194,32 +223,17 @@ import json
 from kafka import KafkaProducer
 from metrics_pb2 import Metrics
 
+
 producer = KafkaProducer(bootstrap_servers='localhost:9092')
 topic = 'metrics_pb'
-metrics = Metrics()
 
 for row in iter(sys.stdin):
     d = json.loads(row)
+    metrics = Metrics()
     for k, v in d.items():
         setattr(metrics, k, v)
     pb = metrics.SerializeToString()
     producer.send(topic, pb)
-```
 
-3. run producer
-
-```
-./bin/generate-example-metrics | ./pb_publisher.py
-```
-
-4. test
-
-```
-kafka-console-consumer --zookeeper localhost --topic metrics_pb
-```
-
-It should print messages like this
-
-```
-millisecondsGETR"2017-04-06T03:23:56Z*2002/list:request/latencyBwww1.example.com
+producer.flush()
 ```

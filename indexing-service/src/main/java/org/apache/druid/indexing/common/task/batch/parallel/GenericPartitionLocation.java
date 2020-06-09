@@ -26,13 +26,11 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 /**
- * This class represents the intermediary data server where the partition of {@link #interval} and {@link #shardSpec}
+ * This class represents the intermediary data server where the partition of {@code interval} and {@code shardSpec}
  * is stored.
  */
 public class GenericPartitionLocation extends PartitionLocation<ShardSpec>
 {
-  private final ShardSpec shardSpec;
-
   @JsonCreator
   public GenericPartitionLocation(
       @JsonProperty("host") String host,
@@ -44,19 +42,18 @@ public class GenericPartitionLocation extends PartitionLocation<ShardSpec>
   )
   {
     super(host, port, useHttps, subTaskId, interval, shardSpec);
-    this.shardSpec = shardSpec;
   }
 
   @JsonIgnore
   @Override
   public int getPartitionId()
   {
-    return shardSpec.getPartitionNum();
+    return getSecondaryPartition().getPartitionNum();
   }
 
   @JsonProperty
   ShardSpec getShardSpec()
   {
-    return shardSpec;
+    return getSecondaryPartition();
   }
 }

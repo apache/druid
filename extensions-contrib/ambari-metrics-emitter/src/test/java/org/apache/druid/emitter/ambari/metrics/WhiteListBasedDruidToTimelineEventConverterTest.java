@@ -71,7 +71,6 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
           "query/time, true",
           "query/node/ttfb, true",
           "query/segmentAndCache/time, true",
-          "query/intervalChunk/time, false",
           "query/time/balaba, true",
           "query/tim, false",
           "segment/added/bytes, true",

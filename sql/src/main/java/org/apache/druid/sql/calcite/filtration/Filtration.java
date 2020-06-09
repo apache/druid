@@ -23,24 +23,21 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.ExpressionDimFilter;
+import org.apache.druid.query.filter.FalseDimFilter;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Objects;
 
 public class Filtration
 {
-  private static final DimFilter MATCH_NOTHING = new ExpressionDimFilter(
-      "1 == 2", ExprMacroTable.nil()
-  );
-  private static final DimFilter MATCH_EVERYTHING = new ExpressionDimFilter(
-      "1 == 1", ExprMacroTable.nil()
-  );
+  private static final DimFilter MATCH_NOTHING = FalseDimFilter.instance();
+  private static final DimFilter MATCH_EVERYTHING = TrueDimFilter.instance();
 
   // 1) If "dimFilter" is null, it should be ignored and not affect filtration.
   // 2) There is an implicit AND between "intervals" and "dimFilter" (if dimFilter is non-null).
@@ -162,10 +159,10 @@ public class Filtration
 
     Filtration that = (Filtration) o;
 
-    if (intervals != null ? !intervals.equals(that.intervals) : that.intervals != null) {
+    if (!Objects.equals(intervals, that.intervals)) {
       return false;
     }
-    return dimFilter != null ? dimFilter.equals(that.dimFilter) : that.dimFilter == null;
+    return Objects.equals(dimFilter, that.dimFilter);
 
   }
 

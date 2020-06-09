@@ -49,6 +49,12 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
+  public void setSparseIndexed()
+  {
+    // no-op, float columns do not have a dictionary to track null values
+  }
+
+  @Override
   public long estimateEncodedKeyComponentSize(Float key)
   {
     return Float.BYTES;
@@ -131,8 +137,8 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
-          return null;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          return NullHandling.defaultFloatValue();
         }
 
         return (Float) dims[dimIndex];

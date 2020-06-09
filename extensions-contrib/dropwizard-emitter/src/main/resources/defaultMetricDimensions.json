@@ -28,11 +28,6 @@
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
-  "query/intervalChunk/time": {
-    "dimensions": [],
-    "type": "timer",
-    "timeUnit": "MILLISECONDS"
-  },
   "query/segment/time": {
     "dimensions": [],
     "type": "timer",

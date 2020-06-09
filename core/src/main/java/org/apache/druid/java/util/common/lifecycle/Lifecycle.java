@@ -302,7 +302,7 @@ public class Lifecycle
   {
     if (!startStopLock.tryLock()) {
       // (*) This check is why the state should be changed before startStopLock.lock() in stop(). This check allows to
-      // spot wrong use of Lifecycle instead of entering deadlock, like https://github.com/apache/incubator-druid/issues/3579.
+      // spot wrong use of Lifecycle instead of entering deadlock, like https://github.com/apache/druid/issues/3579.
       if (state.get().equals(State.STOP)) {
         throw new ISE("Cannot add a handler in the process of Lifecycle stopping");
       }

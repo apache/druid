@@ -1,6 +1,6 @@
 ---
 id: virtual-columns
-title: "Virtual Columns"
+title: "Virtual columns"
 ---
 
 <!--
@@ -22,6 +22,10 @@ title: "Virtual Columns"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the native
+> language. For information about functions available in SQL, refer to the
+> [SQL documentation](sql.md#scalar-functions).
 
 Virtual columns are queryable column "views" created from a set of columns during a query.
 
@@ -29,7 +33,7 @@ A virtual column can potentially draw from multiple underlying columns, although
 
 Virtual columns can be used as dimensions or as inputs to aggregators.
 
-Each Apache Druid (incubating) query can accept a list of virtual columns as a parameter. The following scan query is provided as an example:
+Each Apache Druid query can accept a list of virtual columns as a parameter. The following scan query is provided as an example:
 
 ```
 {

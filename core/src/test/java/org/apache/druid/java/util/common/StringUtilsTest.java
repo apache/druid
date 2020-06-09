@@ -246,4 +246,32 @@ public class StringUtilsTest
     Assert.assertEquals(s5, null);
   }
 
+  @Test
+  public void testChop()
+  {
+    Assert.assertEquals("foo", StringUtils.chop("foo", 5));
+    Assert.assertEquals("fo", StringUtils.chop("foo", 2));
+    Assert.assertEquals("", StringUtils.chop("foo", 0));
+    Assert.assertEquals("smile 🙂 for", StringUtils.chop("smile 🙂 for the camera", 14));
+    Assert.assertEquals("smile 🙂", StringUtils.chop("smile 🙂 for the camera", 10));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 9));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 8));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 7));
+    Assert.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 6));
+    Assert.assertEquals("smile", StringUtils.chop("smile 🙂 for the camera", 5));
+  }
+
+  @Test
+  public void testFastLooseChop()
+  {
+    Assert.assertEquals("foo", StringUtils.fastLooseChop("foo", 5));
+    Assert.assertEquals("fo", StringUtils.fastLooseChop("foo", 2));
+    Assert.assertEquals("", StringUtils.fastLooseChop("foo", 0));
+    Assert.assertEquals("smile 🙂 for", StringUtils.fastLooseChop("smile 🙂 for the camera", 12));
+    Assert.assertEquals("smile 🙂 ", StringUtils.fastLooseChop("smile 🙂 for the camera", 9));
+    Assert.assertEquals("smile 🙂", StringUtils.fastLooseChop("smile 🙂 for the camera", 8));
+    Assert.assertEquals("smile \uD83D", StringUtils.fastLooseChop("smile 🙂 for the camera", 7));
+    Assert.assertEquals("smile ", StringUtils.fastLooseChop("smile 🙂 for the camera", 6));
+    Assert.assertEquals("smile", StringUtils.fastLooseChop("smile 🙂 for the camera", 5));
+  }
 }

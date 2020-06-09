@@ -34,10 +34,12 @@ import java.util.stream.Collectors;
 
 public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 {
+  private static final String FN_NAME = "timestamp_shift";
+
   @Override
   public String name()
   {
-    return "timestamp_shift";
+    return FN_NAME;
   }
 
   @Override
@@ -79,7 +81,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
     TimestampShiftExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
       final PeriodGranularity granularity = getGranularity(args, ExprUtils.nilBindings());
       period = granularity.getPeriod();
       chronology = ISOChronology.getInstance(granularity.getTimeZone());
@@ -105,7 +107,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
   {
     TimestampShiftDynamicExpr(final List<Expr> args)
     {
-      super(args);
+      super(FN_NAME, args);
     }
 
     @Nonnull

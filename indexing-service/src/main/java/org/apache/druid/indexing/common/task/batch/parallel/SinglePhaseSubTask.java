@@ -22,8 +22,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.collect.FluentIterable;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputRow;
@@ -32,19 +32,14 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
-import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.SegmentLockHelper;
-import org.apache.druid.indexing.common.task.SegmentLockHelper.OverwritingRootGenerationPartitions;
+import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
@@ -69,14 +64,11 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NumberedOverwritingShardSpecFactory;
-import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -230,14 +222,13 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     );
 
     // Find inputSegments overshadowed by pushedSegments
-    final Set<DataSegment> allSegments = new HashSet<>(getSegmentLockHelper().getLockedExistingSegments());
+    final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
     allSegments.addAll(pushedSegments);
     final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
-    final Set<DataSegment> oldSegments = timeline.findFullyOvershadowed()
-                                                 .stream()
-                                                 .flatMap(holder -> holder.getObject().stream())
-                                                 .map(PartitionChunk::getObject)
-                                                 .collect(Collectors.toSet());
+    final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
+                                                       .transformAndConcat(TimelineObjectHolder::getObject)
+                                                       .transform(PartitionChunk::getObject)
+                                                       .toSet();
     taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments));
 
     return TaskStatus.success(getId());
@@ -276,93 +267,6 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
       return null;
     } else {
       return granularitySpec.getSegmentGranularity();
-    }
-  }
-
-  @VisibleForTesting
-  SegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
-  {
-    return new WrappingSegmentAllocator(toolbox, taskClient);
-  }
-
-  private class WrappingSegmentAllocator implements SegmentAllocator
-  {
-    private final TaskToolbox toolbox;
-    private final ParallelIndexSupervisorTaskClient taskClient;
-
-    private SegmentAllocator internalAllocator;
-
-    private WrappingSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
-    {
-      this.toolbox = toolbox;
-      this.taskClient = taskClient;
-    }
-
-    @Override
-    public SegmentIdWithShardSpec allocate(
-        InputRow row,
-        String sequenceName,
-        String previousSegmentId,
-        boolean skipSegmentLineageCheck
-    ) throws IOException
-    {
-      if (internalAllocator == null) {
-        internalAllocator = createSegmentAllocator();
-      }
-      return internalAllocator.allocate(row, sequenceName, previousSegmentId, skipSegmentLineageCheck);
-    }
-
-    private SegmentAllocator createSegmentAllocator()
-    {
-      final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
-      final SegmentLockHelper segmentLockHelper = getSegmentLockHelper();
-      if (ingestionSchema.getIOConfig().isAppendToExisting() || isUseSegmentLock()) {
-        return new ActionBasedSegmentAllocator(
-            toolbox.getTaskActionClient(),
-            ingestionSchema.getDataSchema(),
-            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> {
-              final Interval interval = granularitySpec
-                  .bucketInterval(row.getTimestamp())
-                  .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
-
-              final ShardSpecFactory shardSpecFactory;
-              if (segmentLockHelper.hasOverwritingRootGenerationPartition(interval)) {
-                final OverwritingRootGenerationPartitions overwritingSegmentMeta = segmentLockHelper
-                    .getOverwritingRootGenerationPartition(interval);
-                if (overwritingSegmentMeta == null) {
-                  throw new ISE("Can't find overwritingSegmentMeta for interval[%s]", interval);
-                }
-                shardSpecFactory = new NumberedOverwritingShardSpecFactory(
-                    overwritingSegmentMeta.getStartRootPartitionId(),
-                    overwritingSegmentMeta.getEndRootPartitionId(),
-                    overwritingSegmentMeta.getMinorVersionForNewSegments()
-                );
-              } else {
-                shardSpecFactory = NumberedShardSpecFactory.instance();
-              }
-
-              return new SurrogateAction<>(
-                  supervisorTaskId,
-                  new SegmentAllocateAction(
-                      schema.getDataSource(),
-                      row.getTimestamp(),
-                      schema.getGranularitySpec().getQueryGranularity(),
-                      schema.getGranularitySpec().getSegmentGranularity(),
-                      sequenceName,
-                      previousSegmentId,
-                      skipSegmentLineageCheck,
-                      shardSpecFactory,
-                      isUseSegmentLock() ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK
-                  )
-              );
-            }
-        );
-      } else {
-        return (row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> taskClient.allocateSegment(
-            supervisorTaskId,
-            row.getTimestamp()
-        );
-      }
     }
   }
 
@@ -410,7 +314,14 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
-    final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
+    final SegmentAllocator segmentAllocator = SegmentAllocators.forLinearPartitioning(
+        toolbox,
+        new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
+        getIngestionSchema().getDataSchema(),
+        getTaskLockHelper(),
+        ingestionSchema.getIOConfig().isAppendToExisting(),
+        partitionsSpec
+    );
 
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
@@ -484,9 +395,10 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
-              final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+              final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
               pushedSegments.addAll(pushed.getSegments());
-              LOG.info("Pushed segments[%s]", pushed.getSegments());
+              LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+              LOG.infoSegments(pushed.getSegments(), "Pushed segments");
             }
           } else {
             throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
@@ -503,9 +415,10 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         }
       }
 
-      final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+      final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      LOG.info("Pushed segments[%s]", pushed.getSegments());
+      LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+      LOG.infoSegments(pushed.getSegments(), "Pushed segments");
       appenderator.close();
 
       return pushedSegments;

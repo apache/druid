@@ -120,11 +120,6 @@ public class DefaultQueryMetricsTest
     Assert.assertEquals("query/segmentAndCache/time", actualEvent.get("metric"));
     Assert.assertEquals(4L, actualEvent.get("value"));
 
-    queryMetrics.reportIntervalChunkTime(5000001).emit(serviceEmitter);
-    actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals("query/intervalChunk/time", actualEvent.get("metric"));
-    Assert.assertEquals(5L, actualEvent.get("value"));
-
     queryMetrics.reportCpuTime(6000001).emit(serviceEmitter);
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/cpu/time", actualEvent.get("metric"));

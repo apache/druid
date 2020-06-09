@@ -61,11 +61,15 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
       {
         final double[] vector = selector.getDoubleVector();
         final int[] selection = match.getSelection();
-
+        final boolean[] nulls = selector.getNullVector();
+        final boolean hasNulls = canHaveNulls && nulls != null;
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
+          if (hasNulls && nulls[rowNum]) {
+            continue;
+          }
           if (vector[rowNum] == matchValDouble) {
             selection[numRows++] = rowNum;
           }
@@ -92,12 +96,18 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
       {
         final double[] vector = selector.getDoubleVector();
         final int[] selection = match.getSelection();
+        final boolean[] nulls = selector.getNullVector();
+        final boolean hasNulls = canHaveNulls && nulls != null;
 
         int numRows = 0;
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (predicate.applyDouble(vector[rowNum])) {
+          if (hasNulls && nulls[rowNum]) {
+            if (predicate.applyNull()) {
+              selection[numRows++] = rowNum;
+            }
+          } else if (predicate.applyDouble(vector[rowNum])) {
             selection[numRows++] = rowNum;
           }
         }

@@ -123,7 +123,7 @@ public class RetryingInputStream<T> extends InputStream
   }
 
   @Override
-  public int read(byte b[]) throws IOException
+  public int read(byte[] b) throws IOException
   {
     for (int nTry = 0; nTry < maxRetry; nTry++) {
       try {
@@ -137,7 +137,7 @@ public class RetryingInputStream<T> extends InputStream
   }
 
   @Override
-  public int read(byte b[], int off, int len) throws IOException
+  public int read(byte[] b, int off, int len) throws IOException
   {
     for (int nTry = 0; nTry < maxRetry; nTry++) {
       try {

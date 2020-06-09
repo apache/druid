@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
@@ -38,18 +40,26 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  */
 public class AndFilter implements BooleanFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
-  static final ValueMatcher[] EMPTY_VALUE_MATCHER_ARRAY = new ValueMatcher[0];
 
-  private final List<Filter> filters;
+  private final Set<Filter> filters;
 
+  @VisibleForTesting
   public AndFilter(List<Filter> filters)
+  {
+    this(new HashSet<>(filters));
+  }
+
+  public AndFilter(Set<Filter> filters)
   {
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty AndFilter");
     this.filters = filters;
@@ -58,7 +68,7 @@ public class AndFilter implements BooleanFilter
   public static <T> ImmutableBitmap getBitmapIndex(
       BitmapIndexSelector selector,
       BitmapResultFactory<T> bitmapResultFactory,
-      List<Filter> filters
+      Set<Filter> filters
   )
   {
     return bitmapResultFactory.toImmutableBitmap(getBitmapResult(selector, bitmapResultFactory, filters));
@@ -67,11 +77,11 @@ public class AndFilter implements BooleanFilter
   private static <T> T getBitmapResult(
       BitmapIndexSelector selector,
       BitmapResultFactory<T> bitmapResultFactory,
-      List<Filter> filters
+      Set<Filter> filters
   )
   {
     if (filters.size() == 1) {
-      return filters.get(0).getBitmapResult(selector, bitmapResultFactory);
+      return Iterables.getOnlyElement(filters).getBitmapResult(selector, bitmapResultFactory);
     }
 
     final List<T> bitmapResults = Lists.newArrayListWithCapacity(filters.size());
@@ -101,8 +111,9 @@ public class AndFilter implements BooleanFilter
   {
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
 
-    for (int i = 0; i < filters.size(); i++) {
-      matchers[i] = filters.get(i).makeMatcher(factory);
+    int i = 0;
+    for (Filter filter : filters) {
+      matchers[i++] = filter.makeMatcher(factory);
     }
     return makeMatcher(matchers);
   }
@@ -112,8 +123,9 @@ public class AndFilter implements BooleanFilter
   {
     final VectorValueMatcher[] matchers = new VectorValueMatcher[filters.size()];
 
-    for (int i = 0; i < filters.size(); i++) {
-      matchers[i] = filters.get(i).makeVectorMatcher(factory);
+    int i = 0;
+    for (Filter filter : filters) {
+      matchers[i++] = filter.makeVectorMatcher(factory);
     }
     return makeVectorMatcher(matchers);
   }
@@ -149,11 +161,11 @@ public class AndFilter implements BooleanFilter
       matchers.add(0, offsetMatcher);
     }
 
-    return makeMatcher(matchers.toArray(EMPTY_VALUE_MATCHER_ARRAY));
+    return makeMatcher(matchers.toArray(BooleanFilter.EMPTY_VALUE_MATCHER_ARRAY));
   }
 
   @Override
-  public List<Filter> getFilters()
+  public Set<Filter> getFilters()
   {
     return filters;
   }
@@ -233,5 +245,24 @@ public class AndFilter implements BooleanFilter
         return match;
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AndFilter andFilter = (AndFilter) o;
+    return Objects.equals(getFilters(), andFilter.getFilters());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getFilters());
   }
 }

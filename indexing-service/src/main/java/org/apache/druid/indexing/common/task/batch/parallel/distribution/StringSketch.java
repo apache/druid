@@ -34,9 +34,11 @@ import com.google.common.base.Preconditions;
 import org.apache.datasketches.ArrayOfStringsSerDe;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.ItemsSketch;
+import org.apache.druid.timeline.partition.PartitionBoundaries;
 
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.Objects;
 
 /**
  * Counts approximate frequencies of strings.
@@ -135,6 +137,40 @@ public class StringSketch implements StringDistribution
     return "StringSketch{" +
            "delegate=" + delegate +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    StringSketch that = (StringSketch) o;
+
+    // ParallelIndexPhaseRunner.collectReport() uses equals() to check subtasks send identical reports if they retry.
+    // However, ItemsSketch does not override equals(): https://github.com/apache/incubator-datasketches-java/issues/140
+    //
+    // Since ItemsSketch has built-in non-determinism, only rely on ItemsSketch properties that are deterministic. This
+    // check is best-effort as it is possible for it to return true for sketches that contain different values.
+    return delegate.getK() == that.delegate.getK() &&
+           delegate.getN() == that.delegate.getN() &&
+           Objects.equals(delegate.getMaxValue(), that.delegate.getMaxValue()) &&
+           Objects.equals(delegate.getMinValue(), that.delegate.getMinValue());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    // See comment in equals() regarding ItemsSketch.
+    return Objects.hash(
+        delegate.getK(),
+        delegate.getN(),
+        delegate.getMaxValue(),
+        delegate.getMinValue()
+    );
   }
 
   ItemsSketch<String> getDelegate()

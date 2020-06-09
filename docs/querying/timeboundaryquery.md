@@ -23,6 +23,9 @@ sidebar_label: "TimeBoundary"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes a query
+> type that is only available in the native language.
 
 Time boundary queries return the earliest and latest data points of a data set. The grammar is:
 
@@ -39,7 +42,7 @@ There are 3 main parts to a time boundary query:
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "timeBoundary"; this is the first thing Apache Druid (incubating) looks at to figure out how to interpret the query|yes|
+|queryType|This String should always be "timeBoundary"; this is the first thing Apache Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
 |bound   | Optional, set to `maxTime` or `minTime` to return only the latest or earliest timestamp. Default to returning both if not set| no |
 |filter|See [Filters](../querying/filters.md)|no|

@@ -45,7 +45,7 @@ public class OverlordActionBasedUsedSegmentsRetriever implements UsedSegmentsRet
   }
 
   @Override
-  public Collection<DataSegment> getUsedSegmentsForIntervals(
+  public Collection<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
       Segments visibility

@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * expose them via JSON APIs.
  *
  * These abstractions can probably be merged when Druid updates to Jackson 2.9 that supports JsonAliases, see
- * see https://github.com/apache/incubator-druid/issues/7152.
+ * see https://github.com/apache/druid/issues/7152.
  */
 public enum NodeRole
 {

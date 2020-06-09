@@ -16,9 +16,6 @@
   "query/node/ttfb": [
     "server"
   ],
-  "query/intervalChunk/time": [
-    "chunkInterval"
-  ],
   "query/success/count": [],
   "query/failed/count": [],
   "query/interrupted/count": [],

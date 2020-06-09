@@ -24,10 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -47,7 +48,6 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -58,6 +58,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.SqlLifecycle;
@@ -68,14 +69,14 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -95,21 +96,27 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
   private static final boolean ROUND = true;
-
-  private static QueryRunnerFactoryConglomerate conglomerate;
-  private static Closer resourceCloser;
-  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
   private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
       PlannerContext.CTX_SQL_QUERY_ID, "dummy"
   );
+  private static QueryRunnerFactoryConglomerate conglomerate;
+  private static Closer resourceCloser;
+  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public QueryLogHook queryLogHook = QueryLogHook.create(TestHelper.JSON_MAPPER);
+  
+  private SpecificSegmentsQuerySegmentWalker walker;
+  private SqlLifecycleFactory sqlLifecycleFactory;
 
   @BeforeClass
   public static void setUpClass()
   {
-    final Pair<QueryRunnerFactoryConglomerate, Closer> conglomerateCloserPair = CalciteTests
-        .createQueryRunnerFactoryConglomerate();
-    conglomerate = conglomerateCloserPair.lhs;
-    resourceCloser = conglomerateCloserPair.rhs;
+    resourceCloser = Closer.create();
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
   }
 
   @AfterClass
@@ -117,15 +124,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
   {
     resourceCloser.close();
   }
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create(TestHelper.JSON_MAPPER);
-
-  private SpecificSegmentsQuerySegmentWalker walker;
-  private SqlLifecycleFactory sqlLifecycleFactory;
 
   @Before
   public void setUp() throws Exception
@@ -170,8 +168,6 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     );
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
         ImmutableSet.of(
             new HllSketchApproxCountDistinctSqlAggregator(),
@@ -185,16 +181,18 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
         )
     );
 
+    SchemaPlus rootSchema =
+        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
         new PlannerFactory(
-            druidSchema,
-            systemSchema,
+            rootSchema,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             CalciteTests.createExprMacroTable(),
             plannerConfig,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+            CalciteTests.getJsonMapper(),
+            CalciteTests.DRUID_SCHEMA_NAME
         )
     );
   }
@@ -222,7 +220,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
@@ -335,7 +338,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + ")";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1L
@@ -349,46 +357,33 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     Query expected = GroupByQuery.builder()
                                  .setDataSource(
                                      new QueryDataSource(
-                                         GroupByQuery.builder()
-                                                     .setDataSource(CalciteTests.DATASOURCE1)
-                                                     .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(
-                                                         Filtration.eternity())))
-                                                     .setGranularity(Granularities.ALL)
-                                                     .setVirtualColumns(
-                                                         new ExpressionVirtualColumn(
-                                                             "v0",
-                                                             "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                             ValueType.LONG,
-                                                             TestExprMacroTable.INSTANCE
-                                                         )
-                                                     )
-                                                     .setDimensions(
-                                                         Collections.singletonList(
-                                                             new DefaultDimensionSpec(
-                                                                 "v0",
-                                                                 "v0",
-                                                                 ValueType.LONG
-                                                             )
-                                                         )
-                                                     )
-                                                     .setAggregatorSpecs(
-                                                         Collections.singletonList(
-                                                             new HllSketchBuildAggregatorFactory(
-                                                                 "a0:a",
-                                                                 "cnt",
-                                                                 null,
-                                                                 null,
-                                                                 ROUND
-                                                             )
-                                                         )
-                                                     )
-                                                     .setPostAggregatorSpecs(
-                                                         ImmutableList.of(
-                                                             new FinalizingFieldAccessPostAggregator("a0", "a0:a")
-                                                         )
-                                                     )
-                                                     .setContext(QUERY_CONTEXT_DEFAULT)
-                                                     .build()
+                                         Druids.newTimeseriesQueryBuilder()
+                                               .dataSource(CalciteTests.DATASOURCE1)
+                                               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(
+                                                   Filtration.eternity()
+                                               )))
+                                               .granularity(new PeriodGranularity(Period.days(1), null, DateTimeZone.UTC))
+                                               .aggregators(
+                                                   Collections.singletonList(
+                                                       new HllSketchBuildAggregatorFactory(
+                                                           "a0:a",
+                                                           "cnt",
+                                                           null,
+                                                           null,
+                                                           ROUND
+                                                       )
+                                                   )
+                                               )
+                                               .postAggregators(
+                                                   ImmutableList.of(
+                                                       new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                                   )
+                                               )
+                                               .context(BaseCalciteQueryTest.getTimeseriesContextWithFloorTime(
+                                                   ImmutableMap.of("skipEmptyBuckets", true, "sqlQueryId", "dummy"),
+                                                   "d0"
+                                               ))
+                                               .build()
                                      )
                                  )
                                  .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
@@ -431,7 +426,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + " HAVING APPROX_COUNT_DISTINCT_DS_HLL(m1) = 2";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results =
+        sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, DEFAULT_PARAMETERS, authenticationResult).toList();
     final int expected = NullHandling.replaceWithDefault() ? 1 : 2;
     Assert.assertEquals(expected, results.size());
   }
@@ -458,7 +454,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                        + "FROM druid.foo";
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             "\"AgEHDAMIAgDhUv8P63iABQ==\"",
@@ -475,6 +476,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               + "  Log Config K   : 12\n"
               + "  Hll Target     : HLL_4\n"
               + "  Current Mode   : LIST\n"
+              + "  Memory         : false\n"
               + "  LB             : 2.0\n"
               + "  Estimate       : 2.000000004967054\n"
               + "  UB             : 2.000099863468538\n"
@@ -484,6 +486,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               + "  LOG CONFIG K   : 12\n"
               + "  HLL TARGET     : HLL_4\n"
               + "  CURRENT MODE   : LIST\n"
+              + "  MEMORY         : FALSE\n"
               + "  LB             : 2.0\n"
               + "  ESTIMATE       : 2.000000004967054\n"
               + "  UB             : 2.000099863468538\n"
@@ -604,7 +607,12 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
     final String sql2 = StringUtils.format("SELECT HLL_SKETCH_ESTIMATE(y), HLL_SKETCH_TO_STRING(y) from (%s)", sql);
 
     // Verify results
-    final List<Object[]> results = sqlLifecycle.runSimple(sql2, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sql2,
+        QUERY_CONTEXT_DEFAULT,
+        DEFAULT_PARAMETERS,
+        authenticationResult
+    ).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             2.000000004967054d,
@@ -612,6 +620,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               + "  Log Config K   : 12\n"
               + "  Hll Target     : HLL_4\n"
               + "  Current Mode   : LIST\n"
+              + "  Memory         : false\n"
               + "  LB             : 2.0\n"
               + "  Estimate       : 2.000000004967054\n"
               + "  UB             : 2.000099863468538\n"

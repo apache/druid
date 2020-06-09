@@ -22,14 +22,8 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.extraction.TimeDimExtractionFn;
@@ -40,7 +34,6 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,45 +42,11 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class SelectorFilterTest extends BaseFilterTest
 {
-  private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "dim6")),
-              null,
-              null
-          )
-      )
-  );
-
-  private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of(
-          "dim0",
-          "0",
-          "dim1",
-          "",
-          "dim2",
-          ImmutableList.of("a", "b"),
-          "dim6",
-          "2017-07-25"
-      )).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of(), "dim6", "2017-07-25"))
-            .get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""), "dim6", "2017-05-25"))
-            .get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "5", "dim1", "abc")).get(0)
-  );
-
   public SelectorFilterTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -96,17 +55,7 @@ public class SelectorFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(
-        testName,
-        ROWS,
-        indexBuilder.schema(
-            new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(PARSER.getParseSpec().getDimensionsSpec()).build()
-        ),
-        finisher,
-        cnf,
-        optimize
-    );
+    super(testName, DEFAULT_ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
   @AfterClass
@@ -123,19 +72,25 @@ public class SelectorFilterTest extends BaseFilterTest
         ImmutableList.of()
     );
     assertFilterMatches(
-        new SelectorDimFilter("dim6", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)),
-        ImmutableList.of("3", "4", "5")
+        new SelectorDimFilter("timeDim", null, new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)),
+        ImmutableList.of("4")
     );
     assertFilterMatches(new SelectorDimFilter(
-        "dim6",
+        "timeDim",
         "2017-07",
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     ), ImmutableList.of("0", "1"));
     assertFilterMatches(new SelectorDimFilter(
-        "dim6",
+        "timeDim",
         "2017-05",
         new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
     ), ImmutableList.of("2"));
+
+    assertFilterMatches(new SelectorDimFilter(
+        "timeDim",
+        "2020-01",
+        new TimeDimExtractionFn("yyyy-MM-dd", "yyyy-MM", true)
+    ), ImmutableList.of("3", "5"));
   }
 
   @Test
@@ -152,15 +107,14 @@ public class SelectorFilterTest extends BaseFilterTest
   {
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of("0"));
-      assertFilterMatches(new SelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     } else {
       assertFilterMatches(new SelectorDimFilter("dim1", null, null), ImmutableList.of());
-      assertFilterMatches(new SelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     }
+    assertFilterMatches(new SelectorDimFilter("dim1", "", null), ImmutableList.of("0"));
     assertFilterMatches(new SelectorDimFilter("dim1", "10", null), ImmutableList.of("1"));
     assertFilterMatches(new SelectorDimFilter("dim1", "2", null), ImmutableList.of("2"));
     assertFilterMatches(new SelectorDimFilter("dim1", "1", null), ImmutableList.of("3"));
-    assertFilterMatches(new SelectorDimFilter("dim1", "def", null), ImmutableList.of("4"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "abdef", null), ImmutableList.of("4"));
     assertFilterMatches(new SelectorDimFilter("dim1", "abc", null), ImmutableList.of("5"));
     assertFilterMatches(new SelectorDimFilter("dim1", "ab", null), ImmutableList.of());
   }
@@ -225,7 +179,7 @@ public class SelectorFilterTest extends BaseFilterTest
     final Map<String, String> stringMap = ImmutableMap.of(
         "1", "HELLO",
         "a", "HELLO",
-        "def", "HELLO",
+        "abdef", "HELLO",
         "abc", "UNKNOWN"
     );
     LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
@@ -353,5 +307,31 @@ public class SelectorFilterTest extends BaseFilterTest
           ImmutableList.of("1")
       );
     }
+  }
+
+  @Test
+  public void testNumericColumnNullsAndDefaults()
+  {
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatches(new SelectorDimFilter("f0", "0", null), ImmutableList.of("0", "4"));
+      assertFilterMatches(new SelectorDimFilter("d0", "0", null), ImmutableList.of("0", "2"));
+      assertFilterMatches(new SelectorDimFilter("l0", "0", null), ImmutableList.of("0", "3"));
+      assertFilterMatches(new SelectorDimFilter("f0", null, null), ImmutableList.of());
+      assertFilterMatches(new SelectorDimFilter("d0", null, null), ImmutableList.of());
+      assertFilterMatches(new SelectorDimFilter("l0", null, null), ImmutableList.of());
+    } else {
+      assertFilterMatches(new SelectorDimFilter("f0", "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new SelectorDimFilter("d0", "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new SelectorDimFilter("l0", "0", null), ImmutableList.of("0"));
+      assertFilterMatches(new SelectorDimFilter("f0", null, null), ImmutableList.of("4"));
+      assertFilterMatches(new SelectorDimFilter("d0", null, null), ImmutableList.of("2"));
+      assertFilterMatches(new SelectorDimFilter("l0", null, null), ImmutableList.of("3"));
+    }
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(SelectorFilter.class).usingGetClass().withNonnullFields("dimension").verify();
   }
 }

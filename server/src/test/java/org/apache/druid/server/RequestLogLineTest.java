@@ -35,7 +35,7 @@ public class RequestLogLineTest
   private Query query;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     query = new TimeBoundaryQuery(
         new TableDataSource("test"),
@@ -47,7 +47,7 @@ public class RequestLogLineTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void nullTimestamp() throws JsonProcessingException
+  public void nullTimestamp()
   {
     RequestLogLine requestLogLine = RequestLogLine.forNative(
         query,
@@ -58,7 +58,7 @@ public class RequestLogLineTest
   }
 
   @Test(expected = NullPointerException.class)
-  public void nullQueryStats() throws JsonProcessingException
+  public void nullQueryStats()
   {
     RequestLogLine requestLogLine = RequestLogLine.forNative(
         query,

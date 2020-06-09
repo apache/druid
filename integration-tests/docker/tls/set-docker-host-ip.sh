@@ -18,7 +18,7 @@
 DOCKER_HOST_IP="$(host "$(hostname)" | perl -nle '/has address (.*)/ && print $1')"
 if [ -z "$DOCKER_HOST_IP" ]; then
     # Mac specific way to get host ip
-    DOCKER_HOST_IP="$(dscacheutil -q host -a name "$(HOSTNAME)" | perl -nle '/ip_address: (.*)/ && print $1')"
+    DOCKER_HOST_IP="$(dscacheutil -q host -a name "$(HOSTNAME)" | perl -nle '/ip_address: (.*)/ && print $1' | tail -n1)"
 fi
 
 if [ -z "$DOCKER_HOST_IP" ]; then

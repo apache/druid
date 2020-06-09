@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -101,9 +102,18 @@ public class SegmentAnalyzer
 
     for (String columnName : columnNames) {
       final ColumnHolder columnHolder = index == null ? null : index.getColumnHolder(columnName);
-      final ColumnCapabilities capabilities = columnHolder != null
-                                              ? columnHolder.getCapabilities()
-                                              : storageAdapter.getColumnCapabilities(columnName);
+      final ColumnCapabilities capabilities;
+      if (columnHolder != null) {
+        capabilities = columnHolder.getCapabilities();
+      } else {
+        // this can be removed if we get to the point where IncrementalIndexStorageAdapter.getColumnCapabilities
+        // accurately reports the capabilities
+        if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
+          capabilities = ((IncrementalIndexStorageAdapter) storageAdapter).getSnapshotColumnCapabilities(columnName);
+        } else {
+          capabilities = storageAdapter.getColumnCapabilities(columnName);
+        }
+      }
 
       final ColumnAnalysis analysis;
       final ValueType type = capabilities.getType();
@@ -138,7 +148,7 @@ public class SegmentAnalyzer
     // Add time column too
     ColumnCapabilities timeCapabilities = storageAdapter.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
     if (timeCapabilities == null) {
-      timeCapabilities = new ColumnCapabilitiesImpl().setType(ValueType.LONG).setHasMultipleValues(false);
+      timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
     }
     columns.put(
         ColumnHolder.TIME_COLUMN_NAME,
@@ -172,7 +182,7 @@ public class SegmentAnalyzer
     long size = 0;
 
     if (analyzingSize()) {
-      if (capabilities.hasMultipleValues()) {
+      if (capabilities.hasMultipleValues().isTrue()) {
         return ColumnAnalysis.error("multi_value");
       }
 
@@ -181,7 +191,7 @@ public class SegmentAnalyzer
 
     return new ColumnAnalysis(
         capabilities.getType().name(),
-        capabilities.hasMultipleValues(),
+        capabilities.hasMultipleValues().isTrue(),
         size,
         null,
         null,
@@ -207,8 +217,8 @@ public class SegmentAnalyzer
         for (int i = 0; i < cardinality; ++i) {
           String value = bitmapIndex.getValue(i);
           if (value != null) {
-            size += StringUtils.estimatedBinaryLengthAsUTF8(value) * bitmapIndex.getBitmap(bitmapIndex.getIndex(value))
-                                                                                .size();
+            size += StringUtils.estimatedBinaryLengthAsUTF8(value) *
+                    ((long) bitmapIndex.getBitmap(bitmapIndex.getIndex(value)).size());
           }
         }
       }
@@ -231,7 +241,7 @@ public class SegmentAnalyzer
 
     return new ColumnAnalysis(
         capabilities.getType().name(),
-        capabilities.hasMultipleValues(),
+        capabilities.hasMultipleValues().isTrue(),
         size,
         analyzingCardinality() ? cardinality : 0,
         min,
@@ -308,7 +318,7 @@ public class SegmentAnalyzer
 
     return new ColumnAnalysis(
         capabilities.getType().name(),
-        capabilities.hasMultipleValues(),
+        capabilities.hasMultipleValues().isTrue(),
         size,
         cardinality,
         min,
@@ -324,7 +334,7 @@ public class SegmentAnalyzer
   )
   {
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
-      final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues();
+      final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {

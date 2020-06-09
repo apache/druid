@@ -287,7 +287,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       }
       catch (ParseException e) {
         if (isLogParseExceptions) {
-          LOG.error(e, "Encountered parse exception:");
+          LOG.error(e, "Encountered parse exception");
         }
 
         numParseExceptions++;

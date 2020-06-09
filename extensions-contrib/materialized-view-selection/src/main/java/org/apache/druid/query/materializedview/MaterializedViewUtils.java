@@ -47,9 +47,8 @@ public class MaterializedViewUtils
    */
   public static Set<String> getRequiredFields(Query query)
   {
-    Set<String> dimensions = new HashSet<>();
     Set<String> dimsInFilter = null == query.getFilter() ? new HashSet<String>() : query.getFilter().getRequiredColumns();
-    dimensions.addAll(dimsInFilter);
+    Set<String> dimensions = new HashSet<>(dimsInFilter);
 
     if (query instanceof TopNQuery) {
       TopNQuery q = (TopNQuery) query;

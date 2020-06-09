@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -38,14 +37,12 @@ import java.util.List;
 public abstract class TextReader extends IntermediateRowParsingReader<String>
 {
   private final InputRowSchema inputRowSchema;
-  final InputEntity source;
-  final File temporaryDirectory;
+  private final InputEntity source;
 
-  public TextReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+  public TextReader(InputRowSchema inputRowSchema, InputEntity source)
   {
     this.inputRowSchema = inputRowSchema;
     this.source = source;
-    this.temporaryDirectory = temporaryDirectory;
   }
 
   public InputRowSchema getInputRowSchema()

@@ -215,7 +215,7 @@ public class ForkingTaskRunner
 
                         for (String propName : props.stringPropertyNames()) {
                           for (String allowedPrefix : config.getAllowedPrefixes()) {
-                            // See https://github.com/apache/incubator-druid/issues/1841
+                            // See https://github.com/apache/druid/issues/1841
                             if (propName.startsWith(allowedPrefix)
                                 && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
                                 && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
@@ -325,6 +325,13 @@ public class ForkingTaskRunner
                         if (nodeType != null) {
                           command.add("--nodeType");
                           command.add(nodeType);
+                        }
+
+                        // If the task type is queryable, we need to load broadcast segments on the peon, used for
+                        // join queries
+                        if (task.supportsQueries()) {
+                          command.add("--loadBroadcastSegments");
+                          command.add("true");
                         }
 
                         if (!taskFile.exists()) {

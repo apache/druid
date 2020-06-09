@@ -459,10 +459,10 @@ public class AppenderatorPlumber implements Plumber
     // WARNING: Committers.nil() here means that on-disk data can get out of sync with committing.
     Futures.addCallback(
         appenderator.push(segmentsToPush, Committers.nil(), false),
-        new FutureCallback<SegmentsAndMetadata>()
+        new FutureCallback<SegmentsAndCommitMetadata>()
         {
           @Override
-          public void onSuccess(SegmentsAndMetadata result)
+          public void onSuccess(SegmentsAndCommitMetadata result)
           {
             // Immediately publish after pushing
             for (DataSegment pushedSegment : result.getSegments()) {

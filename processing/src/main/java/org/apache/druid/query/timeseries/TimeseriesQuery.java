@@ -48,8 +48,13 @@ import java.util.Objects;
 @JsonTypeName("timeseries")
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
-  static final String CTX_GRAND_TOTAL = "grandTotal";
+  public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
+  // "timestampResultField" is an undocumented parameter used internally by the SQL layer.
+  // It is necessary because when the SQL layer generates a Timeseries query for a group-by-time-floor SQL query,
+  // it expects the result of the time-floor to have a specific name. That name is provided using this parameter.
+  // TODO: We can remove this once https://github.com/apache/druid/issues/9974 is done.
+  public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
 
   private final VirtualColumns virtualColumns;
   private final DimFilter dimFilter;
@@ -103,6 +108,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Query.TIMESERIES;
   }
 
+  @Override
   @JsonProperty
   public VirtualColumns getVirtualColumns()
   {
@@ -136,6 +142,11 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public boolean isGrandTotal()
   {
     return getContextBoolean(CTX_GRAND_TOTAL, false);
+  }
+
+  public String getTimestampResultField()
+  {
+    return getContextValue(CTX_TIMESTAMP_RESULT_FIELD);
   }
 
   public boolean isSkipEmptyBuckets()

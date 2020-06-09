@@ -178,7 +178,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       outputStream.write(errorJson.getBytes(StandardCharsets.UTF_8));
     }
     catch (IOException ioe) {
-      log.error("WTF? Can't get writer from HTTP response.");
+      log.error("Can't get writer from HTTP response.");
     }
   }
 }

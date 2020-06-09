@@ -34,6 +34,8 @@ import java.util.Map;
 class PartialDimensionDistributionParallelIndexTaskRunner
     extends InputSourceSplitParallelIndexTaskRunner<PartialDimensionDistributionTask, DimensionDistributionReport>
 {
+  private static final String PHASE_NAME = "partial dimension distribution";
+
   // For tests
   private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
 
@@ -82,7 +84,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
   @Override
   public String getName()
   {
-    return PartialDimensionDistributionTask.TYPE;
+    return PHASE_NAME;
   }
 
   @Override
@@ -92,8 +94,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       String supervisorTaskId,
       Map<String, Object> context,
       InputSplit split,
-      ParallelIndexIngestionSpec subTaskIngestionSpec,
-      IndexingServiceClient indexingServiceClient
+      ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
     return new SubTaskSpec<PartialDimensionDistributionTask>(

@@ -395,7 +395,7 @@ public abstract class LoadRule implements Rule
       left = dropSegmentFromServers(balancerStrategy, segment, activeServers, left);
     }
     if (left != 0) {
-      log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getId());
+      log.warn("I have no servers serving [%s]?", segment.getId());
     }
     return numToDrop - left;
   }

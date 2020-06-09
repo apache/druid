@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.joda.time.Interval;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class DimensionDistributionReport implements SubTaskReport
 {
@@ -64,5 +65,25 @@ public class DimensionDistributionReport implements SubTaskReport
            "taskId='" + taskId + '\'' +
            ", intervalToDistribution=" + intervalToDistribution +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DimensionDistributionReport that = (DimensionDistributionReport) o;
+    return Objects.equals(taskId, that.taskId) &&
+           Objects.equals(intervalToDistribution, that.intervalToDistribution);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(taskId, intervalToDistribution);
   }
 }

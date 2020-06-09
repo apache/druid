@@ -121,6 +121,7 @@ public interface ColumnarDoubles extends Closeable
         @Override
         public double getDouble()
         {
+          //noinspection AssertWithSideEffects (ignore null handling test initialization check side effect)
           assert NullHandling.replaceWithDefault() || !isNull();
           return ColumnarDoubles.this.get(offset.getOffset());
         }

@@ -66,7 +66,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  *   }
  * }
  */
-public final class LifecycleLock
+public class LifecycleLock
 {
   private static class Sync extends AbstractQueuedSynchronizer
   {

@@ -19,12 +19,9 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -279,35 +276,24 @@ public class TaskQueue
           } else if (isTaskPending(task)) {
             // if the taskFutures contain this task and this task is pending, also let the taskRunner
             // to run it to guarantee it will be assigned to run
-            // see https://github.com/apache/incubator-druid/pull/6991
+            // see https://github.com/apache/druid/pull/6991
             taskRunner.run(task);
           }
         }
         // Kill tasks that shouldn't be running
-        final Set<String> tasksToKill = Sets.difference(
-            runnerTaskFutures.keySet(),
-            ImmutableSet.copyOf(
-                Lists.transform(
-                    tasks,
-                    new Function<Task, Object>()
-                    {
-                      @Override
-                      public String apply(Task task)
-                      {
-                        return task.getId();
-                      }
-                    }
-                )
-            )
-        );
+        final Set<String> knownTaskIds = tasks
+            .stream()
+            .map(Task::getId)
+            .collect(Collectors.toSet());
+        final Set<String> tasksToKill = Sets.difference(runnerTaskFutures.keySet(), knownTaskIds);
         if (!tasksToKill.isEmpty()) {
           log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
           for (final String taskId : tasksToKill) {
             try {
               taskRunner.shutdown(
                   taskId,
-                  "task is not in runnerTaskFutures[%s]",
-                  runnerTaskFutures.keySet()
+                  "task is not in knownTaskIds[%s]",
+                  knownTaskIds
               );
             }
             catch (Exception e) {

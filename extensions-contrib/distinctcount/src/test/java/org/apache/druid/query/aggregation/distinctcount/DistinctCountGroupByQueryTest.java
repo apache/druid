@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.distinctcount;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
@@ -90,7 +91,7 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
 
     String visitor_id = "visitor_id";
     String client_type = "client_type";
-    long timestamp = System.currentTimeMillis();
+    long timestamp = DateTimes.of("2010-01-01").getMillis();
     index.add(
         new MapBasedInputRow(
             timestamp,

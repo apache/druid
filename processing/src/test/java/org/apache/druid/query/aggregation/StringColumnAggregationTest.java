@@ -101,7 +101,7 @@ public class StringColumnAggregationTest
         tempFolder
     );
 
-    IncrementalIndex index = aggregationTestHelper.createIncrementalIndex(
+    IncrementalIndex index = AggregationTestHelper.createIncrementalIndex(
         inputRows.iterator(),
         new NoopInputRowParser(null),
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
@@ -129,7 +129,7 @@ public class StringColumnAggregationTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     if (segments != null) {
       for (Segment seg : segments) {

@@ -22,20 +22,22 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 @JsonTypeName("table")
 public class TableDataSource implements DataSource
 {
-  @JsonProperty
   private final String name;
 
   @JsonCreator
   public TableDataSource(@JsonProperty("name") String name)
   {
-    this.name = (name == null ? null : name);
+    this.name = Preconditions.checkNotNull(name, "'name' must be nonnull");
   }
 
   @JsonProperty
@@ -45,9 +47,43 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public List<String> getNames()
+  public Set<String> getTableNames()
   {
-    return Collections.singletonList(name);
+    return Collections.singleton(name);
+  }
+
+  @Override
+  public List<DataSource> getChildren()
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public DataSource withChildren(List<DataSource> children)
+  {
+    if (!children.isEmpty()) {
+      throw new IAE("Cannot accept children");
+    }
+
+    return this;
+  }
+
+  @Override
+  public boolean isCacheable()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isGlobal()
+  {
+    return false;
+  }
+
+  @Override
+  public boolean isConcrete()
+  {
+    return true;
   }
 
   @Override
@@ -57,7 +93,7 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public boolean equals(Object o)
+  public final boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -76,7 +112,7 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public int hashCode()
+  public final int hashCode()
   {
     return name.hashCode();
   }

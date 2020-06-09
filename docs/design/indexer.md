@@ -25,13 +25,13 @@ title: "Indexer Process"
 > The Indexer is an optional and <a href="../development/experimental.html">experimental</a> feature.
 > Its memory management system is still under development and will be significantly enhanced in later releases. 
 
-The Apache Druid (incubating) Indexer process is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
+The Apache Druid Indexer process is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
 
 The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system and to better enable resource sharing across tasks.
 
 ### Configuration
 
-For Apache Druid (incubating) Indexer Process Configuration, see [Indexer Configuration](../configuration/index.html#indexer).
+For Apache Druid Indexer Process Configuration, see [Indexer Configuration](../configuration/index.html#indexer).
 
 ### HTTP endpoints
 
@@ -91,4 +91,4 @@ Separate task logs are not currently supported when using the Indexer; all task 
 
 The Indexer currently imposes an identical memory limit on each task. In later releases, the per-task memory limit will be removed and only the global limit will apply. The limit on concurrent merges will also be removed. 
 
-In later releases, per-task memory usage will be dynamically managed. Please see https://github.com/apache/incubator-druid/issues/7900 for details on future enhancements to the Indexer.
+In later releases, per-task memory usage will be dynamically managed. Please see https://github.com/apache/druid/issues/7900 for details on future enhancements to the Indexer.

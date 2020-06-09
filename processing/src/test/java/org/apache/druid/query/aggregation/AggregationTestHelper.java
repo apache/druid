@@ -177,9 +177,7 @@ public class AggregationTestHelper implements Closeable
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest();
 
     TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
         toolchest,
@@ -218,10 +216,7 @@ public class AggregationTestHelper implements Closeable
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-    );
+    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
 
     final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
@@ -438,6 +433,7 @@ public class AggregationTestHelper implements Closeable
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(minTimestamp)
+                  .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
                   .withQueryGranularity(gran)
                   .withMetrics(metrics)
                   .withRollup(rollup)
@@ -458,6 +454,7 @@ public class AggregationTestHelper implements Closeable
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(minTimestamp)
+                      .withDimensionsSpec(parser.getParseSpec().getDimensionsSpec())
                       .withQueryGranularity(gran)
                       .withMetrics(metrics)
                       .withRollup(rollup)

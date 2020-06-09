@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
@@ -38,7 +40,10 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  */
@@ -46,9 +51,15 @@ public class OrFilter implements BooleanFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
-  private final List<Filter> filters;
+  private final Set<Filter> filters;
 
+  @VisibleForTesting
   public OrFilter(List<Filter> filters)
+  {
+    this(new HashSet<>(filters));
+  }
+
+  public OrFilter(Set<Filter> filters)
   {
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty OrFilter (the universe does not exist)");
 
@@ -59,7 +70,7 @@ public class OrFilter implements BooleanFilter
   public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
   {
     if (filters.size() == 1) {
-      return filters.get(0).getBitmapResult(selector, bitmapResultFactory);
+      return Iterables.getOnlyElement(filters).getBitmapResult(selector, bitmapResultFactory);
     }
 
     List<T> bitmapResults = new ArrayList<>();
@@ -75,8 +86,9 @@ public class OrFilter implements BooleanFilter
   {
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
 
-    for (int i = 0; i < filters.size(); i++) {
-      matchers[i] = filters.get(i).makeMatcher(factory);
+    int i = 0;
+    for (Filter filter : filters) {
+      matchers[i++] = filter.makeMatcher(factory);
     }
     return makeMatcher(matchers);
   }
@@ -86,8 +98,9 @@ public class OrFilter implements BooleanFilter
   {
     final VectorValueMatcher[] matchers = new VectorValueMatcher[filters.size()];
 
-    for (int i = 0; i < filters.size(); i++) {
-      matchers[i] = filters.get(i).makeVectorMatcher(factory);
+    int i = 0;
+    for (Filter filter : filters) {
+      matchers[i++] = filter.makeVectorMatcher(factory);
     }
     return makeVectorMatcher(matchers);
   }
@@ -123,11 +136,11 @@ public class OrFilter implements BooleanFilter
       matchers.add(0, offsetMatcher);
     }
 
-    return makeMatcher(matchers.toArray(AndFilter.EMPTY_VALUE_MATCHER_ARRAY));
+    return makeMatcher(matchers.toArray(BooleanFilter.EMPTY_VALUE_MATCHER_ARRAY));
   }
 
   @Override
-  public List<Filter> getFilters()
+  public Set<Filter> getFilters()
   {
     return filters;
   }
@@ -217,5 +230,24 @@ public class OrFilter implements BooleanFilter
         return retVal;
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OrFilter orFilter = (OrFilter) o;
+    return Objects.equals(getFilters(), orFilter.getFilters());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(getFilters());
   }
 }

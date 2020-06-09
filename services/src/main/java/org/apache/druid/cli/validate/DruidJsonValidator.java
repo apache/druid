@@ -99,7 +99,7 @@ public class DruidJsonValidator extends GuiceRunnable
     return ImmutableList.of(
         // It's unknown if those modules are required in DruidJsonValidator.
         // Maybe some of those modules could be removed.
-        // See https://github.com/apache/incubator-druid/pull/4429#discussion_r123603498
+        // See https://github.com/apache/druid/pull/4429#discussion_r123603498
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),

@@ -23,7 +23,7 @@ title: "Multi-value dimensions"
   -->
 
 
-Apache Druid (incubating) supports "multi-value" string dimensions. These are generated when an input field contains an
+Apache Druid supports "multi-value" string dimensions. These are generated when an input field contains an
 array of values instead of a single value (e.g. JSON arrays, or a TSV field containing one or more `listDelimiter`
 characters).
 

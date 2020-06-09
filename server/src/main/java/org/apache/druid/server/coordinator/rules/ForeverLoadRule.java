@@ -28,6 +28,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -75,5 +76,24 @@ public class ForeverLoadRule extends LoadRule
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
     return true;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ForeverLoadRule that = (ForeverLoadRule) o;
+    return Objects.equals(tieredReplicants, that.tieredReplicants);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(tieredReplicants);
   }
 }

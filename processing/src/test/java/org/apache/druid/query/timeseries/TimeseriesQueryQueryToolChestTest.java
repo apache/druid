@@ -22,12 +22,15 @@ package org.apache.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -40,7 +43,10 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -50,7 +56,14 @@ import java.util.Arrays;
 @RunWith(Parameterized.class)
 public class TimeseriesQueryQueryToolChestTest
 {
+  private static final String TIMESTAMP_RESULT_FIELD_NAME = "d0";
   private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -131,7 +144,8 @@ public class TimeseriesQueryQueryToolChestTest
         strategy.getCacheObjectClazz()
     );
 
-    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
+    Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true)
+                                                                    .apply(fromResultLevelCacheValue);
     Assert.assertEquals(result2, fromResultLevelCacheRes);
 
     final Result<TimeseriesResultValue> result3 = new Result<>(
@@ -181,7 +195,7 @@ public class TimeseriesQueryQueryToolChestTest
                                          )
                                          .build();
 
-    // Test for https://github.com/apache/incubator-druid/issues/4093.
+    // Test for https://github.com/apache/druid/issues/4093.
     Assert.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
@@ -346,6 +360,98 @@ public class TimeseriesQueryQueryToolChestTest
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
+        )
+    );
+  }
+
+  @Test
+  public void testResultArraySignatureWithoutTimestampResultField()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .descending(descending)
+              .granularity(Granularities.HOUR)
+              .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+              .postAggregators(QueryRunnerTestHelper.CONSTANT)
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        TOOL_CHEST.resultArraySignature(query)
+    );
+  }
+
+  @Test
+  public void testResultArraySignatureWithTimestampResultField()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .descending(descending)
+              .granularity(Granularities.HOUR)
+              .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+              .postAggregators(QueryRunnerTestHelper.CONSTANT)
+              .context(ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME))
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add(TIMESTAMP_RESULT_FIELD_NAME, ValueType.LONG)
+                    .add("rows", ValueType.LONG)
+                    .add("index", ValueType.DOUBLE)
+                    .add("uniques", null)
+                    .add("const", null)
+                    .build(),
+        TOOL_CHEST.resultArraySignature(query)
+    );
+  }
+
+  @Test
+  public void testResultsAsArrays()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .descending(descending)
+              .granularity(Granularities.HOUR)
+              .aggregators(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS)
+              .postAggregators(QueryRunnerTestHelper.CONSTANT)
+              .build();
+
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.of(
+            new Object[]{DateTimes.of("2000").getMillis(), 1L, 2L, 3L, 1L},
+            new Object[]{DateTimes.of("2000T01").getMillis(), 4L, 5L, 6L, 1L}
+        ),
+        TOOL_CHEST.resultsAsArrays(
+            query,
+            Sequences.simple(
+                ImmutableList.of(
+                    new Result<>(
+                        DateTimes.of("2000"),
+                        new TimeseriesResultValue(
+                            ImmutableMap.of("rows", 1L, "index", 2L, "uniques", 3L, "const", 1L)
+                        )
+                    ),
+                    new Result<>(
+                        DateTimes.of("2000T01"),
+                        new TimeseriesResultValue(
+                            ImmutableMap.of("rows", 4L, "index", 5L, "uniques", 6L, "const", 1L)
+                        )
+                    )
+                )
+            )
         )
     );
   }

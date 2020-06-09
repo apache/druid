@@ -53,6 +53,12 @@ public class DynamicPartitionsSpec implements PartitionsSpec
   }
 
   @Override
+  public SecondaryPartitionType getType()
+  {
+    return SecondaryPartitionType.LINEAR;
+  }
+
+  @Override
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {

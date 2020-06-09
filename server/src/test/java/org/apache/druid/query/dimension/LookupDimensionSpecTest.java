@@ -42,6 +42,7 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 
 @RunWith(JUnitParamsRunner.class)
 public class LookupDimensionSpecTest
@@ -55,7 +56,9 @@ public class LookupDimensionSpecTest
   static {
     EasyMock
         .expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName")))
-        .andReturn(new LookupExtractorFactoryContainer("v0", new MapLookupExtractorFactory(STRING_MAP, false)))
+        .andReturn(
+            Optional.of(new LookupExtractorFactoryContainer("v0", new MapLookupExtractorFactory(STRING_MAP, false)))
+        )
         .anyTimes();
     EasyMock.replay(LOOKUP_REF_MANAGER);
   }
@@ -75,14 +78,26 @@ public class LookupDimensionSpecTest
         LOOKUP_REF_MANAGER
     );
     String serLookup = mapper.writeValueAsString(lookupDimSpec);
-    Assert.assertEquals(lookupDimSpec, mapper.readerFor(DimensionSpec.class).with(injectableValues).readValue(serLookup));
+    Assert.assertEquals(
+        lookupDimSpec,
+        mapper.readerFor(DimensionSpec.class).with(injectableValues).readValue(serLookup)
+    );
   }
 
   private Object[] parametersForTestSerDesr()
   {
     return new Object[]{
         new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, true, null, null, true, null),
-        new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "Missing_value", null, true, null),
+        new LookupDimensionSpec(
+            "dimName",
+            "outputName",
+            MAP_LOOKUP_EXTRACTOR,
+            false,
+            "Missing_value",
+            null,
+            true,
+            null
+        ),
         new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, true, null),
         new LookupDimensionSpec("dimName", "outputName", null, false, null, "name", true, LOOKUP_REF_MANAGER)
     };

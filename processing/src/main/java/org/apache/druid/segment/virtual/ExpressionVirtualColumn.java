@@ -21,7 +21,9 @@ package org.apache.druid.segment.virtual;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -62,6 +64,23 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.parsedExpression = Suppliers.memoize(() -> Parser.parse(expression, macroTable));
   }
 
+  /**
+   * Constructor for creating an ExpressionVirtualColumn from a pre-parsed expression.
+   */
+  public ExpressionVirtualColumn(
+      String name,
+      Expr parsedExpression,
+      ValueType outputType
+  )
+  {
+    this.name = Preconditions.checkNotNull(name, "name");
+    // Unfortunately this string representation can't be reparsed into the same expression, might be useful
+    // if the expression system supported that
+    this.expression = parsedExpression.toString();
+    this.outputType = outputType != null ? outputType : ValueType.FLOAT;
+    this.parsedExpression = Suppliers.ofInstance(parsedExpression);
+  }
+
   @JsonProperty("name")
   @Override
   public String getOutputName()
@@ -79,6 +98,13 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ValueType getOutputType()
   {
     return outputType;
+  }
+
+  @JsonIgnore
+  @VisibleForTesting
+  public Supplier<Expr> getParsedExpression()
+  {
+    return parsedExpression;
   }
 
   @Override
@@ -105,10 +131,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    // Note: Ideally we would only "setHasMultipleValues(true)" if the expression in question could potentially return
-    // multiple values. However, we don't currently have a good way of determining this, so to be safe we always
-    // set the flag.
-    return new ColumnCapabilitiesImpl().setType(outputType).setHasMultipleValues(true);
+    // Note: Ideally we would fill out additional information instead of leaving capabilities as 'unknown', e.g. examine
+    // if the expression in question could potentially return multiple values and anything else. However, we don't
+    // currently have a good way of determining this, so fill this out more once we do
+    return new ColumnCapabilitiesImpl().setType(outputType);
   }
 
   @Override

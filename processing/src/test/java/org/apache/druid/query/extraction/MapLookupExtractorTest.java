@@ -19,10 +19,12 @@
 
 package org.apache.druid.query.extraction;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -33,8 +35,15 @@ import java.util.Map;
 
 public class MapLookupExtractorTest
 {
-  private final Map lookupMap = ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "", "empty_string");
+  private final Map<String, String> lookupMap =
+      ImmutableMap.of("foo", "bar", "null", "", "empty String", "", "", "empty_string");
   private final MapLookupExtractor fn = new MapLookupExtractor(lookupMap, false);
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    NullHandling.initializeForTests();
+  }
 
   @Test
   public void testUnApply()
@@ -79,6 +88,21 @@ public class MapLookupExtractorTest
     Assert.assertFalse(Arrays.equals(fn.getCacheKey(), fn3.getCacheKey()));
     final MapLookupExtractor fn4 = new MapLookupExtractor(ImmutableMap.of("foo", "bar2"), false);
     Assert.assertFalse(Arrays.equals(fn.getCacheKey(), fn4.getCacheKey()));
+  }
+
+  @Test
+  public void testCanIterate()
+  {
+    Assert.assertTrue(fn.canIterate());
+  }
+
+  @Test
+  public void testIterable()
+  {
+    Assert.assertEquals(
+        ImmutableList.copyOf(lookupMap.entrySet()),
+        ImmutableList.copyOf(fn.iterable())
+    );
   }
 
   @Test

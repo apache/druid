@@ -41,6 +41,9 @@ public interface PartitionsSpec
   String MAX_ROWS_PER_SEGMENT = "maxRowsPerSegment";
   int HISTORICAL_NULL = -1;
 
+  @JsonIgnore
+  SecondaryPartitionType getType();
+
   /**
    * Returns the max number of rows per segment.
    * Implementations can have different default values which it could be even null.
@@ -54,28 +57,6 @@ public interface PartitionsSpec
    * It should usually return true if perfect rollup is enforced but number of partitions is not specified.
    */
   boolean needsDeterminePartitions(boolean useForHadoopTask);
-
-  /**
-   * '-1' regarded as null for some historical reason.
-   */
-  static boolean isEffectivelyNull(@Nullable Integer val)
-  {
-    return val == null || val == HISTORICAL_NULL;
-  }
-
-  /**
-   * '-1' regarded as null for some historical reason.
-   */
-  static boolean isEffectivelyNull(@Nullable Long val)
-  {
-    return val == null || val == HISTORICAL_NULL;
-  }
-
-  @Nullable
-  static Integer resolveHistoricalNullIfNeeded(@Nullable Integer val)
-  {
-    return isEffectivelyNull(val) ? null : val;
-  }
 
   /**
    * @return True if this partitionSpec's type is compatible with forceGuaranteedRollup=true.
@@ -101,4 +82,26 @@ public interface PartitionsSpec
    */
   @JsonIgnore
   String getForceGuaranteedRollupIncompatiblityReason();
+
+  /**
+   * '-1' regarded as null for some historical reason.
+   */
+  static boolean isEffectivelyNull(@Nullable Integer val)
+  {
+    return val == null || val == HISTORICAL_NULL;
+  }
+
+  /**
+   * '-1' regarded as null for some historical reason.
+   */
+  static boolean isEffectivelyNull(@Nullable Long val)
+  {
+    return val == null || val == HISTORICAL_NULL;
+  }
+
+  @Nullable
+  static Integer resolveHistoricalNullIfNeeded(@Nullable Integer val)
+  {
+    return isEffectivelyNull(val) ? null : val;
+  }
 }

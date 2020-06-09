@@ -65,16 +65,16 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void killSegments(String dataSource, Interval interval)
+  public void killUnusedSegments(String dataSource, Interval interval)
   {
-    runTask(new ClientKillQuery(dataSource, interval));
+    runTask(new ClientKillUnusedSegmentsTaskQuery(dataSource, interval));
   }
 
   @Override
   public String compactSegments(
       List<DataSegment> segments,
       int compactionTaskPriority,
-      ClientCompactQueryTuningConfig tuningConfig,
+      ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   )
   {
@@ -90,7 +90,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context.put("priority", compactionTaskPriority);
 
     return runTask(
-        new ClientCompactQuery(
+        new ClientCompactionTaskQuery(
             dataSource,
             new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
             tuningConfig,
@@ -103,6 +103,8 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public String runTask(Object taskObject)
   {
     try {
+      // Warning, magic: here we may serialize ClientTaskQuery objects, but OverlordResource.taskPost() deserializes
+      // Task objects from the same data. See the comment for ClientTaskQuery for details.
       final StringFullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/task")
                            .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskObject))
@@ -133,7 +135,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public String killTask(String taskId)
+  public String cancelTask(String taskId)
   {
     try {
       final StringFullResponseHolder response = druidLeaderClient.go(
@@ -144,22 +146,22 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Failed to kill task[%s]", taskId);
+        throw new ISE("Failed to cancel task[%s]", taskId);
       }
 
       final Map<String, Object> resultMap = jsonMapper.readValue(
           response.getContent(),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
-      final String killedTaskId = (String) resultMap.get("task");
-      Preconditions.checkNotNull(killedTaskId, "Null task id returned for task[%s]", taskId);
+      final String cancelledTaskId = (String) resultMap.get("task");
+      Preconditions.checkNotNull(cancelledTaskId, "Null task id returned for task[%s]", taskId);
       Preconditions.checkState(
-          taskId.equals(killedTaskId),
-          "Requested to kill task[%s], but another task[%s] was killed!",
+          taskId.equals(cancelledTaskId),
+          "Requested to cancel task[%s], but another task[%s] was cancelled!",
           taskId,
-          killedTaskId
+          cancelledTaskId
       );
-      return killedTaskId;
+      return cancelledTaskId;
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -229,7 +231,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       if (!responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Error while fetching the status of the last complete task");
+        throw new ISE("Error while fetching the status of tasks");
       }
 
       return jsonMapper.readValue(

@@ -34,7 +34,7 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 
 ## Jetty server configuration
 
-Apache Druid (incubating) uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
+Apache Druid uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
 reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html) might be helpful.
 To get more in depth knowledge of TLS/SSL support in Java in general, please refer to this [guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
 The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html#configuring-sslcontextfactory)
@@ -82,7 +82,7 @@ Since, there are various ways to configure SSLContext, by default, Druid looks f
 while creating the HttpClient. This binding can be achieved writing a [Druid extension](../development/extensions.md)
 which can provide an instance of SSLContext. Druid comes with a simple extension present [here](../development/extensions-core/simple-client-sslcontext.md)
 which should be useful enough for most simple cases, see [this](../development/extensions.md#loading-extensions) for how to include extensions.
-If this extension does not satisfy the requirements then please follow the extension [implementation](https://github.com/apache/incubator-druid/tree/master/extensions-core/simple-client-sslcontext)
+If this extension does not satisfy the requirements then please follow the extension [implementation](https://github.com/apache/druid/tree/master/extensions-core/simple-client-sslcontext)
 to create your own extension.
 
 When Druid Coordinator/Overlord have both HTTP and HTTPS enabled and Client sends request to non-leader process, then Client is always redirected to the HTTPS endpoint on leader process.

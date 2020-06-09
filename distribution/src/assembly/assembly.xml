@@ -98,7 +98,6 @@
         <fileSet>
             <directory>../</directory>
             <includes>
-                <include>DISCLAIMER</include>
                 <include>licenses/**</include>
             </includes>
         </fileSet>

@@ -23,7 +23,7 @@ title: "Graphite Emitter"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `graphite-emitter` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `graphite-emitter` extension.
 
 ## Introduction
 

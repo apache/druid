@@ -19,24 +19,90 @@
 
 package org.apache.druid.segment.column;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.java.util.common.StringUtils;
+
+import javax.annotation.Nullable;
+
 /**
  */
 public interface ColumnCapabilities
 {
   ValueType getType();
-
   boolean isDictionaryEncoded();
+  Capable areDictionaryValuesSorted();
+  Capable areDictionaryValuesUnique();
   boolean isRunLengthEncoded();
   boolean hasBitmapIndexes();
   boolean hasSpatialIndexes();
-  boolean hasMultipleValues();
+  Capable hasMultipleValues();
   boolean isFilterable();
 
-  /**
-   * This property indicates that this {@link ColumnCapabilities} is "complete" in that all properties can be expected
-   * to supply valid responses. Not all {@link ColumnCapabilities} are created equal. Some, such as those provided by
-   * {@link org.apache.druid.query.groupby.RowBasedColumnSelectorFactory} only have type information, if even that, and
-   * cannot supply information like {@link ColumnCapabilities#hasMultipleValues}, and will report as false.
-   */
-  boolean isComplete();
+  enum Capable
+  {
+    FALSE,
+    TRUE,
+    UNKNOWN;
+
+    public boolean isTrue()
+    {
+      return this == TRUE;
+    }
+
+    public boolean isMaybeTrue()
+    {
+      return isTrue() || isUnknown();
+    }
+
+    public boolean isUnknown()
+    {
+      return this == UNKNOWN;
+    }
+
+    public Capable coerceUnknownToBoolean(boolean unknownIsTrue)
+    {
+      return this == UNKNOWN ? Capable.of(unknownIsTrue) : this;
+    }
+
+    public Capable and(Capable other)
+    {
+      if (this == UNKNOWN || other == UNKNOWN) {
+        return UNKNOWN;
+      }
+      return this == TRUE && other == TRUE ? TRUE : FALSE;
+    }
+
+    public Capable or(Capable other)
+    {
+      if (this == TRUE) {
+        return TRUE;
+      }
+      return other;
+    }
+
+    public static Capable of(boolean bool)
+    {
+      return bool ? TRUE : FALSE;
+    }
+
+    @JsonCreator
+    public static Capable ofNullable(@Nullable Boolean bool)
+    {
+      return bool == null ? Capable.UNKNOWN : of(bool);
+    }
+
+    @JsonValue
+    @Nullable
+    public Boolean toJson()
+    {
+      return this == UNKNOWN ? null : isTrue();
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.toLowerCase(super.toString());
+    }
+  }
 }

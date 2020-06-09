@@ -28,6 +28,8 @@ import org.apache.druid.collections.spatial.ImmutableNode;
 import org.apache.druid.collections.spatial.ImmutablePoint;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  */
@@ -150,5 +152,30 @@ public class RectangularBound implements Bound
         .putInt(limit)
         .put(CACHE_TYPE_ID);
     return cacheKey.array();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    RectangularBound that = (RectangularBound) o;
+    return limit == that.limit &&
+           numDims == that.numDims &&
+           Arrays.equals(minCoords, that.minCoords) &&
+           Arrays.equals(maxCoords, that.maxCoords);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = Objects.hash(limit, numDims);
+    result = 31 * result + Arrays.hashCode(minCoords);
+    result = 31 * result + Arrays.hashCode(maxCoords);
+    return result;
   }
 }

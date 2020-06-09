@@ -25,7 +25,7 @@
   Some of the bugs will only occur once or twice on the codebase,
   while others will occur potentially a lot.
 
-  Reference: https://github.com/apache/incubator-druid/pull/7894/files
+  Reference: https://github.com/apache/druid/pull/7894/files
 -->
 <FindBugsFilter>
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>

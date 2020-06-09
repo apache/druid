@@ -75,7 +75,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Override
   default float getFloat()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0.0f;
   }
 
@@ -88,7 +88,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Override
   default double getDouble()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0.0;
   }
 
@@ -101,7 +101,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   @Override
   default long getLong()
   {
-    // This is controversial, see https://github.com/apache/incubator-druid/issues/4888
+    // This is controversial, see https://github.com/apache/druid/issues/4888
     return 0L;
   }
 

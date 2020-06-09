@@ -48,6 +48,12 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   }
 
   @Override
+  public void setSparseIndexed()
+  {
+    // no-op, double columns do not have a dictionary to track null values
+  }
+
+  @Override
   public long estimateEncodedKeyComponentSize(Double key)
   {
     return Double.BYTES;
@@ -129,8 +135,8 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
-          return null;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          return NullHandling.defaultDoubleValue();
         }
         return (Double) dims[dimIndex];
       }

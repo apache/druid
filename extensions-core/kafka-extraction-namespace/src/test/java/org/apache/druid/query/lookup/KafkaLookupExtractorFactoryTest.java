@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
@@ -45,7 +46,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -132,7 +132,7 @@ public class KafkaLookupExtractorFactoryTest
 
     final LookupExtractor extractor = factory.get();
 
-    final Set<List<Byte>> byteArrays = new HashSet<>(n);
+    final Set<List<Byte>> byteArrays = Sets.newHashSetWithExpectedSize(n);
     for (int i = 0; i < n; ++i) {
       final List<Byte> myKey = Bytes.asList(extractor.getCacheKey());
       Assert.assertFalse(byteArrays.contains(myKey));
@@ -154,7 +154,7 @@ public class KafkaLookupExtractorFactoryTest
     factory.getMapRef().set(ImmutableMap.of());
     final AtomicLong events = factory.getDoubleEventCount();
 
-    final Set<List<Byte>> byteArrays = new HashSet<>(n);
+    final Set<List<Byte>> byteArrays = Sets.newHashSetWithExpectedSize(n);
     for (int i = 0; i < n; ++i) {
       final LookupExtractor extractor = factory.get();
       final List<Byte> myKey = Bytes.asList(extractor.getCacheKey());

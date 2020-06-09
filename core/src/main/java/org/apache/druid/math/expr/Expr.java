@@ -19,12 +19,15 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -44,8 +47,11 @@ import java.util.stream.Collectors;
  * Base interface of Druid expression language abstract syntax tree nodes. All {@link Expr} implementations are
  * immutable.
  */
+@SubclassesMustOverrideEqualsAndHashCode
 public interface Expr
 {
+  String NULL_LITERAL = "null";
+  Joiner ARG_JOINER = Joiner.on(", ");
   /**
    * Indicates expression is a constant whose literal value can be extracted by {@link Expr#getLiteralValue()},
    * making evaluating with arguments and bindings unecessary
@@ -80,7 +86,10 @@ public interface Expr
   }
 
   /**
-   * Returns the string identifier of an {@link IdentifierExpr}, else null
+   * Returns the string identifier of an {@link IdentifierExpr}, else null. Use this method to analyze an {@link Expr}
+   * tree when trying to distinguish between different {@link IdentifierExpr} with the same
+   * {@link IdentifierExpr#binding}. Do NOT use this method to analyze the input binding (e.g. backing column name),
+   * use {@link #getBindingIfIdentifier} instead.
    */
   @Nullable
   default String getIdentifierIfIdentifier()
@@ -91,7 +100,7 @@ public interface Expr
 
   /**
    * Returns the string key to use to get a value from {@link Expr.ObjectBinding} of an {@link IdentifierExpr},
-   * else null
+   * else null. Use this method to analyze the inputs required to an {@link Expr} tree (e.g. backing column name).
    */
   @Nullable
   default String getBindingIfIdentifier()
@@ -105,6 +114,12 @@ public interface Expr
    * {@link ExprEval} with the result.
    */
   ExprEval eval(ObjectBinding bindings);
+
+  /**
+   * Convert the {@link Expr} back into parseable string that when parsed with
+   * {@link Parser#parse(String, ExprMacroTable)} will produce an equivalent {@link Expr}.
+   */
+  String stringify();
 
   /**
    * Programmatically inspect the {@link Expr} tree with a {@link Visitor}. Each {@link Expr} is responsible for
@@ -421,7 +436,7 @@ public interface Expr
         java.util.function.Function<IdentifierExpr, String> mapper
     )
     {
-      Set<String> results = new HashSet<>(variables.size());
+      Set<String> results = Sets.newHashSetWithExpectedSize(variables.size());
       for (IdentifierExpr variable : variables) {
         results.add(mapper.apply(variable));
       }
@@ -460,6 +475,12 @@ abstract class ConstantExpr implements Expr
   {
     return new BindingDetails();
   }
+
+  @Override
+  public String stringify()
+  {
+    return toString();
+  }
 }
 
 abstract class NullNumericConstantExpr extends ConstantExpr
@@ -473,7 +494,7 @@ abstract class NullNumericConstantExpr extends ConstantExpr
   @Override
   public String toString()
   {
-    return "null";
+    return NULL_LITERAL;
   }
 }
 
@@ -503,6 +524,25 @@ class LongExpr extends ConstantExpr
   {
     return ExprEval.ofLong(value);
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LongExpr longExpr = (LongExpr) o;
+    return Objects.equals(value, longExpr.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(value);
+  }
 }
 
 class NullLongExpr extends NullNumericConstantExpr
@@ -511,6 +551,18 @@ class NullLongExpr extends NullNumericConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLong(null);
+  }
+
+  @Override
+  public final int hashCode()
+  {
+    return NullLongExpr.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof NullLongExpr;
   }
 }
 
@@ -540,6 +592,34 @@ class LongArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofLongArray(value);
+  }
+
+  @Override
+  public String stringify()
+  {
+    if (value.length == 0) {
+      return "<LONG>[]";
+    }
+    return StringUtils.format("<LONG>%s", toString());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LongArrayExpr that = (LongArrayExpr) o;
+    return Arrays.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Arrays.hashCode(value);
   }
 }
 
@@ -571,6 +651,32 @@ class StringExpr extends ConstantExpr
   {
     return ExprEval.of(value);
   }
+
+  @Override
+  public String stringify()
+  {
+    // escape as javascript string since string literals are wrapped in single quotes
+    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(value));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    StringExpr that = (StringExpr) o;
+    return Objects.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(value);
+  }
 }
 
 class StringArrayExpr extends ConstantExpr
@@ -598,6 +704,46 @@ class StringArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofStringArray(value);
+  }
+
+  @Override
+  public String stringify()
+  {
+    if (value.length == 0) {
+      return "<STRING>[]";
+    }
+
+    return StringUtils.format(
+        "<STRING>[%s]",
+        ARG_JOINER.join(
+            Arrays.stream(value)
+                  .map(s -> s == null
+                            ? NULL_LITERAL
+                            // escape as javascript string since string literals are wrapped in single quotes
+                            : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(s))
+                  )
+                  .iterator()
+        )
+    );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    StringArrayExpr that = (StringArrayExpr) o;
+    return Arrays.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Arrays.hashCode(value);
   }
 }
 
@@ -627,6 +773,25 @@ class DoubleExpr extends ConstantExpr
   {
     return ExprEval.ofDouble(value);
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DoubleExpr that = (DoubleExpr) o;
+    return Objects.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(value);
+  }
 }
 
 class NullDoubleExpr extends NullNumericConstantExpr
@@ -635,6 +800,18 @@ class NullDoubleExpr extends NullNumericConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofDouble(null);
+  }
+
+  @Override
+  public final int hashCode()
+  {
+    return NullDoubleExpr.class.hashCode();
+  }
+
+  @Override
+  public final boolean equals(Object obj)
+  {
+    return obj instanceof NullDoubleExpr;
   }
 }
 
@@ -663,6 +840,34 @@ class DoubleArrayExpr extends ConstantExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     return ExprEval.ofDoubleArray(value);
+  }
+
+  @Override
+  public String stringify()
+  {
+    if (value.length == 0) {
+      return "<DOUBLE>[]";
+    }
+    return StringUtils.format("<DOUBLE>%s", toString());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DoubleArrayExpr that = (DoubleArrayExpr) o;
+    return Arrays.equals(value, that.value);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Arrays.hashCode(value);
   }
 }
 
@@ -755,6 +960,13 @@ class IdentifierExpr implements Expr
   }
 
   @Override
+  public String stringify()
+  {
+    // escape as java strings since identifiers are wrapped in double quotes
+    return StringUtils.format("\"%s\"", StringEscapeUtils.escapeJava(binding));
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     visitor.visit(this);
@@ -764,6 +976,25 @@ class IdentifierExpr implements Expr
   public Expr visit(Shuttle shuttle)
   {
     return shuttle.visit(this);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IdentifierExpr that = (IdentifierExpr) o;
+    return Objects.equals(identifier, that.identifier);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(identifier);
   }
 }
 
@@ -821,6 +1052,12 @@ class LambdaExpr implements Expr
   }
 
   @Override
+  public String stringify()
+  {
+    return StringUtils.format("(%s) -> %s", ARG_JOINER.join(getIdentifiers()), expr.stringify());
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     expr.visit(visitor);
@@ -842,6 +1079,26 @@ class LambdaExpr implements Expr
     final Set<String> lambdaArgs = args.stream().map(IdentifierExpr::toString).collect(Collectors.toSet());
     BindingDetails bodyDetails = expr.analyzeInputs();
     return bodyDetails.removeLambdaArguments(lambdaArgs);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LambdaExpr that = (LambdaExpr) o;
+    return Objects.equals(args, that.args) &&
+           Objects.equals(expr, that.expr);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(args, expr);
   }
 }
 
@@ -877,6 +1134,12 @@ class FunctionExpr implements Expr
   }
 
   @Override
+  public String stringify()
+  {
+    return StringUtils.format("%s(%s)", name, ARG_JOINER.join(args.stream().map(Expr::stringify).iterator()));
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     for (Expr child : args) {
@@ -904,6 +1167,26 @@ class FunctionExpr implements Expr
                       .withArrayArguments(function.getArrayInputs(args))
                       .withArrayInputs(function.hasArrayInputs())
                       .withArrayOutput(function.hasArrayOutput());
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    FunctionExpr that = (FunctionExpr) o;
+    return args.equals(that.args) &&
+           name.equals(that.name);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(args, name);
   }
 }
 
@@ -963,6 +1246,17 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
+  public String stringify()
+  {
+    return StringUtils.format(
+        "%s(%s, %s)",
+        name,
+        lambdaExpr.stringify(),
+        ARG_JOINER.join(argsExpr.stream().map(Expr::stringify).iterator())
+    );
+  }
+
+  @Override
   public void visit(Visitor visitor)
   {
     lambdaExpr.visit(visitor);
@@ -984,6 +1278,27 @@ class ApplyFunctionExpr implements Expr
   public BindingDetails analyzeInputs()
   {
     return bindingDetails;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ApplyFunctionExpr that = (ApplyFunctionExpr) o;
+    return name.equals(that.name) &&
+           lambdaExpr.equals(that.lambdaExpr) &&
+           argsExpr.equals(that.argsExpr);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, lambdaExpr, argsExpr);
   }
 }
 
@@ -1025,6 +1340,25 @@ abstract class UnaryExpr implements Expr
     // currently all unary operators only operate on scalar inputs
     return expr.analyzeInputs().withScalarArguments(ImmutableSet.of(expr));
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    UnaryExpr unaryExpr = (UnaryExpr) o;
+    return Objects.equals(expr, unaryExpr.expr);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(expr);
+  }
 }
 
 class UnaryMinusExpr extends UnaryExpr
@@ -1057,6 +1391,12 @@ class UnaryMinusExpr extends UnaryExpr
   }
 
   @Override
+  public String stringify()
+  {
+    return StringUtils.format("-%s", expr.stringify());
+  }
+
+  @Override
   public String toString()
   {
     return StringUtils.format("-%s", expr);
@@ -1086,6 +1426,12 @@ class UnaryNotExpr extends UnaryExpr
     // conforming to other boolean-returning binary operators
     ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
     return ExprEval.of(!ret.asBoolean(), retType);
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("!%s", expr.stringify());
   }
 
   @Override
@@ -1141,6 +1487,12 @@ abstract class BinaryOpExprBase implements Expr
     return StringUtils.format("(%s %s %s)", op, left, right);
   }
 
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("(%s %s %s)", left.stringify(), op, right.stringify());
+  }
+
   protected abstract BinaryOpExprBase copy(Expr left, Expr right);
 
   @Override
@@ -1148,6 +1500,27 @@ abstract class BinaryOpExprBase implements Expr
   {
     // currently all binary operators operate on scalar inputs
     return left.analyzeInputs().with(right).withScalarArguments(ImmutableSet.of(left, right));
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BinaryOpExprBase that = (BinaryOpExprBase) o;
+    return Objects.equals(op, that.op) &&
+           Objects.equals(left, that.left) &&
+           Objects.equals(right, that.right);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(op, left, right);
   }
 }
 
@@ -1173,7 +1546,6 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
     if (NullHandling.sqlCompatible() && (leftVal.value() == null || rightVal.value() == null)) {
       return ExprEval.of(null);
     }
-
 
     if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
@@ -1599,5 +1971,6 @@ class BinOrExpr extends BinaryOpExprBase
     ExprEval leftVal = left.eval(bindings);
     return leftVal.asBoolean() ? leftVal : right.eval(bindings);
   }
+
 }
 

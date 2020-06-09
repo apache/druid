@@ -22,6 +22,7 @@
 64-bit
 ACL
 APIs
+AvroStorage
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
 AWS_CONTAINER_CREDENTIALS_FULL_URI
@@ -39,6 +40,7 @@ CORS
 CPUs
 CSVs
 Ceph
+CNF
 ColumnDescriptor
 Corretto
 DDL
@@ -58,6 +60,7 @@ Double.POSITIVE_INFINITY
 Double.POSITIVE_INFINITY.
 Dropwizard
 dropwizard
+DruidInputSource
 DruidSQL
 EC2
 EC2ContainerCredentialsProviderWrapper
@@ -67,6 +70,7 @@ EMRFS
 ETL
 Elasticsearch
 FirehoseFactory
+FlattenSpec
 Float.NEGATIVE_INFINITY
 Float.POSITIVE_INFINITY
 ForwardedRequestCustomizer
@@ -77,6 +81,7 @@ GUIs
 GroupBy
 Guice
 HDFS
+HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -92,6 +97,7 @@ IndexSpec
 IndexTask
 InfluxDB
 InputFormat
+InputSource
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -103,6 +109,7 @@ JMX
 JRE
 JS
 JSON
+JsonPath
 JVM
 JVMs
 Joda
@@ -126,6 +133,7 @@ MiddleManagers
 Montréal
 Murmur3
 NFS
+OCF
 OLAP
 OOMs
 OpenJDK
@@ -150,6 +158,7 @@ SSL
 Samza
 Splunk
 SqlFirehose
+SqlParameter
 StatsD
 TCP
 TGT
@@ -211,21 +220,28 @@ dbcp
 denormalization
 denormalize
 denormalized
+deprioritization
+deprioritizes
 dequeued
 deserialization
 deserialize
 deserialized
 downtimes
+druid
 e.g.
 encodings
 endian
 enum
+expr
 failover
+featureSpec
+findColumnsFromHeader
 filenames
 filesystem
 firefox
 firehose
 firehoses
+fromPigAvroStorage
 frontends
 granularities
 gzip
@@ -240,13 +256,16 @@ http
 https
 i.e.
 influxdb
+ingestionSpec
 injective
 inlined
 interruptible
+jackson-jq
 javadoc
 kerberos
 keystore
 keytab
+laning
 lifecycle
 localhost
 log4j
@@ -262,6 +281,7 @@ mergeable
 metadata
 millis
 misconfiguration
+mostAvailableSize
 multitenancy
 multitenant
 mysql
@@ -289,6 +309,8 @@ pre-computation
 pre-compute
 pre-computing
 pre-configured
+pre-filtered
+pre-filtering
 pre-generated
 pre-made
 pre-processing
@@ -300,6 +322,7 @@ prepend
 prepended
 prepending
 prepends
+prepopulated
 preprocessing
 priori
 programmatically
@@ -327,8 +350,10 @@ runtime
 schemas
 searchable
 servlet
+simple-client-sslcontext
 sharded
 sharding
+skipHeaderRows
 smooshed
 splittable
 stdout
@@ -360,8 +385,11 @@ unmergeable
 unmerged
 unparseable
 unparsed
+unsetting
+useFilterCNF
 uptime
 uris
+useFieldDiscovery
 v1
 v2
 vCPUs
@@ -423,11 +451,13 @@ v9
 DskipTests
 Papache-release
 Pdist
+Ddruid.console.skip
+yaml
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
 trustStore
- - ../docs/development/extensions-contrib/azure.md
+ - ../docs/development/extensions-core/azure.md
 StaticAzureBlobStoreFirehose
 StaticS3Firehose
 fetchTimeout
@@ -442,6 +472,13 @@ StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
 rackspace-cloudfiles-us
+StaticAzureBlobStoreFirehose
+gz
+shardSpecs
+maxCacheCapacityBytes
+maxFetchCapacityBytes
+fetchTimeout
+maxFetchRetry
  - ../docs/development/extensions-contrib/distinctcount.md
 distinctCount
 groupBy
@@ -503,6 +540,7 @@ postAggregations
 postAveragers
  - ../docs/development/extensions-contrib/opentsdb-emitter.md
 defaultMetrics.json
+namespacePrefix
 src
  - ../docs/development/extensions-contrib/redis-cache.md
 loadList
@@ -618,6 +656,11 @@ maximumSize
 onHeapPolling
 pollPeriod
 reverseLoadingCacheSpec
+ - ../docs/development/extensions-core/druid-pac4j.md
+OAuth
+Okta
+OpenID
+pac4j
  - ../docs/development/extensions-core/google.md
 GCS
 StaticGoogleBlobStoreFirehose
@@ -796,7 +839,6 @@ jvm-global
 kafka-emitter
 org.apache.druid.extensions.contrib.
 pull-deps
-simple-client-sslcontext
 sqlserver-metadata-storage
 statsd-emitter
  - ../docs/development/geo.md
@@ -884,7 +926,6 @@ ignoreInvalidRows
 ignoreWhenNoSegments
 indexSpecForIntermediatePersists
 index_hadoop
-ingestionSpec
 inputPath
 inputSpecs
 interval1
@@ -931,6 +972,7 @@ PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
 SplitHintSpec
+accessKeyId
 appendToExisting
 baseDir
 chatHandlerNumRetries
@@ -950,6 +992,7 @@ maxNumSegmentsToMerge
 maxRetry
 pushTimeout
 reportParseExceptions
+secretAccessKey
 segmentWriteOutMediumFactory
 sql
 sqls
@@ -957,6 +1000,8 @@ splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
+StaticS3Firehose
+prefetchTriggerBytes
  - ../docs/ingestion/schema-design.md
 product_category
 product_id
@@ -1024,6 +1069,7 @@ nextafter
 nvl
 parse_long
 regexp_extract
+regexp_like
 result1
 result2
 rint
@@ -1114,7 +1160,6 @@ SysMonitor
 TaskCountStatsMonitor
 bufferCapacity
 bufferPoolName
-chunkInterval
 cms
 cpuName
 cpuTime
@@ -1234,7 +1279,6 @@ TimeseriesQuery
 D1
 D2
 D3
-chunkPeriod
 druid.query.groupBy.defaultStrategy
 druid.query.groupBy.maxMergingDictionarySize
 druid.query.groupBy.maxOnDiskStorage
@@ -1510,6 +1554,7 @@ EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
+GCE
 HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
@@ -1518,6 +1563,7 @@ JRE8u60
 KeyManager
 L1
 L2
+ListManagedInstances
 LoadSpec
 LoggingEmitter
 Los_Angeles
@@ -1557,10 +1603,12 @@ _default_tier
 addr
 affinityConfig
 allowAll
+ANDed
 array_mod
+autoscale
+autoscalers
 batch_index_task
 cgroup
-chunkPeriod
 classloader
 com.metamx
 common.runtime.properties
@@ -1585,6 +1633,7 @@ druid_supervisors
 druid_taskLock
 druid_taskLog
 druid_tasks
+DruidQueryRel
 ec2
 equalDistribution
 extractionFn
@@ -1595,12 +1644,15 @@ floatMax
 floatMin
 floatSum
 freeSpacePercent
+gce
+gce-extensions
 getCanonicalHostName
 groupBy
 hdfs
 httpRemote
 indexTask
 info_dir
+inlining
 java.class.path
 java.io.tmpdir
 javaOpts
@@ -1617,6 +1669,7 @@ middlemanager
 minTimeMs
 minmax
 mins
+nullable
 orderby
 orderbys
 org.apache.druid
@@ -1625,6 +1678,7 @@ org.apache.hadoop
 overlord.html
 pendingSegments
 pre-flight
+preloaded
 queryType
 remoteTaskRunnerConfig
 rendezvousHash
@@ -1646,6 +1700,7 @@ tmp
 tmpfs
 truststore
 tuningConfig
+unioning
 useIndexes
 user.timezone
 v0.12.0
@@ -1690,3 +1745,11 @@ isUnpatrolled
 metroCode
 regionIsoCode
 regionName
+ - ../docs/development/extensions-core/druid-ranger-security.md
+json
+metastore
+UserGroupInformation
+CVE-2019-17571
+CVE-2019-12399
+CVE-2018-17196
+bin.tar.gz

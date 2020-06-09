@@ -81,7 +81,7 @@ public class CuratorTestBase
        * For some reason, Travis build sometimes fails here because of
        * org.apache.zookeeper.KeeperException$NodeExistsException: KeeperErrorCode = NodeExists, though it should never
        * happen because zookeeper should be in a clean state for each run of tests.
-       * Address issue: https://github.com/apache/incubator-druid/issues/1512
+       * Address issue: https://github.com/apache/druid/issues/1512
        */
       try {
         curator.setData()

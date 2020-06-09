@@ -38,6 +38,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -47,7 +48,6 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -174,7 +174,10 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           inputOperand.getType().getSqlTypeName()
       );
       virtualColumns.add(virtualColumn);
-      spec = new DefaultDimensionSpec(virtualColumn.getOutputName(), virtualColumn.getOutputName());
+      spec = new DefaultDimensionSpec(
+          virtualColumn.getOutputName(),
+          StringUtils.format("%s:%s", name, virtualColumn.getOutputName())
+      );
     }
 
     aggregatorFactory = new BloomFilterAggregatorFactory(

@@ -36,6 +36,7 @@ public class TieredBrokerConfig
 {
   public static final String DEFAULT_COORDINATOR_SERVICE_NAME = "druid/coordinator";
   public static final String DEFAULT_BROKER_SERVICE_NAME = "druid/broker";
+  public static final String DEFAULT_RULE_NAME = "_default";
 
   @JsonProperty
   @NotNull
@@ -46,7 +47,7 @@ public class TieredBrokerConfig
 
   @JsonProperty
   @NotNull
-  private String defaultRule = "_default";
+  private String defaultRule = DEFAULT_RULE_NAME;
 
   @JsonProperty
   @NotNull

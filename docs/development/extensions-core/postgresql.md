@@ -23,7 +23,7 @@ title: "PostgreSQL Metadata Store"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `postgresql-metadata-storage` as an extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `postgresql-metadata-storage` as an extension.
 
 ## Setting up PostgreSQL
 
@@ -87,11 +87,11 @@ In most cases, the configuration options map directly to the [postgres JDBC conn
 
 ### PostgreSQL Firehose
 
-The PostgreSQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses) which can be used to ingest data into Druid from a PostgreSQL database.
+The PostgreSQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a PostgreSQL database.
 
 ```json
 {
-  "type": "index",
+  "type": "index_parallel",
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
@@ -128,7 +128,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
       }
     },
     "ioConfig": {
-      "type": "index",
+      "type": "index_parallel",
       "firehose": {
         "type": "sql",
         "database": {
@@ -145,7 +145,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
       }
     },
     "tuningconfig": {
-      "type": "index"
+      "type": "index_parallel"
     }
   }
 }

@@ -957,7 +957,7 @@ public class OverlordResourceTest
   {
     // This is disabled since OverlordResource.getTaskStatus() is annotated with TaskResourceFilter which is supposed to
     // set authorization token properly, but isn't called in this test.
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     final NoopTask task = NoopTask.create("mydatasource");
     EasyMock.expect(taskStorageQueryAdapter.getTask("mytask"))
@@ -995,7 +995,7 @@ public class OverlordResourceTest
   {
     // This is disabled since OverlordResource.getTaskStatus() is annotated with TaskResourceFilter which is supposed to
     // set authorization token properly, but isn't called in this test.
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     final Task task = NoopTask.create("mytask", 0);
     final TaskStatus status = TaskStatus.running("mytask");
@@ -1063,7 +1063,7 @@ public class OverlordResourceTest
   public void testShutdownTask()
   {
     // This is disabled since OverlordResource.doShutdown is annotated with TaskResourceFilter
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
     EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
@@ -1096,7 +1096,7 @@ public class OverlordResourceTest
   public void testShutdownAllTasks()
   {
     // This is disabled since OverlordResource.shutdownTasksForDataSource is annotated with DatasourceResourceFilter
-    // This should be fixed in https://github.com/apache/incubator-druid/issues/6685.
+    // This should be fixed in https://github.com/apache/druid/issues/6685.
     // expectAuthorizationTokenCheck();
     TaskQueue mockQueue = EasyMock.createMock(TaskQueue.class);
     EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();

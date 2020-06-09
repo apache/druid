@@ -22,33 +22,19 @@ title: "Joins"
   ~ under the License.
   -->
 
+Druid has two features related to joining of data:
 
-Apache Druid (incubating) has limited support for joins through [query-time lookups](../querying/lookups.md). The common use case of
-query-time lookups is to replace one dimension value (e.g. a String ID) with another value (e.g. a human-readable String value). This is similar to a star-schema join.
+1. [Join](datasource.md#join) operators. These are available using a [join datasource](datasource.md#join) in native
+queries, or using the [JOIN operator](sql.md#query-syntax) in Druid SQL. Refer to the
+[join datasource](datasource.md#join) documentation for information about how joins work in Druid.
+2. [Query-time lookups](lookups.md), simple key-to-value mappings. These are preloaded on all servers that are involved
+in queries and can be accessed with or without an explicit join operator. Refer to the [lookups](lookups.md)
+documentation for more details.
 
-Druid does not yet have full support for joins. Although Druid’s storage format would allow for the implementation
-of joins (there is no loss of fidelity for columns included as dimensions), full support for joins have not yet been implemented yet
-for the following reasons:
+Whenever possible, for best performance it is good to avoid joins at query time. Often this can be accomplished by
+joining data before it is loaded into Druid. However, there are situations where joins or lookups are the best solution
+available despite the performance overhead, including:
 
-1. Scaling join queries has been, in our professional experience,
-a constant bottleneck of working with distributed databases.
-2. The incremental gains in functionality are perceived to be
-of less value than the anticipated problems with managing
-highly concurrent, join-heavy workloads.
-
-A join query is essentially the merging of two or more streams of data based on a shared set of keys. The primary
-high-level strategies for join queries we are aware of are a hash-based strategy or a
-sorted-merge strategy. The hash-based strategy requires that all but
-one data set be available as something that looks like a hash table,
-a lookup operation is then performed on this hash table for every
-row in the “primary” stream. The sorted-merge strategy assumes
-that each stream is sorted by the join key and thus allows for the incremental
-joining of the streams. Each of these strategies, however,
-requires the materialization of some number of the streams either in
-sorted order or in a hash table form.
-
-When all sides of the join are significantly large tables (> 1 billion
-records), materializing the pre-join streams requires complex
-distributed memory management. The complexity of the memory
-management is only amplified by the fact that we are targeting highly
-concurrent, multi-tenant workloads.
+- The fact-to-dimension (star and snowflake schema) case: you need to change dimension values after initial ingestion,
+and aren't able to reingest to do this. In this case, you can use lookups for your dimension tables.
+- Your workload requires joins or filters on subqueries.

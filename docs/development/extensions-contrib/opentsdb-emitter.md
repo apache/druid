@@ -23,7 +23,7 @@ title: "OpenTSDB Emitter"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `opentsdb-emitter` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `opentsdb-emitter` extension.
 
 ## Introduction
 
@@ -43,6 +43,7 @@ All the configuration parameters for the OpenTSDB emitter are under `druid.emitt
 |`druid.emitter.opentsdb.maxQueueSize`|Maximum size of the queue used to buffer events.|no|1000|
 |`druid.emitter.opentsdb.consumeDelay`|Queue consuming delay(in milliseconds). Actually, we use `ScheduledExecutorService` to schedule consuming events, so this `consumeDelay` means the delay between the termination of one execution and the commencement of the next. If your druid processes produce metric events fast, then you should decrease this `consumeDelay` or increase the `maxQueueSize`.|no|10000|
 |`druid.emitter.opentsdb.metricMapPath`|JSON file defining the desired metrics and dimensions for every Druid metric|no|./src/main/resources/defaultMetrics.json|
+|`druid.emitter.opentsdb.namespacePrefix`|Optional (string) prefix for metric names, for example the default metric name `query.count` with a namespacePrefix set to `druid` would be emitted as `druid.query.count` |no|null|
 
 ### Druid to OpenTSDB Event Converter
 

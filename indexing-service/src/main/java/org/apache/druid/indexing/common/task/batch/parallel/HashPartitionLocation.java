@@ -24,13 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 /**
- * This class represents the intermediary data server where the partition of {@link #interval} and {@link #partitionId}
+ * This class represents the intermediary data server where the partition of {@code interval} and {@code partitionId}
  * is stored.
  */
 public class HashPartitionLocation extends PartitionLocation<Integer>
 {
-  private final int partitionId;
-
   @JsonCreator
   public HashPartitionLocation(
       @JsonProperty("host") String host,
@@ -42,13 +40,12 @@ public class HashPartitionLocation extends PartitionLocation<Integer>
   )
   {
     super(host, port, useHttps, subTaskId, interval, partitionId);
-    this.partitionId = partitionId;
   }
 
   @JsonProperty
   @Override
   public int getPartitionId()
   {
-    return partitionId;
+    return getSecondaryPartition();
   }
 }

@@ -23,7 +23,7 @@ title: "Clustered deployment"
   -->
 
 
-Apache Druid (incubating) is designed to be deployed as a scalable, fault-tolerant cluster.
+Apache Druid is designed to be deployed as a scalable, fault-tolerant cluster.
 
 In this document, we'll set up a simple cluster and discuss how it can be further configured to meet
 your needs.
@@ -132,9 +132,9 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 We recommend running your favorite Linux distribution. You will also need:
 
-  * **Java 8**
+  * **Java 8 or later**
 
-> **Warning:** Java 8 is required to run Druid. While Druid will start with a higher version of Java it will not function correctly.
+> **Warning:** Druid only officially supports Java 8. Any Java version later than 8 is still experimental.
 >
 > If needed, you can specify where to find Java using the environment variables `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the verify-java script.
 
@@ -148,7 +148,7 @@ First, download and unpack the release archive. It's best to do this on a single
 since you will be editing the configurations and then copying the modified distribution out to all
 of your servers.
 
-[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
+[Download](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz)
 the {{DRUIDVERSION}} release.
 
 Extract Druid by running the following commands in your terminal:
@@ -160,7 +160,7 @@ cd apache-druid-{{DRUIDVERSION}}
 
 In the package, you should find:
 
-* `DISCLAIMER`, `LICENSE`, and `NOTICE` files
+* `LICENSE` and `NOTICE` files
 * `bin/*` - scripts related to the [single-machine quickstart](index.html)
 * `conf/druid/cluster/*` - template configurations for a clustered setup
 * `extensions/*` - core Druid extensions

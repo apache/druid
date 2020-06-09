@@ -38,6 +38,10 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
+import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
@@ -110,7 +114,11 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleMean", value = DoubleMeanAggregatorFactory.class),
       @JsonSubTypes.Type(name = "floatLast", value = FloatLastAggregatorFactory.class),
       @JsonSubTypes.Type(name = "stringLast", value = StringLastAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "stringLastFold", value = StringLastFoldingAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "stringLastFold", value = StringLastFoldingAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "longAny", value = LongAnyAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatAny", value = FloatAnyAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "doubleAny", value = DoubleAnyAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "stringAny", value = StringAnyAggregatorFactory.class)
   })
   public interface AggregatorFactoryMixin
   {

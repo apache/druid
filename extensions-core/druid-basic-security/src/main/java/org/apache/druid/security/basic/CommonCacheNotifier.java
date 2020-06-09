@@ -88,7 +88,7 @@ public class CommonCacheNotifier
       String callerName
   )
   {
-    this.exec = Execs.scheduledSingleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
+    this.exec = Execs.singleThreaded(StringUtils.format("%s-notifierThread-", callerName) + "%d");
     this.callerName = callerName;
     this.updateQueue = new LinkedBlockingQueue<>();
     this.itemConfigMap = itemConfigMap;
@@ -198,7 +198,7 @@ public class CommonCacheNotifier
       );
     }
     catch (MalformedURLException mue) {
-      LOG.error(callerName + ":WTF? Malformed url for DruidNode[%s] and baseUrl[%s]", druidNode, baseUrl);
+      LOG.error(callerName + ": Malformed url for DruidNode[%s] and baseUrl[%s]", druidNode, baseUrl);
 
       throw new RuntimeException(mue);
     }

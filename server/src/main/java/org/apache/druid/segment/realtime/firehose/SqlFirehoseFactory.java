@@ -25,6 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
@@ -35,7 +38,6 @@ import org.skife.jdbi.v2.exceptions.ResultSetException;
 import org.skife.jdbi.v2.exceptions.StatementException;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -44,6 +46,7 @@ import java.io.InputStream;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -170,5 +173,20 @@ public class SqlFirehoseFactory extends PrefetchSqlFirehoseFactory<String>
   protected Collection<String> initObjects()
   {
     return sqls;
+  }
+
+  @Override
+  public FiniteFirehoseFactory<InputRowParser<Map<String, Object>>, String> withSplit(InputSplit<String> split)
+  {
+    return new SqlFirehoseFactory(
+        Collections.singletonList(split.get()),
+        getMaxCacheCapacityBytes(),
+        getMaxFetchCapacityBytes(),
+        getPrefetchTriggerBytes(),
+        getFetchTimeout(),
+        foldCase,
+        sqlFirehoseDatabaseConnector,
+        objectMapper
+    );
   }
 }

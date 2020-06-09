@@ -45,9 +45,19 @@ class AtomicUpdateGroup<T extends Overshadowable<T>> implements Overshadowable<A
   // This may matter if there are a lot of segments to keep in memory as in brokers or the coordinator.
   private final List<PartitionChunk<T>> chunks = new ArrayList<>();
 
+  static <T extends Overshadowable<T>> AtomicUpdateGroup<T> copy(AtomicUpdateGroup<T> group)
+  {
+    return new AtomicUpdateGroup<>(group.chunks);
+  }
+
   AtomicUpdateGroup(PartitionChunk<T> chunk)
   {
     this.chunks.add(chunk);
+  }
+
+  private AtomicUpdateGroup(List<PartitionChunk<T>> chunks)
+  {
+    this.chunks.addAll(chunks);
   }
 
   public void add(PartitionChunk<T> chunk)

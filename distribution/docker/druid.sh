@@ -35,7 +35,7 @@
 # - DRUID_NEWSIZE -- set Java new size
 # - DRUID_MAXDIRECTMEMORYSIZE -- set Java max direct memory size
 #
-# - DRUID_CONFIG -- full path to a file for druid 'common' properties
+# - DRUID_CONFIG_COMMON -- full path to a file for druid 'common' properties
 # - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
 
 set -e

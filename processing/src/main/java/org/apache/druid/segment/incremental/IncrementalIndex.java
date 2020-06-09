@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -48,7 +49,6 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.groupby.RowBasedColumnSelectorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractIndex;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -63,11 +63,14 @@ import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -87,6 +90,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -130,7 +134,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       final boolean deserializeComplexMetrics
   )
   {
-    final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in::get, null);
+    final RowBasedColumnSelectorFactory<InputRow> baseSelectorFactory = RowBasedColumnSelectorFactory.create(
+        RowAdapters.standardRow(),
+        in::get,
+        RowSignature.empty(),
+        true
+    );
 
     class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory
     {
@@ -320,9 +329,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
 
     //__time capabilities
-    ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl().setIsComplete(true);
-    timeCapabilities.setType(ValueType.LONG);
-    columnCapabilities.put(ColumnHolder.TIME_COLUMN_NAME, timeCapabilities);
+    columnCapabilities.put(
+        ColumnHolder.TIME_COLUMN_NAME,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG)
+    );
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
@@ -633,12 +643,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
 
     final List<String> rowDimensions = row.getDimensions();
-
     Object[] dims;
     List<Object> overflow = null;
     long dimsKeySize = 0;
     List<String> parseExceptionMessages = new ArrayList<>();
     synchronized (dimensionDescs) {
+      // all known dimensions are assumed missing until we encounter in the rowDimensions
+      Set<String> absentDimensions = Sets.newHashSet(dimensionDescs.keySet());
+
+      // first, process dimension values present in the row
       dims = new Object[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
         if (Strings.isNullOrEmpty(dimension)) {
@@ -649,16 +662,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         DimensionDesc desc = dimensionDescs.get(dimension);
         if (desc != null) {
           capabilities = desc.getCapabilities();
+          absentDimensions.remove(dimension);
         } else {
           wasNewDim = true;
           capabilities = columnCapabilities.get(dimension);
           if (capabilities == null) {
-            capabilities = new ColumnCapabilitiesImpl();
             // For schemaless type discovery, assume everything is a String for now, can change later.
-            capabilities.setType(ValueType.STRING);
-            capabilities.setDictionaryEncoded(true);
-            capabilities.setHasBitmapIndexes(true);
-            capabilities.setIsComplete(true);
+            capabilities = makeCapabilitiesFromValueType(ValueType.STRING);
             columnCapabilities.put(dimension, capabilities);
           }
           DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
@@ -668,23 +678,24 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
-          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(
-              row.getRaw(dimension),
-              true
-          );
+          dimsKey = indexer.processRowValsToUnsortedEncodedKeyComponent(row.getRaw(dimension), true);
         }
         catch (ParseException pe) {
           parseExceptionMessages.add(pe.getMessage());
         }
         dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
         // Set column capabilities as data is coming in
-        if (!capabilities.hasMultipleValues() &&
+        if (!capabilities.hasMultipleValues().isTrue() &&
             dimsKey != null &&
             handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
           capabilities.setHasMultipleValues(true);
         }
 
         if (wasNewDim) {
+          // unless this is the first row we are processing, all newly discovered columns will be sparse
+          if (maxIngestedEventTime != null) {
+            indexer.setSparseIndexed();
+          }
           if (overflow == null) {
             overflow = new ArrayList<>();
           }
@@ -703,6 +714,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         } else {
           dims[desc.getIndex()] = dimsKey;
         }
+      }
+
+      // process any dimensions with missing values in the row
+      for (String missing : absentDimensions) {
+        dimensionDescs.get(missing).getIndexer().setSparseIndexed();
       }
     }
 
@@ -914,18 +930,22 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private ColumnCapabilitiesImpl makeCapabilitiesFromValueType(ValueType type)
   {
-    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-    capabilities.setDictionaryEncoded(type == ValueType.STRING);
-    capabilities.setHasBitmapIndexes(type == ValueType.STRING);
-    capabilities.setType(type);
-    capabilities.setIsComplete(true);
-    return capabilities;
+    if (type == ValueType.STRING) {
+      // we start out as not having multiple values, but this might change as we encounter them
+      return new ColumnCapabilitiesImpl().setType(type)
+                                         .setHasBitmapIndexes(true)
+                                         .setDictionaryEncoded(true)
+                                         .setDictionaryValuesUnique(true)
+                                         .setDictionaryValuesSorted(false);
+    } else {
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+    }
   }
 
   /**
    * Currently called to initialize IncrementalIndex dimension order during index creation
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
-   * https://github.com/apache/incubator-druid/issues/2011
+   * https://github.com/apache/druid/issues/2011
    */
   public void loadDimensionIterable(
       Iterable<String> oldDimensionOrder,
@@ -975,6 +995,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new IncrementalIndexStorageAdapter(this);
   }
 
+  @Nullable
   public ColumnCapabilities getCapabilities(String column)
   {
     return columnCapabilities.get(column);
@@ -1111,18 +1132,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.name = factory.getName();
 
       String typeInfo = factory.getTypeName();
-      this.capabilities = new ColumnCapabilitiesImpl().setIsComplete(true);
       if ("float".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.FLOAT);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
         this.type = typeInfo;
       } else if ("long".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.LONG);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
         this.type = typeInfo;
       } else if ("double".equalsIgnoreCase(typeInfo)) {
-        capabilities.setType(ValueType.DOUBLE);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
         this.type = typeInfo;
       } else {
-        capabilities.setType(ValueType.COMPLEX);
+        // in an ideal world complex type reports its actual column capabilities...
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX);
         this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
       }
     }

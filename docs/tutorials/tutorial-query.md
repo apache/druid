@@ -24,56 +24,164 @@ sidebar_label: "Querying data"
   -->
 
 
-This tutorial will demonstrate how to query data in Apache Druid (incubating), with examples for Druid SQL and Druid's native query format.
+This tutorial demonstrates how to query data in Apache Druid using SQL.  
 
-The tutorial assumes that you've already completed one of the 4 ingestion tutorials, as we will be querying the sample Wikipedia edits data.
+It assumes that you've completed the [Quickstart](../tutorials/index.md) 
+or one of the following tutorials, since we'll query datasources that you would have created
+by following one of them:
 
 * [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
 * [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.md)
 * [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
 
-Druid queries are sent over HTTP.
-The Druid console includes a view to issue queries to Druid and nicely format the results.
+There are various ways to run Druid SQL queries: from the Druid console, using a command line utility
+and by posting the query by HTTP. We'll look at each of these. 
 
-## Druid SQL queries
 
-Druid supports a dialect of SQL for querying.
+## Query SQL from the Druid console
 
-This query retrieves the 10 Wikipedia pages with the most page edits on 2015-09-12.
+The Druid console includes a view that makes it easier to build and test queries, and 
+view their results. 
+
+1. Start up the Druid cluster, if it's not already running, and open the Druid console in your web
+browser. 
+
+2. Click **Query** from the header to open the Query view:  
+
+   ![Query view](../assets/tutorial-query-01.png "Query view")
+
+   You can always write queries directly in the edit pane, but the Query view also provides 
+   facilities to help you construct SQL queries, which we will use to generate a starter query. 
+
+3. Expand the wikipedia datasource tree in the left pane. We'll
+create a query for the page dimension.  
+
+4. Click `page` and then **Show:page** from the menu: 
+
+   ![Query select page](../assets/tutorial-query-02.png "Query select page")
+
+   A SELECT query appears in the query edit pane and immediately runs. However, in this case, the query 
+   returns no data, since by default the query filters for data from the last day, while our data is considerably
+   older than that. Let's remove the filter.  
+
+5. In the datasource tree, click `__time` and **Remove Filter**. 
+
+   ![Clear WHERE filter](../assets/tutorial-query-03.png "Clear WHERE filter")
+
+6. Click **Run** to run the query.   
+
+   You should now see two columns of data, a page name and the count:
+
+   ![Query results](../assets/tutorial-query-04.png "Query results")
+
+   Notice that the results are limited in the console to about a hundred, by default, due to the **Smart query limit** 
+   feature. This helps users avoid inadvertently running queries that return an excessive amount of data, possibly
+   overwhelming their system. 
+
+7. Let's edit the query directly and take a look at a few more query building features in the editor. 
+   Click in the query edit pane and make the following changes: 
+
+   1.  Add a line after the first column, `"page"` and Start typing the name of a new column, `"countryName"`. Notice that the autocomplete menu suggests column names, functions, keywords, and more. Choose "countryName" and 
+add the new column to the GROUP BY clause as well, either by name or by reference to its position, `2`.  
+
+   2. For readability, replace `Count` column name with `Edits`, since the `COUNT()` function actually
+returns the number of edits for the page. Make the same column name change in the ORDER BY clause as well. 
+
+      The `COUNT()` function is one of many functions available for use in Druid SQL queries. You can mouse over a function name
+      in the autocomplete menu to see a brief description of a function. Also, you can find more information in the Druid 
+      documentation; for example, the `COUNT()` function is documented in 
+      [Aggregation functions](../querying/sql.md#aggregation-functions). 
+
+   The query should now be:
+
+   ```sql
+   SELECT
+     "page",
+     "countryName",
+     COUNT(*) AS "Edits"
+   FROM "wikipedia"
+   GROUP BY 1, 2
+   ORDER BY "Edits" DESC
+   ``` 
+
+   When you run the query again, notice that we're getting the new dimension,`countryName`, but for most of the rows, its value 
+   is null. Let's 
+   show only rows with a `countryName` value.
+
+8. Click the countryName dimension in the left pane and choose the first filtering option. It's not exactly what we want, but
+we'll edit it by hand. The new WHERE clause should appear in your query. 
+
+8. Modify the WHERE clause to exclude results that do not have a value for countryName: 
+
+   ```sql
+   WHERE "countryName" IS NOT NULL
+   ``` 
+   Run the query again. You should now see the top edits by country:  
+
+   ![Finished query](../assets/tutorial-query-035.png "Finished query")
+
+9. Under the covers, every Druid SQL query is translated into a query in the JSON-based _Druid native query_ format before it runs
+ on data nodes. You can view the native query for this query by clicking `...` and **Explain SQL Query**. 
+
+   While you can use Druid SQL for most purposes, familiarity with native query is useful for composing complex queries and for troubleshooting 
+performance issues. For more information, see [Native queries](../querying/querying.md). 
+
+   ![Explain query](../assets/tutorial-query-06.png "Explain query")
+
+    > Another way to view the explain plan is by adding EXPLAIN PLAN FOR to the front of your query, as follows:
+    >
+    >```sql
+    >EXPLAIN PLAN FOR
+    >SELECT
+    >  "page",
+    >  "countryName",
+    >  COUNT(*) AS "Edits"
+    >FROM "wikipedia"
+    >WHERE "countryName" IS NOT NULL
+    >GROUP BY 1, 2
+    >ORDER BY "Edits" DESC
+    >```
+    >This is particularly useful when running queries 
+    from the command line or over HTTP.
+
+
+9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  
+
+That's it! We've built a simple query using some of the query builder features built into the Druid Console. The following
+sections provide a few more example queries you can try. Also, see [Other ways to invoke SQL queries](#other-ways-to-invoke-sql-queries) to learn how
+to run Druid SQL from the command line or over HTTP. 
+
+## More Druid SQL examples
+
+Here is a collection of queries to try out:
+
+### Query over time
 
 ```sql
-SELECT page, COUNT(*) AS Edits
-FROM wikipedia
-WHERE TIMESTAMP '2015-09-12 00:00:00' <= "__time" AND "__time" < TIMESTAMP '2015-09-13 00:00:00'
-GROUP BY page
-ORDER BY Edits DESC
-LIMIT 10
+SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
+FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
+GROUP BY 1
 ```
 
-Let's look at the different ways to issue this query.
+![Query example](../assets/tutorial-query-07.png "Query example")
 
-### Query SQL via the console
+### General group by
 
-You can issue the above query from the console.
+```sql
+SELECT channel, page, SUM(added)
+FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
+GROUP BY channel, page
+ORDER BY SUM(added) DESC
+```
 
-![Query autocomplete](../assets/tutorial-query-01.png "Query autocomplete")
+![Query example](../assets/tutorial-query-08.png "Query example")
 
-The console query view provides autocomplete functionality with inline documentation.
 
-![Query options](../assets/tutorial-query-02.png "Query options")
-
-You can also configure extra [context flags](../querying/query-context.md) to be sent with the query from the `...` options menu.
-
-Note that the console will (by default) wrap your SQL queries in a limit where appropriate so that queries such as `SELECT * FROM wikipedia` can complete.
-You can turn off this behavior from the `Smart query limit` toggle.
-
-![Query actions](../assets/tutorial-query-03.png "Query actions")
-
-The query view provides contextual actions that can write and modify the query for you. 
+## Other ways to invoke SQL queries
 
 ### Query SQL via dsql
 
-For convenience, the Druid package includes a SQL command-line client, located at `bin/dsql` from the Druid package root.
+For convenience, the Druid package includes a SQL command-line client, located at `bin/dsql` in the Druid package root.
 
 Let's now run `bin/dsql`; you should see the following prompt:
 
@@ -107,7 +215,8 @@ Retrieved 10 rows in 0.06s.
 
 ### Query SQL over HTTP
 
-The SQL queries are submitted as JSON over HTTP.
+
+You can submit queries directly to the Druid Broker over HTTP. 
 
 The tutorial package includes an example file that contains the SQL query shown above at `quickstart/tutorial/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid Broker:
 
@@ -162,150 +271,8 @@ The following results should be returned:
 ]
 ```
 
-### More Druid SQL examples
-
-Here is a collection of queries to try out:
-
-#### Query over time
-
-```sql
-SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
-FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
-GROUP BY 1
-```
-
-![Query example](../assets/tutorial-query-03.png "Query example")
-
-#### General group by
-
-```sql
-SELECT channel, page, SUM(added)
-FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00'
-GROUP BY channel, page
-ORDER BY SUM(added) DESC
-```
-
-![Query example](../assets/tutorial-query-04.png "Query example")
-
-#### Select raw data
-
-```sql
-SELECT user, page
-FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 02:00:00' AND TIMESTAMP '2015-09-12 03:00:00'
-LIMIT 5
-```
-
-![Query example](../assets/tutorial-query-05.png "Query example")
-
-### Explain query plan
-
-Druid SQL has the ability to explain the query plan for a given query.
-In the console this functionality is accessible from the `...` button.
-
-![Explain query](../assets/tutorial-query-06.png "Explain query")
-
-If you are querying in other ways you can get the plan by prepending `EXPLAIN PLAN FOR ` to a Druid SQL query.
-
-Using a query from an example above:
-
-`EXPLAIN PLAN FOR SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;`
-
-```bash
-dsql> EXPLAIN PLAN FOR SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE "__time" BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10;
-┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ PLAN                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    │
-├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ DruidQueryRel(query=[{"queryType":"topN","dataSource":{"type":"table","name":"wikipedia"},"virtualColumns":[],"dimension":{"type":"default","dimension":"page","outputName":"d0","outputType":"STRING"},"metric":{"type":"numeric","metric":"a0"},"threshold":10,"intervals":{"type":"intervals","intervals":["2015-09-12T00:00:00.000Z/2015-09-13T00:00:00.001Z"]},"filter":null,"granularity":{"type":"all"},"aggregations":[{"type":"count","name":"a0"}],"postAggregations":[],"context":{},"descending":false}], signature=[{d0:STRING, a0:LONG}]) │
-└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-Retrieved 1 row in 0.03s.
-```
-
-
-## Native JSON queries
-
-Druid's native query format is expressed in JSON.
-
-### Native query via the console
-
-You can issue native Druid queries from the console's Query view.
-
-Here is a query that retrieves the 10 Wikipedia pages with the most page edits on 2015-09-12.
-
-```json
-{
-  "queryType" : "topN",
-  "dataSource" : "wikipedia",
-  "intervals" : ["2015-09-12/2015-09-13"],
-  "granularity" : "all",
-  "dimension" : "page",
-  "metric" : "count",
-  "threshold" : 10,
-  "aggregations" : [
-    {
-      "type" : "count",
-      "name" : "count"
-    }
-  ]
-}
-```
-
-Simply paste it into the console to switch the editor into JSON mode.
-
-![Native query](../assets/tutorial-query-07.png "Native query")
-
-
-### Native queries over HTTP
-
-We have included a sample native TopN query under `quickstart/tutorial/wikipedia-top-pages.json`:
-
-Let's submit this query to Druid:
-
-```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-top-pages.json http://localhost:8888/druid/v2?pretty
-```
-
-You should see the following query results:
-
-```json
-[ {
-  "timestamp" : "2015-09-12T00:46:58.771Z",
-  "result" : [ {
-    "count" : 33,
-    "page" : "Wikipedia:Vandalismusmeldung"
-  }, {
-    "count" : 28,
-    "page" : "User:Cyde/List of candidates for speedy deletion/Subpage"
-  }, {
-    "count" : 27,
-    "page" : "Jeremy Corbyn"
-  }, {
-    "count" : 21,
-    "page" : "Wikipedia:Administrators' noticeboard/Incidents"
-  }, {
-    "count" : 20,
-    "page" : "Flavia Pennetta"
-  }, {
-    "count" : 18,
-    "page" : "Total Drama Presents: The Ridonculous Race"
-  }, {
-    "count" : 18,
-    "page" : "User talk:Dudeperson176123"
-  }, {
-    "count" : 18,
-    "page" : "Wikipédia:Le Bistro/12 septembre 2015"
-  }, {
-    "count" : 17,
-    "page" : "Wikipedia:In the news/Candidates"
-  }, {
-    "count" : 17,
-    "page" : "Wikipedia:Requests for page protection"
-  } ]
-} ]
-```
-
-
 ## Further reading
 
-The [Queries documentation](../querying/querying.md) has more information on Druid's native JSON queries.
+See the [Druid SQL documentation](../querying/sql.md) for more information on using Druid SQL queries.
 
-The [Druid SQL documentation](../querying/sql.md) has more information on using Druid SQL queries.
+See the [Queries documentation](../querying/querying.md) for more information on Druid native queries.

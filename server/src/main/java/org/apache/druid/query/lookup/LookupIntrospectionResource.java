@@ -28,6 +28,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import java.util.Optional;
 
 @Path("/druid/v1/lookups/introspect")
 @ResourceFilters(ConfigResourceFilter.class)
@@ -48,12 +49,15 @@ public class LookupIntrospectionResource
   @Path("/{lookupId}")
   public Object introspectLookup(@PathParam("lookupId") final String lookupId)
   {
-    final LookupExtractorFactoryContainer container = lookupExtractorFactoryContainerProvider.get(lookupId);
+    final Optional<LookupExtractorFactoryContainer> maybeContainer =
+        lookupExtractorFactoryContainerProvider.get(lookupId);
 
-    if (container == null) {
+    if (!maybeContainer.isPresent()) {
       LOGGER.error("trying to introspect non existing lookup [%s]", lookupId);
       return Response.status(Response.Status.NOT_FOUND).build();
     }
+
+    final LookupExtractorFactoryContainer container = maybeContainer.get();
     LookupIntrospectHandler introspectHandler = container.getLookupExtractorFactory().getIntrospectHandler();
     if (introspectHandler != null) {
       return introspectHandler;

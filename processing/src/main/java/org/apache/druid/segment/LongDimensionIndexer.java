@@ -49,6 +49,12 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
+  public void setSparseIndexed()
+  {
+    // no-op, long columns do not have a dictionary to track null values
+  }
+
+  @Override
   public long estimateEncodedKeyComponentSize(Long key)
   {
     return Long.BYTES;
@@ -131,8 +137,8 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       {
         final Object[] dims = currEntry.get().getDims();
 
-        if (dimIndex >= dims.length) {
-          return null;
+        if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          return NullHandling.defaultLongValue();
         }
 
         return (Long) dims[dimIndex];

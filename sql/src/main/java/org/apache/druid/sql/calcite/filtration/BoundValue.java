@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite.filtration;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.ordering.StringComparator;
 
+import java.util.Objects;
+
 public class BoundValue implements Comparable<BoundValue>
 {
   private final String value;
@@ -55,10 +57,10 @@ public class BoundValue implements Comparable<BoundValue>
 
     BoundValue that = (BoundValue) o;
 
-    if (value != null ? !value.equals(that.value) : that.value != null) {
+    if (!Objects.equals(value, that.value)) {
       return false;
     }
-    return comparator != null ? comparator.equals(that.comparator) : that.comparator == null;
+    return Objects.equals(comparator, that.comparator);
 
   }
 

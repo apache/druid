@@ -25,45 +25,100 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ *
  */
 public class LimitedSequenceTest
 {
+  private static final List<Integer> NUMS = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+
   @Test
   public void testSanityAccumulate() throws Exception
   {
-    final List<Integer> nums = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     final int threshold = 5;
     SequenceTestHelper.testAll(
-        Sequences.simple(nums).limit(threshold),
-        Lists.newArrayList(Iterables.limit(nums, threshold))
+        Sequences.simple(NUMS).limit(threshold),
+        Lists.newArrayList(Iterables.limit(NUMS, threshold))
     );
   }
 
   @Test
   public void testTwo() throws Exception
   {
-    final List<Integer> nums = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     final int threshold = 2;
-
     SequenceTestHelper.testAll(
-        Sequences.simple(nums).limit(threshold),
-        Lists.newArrayList(Iterables.limit(nums, threshold))
+        Sequences.simple(NUMS).limit(threshold),
+        Lists.newArrayList(Iterables.limit(NUMS, threshold))
     );
   }
 
   @Test
   public void testOne() throws Exception
   {
-    final List<Integer> nums = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     final int threshold = 1;
-
     SequenceTestHelper.testAll(
-        Sequences.simple(nums).limit(threshold),
-        Lists.newArrayList(Iterables.limit(nums, threshold))
+        Sequences.simple(NUMS).limit(threshold),
+        Lists.newArrayList(Iterables.limit(NUMS, threshold))
+    );
+  }
+
+  @Test
+  public void testWithYieldingSequence()
+  {
+    // Regression test for https://github.com/apache/druid/issues/9291.
+
+    // Create a Sequence whose Yielders will yield for each element, regardless of what the accumulator passed
+    // to "toYielder" does.
+    final BaseSequence<Integer, Iterator<Integer>> sequence = new BaseSequence<Integer, Iterator<Integer>>(
+        new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
+        {
+          @Override
+          public Iterator<Integer> make()
+          {
+            return NUMS.iterator();
+          }
+
+          @Override
+          public void cleanup(Iterator<Integer> iterFromMake)
+          {
+            // Do nothing.
+          }
+        }
+    )
+    {
+      @Override
+      public <OutType> Yielder<OutType> toYielder(
+          final OutType initValue,
+          final YieldingAccumulator<OutType, Integer> accumulator
+      )
+      {
+        return super.toYielder(
+            initValue,
+            new DelegatingYieldingAccumulator<OutType, Integer>(accumulator)
+            {
+              @Override
+              public OutType accumulate(OutType accumulated, Integer in)
+              {
+                final OutType retVal = super.accumulate(accumulated, in);
+                yield();
+                return retVal;
+              }
+            }
+        );
+      }
+    };
+
+    final int threshold = 4;
+
+    // Can't use "testAll" because its "testYield" implementation depends on the underlying Sequence _not_ yielding.
+    SequenceTestHelper.testAccumulation(
+        "",
+        sequence.limit(threshold),
+        Lists.newArrayList(Iterables.limit(NUMS, threshold))
     );
   }
 

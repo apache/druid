@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -30,6 +31,65 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
+  public static ColumnCapabilitiesImpl copyOf(@Nullable final ColumnCapabilities other)
+  {
+    final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+    if (other != null) {
+      capabilities.type = other.getType();
+      capabilities.dictionaryEncoded = other.isDictionaryEncoded();
+      capabilities.runLengthEncoded = other.isRunLengthEncoded();
+      capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
+      capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
+      capabilities.hasMultipleValues = other.hasMultipleValues();
+      capabilities.dictionaryValuesSorted = other.areDictionaryValuesSorted();
+      capabilities.dictionaryValuesUnique = other.areDictionaryValuesUnique();
+      capabilities.filterable = other.isFilterable();
+    }
+    return capabilities;
+  }
+
+  /**
+   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
+   * {@link Capable#FALSE}, in order to present a snapshot of the state of the this column
+   */
+  @Nullable
+  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities)
+  {
+    return snapshot(capabilities, false);
+  }
+
+  /**
+   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
+   * {@link Capable#FALSE} or {@link Capable#TRUE}, in order to present a snapshot of the state of the this column
+   */
+  @Nullable
+  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities, boolean unknownIsTrue)
+  {
+    if (capabilities == null) {
+      return null;
+    }
+    ColumnCapabilitiesImpl copy = copyOf(capabilities);
+    copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(unknownIsTrue);
+    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(unknownIsTrue);
+    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(unknownIsTrue);
+    return copy;
+  }
+
+
+  /**
+   * Create a no frills, simple column with {@link ValueType} set and everything else false
+   */
+  public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(ValueType valueType)
+  {
+    return new ColumnCapabilitiesImpl().setType(valueType)
+                                       .setHasMultipleValues(false)
+                                       .setHasBitmapIndexes(false)
+                                       .setDictionaryEncoded(false)
+                                       .setDictionaryValuesSorted(false)
+                                       .setDictionaryValuesUnique(false)
+                                       .setHasSpatialIndexes(false);
+  }
+
   @Nullable
   private ValueType type = null;
 
@@ -37,24 +97,15 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private boolean runLengthEncoded = false;
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
-  private boolean hasMultipleValues = false;
+  private Capable hasMultipleValues = Capable.UNKNOWN;
 
-  // This is a query time concept and not persisted in the segment files.
+  // These capabilities are computed at query time and not persisted in the segment files.
+  @JsonIgnore
+  private Capable dictionaryValuesSorted = Capable.UNKNOWN;
+  @JsonIgnore
+  private Capable dictionaryValuesUnique = Capable.UNKNOWN;
   @JsonIgnore
   private boolean filterable;
-
-
-  @JsonIgnore
-  private boolean complete = false;
-
-  public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
-  {
-    final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-    capabilities.merge(other);
-    capabilities.setFilterable(other.isFilterable());
-    capabilities.setIsComplete(other.isComplete());
-    return capabilities;
-  }
 
   @Override
   @JsonProperty
@@ -65,7 +116,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   public ColumnCapabilitiesImpl setType(ValueType type)
   {
-    this.type = type;
+    this.type = Preconditions.checkNotNull(type, "'type' must be nonnull");
     return this;
   }
 
@@ -79,6 +130,30 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setDictionaryEncoded(boolean dictionaryEncoded)
   {
     this.dictionaryEncoded = dictionaryEncoded;
+    return this;
+  }
+
+  @Override
+  public Capable areDictionaryValuesSorted()
+  {
+    return dictionaryValuesSorted;
+  }
+
+  public ColumnCapabilitiesImpl setDictionaryValuesSorted(boolean dictionaryValuesSorted)
+  {
+    this.dictionaryValuesSorted = Capable.of(dictionaryValuesSorted);
+    return this;
+  }
+
+  @Override
+  public Capable areDictionaryValuesUnique()
+  {
+    return dictionaryValuesUnique;
+  }
+
+  public ColumnCapabilitiesImpl setDictionaryValuesUnique(boolean dictionaryValuesUnique)
+  {
+    this.dictionaryValuesUnique = Capable.of(dictionaryValuesUnique);
     return this;
   }
 
@@ -117,9 +192,15 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   @Override
   @JsonProperty("hasMultipleValues")
-  public boolean hasMultipleValues()
+  public Capable hasMultipleValues()
   {
     return hasMultipleValues;
+  }
+
+  public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
+  {
+    this.hasMultipleValues = Capable.of(hasMultipleValues);
+    return this;
   }
 
   @Override
@@ -132,34 +213,16 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
            filterable;
   }
 
-  @Override
-  public boolean isComplete()
-  {
-    return complete;
-  }
-
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)
   {
     this.filterable = filterable;
     return this;
   }
 
-  public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
-  {
-    this.hasMultipleValues = hasMultipleValues;
-    return this;
-  }
-
-  public ColumnCapabilitiesImpl setIsComplete(boolean complete)
-  {
-    this.complete = complete;
-    return this;
-  }
-
-  public void merge(ColumnCapabilities other)
+  public ColumnCapabilities merge(@Nullable ColumnCapabilities other)
   {
     if (other == null) {
-      return;
+      return this;
     }
 
     if (type == null) {
@@ -174,8 +237,11 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.runLengthEncoded |= other.isRunLengthEncoded();
     this.hasInvertedIndexes |= other.hasBitmapIndexes();
     this.hasSpatialIndexes |= other.hasSpatialIndexes();
-    this.hasMultipleValues |= other.hasMultipleValues();
-    this.complete &= other.isComplete(); // these should always be the same?
     this.filterable &= other.isFilterable();
+    this.hasMultipleValues = this.hasMultipleValues.or(other.hasMultipleValues());
+    this.dictionaryValuesSorted = this.dictionaryValuesSorted.and(other.areDictionaryValuesSorted());
+    this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
+
+    return this;
   }
 }

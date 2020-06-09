@@ -23,9 +23,11 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -79,6 +81,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class FloatVarianceAggregator extends VarianceBufferAggregator
   {
+    private final boolean noNulls = NullHandling.replaceWithDefault();
     private final BaseFloatColumnValueSelector selector;
 
     public FloatVarianceAggregator(BaseFloatColumnValueSelector selector)
@@ -89,8 +92,42 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      if (noNulls || !selector.isNull()) {
         float v = selector.getFloat();
+        long count = buf.getLong(position + COUNT_OFFSET) + 1;
+        double sum = buf.getDouble(position + SUM_OFFSET) + v;
+        buf.putLong(position, count);
+        buf.putDouble(position + SUM_OFFSET, sum);
+        if (count > 1) {
+          double t = count * v - sum;
+          double variance = buf.getDouble(position + NVARIANCE_OFFSET) + (t * t) / ((double) count * (count - 1));
+          buf.putDouble(position + NVARIANCE_OFFSET, variance);
+        }
+      }
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("selector", selector);
+    }
+  }
+
+  public static final class DoubleVarianceAggregator extends VarianceBufferAggregator
+  {
+    private final boolean noNulls = NullHandling.replaceWithDefault();
+    private final BaseDoubleColumnValueSelector selector;
+
+    public DoubleVarianceAggregator(BaseDoubleColumnValueSelector selector)
+    {
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      if (noNulls || !selector.isNull()) {
+        double v = selector.getDouble();
         long count = buf.getLong(position + COUNT_OFFSET) + 1;
         double sum = buf.getDouble(position + SUM_OFFSET) + v;
         buf.putLong(position, count);
@@ -112,6 +149,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
 
   public static final class LongVarianceAggregator extends VarianceBufferAggregator
   {
+    private final boolean noNulls = NullHandling.replaceWithDefault();
     private final BaseLongColumnValueSelector selector;
 
     public LongVarianceAggregator(BaseLongColumnValueSelector selector)
@@ -122,7 +160,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
-      if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      if (noNulls || !selector.isNull()) {
         long v = selector.getLong();
         long count = buf.getLong(position + COUNT_OFFSET) + 1;
         double sum = buf.getDouble(position + SUM_OFFSET) + v;

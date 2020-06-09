@@ -24,11 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -76,7 +76,8 @@ public abstract class AbstractTask implements Task
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.context = context == null ? new HashMap<>() : context;
+    // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
+    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
   }
 
   public static String getOrMakeId(String id, final String typeName, String dataSource)
@@ -91,7 +92,7 @@ public abstract class AbstractTask implements Task
     }
 
     final List<Object> objects = new ArrayList<>();
-    final String suffix = RandomIdUtils.getRandomId();
+    final String suffix = TaskIdUtils.getRandomId();
     objects.add(typeName);
     objects.add(dataSource);
     objects.add(suffix);
@@ -142,6 +143,12 @@ public abstract class AbstractTask implements Task
   public <T> QueryRunner<T> getQueryRunner(Query<T> query)
   {
     return null;
+  }
+
+  @Override
+  public boolean supportsQueries()
+  {
+    return false;
   }
 
   @Override

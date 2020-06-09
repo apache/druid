@@ -209,8 +209,10 @@ public class S3DataSegmentMover implements DataSegmentMover
       if (s3Client.doesObjectExist(targetS3Bucket, targetS3Path)) {
         log.info(
             "Not moving file [s3://%s/%s], already present in target location [s3://%s/%s]",
-            s3Bucket, s3Path,
-            targetS3Bucket, targetS3Path
+            s3Bucket,
+            s3Path,
+            targetS3Bucket,
+            targetS3Path
         );
       } else {
         throw new SegmentLoadingException(

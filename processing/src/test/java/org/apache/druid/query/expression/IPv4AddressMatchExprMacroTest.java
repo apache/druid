@@ -23,7 +23,6 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -42,12 +41,9 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   private static final Expr SUBNET_10 = ExprEval.of("10.0.0.0/8").toExpr();
   private static final Expr NOT_LITERAL = new NotLiteralExpr(null);
 
-  private IPv4AddressMatchExprMacro target;
-
-  @Before
-  public void setUp()
+  public IPv4AddressMatchExprMacroTest()
   {
-    target = new IPv4AddressMatchExprMacro();
+    super(new IPv4AddressMatchExprMacro());
   }
 
   @Test
@@ -55,7 +51,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "must have 2 arguments");
 
-    target.apply(Collections.emptyList());
+    apply(Collections.emptyList());
   }
 
   @Test
@@ -63,7 +59,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "must have 2 arguments");
 
-    target.apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL));
+    apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL));
   }
 
   @Test
@@ -71,7 +67,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   {
     expectException(IllegalArgumentException.class, "subnet arg must be a literal");
 
-    target.apply(Arrays.asList(IPV4, NOT_LITERAL));
+    apply(Arrays.asList(IPV4, NOT_LITERAL));
   }
 
   @Test
@@ -80,7 +76,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
     expectException(IllegalArgumentException.class, "subnet arg has an invalid format");
 
     Expr invalidSubnet = ExprEval.of("192.168.0.1/invalid").toExpr();
-    target.apply(Arrays.asList(IPV4, invalidSubnet));
+    apply(Arrays.asList(IPV4, invalidSubnet));
   }
 
   @Test
@@ -182,7 +178,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
 
   private boolean eval(Expr... args)
   {
-    Expr expr = target.apply(Arrays.asList(args));
+    Expr expr = apply(Arrays.asList(args));
     ExprEval eval = expr.eval(ExprUtils.nilBindings());
     return eval.asBoolean();
   }
@@ -193,7 +189,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   {
     NotLiteralExpr(Expr arg)
     {
-      super(arg);
+      super("not", arg);
     }
 
     @Override

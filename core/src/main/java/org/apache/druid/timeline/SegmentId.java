@@ -409,7 +409,7 @@ public final class SegmentId implements Comparable<SegmentId>
     return sb.toString();
   }
 
-  private int safeUpperLimitOfStringSize()
+  public int safeUpperLimitOfStringSize()
   {
     int delimiters = 4;
     int partitionNumSizeUpperLimit = 3; // less than 1000 partitions

@@ -66,9 +66,9 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
   }
 
   @Override
-  public int getMaxVectorSize()
+  public VectorSizeInspector getVectorSizeInspector()
   {
-    return offset.getMaxVectorSize();
+    return offset;
   }
 
   @Override
@@ -85,7 +85,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
           if (holder == null
               || !holder.getCapabilities().isDictionaryEncoded()
               || holder.getCapabilities().getType() != ValueType.STRING
-              || !holder.getCapabilities().hasMultipleValues()) {
+              || !holder.getCapabilities().hasMultipleValues().isMaybeTrue()) {
             throw new ISE(
                 "Column[%s] is not a multi-value string column, do not ask for a multi-value selector",
                 spec.getDimension()
@@ -96,6 +96,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
           final DictionaryEncodedColumn<String> dictionaryEncodedColumn = (DictionaryEncodedColumn<String>)
               getCachedColumn(spec.getDimension());
 
+          // dictionaryEncodedColumn is not null because of holder null check above
+          assert dictionaryEncodedColumn != null;
           final MultiValueDimensionVectorSelector selector = dictionaryEncodedColumn.makeMultiValueDimensionVectorSelector(
               offset
           );
@@ -123,7 +125,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
             return NilVectorSelector.create(offset);
           }
 
-          if (holder.getCapabilities().hasMultipleValues()) {
+          if (holder.getCapabilities().hasMultipleValues().isMaybeTrue()) {
             // Asking for a single-value dimension selector on a multi-value column gets you an error.
             throw new ISE("Column[%s] is multi-value, do not ask for a single-value selector", spec.getDimension());
           }
@@ -132,6 +134,8 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
           final DictionaryEncodedColumn<String> dictionaryEncodedColumn = (DictionaryEncodedColumn<String>)
               getCachedColumn(spec.getDimension());
 
+          // dictionaryEncodedColumn is not null because of holder null check above
+          assert dictionaryEncodedColumn != null;
           final SingleValueDimensionVectorSelector selector =
               dictionaryEncodedColumn.makeSingleValueDimensionVectorSelector(offset);
 

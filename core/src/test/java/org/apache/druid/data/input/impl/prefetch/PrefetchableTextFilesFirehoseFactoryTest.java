@@ -627,7 +627,7 @@ public class PrefetchableTextFilesFirehoseFactoryTest
       }
 
       @Override
-      public int read(byte b[], int off, int len) throws IOException
+      public int read(byte[] b, int off, int len) throws IOException
       {
         if (readCount++ % NUM_READ_COUNTS_BEFORE_ERROR == 0) {
           if (numConnectionResets++ < maxConnectionResets) {

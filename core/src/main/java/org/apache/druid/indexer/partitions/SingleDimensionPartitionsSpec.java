@@ -138,6 +138,12 @@ public class SingleDimensionPartitionsSpec implements DimensionBasedPartitionsSp
     return targetRowsPerSegment;
   }
 
+  @Override
+  public SecondaryPartitionType getType()
+  {
+    return SecondaryPartitionType.RANGE;
+  }
+
   @JsonIgnore
   @Override
   @NotNull

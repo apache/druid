@@ -23,7 +23,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -35,8 +38,8 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -134,19 +137,30 @@ public class SegmentManager
     return segmentLoader.isSegmentLoaded(segment);
   }
 
-  @Nullable
-  public VersionedIntervalTimeline<String, ReferenceCountingSegment> getTimeline(String dataSource)
+  /**
+   * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
+   * datasource of a single table.
+   *
+   * @param analysis data source analysis information
+   *
+   * @return timeline, if it exists
+   *
+   * @throws IllegalStateException if 'analysis' does not represent a scan-based datasource of a single table
+   */
+  public Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> getTimeline(DataSourceAnalysis analysis)
   {
-    final DataSourceState dataSourceState = dataSources.get(dataSource);
-    return dataSourceState == null ? null : dataSourceState.getTimeline();
+    final TableDataSource tableDataSource =
+        analysis.getBaseTableDataSource()
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+
+    return Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTimeline);
   }
 
   /**
    * Load a single segment.
    *
    * @param segment segment to load
-   *
-   * @param lazy whether to lazy load columns metadata
+   * @param lazy    whether to lazy load columns metadata
    *
    * @return true if the segment was newly loaded, false if it was already loaded
    *

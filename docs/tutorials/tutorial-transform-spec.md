@@ -26,7 +26,7 @@ sidebar_label: "Transforming input data"
 
 This tutorial will demonstrate how to use transform specs to filter and transform input data during ingestion.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in
+For this tutorial, we'll assume you've already downloaded Apache Druid as described in
 the [single-machine quickstart](index.html) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
@@ -48,25 +48,19 @@ We will ingest the sample data using the following spec, which demonstrates the 
 
 ```json
 {
-  "type" : "index",
+  "type" : "index_parallel",
   "spec" : {
     "dataSchema" : {
       "dataSource" : "transform-tutorial",
-      "parser" : {
-        "type" : "string",
-        "parseSpec" : {
-          "format" : "json",
-          "dimensionsSpec" : {
-            "dimensions" : [
-              "animal",
-              { "name": "location", "type": "long" }
-            ]
-          },
-          "timestampSpec": {
-            "column": "timestamp",
-            "format": "iso"
-          }
-        }
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "iso"
+      },
+      "dimensionsSpec" : {
+        "dimensions" : [
+          "animal",
+          { "name": "location", "type": "long" }
+        ]
       },
       "metricsSpec" : [
         { "type" : "count", "name" : "count" },
@@ -104,16 +98,19 @@ We will ingest the sample data using the following spec, which demonstrates the 
       }
     },
     "ioConfig" : {
-      "type" : "index",
-      "firehose" : {
+      "type" : "index_parallel",
+      "inputSource" : {
         "type" : "local",
         "baseDir" : "quickstart/tutorial",
         "filter" : "transform-data.json"
       },
+      "inputFormat" : {
+        "type" :"json"
+      },
       "appendToExisting" : false
     },
     "tuningConfig" : {
-      "type" : "index",
+      "type" : "index_parallel",
       "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }

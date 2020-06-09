@@ -150,7 +150,7 @@ public final class SpecializationService
     {
       SpecializationId specializationId = new SpecializationId(runtimeShape, classRemapping);
       // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
-      // See https://github.com/apache/incubator-druid/pull/6898#discussion_r251384586.
+      // See https://github.com/apache/druid/pull/6898#discussion_r251384586.
       SpecializationState<T> alreadyExistingState = specializationStates.get(specializationId);
       if (alreadyExistingState != null) {
         return alreadyExistingState;

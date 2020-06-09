@@ -1,11 +1,11 @@
-<!-- Thanks for trying to help us make Apache Druid (incubating) be the best it can be! Please fill out as much of the following information as is possible (where relevant, and remove it when irrelevant) to help make the intention and scope of this PR clear in order to ease review. -->
+<!-- Thanks for trying to help us make Apache Druid be the best it can be! Please fill out as much of the following information as is possible (where relevant, and remove it when irrelevant) to help make the intention and scope of this PR clear in order to ease review. -->
 
 Fixes #XXXX.
 
 <!-- Replace XXXX with the id of the issue fixed in this PR. Remove this section if there is no corresponding issue. Don't reference the issue in the title of this pull-request. -->
 
 <!-- If you are a committer, follow the PR action item checklist for committers:
-https://github.com/apache/incubator-druid/blob/master/dev/committer-instructions.md#pr-and-issue-action-item-checklist-for-committers. -->
+https://github.com/apache/druid/blob/master/dev/committer-instructions.md#pr-and-issue-action-item-checklist-for-committers. -->
 
 ### Description
 
@@ -39,10 +39,10 @@ In each section, please describe design decisions made, including:
 
 This PR has:
 - [ ] been self-reviewed.
-   - [ ] using the [concurrency checklist](https://github.com/apache/incubator-druid/blob/master/dev/code-review/concurrency.md) (Remove this item if the PR doesn't have any relation to concurrency.)
+   - [ ] using the [concurrency checklist](https://github.com/apache/druid/blob/master/dev/code-review/concurrency.md) (Remove this item if the PR doesn't have any relation to concurrency.)
 - [ ] added documentation for new or modified features or behaviors.
 - [ ] added Javadocs for most classes and all non-trivial methods. Linked related entities via Javadoc links.
-- [ ] added or updated version, license, or notice information in [licenses.yaml](https://github.com/apache/incubator-druid/blob/master/licenses.yaml)
+- [ ] added or updated version, license, or notice information in [licenses.yaml](https://github.com/apache/druid/blob/master/licenses.yaml)
 - [ ] added comments explaining the "why" and the intent of the code wherever would not be obvious for an unfamiliar reader.
 - [ ] added unit tests or modified existing tests to cover new code paths.
 - [ ] added integration tests.

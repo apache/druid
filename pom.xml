@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.18.0-incubating-SNAPSHOT</version>
+    <version>0.19.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -53,7 +53,7 @@
 
     <mailingLists>
         <mailingList>
-            <name>Apache Druid (incubating) developers list</name>
+            <name>Apache Druid developers list</name>
             <subscribe>dev-subscribe@druid.apache.org</subscribe>
             <unsubscribe>dev-unsubscribe@druid.apache.org</unsubscribe>
             <post>dev@druid.apache.org</post>
@@ -64,10 +64,10 @@
     <inceptionYear>2011</inceptionYear>
 
     <scm>
-        <connection>scm:git:ssh://git@github.com/apache/incubator-druid.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/apache/incubator-druid.git</developerConnection>
-        <url>https://github.com/apache/incubator-druid.git</url>
-        <tag>0.13.0-incubating-SNAPSHOT</tag>
+        <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
+        <url>https://github.com/apache/druid.git</url>
+        <tag>0.19.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
@@ -76,12 +76,16 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>4.1.0</apache.curator.version>
+        <apache.curator.version>4.3.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.1.1</apache.kafka.version>
+        <apache.kafka.version>2.5.0</apache.kafka.version>
+        <apache.ranger.version>2.0.0</apache.ranger.version>
+        <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
         <avatica.version>1.15.0</avatica.version>
-        <avro.version>1.9.1</avro.version>
+        <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
+        <datasketches.version>1.3.0-incubating</datasketches.version>
+        <datasketches.memory.version>1.2.0-incubating</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <guava.version>23.0</guava.version>
@@ -89,14 +93,17 @@
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.12.v20180830</jetty.version>
         <jersey.version>1.19.3</jersey.version>
-        <jackson.version>2.10.1</jackson.version>
+        <jackson.version>2.10.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.8.2</log4j.version>
+        <mysql.version>5.1.48</mysql.version>
         <netty3.version>3.10.6.Final</netty3.version>
+        <resilience4j.version>1.3.1</resilience4j.version>
         <!-- Spark updated in https://github.com/apache/spark/pull/19884 -->
-        <netty4.version>4.1.42.Final</netty4.version>
+        <netty4.version>4.1.48.Final</netty4.version>
         <node.version>v10.14.2</node.version>
         <npm.version>6.5.0</npm.version>
+        <postgresql.version>42.2.8</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
@@ -104,10 +111,14 @@
         <powermock.version>2.0.2</powermock.version>
         <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
+        <!-- Curator requires 3.4.x ZooKeeper clients to maintain compatibility with 3.4.x ZooKeeper servers,
+             If we upgrade to 3.5.x clients, curator requires 3.5.x servers, which would break backwards compatibility
+             see http://curator.apache.org/zk-compatibility.html -->
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.22.0</com.google.apis.client.version>
+        <com.google.apis.client.version>1.25.0</com.google.apis.client.version>
+        <com.google.apis.compute.version>v1-rev214-1.25.0</com.google.apis.compute.version>
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -134,9 +145,11 @@
         <module>cloud/gcp-common</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
+        <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-bloom-filter</module>
         <module>extensions-core/druid-kerberos</module>
+        <module>extensions-core/druid-pac4j</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
@@ -156,9 +169,9 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
+        <module>extensions-core/druid-ranger-security</module>
         <!-- Community extensions -->
         <module>extensions-contrib/influx-extensions</module>
-        <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
@@ -179,6 +192,7 @@
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
+        <module>extensions-contrib/gce-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -326,7 +340,7 @@
             <dependency>
               <!--
                 ~ TODO: This dependency transitively pulls in org.codehaus.jackson:jackson-mapper.asl.1.9.13 which has
-                ~ security vulnerability CVE-2017-7525. https://github.com/apache/incubator-druid/pull/8177 tracks
+                ~ security vulnerability CVE-2017-7525. https://github.com/apache/druid/pull/8177 tracks
                 ~ upgrading to a newer curator version.
               -->
               <groupId>org.apache.curator</groupId>
@@ -388,6 +402,11 @@
                 <artifactId>guice-multibindings</artifactId>
                 <version>${guice.version}</version>
             </dependency>
+            <dependency>
+              <groupId>com.google.inject.extensions</groupId>
+              <artifactId>guice-assistedinject</artifactId>
+              <version>${guice.version}</version>
+              </dependency>
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
@@ -756,7 +775,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.6.0</version>
+                <version>1.7.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -996,12 +1015,12 @@
             <dependency>
                 <groupId>org.apache.datasketches</groupId>
                 <artifactId>datasketches-java</artifactId>
-                <version>1.1.0-incubating</version>
+                <version>${datasketches.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.datasketches</groupId>
                 <artifactId>datasketches-memory</artifactId>
-                <version>1.2.0-incubating</version>
+                <version>${datasketches.memory.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -1105,6 +1124,11 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+           <dependency>
+               <groupId>org.postgresql</groupId>
+               <artifactId>postgresql</artifactId>
+               <version>${postgresql.version}</version>
+           </dependency>
 
             <!-- GCP -->
             <dependency>
@@ -1169,11 +1193,23 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-bulkhead</artifactId>
+                <version>${resilience4j.version}</version>
+            </dependency>
+            <!-- GCE -->
+            <dependency>
+                <groupId>com.google.apis</groupId>
+                <artifactId>google-api-services-compute</artifactId>
+                <version>${com.google.apis.compute.version}</version>
+                <scope>provided</scope>
+            </dependency>
 
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>6.8.7</version>
+                <version>6.14.3</version>
             </dependency>
             <dependency>
                 <groupId>org.hamcrest</groupId>
@@ -1202,7 +1238,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.1.10</version>
+                <version>3.1.11</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -1219,7 +1255,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.4</version>
+                <version>0.8.5</version>
                 <configuration>
                     <excludes>
                         <!-- Ignore generated code -->
@@ -1230,7 +1266,6 @@
                         <!-- Ignore non-production code -->
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
-                        <exclude>org/testng/DruidTestRunnerFactory*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
                     </excludes>
                 </configuration>
@@ -1336,6 +1371,9 @@
                         <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
+                    <excludes>
+                      <exclude>**/SomeAvroDatum.class</exclude>
+                    </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
                     </suppressAnnotations>
@@ -1487,11 +1525,10 @@
                         </goals>
                         <configuration>
                             <properties>
-                                <projectName>Apache Druid (incubating)</projectName>
+                                <projectName>Apache Druid</projectName>
                             </properties>
                             <resourceBundles>
                                 <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
-                                <resourceBundle>org.apache.apache.resources:apache-incubator-disclaimer-resource-bundle:1.2-SNAPSHOT</resourceBundle>
                             </resourceBundles>
                         </configuration>
                     </execution>
@@ -1500,12 +1537,15 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>5.2.4</version>
+                <version>5.3.2</version>
                 <configuration>
                     <cveValidForHours>24</cveValidForHours>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
                     <skipSystemScope>true</skipSystemScope>  <!-- avoid error when processing jdk.tools:jdk.tools:jar:1.8:system -->
+                    <!-- For node analysis info, see https://github.com/jeremylong/DependencyCheck/issues/2482#issuecomment-603755623 -->
+                    <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>  <!-- plugin author (jeremylong) recommends to disable, since this analyzer is retired -->
+                    <nodeAuditSkipDevDependencies>true</nodeAuditSkipDevDependencies>
                     <suppressionFile>owasp-dependency-check-suppressions.xml</suppressionFile>
                 </configuration>
                 <executions>
@@ -1534,7 +1574,7 @@
                             -Duser.timezone=UTC
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
-                            <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
+                            <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
                         <trimStackTrace>false</trimStackTrace>
@@ -1771,7 +1811,7 @@
                             <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
-                                <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
+                                <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                                 -Ddruid.indexing.doubleStorage=double
                             </argLine>
                             <!-- our tests are very verbose, let's keep the volume down -->
@@ -1856,6 +1896,7 @@
                                 <exclude>codestyle/*-forbidden-apis.txt</exclude>
                                 <exclude>conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
+                                <exclude>docker/service-supervisords/*.conf</exclude>
                                 <exclude>target/**</exclude>
                                 <exclude>licenses/**</exclude>
                                 <exclude>**/test/resources/**</exclude>
@@ -1879,6 +1920,7 @@
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
+                                <exclude>**/dependency-reduced-pom.xml</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -1900,6 +1942,18 @@
                             </execution>
                         </executions>
                     </plugin>
+                    <plugin>
+                      <groupId>org.owasp</groupId>
+                      <artifactId>dependency-check-maven</artifactId>
+                      <executions>
+                          <execution>
+                              <phase>compile</phase>
+                              <goals>
+                                  <goal>check</goal>
+                              </goals>
+                          </execution>
+                      </executions>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
@@ -1908,6 +1962,25 @@
           <modules>
             <module>website</module>
           </modules>
+        </profile>
+        <profile>
+          <id>skip-static-checks</id>
+          <properties>
+            <animal.sniffer.skip>true</animal.sniffer.skip>
+            <checkstyle.skip>true</checkstyle.skip>
+            <enforcer.skip>true</enforcer.skip>
+            <forbiddenapis.skip>true</forbiddenapis.skip>
+            <maven.javadoc.skip>true</maven.javadoc.skip>
+            <pmd.skip>true</pmd.skip>
+            <spotbugs.skip>true</spotbugs.skip>
+          </properties>
+        </profile>
+        <profile>
+          <id>skip-tests</id>
+          <properties>
+            <skipTests>true</skipTests>
+            <jacoco.skip>true</jacoco.skip>
+          </properties>
         </profile>
     </profiles>
 </project>

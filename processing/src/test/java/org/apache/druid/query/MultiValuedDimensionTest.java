@@ -576,10 +576,6 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByExpressionMultiMultiAutoAutoDupeIdentifier()
   {
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("GroupBy v1 does not support dimension selectors with unknown cardinality.");
-    }
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("xx")
@@ -615,7 +611,6 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970", "texpr", "t7t7", "count", 2L)
     );
 
-    System.out.println(result.toList());
     TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi-auto-auto-self");
   }
 
@@ -1023,10 +1018,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
           pool,
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
@@ -1076,10 +1068,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
           pool,
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
@@ -1136,10 +1125,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
       QueryRunnerFactory factory = new TopNQueryRunnerFactory(
           pool,
-          new TopNQueryQueryToolChest(
-              new TopNQueryConfig(),
-              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-          ),
+          new TopNQueryQueryToolChest(new TopNQueryConfig()),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(

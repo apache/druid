@@ -23,6 +23,10 @@ sidebar_label: "SegmentMetadata"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes a query
+> type that is only available in the native language. However, Druid SQL contains similar functionality in
+> its [metadata tables](sql.md#metadata-tables).
 
 Segment metadata queries return per-segment information about:
 
@@ -48,7 +52,7 @@ There are several main parts to a segment metadata query:
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "segmentMetadata"; this is the first thing Apache Druid (incubating) looks at to figure out how to interpret the query|yes|
+|queryType|This String should always be "segmentMetadata"; this is the first thing Apache Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|no|
 |toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|

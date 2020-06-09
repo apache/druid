@@ -25,6 +25,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Objects;
+
 /**
  */
 public class IntervalDropRule extends DropRule
@@ -62,5 +64,24 @@ public class IntervalDropRule extends DropRule
   public boolean appliesTo(Interval theInterval, DateTime referenceTimestamp)
   {
     return interval.contains(theInterval);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IntervalDropRule that = (IntervalDropRule) o;
+    return Objects.equals(interval, that.interval);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(interval);
   }
 }

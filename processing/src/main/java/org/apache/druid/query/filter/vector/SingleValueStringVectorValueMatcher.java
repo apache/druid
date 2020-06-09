@@ -22,8 +22,8 @@ package org.apache.druid.query.filter.vector;
 import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.query.filter.StringValueMatcherColumnSelectorStrategy;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
 import javax.annotation.Nullable;
@@ -45,7 +45,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
       final Predicate<String> predicate
   )
   {
-    final Boolean booleanValue = StringValueMatcherColumnSelectorStrategy.toBooleanIfPossible(
+    final Boolean booleanValue = ValueMatchers.toBooleanIfPossible(
         selector,
         false,
         predicate

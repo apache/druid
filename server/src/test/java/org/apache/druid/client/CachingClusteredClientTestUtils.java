@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -65,23 +64,15 @@ public final class CachingClusteredClientTestUtils
             ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                 .put(
                     TimeseriesQuery.class,
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new TimeseriesQueryQueryToolChest()
                 )
                 .put(
                     TopNQuery.class,
-                    new TopNQueryQueryToolChest(
-                        new TopNQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new TopNQueryQueryToolChest(new TopNQueryConfig())
                 )
                 .put(
                     SearchQuery.class,
-                    new SearchQueryQueryToolChest(
-                        new SearchQueryConfig(),
-                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
-                    )
+                    new SearchQueryQueryToolChest(new SearchQueryConfig())
                 )
                 .put(
                     GroupByQuery.class,

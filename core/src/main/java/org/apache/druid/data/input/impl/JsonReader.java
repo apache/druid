@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -45,13 +44,13 @@ public class JsonReader extends TextReader
   JsonReader(
       InputRowSchema inputRowSchema,
       InputEntity source,
-      File temporaryDirectory,
       JSONPathSpec flattenSpec,
-      ObjectMapper mapper
+      ObjectMapper mapper,
+      boolean keepNullColumns
   )
   {
-    super(inputRowSchema, source, temporaryDirectory);
-    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker());
+    super(inputRowSchema, source);
+    this.flattener = ObjectFlatteners.create(flattenSpec, new JSONFlattenerMaker(keepNullColumns));
     this.mapper = mapper;
   }
 

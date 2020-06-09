@@ -33,7 +33,7 @@ get_java_bin_dir() {
     elif [ ! -z "$(command -v java)" ]; then
       # Strip /java from the location of where java is installed
       JAVA_ON_PATH="$(command -v java)"
-      echo -n "${JAVA_ON_PATH%/java}"
+      printf "${JAVA_ON_PATH%/java}"
     else
       printf ""
     fi

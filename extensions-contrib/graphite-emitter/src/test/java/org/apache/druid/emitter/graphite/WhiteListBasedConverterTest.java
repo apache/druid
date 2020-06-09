@@ -75,7 +75,6 @@ public class WhiteListBasedConverterTest
           "query/time, true",
           "query/node/ttfb, true",
           "query/segmentAndCache/time, true",
-          "query/intervalChunk/time, false",
           "query/time/balaba, true",
           "query/tim, false",
           "segment/added/bytes, false",
@@ -136,7 +135,7 @@ public class WhiteListBasedConverterTest
     );
 
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
-        .setDimension("gcName", new String[] {"g1"})
+        .setDimension("gcName", new String[]{"g1"})
         .build(createdTime, "jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 

@@ -1,6 +1,7 @@
 ---
 id: filters
-title: "Query Filters"
+title: "Query filters"
+sidebar_label: "Filters"
 ---
 
 <!--
@@ -22,8 +23,12 @@ title: "Query Filters"
   ~ under the License.
   -->
 
+> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+> This document describes the native
+> language. For information about aggregators available in SQL, refer to the
+> [SQL documentation](sql.md#scalar-functions).
 
-A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL. Apache Druid (incubating) supports the following types of filters.
+A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL. Apache Druid supports the following types of filters.
 
 ### Selector filter
 
@@ -231,6 +236,8 @@ The grammar for a IN filter is as follows:
 The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
 If an empty `values` array is passed to the IN filter, it will simply return an empty result.
+If the `dimension` is a multi-valued dimension, the IN filter will return true if one of the dimension values is
+in the `values` array.
 
 ### Like filter
 

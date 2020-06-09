@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -45,6 +45,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -57,10 +58,12 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -83,6 +86,7 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -124,19 +128,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       false,
       0
   );
-  private static final CompactionState DEFAULT_COMPACTION_STATE = new CompactionState(
-      new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-      ImmutableMap.of(
-          "bitmap",
-          ImmutableMap.of("type", "concise"),
-          "dimensionCompression",
-          "lz4",
-          "metricCompression",
-          "lz4",
-          "longEncoding",
-          "longs"
-      )
-  );
+  private static CompactionState DEFAULT_COMPACTION_STATE;
 
   private static final List<String> TEST_ROWS = ImmutableList.of(
       "2014-01-01T00:00:10Z,a,1\n",
@@ -181,14 +173,28 @@ public class CompactionTaskRunTest extends IngestionTestBase
     coordinatorClient = new CoordinatorClient(null, null)
     {
       @Override
-      public Collection<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public Collection<DataSegment> fetchUsedSegmentsInDataSourceForIntervals(
+          String dataSource,
+          List<Interval> intervals
+      )
       {
-        return getStorageCoordinator().getUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
+        return getStorageCoordinator().retrieveUsedSegmentsForIntervals(dataSource, intervals, Segments.ONLY_VISIBLE);
       }
     };
     segmentLoaderFactory = new SegmentLoaderFactory(getIndexIO(), getObjectMapper());
     appenderatorsManager = new TestAppenderatorsManager();
     this.lockGranularity = lockGranularity;
+  }
+
+  @BeforeClass
+  public static void setupClass() throws JsonProcessingException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+
+    DEFAULT_COMPACTION_STATE = new CompactionState(
+      new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
+      mapper.readValue(mapper.writeValueAsString(new IndexSpec()), Map.class)
+    );
   }
 
   @Before
@@ -377,12 +383,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
             getObjectMapper(),
             tmpDir,
             DEFAULT_PARSE_SPEC,
+            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
         null,
@@ -510,17 +517,16 @@ public class CompactionTaskRunTest extends IngestionTestBase
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .build();
 
-    final Set<DataSegment> expectedSegments = new HashSet<>();
     final Pair<TaskStatus, List<DataSegment>> compactionResult = runTask(compactionTask);
     Assert.assertTrue(compactionResult.lhs.isSuccess());
-    expectedSegments.addAll(compactionResult.rhs);
+    final Set<DataSegment> expectedSegments = new HashSet<>(compactionResult.rhs);
 
     final Pair<TaskStatus, List<DataSegment>> appendResult = runAppendTask();
     Assert.assertTrue(appendResult.lhs.isSuccess());
     expectedSegments.addAll(appendResult.rhs);
 
     final Set<DataSegment> usedSegments = new HashSet<>(
-        getStorageCoordinator().getUsedSegmentsForIntervals(
+        getStorageCoordinator().retrieveUsedSegmentsForIntervals(
             DATA_SOURCE,
             Collections.singletonList(Intervals.of("2014-01-01/2014-01-02")),
             Segments.ONLY_VISIBLE
@@ -723,7 +729,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 ),
                 false
             ),
-            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, null, false, true)
+            IndexTaskTest.createTuningConfig(5000000, null, null, Long.MAX_VALUE, null, false, true)
         ),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -788,12 +794,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
             getObjectMapper(),
             tmpDir,
             DEFAULT_PARSE_SPEC,
+            null,
             new UniformGranularitySpec(
                 Granularities.HOUR,
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, false, true),
             appendToExisting
         ),
         null,
@@ -821,9 +828,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     getTaskStorage().insert(task, TaskStatus.running(task.getId()));
 
     final ObjectMapper objectMapper = getObjectMapper();
-    objectMapper.registerSubtypes(
-        new NamedType(LocalLoadSpec.class, "local")
-    );
+    objectMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
     objectMapper.registerSubtypes(LocalDataSegmentPuller.class);
 
     final TaskToolbox box = createTaskToolbox(objectMapper, task);
@@ -877,6 +882,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
+        NoopJoinableFactory.INSTANCE,
         null,
         loader,
         objectMapper,

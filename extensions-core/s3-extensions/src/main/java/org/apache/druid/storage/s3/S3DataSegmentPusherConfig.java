@@ -37,8 +37,8 @@ public class S3DataSegmentPusherConfig
   private boolean disableAcl = false;
 
   @JsonProperty
-  @Min(0)
-  private int maxListingLength = 1000;
+  @Min(1)
+  private int maxListingLength = 1024;
   // use s3n by default for backward compatibility
   @JsonProperty
   private boolean useS3aSchema = false;

@@ -24,10 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -92,17 +91,6 @@ public class DataSourceCompactionConfigTest
   }
 
   @Test
-  public void testSerdeUserCompactTuningConfig() throws IOException
-  {
-    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null, null, null, null);
-    final String json = OBJECT_MAPPER.writeValueAsString(config);
-    // Check maxRowsPerSegment doesn't exist in the JSON string
-    Assert.assertFalse(json.contains("maxRowsPerSegment"));
-    final UserCompactTuningConfig fromJson = OBJECT_MAPPER.readValue(json, UserCompactTuningConfig.class);
-    Assert.assertEquals(config, fromJson);
-  }
-
-  @Test
   public void testSerdeWithMaxTotalRows() throws IOException
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
@@ -111,7 +99,7 @@ public class DataSourceCompactionConfigTest
         500L,
         null,
         new Period(3600),
-        new UserCompactTuningConfig(
+        new UserCompactionTaskQueryTuningConfig(
             null,
             null,
             10000L,
@@ -144,7 +132,7 @@ public class DataSourceCompactionConfigTest
         500L,
         10000,
         new Period(3600),
-        new UserCompactTuningConfig(
+        new UserCompactionTaskQueryTuningConfig(
             null,
             null,
             10000L,
@@ -172,7 +160,7 @@ public class DataSourceCompactionConfigTest
   @Test
   public void testSerdeUserCompactionTuningConfig() throws IOException
   {
-    final UserCompactTuningConfig tuningConfig = new UserCompactTuningConfig(
+    final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
         1000,
         10000L,
         2000L,
@@ -181,7 +169,7 @@ public class DataSourceCompactionConfigTest
             new RoaringBitmapSerdeFactory(false),
             CompressionStrategy.LZF,
             CompressionStrategy.UNCOMPRESSED,
-            LongEncodingStrategy.LONGS
+            CompressionFactory.LongEncodingStrategy.LONGS
         ),
         1,
         3000L,
@@ -189,7 +177,8 @@ public class DataSourceCompactionConfigTest
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);
-    final UserCompactTuningConfig fromJson = OBJECT_MAPPER.readValue(json, UserCompactTuningConfig.class);
+    final UserCompactionTaskQueryTuningConfig fromJson =
+        OBJECT_MAPPER.readValue(json, UserCompactionTaskQueryTuningConfig.class);
     Assert.assertEquals(tuningConfig, fromJson);
   }
 }

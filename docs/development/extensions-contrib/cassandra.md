@@ -23,7 +23,7 @@ title: "Apache Cassandra"
   -->
 
 
-To use this Apache Druid (incubating) extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-cassandra-storage` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-cassandra-storage` extension.
 
 [Apache Cassandra](http://www.datastax.com/what-we-offer/products-services/datastax-enterprise/apache-cassandra) can also
 be leveraged for deep storage.  This requires some additional Druid configuration as well as setting up the necessary

@@ -65,9 +65,7 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    Set<String> dependentFields = new HashSet<>();
-
-    dependentFields.addAll(zScore.getDependentFields());
+    Set<String> dependentFields = new HashSet<>(zScore.getDependentFields());
 
     return dependentFields;
   }
@@ -81,9 +79,11 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-
-    double zScoreValue = ((Number) zScore.compute(combinedAggregators))
-        .doubleValue();
+    Object result = zScore.compute(combinedAggregators);
+    if (!(result instanceof Number)) {
+      return null;
+    }
+    double zScoreValue = ((Number) result).doubleValue();
 
     zScoreValue = Math.abs(zScoreValue);
     return 2 * (1 - cumulativeProbability(zScoreValue));
@@ -118,7 +118,7 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   }
 
   @JsonProperty
-  public PostAggregator getZscore()
+  public PostAggregator getzScore()
   {
     return zScore;
   }
