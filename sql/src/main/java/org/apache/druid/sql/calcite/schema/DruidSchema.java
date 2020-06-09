@@ -355,7 +355,7 @@ public class DruidSchema extends AbstractSchema
       AvailableSegmentMetadata segmentMetadata = knownSegments != null ? knownSegments.get(segment.getId()) : null;
       if (segmentMetadata == null) {
         // segmentReplicatable is used to determine if segments are served by historical or realtime servers
-        long isRealtime = server.segmentReplicatable() ? 0 : 1;
+        long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
         segmentMetadata = AvailableSegmentMetadata.builder(
             segment,
             isRealtime,
@@ -366,7 +366,7 @@ public class DruidSchema extends AbstractSchema
         // Unknown segment.
         setAvailableSegmentMetadata(segment.getId(), segmentMetadata);
         segmentsNeedingRefresh.add(segment.getId());
-        if (!server.segmentReplicatable()) {
+        if (!server.isSegmentReplicationTarget()) {
           log.debug("Added new mutable segment[%s].", segment.getId());
           mutableSegments.add(segment.getId());
         } else {
@@ -384,7 +384,7 @@ public class DruidSchema extends AbstractSchema
             .withRealtime(recomputeIsRealtime(servers))
             .build();
         knownSegments.put(segment.getId(), metadataWithNumReplicas);
-        if (server.segmentReplicatable()) {
+        if (server.isSegmentReplicationTarget()) {
           // If a segment shows up on a replicatable (historical) server at any point, then it must be immutable,
           // even if it's also available on non-replicatable (realtime) servers.
           mutableSegments.remove(segment.getId());

@@ -122,6 +122,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return peon.getSegmentsToLoad().contains(segment);
   }
 
+  public boolean isDroppingSegment(DataSegment segment)
+  {
+    return peon.getSegmentsToDrop().contains(segment);
+  }
+
   public int getNumberOfSegmentsInQueue()
   {
     return peon.getNumberOfSegmentsInQueue();
