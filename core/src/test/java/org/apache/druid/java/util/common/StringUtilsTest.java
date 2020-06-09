@@ -211,39 +211,51 @@ public class StringUtilsTest
   @Test
   public void testLpad()
   {
-    String s1 = StringUtils.lpad("abc", 7, "de");
-    Assert.assertEquals(s1, "dedeabc");
+    String lpad = StringUtils.lpad("abc", 7, "de");
+    Assert.assertEquals("dedeabc", lpad);
 
-    String s2 = StringUtils.lpad("abc", 6, "de");
-    Assert.assertEquals(s2, "dedabc");
+    lpad = StringUtils.lpad("abc", 6, "de");
+    Assert.assertEquals("dedabc", lpad);
 
-    String s3 = StringUtils.lpad("abc", 2, "de");
-    Assert.assertEquals(s3, "ab");
+    lpad = StringUtils.lpad("abc", 2, "de");
+    Assert.assertEquals("ab", lpad);
 
-    String s4 = StringUtils.lpad("abc", 0, "de");
-    Assert.assertEquals(s4, "");
+    lpad = StringUtils.lpad("abc", 0, "de");
+    Assert.assertEquals("", lpad);
 
-    String s5 = StringUtils.lpad("abc", -1, "de");
-    Assert.assertEquals(s5, null);
+    lpad = StringUtils.lpad("abc", -1, "de");
+    Assert.assertNull(lpad);
+
+    lpad = StringUtils.lpad("abc", 10, "");
+    Assert.assertNull(lpad);
+
+    lpad = StringUtils.lpad("abc", 1, "");
+    Assert.assertNull(lpad);
   }
 
   @Test
   public void testRpad()
   {
-    String s1 = StringUtils.rpad("abc", 7, "de");
-    Assert.assertEquals(s1, "abcdede");
+    String rpad = StringUtils.rpad("abc", 7, "de");
+    Assert.assertEquals("abcdede", rpad);
 
-    String s2 = StringUtils.rpad("abc", 6, "de");
-    Assert.assertEquals(s2, "abcded");
+    rpad = StringUtils.rpad("abc", 6, "de");
+    Assert.assertEquals("abcded", rpad);
 
-    String s3 = StringUtils.rpad("abc", 2, "de");
-    Assert.assertEquals(s3, "ab");
+    rpad = StringUtils.rpad("abc", 2, "de");
+    Assert.assertEquals("ab", rpad);
 
-    String s4 = StringUtils.rpad("abc", 0, "de");
-    Assert.assertEquals(s4, "");
+    rpad = StringUtils.rpad("abc", 0, "de");
+    Assert.assertEquals("", rpad);
 
-    String s5 = StringUtils.rpad("abc", -1, "de");
-    Assert.assertEquals(s5, null);
+    rpad = StringUtils.rpad("abc", -1, "de");
+    Assert.assertNull(rpad);
+
+    rpad = StringUtils.lpad("abc", 10, "");
+    Assert.assertNull(rpad);
+
+    rpad = StringUtils.lpad("abc", 1, "");
+    Assert.assertNull(rpad);
   }
 
   @Test

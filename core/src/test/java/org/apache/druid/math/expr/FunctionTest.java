@@ -146,9 +146,14 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("lpad(x, 5, 'ab')", "abfoo");
     assertExpr("lpad(x, 4, 'ab')", "afoo");
     assertExpr("lpad(x, 2, 'ab')", "fo");
+    assertExpr("lpad(null, 5, 'ab')", null);
+    assertExpr("lpad(x, 2, '')", null);
+    assertExpr("lpad(x, 2, null)", null);
     assertArrayExpr("lpad(x, 0, 'ab')", null);
     assertArrayExpr("lpad(x, 5, null)", null);
-    assertArrayExpr("lpad(null, 5, x)", null);
+    assertArrayExpr("lpad(null, 5, 'ab')", null);
+    assertArrayExpr("lpad(x, 2, '')", null);
+    assertArrayExpr("lpad(x, 2, null)", null);
   }
 
   @Test
@@ -157,9 +162,15 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("rpad(x, 5, 'ab')", "fooab");
     assertExpr("rpad(x, 4, 'ab')", "fooa");
     assertExpr("rpad(x, 2, 'ab')", "fo");
+    assertExpr("rpad(null, 5, 'ab')", null);
+    assertExpr("rpad(x, 2, '')", null);
+    assertExpr("rpad(x, 2, null)", null);
     assertArrayExpr("rpad(x, 0, 'ab')", null);
     assertArrayExpr("rpad(x, 5, null)", null);
     assertArrayExpr("rpad(null, 5, x)", null);
+    assertArrayExpr("rpad(null, 5, 'ab')", null);
+    assertArrayExpr("rpad(x, 2, '')", null);
+    assertArrayExpr("rpad(x, 2, null)", null);
   }
 
   @Test

@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -481,9 +482,10 @@ public class StringUtils
    *
    * @return the string left-padded with pad to a length of len
    */
-  public static String lpad(String base, Integer len, String pad)
+  @Nullable
+  public static String lpad(@Nonnull String base, int len, @Nonnull String pad)
   {
-    if (len < 0) {
+    if (len < 0 || pad.isEmpty()) {
       return null;
     } else if (len == 0) {
       return "";
@@ -519,7 +521,8 @@ public class StringUtils
    *
    * @return the string right-padded with pad to a length of len
    */
-  public static String rpad(String base, Integer len, String pad)
+  @Nullable
+  public static String rpad(@Nonnull String base, int len, @Nonnull String pad)
   {
     if (len < 0) {
       return null;
