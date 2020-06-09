@@ -106,25 +106,30 @@ public class HashJoinSegment implements SegmentReference
   public Optional<Closeable> acquireReferences()
   {
     Closer closer = Closer.create();
-    boolean acquireFailed = baseSegment.acquireReferences().map(closeable -> {
-      closer.register(closeable);
-      return false;
-    }).orElse(true);
-
-    for (JoinableClause claws : clauses) {
-      if (acquireFailed) {
-        break;
-      }
-      acquireFailed |= claws.acquireReferences().map(closeable -> {
+    try {
+      boolean acquireFailed = baseSegment.acquireReferences().map(closeable -> {
         closer.register(closeable);
         return false;
       }).orElse(true);
-    }
-    if (acquireFailed) {
+
+      for (JoinableClause joinClause : clauses) {
+        if (acquireFailed) {
+          break;
+        }
+        acquireFailed |= joinClause.acquireReferences().map(closeable -> {
+          closer.register(closeable);
+          return false;
+        }).orElse(true);
+      }
+      if (acquireFailed) {
+        CloseQuietly.close(closer);
+        return Optional.empty();
+      } else {
+        return Optional.of(closer);
+      }
+    } catch (Exception ex) {
       CloseQuietly.close(closer);
       return Optional.empty();
-    } else {
-      return Optional.of(closer);
     }
   }
 }
