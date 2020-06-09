@@ -524,7 +524,7 @@ public class StringUtils
   @Nullable
   public static String rpad(@Nonnull String base, int len, @Nonnull String pad)
   {
-    if (len < 0) {
+    if (len < 0 || pad.isEmpty()) {
       return null;
     } else if (len == 0) {
       return "";

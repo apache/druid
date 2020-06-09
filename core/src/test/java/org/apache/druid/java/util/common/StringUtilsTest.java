@@ -251,10 +251,10 @@ public class StringUtilsTest
     rpad = StringUtils.rpad("abc", -1, "de");
     Assert.assertNull(rpad);
 
-    rpad = StringUtils.lpad("abc", 10, "");
+    rpad = StringUtils.rpad("abc", 10, "");
     Assert.assertNull(rpad);
 
-    rpad = StringUtils.lpad("abc", 1, "");
+    rpad = StringUtils.rpad("abc", 1, "");
     Assert.assertNull(rpad);
   }
 
