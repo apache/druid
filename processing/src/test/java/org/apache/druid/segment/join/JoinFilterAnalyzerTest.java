@@ -39,11 +39,13 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
+import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
+import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -466,9 +468,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    List<JoinableClause> joinableClauses = ImmutableList.of(
+    JoinableClauses joinableClauses = JoinableClauses.fromList(ImmutableList.of(
         factToRegion(JoinType.LEFT)
-    );
+    ));
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
         joinableClauses,
@@ -482,7 +484,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        joinableClauses,
+        joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
     );
 
@@ -1262,6 +1264,60 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   }
 
   @Test
+  public void test_filterPushDown_factToCountryRightWithFilterOnValueThatMatchesNothing()
+  {
+    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
+    Filter originalFilter = new AndFilter(
+        ImmutableList.of(
+            new SelectorFilter("channel", null),
+            new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "NO MATCH")
+        )
+    );
+    JoinFilterPreAnalysis joinFilterPreAnalysis = simplePreAnalysis(
+        joinableClauses,
+        originalFilter
+    );
+    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
+        factSegment.asStorageAdapter(),
+        joinableClauses,
+        joinFilterPreAnalysis
+    );
+
+    JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
+        FalseFilter.instance(),
+        new AndFilter(
+            ImmutableList.of(
+                new SelectorFilter("channel", null),
+                new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "NO MATCH")
+            )
+        ),
+        ImmutableSet.of()
+    );
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+
+    JoinTestHelper.verifyCursors(
+        adapter.makeCursors(
+            originalFilter,
+            Intervals.ETERNITY,
+            VirtualColumns.EMPTY,
+            Granularities.ALL,
+            false,
+            null
+        ),
+        ImmutableList.of(
+            "page",
+            "countryIsoCode",
+            "countryNumber",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
+            FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
   public void test_filterPushDown_factToCountryRightWithFilterOnNullColumnsUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.RIGHT));
@@ -1974,10 +2030,10 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftFilterOnPageDisablePushDown()
   {
-    List<JoinableClause> joinableClauses = ImmutableList.of(
+    JoinableClauses joinableClauses = JoinableClauses.fromList(ImmutableList.of(
         factToRegion(JoinType.LEFT),
         regionToCountry(JoinType.LEFT)
-    );
+    ));
     Filter originalFilter = new SelectorFilter("page", "Peremptory norm");
 
     JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
@@ -1991,7 +2047,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        joinableClauses,
+        joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
     );
 
@@ -2026,10 +2082,10 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftEnablePushDownDisableRewrite()
   {
-    List<JoinableClause> joinableClauses = ImmutableList.of(
+    JoinableClauses joinableClauses = JoinableClauses.fromList(ImmutableList.of(
         factToRegion(JoinType.LEFT),
         regionToCountry(JoinType.LEFT)
-    );
+    ));
     Filter originalFilter = new AndFilter(
         ImmutableList.of(
             new SelectorFilter("channel", "#en.wikipedia"),
@@ -2063,7 +2119,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
-        joinableClauses,
+        joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
     );
 
@@ -2450,7 +2506,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   )
   {
     return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        joinableClauses,
+        JoinableClauses.fromList(joinableClauses),
         VirtualColumns.EMPTY,
         originalFilter,
         true,

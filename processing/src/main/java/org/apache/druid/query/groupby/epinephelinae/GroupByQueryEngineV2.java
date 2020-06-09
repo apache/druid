@@ -131,47 +131,53 @@ public class GroupByQueryEngineV2
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
-    final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
-        query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
-    );
-
-    final DateTime fudgeTimestamp = fudgeTimestampString == null
-                                    ? null
-                                    : DateTimes.utc(Long.parseLong(fudgeTimestampString));
-
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-    final Interval interval = Iterables.getOnlyElement(query.getIntervals());
-
-    final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
-        VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
-    );
-
-    final Sequence<ResultRow> result;
-
-    if (doVectorize) {
-      result = VectorGroupByEngine.process(
-          query,
-          storageAdapter,
-          bufferHolder.get(),
-          fudgeTimestamp,
-          filter,
-          interval,
-          querySpecificConfig,
-          queryConfig
+    try {
+      final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
+          query.getContextValue(GroupByStrategyV2.CTX_KEY_FUDGE_TIMESTAMP, null)
       );
-    } else {
-      result = processNonVectorized(
-          query,
-          storageAdapter,
-          bufferHolder.get(),
-          fudgeTimestamp,
-          querySpecificConfig,
-          filter,
-          interval
+
+      final DateTime fudgeTimestamp = fudgeTimestampString == null
+                                      ? null
+                                      : DateTimes.utc(Long.parseLong(fudgeTimestampString));
+
+      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+
+      final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
+          VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
       );
+
+      final Sequence<ResultRow> result;
+
+      if (doVectorize) {
+        result = VectorGroupByEngine.process(
+            query,
+            storageAdapter,
+            bufferHolder.get(),
+            fudgeTimestamp,
+            filter,
+            interval,
+            querySpecificConfig,
+            queryConfig
+        );
+      } else {
+        result = processNonVectorized(
+            query,
+            storageAdapter,
+            bufferHolder.get(),
+            fudgeTimestamp,
+            querySpecificConfig,
+            filter,
+            interval
+        );
+      }
+
+      return result.withBaggage(bufferHolder);
     }
-
-    return result.withBaggage(bufferHolder);
+    catch (Throwable e) {
+      bufferHolder.close();
+      throw e;
+    }
   }
 
   private static Sequence<ResultRow> processNonVectorized(
@@ -315,13 +321,13 @@ public class GroupByQueryEngineV2
   /**
    * Checks whether all "dimensions" are either single-valued, or if allowed, nonexistent. Since non-existent column
    * selectors will show up as full of nulls they are effectively single valued, however they can also be null during
-   * broker merge, for example with an 'inline' datasource subquery. 'missingMeansNonexistent' is sort of a hack to let
+   * broker merge, for example with an 'inline' datasource subquery. 'missingMeansNonExistent' is sort of a hack to let
    * the vectorized engine, which only operates on actual segments, to still work in this case for non-existent columns.
    */
   public static boolean isAllSingleValueDims(
       final Function<String, ColumnCapabilities> capabilitiesFunction,
       final List<DimensionSpec> dimensions,
-      final boolean missingMeansNonexistent
+      final boolean missingMeansNonExistent
   )
   {
     return dimensions
@@ -336,8 +342,8 @@ public class GroupByQueryEngineV2
 
               // Now check column capabilities.
               final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues()) ||
-                     (missingMeansNonexistent && columnCapabilities == null);
+              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues().isMaybeTrue()) ||
+                     (missingMeansNonExistent && columnCapabilities == null);
             });
   }
 
@@ -965,13 +971,13 @@ public class GroupByQueryEngineV2
       DefaultLimitSpec limitSpec = (DefaultLimitSpec) query.getLimitSpec();
 
       return GrouperBufferComparatorUtils.bufferComparatorWithAggregators(
-        query.getAggregatorSpecs().toArray(new AggregatorFactory[0]),
-        aggregatorOffsets,
-        limitSpec,
-        query.getDimensions(),
-        getDimensionComparators(limitSpec),
-        query.getResultRowHasTimestamp(),
-        query.getContextSortByDimsFirst()
+          query.getAggregatorSpecs().toArray(new AggregatorFactory[0]),
+          aggregatorOffsets,
+          limitSpec,
+          query.getDimensions(),
+          getDimensionComparators(limitSpec),
+          query.getResultRowHasTimestamp(),
+          query.getContextSortByDimsFirst()
       );
     }
 

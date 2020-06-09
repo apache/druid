@@ -46,6 +46,7 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -83,7 +84,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
   @Override
   public QueryRunner<ScanResultValue> mergeRunners(
-      ExecutorService queryExecutor,
+      final ExecutorService queryExecutor,
       final Iterable<QueryRunner<ScanResultValue>> queryRunners
   )
   {
@@ -122,14 +123,19 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                         : query.getMaxRowsQueuedForOrdering());
         if (query.getScanRowsLimit() <= maxRowsQueuedForOrdering) {
           // Use priority queue strategy
-          return priorityQueueSortAndLimit(
-              Sequences.concat(Sequences.map(
-                  Sequences.simple(queryRunnersOrdered),
-                  input -> input.run(queryPlus, responseContext)
-              )),
-              query,
-              intervalsOrdered
-          );
+          try {
+            return priorityQueueSortAndLimit(
+                Sequences.concat(Sequences.map(
+                    Sequences.simple(queryRunnersOrdered),
+                    input -> input.run(queryPlus, responseContext)
+                )),
+                query,
+                intervalsOrdered
+            );
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         } else {
           // Use n-way merge strategy
           List<Pair<Interval, QueryRunner<ScanResultValue>>> intervalsAndRunnersOrdered = new ArrayList<>();
@@ -149,11 +155,11 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           // query runners for that segment
           LinkedHashMap<Interval, List<Pair<Interval, QueryRunner<ScanResultValue>>>> partitionsGroupedByInterval =
               intervalsAndRunnersOrdered.stream()
-                                          .collect(Collectors.groupingBy(
-                                              x -> x.lhs,
-                                              LinkedHashMap::new,
-                                              Collectors.toList()
-                                          ));
+                                        .collect(Collectors.groupingBy(
+                                            x -> x.lhs,
+                                            LinkedHashMap::new,
+                                            Collectors.toList()
+                                        ));
 
           // Find the segment with the largest numbers of partitions.  This will be used to compare with the
           // maxSegmentPartitionsOrderedInMemory limit to determine if the query is at risk of consuming too much memory.
@@ -203,7 +209,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       Sequence<ScanResultValue> inputSequence,
       ScanQuery scanQuery,
       List<Interval> intervalsOrdered
-  )
+  ) throws IOException
   {
     Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
@@ -232,48 +238,54 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           }
         }
     );
-    boolean doneScanning = yielder.isDone();
-    // We need to scan limit elements and anything else in the last segment
-    int numRowsScanned = 0;
-    Interval finalInterval = null;
-    while (!doneScanning) {
-      ScanResultValue next = yielder.get();
-      List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
-      for (ScanResultValue srv : singleEventScanResultValues) {
-        numRowsScanned++;
-        // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
-        // needs to be preserved for queries using the compactedList result format
-        q.offer(srv);
-        if (q.size() > limit) {
-          q.poll();
-        }
 
-        // Finish scanning the interval containing the limit row
-        if (numRowsScanned > limit && finalInterval == null) {
-          long timestampOfLimitRow = srv.getFirstEventTimestamp(scanQuery.getResultFormat());
-          for (Interval interval : intervalsOrdered) {
-            if (interval.contains(timestampOfLimitRow)) {
-              finalInterval = interval;
+    try {
+      boolean doneScanning = yielder.isDone();
+      // We need to scan limit elements and anything else in the last segment
+      int numRowsScanned = 0;
+      Interval finalInterval = null;
+      while (!doneScanning) {
+        ScanResultValue next = yielder.get();
+        List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
+        for (ScanResultValue srv : singleEventScanResultValues) {
+          numRowsScanned++;
+          // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
+          // needs to be preserved for queries using the compactedList result format
+          q.offer(srv);
+          if (q.size() > limit) {
+            q.poll();
+          }
+
+          // Finish scanning the interval containing the limit row
+          if (numRowsScanned > limit && finalInterval == null) {
+            long timestampOfLimitRow = srv.getFirstEventTimestamp(scanQuery.getResultFormat());
+            for (Interval interval : intervalsOrdered) {
+              if (interval.contains(timestampOfLimitRow)) {
+                finalInterval = interval;
+              }
+            }
+            if (finalInterval == null) {
+              throw new ISE("WTH???  Row came from an unscanned interval?");
             }
           }
-          if (finalInterval == null) {
-            throw new ISE("WTH???  Row came from an unscanned interval?");
-          }
         }
+        yielder = yielder.next(null);
+        doneScanning = yielder.isDone() ||
+                       (finalInterval != null &&
+                        !finalInterval.contains(next.getFirstEventTimestamp(scanQuery.getResultFormat())));
       }
-      yielder = yielder.next(null);
-      doneScanning = yielder.isDone() ||
-                     (finalInterval != null &&
-                      !finalInterval.contains(next.getFirstEventTimestamp(scanQuery.getResultFormat())));
+      // Need to convert to a Deque because Priority Queue's iterator doesn't guarantee that the sorted order
+      // will be maintained.  Deque was chosen over list because its addFirst is O(1).
+      final Deque<ScanResultValue> sortedElements = new ArrayDeque<>(q.size());
+      while (q.size() != 0) {
+        // addFirst is used since PriorityQueue#poll() dequeues the low-priority (timestamp-wise) events first.
+        sortedElements.addFirst(q.poll());
+      }
+      return Sequences.simple(sortedElements);
     }
-    // Need to convert to a Deque because Priority Queue's iterator doesn't guarantee that the sorted order
-    // will be maintained.  Deque was chosen over list because its addFirst is O(1).
-    final Deque<ScanResultValue> sortedElements = new ArrayDeque<>(q.size());
-    while (q.size() != 0) {
-      // addFirst is used since PriorityQueue#poll() dequeues the low-priority (timestamp-wise) events first.
-      sortedElements.addFirst(q.poll());
+    finally {
+      yielder.close();
     }
-    return Sequences.simple(sortedElements);
   }
 
   @VisibleForTesting

@@ -36,6 +36,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -117,7 +118,7 @@ public class LookupJoinableTest
   @Test
   public void getCorrelatedColummnValuesMissingSearchColumnShouldReturnEmptySet()
   {
-    Set<String> correlatedValues =
+    Optional<Set<String>> correlatedValues =
         target.getCorrelatedColumnValues(
             UNKNOWN_COLUMN,
             SEARCH_KEY_VALUE,
@@ -125,13 +126,13 @@ public class LookupJoinableTest
             0,
             false);
 
-    Assert.assertEquals(Collections.emptySet(), correlatedValues);
+    Assert.assertFalse(correlatedValues.isPresent());
   }
 
   @Test
   public void getCorrelatedColummnValuesMissingRetrievalColumnShouldReturnEmptySet()
   {
-    Set<String> correlatedValues =
+    Optional<Set<String>> correlatedValues =
         target.getCorrelatedColumnValues(
             LookupColumnSelectorFactory.KEY_COLUMN,
             SEARCH_KEY_VALUE,
@@ -139,85 +140,85 @@ public class LookupJoinableTest
             0,
             false);
 
-    Assert.assertEquals(Collections.emptySet(), correlatedValues);
+    Assert.assertFalse(correlatedValues.isPresent());
   }
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnShouldReturnSearchValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         SEARCH_KEY_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         0,
         false);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_KEY_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         SEARCH_KEY_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         0,
         false);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_VALUE_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchKeyMissingAndRetrieveValueColumnShouldReturnExtractedValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         SEARCH_KEY_NULL_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         0,
         false);
-    Assert.assertEquals(Collections.singleton(null), correlatedValues);
+    Assert.assertEquals(Optional.of(Collections.singleton(null)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnAndNonKeyColumnSearchDisabledShouldReturnSearchValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         10,
         false);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
     correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         10,
         false);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnShouldReturnSearchValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.VALUE_COLUMN,
         0,
         true);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_VALUE_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnShouldReturnUnAppliedValue()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         10,
         true);
-    Assert.assertEquals(ImmutableSet.of(SEARCH_KEY_VALUE), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
   }
 
   @Test
@@ -228,24 +229,24 @@ public class LookupJoinableTest
    */
   public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnWithMaxLimitSetShouldHonorMaxLimit()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_VALUE,
         LookupColumnSelectorFactory.KEY_COLUMN,
         0,
         true);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
   }
 
   @Test
   public void getCorrelatedColumnValuesForSearchUnknownValueAndRetrieveKeyColumnShouldReturnNoCorrelatedValues()
   {
-    Set<String> correlatedValues = target.getCorrelatedColumnValues(
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         SEARCH_VALUE_UNKNOWN,
         LookupColumnSelectorFactory.KEY_COLUMN,
         10,
         true);
-    Assert.assertEquals(ImmutableSet.of(), correlatedValues);
+    Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
   }
 }

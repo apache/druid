@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.apache.druid.indexing.common.task.IndexTask.ShardSpecs;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
 /**

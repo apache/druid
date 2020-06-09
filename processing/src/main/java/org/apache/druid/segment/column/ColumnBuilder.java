@@ -118,7 +118,6 @@ public class ColumnBuilder
             .setDictionaryValuesUnique(dictionaryEncoded)
             .setHasSpatialIndexes(spatialIndex != null)
             .setHasMultipleValues(hasMultipleValues)
-            .setIsComplete(true)
             .setFilterable(filterable),
         columnSupplier,
         bitmapIndex,

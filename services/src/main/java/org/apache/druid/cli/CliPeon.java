@@ -61,7 +61,6 @@ import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
@@ -109,15 +108,16 @@ import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffN
 import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.ZkCoordinator;
+import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -154,6 +154,14 @@ public class CliPeon extends GuiceRunnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String serverType = "indexer-executor";
 
+
+  /**
+   * If set to "true", the peon will bind classes necessary for loading broadcast segments. This is used for
+   * queryable tasks, such as streaming ingestion tasks.
+   */
+  @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
+  public String loadBroadcastSegments = "false";
+
   private static final Logger log = new Logger(CliPeon.class);
 
   @Inject
@@ -174,6 +182,7 @@ public class CliPeon extends GuiceRunnable
         new JoinableFactoryModule(),
         new Module()
         {
+          @SuppressForbidden(reason = "System#out, System#err")
           @Override
           public void configure(Binder binder)
           {
@@ -218,6 +227,13 @@ public class CliPeon extends GuiceRunnable
             Jerseys.addResource(binder, SegmentListerResource.class);
             binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
+
+            if ("true".equals(loadBroadcastSegments)) {
+              binder.bind(SegmentManager.class).in(LazySingleton.class);
+              binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+              Jerseys.addResource(binder, HistoricalResource.class);
+              LifecycleModule.register(binder, ZkCoordinator.class);
+            }
           }
 
           @Provides
@@ -246,16 +262,6 @@ public class CliPeon extends GuiceRunnable
           public String getTaskIDFromTask(final Task task)
           {
             return task.getId();
-          }
-
-          @Provides
-          public SegmentListerResource getSegmentListerResource(
-              @Json ObjectMapper jsonMapper,
-              @Smile ObjectMapper smileMapper,
-              @Nullable BatchDataSegmentAnnouncer announcer
-          )
-          {
-            return new SegmentListerResource(jsonMapper, smileMapper, announcer, null);
           }
         },
         new QueryablePeonModule(),
