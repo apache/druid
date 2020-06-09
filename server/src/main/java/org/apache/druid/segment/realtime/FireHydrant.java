@@ -168,6 +168,9 @@ public class FireHydrant
       // segment.acquireReferences() returned false, means it is closed. Since close() in swapSegment() happens after
       // segment swap, the new segment should already be visible.
       ReferenceCountingSegment newSinkSegment = adapter.get();
+      if (newSinkSegment == null) {
+        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
+      }
       if (sinkSegment == newSinkSegment) {
         if (newSinkSegment.isClosed()) {
           throw new ISE("segment.close() is called somewhere outside FireHydrant.swapSegment()");
@@ -175,9 +178,6 @@ public class FireHydrant
         // if segment is not closed, but is same segment it means we are having trouble getting references for joinables
         // of a HashJoinSegment created by segmentMapFn
         return Optional.empty();
-      }
-      if (newSinkSegment == null) {
-        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
       }
       segment = segmentMapFn.apply(newSinkSegment);
       // Spin loop.
