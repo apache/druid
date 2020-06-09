@@ -709,7 +709,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.manager.config.pollDuration`|How often the manager polls the config table for updates.|PT1M|
 |`druid.manager.segments.pollDuration`|The duration between polls the Coordinator does for updates to the set of active segments. Generally defines the amount of lag time it can take for the Coordinator to notice new segments.|PT1M|
 |`druid.manager.rules.pollDuration`|The duration between polls the Coordinator does for updates to the set of active rules. Generally defines the amount of lag time it can take for the Coordinator to notice rules.|PT1M|
-|`druid.manager.rules.defaultTier`|The default tier from which default rules will be loaded from.|_default|
+|`druid.manager.rules.defaultRule`|The default rule for the cluster|_default|
 |`druid.manager.rules.alertThreshold`|The duration after a failed poll upon which an alert should be emitted.|PT10M|
 
 #### Dynamic Configuration
@@ -1204,7 +1204,7 @@ You can optionally configure caching to be enabled on the peons by setting cachi
 |`druid.realtime.cache.useCache`|true, false|Enable the cache on the realtime.|false|
 |`druid.realtime.cache.populateCache`|true, false|Populate the cache on the realtime.|false|
 |`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
-|`druid.realtime.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
+|`druid.realtime.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
@@ -1344,7 +1344,7 @@ You can optionally configure caching to be enabled on the Indexer by setting cac
 |`druid.realtime.cache.useCache`|true, false|Enable the cache on the realtime.|false|
 |`druid.realtime.cache.populateCache`|true, false|Populate the cache on the realtime.|false|
 |`druid.realtime.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
-|`druid.realtime.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
+|`druid.realtime.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
@@ -1650,7 +1650,7 @@ You can optionally only configure caching to be enabled on the Broker by setting
 |`druid.broker.cache.resultLevelCacheLimit`|positive integer|Maximum size of query response that can be cached.|`Integer.MAX_VALUE`|
 |`druid.broker.cache.unCacheable`|All druid query types|All query types to not cache.|`[]`|
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the Historicals|`Integer.MAX_VALUE`|
-|`druid.broker.cache.maxEntrySize`|Maximum cache entry size in bytes.|1_000_000|
+|`druid.broker.cache.maxEntrySize`|positive integer|Maximum cache entry size in bytes.|1_000_000|
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
