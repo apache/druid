@@ -123,7 +123,7 @@ public abstract class BaseQuery<T> implements Query<T>
   {
     return DataSourceAnalysis.forDataSource(query.getDataSource())
                              .getBaseQuerySegmentSpec()
-                             .orElseGet(() -> query.getQuerySegmentSpec());
+                             .orElseGet(query::getQuerySegmentSpec);
   }
 
   @Override
