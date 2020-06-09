@@ -390,7 +390,7 @@ public class DataGeneratorTest
   }
 
   @Test
-  public void testCanMakeTestCoverageCheckNotFailForGeneratorBasicSchemasAndGeneratorSchemaInfo()
+  public void testBasicSchemasAndGeneratorSchemaInfo()
   {
     GeneratorSchemaInfo basicSchema = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
     Assert.assertEquals(13, basicSchema.getColumnSchemas().size());
@@ -402,7 +402,7 @@ public class DataGeneratorTest
   }
 
   @Test
-  public void testCanMakeTestCoverageCheckNotFailForRealRoundingDistribution()
+  public void testRealRoundingDistributionZeroGetters()
   {
     RealRoundingDistribution dist = new RealRoundingDistribution(new NormalDistribution());
     Assert.assertEquals(0, dist.getSupportLowerBound());
