@@ -45,6 +45,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -89,15 +90,14 @@ public class SegmentLoadDropHandlerTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Before
   public void setUp()
   {
     try {
-      infoDir = new File(File.createTempFile("blah", "blah2").getParent(), "ZkCoordinatorTest");
-      infoDir.mkdirs();
-      for (File file : infoDir.listFiles()) {
-        file.delete();
-      }
+      infoDir = temporaryFolder.newFolder();
       log.info("Creating tmp test files in [%s]", infoDir);
     }
     catch (IOException e) {

@@ -11489,7 +11489,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     try {
       testQuery(
           "with abc as"
-          + "("
+          + "(Run"
           + "  SELECT dim1, m2 from druid.foo where \"__time\" >= '2001-01-02'"
           + ")"
           + ", def as"

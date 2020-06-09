@@ -40,7 +40,9 @@ import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -79,15 +81,14 @@ public class ZkCoordinatorTest extends CuratorTestBase
   private File infoDir;
   private List<StorageLocationConfig> locations;
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Before
   public void setUp() throws Exception
   {
     try {
-      infoDir = new File(File.createTempFile("blah", "blah2").getParent(), "ZkCoordinatorTest");
-      infoDir.mkdirs();
-      for (File file : infoDir.listFiles()) {
-        file.delete();
-      }
+      infoDir = temporaryFolder.newFolder();
       log.info("Creating tmp test files in [%s]", infoDir);
     }
     catch (IOException e) {

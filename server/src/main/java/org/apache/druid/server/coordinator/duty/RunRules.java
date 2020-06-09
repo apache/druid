@@ -115,6 +115,9 @@ public class RunRules implements CoordinatorDuty
         if (rule.appliesTo(segment, now)) {
           stats.accumulate(rule.run(coordinator, paramsWithReplicationManager, segment));
           foundMatchingRule = true;
+
+          // The set of broadcast datasources is used by BalanceSegments, so it's important that RunRules
+          // executes before BalanceSegments
           if (rule instanceof BroadcastDistributionRule) {
             broadcastDatasources.add(segment.getDataSource());
           }
