@@ -20,7 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.Closeable;
 import java.util.Optional;
@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public abstract class ReferenceCountingCloseableObject<BaseObject extends Closeable> implements Closeable
 {
-  private static final EmittingLogger log = new EmittingLogger(ReferenceCountingCloseableObject.class);
+  private static final Logger log = new Logger(ReferenceCountingCloseableObject.class);
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private final Phaser referents = new Phaser(1)

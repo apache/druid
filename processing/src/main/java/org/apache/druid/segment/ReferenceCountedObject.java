@@ -37,7 +37,10 @@ public interface ReferenceCountedObject
    * closeable.
    *
    * IMPORTANT NOTE: to fulfill the contract of this method, implementors must return a closeable to indicate that the
-   * reference can be acquired, even if there is nothing to close.
+   * reference can be acquired, even if there is nothing to close. Implementors should avoid allowing this method or the
+   * {@link Closeable} it creates to throw exceptions.
+   *
+   * For callers: if this method returns non-empty, IT MUST BE CLOSED, else reference counts can potentially leak.
    */
   Optional<Closeable> acquireReferences();
 }

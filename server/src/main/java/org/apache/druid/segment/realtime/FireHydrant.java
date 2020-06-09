@@ -40,8 +40,6 @@ import java.util.function.Function;
  */
 public class FireHydrant
 {
-  private static final int GET_SEGMENT_REFERENCE_ESCAPE_HATCH = 1000; // arbitrary large but not too large number
-
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
   private volatile IncrementalIndex index;
@@ -121,8 +119,7 @@ public class FireHydrant
   public ReferenceCountingSegment getIncrementedSegment()
   {
     ReferenceCountingSegment segment = adapter.get();
-    int counter = 0;
-    while (counter++ < GET_SEGMENT_REFERENCE_ESCAPE_HATCH) {
+    while (true) {
       if (segment.increment()) {
         return segment;
       }
@@ -138,7 +135,6 @@ public class FireHydrant
       segment = newSegment;
       // Spin loop.
     }
-    throw new ISE("Unable to increment segment reference for FireHydrant (this should not happen)");
   }
 
   public Pair<ReferenceCountingSegment, Closeable> getAndIncrementSegment()
@@ -158,8 +154,7 @@ public class FireHydrant
   {
     ReferenceCountingSegment sinkSegment = adapter.get();
     SegmentReference segment = segmentMapFn.apply(sinkSegment);
-    int counter = 0;
-    while (counter++ < GET_SEGMENT_REFERENCE_ESCAPE_HATCH) {
+    while (true) {
       Optional<Closeable> reference = segment.acquireReferences();
       if (reference.isPresent()) {
 
@@ -182,7 +177,6 @@ public class FireHydrant
       segment = segmentMapFn.apply(newSinkSegment);
       // Spin loop.
     }
-    return Optional.empty();
   }
 
   @VisibleForTesting

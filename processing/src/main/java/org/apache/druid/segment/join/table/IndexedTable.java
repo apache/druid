@@ -33,6 +33,9 @@ import java.util.Set;
  */
 public interface IndexedTable extends ReferenceCountedObject
 {
+  /**
+   * Returns the version of this table, used to compare against when loading a new version of the table
+   */
   @SuppressWarnings("unused")
   String version();
 
