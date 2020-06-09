@@ -50,7 +50,6 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.filter.InFilter;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.Immutable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,7 +61,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Immutable
 public class InDimFilter implements DimFilter
 {
   // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
@@ -84,7 +82,7 @@ public class InDimFilter implements DimFilter
   private byte[] cacheKey;
 
   @JsonIgnore
-  private Integer valuesHashCode;
+  private final Supplier<Integer> valuesHashCode;
 
   @JsonCreator
   public InDimFilter(
@@ -112,6 +110,7 @@ public class InDimFilter implements DimFilter
     this.longPredicateSupplier = getLongPredicateSupplier();
     this.floatPredicateSupplier = getFloatPredicateSupplier();
     this.doublePredicateSupplier = getDoublePredicateSupplier();
+    this.valuesHashCode = Suppliers.memoize(() -> computeValuesHashCode(values));
   }
 
   /**
@@ -154,16 +153,13 @@ public class InDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    if (valuesHashCode == null) {
-      valuesHashCode = computeValuesHashCode(values);
-    }
     if (cacheKey == null) {
       cacheKey = new CacheKeyBuilder(DimFilterUtils.IN_CACHE_ID)
           .appendString(dimension)
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
           .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
           .appendByte(DimFilterUtils.STRING_SEPARATOR)
-          .appendInt(valuesHashCode)
+          .appendInt(valuesHashCode.get())
           .build();
     }
     return cacheKey;
@@ -291,12 +287,7 @@ public class InDimFilter implements DimFilter
     }
 
     InDimFilter that = (InDimFilter) o;
-
-    // make sure the hashCode is initialized for both filters
-    hashCode();
-    that.hashCode();
-
-    return valuesHashCode.equals(that.valuesHashCode) &&
+    return valuesHashCode.get().equals(that.valuesHashCode.get()) &&
            dimension.equals(that.dimension) &&
            Objects.equals(extractionFn, that.extractionFn) &&
            Objects.equals(filterTuning, that.filterTuning);
@@ -305,10 +296,7 @@ public class InDimFilter implements DimFilter
   @Override
   public int hashCode()
   {
-    if (valuesHashCode == null) {
-      valuesHashCode = computeValuesHashCode(values);
-    }
-    return Objects.hash(valuesHashCode, dimension, extractionFn, filterTuning);
+    return Objects.hash(valuesHashCode.get(), dimension, extractionFn, filterTuning);
   }
 
   public static int computeValuesHashCode(Set<String> values)

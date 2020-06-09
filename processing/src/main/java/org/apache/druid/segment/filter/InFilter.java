@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.Immutable;
 import it.unimi.dsi.fastutil.ints.IntIterable;
@@ -75,7 +76,7 @@ public class InFilter implements Filter
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-  private Integer valuesHashCode;
+  private final Supplier<Integer> valuesHashCode;
 
   public InFilter(
       String dimension,
@@ -85,7 +86,7 @@ public class InFilter implements Filter
       Supplier<DruidDoublePredicate> doublePredicateSupplier,
       ExtractionFn extractionFn,
       FilterTuning filterTuning,
-      Integer valuesHashCode
+      Supplier<Integer> valuesHashCode
   )
   {
     this.dimension = dimension;
@@ -95,7 +96,9 @@ public class InFilter implements Filter
     this.longPredicateSupplier = longPredicateSupplier;
     this.floatPredicateSupplier = floatPredicateSupplier;
     this.doublePredicateSupplier = doublePredicateSupplier;
-    this.valuesHashCode = valuesHashCode;
+    this.valuesHashCode = valuesHashCode == null
+                          ? Suppliers.memoize(() -> InDimFilter.computeValuesHashCode(values))
+                          : valuesHashCode;
   }
 
   @Override
@@ -251,13 +254,8 @@ public class InFilter implements Filter
       return false;
     }
     InFilter inFilter = (InFilter) o;
-
-    // make sure the hashCode is initialized for both filters
-    hashCode();
-    inFilter.hashCode();
-
     return Objects.equals(dimension, inFilter.dimension) &&
-           Objects.equals(valuesHashCode, inFilter.valuesHashCode) &&
+           Objects.equals(valuesHashCode.get(), inFilter.valuesHashCode.get()) &&
            Objects.equals(extractionFn, inFilter.extractionFn) &&
            Objects.equals(filterTuning, inFilter.filterTuning);
   }
@@ -265,10 +263,7 @@ public class InFilter implements Filter
   @Override
   public int hashCode()
   {
-    if (valuesHashCode == null) {
-      valuesHashCode = InDimFilter.computeValuesHashCode(values);
-    }
-    return Objects.hash(dimension, valuesHashCode, extractionFn, filterTuning);
+    return Objects.hash(dimension, valuesHashCode.get(), extractionFn, filterTuning);
   }
 
   @VisibleForTesting

@@ -22,6 +22,8 @@ package org.apache.druid.segment.filter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
@@ -55,7 +57,7 @@ public class OrFilter implements BooleanFilter
 
   private final Set<Filter> filters;
 
-  private Integer filtersHashCode;
+  private final Supplier<Integer> filtersHashCode;
 
   @VisibleForTesting
   public OrFilter(List<Filter> filters)
@@ -68,6 +70,7 @@ public class OrFilter implements BooleanFilter
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty OrFilter (the universe does not exist)");
 
     this.filters = filters;
+    this.filtersHashCode = Suppliers.memoize(() -> Objects.hash(getFilters()));
   }
 
   @Override
@@ -252,10 +255,6 @@ public class OrFilter implements BooleanFilter
   @Override
   public int hashCode()
   {
-    if (filtersHashCode == null) {
-      filtersHashCode = Objects.hash(getFilters());
-    }
-
-    return filtersHashCode;
+    return filtersHashCode.get();
   }
 }

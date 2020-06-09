@@ -20,6 +20,8 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -182,8 +184,13 @@ public class AndFilterTest extends BaseFilterTest
   {
     EqualsVerifier.forClass(AndFilter.class)
                   .usingGetClass()
-                  .withNonnullFields("filters")
+                  .withNonnullFields("filters", "filtersHashCode")
                   .withIgnoredFields("filters")
+                  .withPrefabValues(
+                      Supplier.class,
+                      Suppliers.ofInstance(1),
+                      Suppliers.ofInstance(2)
+                  )
                   .verify();
   }
 }

@@ -20,6 +20,8 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -151,9 +153,9 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     EqualsVerifier.forClass(InDimFilter.class)
                   .usingGetClass()
-                  .withNonnullFields("dimension", "values")
+                  .withNonnullFields("dimension", "values", "valuesHashCode")
                   .withIgnoredFields("values", "cacheKey", "longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .withPrefabValues(Supplier.class, Suppliers.ofInstance(1), Suppliers.ofInstance(2))
                   .verify();
   }
-
 }

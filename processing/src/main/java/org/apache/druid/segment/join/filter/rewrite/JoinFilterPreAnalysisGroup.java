@@ -77,15 +77,6 @@ public class JoinFilterPreAnalysisGroup
       VirtualColumns virtualColumns
   )
   {
-    // Some filters have potentially expensive hash codes that are lazily computed and cached.
-    // We call hashCode() here in a synchronized block before we attempt to use the Filter in the analyses map,
-    // to ensure that the hashCode is only computed once per Filter since the Filter interface is not thread-safe.
-    synchronized (analyses) {
-      if (filter != null) {
-        filter.hashCode();
-      }
-    }
-
     JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, clauses, virtualColumns);
     return analyses.computeIfAbsent(
         key,

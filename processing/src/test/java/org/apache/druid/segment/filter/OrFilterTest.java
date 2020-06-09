@@ -19,14 +19,26 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Test;
 
-public class OrFilterTest
+public class OrFilterTest extends InitializedNullHandlingTest
 {
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(OrFilter.class).usingGetClass().withNonnullFields("filters").verify();
+    EqualsVerifier.forClass(OrFilter.class)
+                  .usingGetClass()
+                  .withNonnullFields("filters", "filtersHashCode")
+                  .withIgnoredFields("filters")
+                  .withPrefabValues(
+                      Supplier.class,
+                      Suppliers.ofInstance(1),
+                      Suppliers.ofInstance(2)
+                      )
+                  .verify();
   }
 }
