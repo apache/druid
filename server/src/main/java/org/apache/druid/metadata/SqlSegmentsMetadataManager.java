@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -97,7 +98,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {}
 
   /** Represents periodic {@link #poll}s happening from {@link #exec}. */
-  private static class PeriodicDatabasePoll implements DatabasePoll
+  @VisibleForTesting
+  static class PeriodicDatabasePoll implements DatabasePoll
   {
     /**
      * This future allows to wait until {@link #dataSourcesSnapshot} is initialized in the first {@link #poll()}
@@ -113,7 +115,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * Represents on-demand {@link #poll} initiated at periods of time when SqlSegmentsMetadataManager doesn't poll the database
    * periodically.
    */
-  private static class OnDemandDatabasePoll implements DatabasePoll
+  @VisibleForTesting
+  static class OnDemandDatabasePoll implements DatabasePoll
   {
     final long initiationTimeNanos = System.nanoTime();
     final CompletableFuture<Void> pollCompletionFuture = new CompletableFuture<>();
@@ -433,7 +436,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * This means that any method using this check can read from snapshot that is
    * up to {@link SqlSegmentsMetadataManager#periodicPollDelay} old.
    */
-  private boolean useLatestSnapshotIfWithinDelay()
+  @VisibleForTesting
+  boolean useLatestSnapshotIfWithinDelay()
   {
     DatabasePoll latestDatabasePoll = this.latestDatabasePoll;
     if (latestDatabasePoll instanceof PeriodicDatabasePoll) {
@@ -462,7 +466,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * This means that any method using this check can be sure that the latest poll for the snapshot was completed after
    * this method was called.
    */
-  public void forceOrWaitOngoingDatabasePoll()
+  @VisibleForTesting
+  void forceOrWaitOngoingDatabasePoll()
   {
     long checkStartTime = System.currentTimeMillis();
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
@@ -928,6 +933,19 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     useLatestIfWithinDelayOrPerformNewDatabasePoll();
     return dataSourcesSnapshot;
   }
+
+  @VisibleForTesting
+  DataSourcesSnapshot getDataSourcesSnapshot()
+  {
+    return dataSourcesSnapshot;
+  }
+
+  @VisibleForTesting
+  DatabasePoll getLatestDatabasePoll()
+  {
+    return latestDatabasePoll;
+  }
+
 
   @Override
   public Iterable<DataSegment> iterateAllUsedSegments()

@@ -410,7 +410,7 @@ public class DataSourcesResource
   {
     final Interval theInterval;
     if (interval == null) {
-      long defaultIntervalOffset =  14 * 24 * 60 * 60 * 1000;
+      long defaultIntervalOffset = 14 * 24 * 60 * 60 * 1000;
       long currentTimeInMs = System.currentTimeMillis();
       theInterval = Intervals.utc(currentTimeInMs - defaultIntervalOffset, currentTimeInMs);
     } else {
@@ -428,10 +428,10 @@ public class DataSourcesResource
     if (!segments.isPresent()) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
-    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
 
     if (simple != null) {
       // Calculate resposne for simple mode
+      Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
       int numUnloadedSegments = 0;
       for (DataSegment segment : segments.get()) {
         if (!segmentLoadInfos.containsKey(segment.getId())) {
@@ -448,14 +448,15 @@ public class DataSourcesResource
       // Calculate resposne for full mode
       final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
-      final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();;
+      final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
       final DateTime now = DateTimes.nowUtc();
 
       for (DataSegment segment : segments.get()) {
         for (DruidServer druidServer : serverInventoryView.getInventory()) {
           String tier = druidServer.getTier();
           SegmentId segmentId = segment.getId();
-          if (druidServer.getDataSource(dataSourceName).getSegment(segmentId) != null) {
+          DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
+          if (druidDataSource != null && druidDataSource.getSegment(segmentId) != null) {
             Integer numReplicants = segmentsInCluster.get(segmentId, tier);
             if (numReplicants == null) {
               numReplicants = 0;
@@ -463,14 +464,6 @@ public class DataSourcesResource
             segmentsInCluster.put(segmentId, tier, numReplicants + 1);
           }
         }
-      }
-      segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
-          dataSourceName,
-          theInterval,
-          false
-      );
-      if (!segments.isPresent()) {
-        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
       }
       for (DataSegment segment : segments.get()) {
         for (final Rule rule : rules) {
@@ -493,6 +486,7 @@ public class DataSourcesResource
       return Response.ok(underReplicationCountsPerDataSourcePerTier).build();
     } else {
       // Calculate resposne for default mode
+      Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
       int numUsedSegments = 0;
       int numUnloadedSegments = 0;
       for (DataSegment segment : segments.get()) {
