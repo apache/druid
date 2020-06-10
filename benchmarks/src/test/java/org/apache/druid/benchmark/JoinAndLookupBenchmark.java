@@ -38,6 +38,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -150,7 +151,7 @@ public class JoinAndLookupBenchmark
         0
     );
     hashJoinLookupStringKeySegment = new HashJoinSegment(
-        baseSegment,
+        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClausesLookupStringKey,
         preAnalysisLookupStringKey
     );
@@ -177,7 +178,7 @@ public class JoinAndLookupBenchmark
         0
     );
     hashJoinLookupLongKeySegment = new HashJoinSegment(
-        baseSegment,
+        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClausesLookupLongKey,
         preAnalysisLookupLongKey
     );
@@ -204,7 +205,7 @@ public class JoinAndLookupBenchmark
         0
     );
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
-        baseSegment,
+        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClausesIndexedTableStringKey,
         preAnalysisIndexedTableStringKey
     );
@@ -231,7 +232,7 @@ public class JoinAndLookupBenchmark
         0
     );
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
-        baseSegment,
+        ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClausesIndexedTableLonggKey,
         preAnalysisIndexedTableLongKey
     );
