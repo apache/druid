@@ -68,6 +68,25 @@ can either be 8 or 11.
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
 
+## Docker compose
+
+Docker compose yamls located in "docker" folder
+
+docker-compose.base.yml - Base file that defining all containers for integration test
+
+docker-compose.yml - Defining minimal Druid cluster that can be used for non cluster tests.
+    
+    docker-compose -f docker-compose.yml up
+    DRUID_INTEGRATION_TEST_GROUP=query docker-compose -f docker-compose.yml up
+
+docker-compose.override-env.yml - the same configuration as docker-compose.yml + override-env variable that needed to run cloud tests 
+
+    OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
+    
+docker-compose.druid-hadoop.yml - druid hadoop
+
+    docker-compose -f docker-compose.druid-hadoop.yml up
+
 ## Manual bringing up docker containers and running tests
 
 1. Build druid-cluster, druid-hadoop docker images. From root module run maven command:
