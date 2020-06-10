@@ -63,7 +63,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -102,6 +102,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -491,12 +492,12 @@ public class CompactionTask extends AbstractBatchIndexTask
       final RetryPolicyFactory retryPolicyFactory
   ) throws IOException, SegmentLoadingException
   {
-    Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
+    NonnullPair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
         toolbox,
         segmentProvider
     );
-    final Map<DataSegment, File> segmentFileMap = pair.lhs;
-    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.rhs;
+    final Map<DataSegment, File> segmentFileMap = pair.left();
+    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.right();
 
     if (timelineSegments.size() == 0) {
       return Collections.emptyList();
@@ -504,7 +505,7 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     // find metadata for interval
     // queryableIndexAndSegments is sorted by the interval of the dataSegment
-    final List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments = loadSegments(
+    final List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments = loadSegments(
         timelineSegments,
         segmentFileMap,
         toolbox.getIndexIO()
@@ -514,20 +515,20 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     if (segmentGranularity == null) {
       // original granularity
-      final Map<Interval, List<Pair<QueryableIndex, DataSegment>>> intervalToSegments = new TreeMap<>(
+      final Map<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> intervalToSegments = new TreeMap<>(
           Comparators.intervalsByStartThenEnd()
       );
-      //noinspection ConstantConditions
       queryableIndexAndSegments.forEach(
-          p -> intervalToSegments.computeIfAbsent(p.rhs.getInterval(), k -> new ArrayList<>())
+          p -> intervalToSegments.computeIfAbsent(p.right().getInterval(), k -> new ArrayList<>())
                                  .add(p)
       );
 
       // unify overlapping intervals to ensure overlapping segments compacting in the same indexSpec
-      List<Pair<Interval, List<Pair<QueryableIndex, DataSegment>>>> intervalToSegmentsUnified = new ArrayList<>();
+      List<NonnullPair<Interval, List<NonnullPair<QueryableIndex, DataSegment>>>> intervalToSegmentsUnified =
+          new ArrayList<>();
       Interval union = null;
-      List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
-      for (Map.Entry<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
+      List<NonnullPair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
+      for (Entry<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> entry : intervalToSegments.entrySet()) {
         Interval cur = entry.getKey();
         if (union == null) {
           union = cur;
@@ -536,24 +537,23 @@ public class CompactionTask extends AbstractBatchIndexTask
           union = Intervals.utc(union.getStartMillis(), Math.max(union.getEndMillis(), cur.getEndMillis()));
           segments.addAll(entry.getValue());
         } else {
-          intervalToSegmentsUnified.add(Pair.of(union, segments));
+          intervalToSegmentsUnified.add(new NonnullPair<>(union, segments));
           union = cur;
           segments = new ArrayList<>(entry.getValue());
         }
       }
-      intervalToSegmentsUnified.add(Pair.of(union, segments));
+      intervalToSegmentsUnified.add(new NonnullPair<>(union, segments));
 
       final List<ParallelIndexIngestionSpec> specs = new ArrayList<>(intervalToSegmentsUnified.size());
-      for (Pair<Interval, List<Pair<QueryableIndex, DataSegment>>> entry : intervalToSegmentsUnified) {
-        final Interval interval = entry.lhs;
-        final List<Pair<QueryableIndex, DataSegment>> segmentsToCompact = entry.rhs;
+      for (NonnullPair<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> entry : intervalToSegmentsUnified) {
+        final Interval interval = entry.left();
+        final List<NonnullPair<QueryableIndex, DataSegment>> segmentsToCompact = entry.right();
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
             segmentsToCompact,
             dimensionsSpec,
             metricsSpec,
-            GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity(),
-            jsonMapper
+            GranularityType.fromPeriod(interval.toPeriod()).getDefaultGranularity()
         );
 
         specs.add(
@@ -580,8 +580,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           queryableIndexAndSegments,
           dimensionsSpec,
           metricsSpec,
-          segmentGranularity,
-          jsonMapper
+          segmentGranularity
       );
 
       return Collections.singletonList(
@@ -629,7 +628,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     );
   }
 
-  private static Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> prepareSegments(
+  private static NonnullPair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> prepareSegments(
       TaskToolbox toolbox,
       SegmentProvider segmentProvider
   ) throws IOException, SegmentLoadingException
@@ -639,23 +638,22 @@ public class CompactionTask extends AbstractBatchIndexTask
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = VersionedIntervalTimeline
         .forSegments(usedSegments)
         .lookup(segmentProvider.interval);
-    return Pair.of(segmentFileMap, timelineSegments);
+    return new NonnullPair<>(segmentFileMap, timelineSegments);
   }
 
   private static DataSchema createDataSchema(
       String dataSource,
-      List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
+      List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      Granularity segmentGranularity,
-      ObjectMapper jsonMapper
+      Granularity segmentGranularity
   )
   {
     // check index metadata
-    for (Pair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
-      final QueryableIndex index = pair.lhs;
+    for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
+      final QueryableIndex index = pair.left();
       if (index.getMetadata() == null) {
-        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
+        throw new RE("Index metadata doesn't exist for segment[%s]", pair.right().getId());
       }
     }
 
@@ -663,12 +661,12 @@ public class CompactionTask extends AbstractBatchIndexTask
     // set rollup only if rollup is set for all segments
     final boolean rollup = queryableIndexAndSegments.stream().allMatch(pair -> {
       // We have already checked getMetadata() doesn't return null
-      final Boolean isRollup = pair.lhs.getMetadata().isRollup();
+      final Boolean isRollup = pair.left().getMetadata().isRollup();
       return isRollup != null && isRollup;
     });
 
     final Interval totalInterval = JodaUtils.umbrellaInterval(
-        queryableIndexAndSegments.stream().map(p -> p.rhs.getInterval()).collect(Collectors.toList())
+        queryableIndexAndSegments.stream().map(p -> p.right().getInterval()).collect(Collectors.toList())
     );
 
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -697,12 +695,12 @@ public class CompactionTask extends AbstractBatchIndexTask
   }
 
   private static AggregatorFactory[] createMetricsSpec(
-      List<Pair<QueryableIndex, DataSegment>> queryableIndexAndSegments
+      List<NonnullPair<QueryableIndex, DataSegment>> queryableIndexAndSegments
   )
   {
     final List<AggregatorFactory[]> aggregatorFactories = queryableIndexAndSegments
         .stream()
-        .map(pair -> pair.lhs.getMetadata().getAggregators()) // We have already done null check on index.getMetadata()
+        .map(pair -> pair.left().getMetadata().getAggregators()) // We have already done null check on index.getMetadata()
         .collect(Collectors.toList());
     final AggregatorFactory[] mergedAggregators = AggregatorFactory.mergeAggregators(aggregatorFactories);
 
@@ -719,7 +717,7 @@ public class CompactionTask extends AbstractBatchIndexTask
                  .toArray(AggregatorFactory[]::new);
   }
 
-  private static DimensionsSpec createDimensionsSpec(List<Pair<QueryableIndex, DataSegment>> queryableIndices)
+  private static DimensionsSpec createDimensionsSpec(List<NonnullPair<QueryableIndex, DataSegment>> queryableIndices)
   {
     final BiMap<String, Integer> uniqueDims = HashBiMap.create();
     final Map<String, DimensionSchema> dimensionSchemaMap = new HashMap<>();
@@ -730,11 +728,13 @@ public class CompactionTask extends AbstractBatchIndexTask
     // frequently, and thus the performance should be optimized for recent ones rather than old ones.
 
     // sort timelineSegments in order of interval, see https://github.com/apache/druid/pull/9905
-    queryableIndices.sort((o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.rhs.getInterval(), o2.rhs.getInterval()));
+    queryableIndices.sort(
+        (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.right().getInterval(), o2.right().getInterval())
+    );
 
     int index = 0;
-    for (Pair<QueryableIndex, DataSegment> pair : Lists.reverse(queryableIndices)) {
-      final QueryableIndex queryableIndex = pair.lhs;
+    for (NonnullPair<QueryableIndex, DataSegment> pair : Lists.reverse(queryableIndices)) {
+      final QueryableIndex queryableIndex = pair.left();
       final Map<String, DimensionHandler> dimensionHandlerMap = queryableIndex.getDimensionHandlers();
 
       for (String dimension : queryableIndex.getAvailableDimensions()) {
@@ -780,13 +780,13 @@ public class CompactionTask extends AbstractBatchIndexTask
     return new DimensionsSpec(dimensionSchemas, null, null);
   }
 
-  private static List<Pair<QueryableIndex, DataSegment>> loadSegments(
+  private static List<NonnullPair<QueryableIndex, DataSegment>> loadSegments(
       List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders,
       Map<DataSegment, File> segmentFileMap,
       IndexIO indexIO
   ) throws IOException
   {
-    final List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
+    final List<NonnullPair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
 
     for (TimelineObjectHolder<String, DataSegment> timelineObjectHolder : timelineObjectHolders) {
       final PartitionHolder<DataSegment> partitionHolder = timelineObjectHolder.getObject();
@@ -795,7 +795,7 @@ public class CompactionTask extends AbstractBatchIndexTask
         final QueryableIndex queryableIndex = indexIO.loadIndex(
             Preconditions.checkNotNull(segmentFileMap.get(segment), "File for segment %s", segment.getId())
         );
-        segments.add(Pair.of(queryableIndex, segment));
+        segments.add(new NonnullPair<>(queryableIndex, segment));
       }
     }
 
