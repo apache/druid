@@ -120,10 +120,10 @@ Returns the serialized JSON of segments to load and drop for each Historical pro
 These APIs can be used to verify if segments created by recent ingestion task are loaded onto historicals and available for query.
 An example workflow for this is:
 1. Submit your ingestion task
-2. Repeatedly poll Overlod's task API ( `/druid/indexer/v1/task/{taskId}/status`) until task is completed and succeeded.
-3. Poll Segment Loading for Datasource API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with forceMetadataRefresh=true once. 
+2. Repeatedly poll Overlord's task API ( `/druid/indexer/v1/task/{taskId}/status`) until task is completed and succeeded.
+3. Poll Segment Loading for Datasource API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=true` once. 
 If there are segments not yet loaded, continue to step 4, otherwise you can now query the data.
-4. Repeatedly poll Segment Loading for Datasource API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with forceMetadataRefresh=false. 
+4. Repeatedly poll Segment Loading for Datasource API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=false`. 
 Continue polling until all segments are loaded. Once all segments are loaded you can now query the data.
 
 ##### GET
@@ -131,22 +131,22 @@ Continue polling until all segments are loaded. Once all segments are loaded you
 * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). Setting forceMetadataRefresh to true
-will force the coordinator to poll latest segment metadata from the metadatastore. forceMetadataRefresh will be set to true if not given.
+over the given interval (or last 2 weeks if interval is not given). Setting `forceMetadataRefresh=true`
+will force the coordinator to poll latest segment metadata from the metadata store. `forceMetadataRefresh` will be set to true if not given.
 If no used segments found for the given inputs, this API returns 100% as the value.
 
  * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?simple&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load until segments that should be loaded in the cluster are available for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). This does not include replication. Setting forceMetadataRefresh to true 
-will force the coordinator to poll latest segment metadata from the metadatastore. forceMetadataRefresh will be set to true if not given.
+over the given interval (or last 2 weeks if interval is not given). This does not include replication. Setting `forceMetadataRefresh=true` 
+will force the coordinator to poll latest segment metadata from the metadata store. `forceMetadataRefresh` will be set to true if not given.
 If no used segments found for the given inputs, this API returns 0 as the value.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?full&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). This includes replication. Setting forceMetadataRefresh to true
-will force the coordinator to poll latest segment metadata from the metadatastore. forceMetadataRefresh will be set to true if not given.
+over the given interval (or last 2 weeks if interval is not given). This includes replication. Setting `forceMetadataRefresh=true`
+will force the coordinator to poll latest segment metadata from the metadata store. `forceMetadataRefresh` will be set to true if not given.
 If no used segments found for the given inputs, this API returns empty map.
 
 #### Metadata store information
