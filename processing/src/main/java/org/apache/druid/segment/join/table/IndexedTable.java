@@ -24,6 +24,7 @@ import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.Set;
 
 /**
@@ -31,7 +32,7 @@ import java.util.Set;
  *
  * The main user of this class is {@link IndexedTableJoinable}, and its main purpose is to participate in joins.
  */
-public interface IndexedTable extends ReferenceCountedObject
+public interface IndexedTable extends ReferenceCountedObject, Closeable
 {
   /**
    * Returns the version of this table, used to compare against when loading a new version of the table

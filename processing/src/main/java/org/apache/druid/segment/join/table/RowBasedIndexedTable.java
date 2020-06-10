@@ -181,4 +181,10 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     // nothing to close by default, whatever loaded this thing (probably) lives on heap
     return Optional.of(() -> {});
   }
+
+  @Override
+  public void close()
+  {
+    // nothing to close
+  }
 }
