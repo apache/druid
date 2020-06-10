@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -35,5 +36,13 @@ public class NonnullPairTest
     expectedException.expectMessage("lhs");
     //noinspection ResultOfObjectAllocationIgnored
     new NonnullPair<>(null, "nullTest");
+  }
+
+  @Test
+  public void testGets()
+  {
+    final NonnullPair<Integer, Integer> pair = new NonnullPair<>(20, 30);
+    Assert.assertEquals(20, pair.left().intValue());
+    Assert.assertEquals(30, pair.right().intValue());
   }
 }
