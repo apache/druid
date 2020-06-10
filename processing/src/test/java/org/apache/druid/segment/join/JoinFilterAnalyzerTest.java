@@ -2679,4 +2679,14 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                   .withNonnullFields("baseTableFilter", "pushDownVirtualColumns")
                   .verify();
   }
+
+
+  @Test
+  public void test_JoinFilterPreAnalysisGroupKey_equals()
+  {
+    EqualsVerifier.forClass(JoinFilterPreAnalysisGroup.JoinFilterPreAnalysisGroupKey.class)
+                  .usingGetClass()
+                  .withNonnullFields("filter", "clauses", "virtualColumns")
+                  .verify();
+  }
 }

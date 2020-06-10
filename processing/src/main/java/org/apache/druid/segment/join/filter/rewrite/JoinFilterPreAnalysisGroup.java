@@ -63,11 +63,6 @@ public class JoinFilterPreAnalysisGroup
     this.isSingleLevelMode = isSingleLevelMode;
   }
 
-  public JoinFilterRewriteConfig getJoinFilterRewriteConfig()
-  {
-    return joinFilterRewriteConfig;
-  }
-
   public boolean isSingleLevelMode()
   {
     return isSingleLevelMode;
@@ -113,26 +108,12 @@ public class JoinFilterPreAnalysisGroup
     return analyses.get(key);
   }
 
-  public void performAnalysisForSingleLevelMode(
-      Filter filter,
-      List<JoinableClause> clauses,
-      VirtualColumns virtualColumns
-  )
-  {
-    preAnalysisForSingleLevelMode = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(clauses),
-        virtualColumns,
-        filter,
-        joinFilterRewriteConfig
-    );
-  }
-
   public JoinFilterPreAnalysis getPreAnalysisForSingleLevelMode()
   {
     return preAnalysisForSingleLevelMode;
   }
 
-  private static class JoinFilterPreAnalysisGroupKey
+  public static class JoinFilterPreAnalysisGroupKey
   {
     private final Filter filter;
     private final List<JoinableClause> clauses;

@@ -22,11 +22,21 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.TestQuery;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.planning.PreJoinableClause;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
@@ -36,7 +46,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -165,7 +177,12 @@ public class JoinablesTest
         },
         new AtomicLong(),
         DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
-        null
+        new TestQuery(
+            new TableDataSource("test"),
+            new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+            false,
+            new HashMap()
+        )
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);
@@ -218,5 +235,84 @@ public class JoinablesTest
     );
 
     Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
+  }
+
+  @Test
+  public void test_gatherAllJoinQueryLevels()
+  {
+    Query query1 = new GroupByQuery.Builder()
+        .addDimension("dim1")
+        .setDataSource(
+            JoinDataSource.create(
+                new NoopDataSource(),
+                new NoopDataSource(),
+                "111",
+                "1",
+                JoinType.LEFT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setInterval("1999/2000")
+        .setGranularity(Granularities.YEAR)
+        .build();
+
+    Query query2 = new GroupByQuery.Builder()
+        .addDimension("dim2")
+        .setDataSource(
+            JoinDataSource.create(
+                new NoopDataSource(),
+                new NoopDataSource(),
+                "222",
+                "1",
+                JoinType.LEFT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setInterval("1999/2000")
+        .setGranularity(Granularities.YEAR)
+        .build();
+
+    QueryDataSource queryDataSource1 = new QueryDataSource(query1);
+    QueryDataSource queryDataSource2 = new QueryDataSource(query2);
+
+    Query query3 = new GroupByQuery.Builder()
+        .addDimension("dim2")
+        .setDataSource(
+            JoinDataSource.create(
+                JoinDataSource.create(
+                    queryDataSource1,
+                    new NoopDataSource(),
+                    "444",
+                    "4",
+                    JoinType.LEFT,
+                    TestExprMacroTable.INSTANCE
+                ),
+                queryDataSource2,
+                "333",
+                "3",
+                JoinType.LEFT,
+                TestExprMacroTable.INSTANCE
+            )
+        )
+        .setInterval("1999/2000")
+        .setGranularity(Granularities.YEAR)
+        .build();
+
+    Query queryOuter = new GroupByQuery.Builder()
+        .addDimension("dim")
+        .setDataSource(
+            new QueryDataSource(query3)
+        )
+        .setInterval("1999/2000")
+        .setGranularity(Granularities.YEAR)
+        .build();
+
+    List<Query> joinQueryLevels = new ArrayList<>();
+    Joinables.gatherAllJoinQueryLevels(queryOuter, joinQueryLevels);
+
+    Assert.assertEquals(
+        ImmutableList.of(query3, query1, query2),
+        joinQueryLevels
+    );
   }
 }
