@@ -414,7 +414,7 @@ public class DataSourcesResource
       long currentTimeInMs = System.currentTimeMillis();
       theInterval = Intervals.utc(currentTimeInMs - defaultIntervalOffset, currentTimeInMs);
     } else {
-      theInterval = Intervals.of(interval);
+      theInterval = Intervals.of(interval.replace('_', '/'));
     }
 
     boolean requiresMetadataStorePoll = forceMetadataRefresh == null ? true : forceMetadataRefresh;
@@ -494,6 +494,14 @@ public class DataSourcesResource
         if (!segmentLoadInfos.containsKey(segment.getId())) {
           numUnloadedSegments++;
         }
+      }
+      if (numUsedSegments == 0) {
+        return Response.ok(
+            ImmutableMap.of(
+                dataSourceName,
+                100
+            )
+        ).build();
       }
       return Response.ok(
           ImmutableMap.of(

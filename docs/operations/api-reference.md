@@ -117,9 +117,6 @@ Returns the serialized JSON of segments to load and drop for each Historical pro
 
 #### Segment Loading for Datasource
 
-Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
-
 These APIs can be used to verify if segments created by recent ingestion task are loaded onto historicals and available for query.
 An example workflow for this is:
 1. Submit your ingestion task
@@ -136,18 +133,21 @@ Continue polling until all segments are loaded. Once all segments are loaded you
 Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster for the given datasource 
 over the given interval (or last 2 weeks if interval is not given). Setting forceMetadataRefresh to true
 will force the coordinator to poll latest segment metadata from the metadatastore. forceMetadataRefresh will be set to true if not given.
+If no used segments found for the given inputs, this API returns 100% as the value.
 
  * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?simple&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load until segments that should be loaded in the cluster are available for the given datasource 
 over the given interval (or last 2 weeks if interval is not given). This does not include replication. Setting forceMetadataRefresh to true 
 will force the coordinator to poll latest segment metadata from the metadatastore. forceMetadataRefresh will be set to true if not given.
+If no used segments found for the given inputs, this API returns 0 as the value.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?full&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available for the given datasource 
 over the given interval (or last 2 weeks if interval is not given). This includes replication. Setting forceMetadataRefresh to true
 will force the coordinator to poll latest segment metadata from the metadatastore. forceMetadataRefresh will be set to true if not given.
+If no used segments found for the given inputs, this API returns empty map.
 
 #### Metadata store information
 
