@@ -35,6 +35,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexIndexableAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -100,7 +102,7 @@ public class SegmentGenerator implements Closeable
 
   public QueryableIndex generate(
       final DataSegment dataSegment,
-      final BenchmarkSchemaInfo schemaInfo,
+      final GeneratorSchemaInfo schemaInfo,
       final Granularity granularity,
       final int numRows
   )
@@ -131,7 +133,7 @@ public class SegmentGenerator implements Closeable
 
     log.info("Writing segment with hash[%s] to directory[%s].", dataHash, outDir);
 
-    final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
+    final DataGenerator dataGenerator = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         dataSegment.getId().hashCode(), /* Use segment identifier hashCode as seed */
         schemaInfo.getDataInterval(),
