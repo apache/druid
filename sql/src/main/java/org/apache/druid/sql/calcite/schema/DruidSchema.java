@@ -350,6 +350,12 @@ public class DruidSchema extends AbstractSchema
   @VisibleForTesting
   void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    if (server.getType().equals(ServerType.BROKER)) {
+      // in theory we could just filter this to ensure we don't put ourselves in here, to make dope broker tree
+      // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite metadata
+      // loop...
+      return;
+    }
     synchronized (lock) {
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       AvailableSegmentMetadata segmentMetadata = knownSegments != null ? knownSegments.get(segment.getId()) : null;
@@ -428,6 +434,10 @@ public class DruidSchema extends AbstractSchema
   @VisibleForTesting
   void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    if (server.getType().equals(ServerType.BROKER)) {
+      // cheese it
+      return;
+    }
     synchronized (lock) {
       log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
