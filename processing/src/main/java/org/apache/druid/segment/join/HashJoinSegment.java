@@ -127,7 +127,8 @@ public class HashJoinSegment implements SegmentReference
       } else {
         return Optional.of(closer);
       }
-    } catch (Exception ex) {
+    }
+    catch (Exception ex) {
       CloseQuietly.close(closer);
       return Optional.empty();
     }
