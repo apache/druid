@@ -44,8 +44,10 @@ import java.util.Map;
  * This shardSpec is used for such use case. A non-appending batch task can use this shardSpec until it publishes
  * segments at last. When it publishes segments, it should convert the shardSpec of those segments to NumberedShardSpec.
  * See {@code SegmentPublisherHelper#annotateShardSpec} for converting to NumberedShardSpec. Note that, when
- * the segment lock is used, the Overlord coordinates the segment allocation and this class is never used. See
- * {@link PartialShardSpec} for that case.
+ * the segment lock is used, the Overlord coordinates the segment allocation and this class is never used. Instead,
+ * the task sends {@link PartialShardSpec} to the Overlord to allocate a new segment. The result segment could have
+ * either a {@link ShardSpec} (for root generation segments) or an {@link OverwriteShardSpec} (for non-root
+ * generation segments).
  *
  * This class should be Jackson-serializable as the subtasks can send it to the parallel task in parallel ingestion.
  *
@@ -73,7 +75,9 @@ public class BuildingNumberedShardSpec implements ShardSpec
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return new LinearPartitionChunk<>(partitionId, obj);
+    // This method can be called in AppenderatorImpl to create a sinkTimeline.
+    // The sinkTimeline doesn't seem in use in batch ingestion, let's set 'chunks' to 0 for now.
+    return new NumberedPartitionChunk<>(partitionId, 0, obj);
   }
 
   @JsonProperty("partitionId")

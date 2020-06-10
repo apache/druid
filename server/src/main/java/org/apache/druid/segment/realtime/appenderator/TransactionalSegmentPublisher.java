@@ -20,21 +20,11 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.OverwriteShardSpec;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public interface TransactionalSegmentPublisher
 {
