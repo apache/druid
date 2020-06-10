@@ -23,31 +23,17 @@ import org.apache.druid.segment.vector.VectorSizeInspector;
 
 public class BooleanVectorValueMatcher extends BaseVectorValueMatcher
 {
-  private final VectorSizeInspector selector;
   private final boolean matches;
 
   private BooleanVectorValueMatcher(final VectorSizeInspector selector, final boolean matches)
   {
     super(selector);
-    this.selector = selector;
     this.matches = matches;
   }
 
   public static BooleanVectorValueMatcher of(final VectorSizeInspector selector, final boolean matches)
   {
     return new BooleanVectorValueMatcher(selector, matches);
-  }
-
-  @Override
-  public int getCurrentVectorSize()
-  {
-    return selector.getCurrentVectorSize();
-  }
-
-  @Override
-  public int getMaxVectorSize()
-  {
-    return selector.getCurrentVectorSize();
   }
 
   @Override
