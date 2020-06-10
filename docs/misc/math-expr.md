@@ -91,8 +91,8 @@ The following built-in functions are available.
 |upper|upper(expr) converts a string to uppercase|
 |reverse|reverse(expr) reverses a string|
 |repeat|repeat(expr, N) repeats a string N times|
-|lpad|lpad(expr, length, chars) returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` is null, or `chars` is either null or empty.|
-|rpad|rpad(expr, length, chars) returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` is null, or `chars` is either null or empty.|
+|lpad|lpad(expr, length, chars) returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
+|rpad|rpad(expr, length, chars) returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 
 ## Time functions
 

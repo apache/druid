@@ -133,13 +133,6 @@ public class StringUtilsTest
     Assert.assertEquals("abcd", StringUtils.fromUtf8(bytes));
   }
 
-  @Test
-  public void testCharsetShowsUpAsDeprecated()
-  {
-    // Not actually a runnable test, just checking the IDE
-    Assert.assertNotNull(StringUtils.UTF8_CHARSET);
-  }
-
   @SuppressWarnings("MalformedFormatString")
   @Test
   public void testNonStrictFormat()
@@ -227,10 +220,10 @@ public class StringUtilsTest
     Assert.assertNull(lpad);
 
     lpad = StringUtils.lpad("abc", 10, "");
-    Assert.assertNull(lpad);
+    Assert.assertEquals("abc", lpad);
 
     lpad = StringUtils.lpad("abc", 1, "");
-    Assert.assertNull(lpad);
+    Assert.assertEquals("a", lpad);
   }
 
   @Test
@@ -252,10 +245,10 @@ public class StringUtilsTest
     Assert.assertNull(rpad);
 
     rpad = StringUtils.rpad("abc", 10, "");
-    Assert.assertNull(rpad);
+    Assert.assertEquals("abc", rpad);
 
     rpad = StringUtils.rpad("abc", 1, "");
-    Assert.assertNull(rpad);
+    Assert.assertEquals("a", rpad);
   }
 
   @Test

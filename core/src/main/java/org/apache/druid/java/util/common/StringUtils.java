@@ -473,31 +473,37 @@ public class StringUtils
   /**
    * Returns the string left-padded with the string pad to a length of len characters.
    * If str is longer than len, the return value is shortened to len characters.
-   * Lpad and rpad functions are migrated from flink's scala function with minor refactor
+   * This function is migrated from flink's scala function with minor refactor
    * https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/runtime/functions/ScalarFunctions.scala
+   * - Modified to handle empty pad string.
    *
    * @param base The base string to be padded
    * @param len  The length of padded string
    * @param pad  The pad string
    *
-   * @return the string left-padded with pad to a length of len
+   * @return the string left-padded with pad to a length of len or null if the pad is empty or the len is less than 0.
    */
   @Nullable
   public static String lpad(@Nonnull String base, int len, @Nonnull String pad)
   {
-    if (len < 0 || pad.isEmpty()) {
+    if (len < 0) {
       return null;
     } else if (len == 0) {
       return "";
     }
 
-    char[] data = new char[len];
-
     // The length of the padding needed
     int pos = Math.max(len - base.length(), 0);
 
+    // short-circuit if there is no pad and we need to add a padding
+    if (pos > 0 && pad.isEmpty()) {
+      return base;
+    }
+
+    char[] data = new char[len];
+
     // Copy the padding
-    for (int i = 0; i < pos; i += pad.length()) {
+    for (int i = 0; !pad.isEmpty() && i < pos; i += pad.length()) {
       for (int j = 0; j < pad.length() && j < pos - i; j++) {
         data[i + j] = pad.charAt(j);
       }
@@ -514,36 +520,46 @@ public class StringUtils
   /**
    * Returns the string right-padded with the string pad to a length of len characters.
    * If str is longer than len, the return value is shortened to len characters.
+   * This function is migrated from flink's scala function with minor refactor
+   * https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/runtime/functions/ScalarFunctions.scala
+   * - Modified to handle empty pad string.
+   * - Modified to only copy the pad string if needed (this implementation mimics lpad).
    *
    * @param base The base string to be padded
    * @param len  The length of padded string
    * @param pad  The pad string
    *
-   * @return the string right-padded with pad to a length of len
+   * @return the string right-padded with pad to a length of len or null if the pad is empty or the len is less than 0.
    */
   @Nullable
   public static String rpad(@Nonnull String base, int len, @Nonnull String pad)
   {
-    if (len < 0 || pad.isEmpty()) {
+    if (len < 0) {
       return null;
     } else if (len == 0) {
       return "";
     }
 
-    char[] data = new char[len];
+    // The length of the padding needed
+    int paddingLen = Math.max(len - base.length(), 0);
 
-    int pos = 0;
-
-    // Copy the base
-    for (; pos < base.length() && pos < len; pos++) {
-      data[pos] = base.charAt(pos);
+    // short-circuit if there is no pad and we need to add a padding
+    if (paddingLen > 0 && pad.isEmpty()) {
+      return base;
     }
 
+    char[] data = new char[len];
+
     // Copy the padding
-    for (; pos < len; pos += pad.length()) {
-      for (int i = 0; i < pad.length() && i < len - pos; i++) {
-        data[pos + i] = pad.charAt(i);
+    for (int i = len - paddingLen; !pad.isEmpty() && i < len; i += pad.length()) {
+      for (int j = 0; j < pad.length() && i + j < data.length; j++) {
+        data[i + j] = pad.charAt(j);
       }
+    }
+
+    // Copy the base
+    for (int i = 0; i < len && i < base.length(); i++) {
+      data[i] = base.charAt(i);
     }
 
     return new String(data);
