@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.input.SqlTestUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.AfterClass;
@@ -41,9 +42,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,7 +81,6 @@ public class SqlFirehoseFactoryTest
       )
   );
   private TestDerbyConnector derbyConnector;
-  private TestDerbyFirehoseConnector derbyFirehoseConnector;
 
   @BeforeClass
   public static void setup() throws IOException
@@ -139,56 +137,12 @@ public class SqlFirehoseFactoryTest
     return firehoseTempDir;
   }
 
-  private void dropTable(final String tableName)
-  {
-    derbyConnector.getDBI().withHandle(
-        (HandleCallback<Void>) handle -> {
-          handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
-                .execute();
-          return null;
-        }
-    );
-  }
-
-  private void createAndUpdateTable(final String tableName)
-  {
-    derbyConnector = derbyConnectorRule.getConnector();
-    derbyFirehoseConnector = new TestDerbyFirehoseConnector(new MetadataStorageConnectorConfig(),
-                                                                                       derbyConnector.getDBI());
-    derbyConnector.createTable(
-        tableName,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  timestamp varchar(255) NOT NULL,\n"
-                + "  a VARCHAR(255) NOT NULL,\n"
-                + "  b VARCHAR(255) NOT NULL\n"
-                + ")",
-                tableName
-            )
-        )
-    );
-
-    derbyConnector.getDBI().withHandle(
-        (handle) -> {
-          Batch batch = handle.createBatch();
-          for (int i = 0; i < 10; i++) {
-            String timestampSt = StringUtils.format("2011-01-12T00:0%s:00.000Z", i);
-            batch.add(StringUtils.format("INSERT INTO %1$s (timestamp, a, b) VALUES ('%2$s', '%3$s', '%4$s')",
-                                         tableName, timestampSt,
-                                         i, i
-            ));
-          }
-          batch.execute();
-          return null;
-        }
-    );
-  }
-
   @Test
   public void testWithoutCacheAndFetch() throws Exception
   {
-    createAndUpdateTable(TABLE_NAME_1);
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
     final SqlFirehoseFactory factory =
         new SqlFirehoseFactory(
             SQLLIST1,
@@ -197,7 +151,7 @@ public class SqlFirehoseFactoryTest
             0L,
             0L,
             true,
-            derbyFirehoseConnector,
+            testUtils.getDerbyFirehoseConnector(),
             mapper
         );
 
@@ -211,14 +165,16 @@ public class SqlFirehoseFactoryTest
 
     assertResult(rows, SQLLIST1);
     assertNumRemainingCacheFiles(firehoseTmpDir, 0);
-    dropTable(TABLE_NAME_1);
+    testUtils.dropTable(TABLE_NAME_1);
   }
 
 
   @Test
   public void testWithoutCache() throws IOException
   {
-    createAndUpdateTable(TABLE_NAME_1);
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
     final SqlFirehoseFactory factory =
         new SqlFirehoseFactory(
             SQLLIST1,
@@ -227,7 +183,7 @@ public class SqlFirehoseFactoryTest
             null,
             null,
             true,
-            derbyFirehoseConnector,
+            testUtils.getDerbyFirehoseConnector(),
             mapper
         );
 
@@ -242,15 +198,17 @@ public class SqlFirehoseFactoryTest
 
     assertResult(rows, SQLLIST1);
     assertNumRemainingCacheFiles(firehoseTmpDir, 0);
-    dropTable(TABLE_NAME_1);
+    testUtils.dropTable(TABLE_NAME_1);
   }
 
 
   @Test
   public void testWithCacheAndFetch() throws IOException
   {
-    createAndUpdateTable(TABLE_NAME_1);
-    createAndUpdateTable(TABLE_NAME_2);
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    testUtils.createAndUpdateTable(TABLE_NAME_1, 10);
+    testUtils.createAndUpdateTable(TABLE_NAME_2, 10);
 
     final SqlFirehoseFactory factory = new
         SqlFirehoseFactory(
@@ -260,7 +218,7 @@ public class SqlFirehoseFactoryTest
         0L,
         null,
         true,
-        derbyFirehoseConnector,
+        testUtils.getDerbyFirehoseConnector(),
         mapper
     );
 
@@ -274,8 +232,8 @@ public class SqlFirehoseFactoryTest
 
     assertResult(rows, SQLLIST2);
     assertNumRemainingCacheFiles(firehoseTmpDir, 2);
-    dropTable(TABLE_NAME_1);
-    dropTable(TABLE_NAME_2);
+    testUtils.dropTable(TABLE_NAME_1);
+    testUtils.dropTable(TABLE_NAME_2);
 
   }
   private static class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector

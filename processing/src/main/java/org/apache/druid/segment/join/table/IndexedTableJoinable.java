@@ -27,6 +27,7 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -132,5 +133,11 @@ public class IndexedTableJoinable implements Joinable
 
       return Optional.of(correlatedValues);
     }
+  }
+
+  @Override
+  public Optional<Closeable> acquireReferences()
+  {
+    return table.acquireReferences();
   }
 }

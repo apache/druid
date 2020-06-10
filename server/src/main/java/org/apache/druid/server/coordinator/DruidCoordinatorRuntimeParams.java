@@ -34,7 +34,9 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
@@ -70,6 +72,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorStats stats;
   private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategy balancerStrategy;
+  private final Set<String> broadcastDatasources;
 
   private DruidCoordinatorRuntimeParams(
       long startTimeNanos,
@@ -85,7 +88,8 @@ public class DruidCoordinatorRuntimeParams
       CoordinatorCompactionConfig coordinatorCompactionConfig,
       CoordinatorStats stats,
       DateTime balancerReferenceTimestamp,
-      BalancerStrategy balancerStrategy
+      BalancerStrategy balancerStrategy,
+      Set<String> broadcastDatasources
   )
   {
     this.startTimeNanos = startTimeNanos;
@@ -102,6 +106,7 @@ public class DruidCoordinatorRuntimeParams
     this.stats = stats;
     this.balancerReferenceTimestamp = balancerReferenceTimestamp;
     this.balancerStrategy = balancerStrategy;
+    this.broadcastDatasources = broadcastDatasources;
   }
 
   public long getStartTimeNanos()
@@ -180,6 +185,11 @@ public class DruidCoordinatorRuntimeParams
     return balancerStrategy;
   }
 
+  public Set<String> getBroadcastDatasources()
+  {
+    return broadcastDatasources;
+  }
+
   public boolean coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()
   {
     long nanosElapsedSinceCoordinatorStart = System.nanoTime() - getStartTimeNanos();
@@ -256,6 +266,7 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorStats stats;
     private DateTime balancerReferenceTimestamp;
     private BalancerStrategy balancerStrategy;
+    private Set<String> broadcastDatasources;
 
     private Builder()
     {
@@ -272,6 +283,7 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
       this.balancerReferenceTimestamp = DateTimes.nowUtc();
+      this.broadcastDatasources = new HashSet<>();
     }
 
     Builder(
@@ -324,7 +336,8 @@ public class DruidCoordinatorRuntimeParams
           coordinatorCompactionConfig,
           stats,
           balancerReferenceTimestamp,
-          balancerStrategy
+          balancerStrategy,
+          broadcastDatasources
       );
     }
 
@@ -434,6 +447,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withBalancerStrategy(BalancerStrategy balancerStrategy)
     {
       this.balancerStrategy = balancerStrategy;
+      return this;
+    }
+
+    public Builder withBroadcastDatasources(Set<String> broadcastDatasources)
+    {
+      this.broadcastDatasources = broadcastDatasources;
       return this;
     }
   }

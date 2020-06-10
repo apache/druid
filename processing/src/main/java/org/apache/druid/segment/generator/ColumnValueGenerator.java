@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.segment.generator;
 
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.UniformIntegerDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.apache.commons.math3.util.Pair;
@@ -33,16 +34,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class BenchmarkColumnValueGenerator
+public class ColumnValueGenerator
 {
-  private final BenchmarkColumnSchema schema;
+  private final GeneratorColumnSchema schema;
   private final long seed;
 
   private Serializable distribution;
   private Random simpleRng;
 
-  public BenchmarkColumnValueGenerator(
-      BenchmarkColumnSchema schema,
+  public ColumnValueGenerator(
+      GeneratorColumnSchema schema,
       long seed
   )
   {
@@ -76,7 +77,7 @@ public class BenchmarkColumnValueGenerator
     }
   }
 
-  public BenchmarkColumnSchema getSchema()
+  public GeneratorColumnSchema getSchema()
   {
     return schema;
   }
@@ -138,7 +139,7 @@ public class BenchmarkColumnValueGenerator
 
   private void initDistribution()
   {
-    BenchmarkColumnSchema.ValueDistribution distributionType = schema.getDistributionType();
+    GeneratorColumnSchema.ValueDistribution distributionType = schema.getDistributionType();
     ValueType type = schema.getType();
     List<Object> enumeratedValues = schema.getEnumeratedValues();
     List<Double> enumeratedProbabilities = schema.getEnumeratedProbabilities();
@@ -194,6 +195,15 @@ public class BenchmarkColumnValueGenerator
           }
         }
         distribution = new EnumeratedTreeDistribution<>(probabilities);
+        break;
+      case LAZY_ZIPF:
+        int lazyCardinality;
+        Integer startInt = schema.getStartInt();
+        lazyCardinality = schema.getEndInt() - startInt;
+        distribution = new ZipfDistribution(lazyCardinality, schema.getZipfExponent());
+        break;
+      case LAZY_DISCRETE_UNIFORM:
+        distribution = new UniformIntegerDistribution(schema.getStartInt(), schema.getEndInt());
         break;
       case ENUMERATED:
         for (int i = 0; i < enumeratedValues.size(); i++) {
