@@ -903,7 +903,7 @@ public class ExpressionsTest extends ExpressionTestBase
 
     expectException(
         IAE.class,
-        "The first argument to the function[round] should be integer or double type but get the STRING type"
+        "The first argument to the function[round] should be integer or double type but got the type: STRING"
     );
     testHelper.testExpression(
         roundFunction,
@@ -920,7 +920,7 @@ public class ExpressionsTest extends ExpressionTestBase
 
     expectException(
         IAE.class,
-        "The second argument to the function[round] should be integer type but get the STRING type"
+        "The second argument to the function[round] should be integer type but got the type: STRING"
     );
     testHelper.testExpression(
         roundFunction,
