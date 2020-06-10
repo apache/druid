@@ -122,9 +122,11 @@ public interface SegmentsMetadataManager
    * If {@param requiresLatest} is false then segment information from stale snapshot of up to the last periodic poll
    * period {@link SqlSegmentsMetadataManager#periodicPollDelay} will be used.
    */
-  Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(String datasource,
-                                                                                             Interval interval,
-                                                                                             boolean requiresLatest);
+  Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+      String datasource,
+      Interval interval,
+      boolean requiresLatest
+  );
 
   /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments
