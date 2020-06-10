@@ -47,7 +47,7 @@ import java.util.Map;
  * the segment lock is used, the Overlord coordinates the segment allocation and this class is never used. See
  * {@link PartialShardSpec} for that case.
  *
- * This class should be Jackson-serializable
+ * This class should be Jackson-serializable as the subtasks can send it to the parallel task in parallel ingestion.
  *
  * Finally, this shardSpec has only partitionId which is same as {@link LinearShardSpec}. The difference between
  * them is this shardSpec should never be published and so never be used in other places such as Broker timeline.
