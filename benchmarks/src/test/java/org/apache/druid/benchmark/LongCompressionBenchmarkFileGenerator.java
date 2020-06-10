@@ -20,14 +20,14 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.benchmark.datagen.BenchmarkColumnSchema;
-import org.apache.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.generator.ColumnValueGenerator;
+import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 
 import java.io.BufferedReader;
@@ -66,7 +66,7 @@ public class LongCompressionBenchmarkFileGenerator
       dirPath = args[0];
     }
 
-    BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated(
+    GeneratorColumnSchema enumeratedSchema = GeneratorColumnSchema.makeEnumerated(
         "",
         ValueType.LONG,
         true,
@@ -87,8 +87,8 @@ public class LongCompressionBenchmarkFileGenerator
             0.0001
         )
     );
-    BenchmarkColumnSchema zipfLowSchema = BenchmarkColumnSchema.makeZipf("", ValueType.LONG, true, 1, 0d, -1, 1000, 1d);
-    BenchmarkColumnSchema zipfHighSchema = BenchmarkColumnSchema.makeZipf(
+    GeneratorColumnSchema zipfLowSchema = GeneratorColumnSchema.makeZipf("", ValueType.LONG, true, 1, 0d, -1, 1000, 1d);
+    GeneratorColumnSchema zipfHighSchema = GeneratorColumnSchema.makeZipf(
         "",
         ValueType.LONG,
         true,
@@ -98,7 +98,7 @@ public class LongCompressionBenchmarkFileGenerator
         1000,
         3d
     );
-    BenchmarkColumnSchema sequentialSchema = BenchmarkColumnSchema.makeSequential(
+    GeneratorColumnSchema sequentialSchema = GeneratorColumnSchema.makeSequential(
         "",
         ValueType.LONG,
         true,
@@ -107,7 +107,7 @@ public class LongCompressionBenchmarkFileGenerator
         1470187671,
         2000000000
     );
-    BenchmarkColumnSchema uniformSchema = BenchmarkColumnSchema.makeDiscreteUniform(
+    GeneratorColumnSchema uniformSchema = GeneratorColumnSchema.makeDiscreteUniform(
         "",
         ValueType.LONG,
         true,
@@ -117,18 +117,18 @@ public class LongCompressionBenchmarkFileGenerator
         1000
     );
 
-    Map<String, BenchmarkColumnValueGenerator> generators = new HashMap<>();
-    generators.put("enumerate", new BenchmarkColumnValueGenerator(enumeratedSchema, 1));
-    generators.put("zipfLow", new BenchmarkColumnValueGenerator(zipfLowSchema, 1));
-    generators.put("zipfHigh", new BenchmarkColumnValueGenerator(zipfHighSchema, 1));
-    generators.put("sequential", new BenchmarkColumnValueGenerator(sequentialSchema, 1));
-    generators.put("uniform", new BenchmarkColumnValueGenerator(uniformSchema, 1));
+    Map<String, ColumnValueGenerator> generators = new HashMap<>();
+    generators.put("enumerate", new ColumnValueGenerator(enumeratedSchema, 1));
+    generators.put("zipfLow", new ColumnValueGenerator(zipfLowSchema, 1));
+    generators.put("zipfHigh", new ColumnValueGenerator(zipfHighSchema, 1));
+    generators.put("sequential", new ColumnValueGenerator(sequentialSchema, 1));
+    generators.put("uniform", new ColumnValueGenerator(uniformSchema, 1));
 
     File dir = new File(dirPath);
     dir.mkdir();
 
     // create data files using BenchmarkColunValueGenerator
-    for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
+    for (Map.Entry<String, ColumnValueGenerator> entry : generators.entrySet()) {
       final File dataFile = new File(dir, entry.getKey());
       dataFile.delete();
       try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
@@ -139,7 +139,7 @@ public class LongCompressionBenchmarkFileGenerator
     }
 
     // create compressed files using all combinations of CompressionStrategy and LongEncoding provided
-    for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
+    for (Map.Entry<String, ColumnValueGenerator> entry : generators.entrySet()) {
       for (CompressionStrategy compression : COMPRESSIONS) {
         for (CompressionFactory.LongEncodingStrategy encoding : ENCODINGS) {
           String name = entry.getKey() + "-" + compression + "-" + encoding;
