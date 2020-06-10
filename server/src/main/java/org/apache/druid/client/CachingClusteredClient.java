@@ -261,7 +261,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
                                          .map(QuerySegmentSpec::getIntervals)
-                                         .orElse(query.getIntervals());
+                                         .orElseGet(() -> query.getIntervals());
     }
 
     private ImmutableMap<String, Object> makeDownstreamQueryContext()

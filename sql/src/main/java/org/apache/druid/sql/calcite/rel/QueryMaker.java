@@ -126,7 +126,7 @@ public class QueryMaker
     return DataSourceAnalysis.forDataSource(query.getDataSource())
                              .getBaseQuerySegmentSpec()
                              .map(QuerySegmentSpec::getIntervals)
-                             .orElse(query.getIntervals());
+                             .orElseGet(query::getIntervals);
   }
 
   private <T> Sequence<Object[]> execute(Query<T> query, final List<String> newFields, final List<SqlTypeName> newTypes)

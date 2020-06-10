@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.segment.generator;
 
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
 import org.apache.commons.math3.util.Pair;
@@ -41,7 +41,7 @@ public class EnumeratedTreeDistribution<T> extends EnumeratedDistribution
     super(pmf);
 
     // build the interval tree
-    probabilityRanges = new TreeMap<Double, Integer>();
+    probabilityRanges = new TreeMap<>();
     normalizedPmf = this.getPmf();
     double cumulativep = 0.0;
     for (int i = 0; i < normalizedPmf.size(); i++) {
