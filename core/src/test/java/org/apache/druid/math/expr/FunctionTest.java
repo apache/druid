@@ -20,13 +20,17 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.Locale;
+import java.util.Set;
 
 public class FunctionTest extends InitializedNullHandlingTest
 {
@@ -35,13 +39,21 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    builder.put("x", "foo");
-    builder.put("y", 2);
-    builder.put("z", 3.1);
-    builder.put("a", new String[] {"foo", "bar", "baz", "foobar"});
-    builder.put("b", new Long[] {1L, 2L, 3L, 4L, 5L});
-    builder.put("c", new Double[] {3.1, 4.2, 5.3});
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+        .put("x", "foo")
+        .put("y", 2)
+        .put("z", 3.1)
+        .put("d", 34.56D)
+        .put("f", 12.34F)
+        .put("nan", Double.NaN)
+        .put("inf", Double.POSITIVE_INFINITY)
+        .put("-inf", Double.NEGATIVE_INFINITY)
+        .put("o", 0)
+        .put("od", 0D)
+        .put("of", 0F)
+        .put("a", new String[] {"foo", "bar", "baz", "foobar"})
+        .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
+        .put("c", new Double[] {3.1, 4.2, 5.3});
     bindings = Parser.withMap(builder.build());
   }
 
@@ -291,6 +303,112 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_prepend(1, [])", new String[]{"1"});
     assertArrayExpr("array_prepend(1, <LONG>[])", new Long[]{1L});
     assertArrayExpr("array_prepend(1, <DOUBLE>[])", new Double[]{1.0});
+  }
+
+  @Test
+  public void testRoundWithNonNumericValuesShouldReturn0()
+  {
+    assertExpr("round(nan)", 0L);
+    assertExpr("round(nan, 5)", 0L);
+    assertExpr("round(inf)", 0L);
+    assertExpr("round(inf, 4)", 0L);
+    assertExpr("round(-inf)", 0L);
+    assertExpr("round(-inf, 3)", 0L);
+
+    // Calculations that result in non numeric numbers
+    assertExpr("round(0/od)", 0L);
+    assertExpr("round(od/od)", 0L);
+    assertExpr("round(1/od)", 0L);
+    assertExpr("round(-1/od)", 0L);
+
+    assertExpr("round(0/of)", 0L);
+    assertExpr("round(of/of)", 0L);
+    assertExpr("round(1/of)", 0L);
+    assertExpr("round(-1/of)", 0L);
+  }
+
+  @Test
+  public void testRoundWithLong()
+  {
+    assertExpr("round(y)", 2L);
+    assertExpr("round(y, 2)", 2L);
+    assertExpr("round(y, -1)", 0L);
+  }
+
+  @Test
+  public void testRoundWithDouble()
+  {
+    assertExpr("round(d)", 35D);
+    assertExpr("round(d, 2)", 34.56D);
+    assertExpr("round(d, y)", 34.56D);
+    assertExpr("round(d, 1)", 34.6D);
+    assertExpr("round(d, -1)", 30D);
+  }
+
+  @Test
+  public void testRoundWithFloat()
+  {
+    assertExpr("round(f)", 12D);
+    assertExpr("round(f, 2)", 12.34D);
+    assertExpr("round(f, y)", 12.34D);
+    assertExpr("round(f, 1)", 12.3D);
+    assertExpr("round(f, -1)", 10D);
+  }
+
+  @Test
+  public void testRoundWithInvalidFirstArgument()
+  {
+    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
+        Pair.of("b", "LONG_ARRAY"),
+        Pair.of("x", "STRING"),
+        Pair.of("c", "DOUBLE_ARRAY"),
+        Pair.of("a", "STRING_ARRAY")
+
+    );
+    for (Pair<String, String> argAndType : invalidArguments) {
+      try {
+        assertExpr(String.format(Locale.ENGLISH, "round(%s)", argAndType.lhs), null);
+        Assert.fail("Did not throw IllegalArgumentException");
+      }
+      catch (IllegalArgumentException e) {
+        Assert.assertEquals(
+            String.format(
+                Locale.ENGLISH,
+                "The first argument to the function[round] should be integer or double type but got the type: %s",
+                argAndType.rhs
+            ),
+            e.getMessage()
+        );
+      }
+    }
+  }
+
+  @Test
+  public void testRoundWithInvalidSecondArgument()
+  {
+    Set<Pair<String, String>> invalidArguments = ImmutableSet.of(
+        Pair.of("1.2", "DOUBLE"),
+        Pair.of("x", "STRING"),
+        Pair.of("a", "STRING_ARRAY"),
+        Pair.of("c", "DOUBLE_ARRAY")
+
+    );
+    for (Pair<String, String> argAndType : invalidArguments) {
+      try {
+        assertExpr(String.format(Locale.ENGLISH, "round(d, %s)", argAndType.lhs), null);
+        Assert.fail("Did not throw IllegalArgumentException");
+      }
+      catch (IllegalArgumentException e) {
+        Assert.assertEquals(
+            String.format(
+                Locale.ENGLISH,
+                "The second argument to the function[round] should be integer type but got the type: %s",
+                argAndType.rhs
+            ),
+            e.getMessage()
+        );
+      }
+    }
   }
 
   @Test

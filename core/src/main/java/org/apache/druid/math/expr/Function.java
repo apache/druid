@@ -705,7 +705,11 @@ public interface Function
     {
       ExprEval value1 = args.get(0).eval(bindings);
       if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
-        throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
+        throw new IAE(
+            "The first argument to the function[%s] should be integer or double type but got the type: %s",
+            name(),
+            value1.type()
+        );
       }
 
       if (args.size() == 1) {
@@ -713,7 +717,11 @@ public interface Function
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
         if (value2.type() != ExprType.LONG) {
-          throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
+          throw new IAE(
+              "The second argument to the function[%s] should be integer type but got the type: %s",
+              name(),
+              value2.type()
+          );
         }
         return eval(value1, value2.asInt());
       }
