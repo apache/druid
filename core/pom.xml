@@ -394,6 +394,7 @@
           <argLine>
             @{jacocoArgLine}
             -Djava.library.path=${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib/
+            -Duser.language=en
           </argLine>
         </configuration>
       </plugin>

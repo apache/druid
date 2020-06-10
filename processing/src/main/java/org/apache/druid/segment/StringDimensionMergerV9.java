@@ -221,7 +221,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     final CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
 
     String filenameBase = StringUtils.format("%s.forward_dim", dimensionName);
-    if (capabilities.hasMultipleValues()) {
+    if (capabilities.hasMultipleValues().isTrue()) {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
         encodedValueSerializer = V3CompressedVSizeColumnarMultiIntsSerializer.create(
             dimensionName,
@@ -533,7 +533,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   public ColumnDescriptor makeColumnDescriptor()
   {
     // Now write everything
-    boolean hasMultiValue = capabilities.hasMultipleValues();
+    boolean hasMultiValue = capabilities.hasMultipleValues().isTrue();
     final CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 

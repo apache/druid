@@ -146,6 +146,12 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
+  public boolean supportsQueries()
+  {
+    return false;
+  }
+
+  @Override
   public String getClasspathPrefix()
   {
     return null;

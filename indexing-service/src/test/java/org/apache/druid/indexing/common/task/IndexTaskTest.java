@@ -229,6 +229,8 @@ public class IndexTaskTest extends IngestionTestBase
         appenderatorsManager
     );
 
+    Assert.assertFalse(indexTask.supportsQueries());
+
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
     Assert.assertEquals(2, segments.size());
@@ -1561,8 +1563,8 @@ public class IndexTaskTest extends IngestionTestBase
 
       Assert.assertTrue(
           StringUtils.format("Actual dimensions: %s", dimensions),
-          dimensions.equals(Sets.newHashSet("dim", "column_3")) ||
-          dimensions.equals(Sets.newHashSet("column_2", "column_3"))
+          dimensions.equals(Sets.newHashSet("column_2")) ||
+          dimensions.equals(Sets.newHashSet("dim", "column_2", "column_3"))
       );
 
       Assert.assertEquals(Collections.singletonList("val"), segment.getMetrics());

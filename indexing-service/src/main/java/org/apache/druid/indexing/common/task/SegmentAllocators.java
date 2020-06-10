@@ -23,6 +23,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
@@ -77,6 +78,7 @@ public final class SegmentAllocators
       final TaskToolbox toolbox,
       final String dataSource,
       final String taskId,
+      final Granularity queryGranularity,
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final CompletePartitionAnalysis partitionAnalysis
   ) throws IOException
@@ -85,6 +87,7 @@ public final class SegmentAllocators
         toolbox,
         dataSource,
         taskId,
+        queryGranularity,
         supervisorTaskAccess,
         partitionAnalysis::convertToIntervalToSegmentIds
     );

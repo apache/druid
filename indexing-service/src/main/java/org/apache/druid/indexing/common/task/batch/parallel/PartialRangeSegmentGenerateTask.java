@@ -161,6 +161,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         toolbox,
         getDataSource(),
         getId(),
+        ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity(),
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
         partitionAnalysis
     );

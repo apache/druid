@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.segment.generator;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -31,12 +31,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BenchmarkDataGenerator
+public class DataGenerator
 {
-  private final List<BenchmarkColumnSchema> columnSchemas;
+  private final List<GeneratorColumnSchema> columnSchemas;
   private final long seed;
 
-  private List<BenchmarkColumnValueGenerator> columnGenerators;
+  private List<ColumnValueGenerator> columnGenerators;
   private final long startTime;
   private final long endTime;
   private final int numConsecutiveTimestamps;
@@ -46,8 +46,8 @@ public class BenchmarkDataGenerator
   private int timeCounter;
   private List<String> dimensionNames;
 
-  public BenchmarkDataGenerator(
-      List<BenchmarkColumnSchema> columnSchemas,
+  public DataGenerator(
+      List<GeneratorColumnSchema> columnSchemas,
       final long seed,
       long startTime,
       int numConsecutiveTimestamps,
@@ -66,8 +66,8 @@ public class BenchmarkDataGenerator
     init();
   }
 
-  public BenchmarkDataGenerator(
-      List<BenchmarkColumnSchema> columnSchemas,
+  public DataGenerator(
+      List<GeneratorColumnSchema> columnSchemas,
       final long seed,
       Interval interval,
       int numRows
@@ -91,7 +91,7 @@ public class BenchmarkDataGenerator
   public InputRow nextRow()
   {
     Map<String, Object> event = new HashMap<>();
-    for (BenchmarkColumnValueGenerator generator : columnGenerators) {
+    for (ColumnValueGenerator generator : columnGenerators) {
       event.put(generator.getSchema().getName(), generator.generateRowValue());
     }
     MapBasedInputRow row = new MapBasedInputRow(nextTimestamp(), dimensionNames, event);
@@ -104,7 +104,7 @@ public class BenchmarkDataGenerator
     this.currentTime = startTime;
 
     dimensionNames = new ArrayList<>();
-    for (BenchmarkColumnSchema schema : columnSchemas) {
+    for (GeneratorColumnSchema schema : columnSchemas) {
       if (!schema.isMetric()) {
         dimensionNames.add(schema.getName());
       }
@@ -114,11 +114,11 @@ public class BenchmarkDataGenerator
     columnGenerators.addAll(
         Lists.transform(
             columnSchemas,
-            new Function<BenchmarkColumnSchema, BenchmarkColumnValueGenerator>()
+            new Function<GeneratorColumnSchema, ColumnValueGenerator>()
             {
               @Override
-              public BenchmarkColumnValueGenerator apply(
-                  BenchmarkColumnSchema input
+              public ColumnValueGenerator apply(
+                  GeneratorColumnSchema input
               )
               {
                 return input.makeGenerator(seed);

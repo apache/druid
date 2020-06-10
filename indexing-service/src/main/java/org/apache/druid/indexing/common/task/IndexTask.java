@@ -108,7 +108,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CircularBuffer;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.Interval;
@@ -887,6 +886,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             toolbox,
             getDataSource(),
             getId(),
+            dataSchema.getGranularitySpec().getQueryGranularity(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
         );
@@ -1010,36 +1010,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return publishFuture.get();
     } else {
       return publishFuture.get(publishTimeout, TimeUnit.MILLISECONDS);
-    }
-  }
-
-  /**
-   * This class represents a map of (Interval, ShardSpec) and is used for easy shardSpec generation.
-   */
-  static class ShardSpecs
-  {
-    private final Map<Interval, List<ShardSpec>> map;
-
-    ShardSpecs(final Map<Interval, List<ShardSpec>> map)
-    {
-      this.map = map;
-    }
-
-    /**
-     * Return a shardSpec for the given interval and input row.
-     *
-     * @param interval interval for shardSpec
-     * @param row      input row
-     *
-     * @return a shardSpec
-     */
-    ShardSpec getShardSpec(Interval interval, InputRow row)
-    {
-      final List<ShardSpec> shardSpecs = map.get(interval);
-      if (shardSpecs == null || shardSpecs.isEmpty()) {
-        throw new ISE("Failed to get shardSpec for interval[%s]", interval);
-      }
-      return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(row.getTimestampFromEpoch(), row);
     }
   }
 

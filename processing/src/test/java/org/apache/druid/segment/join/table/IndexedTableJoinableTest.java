@@ -22,6 +22,7 @@ package org.apache.druid.segment.join.table;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -96,7 +97,8 @@ public class IndexedTableJoinableTest
       inlineDataSource.getRowsAsList(),
       inlineDataSource.rowAdapter(),
       inlineDataSource.getRowSignature(),
-      ImmutableSet.of("str")
+      ImmutableSet.of("str"),
+      DateTimes.nowUtc().toString()
   );
 
   private IndexedTableJoinable target;
@@ -137,9 +139,8 @@ public class IndexedTableJoinableTest
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.isDictionaryEncoded());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
-    Assert.assertFalse(capabilities.hasMultipleValues());
+    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
-    Assert.assertTrue(capabilities.isComplete());
   }
 
   @Test
@@ -149,9 +150,8 @@ public class IndexedTableJoinableTest
     Assert.assertEquals(ValueType.LONG, capabilities.getType());
     Assert.assertFalse(capabilities.isDictionaryEncoded());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
-    Assert.assertFalse(capabilities.hasMultipleValues());
+    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
-    Assert.assertTrue(capabilities.isComplete());
   }
 
   @Test

@@ -42,7 +42,7 @@ public class StringFormatOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("STRING_FORMAT")
       .operandTypeChecker(new StringFormatOperandTypeChecker())
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeNonNull(SqlTypeName.VARCHAR)
       .build();
 
   @Override

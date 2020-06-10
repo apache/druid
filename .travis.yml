@@ -175,9 +175,13 @@ jobs:
           | node_modules/.bin/diff-test-coverage
           --coverage "**/target/site/jacoco/jacoco.xml"
           --type jacoco
-          --line-coverage 65
-          --branch-coverage 65
+          --line-coverage 50 
+          --branch-coverage 50
           --function-coverage 0
+          --log-template "coverage-lines-complete"
+          --log-template "coverage-files-complete"
+          --log-template "totals-complete"
+          --log-template "errors"
           --
           || { printf "\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\n" && false; }
           fi

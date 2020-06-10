@@ -49,6 +49,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
+import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -152,14 +153,19 @@ public class IndexMergerV9 implements IndexMerger
       progress.progress();
       startTime = System.currentTimeMillis();
       try (FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"))) {
-        mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+        SegmentizerFactory customSegmentLoader = indexSpec.getSegmentLoader();
+        if (customSegmentLoader != null) {
+          mapper.writeValue(fos, customSegmentLoader);
+        } else {
+          mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+        }
       }
       log.debug("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
 
       progress.progress();
       final Map<String, ValueType> metricsValueTypes = new TreeMap<>(Comparators.naturalNullsFirst());
       final Map<String, String> metricTypeNames = new TreeMap<>(Comparators.naturalNullsFirst());
-      final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final List<ColumnCapabilities> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
       mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
 
       final Map<String, DimensionHandler> handlers = makeDimensionHandlers(mergedDimensions, dimCapabilities);
@@ -710,18 +716,22 @@ public class IndexMergerV9 implements IndexMerger
       final List<String> mergedDimensions,
       final Map<String, ValueType> metricsValueTypes,
       final Map<String, String> metricTypeNames,
-      final List<ColumnCapabilitiesImpl> dimCapabilities
+      final List<ColumnCapabilities> dimCapabilities
   )
   {
-    final Map<String, ColumnCapabilitiesImpl> capabilitiesMap = new HashMap<>();
+    final Map<String, ColumnCapabilities> capabilitiesMap = new HashMap<>();
     for (IndexableAdapter adapter : adapters) {
       for (String dimension : adapter.getDimensionNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
-        capabilitiesMap.computeIfAbsent(dimension, d -> new ColumnCapabilitiesImpl().setIsComplete(true)).merge(capabilities);
+        capabilitiesMap.compute(dimension, (d, existingCapabilities) ->
+            ColumnCapabilitiesImpl.snapshot(capabilities)
+                                  .merge(ColumnCapabilitiesImpl.snapshot(existingCapabilities)));
       }
       for (String metric : adapter.getMetricNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(metric);
-        capabilitiesMap.computeIfAbsent(metric, m -> new ColumnCapabilitiesImpl().setIsComplete(true)).merge(capabilities);
+        capabilitiesMap.compute(metric, (m, existingCapabilities) ->
+            ColumnCapabilitiesImpl.snapshot(capabilities)
+                                  .merge(ColumnCapabilitiesImpl.snapshot(existingCapabilities)));
         metricsValueTypes.put(metric, capabilities.getType());
         metricTypeNames.put(metric, adapter.getMetricType(metric));
       }
@@ -996,7 +1006,7 @@ public class IndexMergerV9 implements IndexMerger
 
   private Map<String, DimensionHandler> makeDimensionHandlers(
       final List<String> mergedDimensions,
-      final List<ColumnCapabilitiesImpl> dimCapabilities
+      final List<ColumnCapabilities> dimCapabilities
   )
   {
     Map<String, DimensionHandler> handlers = new LinkedHashMap<>();

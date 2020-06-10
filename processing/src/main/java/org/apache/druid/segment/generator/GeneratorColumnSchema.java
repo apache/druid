@@ -17,8 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.segment.generator;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
@@ -28,26 +31,32 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.List;
+import java.util.Objects;
 
-public class BenchmarkColumnSchema
+public class GeneratorColumnSchema
 {
+
   /**
-   * SEQUENTIAL:          Generate integer or enumerated values in sequence. Not random.
+   * SEQUENTIAL:            Generate integer or enumerated values in sequence. Not random.
    *
-   * DISCRETE_UNIFORM:    Discrete uniform distribution, generates integers or enumerated values.
+   * DISCRETE_UNIFORM:      Discrete uniform distribution, generates integers or enumerated values.
    *
-   * ROUNDED_NORMAL:      Discrete distribution that rounds sample values from an underlying normal
-   *                      distribution
+   * ROUNDED_NORMAL:        Discrete distribution that rounds sample values from an underlying normal
+   *                        distribution
    *
-   * ZIPF:                Discrete Zipf distribution.
-   *                      Lower numbers have higher probability.
-   *                      Can also generate Zipf distribution from a list of enumerated values.
+   * ZIPF:                  Discrete Zipf distribution.
+   *                        Lower numbers have higher probability.
+   *                        Can also generate Zipf distribution from a list of enumerated values.
    *
-   * ENUMERATED:          Discrete distribution, generated from lists of values and associated probabilities.
+   * LAZY_ZIPF:             ZIPF but lazy evaluated for large cardinalities
    *
-   * NORMAL:              Continuous normal distribution.
+   * LAZY_DISCRETE_UNIFORM: DISCRETE_UNIFORM but lazy evaluated for large cardinalities
    *
-   * UNIFORM:             Continuous uniform distribution.
+   * ENUMERATED:            Discrete distribution, generated from lists of values and associated probabilities.
+   *
+   * NORMAL:                Continuous normal distribution.
+   *
+   * UNIFORM:               Continuous uniform distribution.
    */
   public enum ValueDistribution
   {
@@ -57,6 +66,8 @@ public class BenchmarkColumnSchema
     ROUNDED_NORMAL,
     ZIPF,
     ENUMERATED,
+    LAZY_ZIPF,
+    LAZY_DISCRETE_UNIFORM,
 
     // continuous distributions
     UNIFORM,
@@ -128,7 +139,43 @@ public class BenchmarkColumnSchema
   private Double mean;
   private Double standardDeviation;
 
-  private BenchmarkColumnSchema(
+  @JsonCreator
+  public GeneratorColumnSchema(
+      @JsonProperty("name") String name,
+      @JsonProperty("type") ValueType type,
+      @JsonProperty("isMetric") boolean isMetric,
+      @JsonProperty("rowSize") int rowSize,
+      @JsonProperty("nullProbability") Double nullProbability,
+      @JsonProperty("distributionType") ValueDistribution distributionType,
+      @JsonProperty("enumeratedValues") List<Object> enumeratedValues,
+      @JsonProperty("enumeratedProbabilities") List<Double> enumeratedProbabilities,
+      @JsonProperty("startInt") Integer startInt,
+      @JsonProperty("endInt") Integer endInt,
+      @JsonProperty("startDouble") Double startDouble,
+      @JsonProperty("endDouble") Double endDouble,
+      @JsonProperty("zipfExponent") Double zipfExponent,
+      @JsonProperty("mean") Double mean,
+      @JsonProperty("standardDeviation") Double standardDeviation
+  )
+  {
+    this.name = name;
+    this.type = type;
+    this.isMetric = isMetric;
+    this.distributionType = distributionType;
+    this.rowSize = rowSize;
+    this.nullProbability = nullProbability;
+    this.enumeratedValues = enumeratedValues;
+    this.enumeratedProbabilities = enumeratedProbabilities;
+    this.startInt = startInt;
+    this.endInt = endInt;
+    this.startDouble = startDouble;
+    this.endDouble = endDouble;
+    this.zipfExponent = zipfExponent;
+    this.mean = mean;
+    this.standardDeviation = standardDeviation;
+  }
+
+  private GeneratorColumnSchema(
       String name,
       ValueType type,
       boolean isMetric,
@@ -145,11 +192,12 @@ public class BenchmarkColumnSchema
     this.nullProbability = nullProbability;
   }
 
-  public BenchmarkColumnValueGenerator makeGenerator(long seed)
+  public ColumnValueGenerator makeGenerator(long seed)
   {
-    return new BenchmarkColumnValueGenerator(this, seed);
+    return new ColumnValueGenerator(this, seed);
   }
 
+  @JsonIgnore
   public DimensionSchema getDimensionSchema()
   {
     switch (type) {
@@ -166,82 +214,97 @@ public class BenchmarkColumnSchema
     }
   }
 
+  @JsonProperty
   public String getName()
   {
     return name;
   }
 
+  @JsonProperty
   public Double getNullProbability()
   {
     return nullProbability;
   }
 
+  @JsonProperty
   public ValueType getType()
   {
     return type;
   }
 
+  @JsonProperty
   public boolean isMetric()
   {
     return isMetric;
   }
 
+  @JsonProperty
   public ValueDistribution getDistributionType()
   {
     return distributionType;
   }
 
+  @JsonProperty
   public int getRowSize()
   {
     return rowSize;
   }
 
+  @JsonProperty
   public List<Object> getEnumeratedValues()
   {
     return enumeratedValues;
   }
 
+  @JsonProperty
   public List<Double> getEnumeratedProbabilities()
   {
     return enumeratedProbabilities;
   }
 
+  @JsonProperty
   public Integer getStartInt()
   {
     return startInt;
   }
 
+  @JsonProperty
   public Integer getEndInt()
   {
     return endInt;
   }
 
+  @JsonProperty
   public Double getStartDouble()
   {
     return startDouble;
   }
 
+  @JsonProperty
   public Double getEndDouble()
   {
     return endDouble;
   }
 
+  @JsonProperty
   public Double getZipfExponent()
   {
     return zipfExponent;
   }
 
+  @JsonProperty
   public Double getMean()
   {
     return mean;
   }
 
+  @JsonProperty
   public Double getStandardDeviation()
   {
     return standardDeviation;
   }
 
-  public static BenchmarkColumnSchema makeSequential(
+  public static GeneratorColumnSchema makeSequential(
       String name,
       ValueType type,
       boolean isMetric,
@@ -251,7 +314,7 @@ public class BenchmarkColumnSchema
       int endInt
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -264,7 +327,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumeratedSequential(
+  public static GeneratorColumnSchema makeEnumeratedSequential(
       String name,
       ValueType type,
       boolean isMetric,
@@ -273,7 +336,7 @@ public class BenchmarkColumnSchema
       List<Object> enumeratedValues
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -285,7 +348,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeDiscreteUniform(
+  public static GeneratorColumnSchema makeDiscreteUniform(
       String name,
       ValueType type,
       boolean isMetric,
@@ -295,7 +358,7 @@ public class BenchmarkColumnSchema
       int endInt
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -308,7 +371,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumeratedDiscreteUniform(
+  public static GeneratorColumnSchema makeEnumeratedDiscreteUniform(
       String name,
       ValueType type,
       boolean isMetric,
@@ -317,7 +380,7 @@ public class BenchmarkColumnSchema
       List<Object> enumeratedValues
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -329,7 +392,31 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeContinuousUniform(
+  public static GeneratorColumnSchema makeLazyDiscreteUniform(
+      String name,
+      ValueType type,
+      boolean isMetric,
+      int rowSize,
+      Double nullProbability,
+      int startInt,
+      int endInt
+  )
+  {
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
+        name,
+        type,
+        isMetric,
+        rowSize,
+        nullProbability,
+        ValueDistribution.LAZY_DISCRETE_UNIFORM
+    );
+    schema.startInt = startInt;
+    schema.endInt = endInt;
+    return schema;
+  }
+
+
+  public static GeneratorColumnSchema makeContinuousUniform(
       String name,
       ValueType type,
       boolean isMetric,
@@ -339,7 +426,7 @@ public class BenchmarkColumnSchema
       double endDouble
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -352,7 +439,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeNormal(
+  public static GeneratorColumnSchema makeNormal(
       String name,
       ValueType type,
       boolean isMetric,
@@ -363,7 +450,7 @@ public class BenchmarkColumnSchema
       boolean useRounding
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -376,7 +463,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeZipf(
+  public static GeneratorColumnSchema makeZipf(
       String name,
       ValueType type,
       boolean isMetric,
@@ -387,7 +474,7 @@ public class BenchmarkColumnSchema
       Double zipfExponent
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -401,7 +488,32 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumeratedZipf(
+  public static GeneratorColumnSchema makeLazyZipf(
+      String name,
+      ValueType type,
+      boolean isMetric,
+      int rowSize,
+      Double nullProbability,
+      int startInt,
+      int endInt,
+      Double zipfExponent
+  )
+  {
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
+        name,
+        type,
+        isMetric,
+        rowSize,
+        nullProbability,
+        ValueDistribution.LAZY_ZIPF
+    );
+    schema.startInt = startInt;
+    schema.endInt = endInt;
+    schema.zipfExponent = zipfExponent;
+    return schema;
+  }
+
+  public static GeneratorColumnSchema makeEnumeratedZipf(
       String name,
       ValueType type,
       boolean isMetric,
@@ -411,7 +523,7 @@ public class BenchmarkColumnSchema
       Double zipfExponent
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -424,7 +536,7 @@ public class BenchmarkColumnSchema
     return schema;
   }
 
-  public static BenchmarkColumnSchema makeEnumerated(
+  public static GeneratorColumnSchema makeEnumerated(
       String name,
       ValueType type,
       boolean isMetric,
@@ -434,7 +546,7 @@ public class BenchmarkColumnSchema
       List<Double> enumeratedProbabilities
   )
   {
-    BenchmarkColumnSchema schema = new BenchmarkColumnSchema(
+    GeneratorColumnSchema schema = new GeneratorColumnSchema(
         name,
         type,
         isMetric,
@@ -467,5 +579,54 @@ public class BenchmarkColumnSchema
            ", mean=" + mean +
            ", standardDeviation=" + standardDeviation +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    GeneratorColumnSchema that = (GeneratorColumnSchema) o;
+    return isMetric == that.isMetric &&
+           rowSize == that.rowSize &&
+           distributionType == that.distributionType &&
+           name.equals(that.name) &&
+           type == that.type &&
+           Objects.equals(nullProbability, that.nullProbability) &&
+           Objects.equals(enumeratedValues, that.enumeratedValues) &&
+           Objects.equals(enumeratedProbabilities, that.enumeratedProbabilities) &&
+           Objects.equals(startInt, that.startInt) &&
+           Objects.equals(endInt, that.endInt) &&
+           Objects.equals(startDouble, that.startDouble) &&
+           Objects.equals(endDouble, that.endDouble) &&
+           Objects.equals(zipfExponent, that.zipfExponent) &&
+           Objects.equals(mean, that.mean) &&
+           Objects.equals(standardDeviation, that.standardDeviation);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        distributionType,
+        name,
+        type,
+        isMetric,
+        rowSize,
+        nullProbability,
+        enumeratedValues,
+        enumeratedProbabilities,
+        startInt,
+        endInt,
+        startDouble,
+        endDouble,
+        zipfExponent,
+        mean,
+        standardDeviation
+    );
   }
 }

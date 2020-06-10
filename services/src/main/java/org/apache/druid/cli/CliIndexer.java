@@ -25,9 +25,9 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import com.google.inject.util.Providers;
 import io.airlift.airline.Command;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
@@ -43,6 +43,7 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
@@ -58,14 +59,16 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.http.ShuffleResource;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
-import org.apache.druid.segment.realtime.CliIndexerDataSegmentServerAnnouncerLifecycleHandler;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordination.ZkCoordinator;
+import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.CliIndexerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -138,14 +141,14 @@ public class CliIndexer extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, SegmentListerResource.class);
-
-            LifecycleModule.register(binder, CliIndexerDataSegmentServerAnnouncerLifecycleHandler.class);
-
             Jerseys.addResource(binder, ShuffleResource.class);
 
             LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
 
-            binder.bind(SegmentLoadDropHandler.class).toProvider(Providers.of(null));
+            binder.bind(SegmentManager.class).in(LazySingleton.class);
+            binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+            Jerseys.addResource(binder, HistoricalResource.class);
+            LifecycleModule.register(binder, ZkCoordinator.class);
 
             bindNodeRoleAndAnnouncer(
                 binder,
@@ -186,11 +189,11 @@ public class CliIndexer extends ServerRunnable
 
           @Provides
           @LazySingleton
-          public DataNodeService getDataNodeService()
+          public DataNodeService getDataNodeService(DruidServerConfig serverConfig)
           {
             return new DataNodeService(
                 DruidServer.DEFAULT_TIER,
-                0L,
+                serverConfig.getMaxSize(),
                 ServerType.INDEXER_EXECUTOR,
                 DruidServer.DEFAULT_PRIORITY
             );
@@ -200,6 +203,7 @@ public class CliIndexer extends ServerRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new IndexingServiceTuningConfigModule(),
+        new InputSourceModule(),
         new QueryablePeonModule(),
         new CliIndexerServerModule(properties),
         new LookupModule()

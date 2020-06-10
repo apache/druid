@@ -48,7 +48,7 @@ public class ArrayOrdinalOfOperatorConversion implements SqlOperatorConversion
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnType(SqlTypeName.INTEGER)
+      .returnTypeNonNull(SqlTypeName.INTEGER)
       .build();
 
   @Override
