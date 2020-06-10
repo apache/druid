@@ -77,6 +77,12 @@ public class ExpressionsTest extends ExpressionTestBase
       .add("y", ValueType.LONG)
       .add("z", ValueType.FLOAT)
       .add("s", ValueType.STRING)
+      .add("nan", ValueType.DOUBLE)
+      .add("inf", ValueType.DOUBLE)
+      .add("-inf", ValueType.DOUBLE)
+      .add("fnan", ValueType.FLOAT)
+      .add("finf", ValueType.FLOAT)
+      .add("-finf", ValueType.FLOAT)
       .add("hexstr", ValueType.STRING)
       .add("intstr", ValueType.STRING)
       .add("spacey", ValueType.STRING)
@@ -92,6 +98,13 @@ public class ExpressionsTest extends ExpressionTestBase
       .put("x", 2.25)
       .put("y", 3.0)
       .put("z", -2.25)
+      .put("o", 0)
+      .put("nan", Double.NaN)
+      .put("inf", Double.POSITIVE_INFINITY)
+      .put("-inf", Double.NEGATIVE_INFINITY)
+      .put("fnan", Float.NaN)
+      .put("finf", Float.POSITIVE_INFINITY)
+      .put("-finf", Float.NEGATIVE_INFINITY)
       .put("s", "foo")
       .put("hexstr", "EF")
       .put("intstr", "-100")
@@ -917,6 +930,56 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         DruidExpression.fromExpression("round(\"x\",'foo')"),
         "IAE Exception"
+    );
+  }
+
+  @Test
+  public void testRoundWithNanShouldRoundTo0()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("nan"),
+        DruidExpression.fromExpression("round(\"nan\")"),
+        0L
+    );
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("fnan"),
+        DruidExpression.fromExpression("round(\"fnan\")"),
+        0L
+    );
+  }
+
+  @Test
+  public void testRoundWithInfinityShouldRoundTo0()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("inf"),
+        DruidExpression.fromExpression("round(\"inf\")"),
+        0L
+    );
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("-inf"),
+        DruidExpression.fromExpression("round(\"-inf\")"),
+        0L
+    );
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("finf"),
+        DruidExpression.fromExpression("round(\"finf\")"),
+        0L
+    );
+    testHelper.testExpression(
+        roundFunction,
+        testHelper.makeInputRef("-finf"),
+        DruidExpression.fromExpression("round(\"-finf\")"),
+        0L
     );
   }
 

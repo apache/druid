@@ -737,7 +737,12 @@ public interface Function
       if (param.type() == ExprType.LONG) {
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
       } else if (param.type() == ExprType.DOUBLE) {
-        return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale, RoundingMode.HALF_UP).doubleValue());
+        double val = param.asDouble();
+        if (Double.isNaN(val) || val == Double.POSITIVE_INFINITY || val == Double.NEGATIVE_INFINITY) {
+          // This is the behavior of Math.round()
+          return ExprEval.of(0L);
+        }
+        return ExprEval.of(BigDecimal.valueOf(val).setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
         return ExprEval.of(null);
       }

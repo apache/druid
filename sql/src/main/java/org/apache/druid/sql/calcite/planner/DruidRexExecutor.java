@@ -122,6 +122,7 @@ public class DruidRexExecutor implements RexExecutor
             if (exprResult.type() == ExprType.LONG) {
               bigDecimal = BigDecimal.valueOf(exprResult.asLong());
             } else {
+              // if exprResult evaluates to Nan or infinity, this will throw a NumberFormatException
               bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
             }
 

@@ -141,7 +141,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |pow|pow(x, y) would return the value of the x raised to the power of y|
 |remainder|remainder(x, y) would return the remainder operation on two arguments as prescribed by the IEEE 754 standard|
 |rint|rint(x) would return value that is closest in value to x and is equal to a mathematical integer|
-|round|round(x, y) would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points.|
+|round|round(x, y) would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If x is either Nan or infinity, this will reurn 0. |
 |scalb|scalb(d, sf) would return d * 2^sf rounded as if performed by a single correctly rounded floating-point multiply to a member of the double value set|
 |signum|signum(x) would return the signum function of the argument x|
 |sin|sin(x) would return the trigonometric sine of an angle x|
