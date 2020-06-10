@@ -24,10 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
@@ -399,15 +403,21 @@ public class DataSourcesResource
   public Response getDatasourceLoadstatus(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("interval") @Nullable final String interval,
-      @QueryParam("firstCheck") @Nullable final Boolean firstCheck
+      @QueryParam("forceMetadataRefresh") @Nullable final Boolean forceMetadataRefresh,
+      @QueryParam("simple") @Nullable final String simple,
+      @QueryParam("full") @Nullable final String full
   )
   {
-    if (serverInventoryView == null || serverInventoryView.getSegmentLoadInfos() == null) {
-      return Response.ok(ImmutableMap.of("loaded", false)).build();
+    final Interval theInterval;
+    if (interval == null) {
+      long defaultIntervalOffset =  14 * 24 * 60 * 60 * 1000;
+      long currentTimeInMs = System.currentTimeMillis();
+      theInterval = Intervals.utc(currentTimeInMs - defaultIntervalOffset, currentTimeInMs);
+    } else {
+      theInterval = Intervals.of(interval);
     }
-    // Force poll
-    Interval theInterval = interval == null ? Intervals.ETERNITY : Intervals.of(interval);
-    boolean requiresMetadataStorePoll = firstCheck == null ? true : firstCheck;
+
+    boolean requiresMetadataStorePoll = forceMetadataRefresh == null ? true : forceMetadataRefresh;
 
     Optional<Iterable<DataSegment>> segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
         dataSourceName,
@@ -418,16 +428,88 @@ public class DataSourcesResource
     if (!segments.isPresent()) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
-
-
     Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
-    for (DataSegment segment : segments.get()) {
-      if (!segmentLoadInfos.containsKey(segment.getId())) {
-        return Response.ok(ImmutableMap.of("loaded", false)).build();
+
+    if (simple != null) {
+      // Calculate resposne for simple mode
+      int numUnloadedSegments = 0;
+      for (DataSegment segment : segments.get()) {
+        if (!segmentLoadInfos.containsKey(segment.getId())) {
+          numUnloadedSegments++;
+        }
       }
+      return Response.ok(
+          ImmutableMap.of(
+              dataSourceName,
+              numUnloadedSegments
+          )
+      ).build();
+    } else if (full != null) {
+      // Calculate resposne for full mode
+      final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
+      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
+      final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();;
+      final DateTime now = DateTimes.nowUtc();
+
+      for (DataSegment segment : segments.get()) {
+        for (DruidServer druidServer : serverInventoryView.getInventory()) {
+          String tier = druidServer.getTier();
+          SegmentId segmentId = segment.getId();
+          if (druidServer.getDataSource(dataSourceName).getSegment(segmentId) != null) {
+            Integer numReplicants = segmentsInCluster.get(segmentId, tier);
+            if (numReplicants == null) {
+              numReplicants = 0;
+            }
+            segmentsInCluster.put(segmentId, tier, numReplicants + 1);
+          }
+        }
+      }
+      segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+          dataSourceName,
+          theInterval,
+          false
+      );
+      if (!segments.isPresent()) {
+        return logAndCreateDataSourceNotFoundResponse(dataSourceName);
+      }
+      for (DataSegment segment : segments.get()) {
+        for (final Rule rule : rules) {
+          if (!(rule instanceof LoadRule && rule.appliesTo(segment, now))) {
+            continue;
+          }
+          ((LoadRule) rule)
+              .getTieredReplicants()
+              .forEach((final String tier, final Integer ruleReplicants) -> {
+                Integer currentReplicantsRetVal = segmentsInCluster.get(segment.getId(), tier);
+                int currentReplicants = currentReplicantsRetVal == null ? 0 : currentReplicantsRetVal;
+                Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
+                    .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>());
+                ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
+                    .addTo(dataSourceName, Math.max(ruleReplicants - currentReplicants, 0));
+              });
+          break; // only the first matching rule applies
+        }
+      }
+      return Response.ok(underReplicationCountsPerDataSourcePerTier).build();
+    } else {
+      // Calculate resposne for default mode
+      int numUsedSegments = 0;
+      int numUnloadedSegments = 0;
+      for (DataSegment segment : segments.get()) {
+        numUsedSegments++;
+        if (!segmentLoadInfos.containsKey(segment.getId())) {
+          numUnloadedSegments++;
+        }
+      }
+      return Response.ok(
+          ImmutableMap.of(
+              dataSourceName,
+              100 * ((double) (numUsedSegments - numUnloadedSegments) / (double) numUsedSegments)
+          )
+      ).build();
     }
-    return Response.ok(ImmutableMap.of("loaded", true)).build();
   }
+
 
   /**
    * The property names belong to the public HTTP JSON API.
