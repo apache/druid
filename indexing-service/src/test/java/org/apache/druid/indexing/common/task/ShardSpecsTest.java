@@ -50,8 +50,8 @@ public class ShardSpecsTest extends IngestionTestBase
   @Test
   public void testShardSpecSelectionWithNullPartitionDimension()
   {
-    ShardSpec spec1 = new HashBasedNumberedShardSpec(0, 2, null, jsonMapper);
-    ShardSpec spec2 = new HashBasedNumberedShardSpec(1, 2, null, jsonMapper);
+    ShardSpec spec1 = new HashBasedNumberedShardSpec(0, 2, 2, null, jsonMapper);
+    ShardSpec spec2 = new HashBasedNumberedShardSpec(1, 2, 2, null, jsonMapper);
 
     Map<Interval, List<ShardSpec>> shardSpecMap = new HashMap<>();
     shardSpecMap.put(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), Lists.newArrayList(spec1, spec2));

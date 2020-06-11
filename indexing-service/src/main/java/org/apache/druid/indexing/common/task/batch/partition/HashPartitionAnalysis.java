@@ -24,7 +24,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -106,7 +106,7 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
           interval,
           IntStream.range(0, numBuckets)
                    .mapToObj(i -> {
-                     final HashBasedNumberedShardSpec shardSpec = new HashBasedNumberedShardSpec(
+                     final BuildingHashBasedNumberedShardSpec shardSpec = new BuildingHashBasedNumberedShardSpec(
                          i,
                          numBuckets,
                          partitionsSpec.getPartitionDimensions(),

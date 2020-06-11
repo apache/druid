@@ -29,7 +29,7 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -42,7 +42,7 @@ import java.util.Map;
  */
 
 public class PartialHashSegmentMergeTask
-    extends PartialSegmentMergeTask<HashBasedNumberedShardSpec, HashPartitionLocation>
+    extends PartialSegmentMergeTask<BuildingHashBasedNumberedShardSpec, HashPartitionLocation>
 {
   public static final String TYPE = "partial_index_merge";
 
@@ -100,9 +100,9 @@ public class PartialHashSegmentMergeTask
   }
 
   @Override
-  HashBasedNumberedShardSpec createShardSpec(TaskToolbox toolbox, Interval interval, int partitionId)
+  BuildingHashBasedNumberedShardSpec createShardSpec(TaskToolbox toolbox, Interval interval, int partitionId)
   {
-    return new HashBasedNumberedShardSpec(
+    return new BuildingHashBasedNumberedShardSpec(
         partitionId,
         Preconditions.checkNotNull(partitionsSpec.getNumShards(), "numShards"),
         partitionsSpec.getPartitionDimensions(),

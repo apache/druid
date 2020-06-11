@@ -117,31 +117,23 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         maxNumConcurrentSubTasks
     );
 
+    return runTask(task, expectedTaskStatus);
+  }
+
+  Set<DataSegment> runTask(ParallelIndexSupervisorTask task, TaskState expectedTaskStatus)
+  {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
     Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
     return getIndexingServiceClient().getPublishedSegments(task);
   }
 
-  private ParallelIndexSupervisorTask newTask(
-      @Nullable TimestampSpec timestampSpec,
-      @Nullable DimensionsSpec dimensionsSpec,
-      @Nullable InputFormat inputFormat,
-      @Nullable ParseSpec parseSpec,
-      Interval interval,
-      File inputDir,
-      String filter,
+  ParallelIndexTuningConfig newTuningConfig(
       DimensionBasedPartitionsSpec partitionsSpec,
       int maxNumConcurrentSubTasks
   )
   {
-    GranularitySpec granularitySpec = new UniformGranularitySpec(
-        Granularities.DAY,
-        Granularities.MINUTE,
-        interval == null ? null : Collections.singletonList(interval)
-    );
-
-    ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+    return new ParallelIndexTuningConfig(
         null,
         null,
         null,
@@ -169,6 +161,27 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         null,
         null
     );
+  }
+
+  private ParallelIndexSupervisorTask newTask(
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable DimensionsSpec dimensionsSpec,
+      @Nullable InputFormat inputFormat,
+      @Nullable ParseSpec parseSpec,
+      Interval interval,
+      File inputDir,
+      String filter,
+      DimensionBasedPartitionsSpec partitionsSpec,
+      int maxNumConcurrentSubTasks
+  )
+  {
+    GranularitySpec granularitySpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.MINUTE,
+        interval == null ? null : Collections.singletonList(interval)
+    );
+
+    ParallelIndexTuningConfig tuningConfig = newTuningConfig(partitionsSpec, maxNumConcurrentSubTasks);
 
     final ParallelIndexIngestionSpec ingestionSpec;
 
@@ -185,9 +198,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
               "dataSource",
               timestampSpec,
               dimensionsSpec,
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
+              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
               granularitySpec,
               null
           ),

@@ -36,9 +36,9 @@ import java.util.List;
 public class BuildingNumberedShardSpecTest
 {
   @Test
-  public void testToNumberedShardSpec()
+  public void testConvert()
   {
-    Assert.assertEquals(new NumberedShardSpec(5, 10), new BuildingNumberedShardSpec(5).toNumberedShardSpec(10));
+    Assert.assertEquals(new NumberedShardSpec(5, 10), new BuildingNumberedShardSpec(5).convert(10));
   }
 
   @Test

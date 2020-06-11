@@ -103,6 +103,7 @@ class ParallelIndexTestingFactory
   static final HashBasedNumberedShardSpec HASH_BASED_NUMBERED_SHARD_SPEC = new HashBasedNumberedShardSpec(
       PARTITION_ID,
       PARTITION_ID + 1,
+      PARTITION_ID + 1,
       Collections.singletonList("dim"),
       ParallelIndexTestingFactory.NESTED_OBJECT_MAPPER
   );

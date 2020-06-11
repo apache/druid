@@ -68,10 +68,10 @@ public class NumberedShardSpec implements ShardSpec
   @Override
   public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
   {
-    return createLookup(shardSpecs);
+    return createNumberedLookup(shardSpecs);
   }
 
-  static ShardSpecLookup createLookup(List<ShardSpec> shardSpecs)
+  static ShardSpecLookup createNumberedLookup(List<ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
@@ -127,16 +127,12 @@ public class NumberedShardSpec implements ShardSpec
     if (this == o) {
       return true;
     }
-
-    if (!(o instanceof NumberedShardSpec)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final NumberedShardSpec that = (NumberedShardSpec) o;
-    if (partitionNum != that.partitionNum) {
-      return false;
-    }
-    return partitions == that.partitions;
+    NumberedShardSpec that = (NumberedShardSpec) o;
+    return partitionNum == that.partitionNum &&
+           partitions == that.partitions;
   }
 
   @Override

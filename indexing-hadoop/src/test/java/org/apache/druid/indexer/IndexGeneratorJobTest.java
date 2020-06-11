@@ -562,6 +562,7 @@ public class IndexGeneratorJobTest
         specs.add(new HashBasedNumberedShardSpec(
             shardInfo[0],
             shardInfo[1],
+            shardInfo[1],
             null,
             HadoopDruidIndexerConfig.JSON_MAPPER
         ));
