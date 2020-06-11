@@ -476,6 +476,7 @@ public class StringUtils
    * This function is migrated from flink's scala function with minor refactor
    * https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/runtime/functions/ScalarFunctions.scala
    * - Modified to handle empty pad string.
+   * - Padding of negative length return an empty string.
    *
    * @param base The base string to be padded
    * @param len  The length of padded string
@@ -483,12 +484,10 @@ public class StringUtils
    *
    * @return the string left-padded with pad to a length of len or null if the pad is empty or the len is less than 0.
    */
-  @Nullable
+  @Nonnull
   public static String lpad(@Nonnull String base, int len, @Nonnull String pad)
   {
-    if (len < 0) {
-      return null;
-    } else if (len == 0) {
+    if (len <= 0) {
       return "";
     }
 
@@ -524,6 +523,7 @@ public class StringUtils
    * https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/runtime/functions/ScalarFunctions.scala
    * - Modified to handle empty pad string.
    * - Modified to only copy the pad string if needed (this implementation mimics lpad).
+   * - Padding of negative length return an empty string.
    *
    * @param base The base string to be padded
    * @param len  The length of padded string
@@ -531,12 +531,10 @@ public class StringUtils
    *
    * @return the string right-padded with pad to a length of len or null if the pad is empty or the len is less than 0.
    */
-  @Nullable
+  @Nonnull
   public static String rpad(@Nonnull String base, int len, @Nonnull String pad)
   {
-    if (len < 0) {
-      return null;
-    } else if (len == 0) {
+    if (len <= 0) {
       return "";
     }
 

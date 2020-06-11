@@ -146,6 +146,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("lpad(x, 5, 'ab')", "abfoo");
     assertExpr("lpad(x, 4, 'ab')", "afoo");
     assertExpr("lpad(x, 2, 'ab')", "fo");
+    assertExpr("lpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
     assertExpr("lpad(null, 5, 'ab')", null);
     assertExpr("lpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
     assertExpr("lpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");
@@ -170,6 +171,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("rpad(x, 5, 'ab')", "fooab");
     assertExpr("rpad(x, 4, 'ab')", "fooa");
     assertExpr("rpad(x, 2, 'ab')", "fo");
+    assertExpr("rpad(x, -1, 'ab')", NullHandling.replaceWithDefault() ? null : "");
     assertExpr("rpad(null, 5, 'ab')", null);
     assertExpr("rpad(x, 2, '')", NullHandling.replaceWithDefault() ? null : "fo");
     assertExpr("rpad(x, 6, '')", NullHandling.replaceWithDefault() ? null : "foo");

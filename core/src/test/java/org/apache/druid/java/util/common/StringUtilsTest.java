@@ -217,7 +217,7 @@ public class StringUtilsTest
     Assert.assertEquals("", lpad);
 
     lpad = StringUtils.lpad("abc", -1, "de");
-    Assert.assertNull(lpad);
+    Assert.assertEquals("", lpad);
 
     lpad = StringUtils.lpad("abc", 10, "");
     Assert.assertEquals("abc", lpad);
@@ -242,7 +242,7 @@ public class StringUtilsTest
     Assert.assertEquals("", rpad);
 
     rpad = StringUtils.rpad("abc", -1, "de");
-    Assert.assertNull(rpad);
+    Assert.assertEquals("", rpad);
 
     rpad = StringUtils.rpad("abc", 10, "");
     Assert.assertEquals("abc", rpad);
