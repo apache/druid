@@ -19,15 +19,20 @@
 
 # Druid's Code Coverage Enforcement
 
-Druid has an automated way of checking if new code has adequate unit tests. 
-Druid CI checks are configured to enforce code coverage using JaCoCo. The CI checks will prevent PR from being merged 
+Druid code repository has an automated way of checking if new code has enough code coverage. 
+Druid CI checks are configured to enforce code coverage using JaCoCo. The CI checks will prevent a PR from being merged 
 if test coverage of new added code is below the set threshold. The CI checks filters test coverage based on a diff from
 your PR and make sure that the thresholds are met. Druid currently enforce branch and line code coverage.
+
+However, do note that our current code coverage checks are merely smoke tests. They only verify that a line or branch 
+of code has been called during the test, but not that the functionality has been tested sufficiently. 
+Reviewers should still verify that all the different branches are sufficiently tested by reviewing the tests. 
 
 ## Running code coverage locally
 Code coverage should be run locally to make sure the PR will pass Druid CI checks. 
 1. Code coverage on the codebase can be generated directly in [Intellij](../intellij-setup.md#Set-Code-Coverage-Runner). 
 2. Code coverage on just the diff of your PR can be generated in your terminal. First, you will have to install
 diff-test-coverage by running `npm install @connectis/diff-test-coverage`. Next, run the unit tests
-for the module you are working on `mvn -pl <MODULE_TO_CHECK> test jacoco:report`. Finally, run 
+for the module you are working on `mvn -pl <MODULE_TO_CHECK> test jacoco:report` 
+(this will create a HTML report in target/site/jacoco/index.html). Finally, run 
 `git diff master...HEAD | diff-test-coverage --coverage "**/target/site/jacoco/jacoco.xml" --type jacoco --log-template "full" --`  

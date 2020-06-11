@@ -41,6 +41,8 @@ your code pass the coverage threshold. In IntelliJ, edit the template of JUnit t
 to use Jacoco for code coverage (this provides branch coverage instead of the default which is only line coverage).
 You can then right click src/test/java folder of the modules you are modifying and click run with coverage. This
 will generate a report to show the current code coverage on the code (not just your change).
+![Code Coverage Runner Setup 1](intellij-images/code_coverage_1.png)
+![Code Coverage Runner Setup 2](intellij-images/code_coverage_2.png)
 
 ## Git Checkstyle Verification Hook (Optional)
 Git Checkstyle pre-commit hook can be installed to automatically run checkstyle verification before committing, 
