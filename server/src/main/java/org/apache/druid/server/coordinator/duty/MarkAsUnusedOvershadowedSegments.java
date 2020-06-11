@@ -66,9 +66,8 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
       addSegmentsFromServer(serverHolder, timelines);
     }
 
-    for (ServerHolder serverHolder : cluster.getRealtimes()) {
-      addSegmentsFromServer(serverHolder, timelines);
-    }
+    // Note that we do not include segments from ingestion services such as tasks or indexers,
+    // to prevent unpublished segments from prematurely overshadowing segments.
 
     // Mark all segments as unused in db that are overshadowed by served segments
     for (DataSegment dataSegment : params.getUsedSegments()) {

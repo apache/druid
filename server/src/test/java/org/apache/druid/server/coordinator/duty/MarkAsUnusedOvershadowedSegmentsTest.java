@@ -76,8 +76,7 @@ public class MarkAsUnusedOvershadowedSegmentsTest
   @Parameters(
       {
           "historical",
-          "broker",
-          "indexer-executor"
+          "broker"
       }
   )
   public void testRun(String serverTypeString)
