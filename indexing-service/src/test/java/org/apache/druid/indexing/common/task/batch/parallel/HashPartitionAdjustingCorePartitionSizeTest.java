@@ -23,8 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InlineInputSource;
-import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
@@ -32,12 +30,6 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.joda.time.Interval;
@@ -46,15 +38,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Set;
 
 @RunWith(Parameterized.class)
@@ -64,9 +53,6 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim1", "dim2"))
   );
-  private static final AggregatorFactory[] METRICS = new AggregatorFactory[]{
-      new LongSumAggregatorFactory("val", "val")
-  };
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim1", "dim2", "val"),
       null,
@@ -75,11 +61,6 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
       0
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2020-01-01/P1M");
-  private static final GranularitySpec GRANULARITY_SPEC = new UniformGranularitySpec(
-      Granularities.DAY,
-      Granularities.NONE,
-      Collections.singletonList(INTERVAL_TO_INDEX)
-  );
 
   @Parameterized.Parameters(name = "{0}, maxNumConcurrentSubTasks={1}")
   public static Iterable<Object[]> constructorFeeder()
