@@ -20,6 +20,7 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
@@ -27,6 +28,7 @@ import org.apache.druid.data.input.InputRow;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * This is a special shardSpec which is temporarily used during batch ingestion. In Druid, there is a concept
@@ -58,10 +60,12 @@ import java.util.Map;
  */
 public class BuildingNumberedShardSpec implements ShardSpec
 {
+  public static final String TYPE = "building_numbered";
+
   private final int partitionId;
 
   @JsonCreator
-  public BuildingNumberedShardSpec(int partitionId)
+  public BuildingNumberedShardSpec(@JsonProperty("partitionId") int partitionId)
   {
     Preconditions.checkArgument(partitionId >= 0, "partitionId >= 0");
     this.partitionId = partitionId;
@@ -101,6 +105,7 @@ public class BuildingNumberedShardSpec implements ShardSpec
     throw new UnsupportedOperationException();
   }
 
+  @JsonIgnore
   @Override
   public List<String> getDomainDimensions()
   {
@@ -117,5 +122,32 @@ public class BuildingNumberedShardSpec implements ShardSpec
   public boolean isCompatible(Class<? extends ShardSpec> other)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BuildingNumberedShardSpec shardSpec = (BuildingNumberedShardSpec) o;
+    return partitionId == shardSpec.partitionId;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(partitionId);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "BuildingNumberedShardSpec{" +
+           "partitionId=" + partitionId +
+           '}';
   }
 }

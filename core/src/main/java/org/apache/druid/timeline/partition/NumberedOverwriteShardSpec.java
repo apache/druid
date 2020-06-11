@@ -53,6 +53,7 @@ import java.util.Objects;
  */
 public class NumberedOverwriteShardSpec implements OverwriteShardSpec
 {
+  public static final String TYPE = "numbered_overwrite";
   private final int partitionId;
 
   private final short startRootPartitionId;
