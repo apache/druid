@@ -225,11 +225,6 @@ public class UnloadUnusedSegmentsTest
     CoordinatorStats stats = params.getCoordinatorStats();
     Assert.assertEquals(3, stats.getTieredStat("unneededCount", DruidServer.DEFAULT_TIER));
     Assert.assertEquals(1, stats.getTieredStat("unneededCount", "tier2"));
-    Assert.assertEquals(historicalPeon.getSegmentsToDrop(), Collections.singleton(segment1));
-    Assert.assertEquals(historicalTier2Peon.getSegmentsToDrop(), Collections.singleton(segment1));
-    Assert.assertEquals(brokerPeon.getSegmentsToDrop(), Collections.singleton(segment1));
-    Assert.assertEquals(indexerPeon.getSegmentsToDrop(), Collections.singleton(segment1));
-
   }
 
   private static void mockDruidServer(
