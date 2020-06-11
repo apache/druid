@@ -41,12 +41,14 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -56,6 +58,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -81,6 +84,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -100,8 +104,10 @@ public class DruidSchema extends AbstractSchema
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerConfig config;
+  private final SegmentManager segmentManager;
   private final ViewManager viewManager;
   private final ExecutorService cacheExec;
+  private final ScheduledExecutorService localSegmentExec;
   private final ConcurrentMap<String, DruidTable> tables;
 
   // For awaitInitialization.
@@ -122,6 +128,8 @@ public class DruidSchema extends AbstractSchema
   // All dataSources that need tables regenerated.
   private final Set<String> dataSourcesNeedingRebuild = new HashSet<>();
 
+  private final Set<String> broadcastDatasources = new HashSet<>();
+
   // All segments that need to be refreshed.
   private final TreeSet<SegmentId> segmentsNeedingRefresh = new TreeSet<>(SEGMENT_ORDER);
 
@@ -137,6 +145,7 @@ public class DruidSchema extends AbstractSchema
   public DruidSchema(
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
+      final SegmentManager segmentManager,
       final PlannerConfig config,
       final ViewManager viewManager,
       final Escalator escalator
@@ -144,9 +153,11 @@ public class DruidSchema extends AbstractSchema
   {
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
     Preconditions.checkNotNull(serverView, "serverView");
+    this.segmentManager = segmentManager;
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
+    this.localSegmentExec = Execs.scheduledSingleThreaded("DruidSchema-SegmentCache-%d");
     this.tables = new ConcurrentHashMap<>();
     this.escalator = escalator;
 
@@ -196,118 +207,129 @@ public class DruidSchema extends AbstractSchema
   public void start() throws InterruptedException
   {
     cacheExec.submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              while (!Thread.currentThread().isInterrupted()) {
-                final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
-                final Set<String> dataSourcesToRebuild = new TreeSet<>();
+        () -> {
+          try {
+            while (!Thread.currentThread().isInterrupted()) {
+              final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
+              final Set<String> dataSourcesToRebuild = new TreeSet<>();
 
-                try {
-                  synchronized (lock) {
-                    final long nextRefreshNoFuzz = DateTimes
-                        .utc(lastRefresh)
-                        .plus(config.getMetadataRefreshPeriod())
-                        .getMillis();
+              try {
+                synchronized (lock) {
+                  final long nextRefreshNoFuzz = DateTimes
+                      .utc(lastRefresh)
+                      .plus(config.getMetadataRefreshPeriod())
+                      .getMillis();
 
-                    // Fuzz a bit to spread load out when we have multiple brokers.
-                    final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
+                  // Fuzz a bit to spread load out when we have multiple brokers.
+                  final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
 
-                    while (true) {
-                      // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
-                      final boolean wasRecentFailure = DateTimes.utc(lastFailure)
-                                                                .plus(config.getMetadataRefreshPeriod())
-                                                                .isAfterNow();
+                  while (true) {
+                    // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
+                    final boolean wasRecentFailure = DateTimes.utc(lastFailure)
+                                                              .plus(config.getMetadataRefreshPeriod())
+                                                              .isAfterNow();
 
-                      if (isServerViewInitialized &&
-                          !wasRecentFailure &&
-                          (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
-                          (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
-                        // We need to do a refresh. Break out of the waiting loop.
-                        break;
-                      }
-
-                      if (isServerViewInitialized) {
-                        // Server view is initialized, but we don't need to do a refresh. Could happen if there are
-                        // no segments in the system yet. Just mark us as initialized, then.
-                        initialized.countDown();
-                      }
-
-                      // Wait some more, we'll wake up when it might be time to do another refresh.
-                      lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
+                    if (isServerViewInitialized &&
+                        !wasRecentFailure &&
+                        (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
+                        (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                      // We need to do a refresh. Break out of the waiting loop.
+                      break;
                     }
 
-                    segmentsToRefresh.addAll(segmentsNeedingRefresh);
-                    segmentsNeedingRefresh.clear();
-
-                    // Mutable segments need a refresh every period, since new columns could be added dynamically.
-                    segmentsNeedingRefresh.addAll(mutableSegments);
-
-                    lastFailure = 0L;
-                    lastRefresh = System.currentTimeMillis();
-                    refreshImmediately = false;
-                  }
-
-                  // Refresh the segments.
-                  final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
-
-                  synchronized (lock) {
-                    // Add missing segments back to the refresh list.
-                    segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
-
-                    // Compute the list of dataSources to rebuild tables for.
-                    dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
-                    refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
-                    dataSourcesNeedingRebuild.clear();
-
-                    lock.notifyAll();
-                  }
-
-                  // Rebuild the dataSources.
-                  for (String dataSource : dataSourcesToRebuild) {
-                    final DruidTable druidTable = buildDruidTable(dataSource);
-                    final DruidTable oldTable = tables.put(dataSource, druidTable);
-                    if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-                      log.info("dataSource [%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
-                    } else {
-                      log.debug("dataSource [%s] signature is unchanged.", dataSource);
+                    if (isServerViewInitialized) {
+                      // Server view is initialized, but we don't need to do a refresh. Could happen if there are
+                      // no segments in the system yet. Just mark us as initialized, then.
+                      initialized.countDown();
                     }
+
+                    // Wait some more, we'll wake up when it might be time to do another refresh.
+                    lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                   }
 
-                  initialized.countDown();
-                }
-                catch (InterruptedException e) {
-                  // Fall through.
-                  throw e;
-                }
-                catch (Exception e) {
-                  log.warn(e, "Metadata refresh failed, trying again soon.");
+                  segmentsToRefresh.addAll(segmentsNeedingRefresh);
+                  segmentsNeedingRefresh.clear();
 
-                  synchronized (lock) {
-                    // Add our segments and dataSources back to their refresh and rebuild lists.
-                    segmentsNeedingRefresh.addAll(segmentsToRefresh);
-                    dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
-                    lastFailure = System.currentTimeMillis();
-                    lock.notifyAll();
+                  // Mutable segments need a refresh every period, since new columns could be added dynamically.
+                  segmentsNeedingRefresh.addAll(mutableSegments);
+
+                  lastFailure = 0L;
+                  lastRefresh = System.currentTimeMillis();
+                  refreshImmediately = false;
+                }
+
+                // Refresh the segments.
+                final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
+
+                synchronized (lock) {
+                  // Add missing segments back to the refresh list.
+                  segmentsNeedingRefresh.addAll(Sets.difference(segmentsToRefresh, refreshed));
+
+                  // Compute the list of dataSources to rebuild tables for.
+                  dataSourcesToRebuild.addAll(dataSourcesNeedingRebuild);
+                  refreshed.forEach(segment -> dataSourcesToRebuild.add(segment.getDataSource()));
+                  dataSourcesNeedingRebuild.clear();
+
+                  lock.notifyAll();
+                }
+
+                // Rebuild the dataSources.
+                for (String dataSource : dataSourcesToRebuild) {
+                  final DruidTable druidTable = buildDruidTable(dataSource);
+                  final DruidTable oldTable = tables.put(dataSource, druidTable);
+                  if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
+                    log.info("dataSource [%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
+                  } else {
+                    log.debug("dataSource [%s] signature is unchanged.", dataSource);
                   }
+                }
+
+                initialized.countDown();
+              }
+              catch (InterruptedException e) {
+                // Fall through.
+                throw e;
+              }
+              catch (Exception e) {
+                log.warn(e, "Metadata refresh failed, trying again soon.");
+
+                synchronized (lock) {
+                  // Add our segments and dataSources back to their refresh and rebuild lists.
+                  segmentsNeedingRefresh.addAll(segmentsToRefresh);
+                  dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
+                  lastFailure = System.currentTimeMillis();
+                  lock.notifyAll();
                 }
               }
             }
-            catch (InterruptedException e) {
-              // Just exit.
-            }
-            catch (Throwable e) {
-              // Throwables that fall out to here (not caught by an inner try/catch) are potentially gnarly, like
-              // OOMEs. Anyway, let's just emit an alert and stop refreshing metadata.
-              log.makeAlert(e, "Metadata refresh failed permanently").emit();
-              throw e;
-            }
-            finally {
-              log.info("Metadata refresh stopped.");
-            }
+          }
+          catch (InterruptedException e) {
+            // Just exit.
+          }
+          catch (Throwable e) {
+            // Throwables that fall out to here (not caught by an inner try/catch) are potentially gnarly, like
+            // OOMEs. Anyway, let's just emit an alert and stop refreshing metadata.
+            log.makeAlert(e, "Metadata refresh failed permanently").emit();
+            throw e;
+          }
+          finally {
+            log.info("Metadata refresh stopped.");
+          }
+        }
+    );
+
+    ScheduledExecutors.scheduleWithFixedDelay(
+        localSegmentExec,
+        config.getMetadataRefreshPeriod().toStandardDuration(),
+        config.getMetadataRefreshPeriod().toStandardDuration(),
+        () -> {
+          synchronized (lock) {
+            // refresh known broadcast segments
+            Set<String> localSegmentDatasources = segmentManager.getDataSourceNames();
+            dataSourcesNeedingRebuild.addAll(localSegmentDatasources);
+            broadcastDatasources.clear();
+            broadcastDatasources.addAll(localSegmentDatasources);
+            lock.notifyAll();
           }
         }
     );
@@ -324,6 +346,7 @@ public class DruidSchema extends AbstractSchema
   public void stop()
   {
     cacheExec.shutdownNow();
+    localSegmentExec.shutdownNow();
   }
 
   public void awaitInitialization() throws InterruptedException
@@ -350,12 +373,6 @@ public class DruidSchema extends AbstractSchema
   @VisibleForTesting
   void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    if (server.getType().equals(ServerType.BROKER)) {
-      // in theory we could just filter this to ensure we don't put ourselves in here, to make dope broker tree
-      // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite metadata
-      // loop...
-      return;
-    }
     synchronized (lock) {
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
       AvailableSegmentMetadata segmentMetadata = knownSegments != null ? knownSegments.get(segment.getId()) : null;
@@ -434,10 +451,6 @@ public class DruidSchema extends AbstractSchema
   @VisibleForTesting
   void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    if (server.getType().equals(ServerType.BROKER)) {
-      // cheese it
-      return;
-    }
     synchronized (lock) {
       log.debug("Segment[%s] is gone from server[%s]", segment.getId(), server.getName());
       final Map<SegmentId, AvailableSegmentMetadata> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
@@ -616,6 +629,12 @@ public class DruidSchema extends AbstractSchema
 
       final RowSignature.Builder builder = RowSignature.builder();
       columnTypes.forEach(builder::add);
+      if (broadcastDatasources.contains(dataSource)) {
+        return new DruidTable(
+            new GlobalTableDataSource(dataSource),
+            builder.build()
+        );
+      }
       return new DruidTable(new TableDataSource(dataSource), builder.build());
     }
   }
