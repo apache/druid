@@ -252,7 +252,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             segments.get(i).getShardSpec()
         );
       } else {
-        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
       }
     }
 
@@ -301,7 +301,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             segments.get(i).getShardSpec()
         );
       } else {
-        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
       }
     }
 
@@ -414,7 +414,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     for (int i = 0; i < 6; i++) {
       Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", 3 + i / 2, 3 + i / 2 + 1), segments.get(i).getInterval());
-      Assert.assertEquals(new NumberedShardSpec(i % 2, 0), segments.get(i).getShardSpec());
+      Assert.assertEquals(new NumberedShardSpec(i % 2, 2), segments.get(i).getShardSpec());
     }
 
     Assert.assertTrue(compactionFuture.get().lhs.isSuccess());
@@ -472,7 +472,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(1, segments.size());
 
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
-    Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
     Assert.assertEquals(DEFAULT_COMPACTION_STATE, segments.get(0).getLastCompactionState());
 
     // hour segmentGranularity
@@ -594,7 +594,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             segments.get(i).getShardSpec()
         );
       } else {
-        Assert.assertEquals(new NumberedShardSpec(i % 2, 0), segments.get(i).getShardSpec());
+        Assert.assertEquals(new NumberedShardSpec(i % 2, 2), segments.get(i).getShardSpec());
       }
     }
 
@@ -667,7 +667,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             segments.get(i).getShardSpec()
         );
       } else {
-        Assert.assertEquals(new NumberedShardSpec(i % 2, 0), segments.get(i).getShardSpec());
+        Assert.assertEquals(new NumberedShardSpec(i % 2, 2), segments.get(i).getShardSpec());
       }
     }
 
@@ -757,7 +757,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
             segments.get(i).getShardSpec()
         );
       } else {
-        Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
+        Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(i).getShardSpec());
       }
     }
   }

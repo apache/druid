@@ -43,6 +43,7 @@ import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -159,7 +160,19 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask task = newTask(interval, segmentGranularity, appendToExisting, true);
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
-    assertShardSpec(interval);
+    assertShardSpec(interval, appendToExisting);
+  }
+
+  private void runOverwriteTask(
+      @Nullable Interval interval,
+      Granularity segmentGranularity,
+      LockGranularity actualLockGranularity
+  )
+  {
+    final ParallelIndexSupervisorTask task = newTask(interval, segmentGranularity, false, true);
+    task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
+    Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
+    assertShardSpecAfterOverwrite(interval, actualLockGranularity);
   }
 
   private void runTestTask(@Nullable Interval interval, Granularity segmentGranularity)
@@ -178,7 +191,11 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     );
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
-    runTestTask(inputInterval, secondSegmentGranularity);
+    runOverwriteTask(
+        inputInterval,
+        secondSegmentGranularity,
+        secondSegmentGranularity.equals(Granularities.DAY) ? lockGranularity : LockGranularity.TIME_CHUNK
+    );
 
     // Verify that the segment has been replaced.
     final Collection<DataSegment> newSegments =
@@ -189,12 +206,12 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     Assert.assertEquals(new HashSet<>(newSegments), visibles);
   }
 
-  private void assertShardSpec(@Nullable Interval interval)
+  private void assertShardSpec(@Nullable Interval interval, boolean appendToExisting)
   {
     final Interval nonNullInterval = interval == null ? Intervals.ETERNITY : interval;
     final Collection<DataSegment> segments =
         getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", nonNullInterval, Segments.ONLY_VISIBLE);
-    if (lockGranularity != LockGranularity.SEGMENT) {
+    if (!appendToExisting && lockGranularity != LockGranularity.SEGMENT) {
       // Check the core partition set in the shardSpec
       final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
       segments.forEach(
@@ -212,6 +229,35 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         Assert.assertSame(NumberedShardSpec.class, segment.getShardSpec().getClass());
         final NumberedShardSpec shardSpec = (NumberedShardSpec) segment.getShardSpec();
         Assert.assertEquals(0, shardSpec.getPartitions());
+      }
+    }
+  }
+
+  private void assertShardSpecAfterOverwrite(@Nullable Interval interval, LockGranularity actualLockGranularity)
+  {
+    final Interval nonNullInterval = interval == null ? Intervals.ETERNITY : interval;
+    final Collection<DataSegment> segments =
+        getStorageCoordinator().retrieveUsedSegmentsForInterval("dataSource", nonNullInterval, Segments.ONLY_VISIBLE);
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    segments.forEach(
+        segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+    );
+    if (actualLockGranularity != LockGranularity.SEGMENT) {
+      // Check the core partition set in the shardSpec
+      for (List<DataSegment> segmentsPerInterval : intervalToSegments.values()) {
+        for (DataSegment segment : segmentsPerInterval) {
+          Assert.assertSame(NumberedShardSpec.class, segment.getShardSpec().getClass());
+          final NumberedShardSpec shardSpec = (NumberedShardSpec) segment.getShardSpec();
+          Assert.assertEquals(segmentsPerInterval.size(), shardSpec.getPartitions());
+        }
+      }
+    } else {
+      for (List<DataSegment> segmentsPerInterval : intervalToSegments.values()) {
+        for (DataSegment segment : segmentsPerInterval) {
+          Assert.assertSame(NumberedOverwriteShardSpec.class, segment.getShardSpec().getClass());
+          final NumberedOverwriteShardSpec shardSpec = (NumberedOverwriteShardSpec) segment.getShardSpec();
+          Assert.assertEquals(segmentsPerInterval.size(), shardSpec.getAtomicUpdateGroupSize());
+        }
       }
     }
   }
@@ -246,10 +292,11 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   public void testRunInSequential()
   {
     final Interval interval = Intervals.of("2017-12/P1M");
-    final ParallelIndexSupervisorTask task = newTask(interval, false, false);
+    final boolean appendToExisting = false;
+    final ParallelIndexSupervisorTask task = newTask(interval, appendToExisting, false);
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
-    assertShardSpec(interval);
+    assertShardSpec(interval, appendToExisting);
   }
 
   @Test
@@ -264,10 +311,11 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   public void testWith1MaxNumConcurrentSubTasks()
   {
     final Interval interval = Intervals.of("2017-12/P1M");
+    final boolean appendToExisting = false;
     final ParallelIndexSupervisorTask task = newTask(
         interval,
         Granularities.DAY,
-        false,
+        appendToExisting,
         true,
         new ParallelIndexTuningConfig(
             null,
@@ -301,7 +349,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
     Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getCurrentRunner());
-    assertShardSpec(interval);
+    assertShardSpec(interval, appendToExisting);
   }
 
   @Test
