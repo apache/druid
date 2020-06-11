@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
@@ -47,7 +48,11 @@ import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
@@ -75,68 +80,52 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
       Granularities.NONE,
       Collections.singletonList(INTERVAL_TO_INDEX)
   );
-  private static final int MAX_NUM_CONCURRENT_SUB_TASKS = 2;
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "{0}, maxNumConcurrentSubTasks={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK},
-        new Object[]{LockGranularity.SEGMENT}
+        new Object[]{LockGranularity.TIME_CHUNK, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, 1},
+        new Object[]{LockGranularity.SEGMENT, 2}
     );
   }
 
-  public HashPartitionAdjustingCorePartitionSizeTest(LockGranularity lockGranularity)
+  private final int maxNumConcurrentSubTasks;
+
+  public HashPartitionAdjustingCorePartitionSizeTest(LockGranularity lockGranularity, int maxNumConcurrentSubTasks)
   {
     super(lockGranularity, true);
+    this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
   }
 
   @Test
   public void testLessPartitionsThanBuckets() throws IOException
   {
-    final String data;
-    try (final ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
-         final DataOutputStream out = new DataOutputStream(baos)) {
-      for (int i = 0; i < 3; i++) {
-        out.writeUTF(StringUtils.format("2020-01-01T00:00:00,%s,b1,%d\n", "a" + (i + 1), 10 * (i + 1)));
+    final File inputDir = temporaryFolder.newFolder();
+    for (int i = 0; i < 3; i++) {
+      try (final Writer writer =
+               Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
+        writer.write(StringUtils.format("2020-01-01T00:00:00,%s,b1,%d\n", "a" + (i + 1), 10 * (i + 1)));
       }
-      data = baos.toString(StringUtils.UTF8_STRING);
     }
-    final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
-        new InlineInputSource(data),
-        INPUT_FORMAT,
-        false
-    );
     final DimensionBasedPartitionsSpec partitionsSpec = new HashedPartitionsSpec(
         null,
         10,
         ImmutableList.of("dim1")
     );
-    final ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+    final Set<DataSegment> segments = runTestTask(
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
         null,
-        null,
-        null,
-        new ParallelIndexIngestionSpec(
-            new DataSchema(
-                "testDatasource",
-                TIMESTAMP_SPEC,
-                DIMENSIONS_SPEC,
-                METRICS,
-                GRANULARITY_SPEC,
-                null
-            ),
-            ioConfig,
-            newTuningConfig(partitionsSpec, MAX_NUM_CONCURRENT_SUB_TASKS)
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        INTERVAL_TO_INDEX,
+        inputDir,
+        "test_*",
+        partitionsSpec,
+        maxNumConcurrentSubTasks,
+        TaskState.SUCCESS
     );
-    final Set<DataSegment> segments = runTask(task, TaskState.SUCCESS);
     Assert.assertEquals(3, segments.size());
     segments.forEach(segment -> {
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
@@ -150,49 +139,30 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
   @Test
   public void testEqualNumberOfPartitionsToBuckets() throws IOException
   {
-    final String data;
-    try (final ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
-         final DataOutputStream out = new DataOutputStream(baos)) {
-      for (int i = 0; i < 10; i++) {
-        out.writeUTF(StringUtils.format("2020-01-01T00:00:00,%s,b1,%d\n", "aa" + (i + 10), 10 * (i + 1)));
+    final File inputDir = temporaryFolder.newFolder();
+    for (int i = 0; i < 10; i++) {
+      try (final Writer writer =
+               Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
+        writer.write(StringUtils.format("2020-01-01T00:00:00,%s,b1,%d\n", "aa" + (i + 10), 10 * (i + 1)));
       }
-      data = baos.toString(StringUtils.UTF8_STRING);
     }
-    final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
-        new InlineInputSource(data),
-        INPUT_FORMAT,
-        false
-    );
     final DimensionBasedPartitionsSpec partitionsSpec = new HashedPartitionsSpec(
         null,
         5,
         ImmutableList.of("dim1")
     );
-    final ParallelIndexSupervisorTask task = new ParallelIndexSupervisorTask(
+    final Set<DataSegment> segments = runTestTask(
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
         null,
-        null,
-        null,
-        new ParallelIndexIngestionSpec(
-            new DataSchema(
-                "testDatasource",
-                TIMESTAMP_SPEC,
-                DIMENSIONS_SPEC,
-                METRICS,
-                GRANULARITY_SPEC,
-                null
-            ),
-            ioConfig,
-            newTuningConfig(partitionsSpec, MAX_NUM_CONCURRENT_SUB_TASKS)
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        INTERVAL_TO_INDEX,
+        inputDir,
+        "test_*",
+        partitionsSpec,
+        maxNumConcurrentSubTasks,
+        TaskState.SUCCESS
     );
-    final Set<DataSegment> segments = runTask(task, TaskState.SUCCESS);
     Assert.assertEquals(5, segments.size());
     segments.forEach(segment -> {
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
