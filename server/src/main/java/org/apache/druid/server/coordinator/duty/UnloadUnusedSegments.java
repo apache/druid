@@ -52,7 +52,8 @@ public class UnloadUnusedSegments implements CoordinatorDuty
             serverHolder,
             usedSegments,
             params,
-            stats
+            stats,
+            false
         );
       }
     }
@@ -62,7 +63,8 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           serverHolder,
           usedSegments,
           params,
-          stats
+          stats,
+          false
       );
     }
 
@@ -71,7 +73,8 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           serverHolder,
           usedSegments,
           params,
-          stats
+          stats,
+          true
       );
     }
 
@@ -82,12 +85,25 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       ServerHolder serverHolder,
       Set<DataSegment> usedSegments,
       DruidCoordinatorRuntimeParams params,
-      CoordinatorStats stats
+      CoordinatorStats stats,
+      boolean dropBroadcastOnly
   )
   {
     ImmutableDruidServer server = serverHolder.getServer();
 
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+      // The coordinator tracks used segments by examining the metadata store.
+      // For tasks, the segments they create are unpublished, so those segments will get dropped
+      // unless we exclude them here. We currently drop only broadcast segments in that case.
+      // This check relies on the assumption that queryable stream tasks will never
+      // ingest data to a broadcast datasource. If a broadcast datasource is switched to become a non-broadcast
+      // datasource, this will result in the those segments not being dropped from tasks.
+      // A more robust solution which requires a larger rework could be to expose
+      // the set of segments that were created by a task/indexer here, and exclude them.
+      if (dropBroadcastOnly && !params.getBroadcastDatasources().contains(dataSource.getName())) {
+        continue;
+      }
+
       for (DataSegment segment : dataSource.getSegments()) {
         if (!usedSegments.contains(segment)) {
           LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());

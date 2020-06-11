@@ -58,17 +58,16 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
 
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
-        ImmutableDruidServer server = serverHolder.getServer();
-
-        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          VersionedIntervalTimeline<String, DataSegment> timeline = timelines
-              .computeIfAbsent(
-                  dataSource.getName(),
-                  dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
-              );
-          VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
-        }
+        addSegmentsFromServer(serverHolder, timelines);
       }
+    }
+
+    for (ServerHolder serverHolder : cluster.getBrokers()) {
+      addSegmentsFromServer(serverHolder, timelines);
+    }
+
+    for (ServerHolder serverHolder : cluster.getRealtimes()) {
+      addSegmentsFromServer(serverHolder, timelines);
     }
 
     // Mark all segments as unused in db that are overshadowed by served segments
@@ -82,5 +81,22 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     }
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
+  }
+
+  private void addSegmentsFromServer(
+      ServerHolder serverHolder,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines
+  )
+  {
+    ImmutableDruidServer server = serverHolder.getServer();
+
+    for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+      VersionedIntervalTimeline<String, DataSegment> timeline = timelines
+          .computeIfAbsent(
+              dataSource.getName(),
+              dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
+          );
+      VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
+    }
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -63,10 +64,17 @@ public class UnloadUnusedSegmentsTest
   private LoadQueuePeonTester indexerPeon;
   private DataSegment segment1;
   private DataSegment segment2;
+  private DataSegment broadcastSegment;
+  private DataSegment realtimeOnlySegment;
   private List<DataSegment> segments;
+  private List<DataSegment> segmentsForRealtime;
   private ImmutableDruidDataSource dataSource1;
   private ImmutableDruidDataSource dataSource2;
+  private ImmutableDruidDataSource dataSource2ForRealtime;
+  private ImmutableDruidDataSource broadcastDatasource;
   private List<ImmutableDruidDataSource> dataSources;
+  private List<ImmutableDruidDataSource> dataSourcesForRealtime;
+  private Set<String> broadcastDatasourceNames;
 
   @Before
   public void setUp()
@@ -81,7 +89,7 @@ public class UnloadUnusedSegmentsTest
 
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");
-    DateTime version = DateTimes.of("2012-03-01");
+    DateTime version = DateTimes.of("2012-05-01");
     segment1 = new DataSegment(
         "datasource1",
         new Interval(start1, start1.plusHours(1)),
@@ -95,7 +103,29 @@ public class UnloadUnusedSegmentsTest
     );
     segment2 = new DataSegment(
         "datasource2",
+        new Interval(start1, start1.plusHours(1)),
+        version.toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        0,
+        7L
+    );
+    realtimeOnlySegment = new DataSegment(
+        "datasource2",
         new Interval(start2, start2.plusHours(1)),
+        version.toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        0,
+        7L
+    );
+    broadcastSegment = new DataSegment(
+        "broadcastDatasource",
+        new Interval(start1, start1.plusHours(1)),
         version.toString(),
         new HashMap<>(),
         new ArrayList<>(),
@@ -108,6 +138,11 @@ public class UnloadUnusedSegmentsTest
     segments = new ArrayList<>();
     segments.add(segment1);
     segments.add(segment2);
+    segments.add(broadcastSegment);
+
+    segmentsForRealtime = new ArrayList<>();
+    segmentsForRealtime.add(realtimeOnlySegment);
+    segmentsForRealtime.add(broadcastSegment);
 
     historicalPeon = new LoadQueuePeonTester();
     historicalTier2Peon = new LoadQueuePeonTester();
@@ -119,14 +154,29 @@ public class UnloadUnusedSegmentsTest
         Collections.emptyMap(),
         Collections.singleton(segment1)
     );
-
     dataSource2 = new ImmutableDruidDataSource(
-        "dataSource1",
+        "dataSource2",
         Collections.emptyMap(),
         Collections.singleton(segment2)
     );
 
-    dataSources = ImmutableList.of(dataSource1, dataSource2);
+    broadcastDatasourceNames = Collections.singleton("broadcastDatasource");
+    broadcastDatasource = new ImmutableDruidDataSource(
+        "broadcastDatasource",
+        Collections.emptyMap(),
+        Collections.singleton(broadcastSegment)
+    );
+
+    dataSources = ImmutableList.of(dataSource1, dataSource2, broadcastDatasource);
+
+    // This simulates a task that is ingesting to an existing non-broadcast datasource, with unpublished segments,
+    // while also having a broadcast segment loaded.
+    dataSource2ForRealtime = new ImmutableDruidDataSource(
+        "dataSource2",
+        Collections.emptyMap(),
+        Collections.singleton(realtimeOnlySegment)
+    );
+    dataSourcesForRealtime = ImmutableList.of(dataSource2ForRealtime, broadcastDatasource);
   }
 
   @After
@@ -179,15 +229,17 @@ public class UnloadUnusedSegmentsTest
         DruidServer.DEFAULT_TIER,
         30L,
         100L,
-        segments,
-        dataSources
+        segmentsForRealtime,
+        dataSourcesForRealtime
     );
 
     // Mock stuff that the coordinator needs
     mockCoordinator(coordinator);
 
-    // We keep datasource2, drop datasource1 from all servers
-    Set<DataSegment> usedSegments = Collections.singleton(segment2);
+    // We keep datasource2 segments only, drop datasource1 and broadcastDatasource from all servers
+    // realtimeSegment is intentionally missing from the set, to match how a realtime tasks's unpublished segments
+    // will not appear in the coordinator's view of used segments.
+    Set<DataSegment> usedSegments = ImmutableSet.of(segment2);
 
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
@@ -219,12 +271,15 @@ public class UnloadUnusedSegmentsTest
             )
         )
         .withUsedSegmentsInTest(usedSegments)
+        .withBroadcastDatasources(broadcastDatasourceNames)
         .build();
 
     params = new UnloadUnusedSegments().run(params);
     CoordinatorStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(3, stats.getTieredStat("unneededCount", DruidServer.DEFAULT_TIER));
-    Assert.assertEquals(1, stats.getTieredStat("unneededCount", "tier2"));
+
+    // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer
+    Assert.assertEquals(5, stats.getTieredStat("unneededCount", DruidServer.DEFAULT_TIER));
+    Assert.assertEquals(2, stats.getTieredStat("unneededCount", "tier2"));
   }
 
   private static void mockDruidServer(
