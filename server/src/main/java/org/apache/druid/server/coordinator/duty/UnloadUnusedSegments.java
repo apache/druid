@@ -33,7 +33,7 @@ import java.util.Set;
 import java.util.SortedSet;
 
 /**
- * Unloads segments that are no longer marked as used from Historical servers.
+ * Unloads segments that are no longer marked as used from servers.
  */
 public class UnloadUnusedSegments implements CoordinatorDuty
 {
@@ -48,29 +48,62 @@ public class UnloadUnusedSegments implements CoordinatorDuty
 
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
-        ImmutableDruidServer server = serverHolder.getServer();
+        handleUnusedSegmentsForServer(
+            serverHolder,
+            usedSegments,
+            params,
+            stats
+        );
+      }
+    }
 
-        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          for (DataSegment segment : dataSource.getSegments()) {
-            if (!usedSegments.contains(segment)) {
-              LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
+    for (ServerHolder serverHolder : cluster.getBrokers()) {
+      handleUnusedSegmentsForServer(
+          serverHolder,
+          usedSegments,
+          params,
+          stats
+      );
+    }
 
-              if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-                queuePeon.dropSegment(segment, () -> {});
-                stats.addToTieredStat("unneededCount", server.getTier(), 1);
-                log.info(
-                    "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
-                    segment.getId(),
-                    server.getName(),
-                    server.getTier()
-                );
-              }
-            }
+    for (ServerHolder serverHolder : cluster.getRealtimes()) {
+      handleUnusedSegmentsForServer(
+          serverHolder,
+          usedSegments,
+          params,
+          stats
+      );
+    }
+
+    return params.buildFromExisting().withCoordinatorStats(stats).build();
+  }
+
+  private void handleUnusedSegmentsForServer(
+      ServerHolder serverHolder,
+      Set<DataSegment> usedSegments,
+      DruidCoordinatorRuntimeParams params,
+      CoordinatorStats stats
+  )
+  {
+    ImmutableDruidServer server = serverHolder.getServer();
+
+    for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+      for (DataSegment segment : dataSource.getSegments()) {
+        if (!usedSegments.contains(segment)) {
+          LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
+
+          if (!queuePeon.getSegmentsToDrop().contains(segment)) {
+            queuePeon.dropSegment(segment, () -> {});
+            stats.addToTieredStat("unneededCount", server.getTier(), 1);
+            log.info(
+                "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
+                segment.getId(),
+                server.getName(),
+                server.getTier()
+            );
           }
         }
       }
     }
-
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 }
