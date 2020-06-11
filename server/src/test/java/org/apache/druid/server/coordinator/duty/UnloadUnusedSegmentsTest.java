@@ -27,6 +27,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
@@ -35,6 +36,8 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -75,6 +78,7 @@ public class UnloadUnusedSegmentsTest
   private List<ImmutableDruidDataSource> dataSources;
   private List<ImmutableDruidDataSource> dataSourcesForRealtime;
   private Set<String> broadcastDatasourceNames;
+  private MetadataRuleManager databaseRuleManager;
 
   @Before
   public void setUp()
@@ -86,6 +90,7 @@ public class UnloadUnusedSegmentsTest
     indexerServer = EasyMock.createMock(ImmutableDruidServer.class);
     segment1 = EasyMock.createMock(DataSegment.class);
     segment2 = EasyMock.createMock(DataSegment.class);
+    databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
 
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");
@@ -150,12 +155,12 @@ public class UnloadUnusedSegmentsTest
     indexerPeon = new LoadQueuePeonTester();
 
     dataSource1 = new ImmutableDruidDataSource(
-        "dataSource1",
+        "datasource1",
         Collections.emptyMap(),
         Collections.singleton(segment1)
     );
     dataSource2 = new ImmutableDruidDataSource(
-        "dataSource2",
+        "datasource2",
         Collections.emptyMap(),
         Collections.singleton(segment2)
     );
@@ -172,7 +177,7 @@ public class UnloadUnusedSegmentsTest
     // This simulates a task that is ingesting to an existing non-broadcast datasource, with unpublished segments,
     // while also having a broadcast segment loaded.
     dataSource2ForRealtime = new ImmutableDruidDataSource(
-        "dataSource2",
+        "datasource2",
         Collections.emptyMap(),
         Collections.singleton(realtimeOnlySegment)
     );
@@ -187,6 +192,7 @@ public class UnloadUnusedSegmentsTest
     EasyMock.verify(historicalServerTier2);
     EasyMock.verify(brokerServer);
     EasyMock.verify(indexerServer);
+    EasyMock.verify(databaseRuleManager);
   }
 
   @Test
@@ -236,6 +242,8 @@ public class UnloadUnusedSegmentsTest
     // Mock stuff that the coordinator needs
     mockCoordinator(coordinator);
 
+    mockRuleManager(databaseRuleManager);
+
     // We keep datasource2 segments only, drop datasource1 and broadcastDatasource from all servers
     // realtimeSegment is intentionally missing from the set, to match how a realtime tasks's unpublished segments
     // will not appear in the coordinator's view of used segments.
@@ -272,6 +280,7 @@ public class UnloadUnusedSegmentsTest
         )
         .withUsedSegmentsInTest(usedSegments)
         .withBroadcastDatasources(broadcastDatasourceNames)
+        .withDatabaseRuleManager(databaseRuleManager)
         .build();
 
     params = new UnloadUnusedSegments().run(params);
@@ -321,5 +330,35 @@ public class UnloadUnusedSegmentsTest
     );
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
+  }
+
+  private static void mockRuleManager(MetadataRuleManager metadataRuleManager)
+  {
+    EasyMock.expect(metadataRuleManager.getRulesWithDefault("datasource1")).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(
+                ImmutableMap.of(
+                    DruidServer.DEFAULT_TIER, 1,
+                    "tier2", 1
+                )
+            )
+        )).anyTimes();
+
+    EasyMock.expect(metadataRuleManager.getRulesWithDefault("datasource2")).andReturn(
+        Collections.singletonList(
+            new ForeverLoadRule(
+                ImmutableMap.of(
+                    DruidServer.DEFAULT_TIER, 1,
+                    "tier2", 1
+                )
+            )
+        )).anyTimes();
+
+    EasyMock.expect(metadataRuleManager.getRulesWithDefault("broadcastDatasource")).andReturn(
+        Collections.singletonList(
+            new ForeverBroadcastDistributionRule()
+        )).anyTimes();
+
+    EasyMock.replay(metadataRuleManager);
   }
 }

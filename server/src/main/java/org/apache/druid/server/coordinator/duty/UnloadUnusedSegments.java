@@ -27,8 +27,13 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -46,6 +51,11 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     Set<DataSegment> usedSegments = params.getUsedSegments();
     DruidCluster cluster = params.getDruidCluster();
 
+    Map<String, Boolean> broadcastStatusByDatasource = new HashMap<>();
+    for (String broadcastDatasource : params.getBroadcastDatasources()) {
+      broadcastStatusByDatasource.put(broadcastDatasource, true);
+    }
+
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         handleUnusedSegmentsForServer(
@@ -53,7 +63,8 @@ public class UnloadUnusedSegments implements CoordinatorDuty
             usedSegments,
             params,
             stats,
-            false
+            false,
+            broadcastStatusByDatasource
         );
       }
     }
@@ -64,7 +75,8 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           usedSegments,
           params,
           stats,
-          false
+          false,
+          broadcastStatusByDatasource
       );
     }
 
@@ -74,7 +86,8 @@ public class UnloadUnusedSegments implements CoordinatorDuty
           usedSegments,
           params,
           stats,
-          true
+          true,
+          broadcastStatusByDatasource
       );
     }
 
@@ -86,12 +99,26 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       Set<DataSegment> usedSegments,
       DruidCoordinatorRuntimeParams params,
       CoordinatorStats stats,
-      boolean dropBroadcastOnly
+      boolean dropBroadcastOnly,
+      Map<String, Boolean> broadcastStatusByDatasource
   )
   {
     ImmutableDruidServer server = serverHolder.getServer();
-
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+      boolean isBroadcastDatasource = broadcastStatusByDatasource.computeIfAbsent(
+          dataSource.getName(),
+          (dataSourceName) -> {
+            List<Rule> rules = params.getDatabaseRuleManager().getRulesWithDefault(dataSource.getName());
+            for (Rule rule : rules) {
+              // A datasource is considered a broadcast datasource if it has any broadcast rules.
+              if (rule instanceof BroadcastDistributionRule) {
+                return true;
+              }
+            }
+            return false;
+          }
+      );
+
       // The coordinator tracks used segments by examining the metadata store.
       // For tasks, the segments they create are unpublished, so those segments will get dropped
       // unless we exclude them here. We currently drop only broadcast segments in that case.
@@ -100,7 +127,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       // datasource, this will result in the those segments not being dropped from tasks.
       // A more robust solution which requires a larger rework could be to expose
       // the set of segments that were created by a task/indexer here, and exclude them.
-      if (dropBroadcastOnly && !params.getBroadcastDatasources().contains(dataSource.getName())) {
+      if (dropBroadcastOnly && !isBroadcastDatasource) {
         continue;
       }
 
