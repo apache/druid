@@ -29,6 +29,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,11 +45,21 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
+@RunWith(Parameterized.class)
+public class CompressedColumnarIntsSupplierTest
 {
+
+  @Parameters(name = "{0}")
+  public static Object[] compressionStrategies()
+  {
+    return CompressionStrategy.noNoneValues();
+  }
+
+  private final CompressionStrategy compressionStrategy;
+
   public CompressedColumnarIntsSupplierTest(CompressionStrategy compressionStrategy)
   {
-    super(compressionStrategy);
+    this.compressionStrategy = compressionStrategy;
   }
 
   private Closer closer;

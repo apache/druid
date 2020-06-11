@@ -62,7 +62,7 @@ public class CompressionStrategyTest
     );
   }
 
-  protected final CompressionStrategy compressionStrategy;
+  private final CompressionStrategy compressionStrategy;
 
   public CompressionStrategyTest(CompressionStrategy compressionStrategy)
   {

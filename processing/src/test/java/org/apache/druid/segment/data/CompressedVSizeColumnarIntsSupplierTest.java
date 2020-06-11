@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(Parameterized.class)
-public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategyTest
+public class CompressedVSizeColumnarIntsSupplierTest
 {
   @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}")
   public static Iterable<Object[]> compressionStrategies()
@@ -71,7 +71,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
 
   public CompressedVSizeColumnarIntsSupplierTest(CompressionStrategy compressionStrategy, ByteOrder byteOrder)
   {
-    super(compressionStrategy);
+    this.compressionStrategy = compressionStrategy;
     this.byteOrder = byteOrder;
   }
 
@@ -79,6 +79,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   private ColumnarInts columnarInts;
   private CompressedVSizeColumnarIntsSupplier supplier;
   private int[] vals;
+  private final CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
 
 
