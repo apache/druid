@@ -24,8 +24,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -90,6 +94,13 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   public boolean canVectorize()
   {
     return expression == null;
+  }
+
+  @Override
+  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
+  {
+    final ColumnCapabilities originalCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(fieldName);
+    return originalCapabilities == null || originalCapabilities.canVectorize();
   }
 
   @Override

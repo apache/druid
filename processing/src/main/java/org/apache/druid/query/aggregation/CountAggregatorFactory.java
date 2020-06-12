@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -73,6 +74,12 @@ public class CountAggregatorFactory extends AggregatorFactory
 
   @Override
   public boolean canVectorize()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
   {
     return true;
   }

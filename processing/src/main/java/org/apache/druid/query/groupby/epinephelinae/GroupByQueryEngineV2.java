@@ -65,6 +65,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -76,6 +77,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import static org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.columnCanVectorize;
 
 /**
  * Class that knows how to process a groupBy query on a single {@link StorageAdapter}. It returns a {@link Sequence}
@@ -143,9 +146,22 @@ public class GroupByQueryEngineV2
       final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
       final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-      final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
+      boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
           VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
       );
+
+      VectorCursor cursor = null;
+      if (doVectorize) {
+        cursor = storageAdapter.makeVectorCursor(
+            Filters.toFilter(query.getDimFilter()),
+            interval,
+            query.getVirtualColumns(),
+            false,
+            queryConfig.getVectorSize(),
+            null
+        );
+        doVectorize = columnCanVectorize(cursor, query.getAggregatorSpecs());
+      }
 
       final Sequence<ResultRow> result;
 
@@ -158,7 +174,7 @@ public class GroupByQueryEngineV2
             filter,
             interval,
             querySpecificConfig,
-            queryConfig
+            cursor
         );
       } else {
         result = processNonVectorized(

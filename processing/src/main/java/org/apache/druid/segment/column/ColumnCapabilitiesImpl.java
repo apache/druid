@@ -213,6 +213,17 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
            filterable;
   }
 
+  @Override
+  public boolean canVectorize()
+  {
+    return !dictionaryEncoded
+           && (type == ValueType.STRING
+               || type == ValueType.LONG
+               || type == ValueType.FLOAT
+               || type == ValueType.DOUBLE
+           );
+  }
+
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)
   {
     this.filterable = filterable;

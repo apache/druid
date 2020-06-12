@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -109,6 +110,13 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   public boolean canVectorize()
   {
     return true;
+  }
+
+  @Override
+  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
+  {
+    final ColumnCapabilities originalCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(fieldName);
+    return originalCapabilities == null || originalCapabilities.canVectorize();
   }
 
   @Override

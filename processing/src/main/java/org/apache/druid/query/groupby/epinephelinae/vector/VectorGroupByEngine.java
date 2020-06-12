@@ -89,6 +89,18 @@ public class VectorGroupByEngine
            && adapter.canVectorize(filter, query.getVirtualColumns(), false);
   }
 
+  public static boolean columnCanVectorize(VectorCursor cursor, List<AggregatorFactory> aggregatorFactories)
+  {
+    if (cursor != null) {
+      for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
+        if (!aggregatorFactory.columnCanVectorize(cursor.getColumnSelectorFactory())) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   public static Sequence<ResultRow> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
@@ -97,10 +109,10 @@ public class VectorGroupByEngine
       @Nullable final Filter filter,
       final Interval interval,
       final GroupByQueryConfig config,
-      final QueryConfig queryConfig
+      final VectorCursor cursor
   )
   {
-    if (!canVectorize(query, storageAdapter, filter)) {
+    if (!canVectorize(query, storageAdapter, filter) || !columnCanVectorize(cursor, query.getAggregatorSpecs())) {
       throw new ISE("Cannot vectorize");
     }
 
@@ -110,15 +122,6 @@ public class VectorGroupByEngine
           @Override
           public CloseableIterator<ResultRow> make()
           {
-            final VectorCursor cursor = storageAdapter.makeVectorCursor(
-                Filters.toFilter(query.getDimFilter()),
-                interval,
-                query.getVirtualColumns(),
-                false,
-                queryConfig.getVectorSize(),
-                null
-            );
-
             if (cursor == null) {
               // Return empty iterator.
               return new CloseableIterator<ResultRow>()

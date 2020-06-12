@@ -38,6 +38,7 @@ public interface ColumnCapabilities
   boolean hasSpatialIndexes();
   Capable hasMultipleValues();
   boolean isFilterable();
+  boolean canVectorize();
 
   enum Capable
   {

@@ -137,6 +137,8 @@ public class SchemaEvolutionTest
   @Before
   public void setUp() throws IOException
   {
+    NullHandling.initializeForTests();
+
     // Index1: c1 is a string, c2 nonexistent, "uniques" nonexistent
     index1 = IndexBuilder.create()
                          .tmpDir(temporaryFolder.newFolder())

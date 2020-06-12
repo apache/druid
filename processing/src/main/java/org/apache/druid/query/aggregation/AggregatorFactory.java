@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorCursor;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -69,6 +70,14 @@ public abstract class AggregatorFactory implements Cacheable
    * Returns whether or not this aggregation class supports vectorization. The default implementation returns false.
    */
   public boolean canVectorize()
+  {
+    return false;
+  }
+
+  /**
+   * Returns whether or not the column in this aggregation supports vectorization. The default implementation returns false.
+   */
+  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
   {
     return false;
   }

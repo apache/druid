@@ -76,6 +76,12 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
+  {
+    return delegate.columnCanVectorize(vectorColumnSelectorFactory);
+  }
+
+  @Override
   public Comparator getComparator()
   {
     return delegate.getComparator();

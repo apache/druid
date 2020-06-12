@@ -43,6 +43,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -100,15 +101,35 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
     final boolean descending = query.isDescending();
 
-    final boolean doVectorize = queryConfigToUse.getVectorize().shouldVectorize(
+    boolean doVectorize = queryConfigToUse.getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
     );
 
+    VectorCursor cursor = null;
+    if (doVectorize) {
+      cursor = adapter.makeVectorCursor(
+          filter,
+          interval,
+          query.getVirtualColumns(),
+          descending,
+          queryConfigToUse.getVectorSize(),
+          null
+      );
+      if (cursor != null) {
+        for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
+          if (!aggregatorFactory.columnCanVectorize(cursor.getColumnSelectorFactory())) {
+            doVectorize = false;
+            break;
+          }
+        }
+      }
+    }
+
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, queryConfigToUse, adapter, filter, interval, gran, descending);
+      result = processVectorized(query, adapter, interval, gran, cursor);
     } else {
       result = processNonVectorized(query, adapter, filter, interval, gran, descending);
     }
@@ -123,25 +144,14 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
-      final QueryConfig queryConfig,
       final StorageAdapter adapter,
-      @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final boolean descending
+      final VectorCursor cursor
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-
-    final VectorCursor cursor = adapter.makeVectorCursor(
-        filter,
-        queryInterval,
-        query.getVirtualColumns(),
-        descending,
-        queryConfig.getVectorSize(),
-        null
-    );
 
     if (cursor == null) {
       return Sequences.empty();

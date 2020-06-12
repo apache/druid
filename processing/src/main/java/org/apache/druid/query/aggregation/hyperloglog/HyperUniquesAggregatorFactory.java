@@ -146,6 +146,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
+  {
+    return true;
+  }
+
+  @Override
   public Comparator getComparator()
   {
     return Comparators.naturalNullsFirst();
