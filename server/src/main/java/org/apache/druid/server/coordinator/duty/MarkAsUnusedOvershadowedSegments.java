@@ -58,18 +58,16 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
 
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
-        ImmutableDruidServer server = serverHolder.getServer();
-
-        for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-          VersionedIntervalTimeline<String, DataSegment> timeline = timelines
-              .computeIfAbsent(
-                  dataSource.getName(),
-                  dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
-              );
-          VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
-        }
+        addSegmentsFromServer(serverHolder, timelines);
       }
     }
+
+    for (ServerHolder serverHolder : cluster.getBrokers()) {
+      addSegmentsFromServer(serverHolder, timelines);
+    }
+
+    // Note that we do not include segments from ingestion services such as tasks or indexers,
+    // to prevent unpublished segments from prematurely overshadowing segments.
 
     // Mark all segments as unused in db that are overshadowed by served segments
     for (DataSegment dataSegment : params.getUsedSegments()) {
@@ -82,5 +80,22 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     }
 
     return params.buildFromExisting().withCoordinatorStats(stats).build();
+  }
+
+  private void addSegmentsFromServer(
+      ServerHolder serverHolder,
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines
+  )
+  {
+    ImmutableDruidServer server = serverHolder.getServer();
+
+    for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
+      VersionedIntervalTimeline<String, DataSegment> timeline = timelines
+          .computeIfAbsent(
+              dataSource.getName(),
+              dsName -> new VersionedIntervalTimeline<>(Comparator.naturalOrder())
+          );
+      VersionedIntervalTimeline.addSegments(timeline, dataSource.getSegments().iterator());
+    }
   }
 }
