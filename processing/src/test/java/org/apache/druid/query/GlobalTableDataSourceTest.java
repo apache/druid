@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -28,9 +29,14 @@ import org.junit.Test;
 public class GlobalTableDataSourceTest
 {
   private static final GlobalTableDataSource GLOBAL_TABLE_DATA_SOURCE = new GlobalTableDataSource("foo");
+
+  @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(GlobalTableDataSource.class).usingGetClass().verify();
+    EqualsVerifier.forClass(GlobalTableDataSource.class)
+                  .usingGetClass()
+                  .withNonnullFields("name")
+                  .verify();
   }
 
   @Test

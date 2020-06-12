@@ -98,7 +98,7 @@ public class TableDataSource implements DataSource
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TableDataSource)) {
+    if (!(o instanceof TableDataSource) || !getClass().equals(o.getClass())) {
       return false;
     }
 
