@@ -861,8 +861,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // the final publishing.
       caughtExceptionOuter = e;
       try {
-        Futures.allAsList(publishWaitList).cancel(true);
-        Futures.allAsList(handOffWaitList).cancel(true);
+        publishWaitList.forEach(f -> f.cancel(true));
+        handOffWaitList.forEach(f -> f.cancel(true));
+//        Futures.allAsList(publishWaitList).cancel(true);
+//        Futures.allAsList(handOffWaitList).cancel(true);
         if (appenderator != null) {
           appenderator.closeNow();
         }
@@ -887,8 +889,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // (3) catch all other exceptions thrown for the whole ingestion steps including the final publishing.
       caughtExceptionOuter = e;
       try {
-        Futures.allAsList(publishWaitList).cancel(true);
-        Futures.allAsList(handOffWaitList).cancel(true);
+        publishWaitList.forEach(f -> f.cancel(true));
+        handOffWaitList.forEach(f -> f.cancel(true));
+//        Futures.allAsList(publishWaitList).cancel(true);
+//        Futures.allAsList(handOffWaitList).cancel(true);
         if (appenderator != null) {
           appenderator.closeNow();
         }

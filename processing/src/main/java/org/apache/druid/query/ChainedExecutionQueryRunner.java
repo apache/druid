@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -100,7 +101,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
           public Iterator<T> make()
           {
             // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
-            ListenableFuture<List<Iterable<T>>> futures = Futures.allAsList(
+            List<ListenableFuture<Iterable<T>>> futures =
                 Lists.newArrayList(
                     Iterables.transform(
                         queryables,
@@ -141,22 +142,26 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                           );
                         }
                     )
-                )
-            );
+                );
 
-            queryWatcher.registerQueryFuture(query, futures);
+            Function<Throwable, Void> cancelFunction = (t) -> {
+              futures.forEach(f -> f.cancel(true));
+              return null;
+            };
+            ListenableFuture<List<Iterable<T>>> future = Futures.allAsList(futures);
+            queryWatcher.registerQueryFuture(query, future);
 
             try {
               return new MergeIterable<>(
                   ordering.nullsFirst(),
                   QueryContexts.hasTimeout(query) ?
-                      futures.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
-                      futures.get()
+                      future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS) :
+                      future.get()
               ).iterator();
             }
             catch (InterruptedException e) {
               log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              futures.cancel(true);
+              cancelFunction.apply(e);
               throw new QueryInterruptedException(e);
             }
             catch (CancellationException e) {
@@ -164,11 +169,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (TimeoutException e) {
               log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
-              futures.cancel(true);
+              cancelFunction.apply(e);
               throw new QueryInterruptedException(e);
             }
             catch (ExecutionException e) {
-              Throwables.propagateIfPossible(e.getCause());
+              cancelFunction.apply(e);
               throw new RuntimeException(e.getCause());
             }
           }

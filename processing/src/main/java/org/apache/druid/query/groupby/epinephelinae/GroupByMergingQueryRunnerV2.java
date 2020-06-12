@@ -215,8 +215,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                   ReferenceCountingResourceHolder.fromCloseable(grouper);
               resources.register(grouperHolder);
 
-              ListenableFuture<List<AggregateResult>> futures = Futures.allAsList(
-                  Lists.newArrayList(
+              List<ListenableFuture<AggregateResult>> futures = Lists.newArrayList(
                       Iterables.transform(
                           queryables,
                           new Function<QueryRunner<ResultRow>, ListenableFuture<AggregateResult>>()
@@ -259,7 +258,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                               if (isSingleThreaded) {
                                 waitForFutureCompletion(
                                     query,
-                                    Futures.allAsList(ImmutableList.of(future)),
+                                    ImmutableList.of(future),
                                     hasTimeout,
                                     timeoutAt - System.currentTimeMillis()
                                 );
@@ -269,8 +268,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                             }
                           }
                       )
-                  )
-              );
+                  );
 
               if (!isSingleThreaded) {
                 waitForFutureCompletion(query, futures, hasTimeout, timeoutAt - System.currentTimeMillis());
@@ -339,12 +337,17 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
   private void waitForFutureCompletion(
       GroupByQuery query,
-      ListenableFuture<List<AggregateResult>> future,
+      List<ListenableFuture<AggregateResult>> futures,
       boolean hasTimeout,
       long timeout
   )
   {
+    Function<Throwable, AggregateResult> cancelFunction = (t) -> {
+      futures.forEach(f -> f.cancel(true));
+      return null;
+    };
     try {
+      ListenableFuture<List<AggregateResult>> future = Futures.allAsList(futures);
       if (queryWatcher != null) {
         queryWatcher.registerQueryFuture(query, future);
       }
@@ -364,18 +367,20 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     }
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      future.cancel(true);
+      cancelFunction.apply(e);
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {
+      cancelFunction.apply(e);
       throw new QueryInterruptedException(e);
     }
     catch (TimeoutException e) {
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      future.cancel(true);
+      cancelFunction.apply(e);
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
+      cancelFunction.apply(e);
       throw new RuntimeException(e);
     }
   }

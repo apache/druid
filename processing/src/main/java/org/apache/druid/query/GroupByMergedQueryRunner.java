@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
@@ -93,7 +94,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     final boolean bySegment = QueryContexts.isBySegment(query);
     final int priority = QueryContexts.getPriority(query);
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-    final ListenableFuture<List<Void>> futures = Futures.allAsList(
+    final List<ListenableFuture<Void>> futures =
         Lists.newArrayList(
             Iterables.transform(
                 queryables,
@@ -136,15 +137,14 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                     );
 
                     if (isSingleThreaded) {
-                      waitForFutureCompletion(query, future, indexAccumulatorPair.lhs);
+                      waitForFutureCompletion(query, ImmutableList.of(future), indexAccumulatorPair.lhs);
                     }
 
                     return future;
                   }
                 }
             )
-        )
-    );
+        );
 
     if (!isSingleThreaded) {
       waitForFutureCompletion(query, futures, indexAccumulatorPair.lhs);
@@ -173,11 +173,16 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
 
   private void waitForFutureCompletion(
       GroupByQuery query,
-      ListenableFuture<?> future,
+      List<ListenableFuture<Void>> futures,
       IncrementalIndex<?> closeOnFailure
   )
   {
+    Function<Throwable, Void> cancelFunction = (t) -> {
+      futures.forEach(f -> f.cancel(true));
+      return null;
+    };
     try {
+      ListenableFuture<List<Void>> future = Futures.allAsList(futures);
       queryWatcher.registerQueryFuture(query, future);
       if (QueryContexts.hasTimeout(query)) {
         future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
@@ -187,7 +192,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     }
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      future.cancel(true);
+			cancelFunction.apply(e);
       closeOnFailure.close();
       throw new QueryInterruptedException(e);
     }
@@ -198,10 +203,11 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     catch (TimeoutException e) {
       closeOnFailure.close();
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      future.cancel(true);
+      cancelFunction.apply(e);
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
+      cancelFunction.apply(e);
       closeOnFailure.close();
       Throwables.propagateIfPossible(e.getCause());
       throw new RuntimeException(e.getCause());

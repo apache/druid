@@ -100,6 +100,7 @@ public class BackgroundCachePopulator implements CachePopulator
                 @Override
                 public void onFailure(Throwable t)
                 {
+                  cacheFutures.forEach(f -> f.cancel(true));
                   log.error(t, "Background caching failed");
                 }
               },

@@ -21,9 +21,9 @@
       <option name="m_ignoreCatchBlocksWithComments" value="false" />
     </inspection_tool>
     <inspection_tool class="CharsetObjectCanBeUsed" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="CheckDtdRefs" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="CheckDtdRefs" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="CheckValidXmlInScriptTagBody" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="CheckXmlFileWithXercesValidator" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="CheckXmlFileWithXercesValidator" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
     <inspection_tool class="ClassGetClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ClassInitializerMayBeStatic" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ClassNewInstance" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -181,22 +181,22 @@
         <constraint name="y" nameOfExprType="IndexedInts" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Lists.newArrayList() with a single argument. Use Collections.singletonList() instead" created="1532737126203" text="Lists.newArrayList($x$)" recursive="false" caseInsensitive="true" type="JAVA">
-        <constraint name="x" nameOfExprType="java\.lang\.Iterable|java\.util\.Iterator|Object\[\]" expressionTypes="java.lang.Iterable|java.util.Iterator|Object[]" exprTypeWithinHierarchy="true" negateName="true" negateExprType="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.lang\.Iterable|java\.util\.Iterator|Object\[\]" exprTypeWithinHierarchy="true" negateName="true" negateExprType="true" within="" contains="" />
         <constraint name="__context__" target="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Math.abs(rnd.nextInt()) doensn't guarantee positive result. Use nextInt() &amp; Integer.MAX_VALUE or nextInt(Integer.MAX_VALUE)" created="1535067616084" text="$Math$.abs($x$.nextInt())" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfFormalType="java\.util\.Random" exceptedTypes="java.util.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
         <constraint name="Math" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Math.abs(rnd.nextLong()) doesn't guarantee positive result. Use nextLong() &amp; Long.MAX_VALUE" created="1535067616084" text="$Math$.abs($x$.nextLong())" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfFormalType="java\.util\.Random" exceptedTypes="java.util.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
         <constraint name="Math" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use nextInt(bound) instead" created="1535068047572" text="$x$.nextInt() % $a$" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfFormalType="java\.util\.Random" exceptedTypes="java.util.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="x" nameOfFormalType="java\.util\.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
         <constraint name="a" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use ZKPaths.makePath() with many arguments" created="1537504371779" text="org.apache.curator.utils.ZKPaths.makePath(org.apache.curator.utils.ZKPaths.makePath($x$, $y$), $z$)" recursive="false" caseInsensitive="true" type="JAVA">
@@ -272,29 +272,29 @@
         <constraint name="K" within="" contains="" />
         <constraint name="V" within="" contains="" />
         <constraint name="x" within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" exprTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which compute() is called should be assinged into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.compute($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="y" within="" contains="" />
         <constraint name="z" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which computeIfAbsent() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.computeIfAbsent($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="y" within="" contains="" />
         <constraint name="z" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which computeIfPresent() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.computeIfPresent($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="y" within="" contains="" />
         <constraint name="z" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="A ConcurrentHashMap on which merge() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.merge($a$, $b$, $c$)" recursive="true" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" within="" contains="" />
         <constraint name="a" within="" contains="" />
         <constraint name="b" within="" contains="" />
         <constraint name="c" within="" contains="" />
@@ -373,8 +373,8 @@
       </searchConfiguration>
       <searchConfiguration name="Create a simple ExecutorService (not scheduled)" text="$x$ = $y$;" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
-        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ExecutorService" expressionTypes="java.util.concurrent.ExecutorService" within="" contains="" />
-        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ScheduledExecutorService" expressionTypes="java.util.concurrent.ScheduledExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ExecutorService" within="" contains="" />
+        <constraint name="y" nameOfExprType="java\.util\.concurrent\.ScheduledExecutorService" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use equals on Pattern.toString()" text="$a$.equals($b$)" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
@@ -388,11 +388,11 @@
       </searchConfiguration>
       <searchConfiguration name="Use hashCode of Pattern.toString() instead" text="$a$.hashCode()" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
-        <constraint name="a" nameOfExprType="java\.util\.regex\.Pattern" expressionTypes="java.util.regex.Pattern" within="" contains="" />
+        <constraint name="a" nameOfExprType="java\.util\.regex\.Pattern" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use Objects.hash() on Pattern.toString() instead" text="java.util.Objects.hash($b$,$a$)" recursive="true" caseInsensitive="true" type="JAVA" pattern_context="default">
         <constraint name="__context__" within="" contains="" />
-        <constraint name="a" nameOfExprType="java\.util\.regex\.Pattern" expressionTypes="java.util.regex.Pattern" within="" contains="" />
+        <constraint name="a" nameOfExprType="java\.util\.regex\.Pattern" within="" contains="" />
         <constraint name="b" minCount="0" maxCount="2147483647" within="" contains="" />
       </searchConfiguration>
     </inspection_tool>
@@ -432,7 +432,7 @@
     </inspection_tool>
     <inspection_tool class="SuspiciousSystemArraycopy" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SuspiciousToArrayCall" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="SyntaxError" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SyntaxError" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
     <inspection_tool class="TextLabelInSwitchStatement" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ThrowableNotThrown" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="ToArrayCallWithZeroLengthArrayArgument" enabled="true" level="WARNING" enabled_by_default="true">
@@ -465,12 +465,12 @@
     <inspection_tool class="UseBulkOperation" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UseOfPropertiesAsHashtable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="VariableNotUsedInsideIf" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="XmlDuplicatedId" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="XmlHighlighting" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="XmlInvalidId" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="XmlPathReference" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true">
-      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true">
+    <inspection_tool class="XmlDuplicatedId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
+    <inspection_tool class="XmlHighlighting" enabled="true" level="Non-TeamCity Warning" enabled_by_default="true" />
+    <inspection_tool class="XmlInvalidId" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
+    <inspection_tool class="XmlPathReference" enabled="true" level="Non-TeamCity Error" enabled_by_default="true" />
+    <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true" isSelected="false">
+      <scope name="UnusedInspectionsScope" level="ERROR" enabled="true" isSelected="false">
         <option name="LOCAL_VARIABLE" value="true" />
         <option name="FIELD" value="true" />
         <option name="METHOD" value="true" />
