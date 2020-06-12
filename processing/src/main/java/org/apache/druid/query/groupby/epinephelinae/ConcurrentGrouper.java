@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -339,8 +340,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   private List<CloseableIterator<Entry<KeyType>>> parallelSortAndGetGroupersIterator()
   {
     // The number of groupers is same with the number of processing threads in the executor
-    final ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(
-        groupers.stream()
+    final List<ListenableFuture<CloseableIterator<Entry<KeyType>>>> futures = groupers.stream()
                 .map(grouper ->
                          executor.submit(
                              new AbstractPrioritizedCallable<CloseableIterator<Entry<KeyType>>>(priority)
@@ -353,21 +353,19 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                              }
                          )
                 )
-                .collect(Collectors.toList())
+                .collect(Collectors.toList()
     );
 
     try {
+      ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
       final long timeout = queryTimeoutAt - System.currentTimeMillis();
       return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
     }
-    catch (InterruptedException | TimeoutException e) {
-      future.cancel(true);
+    catch (InterruptedException | TimeoutException | CancellationException e) {
+      futures.forEach(f -> f.cancel(true));
       throw new QueryInterruptedException(e);
-    }
-    catch (CancellationException e) {
-      throw new QueryInterruptedException(e);
-    }
-    catch (ExecutionException e) {
+    } catch (ExecutionException e) {
+      futures.forEach(f -> f.cancel(true));
       throw new RuntimeException(e.getCause());
     }
   }
