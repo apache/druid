@@ -863,8 +863,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       try {
         publishWaitList.forEach(f -> f.cancel(true));
         handOffWaitList.forEach(f -> f.cancel(true));
-//        Futures.allAsList(publishWaitList).cancel(true);
-//        Futures.allAsList(handOffWaitList).cancel(true);
         if (appenderator != null) {
           appenderator.closeNow();
         }
@@ -891,8 +889,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       try {
         publishWaitList.forEach(f -> f.cancel(true));
         handOffWaitList.forEach(f -> f.cancel(true));
-//        Futures.allAsList(publishWaitList).cancel(true);
-//        Futures.allAsList(handOffWaitList).cancel(true);
         if (appenderator != null) {
           appenderator.closeNow();
         }
