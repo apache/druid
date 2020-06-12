@@ -78,8 +78,6 @@ import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.columnCanVectorize;
-
 /**
  * Class that knows how to process a groupBy query on a single {@link StorageAdapter}. It returns a {@link Sequence}
  * of {@link ResultRow} objects that are not guaranteed to be in any particular order, and may not even be fully
@@ -160,7 +158,7 @@ public class GroupByQueryEngineV2
             queryConfig.getVectorSize(),
             null
         );
-        doVectorize = columnCanVectorize(cursor, query.getAggregatorSpecs());
+        doVectorize = VectorGroupByEngine.columnCanVectorize(cursor, query.getAggregatorSpecs());
       }
 
       final Sequence<ResultRow> result;
