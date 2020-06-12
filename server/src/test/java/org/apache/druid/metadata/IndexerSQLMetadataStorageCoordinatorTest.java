@@ -1048,7 +1048,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(0, shardSpec.getPartitionNum());
-    Assert.assertEquals(5, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getPartitions());
+    Assert.assertEquals(5, shardSpec.getNumBuckets());
 
     coordinator.announceHistoricalSegments(
         Collections.singleton(
@@ -1078,7 +1079,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(1, shardSpec.getPartitionNum());
-    Assert.assertEquals(5, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getPartitions());
+    Assert.assertEquals(5, shardSpec.getNumBuckets());
 
     coordinator.announceHistoricalSegments(
         Collections.singleton(
@@ -1108,6 +1110,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(2, shardSpec.getPartitionNum());
-    Assert.assertEquals(3, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getPartitions());
+    Assert.assertEquals(3, shardSpec.getNumBuckets());
   }
 }

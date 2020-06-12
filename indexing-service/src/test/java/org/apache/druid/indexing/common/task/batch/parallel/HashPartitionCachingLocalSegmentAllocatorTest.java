@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.NoneGranularity;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -102,9 +103,9 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
         SegmentId.of(DATASOURCE, INTERVAL, VERSION, PARTITION_NUM),
         segmentIdWithShardSpec.asSegmentId()
     );
-    HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segmentIdWithShardSpec.getShardSpec();
+    BuildingHashBasedNumberedShardSpec shardSpec = (BuildingHashBasedNumberedShardSpec) segmentIdWithShardSpec.getShardSpec();
     Assert.assertEquals(PARTITION_DIMENSIONS, shardSpec.getPartitionDimensions());
-    Assert.assertEquals(NUM_PARTITONS, shardSpec.getPartitions());
+    Assert.assertEquals(NUM_PARTITONS, shardSpec.getNumBuckets());
     Assert.assertEquals(PARTITION_NUM, shardSpec.getPartitionNum());
   }
 
