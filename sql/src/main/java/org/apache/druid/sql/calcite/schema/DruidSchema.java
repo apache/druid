@@ -605,7 +605,7 @@ public class DruidSchema extends AbstractSchema
     }
   }
 
-  private DruidTable buildDruidTable(final String dataSource)
+  protected DruidTable buildDruidTable(final String dataSource)
   {
     synchronized (lock) {
       final Map<SegmentId, AvailableSegmentMetadata> segmentMap = segmentMetadataInfo.get(dataSource);
