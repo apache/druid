@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -364,7 +363,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     catch (InterruptedException | TimeoutException | CancellationException e) {
       futures.forEach(f -> f.cancel(true));
       throw new QueryInterruptedException(e);
-    } catch (ExecutionException e) {
+    }
+    catch (ExecutionException e) {
       futures.forEach(f -> f.cancel(true));
       throw new RuntimeException(e.getCause());
     }
