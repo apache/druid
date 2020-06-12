@@ -23,6 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
+/**
+ * {@link TableDataSource} variant for globally available 'broadcast' segments. If bound to a
+ * {@link org.apache.druid.segment.join.JoinableFactory} that can create an
+ * {@link org.apache.druid.segment.join.table.IndexedTable} using DruidBinders.joinableFactoryBinder, this allows
+ * optimal usage of segments using this DataSource type in join operations (because they are global), and so can be pushed
+ * down to historicals as a {@link JoinDataSource}, instead of requiring a subquery join using
+ * {@link InlineDataSource} to construct an {@link org.apache.druid.segment.join.table.IndexedTable} on the fly on the
+ * broker. Because it is also a {@link TableDataSource}, when queried directly, or on the left hand side of a join,
+ * they will be treated as any normal segment.
+ */
 @JsonTypeName("global")
 public class GlobalTableDataSource extends TableDataSource
 {

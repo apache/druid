@@ -324,7 +324,9 @@ public class DruidSchema extends AbstractSchema
         config.getMetadataRefreshPeriod().toStandardDuration(),
         () -> {
           synchronized (lock) {
-            // refresh known broadcast segments
+            // refresh known broadcast segments. Since DruidSchema is only present on the broker, any segment we have
+            // locally in the SegmentManager must be broadcast datasources. This could potentially be replaced in the
+            // future by fetching load rules from the coordinator
             Set<String> localSegmentDatasources = segmentManager.getDataSourceNames();
             dataSourcesNeedingRebuild.addAll(localSegmentDatasources);
             broadcastDatasources.clear();
