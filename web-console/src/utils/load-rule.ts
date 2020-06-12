@@ -36,7 +36,6 @@ export interface Rule {
   period?: string;
   includeFuture?: boolean;
   tieredReplicants?: Record<string, number>;
-  colocatedDataSources?: string[];
 }
 
 export class RuleUtil {
@@ -83,8 +82,6 @@ export class RuleUtil {
       delete newRule.tieredReplicants;
     }
 
-    if (!RuleUtil.hasColocatedDataSources(newRule)) delete newRule.colocatedDataSources;
-
     return newRule;
   }
 
@@ -123,13 +120,5 @@ export class RuleUtil {
   static addTieredReplicant(rule: Rule, tier: string, replication: number): Rule {
     const newTieredReplicants = deepSet(rule.tieredReplicants || {}, tier, replication);
     return deepSet(rule, 'tieredReplicants', newTieredReplicants);
-  }
-
-  static hasColocatedDataSources(rule: Rule): boolean {
-    return rule.type.startsWith('broadcast');
-  }
-
-  static changeColocatedDataSources(rule: Rule, colocatedDataSources: string[]): Rule {
-    return deepSet(rule, 'colocatedDataSources', colocatedDataSources);
   }
 }
