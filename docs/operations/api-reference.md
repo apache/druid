@@ -121,31 +121,36 @@ You can verify if segments created by a recent ingestion task are loaded onto hi
 An example workflow for this is:
 1. Submit your ingestion task.
 2. Repeatedly poll the Overlord's task API ( `/druid/indexer/v1/task/{taskId}/status`) until your task is shown to be successfully completed.
-3. Poll the datasource loadstatus API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=true` once.
+3. Poll the below datasource loadstatus API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=true` once.
 If there are segments not yet loaded, continue to step 4, otherwise you can now query the data.
-4. Repeatedly poll the datasource loadstatus API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=false`. 
+4. Repeatedly poll the below datasource loadstatus API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=false`. 
 Continue polling until all segments are loaded. Once all segments are loaded you can now query the data.
 
 ##### GET
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?forceMetadataRefresh={boolean}&interval={myInterval}`
 
-Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). Setting `forceMetadataRefresh` to true (the default)
-will force the coordinator to poll latest segment metadata from the metadata store. If all segments have been loaded or 
-no used segments are found for the given inputs, this API returns 100% as the value.
+Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster for the given 
+datasource over the given interval (or last 2 weeks if interval is not given). `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store. 
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content`
 
  * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?simple&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load until segments that should be loaded in the cluster are available for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). This does not include replica of segments. Setting `forceMetadataRefresh` to true (the default)
-will force the coordinator to poll latest segment metadata from the metadata store. If no used segments found for the given inputs, this API returns 0 as the value.
+over the given interval (or last 2 weeks if interval is not given). This does not include replica of segments. `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store. 
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content` 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?full&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). This include replica of segments. Setting `forceMetadataRefresh` to true (the default)
-will force the coordinator to poll latest segment metadata from the metadata store. If no used segments found for the given inputs, this API returns empty map.
+over the given interval (or last 2 weeks if interval is not given). This include replica of segments. `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store. 
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content`
 
 #### Metadata store information
 
