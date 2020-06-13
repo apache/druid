@@ -170,8 +170,9 @@ The interval of a segment will be compared against the specified period. The per
 
 ## Broadcast Rules
 
-Broadcast rules indicate how segments of different datasources should be co-located in Historical processes.
-Once a broadcast rule is configured for a datasource, all segments of the datasource are broadcasted to the servers holding _any segments_ of the co-located datasources.
+Broadcast rules indicate that segments of a data source should be loaded by all servers of a cluster of the following types: historicals, brokers, tasks, and indexers.
+
+Note that the broadcast segments are only directly queryable through the historicals, but they are currently loaded on other server types to support join queries.
 
 ### Forever Broadcast Rule
 
@@ -179,13 +180,13 @@ Forever broadcast rules are of the form:
 
 ```json
 {
-  "type" : "broadcastForever",
-  "colocatedDataSources" : [ "target_source1", "target_source2" ]
+  "type" : "broadcastForever"
 }
 ```
 
 * `type` - this should always be "broadcastForever"
-* `colocatedDataSources` - A JSON List containing datasource names to be co-located. `null` and empty list means broadcasting to every process in the cluster.
+
+This rule applies to all segments of a datasource, covering all intervals.
 
 ### Interval Broadcast Rule
 
@@ -194,13 +195,11 @@ Interval broadcast rules are of the form:
 ```json
 {
   "type" : "broadcastByInterval",
-  "colocatedDataSources" : [ "target_source1", "target_source2" ],
   "interval" : "2012-01-01/2013-01-01"
 }
 ```
 
 * `type` - this should always be "broadcastByInterval"
-* `colocatedDataSources` - A JSON List containing datasource names to be co-located. `null` and empty list means broadcasting to every process in the cluster.
 * `interval` - A JSON Object representing ISO-8601 Periods. Only the segments of the interval will be broadcasted.
 
 ### Period Broadcast Rule
@@ -210,21 +209,16 @@ Period broadcast rules are of the form:
 ```json
 {
   "type" : "broadcastByPeriod",
-  "colocatedDataSources" : [ "target_source1", "target_source2" ],
   "period" : "P1M",
   "includeFuture" : true
 }
 ```
 
 * `type` - this should always be "broadcastByPeriod"
-* `colocatedDataSources` - A JSON List containing datasource names to be co-located. `null` and empty list means broadcasting to every process in the cluster.
 * `period` - A JSON Object representing ISO-8601 Periods
 * `includeFuture` - A JSON Boolean indicating whether the load period should include the future. This property is optional, Default is true.
 
 The interval of a segment will be compared against the specified period. The period is from some time in the past to the future or to the current time, which depends on `includeFuture` is true or false. The rule matches if the period *overlaps* the interval.
-
-> broadcast rules don't guarantee that segments of the datasources are always co-located because segments for the colocated datasources are not loaded together atomically.
-> If you want to always co-locate the segments of some datasources together, it is recommended to leave colocatedDataSources empty.
 
 ## Permanently deleting data
 

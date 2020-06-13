@@ -33,7 +33,7 @@ Environment variable password provider provides password by looking at specified
 e.g
 
 ```json
-{ "type": "environment", "variable": "METADATA_STORAGE_PASSWORD" }
+druid.metadata.storage.connector.password={ "type": "environment", "variable": "METADATA_STORAGE_PASSWORD" }
 ```
 
 The values are described below.
@@ -50,5 +50,5 @@ Please have a look at "Adding a new Password Provider implementation" on this [p
 To use this implementation, simply set the relevant password runtime property to something similar as was done for Environment variable password provider like -
 
 ```json
-{ "type": "<registered_password_provider_name>", "<jackson_property>": "<value>", ... }
+druid.metadata.storage.connector.password={ "type": "<registered_password_provider_name>", "<jackson_property>": "<value>", ... }
 ```

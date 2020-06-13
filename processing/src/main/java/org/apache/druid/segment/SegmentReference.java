@@ -19,26 +19,12 @@
 
 package org.apache.druid.segment;
 
-import java.io.Closeable;
-
 /**
- * An interface to reference-counted objects. Used by {@link ReferenceCountingSegment}. Thread-safe.
+ * A {@link Segment} with a associated references, such as {@link ReferenceCountingSegment} where the reference is
+ * the segment itself, and {@link org.apache.druid.segment.join.HashJoinSegment} which wraps a
+ * {@link ReferenceCountingSegment} and also includes the associated list of
+ * {@link org.apache.druid.segment.join.JoinableClause}
  */
-public interface ReferenceCounter
+public interface SegmentReference extends Segment, ReferenceCountedObject
 {
-  /**
-   * Increment the reference count by one.
-   */
-  boolean increment();
-
-  /**
-   * Returns a {@link Closeable} which action is to call {@link #decrement()} only once. If close() is called on the
-   * returned Closeable object for the second time, it won't call {@link #decrement()} again.
-   */
-  Closeable decrementOnceCloseable();
-
-  /**
-   * Decrement the reference count by one.
-   */
-  void decrement();
 }

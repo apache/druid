@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.indexer;
+package org.apache.druid.tests.query;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
@@ -39,6 +39,8 @@ import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.ServerDiscoveryUtil;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
+import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
@@ -62,7 +64,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   private static final String UNION_TASK_RESOURCE = "/indexer/wikipedia_union_index_task.json";
   private static final String EVENT_RECEIVER_SERVICE_PREFIX = "eventReceiverServiceName";
   private static final String UNION_DATA_FILE = "/data/union_query/wikipedia_index_data.json";
-  private static final String UNION_QUERIES_RESOURCE = "/indexer/union_queries.json";
+  private static final String UNION_QUERIES_RESOURCE = "/queries/union_queries.json";
   private static final String UNION_DATASOURCE = "wikipedia_index_test";
 
   @Inject
@@ -92,7 +94,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       closer.register(unloader(fullDatasourceName + i));
     }
     try {
-      // Load 4 datasources with same dimensions
+      // Load 3 datasources with same dimensions
       String task = setShutOffTime(
           getResourceAsString(UNION_TASK_RESOURCE),
           DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
@@ -117,6 +119,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
           () -> {
             for (int i = 0; i < numTasks; i++) {
               final int countRows = queryHelper.countRows(fullDatasourceName + i, "2013-08-31/2013-09-01");
+              // there are 10 rows, but query only covers the first 5
               if (countRows < 5) {
                 LOG.warn("%d events have been ingested to %s so far", countRows, fullDatasourceName + i);
                 return false;

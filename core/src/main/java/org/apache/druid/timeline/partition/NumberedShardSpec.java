@@ -73,6 +73,11 @@ public class NumberedShardSpec implements ShardSpec
 
   static ShardSpecLookup createNumberedLookup(List<? extends ShardSpec> shardSpecs)
   {
+    return createLookup(shardSpecs);
+  }
+
+  static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
+  {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
 

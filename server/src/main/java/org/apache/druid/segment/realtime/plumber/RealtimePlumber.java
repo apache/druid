@@ -56,7 +56,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -424,7 +424,7 @@ public class RealtimePlumber implements Plumber
               Closer closer = Closer.create();
               try {
                 for (FireHydrant fireHydrant : sink) {
-                  Pair<Segment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+                  Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
                   final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
                   log.info("Adding hydrant[%s]", fireHydrant);
                   indexes.add(queryableIndex);

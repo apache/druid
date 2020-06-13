@@ -27,7 +27,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.planning.PreJoinableClause;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
@@ -95,7 +95,7 @@ public class JoinablesTest
   @Test
   public void test_createSegmentMapFn_noClauses()
   {
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
         ImmutableList.of(),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
@@ -124,7 +124,7 @@ public class JoinablesTest
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("dataSource is not joinable");
 
-    final Function<Segment, Segment> ignored = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> ignored = Joinables.createSegmentMapFn(
         ImmutableList.of(clause),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
@@ -153,7 +153,7 @@ public class JoinablesTest
         conditionAnalysis
     );
 
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
         ImmutableList.of(clause),
         (dataSource, condition) -> {
           if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {

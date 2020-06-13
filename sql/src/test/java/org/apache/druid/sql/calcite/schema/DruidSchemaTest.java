@@ -57,6 +57,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -418,4 +419,35 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals(0L, currentMetadata.isRealtime());
   }
 
+  @Test
+  public void testAvailableSegmentFromBrokerIsIgnored()
+  {
+
+    Assert.assertEquals(4, schema.getTotalSegments());
+
+    DruidServerMetadata metadata = new DruidServerMetadata(
+        "broker",
+        "localhost:0",
+        null,
+        1000L,
+        ServerType.BROKER,
+        "broken",
+        0
+    );
+
+    DataSegment segment = new DataSegment(
+        "test",
+        Intervals.of("2011-04-01/2011-04-11"),
+        "v1",
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        ImmutableList.of(),
+        NoneShardSpec.instance(),
+        1,
+        100L
+    );
+    schema.addSegment(metadata, segment);
+    Assert.assertEquals(4, schema.getTotalSegments());
+
+  }
 }

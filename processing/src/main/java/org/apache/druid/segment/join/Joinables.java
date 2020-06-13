@@ -22,7 +22,7 @@ package org.apache.druid.segment.join;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.planning.PreJoinableClause;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
@@ -88,7 +88,7 @@ public class Joinables
    * @param originalFilter The original filter from the query.
    * @param virtualColumns The virtual columns from the query.
    */
-  public static Function<Segment, Segment> createSegmentMapFn(
+  public static Function<SegmentReference, SegmentReference> createSegmentMapFn(
       final List<PreJoinableClause> clauses,
       final JoinableFactory joinableFactory,
       final AtomicLong cpuTimeAccumulator,
