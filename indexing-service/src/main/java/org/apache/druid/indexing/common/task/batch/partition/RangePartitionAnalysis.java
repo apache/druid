@@ -23,19 +23,15 @@ import com.google.common.collect.Maps;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -90,44 +86,42 @@ public class RangePartitionAnalysis
     return intervalToPartitionBoundaries.size();
   }
 
-  @Override
-  public Map<Interval, List<SegmentIdWithShardSpec>> convertToIntervalToSegmentIds(
-      TaskToolbox toolbox,
-      String dataSource,
-      Function<Interval, String> versionFinder
-  )
-  {
-    final String partitionDimension = partitionsSpec.getPartitionDimension();
-    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
-        getNumTimePartitions()
-    );
-
-    forEach((interval, partitionBoundaries) ->
-                intervalToSegmentIds.put(
-                    interval,
-                    translatePartitionBoundaries(
-                        dataSource,
-                        interval,
-                        partitionDimension,
-                        partitionBoundaries,
-                        versionFinder
-                    )
-                )
-    );
-
-    return intervalToSegmentIds;
-  }
+//  @Override
+//  public Map<Interval, List<SegmentIdWithShardSpec>> convertToIntervalToSegmentIds(
+//      TaskToolbox toolbox,
+//      String dataSource,
+//      Function<Interval, String> versionFinder
+//  )
+//  {
+//    final String partitionDimension = partitionsSpec.getPartitionDimension();
+//    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
+//        getNumTimePartitions()
+//    );
+//
+//    forEach((interval, partitionBoundaries) ->
+//                intervalToSegmentIds.put(
+//                    interval,
+//                    translatePartitionBoundaries(
+//                        dataSource,
+//                        interval,
+//                        partitionDimension,
+//                        partitionBoundaries,
+//                        versionFinder
+//                    )
+//                )
+//    );
+//
+//    return intervalToSegmentIds;
+//  }
 
   /**
    * Translate {@link PartitionBoundaries} into the corresponding
    * {@link SingleDimensionPartitionsSpec} with segment id.
    */
-  private static List<SegmentIdWithShardSpec> translatePartitionBoundaries(
-      String dataSource,
+  private static List<RangeBucket> translatePartitionBoundaries(
       Interval interval,
       String partitionDimension,
-      PartitionBoundaries partitionBoundaries,
-      Function<Interval, String> versionFinder
+      PartitionBoundaries partitionBoundaries
   )
   {
     if (partitionBoundaries.isEmpty()) {
@@ -135,40 +129,62 @@ public class RangePartitionAnalysis
     }
 
     return IntStream.range(0, partitionBoundaries.size() - 1)
-                    .mapToObj(i -> createSegmentIdWithShardSpec(
-                        dataSource,
+                    .mapToObj(i -> new RangeBucket(
                         interval,
-                        versionFinder.apply(interval),
+                        i,
                         partitionDimension,
                         partitionBoundaries.get(i),
-                        partitionBoundaries.get(i + 1),
-                        i
+                        partitionBoundaries.get(i + 1)
                     ))
                     .collect(Collectors.toList());
   }
 
-  private static SegmentIdWithShardSpec createSegmentIdWithShardSpec(
-      String dataSource,
-      Interval interval,
-      String version,
-      String partitionDimension,
-      String partitionStart,
-      @Nullable String partitionEnd,
-      int partitionNum
-  )
+  @Override
+  public Map<Interval, PartitionBucketLookup> createBuckets(TaskToolbox toolbox)
   {
-    // The shardSpec created here will be reused in PartialGenericSegmentMergeTask. This is ok because
-    // all PartialSegmentGenerateTasks create the same set of segmentIds (and thus shardSpecs).
-    return new SegmentIdWithShardSpec(
-        dataSource,
-        interval,
-        version,
-        new SingleDimensionShardSpec(
-            partitionDimension,
-            partitionStart,
-            partitionEnd,
-            partitionNum
-        )
+    final String partitionDimension = partitionsSpec.getPartitionDimension();
+    final Map<Interval, PartitionBucketLookup> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
+        getNumTimePartitions()
     );
+
+    forEach((interval, partitionBoundaries) ->
+                intervalToSegmentIds.put(
+                    interval,
+                    new RangeBucketLookup(
+                        translatePartitionBoundaries(
+                            interval,
+                            partitionDimension,
+                            partitionBoundaries
+                        )
+                    )
+                )
+    );
+
+    return intervalToSegmentIds;
   }
+
+//  private static SegmentIdWithShardSpec createSegmentIdWithShardSpec(
+//      String dataSource,
+//      Interval interval,
+//      String version,
+//      String partitionDimension,
+//      String partitionStart,
+//      @Nullable String partitionEnd,
+//      int partitionNum
+//  )
+//  {
+//    // The shardSpec created here will be reused in PartialGenericSegmentMergeTask. This is ok because
+//    // all PartialSegmentGenerateTasks create the same set of segmentIds (and thus shardSpecs).
+//    return new SegmentIdWithShardSpec(
+//        dataSource,
+//        interval,
+//        version,
+//        new SingleDimensionShardSpec(
+//            partitionDimension,
+//            partitionStart,
+//            partitionEnd,
+//            partitionNum
+//        )
+//    );
+//  }
 }

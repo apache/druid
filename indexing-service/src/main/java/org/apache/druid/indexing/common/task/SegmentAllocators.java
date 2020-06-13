@@ -23,8 +23,8 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
 import javax.annotation.Nullable;
@@ -74,11 +74,11 @@ public final class SegmentAllocators
    * Creates a new {@link SegmentAllocator} for the hash and range partitioning.
    * supervisorTaskAccess can be null if this method is called by the {@link IndexTask}.
    */
-  public static CachingSegmentAllocator forNonLinearPartitioning(
+  public static SegmentAllocator forNonLinearPartitioning(
       final TaskToolbox toolbox,
       final String dataSource,
       final String taskId,
-      final Granularity queryGranularity,
+      final GranularitySpec granularitySpec,
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final CompletePartitionAnalysis partitionAnalysis
   ) throws IOException
@@ -87,9 +87,9 @@ public final class SegmentAllocators
         toolbox,
         dataSource,
         taskId,
-        queryGranularity,
+        granularitySpec,
         supervisorTaskAccess,
-        partitionAnalysis::convertToIntervalToSegmentIds
+        partitionAnalysis
     );
   }
 

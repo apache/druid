@@ -43,6 +43,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
 
   private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
 
+  private final int bucketId;
   /**
    * Number of hash buckets
    */
@@ -55,17 +56,26 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   public HashBasedNumberedShardSpec(
       @JsonProperty("partitionNum") int partitionNum,    // partitionId, hash bucketId
       @JsonProperty("partitions") int partitions,        // core partition set size
+      @JsonProperty("bucketId") @Nullable Integer bucketId, // nullable for backward compatibility
       @JsonProperty("numBuckets") @Nullable Integer numBuckets, // nullable for backward compatibility
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(partitionNum, partitions);
+    // Use partitionId as bucketId if it's missing.
+    this.bucketId = bucketId == null ? partitionNum : bucketId;
     // If numBuckets is missing, assume that any hash bucket is not empty.
     // Use the core partition set size as the number of buckets.
     this.numBuckets = numBuckets == null ? partitions : numBuckets;
     this.jsonMapper = jsonMapper;
     this.partitionDimensions = partitionDimensions == null ? DEFAULT_PARTITION_DIMENSIONS : partitionDimensions;
+  }
+
+  @JsonProperty
+  public int getBucketId()
+  {
+    return bucketId;
   }
 
   @JsonProperty
@@ -89,7 +99,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    return (((long) hash(timestamp, inputRow)) - getPartitionNum()) % numBuckets == 0;
+    return (((long) hash(timestamp, inputRow)) - bucketId) % numBuckets == 0;
   }
 
   /**
@@ -107,7 +117,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return hash(jsonMapper, partitionDimensions, timestamp, inputRow);
   }
 
-  private static int hash(ObjectMapper jsonMapper, List<String> partitionDimensions, long timestamp, InputRow inputRow)
+  public static int hash(ObjectMapper jsonMapper, List<String> partitionDimensions, long timestamp, InputRow inputRow)
   {
     final List<Object> groupKey = getGroupKey(partitionDimensions, timestamp, inputRow);
     try {
@@ -166,14 +176,15 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       return false;
     }
     HashBasedNumberedShardSpec that = (HashBasedNumberedShardSpec) o;
-    return numBuckets == that.numBuckets &&
+    return bucketId == that.bucketId &&
+           numBuckets == that.numBuckets &&
            Objects.equals(partitionDimensions, that.partitionDimensions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), numBuckets, partitionDimensions);
+    return Objects.hash(super.hashCode(), bucketId, numBuckets, partitionDimensions);
   }
 
   @Override
@@ -181,7 +192,8 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   {
     return "HashBasedNumberedShardSpec{" +
            "partitionNum=" + getPartitionNum() +
-           ", partitions=" + getPartitions() +
+           ", partitions=" + getNumCorePartitions() +
+           ", bucketId=" + bucketId +
            ", numBuckets=" + numBuckets +
            ", partitionDimensions=" + partitionDimensions +
            '}';

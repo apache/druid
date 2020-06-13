@@ -882,18 +882,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     switch (partitionsSpec.getType()) {
       case HASH:
       case RANGE:
-        final CachingSegmentAllocator localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
+        final SegmentAllocator localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
             toolbox,
             getDataSource(),
             getId(),
-            dataSchema.getGranularitySpec().getQueryGranularity(),
+            dataSchema.getGranularitySpec(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
         );
-        sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
-            getId(),
-            localSegmentAllocator.getShardSpecs()
-        );
+        // TODO:
+        sequenceNameFunction = ((CachingLocalSegmentAllocator) localSegmentAllocator).getSequenceNameFunction();
         segmentAllocator = localSegmentAllocator;
         break;
       case LINEAR:

@@ -17,30 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+package org.apache.druid.indexing.common.task.batch.partition;
 
-/**
- * ShardSpec for non-first-generation segments.
- * This shardSpec is allocated a partitionId between {@link PartitionIds#NON_ROOT_GEN_START_PARTITION_ID} and
- * {@link PartitionIds#NON_ROOT_GEN_END_PARTITION_ID}.
- *
- * @see org.apache.druid.timeline.Overshadowable
- */
-public interface OverwriteShardSpec extends ShardSpec
+import org.apache.druid.timeline.partition.ShardSpec;
+import org.joda.time.Interval;
+
+public interface PartitionBucket
 {
-  /**
-   * TODO
-   */
-  @Override
-  default int getNumCorePartitions()
-  {
-    return 0;
-  }
+  Interval getInterval();
 
-  default OverwriteShardSpec withAtomicUpdateGroupSize(int atomicUpdateGroupSize)
-  {
-    return withAtomicUpdateGroupSize((short) atomicUpdateGroupSize);
-  }
+  int getBucketId();
 
-  OverwriteShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize);
+  ShardSpec toShardSpec(int partitionId);
+
+  // TODO: lookup
 }

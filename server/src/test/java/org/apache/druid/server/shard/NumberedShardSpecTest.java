@@ -60,7 +60,7 @@ public class NumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, ((NumberedShardSpec) spec).getNumCorePartitions());
   }
 
   @Test
@@ -71,7 +71,7 @@ public class NumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, ((NumberedShardSpec) spec).getNumCorePartitions());
   }
 
   @Test

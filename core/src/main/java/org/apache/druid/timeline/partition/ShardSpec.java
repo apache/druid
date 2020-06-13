@@ -56,6 +56,8 @@ public interface ShardSpec
    */
   int getPartitionNum();
 
+  int getNumCorePartitions();
+
   /**
    * Returns the start root partition ID of the atomic update group which this segment belongs to.
    *

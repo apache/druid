@@ -104,6 +104,7 @@ public class PartialHashSegmentMergeTask
   {
     return new BuildingHashBasedNumberedShardSpec(
         partitionId,
+        partitionId, // TODO: should use shardSpec instead
         Preconditions.checkNotNull(partitionsSpec.getNumShards(), "numShards"),
         partitionsSpec.getPartitionDimensions(),
         toolbox.getJsonMapper()

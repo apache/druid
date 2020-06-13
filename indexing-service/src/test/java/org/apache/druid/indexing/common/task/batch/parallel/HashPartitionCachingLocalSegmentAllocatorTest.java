@@ -29,15 +29,16 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.CachingSegmentAllocator;
-import org.apache.druid.indexing.common.task.NonLinearlyPartitionedSequenceNameFunction;
+import org.apache.druid.indexing.common.task.CachingLocalSegmentAllocator;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.SupervisorTaskAccessWithNullClient;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.NoneGranularity;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
@@ -70,7 +71,7 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
       Collections.singletonList(DIMENSION)
   );
 
-  private CachingSegmentAllocator target;
+  private SegmentAllocator target;
   private SequenceNameFunction sequenceNameFunction;
 
   @Before
@@ -83,11 +84,11 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
         toolbox,
         DATASOURCE,
         TASKID,
-        new NoneGranularity(),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, ImmutableList.of()),
         new SupervisorTaskAccessWithNullClient(SUPERVISOR_TASKID),
         partitionAnalysis
     );
-    sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(TASKID, target.getShardSpecs());
+    sequenceNameFunction = ((CachingLocalSegmentAllocator) target).getSequenceNameFunction();
   }
 
   @Test

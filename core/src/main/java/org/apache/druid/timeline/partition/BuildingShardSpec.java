@@ -52,6 +52,18 @@ public interface BuildingShardSpec<T extends ShardSpec> extends ShardSpec
 {
   T convert(int numCorePartitions);
 
+  @Override
+  default int getNumCorePartitions()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  default ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+  {
+    throw new UnsupportedOperationException();
+  }
+
   // The below methods are used on the query side, and so must not be called for this shardSpec.
 
   @Override

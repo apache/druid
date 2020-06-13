@@ -17,30 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.timeline.partition;
+package org.apache.druid.indexing.common.task.batch.partition;
 
-/**
- * ShardSpec for non-first-generation segments.
- * This shardSpec is allocated a partitionId between {@link PartitionIds#NON_ROOT_GEN_START_PARTITION_ID} and
- * {@link PartitionIds#NON_ROOT_GEN_END_PARTITION_ID}.
- *
- * @see org.apache.druid.timeline.Overshadowable
- */
-public interface OverwriteShardSpec extends ShardSpec
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.ISE;
+
+import java.util.Iterator;
+import java.util.List;
+
+public class RangeBucketLookup implements PartitionBucketLookup<RangeBucket>
 {
-  /**
-   * TODO
-   */
+  private final List<RangeBucket> buckets;
+
+  public RangeBucketLookup(List<RangeBucket> buckets)
+  {
+    this.buckets = buckets;
+  }
+
   @Override
-  default int getNumCorePartitions()
+  public RangeBucket find(long timestamp, InputRow row)
   {
-    return 0;
+    for (RangeBucket bucket : buckets) {
+      if (bucket.isInBucket(timestamp, row)) {
+        return bucket;
+      }
+    }
+    throw new ISE("row[%s] doesn't fit in any bucket[%s]", row, buckets);
   }
 
-  default OverwriteShardSpec withAtomicUpdateGroupSize(int atomicUpdateGroupSize)
+  @Override
+  public Iterator<RangeBucket> iterator()
   {
-    return withAtomicUpdateGroupSize((short) atomicUpdateGroupSize);
+    return buckets.iterator();
   }
-
-  OverwriteShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize);
 }

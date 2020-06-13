@@ -41,8 +41,8 @@ public class BuildingHashBasedNumberedShardSpecTest
   public void testConvert()
   {
     Assert.assertEquals(
-        new HashBasedNumberedShardSpec(5, 10, 12, ImmutableList.of("dim"), new ObjectMapper()),
-        new BuildingHashBasedNumberedShardSpec(5, 12, ImmutableList.of("dim"), new ObjectMapper()).convert(10)
+        new HashBasedNumberedShardSpec(5, 10, 5, 12, ImmutableList.of("dim"), new ObjectMapper()),
+        new BuildingHashBasedNumberedShardSpec(5, 5, 12, ImmutableList.of("dim"), new ObjectMapper()).convert(10)
     );
   }
 
@@ -51,7 +51,8 @@ public class BuildingHashBasedNumberedShardSpecTest
   {
     Assert.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
-        new BuildingHashBasedNumberedShardSpec(5, 12, ImmutableList.of("dim"), new ObjectMapper()).createChunk("test")
+        new BuildingHashBasedNumberedShardSpec(5, 5, 12, ImmutableList.of("dim"), new ObjectMapper())
+            .createChunk("test")
     );
   }
 
@@ -59,9 +60,9 @@ public class BuildingHashBasedNumberedShardSpecTest
   public void testShardSpecLookup()
   {
     final List<ShardSpec> shardSpecs = ImmutableList.of(
-        new BuildingHashBasedNumberedShardSpec(0, 3, ImmutableList.of("dim"), new ObjectMapper()),
-        new BuildingHashBasedNumberedShardSpec(1, 3, ImmutableList.of("dim"), new ObjectMapper()),
-        new BuildingHashBasedNumberedShardSpec(2, 3, ImmutableList.of("dim"), new ObjectMapper())
+        new BuildingHashBasedNumberedShardSpec(0, 0, 3, ImmutableList.of("dim"), new ObjectMapper()),
+        new BuildingHashBasedNumberedShardSpec(1, 1, 3, ImmutableList.of("dim"), new ObjectMapper()),
+        new BuildingHashBasedNumberedShardSpec(2, 2, 3, ImmutableList.of("dim"), new ObjectMapper())
     );
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
@@ -109,6 +110,7 @@ public class BuildingHashBasedNumberedShardSpecTest
     ));
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     final BuildingHashBasedNumberedShardSpec original = new BuildingHashBasedNumberedShardSpec(
+        3,
         5,
         12,
         ImmutableList.of("dim"),

@@ -94,8 +94,9 @@ public class NumberedShardSpec implements ShardSpec
     return other == NumberedShardSpec.class || other == NumberedOverwriteShardSpec.class;
   }
 
+  @Override
   @JsonProperty("partitions")
-  public int getPartitions()
+  public int getNumCorePartitions()
   {
     return partitions;
   }

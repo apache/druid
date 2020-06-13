@@ -35,9 +35,12 @@ import java.util.function.Function;
  */
 public interface CompletePartitionAnalysis<T, P extends PartitionsSpec> extends PartitionAnalysis<T, P>
 {
-  Map<Interval, List<SegmentIdWithShardSpec>> convertToIntervalToSegmentIds(
-      TaskToolbox toolbox,
-      String dataSource,
-      Function<Interval, String> versionFinder
-  );
+//  Map<Interval, List<PartitionBucket>> convertToIntervalToSegmentIds(
+//      TaskToolbox toolbox,
+//      String dataSource,
+//      Function<Interval, String> versionFinder
+//  );
+
+  // TODO: strongly typed
+  Map<Interval, PartitionBucketLookup> createBuckets(TaskToolbox toolbox);
 }

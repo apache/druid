@@ -111,7 +111,7 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
     segments.forEach(segment -> {
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-      Assert.assertEquals(3, shardSpec.getPartitions());
+      Assert.assertEquals(3, shardSpec.getNumCorePartitions());
       Assert.assertEquals(10, shardSpec.getNumBuckets());
       Assert.assertEquals(ImmutableList.of("dim1"), shardSpec.getPartitionDimensions());
     });
@@ -148,7 +148,7 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
     segments.forEach(segment -> {
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-      Assert.assertEquals(5, shardSpec.getPartitions());
+      Assert.assertEquals(5, shardSpec.getNumCorePartitions());
       Assert.assertEquals(5, shardSpec.getNumBuckets());
       Assert.assertEquals(ImmutableList.of("dim1"), shardSpec.getPartitionDimensions());
     });

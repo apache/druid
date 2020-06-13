@@ -28,7 +28,6 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.CachingSegmentAllocator;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -36,6 +35,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartit
 import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnalysis;
 import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
@@ -150,7 +150,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
   }
 
   @Override
-  CachingSegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
+  SegmentAllocator createSegmentAllocator(TaskToolbox toolbox, ParallelIndexSupervisorTaskClient taskClient)
       throws IOException
   {
     final RangePartitionAnalysis partitionAnalysis = new RangePartitionAnalysis(
@@ -161,7 +161,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         toolbox,
         getDataSource(),
         getId(),
-        ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity(),
+        ingestionSchema.getDataSchema().getGranularitySpec(),
         new SupervisorTaskAccess(supervisorTaskId, taskClient),
         partitionAnalysis
     );

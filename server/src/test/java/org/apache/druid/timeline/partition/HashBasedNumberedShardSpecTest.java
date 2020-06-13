@@ -62,6 +62,7 @@ public class HashBasedNumberedShardSpecTest
             new HashBasedNumberedShardSpec(
                 1,
                 2,
+                1,
                 3,
                 ImmutableList.of("visitor_id"),
                 ServerTestHelper.MAPPER
@@ -70,7 +71,8 @@ public class HashBasedNumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, spec.getNumCorePartitions());
+    Assert.assertEquals(1, ((HashBasedNumberedShardSpec) spec).getBucketId());
     Assert.assertEquals(3, ((HashBasedNumberedShardSpec) spec).getNumBuckets());
     Assert.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) spec).getPartitionDimensions());
   }
@@ -83,14 +85,14 @@ public class HashBasedNumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getNumCorePartitions());
 
     final ShardSpec specWithPartitionDimensions = ServerTestHelper.MAPPER.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
         ShardSpec.class
     );
     Assert.assertEquals(1, specWithPartitionDimensions.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitions());
+    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumCorePartitions());
     Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumBuckets());
     Assert.assertEquals(
         ImmutableList.of("visitor_id"),
@@ -102,9 +104,9 @@ public class HashBasedNumberedShardSpecTest
   public void testPartitionChunks()
   {
     final List<ShardSpec> specs = ImmutableList.of(
-        new HashBasedNumberedShardSpec(0, 3, 3, null, ServerTestHelper.MAPPER),
-        new HashBasedNumberedShardSpec(1, 3, 3, null, ServerTestHelper.MAPPER),
-        new HashBasedNumberedShardSpec(2, 3, 3, null, ServerTestHelper.MAPPER)
+        new HashBasedNumberedShardSpec(0, 3, 0, 3, null, ServerTestHelper.MAPPER),
+        new HashBasedNumberedShardSpec(1, 3, 1, 3, null, ServerTestHelper.MAPPER),
+        new HashBasedNumberedShardSpec(2, 3, 2, 3, null, ServerTestHelper.MAPPER)
     );
 
     final List<PartitionChunk<String>> chunks = Lists.transform(
@@ -211,7 +213,7 @@ public class HashBasedNumberedShardSpecTest
   {
     public HashOverridenShardSpec(int partitionNum, int partitions)
     {
-      super(partitionNum, partitions, partitions, null, ServerTestHelper.MAPPER);
+      super(partitionNum, partitions, partitionNum, partitions, null, ServerTestHelper.MAPPER);
     }
 
     @Override

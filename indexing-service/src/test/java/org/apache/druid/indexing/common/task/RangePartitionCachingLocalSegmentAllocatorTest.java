@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -30,7 +31,9 @@ import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnaly
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.NoneGranularity;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
@@ -82,7 +85,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
       INTERVAL_NORMAL, NORMAL_PARTITIONS
   );
 
-  private CachingSegmentAllocator target;
+  private SegmentAllocator target;
   private SequenceNameFunction sequenceNameFunction;
 
   @Rule
@@ -105,11 +108,11 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
         toolbox,
         DATASOURCE,
         TASKID,
-        new NoneGranularity(),
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, ImmutableList.of()),
         new SupervisorTaskAccessWithNullClient(SUPERVISOR_TASKID),
         partitionAnalysis
     );
-    sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(TASKID, target.getShardSpecs());
+    sequenceNameFunction = ((CachingLocalSegmentAllocator) target).getSequenceNameFunction();
   }
 
   @Test
