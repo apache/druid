@@ -24,14 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
@@ -56,7 +53,6 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -477,7 +473,8 @@ public class DataSourcesResource
     }
   }
 
-  private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments) {
+  private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments)
+  {
     Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
     int numPublishedSegments = 0;
     int numUnavailableSegments = 0;
