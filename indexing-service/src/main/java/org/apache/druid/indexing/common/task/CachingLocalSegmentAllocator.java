@@ -140,7 +140,10 @@ public class CachingLocalSegmentAllocator implements SegmentAllocatorForBatch
               sequenceName
           );
           final Interval interval = pair.lhs;
-          // TODO: fuck..... i hate this code
+          // Determines the partitionId if this segment allocator is used by the single-threaded task.
+          // In parallel ingestion, the partitionId is determined in the supervisor task.
+          // See ParallelIndexSupervisorTask.groupGenericPartitionLocationsPerPartition().
+          // This code... isn't pretty, but should be simple enough to understand.
           final ShardSpec shardSpec = isParallel
                                       ? pair.rhs
                                       : pair.rhs.convert(

@@ -1538,7 +1538,13 @@ public class CachingClusteredClientTest
         null,
         null,
         null,
-        new SingleDimensionShardSpec(dimension, start, end, partitionNum, SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS), // TODO
+        new SingleDimensionShardSpec(
+            dimension,
+            start,
+            end,
+            partitionNum,
+            SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
+        ),
         null,
         9,
         0L
