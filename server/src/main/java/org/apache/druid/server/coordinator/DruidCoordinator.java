@@ -257,13 +257,19 @@ public class DruidCoordinator
    */
   public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTier()
   {
+    final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
+    return computeUnderReplicationCountsPerDataSourcePerTierForSegments(dataSegments);
+  }
+
+  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegments(
+      Iterable<DataSegment> dataSegments
+  )
+  {
     final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
 
     if (segmentReplicantLookup == null) {
       return underReplicationCountsPerDataSourcePerTier;
     }
-
-    final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
 
     final DateTime now = DateTimes.nowUtc();
 
@@ -320,7 +326,7 @@ public class DruidCoordinator
 
     for (ImmutableDruidDataSource dataSource : dataSources) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
-      final int numUsedSegments = segments.size();
+      final int numPublishedSegments = segments.size();
 
       // remove loaded segments
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
@@ -333,10 +339,10 @@ public class DruidCoordinator
           }
         }
       }
-      final int numUnloadedSegments = segments.size();
+      final int numUnavailableSegments = segments.size();
       loadStatus.put(
           dataSource.getName(),
-          100 * ((double) (numUsedSegments - numUnloadedSegments) / (double) numUsedSegments)
+          100 * ((double) (numPublishedSegments - numUnavailableSegments) / (double) numPublishedSegments)
       );
     }
 

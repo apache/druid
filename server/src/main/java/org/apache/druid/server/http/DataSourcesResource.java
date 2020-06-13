@@ -32,6 +32,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
@@ -54,6 +55,8 @@ import org.apache.druid.metadata.UnknownSegmentIdsException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -107,6 +110,7 @@ public class DataSourcesResource
   private final MetadataRuleManager metadataRuleManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidCoordinator coordinator;
 
   @Inject
   public DataSourcesResource(
@@ -114,7 +118,8 @@ public class DataSourcesResource
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      DruidCoordinator coordinator
   )
   {
     this.serverInventoryView = serverInventoryView;
@@ -122,6 +127,7 @@ public class DataSourcesResource
     this.metadataRuleManager = metadataRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authorizerMapper = authorizerMapper;
+    this.coordinator = coordinator;
   }
 
   @GET
@@ -402,12 +408,18 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response getDatasourceLoadstatus(
       @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("forceMetadataRefresh") final Boolean forceMetadataRefresh,
       @QueryParam("interval") @Nullable final String interval,
-      @QueryParam("forceMetadataRefresh") @Nullable final Boolean forceMetadataRefresh,
       @QueryParam("simple") @Nullable final String simple,
       @QueryParam("full") @Nullable final String full
   )
   {
+    if (forceMetadataRefresh == null) {
+      return Response
+          .status(Response.Status.BAD_REQUEST)
+          .entity("Invalid request. forceMetadataRefresh must be specified")
+          .build();
+    }
     final Interval theInterval;
     if (interval == null) {
       long defaultIntervalOffset = 14 * 24 * 60 * 60 * 1000;
@@ -417,101 +429,102 @@ public class DataSourcesResource
       theInterval = Intervals.of(interval.replace('_', '/'));
     }
 
-    boolean requiresMetadataStorePoll = forceMetadataRefresh == null ? true : forceMetadataRefresh;
-
     Optional<Iterable<DataSegment>> segments = segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
         dataSourceName,
         theInterval,
-        requiresMetadataStorePoll
+        forceMetadataRefresh
     );
 
     if (!segments.isPresent()) {
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
+    if (IterableUtils.size(segments.get()) == 0) {
+      return Response
+          .status(Response.Status.NO_CONTENT)
+          .entity("No used segment found for the given datasource and interval")
+          .build();
+    }
+
     if (simple != null) {
-      // Calculate resposne for simple mode
-      Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
-      int numUnloadedSegments = 0;
-      for (DataSegment segment : segments.get()) {
-        if (!segmentLoadInfos.containsKey(segment.getId())) {
-          numUnloadedSegments++;
-        }
-      }
+      // Calculate response for simple mode
+      SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments.get());
       return Response.ok(
           ImmutableMap.of(
               dataSourceName,
-              numUnloadedSegments
+              segmentsLoadStatistics.getNumUnavailableSegments()
           )
       ).build();
     } else if (full != null) {
-      // Calculate resposne for full mode
-      final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
-      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
-      final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
-      final DateTime now = DateTimes.nowUtc();
-
-      for (DataSegment segment : segments.get()) {
-        for (DruidServer druidServer : serverInventoryView.getInventory()) {
-          String tier = druidServer.getTier();
-          SegmentId segmentId = segment.getId();
-          DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
-          if (druidDataSource != null && druidDataSource.getSegment(segmentId) != null) {
-            Integer numReplicants = segmentsInCluster.get(segmentId, tier);
-            if (numReplicants == null) {
-              numReplicants = 0;
-            }
-            segmentsInCluster.put(segmentId, tier, numReplicants + 1);
-          }
-        }
+      // Calculate response for full mode
+      Map<String, Object2LongMap<String>> segmentLoadMap
+          = coordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments.get());
+      if (segmentLoadMap.isEmpty()) {
+        return Response.serverError()
+                       .entity("Coordinator segment replicant lookup is not initialized yet. Try again later.")
+                       .build();
       }
-      for (DataSegment segment : segments.get()) {
-        for (final Rule rule : rules) {
-          if (!(rule instanceof LoadRule && rule.appliesTo(segment, now))) {
-            continue;
-          }
-          ((LoadRule) rule)
-              .getTieredReplicants()
-              .forEach((final String tier, final Integer ruleReplicants) -> {
-                Integer currentReplicantsRetVal = segmentsInCluster.get(segment.getId(), tier);
-                int currentReplicants = currentReplicantsRetVal == null ? 0 : currentReplicantsRetVal;
-                Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
-                    .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>());
-                ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
-                    .addTo(dataSourceName, Math.max(ruleReplicants - currentReplicants, 0));
-              });
-          break; // only the first matching rule applies
-        }
-      }
-      return Response.ok(underReplicationCountsPerDataSourcePerTier).build();
+      return Response.ok(segmentLoadMap).build();
     } else {
-      // Calculate resposne for default mode
-      Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
-      int numUsedSegments = 0;
-      int numUnloadedSegments = 0;
-      for (DataSegment segment : segments.get()) {
-        numUsedSegments++;
-        if (!segmentLoadInfos.containsKey(segment.getId())) {
-          numUnloadedSegments++;
-        }
-      }
-      if (numUsedSegments == 0) {
-        return Response.ok(
-            ImmutableMap.of(
-                dataSourceName,
-                100
-            )
-        ).build();
-      }
+      // Calculate response for default mode
+      SegmentsLoadStatistics segmentsLoadStatistics = computeSegmentLoadStatistics(segments.get());
       return Response.ok(
           ImmutableMap.of(
               dataSourceName,
-              100 * ((double) (numUsedSegments - numUnloadedSegments) / (double) numUsedSegments)
+              100 * ((double) (segmentsLoadStatistics.getNumLoadedSegments()) / (double) segmentsLoadStatistics.getNumPublishedSegments())
           )
       ).build();
     }
   }
 
+  private SegmentsLoadStatistics computeSegmentLoadStatistics(Iterable<DataSegment> segments) {
+    Map<SegmentId, SegmentLoadInfo> segmentLoadInfos = serverInventoryView.getSegmentLoadInfos();
+    int numPublishedSegments = 0;
+    int numUnavailableSegments = 0;
+    int numLoadedSegments = 0;
+    for (DataSegment segment : segments) {
+      numPublishedSegments++;
+      if (!segmentLoadInfos.containsKey(segment.getId())) {
+        numUnavailableSegments++;
+      } else {
+        numLoadedSegments++;
+      }
+    }
+    return new SegmentsLoadStatistics(numPublishedSegments, numUnavailableSegments, numLoadedSegments);
+  }
+
+  private static class SegmentsLoadStatistics
+  {
+    private int numPublishedSegments;
+    private int numUnavailableSegments;
+    private int numLoadedSegments;
+
+    SegmentsLoadStatistics(
+        int numPublishedSegments,
+        int numUnavailableSegments,
+        int numLoadedSegments
+    )
+    {
+      this.numPublishedSegments = numPublishedSegments;
+      this.numUnavailableSegments = numUnavailableSegments;
+      this.numLoadedSegments = numLoadedSegments;
+    }
+
+    public int getNumPublishedSegments()
+    {
+      return numPublishedSegments;
+    }
+
+    public int getNumUnavailableSegments()
+    {
+      return numUnavailableSegments;
+    }
+
+    public int getNumLoadedSegments()
+    {
+      return numLoadedSegments;
+    }
+  }
 
   /**
    * The property names belong to the public HTTP JSON API.
