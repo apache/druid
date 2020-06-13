@@ -52,7 +52,9 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
   {
     this.bucketId = bucketId;
     this.numBuckets = numBuckets;
-    this.partitionDimensions = partitionDimensions;
+    this.partitionDimensions = partitionDimensions == null
+                               ? HashBasedNumberedShardSpec.DEFAULT_PARTITION_DIMENSIONS
+                               : partitionDimensions;
     this.jsonMapper = jsonMapper;
   }
 
