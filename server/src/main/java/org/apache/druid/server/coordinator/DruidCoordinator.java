@@ -261,6 +261,9 @@ public class DruidCoordinator
     return computeUnderReplicationCountsPerDataSourcePerTierForSegments(dataSegments);
   }
 
+  /**
+   * @return tier -> { dataSource -> underReplicationCount } map
+   */
   public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegments(
       Iterable<DataSegment> dataSegments
   )
