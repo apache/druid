@@ -88,7 +88,6 @@ public class CachingLocalSegmentAllocator implements SegmentAllocator
     this.versionFinder = interval -> findVersion(intervalToVersion, interval);
     final Map<Interval, PartitionBucketLookup> intervalToBucketLookup = partitionAnalysis.createBuckets(toolbox);
     intervalToNextPartitionId = new Object2IntOpenHashMap<>(intervalToBucketLookup.size());
-    intervalToNextPartitionId.defaultReturnValue(0);
 
     sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
         taskId,
@@ -103,6 +102,7 @@ public class CachingLocalSegmentAllocator implements SegmentAllocator
         // The shardSpecs for partitioning and publishing can be different if isExtendableShardSpecs = true.
         sequenceNameToBucket.put(sequenceNameFunction.getSequenceName(interval, bucket), bucket);
       });
+      intervalToNextPartitionId.put(interval, 0);
     }
   }
 
@@ -147,7 +147,8 @@ public class CachingLocalSegmentAllocator implements SegmentAllocator
   {
     return intervalToNextPartitionId.computeInt(
         interval,
-        (i, nextPartitionId) -> nextPartitionId == null ? 0 : nextPartitionId + 1
+        (i, nextPartitionId) ->
+            Preconditions.checkNotNull(nextPartitionId, "nextPartitionId for interval[%s]", interval) + 1
     );
   }
 

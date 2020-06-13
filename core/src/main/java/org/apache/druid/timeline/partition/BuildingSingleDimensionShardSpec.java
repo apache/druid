@@ -23,9 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<SingleDimensionShardSpec>
 {
+  public static final String TYPE = "building_single_dim";
+
   private final String dimension;
   @Nullable
   private final String start;
@@ -84,5 +87,38 @@ public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<Singl
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return new NumberedPartitionChunk<>(partitionNum, 0, obj);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    BuildingSingleDimensionShardSpec that = (BuildingSingleDimensionShardSpec) o;
+    return partitionNum == that.partitionNum &&
+           Objects.equals(dimension, that.dimension) &&
+           Objects.equals(start, that.start) &&
+           Objects.equals(end, that.end);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, start, end, partitionNum);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "BuildingSingleDimensionShardSpec{" +
+           "dimension='" + dimension + '\'' +
+           ", start='" + start + '\'' +
+           ", end='" + end + '\'' +
+           ", partitionNum=" + partitionNum +
+           '}';
   }
 }

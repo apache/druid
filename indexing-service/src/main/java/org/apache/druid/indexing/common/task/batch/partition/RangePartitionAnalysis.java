@@ -86,34 +86,6 @@ public class RangePartitionAnalysis
     return intervalToPartitionBoundaries.size();
   }
 
-//  @Override
-//  public Map<Interval, List<SegmentIdWithShardSpec>> convertToIntervalToSegmentIds(
-//      TaskToolbox toolbox,
-//      String dataSource,
-//      Function<Interval, String> versionFinder
-//  )
-//  {
-//    final String partitionDimension = partitionsSpec.getPartitionDimension();
-//    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
-//        getNumTimePartitions()
-//    );
-//
-//    forEach((interval, partitionBoundaries) ->
-//                intervalToSegmentIds.put(
-//                    interval,
-//                    translatePartitionBoundaries(
-//                        dataSource,
-//                        interval,
-//                        partitionDimension,
-//                        partitionBoundaries,
-//                        versionFinder
-//                    )
-//                )
-//    );
-//
-//    return intervalToSegmentIds;
-//  }
-
   /**
    * Translate {@link PartitionBoundaries} into the corresponding
    * {@link SingleDimensionPartitionsSpec} with segment id.
