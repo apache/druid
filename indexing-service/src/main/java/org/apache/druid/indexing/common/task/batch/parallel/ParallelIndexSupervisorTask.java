@@ -340,24 +340,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  PartialHashSegmentMergeParallelIndexTaskRunner createPartialHashSegmentMergeRunner(
-      TaskToolbox toolbox,
-      List<PartialHashSegmentMergeIOConfig> ioConfigs
-  )
-  {
-    return new PartialHashSegmentMergeParallelIndexTaskRunner(
-        toolbox,
-        getId(),
-        getGroupId(),
-        getIngestionSchema().getDataSchema(),
-        ioConfigs,
-        getIngestionSchema().getTuningConfig(),
-        getContext(),
-        indexingServiceClient
-    );
-  }
-
-  @VisibleForTesting
   PartialGenericSegmentMergeParallelIndexTaskRunner createPartialGenericSegmentMergeRunner(
       TaskToolbox toolbox,
       List<PartialGenericSegmentMergeIOConfig> ioConfigs

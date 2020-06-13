@@ -373,7 +373,6 @@ public class DeterminePartitionsJobTest
         Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][0], actualSpec.getStart());
         Assert.assertEquals(expectedStartEndForEachShard[segmentNum][partitionNum][1], actualSpec.getEnd());
         Assert.assertEquals(partitionNum, actualSpec.getPartitionNum());
-        Assert.assertEquals(specs.size(), actualSpec.getNumCorePartitions());
         shardNum++;
         partitionNum++;
       }

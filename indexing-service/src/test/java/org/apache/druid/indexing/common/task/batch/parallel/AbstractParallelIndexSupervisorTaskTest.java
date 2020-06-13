@@ -521,7 +521,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         new NamedType(ParallelIndexSupervisorTask.class, ParallelIndexSupervisorTask.TYPE),
         new NamedType(SinglePhaseSubTask.class, SinglePhaseSubTask.TYPE),
         new NamedType(PartialHashSegmentGenerateTask.class, PartialHashSegmentGenerateTask.TYPE),
-        new NamedType(PartialHashSegmentMergeTask.class, PartialHashSegmentMergeTask.TYPE),
         new NamedType(PartialRangeSegmentGenerateTask.class, PartialRangeSegmentGenerateTask.TYPE),
         new NamedType(PartialGenericSegmentMergeTask.class, PartialGenericSegmentMergeTask.TYPE),
         new NamedType(PartialDimensionDistributionTask.class, PartialDimensionDistributionTask.TYPE)

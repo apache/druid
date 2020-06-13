@@ -17,24 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.parallel;
+package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.segment.indexing.IOConfig;
+import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
-import java.util.List;
-
-@JsonTypeName(PartialHashSegmentMergeTask.TYPE)
-class PartialHashSegmentMergeIOConfig extends PartialSegmentMergeIOConfig<HashPartitionLocation>
-    implements IOConfig
+/**
+ *
+ */
+public interface SegmentAllocatorForBatch extends SegmentAllocator
 {
-  @JsonCreator
-  PartialHashSegmentMergeIOConfig(
-      @JsonProperty("partitionLocations") List<HashPartitionLocation> partitionLocations
-  )
-  {
-    super(partitionLocations);
-  }
+  /**
+   *
+   * @return
+   */
+  SequenceNameFunction getSequenceNameFunction();
 }

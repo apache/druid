@@ -33,7 +33,6 @@ import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAn
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -51,7 +50,7 @@ import java.util.stream.Collectors;
 /**
  * Allocates all necessary segments locally at the beginning and reuses them.
  */
-public class CachingLocalSegmentAllocator implements SegmentAllocator
+public class CachingLocalSegmentAllocator implements SegmentAllocatorForBatch
 {
   private final String dataSource;
   private final Map<String, Pair<Interval, BucketNumberedShardSpec>> sequenceNameToBucket;
@@ -156,7 +155,7 @@ public class CachingLocalSegmentAllocator implements SegmentAllocator
     );
   }
 
-  // TODO: i don't like it
+  @Override
   public SequenceNameFunction getSequenceNameFunction()
   {
     return sequenceNameFunction;

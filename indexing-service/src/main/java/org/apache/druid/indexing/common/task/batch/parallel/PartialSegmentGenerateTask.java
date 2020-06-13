@@ -28,10 +28,10 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.CachingLocalSegmentAllocator;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.InputSourceProcessor;
+import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -128,7 +128,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   /**
    * @return {@link SegmentAllocator} suitable for the desired segment partitioning strategy.
    */
-  abstract SegmentAllocator createSegmentAllocator(
+  abstract SegmentAllocatorForBatch createSegmentAllocator(
       TaskToolbox toolbox,
       ParallelIndexSupervisorTaskClient taskClient
   ) throws IOException;
@@ -170,8 +170,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
 
-    final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
-    final SequenceNameFunction sequenceNameFunction = ((CachingLocalSegmentAllocator) segmentAllocator).getSequenceNameFunction(); // TODO
+    final SegmentAllocatorForBatch segmentAllocator = createSegmentAllocator(toolbox, taskClient);
+    final SequenceNameFunction sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
 
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
