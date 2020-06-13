@@ -71,6 +71,17 @@ public class SingleDimensionShardSpec implements ShardSpec
     this.numCorePartitions = numCorePartitions == null ? UNKNOWN_NUM_CORE_PARTITIONS : numCorePartitions;
   }
 
+  public SingleDimensionShardSpec withNumCorePartitions(int numCorePartitions)
+  {
+    return new SingleDimensionShardSpec(
+        dimension,
+        start,
+        end,
+        partitionNum,
+        numCorePartitions
+    );
+  }
+
   @JsonProperty("dimension")
   public String getDimension()
   {

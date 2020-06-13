@@ -76,6 +76,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * Determines appropriate ShardSpecs for a job by determining whether or not partitioning is necessary, and if so,
@@ -819,8 +820,13 @@ public class DeterminePartitionsJob implements Jobby
           dimPartition -> dimPartition.shardSpec
       );
 
+      final List<ShardSpec> annotatedShardSpecs = chosenShardSpecs
+          .stream()
+          .map(shardSpec -> ((SingleDimensionShardSpec) shardSpec).withNumCorePartitions(chosenShardSpecs.size()))
+          .collect(Collectors.toList());
+
       log.info("Chosen partitions:");
-      for (ShardSpec shardSpec : chosenShardSpecs) {
+      for (ShardSpec shardSpec : annotatedShardSpecs) {
         log.info("  %s", HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(shardSpec));
       }
 
@@ -831,7 +837,7 @@ public class DeterminePartitionsJob implements Jobby
                 {
                 }
             )
-            .writeValue(out, chosenShardSpecs);
+            .writeValue(out, annotatedShardSpecs);
       }
       finally {
         Closeables.close(out, false);
