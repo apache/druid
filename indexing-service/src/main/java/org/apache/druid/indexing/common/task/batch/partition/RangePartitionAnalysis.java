@@ -92,7 +92,7 @@ public class RangePartitionAnalysis
    * Translate {@link PartitionBoundaries} into the corresponding
    * {@link SingleDimensionPartitionsSpec} with segment id.
    */
-  private static List<BucketNumberedShardSpec> translatePartitionBoundaries(
+  private static List<BucketNumberedShardSpec<?>> translatePartitionBoundaries(
       String partitionDimension,
       PartitionBoundaries partitionBoundaries
   )
@@ -112,10 +112,10 @@ public class RangePartitionAnalysis
   }
 
   @Override
-  public Map<Interval, List<BucketNumberedShardSpec>> createBuckets(TaskToolbox toolbox)
+  public Map<Interval, List<BucketNumberedShardSpec<?>>> createBuckets(TaskToolbox toolbox)
   {
     final String partitionDimension = partitionsSpec.getPartitionDimension();
-    final Map<Interval, List<BucketNumberedShardSpec>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
+    final Map<Interval, List<BucketNumberedShardSpec<?>>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
         getNumTimePartitions()
     );
 

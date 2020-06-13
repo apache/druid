@@ -83,16 +83,18 @@ public class CachingLocalSegmentAllocator implements SegmentAllocatorForBatch
     }
 
     this.versionFinder = createVersionFinder(toolbox, action);
-    final Map<Interval, List<BucketNumberedShardSpec>> intervalToShardSpecs = partitionAnalysis.createBuckets(toolbox);
+    final Map<Interval, List<BucketNumberedShardSpec<?>>> intervalToShardSpecs = partitionAnalysis.createBuckets(
+        toolbox
+    );
 
     sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
         taskId,
         new ShardSpecs(intervalToShardSpecs, granularitySpec.getQueryGranularity())
     );
 
-    for (Entry<Interval, List<BucketNumberedShardSpec>> entry : intervalToShardSpecs.entrySet()) {
+    for (Entry<Interval, List<BucketNumberedShardSpec<?>>> entry : intervalToShardSpecs.entrySet()) {
       final Interval interval = entry.getKey();
-      final List<BucketNumberedShardSpec> buckets = entry.getValue();
+      final List<BucketNumberedShardSpec<?>> buckets = entry.getValue();
 
       buckets.forEach(bucket -> {
         sequenceNameToBucket.put(sequenceNameFunction.getSequenceName(interval, bucket), Pair.of(interval, bucket));

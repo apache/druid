@@ -33,10 +33,10 @@ import java.util.Map;
  */
 public class ShardSpecs
 {
-  private final Map<Interval, List<BucketNumberedShardSpec>> map;
-  private Granularity queryGranularity;
+  private final Map<Interval, List<BucketNumberedShardSpec<?>>> map;
+  private final Granularity queryGranularity;
 
-  ShardSpecs(final Map<Interval, List<BucketNumberedShardSpec>> map, Granularity queryGranularity)
+  ShardSpecs(final Map<Interval, List<BucketNumberedShardSpec<?>>> map, Granularity queryGranularity)
   {
     this.map = map;
     this.queryGranularity = queryGranularity;
@@ -52,7 +52,7 @@ public class ShardSpecs
    */
   BucketNumberedShardSpec<?> getShardSpec(Interval interval, InputRow row)
   {
-    final List<BucketNumberedShardSpec> shardSpecs = map.get(interval);
+    final List<BucketNumberedShardSpec<?>> shardSpecs = map.get(interval);
     if (shardSpecs == null || shardSpecs.isEmpty()) {
       throw new ISE("Failed to get shardSpec for interval[%s]", interval);
     }

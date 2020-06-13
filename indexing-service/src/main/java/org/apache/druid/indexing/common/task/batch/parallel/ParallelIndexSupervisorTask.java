@@ -653,7 +653,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           final BuildingShardSpec<?> shardSpec = intervalAndIntegerToShardSpec.computeIfAbsent(
               Pair.of(partitionStat.getInterval(), partitionStat.getBucketId()),
               key -> {
-                // TODO: explain why we determine partition id here..
+                // Lazily determine the partitionId to create packed partitionIds for the core partitions.
+                // See the Javadoc of BucketNumberedShardSpec for details.
                 final int partitionId = intervalToNextPartitionId.computeInt(
                     partitionStat.getInterval(),
                     ((interval, nextPartitionId) -> nextPartitionId == null ? 0 : nextPartitionId + 1)

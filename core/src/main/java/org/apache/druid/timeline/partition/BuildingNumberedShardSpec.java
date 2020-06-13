@@ -49,8 +49,8 @@ public class BuildingNumberedShardSpec implements BuildingShardSpec<NumberedShar
   @Override
   public int getBucketId()
   {
-    // TODO: explain...
-    return 0;
+    // This method is currently not called when the shardSpec type is this class.
+    throw new UnsupportedOperationException();
   }
 
   @Override

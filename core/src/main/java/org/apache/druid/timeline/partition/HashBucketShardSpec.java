@@ -29,7 +29,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * TODO
+ * See {@link BucketNumberedShardSpec} for how this class is used.
+ *
+ * @see BuildingHashBasedNumberedShardSpec
  */
 public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHashBasedNumberedShardSpec>
 {
@@ -80,24 +82,10 @@ public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHash
   }
 
   @Override
-  public <T> PartitionChunk<T> createChunk(T obj)
-  {
-    // TODO: explain..
-    return new NumberedPartitionChunk<>(bucketId, 0, obj);
-  }
-
-  @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
     // not in use
     throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public int getPartitionNum()
-  {
-    // TODO: explain..
-    return bucketId;
   }
 
   @Override

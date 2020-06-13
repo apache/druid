@@ -34,6 +34,5 @@ import java.util.Map;
  */
 public interface CompletePartitionAnalysis<T, P extends PartitionsSpec> extends PartitionAnalysis<T, P>
 {
-  // TODO: strongly typed
-  Map<Interval, List<BucketNumberedShardSpec>> createBuckets(TaskToolbox toolbox);
+  Map<Interval, List<BucketNumberedShardSpec<?>>> createBuckets(TaskToolbox toolbox);
 }

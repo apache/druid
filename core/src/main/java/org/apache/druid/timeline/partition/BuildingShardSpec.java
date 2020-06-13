@@ -27,10 +27,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This is a special shardSpec which is temporarily used during batch ingestion. In Druid, there is a concept
- * of core partition set which is a set of segments atomically becoming queryable together in Brokers. The core
- * partition set is represented as a range of partitionIds. For {@link NumberedShardSpec} as an example, the core
- * partition set is [0, {@link NumberedShardSpec#partitions}).
+ * This is one of the special shardSpecs which are temporarily used during batch ingestion. In Druid, there is a
+ * concept of core partition set which is a set of segments atomically becoming queryable together in Brokers. The core
+ * partition set is represented as a range of partitionIds, i.e., [0, {@link ShardSpec#getNumCorePartitions()}).
  *
  * In streaming ingestion, the core partition set size cannot be determined since it's impossible to know how many
  * segments will be created per time chunk upfront. However, in batch ingestion with time chunk locking, the core
@@ -47,6 +46,12 @@ import java.util.Map;
  * generation segments).
  *
  * This class should be Jackson-serializable as the subtasks can send it to the parallel task in parallel ingestion.
+ *
+ * This interface doesn't really have to extend {@link ShardSpec}. The only reason is the ShardSpec is used in many
+ * places such as {@link org.apache.druid.timeline.DataSegment}, and we have to modify those places to allow other
+ * types than ShardSpec which seems pretty invasive. Maybe we could clean up this mess someday in the future.
+ *
+ * @see BucketNumberedShardSpec
  */
 public interface BuildingShardSpec<T extends ShardSpec> extends ShardSpec
 {
@@ -54,9 +59,6 @@ public interface BuildingShardSpec<T extends ShardSpec> extends ShardSpec
 
   T convert(int numCorePartitions);
 
-  /**
-   * TODO
-   */
   @Override
   default int getNumCorePartitions()
   {
@@ -64,7 +66,7 @@ public interface BuildingShardSpec<T extends ShardSpec> extends ShardSpec
   }
 
   /**
-   * TODO
+   * {@link BucketNumberedShardSpec} should be used for shard spec lookup.
    */
   @Override
   default ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)

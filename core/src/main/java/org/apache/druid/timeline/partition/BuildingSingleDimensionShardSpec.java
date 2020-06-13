@@ -26,7 +26,9 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * TODO
+ * See {@link BuildingShardSpec} for how this class is used.
+ *
+ * @see SingleDimensionShardSpec
  */
 public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<SingleDimensionShardSpec>
 {

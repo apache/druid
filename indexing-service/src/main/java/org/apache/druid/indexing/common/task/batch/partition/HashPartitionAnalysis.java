@@ -91,13 +91,13 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
   }
 
   @Override
-  public Map<Interval, List<BucketNumberedShardSpec>> createBuckets(TaskToolbox toolbox)
+  public Map<Interval, List<BucketNumberedShardSpec<?>>> createBuckets(TaskToolbox toolbox)
   {
-    final Map<Interval, List<BucketNumberedShardSpec>> intervalToLookup = Maps.newHashMapWithExpectedSize(
+    final Map<Interval, List<BucketNumberedShardSpec<?>>> intervalToLookup = Maps.newHashMapWithExpectedSize(
         intervalToNumBuckets.size()
     );
     forEach((interval, numBuckets) -> {
-      final List<BucketNumberedShardSpec> buckets = IntStream
+      final List<BucketNumberedShardSpec<?>> buckets = IntStream
           .range(0, numBuckets)
           .mapToObj(i -> new HashBucketShardSpec(
               i,

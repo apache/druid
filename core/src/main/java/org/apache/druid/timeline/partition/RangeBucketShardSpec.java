@@ -28,7 +28,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
+ * See {@link BucketNumberedShardSpec} for how this class is used.
  *
+ * @see BuildingSingleDimensionShardSpec
  */
 public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
 {
@@ -92,20 +94,6 @@ public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSin
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
     return SingleDimensionShardSpec.isInChunk(dimension, start, end, inputRow);
-  }
-
-  @Override
-  public <T> PartitionChunk<T> createChunk(T obj)
-  {
-    // TODO: explain..
-    return new NumberedPartitionChunk<>(bucketId, 0, obj);
-  }
-
-  @Override
-  public int getPartitionNum()
-  {
-    // TODO: explain..
-    return bucketId;
   }
 
   @Override
