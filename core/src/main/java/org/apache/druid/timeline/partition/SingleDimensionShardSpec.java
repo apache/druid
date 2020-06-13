@@ -163,7 +163,11 @@ public class SingleDimensionShardSpec implements ShardSpec
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return new NumberedPartitionChunk<>(partitionNum, numCorePartitions, obj);
+    if (numCorePartitions == UNKNOWN_NUM_CORE_PARTITIONS) {
+      return new StringPartitionChunk<>(start, end, partitionNum, obj);
+    } else {
+      return new NumberedPartitionChunk<>(partitionNum, numCorePartitions, obj);
+    }
   }
 
   @Override

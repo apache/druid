@@ -21,6 +21,7 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -59,7 +60,22 @@ public class PartitionHolderCompletenessTest
                 new SingleDimensionShardSpec("dim", "bbb", "fff", 1, 3),
                 new SingleDimensionShardSpec("dim", "ttt", "zzz", 2, 3)
             ),
-            SingleDimensionShardSpec.class.getSimpleName()
+            StringUtils.format(
+                "%s with empty buckets",
+                SingleDimensionShardSpec.class.getSimpleName()
+            )
+        },
+        new Object[]{
+            // Simulate old format segments with missing numCorePartitions
+            ImmutableList.of(
+                new SingleDimensionShardSpec("dim", null, "bbb", 0, null),
+                new SingleDimensionShardSpec("dim", "bbb", "fff", 1, null),
+                new SingleDimensionShardSpec("dim", "fff", null, 2, null)
+            ),
+            StringUtils.format(
+                "%s with missing numCorePartitions",
+                SingleDimensionShardSpec.class.getSimpleName()
+            )
         }
     );
   }
