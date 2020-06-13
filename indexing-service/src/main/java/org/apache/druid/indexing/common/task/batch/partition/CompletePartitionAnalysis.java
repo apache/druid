@@ -21,12 +21,11 @@ package org.apache.druid.indexing.common.task.batch.partition;
 
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 /**
  * This interface represents the PartitionAnalysis that has the complete picture of secondary partitions to create.
@@ -35,12 +34,6 @@ import java.util.function.Function;
  */
 public interface CompletePartitionAnalysis<T, P extends PartitionsSpec> extends PartitionAnalysis<T, P>
 {
-//  Map<Interval, List<PartitionBucket>> convertToIntervalToSegmentIds(
-//      TaskToolbox toolbox,
-//      String dataSource,
-//      Function<Interval, String> versionFinder
-//  );
-
   // TODO: strongly typed
-  Map<Interval, PartitionBucketLookup> createBuckets(TaskToolbox toolbox);
+  Map<Interval, List<BucketNumberedShardSpec>> createBuckets(TaskToolbox toolbox);
 }

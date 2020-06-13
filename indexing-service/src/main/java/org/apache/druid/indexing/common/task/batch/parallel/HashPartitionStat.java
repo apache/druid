@@ -54,7 +54,7 @@ public class HashPartitionStat extends PartitionStat<Integer>
 
   @JsonProperty
   @Override
-  public int getPartitionId()
+  public int getBucketId()
   {
     return partitionId;
   }

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -48,6 +47,13 @@ public class BuildingNumberedShardSpec implements BuildingShardSpec<NumberedShar
   }
 
   @Override
+  public int getBucketId()
+  {
+    // TODO: explain...
+    return 0;
+  }
+
+  @Override
   public NumberedShardSpec convert(int numTotalPartitions)
   {
     return new NumberedShardSpec(partitionId, numTotalPartitions);
@@ -66,12 +72,6 @@ public class BuildingNumberedShardSpec implements BuildingShardSpec<NumberedShar
   public int getPartitionNum()
   {
     return partitionId;
-  }
-
-  @Override
-  public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
-  {
-    return NumberedShardSpec.createNumberedLookup(shardSpecs);
   }
 
   @Override

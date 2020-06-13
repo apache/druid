@@ -81,10 +81,10 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-//        new Object[]{LockGranularity.TIME_CHUNK, false, 2},
-        new Object[]{LockGranularity.TIME_CHUNK, true, 2}
-//        new Object[]{LockGranularity.TIME_CHUNK, true, 1},
-//        new Object[]{LockGranularity.SEGMENT, true, 2}
+        new Object[]{LockGranularity.TIME_CHUNK, false, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 2},
+        new Object[]{LockGranularity.TIME_CHUNK, true, 1},
+        new Object[]{LockGranularity.SEGMENT, true, 2}
     );
   }
 

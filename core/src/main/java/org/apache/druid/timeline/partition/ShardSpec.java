@@ -40,9 +40,13 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpec.class),
     @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpec.class),
     @JsonSubTypes.Type(name = NumberedOverwriteShardSpec.TYPE, value = NumberedOverwriteShardSpec.class),
+    // TODO: shouldn't be published
     @JsonSubTypes.Type(name = BuildingNumberedShardSpec.TYPE, value = BuildingNumberedShardSpec.class),
     @JsonSubTypes.Type(name = BuildingHashBasedNumberedShardSpec.TYPE, value = BuildingHashBasedNumberedShardSpec.class),
-    @JsonSubTypes.Type(name = BuildingSingleDimensionShardSpec.TYPE, value = BuildingSingleDimensionShardSpec.class)
+    @JsonSubTypes.Type(name = BuildingSingleDimensionShardSpec.TYPE, value = BuildingSingleDimensionShardSpec.class),
+    // TODO: shouldn't be used in push
+    @JsonSubTypes.Type(name = HashBucketShardSpec.TYPE, value = HashBucketShardSpec.class),
+    @JsonSubTypes.Type(name = RangeBucketShardSpec.TYPE, value = RangeBucketShardSpec.class)
 })
 public interface ShardSpec
 {
@@ -100,7 +104,7 @@ public interface ShardSpec
   }
 
   @JsonIgnore
-  ShardSpecLookup getLookup(List<ShardSpec> shardSpecs);
+  ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs);
 
   /**
    * Get dimensions who have possible range for the rows this shard contains.

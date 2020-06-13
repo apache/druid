@@ -44,7 +44,7 @@ public class HashPartitionLocation extends PartitionLocation<Integer>
 
   @JsonProperty
   @Override
-  public int getPartitionId()
+  public int getBucketId()
   {
     return getSecondaryPartition();
   }

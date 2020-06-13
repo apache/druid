@@ -17,37 +17,47 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.task.batch.partition;
+package org.apache.druid.timeline.partition;
 
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.ISE;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.collect.RangeSet;
 
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
-public class RangeBucketLookup implements PartitionBucketLookup<RangeBucket>
+/**
+ * TODO
+ */
+public interface BucketNumberedShardSpec<T extends BuildingShardSpec> extends ShardSpec
 {
-  private final List<RangeBucket> buckets;
+  int getBucketId();
 
-  public RangeBucketLookup(List<RangeBucket> buckets)
+  T convert(int partitionId);
+
+  @Override
+  default int getNumCorePartitions()
   {
-    this.buckets = buckets;
+    throw new UnsupportedOperationException();
+  }
+
+  // The below methods are used on the query side, and so must not be called for this shardSpec.
+
+  @JsonIgnore
+  @Override
+  default List<String> getDomainDimensions()
+  {
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public RangeBucket find(long timestamp, InputRow row)
+  default boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
-    for (RangeBucket bucket : buckets) {
-      if (bucket.isInBucket(timestamp, row)) {
-        return bucket;
-      }
-    }
-    throw new ISE("row[%s] doesn't fit in any bucket[%s]", row, buckets);
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public Iterator<RangeBucket> iterator()
+  default boolean isCompatible(Class<? extends ShardSpec> other)
   {
-    return buckets.iterator();
+    throw new UnsupportedOperationException();
   }
 }

@@ -81,7 +81,7 @@ public class DataSegmentTest
       }
 
       @Override
-      public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+      public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
       {
         return null;
       }

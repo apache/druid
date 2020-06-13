@@ -23,7 +23,8 @@ import com.google.common.collect.Maps;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.utils.CollectionUtils;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -90,68 +91,23 @@ public class HashPartitionAnalysis implements CompletePartitionAnalysis<Integer,
   }
 
   @Override
-  public Map<Interval, PartitionBucketLookup> createBuckets(TaskToolbox toolbox)
+  public Map<Interval, List<BucketNumberedShardSpec>> createBuckets(TaskToolbox toolbox)
   {
-    final Map<Interval, PartitionBucketLookup> intervalToLookup = Maps.newHashMapWithExpectedSize(
+    final Map<Interval, List<BucketNumberedShardSpec>> intervalToLookup = Maps.newHashMapWithExpectedSize(
         intervalToNumBuckets.size()
     );
     forEach((interval, numBuckets) -> {
-      final List<HashBucket> buckets = IntStream
+      final List<BucketNumberedShardSpec> buckets = IntStream
           .range(0, numBuckets)
-          .mapToObj(i -> new HashBucket(
-              interval,
+          .mapToObj(i -> new HashBucketShardSpec(
               i,
               numBuckets,
               partitionsSpec.getPartitionDimensions(),
               toolbox.getJsonMapper()
           ))
           .collect(Collectors.toList());
-      intervalToLookup.put(
-          interval,
-          new HashBucketLookup(
-              toolbox.getJsonMapper(),
-              partitionsSpec.getPartitionDimensions(),
-              buckets
-          )
-      );
+      intervalToLookup.put(interval, buckets);
     });
     return intervalToLookup;
   }
-
-//  @Override
-//  public Map<Interval, List<PartitionBucket>> convertToIntervalToSegmentIds(
-//      TaskToolbox toolbox,
-//      String dataSource,
-//      Function<Interval, String> versionFinder
-//  )
-//  {
-//    final Map<Interval, List<SegmentIdWithShardSpec>> intervalToSegmentIds =
-//        Maps.newHashMapWithExpectedSize(getNumTimePartitions());
-//
-//    forEach((interval, numBuckets) -> {
-//      intervalToSegmentIds.put(
-//          interval,
-//          IntStream.range(0, numBuckets)
-//                   .mapToObj(i -> {
-//                     final HashBucket bucket = new HashBucket(
-//                         i,
-//                         numBuckets,
-//                         partitionsSpec.getPartitionDimensions(),
-//                         toolbox.getJsonMapper()
-//                     );
-//                     return new SegmentIdWithShardSpec(
-//                         dataSource,
-//                         interval,
-//                         versionFinder.apply(interval),
-//                         shardSpec
-//                     );
-//                   })
-//                   .collect(Collectors.toList())
-//      );
-//    });
-//
-//    return intervalToSegmentIds;
-//  }
-
-
 }

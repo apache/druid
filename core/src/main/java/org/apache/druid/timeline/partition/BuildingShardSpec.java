@@ -50,16 +50,24 @@ import java.util.Map;
  */
 public interface BuildingShardSpec<T extends ShardSpec> extends ShardSpec
 {
+  int getBucketId();
+
   T convert(int numCorePartitions);
 
+  /**
+   * TODO
+   */
   @Override
   default int getNumCorePartitions()
   {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * TODO
+   */
   @Override
-  default ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+  default ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
   {
     throw new UnsupportedOperationException();
   }

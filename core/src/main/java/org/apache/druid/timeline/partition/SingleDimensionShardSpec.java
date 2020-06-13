@@ -106,7 +106,12 @@ public class SingleDimensionShardSpec implements ShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
+  {
+    return createLookup(shardSpecs);
+  }
+
+  static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> {
       for (ShardSpec spec : shardSpecs) {
@@ -165,16 +170,10 @@ public class SingleDimensionShardSpec implements ShardSpec
   @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    final List<String> values = inputRow.getDimension(dimension);
-
-    if (values == null || values.size() != 1) {
-      return checkValue(null);
-    } else {
-      return checkValue(values.get(0));
-    }
+    return isInChunk(dimension, start, end, inputRow);
   }
 
-  private boolean checkValue(String value)
+  private static boolean checkValue(@Nullable String start, @Nullable String end, String value)
   {
     if (value == null) {
       return start == null;
@@ -186,6 +185,22 @@ public class SingleDimensionShardSpec implements ShardSpec
 
     return value.compareTo(start) >= 0 &&
            (end == null || value.compareTo(end) < 0);
+  }
+
+  public static boolean isInChunk(
+      String dimension,
+      @Nullable String start,
+      @Nullable String end,
+      InputRow inputRow
+  )
+  {
+    final List<String> values = inputRow.getDimension(dimension);
+
+    if (values == null || values.size() != 1) {
+      return checkValue(start, end, null);
+    } else {
+      return checkValue(start, end, values.get(0));
+    }
   }
 
   @Override

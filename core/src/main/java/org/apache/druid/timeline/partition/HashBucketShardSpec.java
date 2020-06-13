@@ -23,49 +23,35 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.InputRow;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * See {@link BuildingShardSpec} for how this class is used.
- *
- * @see HashBasedNumberedShardSpec
+ * TODO
  */
-public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<HashBasedNumberedShardSpec>
+public class HashBucketShardSpec implements BucketNumberedShardSpec<BuildingHashBasedNumberedShardSpec>
 {
-  public static final String TYPE = "building_hashed";
+  public static final String TYPE = "bucket_hash";
 
-  private final int partitionId;
   private final int bucketId;
   private final int numBuckets;
   private final List<String> partitionDimensions;
   private final ObjectMapper jsonMapper;
 
   @JsonCreator
-  public BuildingHashBasedNumberedShardSpec(
-      @JsonProperty("partitionId") int partitionId,
+  public HashBucketShardSpec(
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("numBuckets") int numBuckets,
-      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+      @JsonProperty("partitionDimensions") List<String> partitionDimensions,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
-    this.partitionId = partitionId;
     this.bucketId = bucketId;
     this.numBuckets = numBuckets;
-    this.partitionDimensions = partitionDimensions == null
-                               ? HashBasedNumberedShardSpec.DEFAULT_PARTITION_DIMENSIONS
-                               : partitionDimensions;
+    this.partitionDimensions = partitionDimensions;
     this.jsonMapper = jsonMapper;
-  }
-
-  @JsonProperty("partitionId")
-  @Override
-  public int getPartitionNum()
-  {
-    return partitionId;
   }
 
   @Override
@@ -88,25 +74,36 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
   }
 
   @Override
-  public <T> PartitionChunk<T> createChunk(T obj)
+  public BuildingHashBasedNumberedShardSpec convert(int partitionId)
   {
-    // This method can be called in AppenderatorImpl to create a sinkTimeline.
-    // The sinkTimeline doesn't seem in use in batch ingestion, let's set 'chunks' to 0 for now.
-    // HashBasedNumberedShardSpec is using NumberedPartitionChunk, so we use it here too.
-    return new NumberedPartitionChunk<>(partitionId, 0, obj);
+    return new BuildingHashBasedNumberedShardSpec(partitionId, bucketId, numBuckets, partitionDimensions, jsonMapper);
   }
 
   @Override
-  public HashBasedNumberedShardSpec convert(int numCorePartitions)
+  public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return new HashBasedNumberedShardSpec(
-        partitionId,
-        numCorePartitions,
-        bucketId,
-        numBuckets,
-        partitionDimensions,
-        jsonMapper
-    );
+    // TODO: explain..
+    return new NumberedPartitionChunk<>(bucketId, 0, obj);
+  }
+
+  @Override
+  public boolean isInChunk(long timestamp, InputRow inputRow)
+  {
+    // not in use
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getPartitionNum()
+  {
+    // TODO: explain..
+    return bucketId;
+  }
+
+  @Override
+  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
+  {
+    return HashBasedNumberedShardSpec.createHashLookup(jsonMapper, partitionDimensions, shardSpecs, numBuckets);
   }
 
   @Override
@@ -118,9 +115,8 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    BuildingHashBasedNumberedShardSpec that = (BuildingHashBasedNumberedShardSpec) o;
-    return partitionId == that.partitionId &&
-           bucketId == that.bucketId &&
+    HashBucketShardSpec that = (HashBucketShardSpec) o;
+    return bucketId == that.bucketId &&
            numBuckets == that.numBuckets &&
            Objects.equals(partitionDimensions, that.partitionDimensions);
   }
@@ -128,14 +124,13 @@ public class BuildingHashBasedNumberedShardSpec implements BuildingShardSpec<Has
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionId, bucketId, numBuckets, partitionDimensions);
+    return Objects.hash(bucketId, numBuckets, partitionDimensions);
   }
 
   @Override
   public String toString()
   {
-    return "BuildingHashBasedNumberedShardSpec{" +
-           "partitionId=" + partitionId +
+    return "HashBucket{" +
            ", bucketId=" + bucketId +
            ", numBuckets=" + numBuckets +
            ", partitionDimensions=" + partitionDimensions +

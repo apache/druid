@@ -23,7 +23,9 @@ import com.google.common.collect.Maps;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
+import org.apache.druid.timeline.partition.RangeBucketShardSpec;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -90,8 +92,7 @@ public class RangePartitionAnalysis
    * Translate {@link PartitionBoundaries} into the corresponding
    * {@link SingleDimensionPartitionsSpec} with segment id.
    */
-  private static List<RangeBucket> translatePartitionBoundaries(
-      Interval interval,
+  private static List<BucketNumberedShardSpec> translatePartitionBoundaries(
       String partitionDimension,
       PartitionBoundaries partitionBoundaries
   )
@@ -101,8 +102,7 @@ public class RangePartitionAnalysis
     }
 
     return IntStream.range(0, partitionBoundaries.size() - 1)
-                    .mapToObj(i -> new RangeBucket(
-                        interval,
+                    .mapToObj(i -> new RangeBucketShardSpec(
                         i,
                         partitionDimension,
                         partitionBoundaries.get(i),
@@ -112,51 +112,20 @@ public class RangePartitionAnalysis
   }
 
   @Override
-  public Map<Interval, PartitionBucketLookup> createBuckets(TaskToolbox toolbox)
+  public Map<Interval, List<BucketNumberedShardSpec>> createBuckets(TaskToolbox toolbox)
   {
     final String partitionDimension = partitionsSpec.getPartitionDimension();
-    final Map<Interval, PartitionBucketLookup> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
+    final Map<Interval, List<BucketNumberedShardSpec>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
         getNumTimePartitions()
     );
 
     forEach((interval, partitionBoundaries) ->
                 intervalToSegmentIds.put(
                     interval,
-                    new RangeBucketLookup(
-                        translatePartitionBoundaries(
-                            interval,
-                            partitionDimension,
-                            partitionBoundaries
-                        )
-                    )
+                    translatePartitionBoundaries(partitionDimension, partitionBoundaries)
                 )
     );
 
     return intervalToSegmentIds;
   }
-
-//  private static SegmentIdWithShardSpec createSegmentIdWithShardSpec(
-//      String dataSource,
-//      Interval interval,
-//      String version,
-//      String partitionDimension,
-//      String partitionStart,
-//      @Nullable String partitionEnd,
-//      int partitionNum
-//  )
-//  {
-//    // The shardSpec created here will be reused in PartialGenericSegmentMergeTask. This is ok because
-//    // all PartialSegmentGenerateTasks create the same set of segmentIds (and thus shardSpecs).
-//    return new SegmentIdWithShardSpec(
-//        dataSource,
-//        interval,
-//        version,
-//        new SingleDimensionShardSpec(
-//            partitionDimension,
-//            partitionStart,
-//            partitionEnd,
-//            partitionNum
-//        )
-//    );
-//  }
 }

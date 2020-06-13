@@ -20,8 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.indexing.common.task.batch.partition.PartitionBucket;
-import org.apache.druid.indexing.common.task.batch.partition.PartitionBuckets;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.joda.time.Interval;
 
 /**
@@ -35,19 +34,19 @@ import org.joda.time.Interval;
 public class NonLinearlyPartitionedSequenceNameFunction implements SequenceNameFunction
 {
   private final String taskId;
-  private final PartitionBuckets partitionBuckets;
+  private final ShardSpecs shardSpecs;
 
-  public NonLinearlyPartitionedSequenceNameFunction(String taskId, PartitionBuckets partitionBuckets)
+  public NonLinearlyPartitionedSequenceNameFunction(String taskId, ShardSpecs shardSpecs)
   {
     this.taskId = taskId;
-    this.partitionBuckets = partitionBuckets;
+    this.shardSpecs = shardSpecs;
   }
 
   @Override
   public String getSequenceName(Interval interval, InputRow inputRow)
   {
     // Sequence name is based solely on the shardSpec, and there will only be one segment per sequence.
-    return getSequenceName(interval, partitionBuckets.lookupBucket(inputRow));
+    return getSequenceName(interval, shardSpecs.getShardSpec(interval, inputRow));
   }
 
   /**
@@ -55,7 +54,7 @@ public class NonLinearlyPartitionedSequenceNameFunction implements SequenceNameF
    *
    * See {@link org.apache.druid.timeline.partition.HashBasedNumberedShardSpec} as an example of partitioning.
    */
-  public String getSequenceName(Interval interval, PartitionBucket bucket)
+  public String getSequenceName(Interval interval, BucketNumberedShardSpec<?> bucket)
   {
     // Note: We do not use String format here since this can be called in a tight loop
     // and it's faster to add strings together than it is to use String#format

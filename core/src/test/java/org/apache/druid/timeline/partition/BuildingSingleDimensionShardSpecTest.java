@@ -20,26 +20,21 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.InjectableValues.Std;
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class BuildingHashBasedNumberedShardSpecTest
+public class BuildingSingleDimensionShardSpecTest
 {
-  private final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
-  
   @Test
   public void testConvert()
   {
     Assert.assertEquals(
-        new HashBasedNumberedShardSpec(5, 10, 5, 12, ImmutableList.of("dim"), mapper),
-        new BuildingHashBasedNumberedShardSpec(5, 5, 12, ImmutableList.of("dim"), mapper).convert(10)
+        new SingleDimensionShardSpec("dim", "start", "end", 5, 10),
+        new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5).convert(10)
     );
   }
 
@@ -48,27 +43,21 @@ public class BuildingHashBasedNumberedShardSpecTest
   {
     Assert.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
-        new BuildingHashBasedNumberedShardSpec(5, 5, 12, ImmutableList.of("dim"), mapper)
-            .createChunk("test")
+        new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5).createChunk("test")
     );
   }
 
   @Test
   public void testSerde() throws JsonProcessingException
   {
+    final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.registerSubtypes(
-        new NamedType(BuildingHashBasedNumberedShardSpec.class, BuildingHashBasedNumberedShardSpec.TYPE)
+        new NamedType(BuildingSingleDimensionShardSpec.class, BuildingSingleDimensionShardSpec.TYPE)
     );
     mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
-    final BuildingHashBasedNumberedShardSpec original = new BuildingHashBasedNumberedShardSpec(
-        3,
-        5,
-        12,
-        ImmutableList.of("dim"),
-        mapper
-    );
+    final BuildingSingleDimensionShardSpec original = new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5);
     final String json = mapper.writeValueAsString(original);
-    final BuildingHashBasedNumberedShardSpec fromJson = (BuildingHashBasedNumberedShardSpec) mapper.readValue(
+    final BuildingSingleDimensionShardSpec fromJson = (BuildingSingleDimensionShardSpec) mapper.readValue(
         json,
         ShardSpec.class
     );
@@ -78,10 +67,6 @@ public class BuildingHashBasedNumberedShardSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(BuildingHashBasedNumberedShardSpec.class)
-                  .withIgnoredFields("jsonMapper")
-                  .withPrefabValues(ObjectMapper.class, new ObjectMapper(), new ObjectMapper())
-                  .usingGetClass()
-                  .verify();
+    EqualsVerifier.forClass(BuildingSingleDimensionShardSpec.class).usingGetClass().verify();
   }
 }

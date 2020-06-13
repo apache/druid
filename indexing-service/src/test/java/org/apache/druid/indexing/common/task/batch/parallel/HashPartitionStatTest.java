@@ -54,6 +54,6 @@ public class HashPartitionStatTest
   @Test
   public void hasPartitionIdThatMatchesSecondaryPartition()
   {
-    Assert.assertEquals(target.getSecondaryPartition().intValue(), target.getPartitionId());
+    Assert.assertEquals(target.getSecondaryPartition().intValue(), target.getBucketId());
   }
 }

@@ -646,7 +646,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           supervisorTaskId,
           location.getSubTaskId(),
           location.getInterval(),
-          location.getPartitionId()
+          location.getBucketId()
       );
       if (zippedFile == null) {
         throw new ISE("Can't find segment file for location[%s] at path[%s]", location);

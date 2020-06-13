@@ -136,7 +136,7 @@ public class ParallelIndexSupervisorTaskTest
                                                          .flatMap(
                                                              i -> i.getPartitionLocations()
                                                                    .stream()
-                                                                   .map(HashPartitionLocation::getPartitionId)
+                                                                   .map(HashPartitionLocation::getBucketId)
                                                          )
                                                          .sorted()
                                                          .collect(Collectors.toList());

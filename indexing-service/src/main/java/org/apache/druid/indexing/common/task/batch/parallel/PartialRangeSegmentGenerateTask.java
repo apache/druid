@@ -37,6 +37,7 @@ import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
 
@@ -183,7 +184,7 @@ public class PartialRangeSegmentGenerateTask extends PartialSegmentGenerateTask<
         toolbox.getTaskExecutorNode().getPortToUse(),
         toolbox.getTaskExecutorNode().isEnableTlsPort(),
         segment.getInterval(),
-        segment.getShardSpec(),
+        (BucketNumberedShardSpec) segment.getShardSpec(),
         null, // numRows is not supported yet
         null  // sizeBytes is not supported yet
     );

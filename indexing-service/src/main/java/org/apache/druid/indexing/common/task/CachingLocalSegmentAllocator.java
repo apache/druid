@@ -30,13 +30,13 @@ import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
-import org.apache.druid.indexing.common.task.batch.partition.PartitionBucket;
-import org.apache.druid.indexing.common.task.batch.partition.PartitionBucketLookup;
-import org.apache.druid.indexing.common.task.batch.partition.PartitionBuckets;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -54,12 +54,13 @@ import java.util.stream.Collectors;
 public class CachingLocalSegmentAllocator implements SegmentAllocator
 {
   private final String dataSource;
-  private final Map<String, PartitionBucket> sequenceNameToBucket;
+  private final Map<String, Pair<Interval, BucketNumberedShardSpec>> sequenceNameToBucket;
   private final Function<Interval, String> versionFinder;
   private final NonLinearlyPartitionedSequenceNameFunction sequenceNameFunction;
+  private final boolean isParallel;
 
   private final Map<String, SegmentIdWithShardSpec> sequenceNameToSegmentId = new HashMap<>();
-  private final Object2IntMap<Interval> intervalToNextPartitionId;
+  private final Object2IntMap<Interval> intervalToNextPartitionId = new Object2IntOpenHashMap<>();
 
   CachingLocalSegmentAllocator(
       TaskToolbox toolbox,
@@ -76,34 +77,42 @@ public class CachingLocalSegmentAllocator implements SegmentAllocator
     final TaskAction<List<TaskLock>> action;
     if (supervisorTaskAccess == null) {
       action = new LockListAction();
+      isParallel = false;
     } else {
       action = new SurrogateAction<>(supervisorTaskAccess.getSupervisorTaskId(), new LockListAction());
+      isParallel = true;
     }
 
-    final Map<Interval, String> intervalToVersion =
-        toolbox.getTaskActionClient()
-               .submit(action)
-               .stream()
-               .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
-    this.versionFinder = interval -> findVersion(intervalToVersion, interval);
-    final Map<Interval, PartitionBucketLookup> intervalToBucketLookup = partitionAnalysis.createBuckets(toolbox);
-    intervalToNextPartitionId = new Object2IntOpenHashMap<>(intervalToBucketLookup.size());
+    this.versionFinder = createVersionFinder(toolbox, action);
+    final Map<Interval, List<BucketNumberedShardSpec>> intervalToShardSpecs = partitionAnalysis.createBuckets(toolbox);
 
     sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
         taskId,
-        new PartitionBuckets(granularitySpec, intervalToBucketLookup)
+        new ShardSpecs(intervalToShardSpecs, granularitySpec.getQueryGranularity())
     );
 
-    for (Entry<Interval, PartitionBucketLookup> entry : intervalToBucketLookup.entrySet()) {
+    for (Entry<Interval, List<BucketNumberedShardSpec>> entry : intervalToShardSpecs.entrySet()) {
       final Interval interval = entry.getKey();
-      final PartitionBucketLookup<?> bucketLookup = entry.getValue();
+      final List<BucketNumberedShardSpec> buckets = entry.getValue();
 
-      bucketLookup.iterator().forEachRemaining(bucket -> {
-        // The shardSpecs for partitioning and publishing can be different if isExtendableShardSpecs = true.
-        sequenceNameToBucket.put(sequenceNameFunction.getSequenceName(interval, bucket), bucket);
+      buckets.forEach(bucket -> {
+        sequenceNameToBucket.put(sequenceNameFunction.getSequenceName(interval, bucket), Pair.of(interval, bucket));
       });
-      intervalToNextPartitionId.put(interval, 0);
     }
+  }
+
+  static Function<Interval, String> createVersionFinder(
+      TaskToolbox toolbox,
+      TaskAction<List<TaskLock>> lockListAction
+  ) throws IOException
+  {
+    final Map<Interval, String> intervalToVersion =
+        toolbox.getTaskActionClient()
+               .submit(lockListAction)
+               .stream()
+               .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
+
+    return interval -> findVersion(intervalToVersion, interval);
   }
 
   private static String findVersion(Map<Interval, String> intervalToVersion, Interval interval)
@@ -126,29 +135,24 @@ public class CachingLocalSegmentAllocator implements SegmentAllocator
     return sequenceNameToSegmentId.computeIfAbsent(
         sequenceName,
         k -> {
-          final PartitionBucket bucket = Preconditions.checkNotNull(
+          final Pair<Interval, BucketNumberedShardSpec> pair = Preconditions.checkNotNull(
               sequenceNameToBucket.get(sequenceName),
               "Missing bucket for sequence[%s]",
               sequenceName
           );
-          final Interval interval = bucket.getInterval();
+          final Interval interval = pair.lhs;
+          // TODO: fuck..... i hate this code
+          final ShardSpec shardSpec = isParallel
+                                      ? pair.rhs
+                                      : pair.rhs.convert(
+                                          intervalToNextPartitionId.computeInt(
+                                              interval,
+                                              (i, nextPartitionId) -> nextPartitionId == null ? 0 : nextPartitionId + 1
+                                          )
+                                      );
           final String version = versionFinder.apply(interval);
-          return new SegmentIdWithShardSpec(
-              dataSource,
-              interval,
-              version,
-              bucket.toShardSpec(getPartitionIdAndIncrement(interval))
-          );
+          return new SegmentIdWithShardSpec(dataSource, interval, version, shardSpec);
         }
-    );
-  }
-
-  private int getPartitionIdAndIncrement(Interval interval)
-  {
-    return intervalToNextPartitionId.computeInt(
-        interval,
-        (i, nextPartitionId) ->
-            Preconditions.checkNotNull(nextPartitionId, "nextPartitionId for interval[%s]", interval) + 1
     );
   }
 

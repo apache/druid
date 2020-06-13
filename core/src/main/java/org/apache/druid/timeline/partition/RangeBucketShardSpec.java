@@ -21,16 +21,18 @@ package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.InputRow;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * TODO
+ *
  */
-public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<SingleDimensionShardSpec>
+public class RangeBucketShardSpec implements BucketNumberedShardSpec<BuildingSingleDimensionShardSpec>
 {
-  public static final String TYPE = "building_single_dim";
+  public static final String TYPE = "bucket_single_dim";
 
   private final int bucketId;
   private final String dimension;
@@ -38,68 +40,78 @@ public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<Singl
   private final String start;
   @Nullable
   private final String end;
-  private final int partitionId;
 
   @JsonCreator
-  public BuildingSingleDimensionShardSpec(
+  public RangeBucketShardSpec(
       @JsonProperty("bucketId") int bucketId,
       @JsonProperty("dimension") String dimension,
       @JsonProperty("start") @Nullable String start,
-      @JsonProperty("end") @Nullable String end,
-      @JsonProperty("partitionNum") int partitionNum
+      @JsonProperty("end") @Nullable String end
   )
   {
     this.bucketId = bucketId;
     this.dimension = dimension;
     this.start = start;
     this.end = end;
-    this.partitionId = partitionNum;
   }
 
-  @JsonProperty("dimension")
+  @Override
+  @JsonProperty
+  public int getBucketId()
+  {
+    return bucketId;
+  }
+
+  @JsonProperty
   public String getDimension()
   {
     return dimension;
   }
 
   @Nullable
-  @JsonProperty("start")
+  @JsonProperty
   public String getStart()
   {
     return start;
   }
 
   @Nullable
-  @JsonProperty("end")
+  @JsonProperty
   public String getEnd()
   {
     return end;
   }
 
   @Override
-  @JsonProperty("partitionNum")
-  public int getPartitionNum()
+  public BuildingSingleDimensionShardSpec convert(int partitionId)
   {
-    return partitionId;
+    return new BuildingSingleDimensionShardSpec(bucketId, dimension, start, end, partitionId);
   }
 
   @Override
-  @JsonProperty("bucketId")
-  public int getBucketId()
+  public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    return bucketId;
-  }
-
-  @Override
-  public SingleDimensionShardSpec convert(int numCorePartitions)
-  {
-    return new SingleDimensionShardSpec(dimension, start, end, partitionId, numCorePartitions);
+    return SingleDimensionShardSpec.isInChunk(dimension, start, end, inputRow);
   }
 
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    return new NumberedPartitionChunk<>(partitionId, 0, obj);
+    // TODO: explain..
+    return new NumberedPartitionChunk<>(bucketId, 0, obj);
+  }
+
+  @Override
+  public int getPartitionNum()
+  {
+    // TODO: explain..
+    return bucketId;
+  }
+
+  @Override
+  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
+  {
+    return SingleDimensionShardSpec.createLookup(shardSpecs);
   }
 
   @Override
@@ -111,29 +123,27 @@ public class BuildingSingleDimensionShardSpec implements BuildingShardSpec<Singl
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    BuildingSingleDimensionShardSpec that = (BuildingSingleDimensionShardSpec) o;
-    return bucketId == that.bucketId &&
-           partitionId == that.partitionId &&
-           Objects.equals(dimension, that.dimension) &&
-           Objects.equals(start, that.start) &&
-           Objects.equals(end, that.end);
+    RangeBucketShardSpec bucket = (RangeBucketShardSpec) o;
+    return bucketId == bucket.bucketId &&
+           Objects.equals(dimension, bucket.dimension) &&
+           Objects.equals(start, bucket.start) &&
+           Objects.equals(end, bucket.end);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bucketId, dimension, start, end, partitionId);
+    return Objects.hash(bucketId, dimension, start, end);
   }
 
   @Override
   public String toString()
   {
-    return "BuildingSingleDimensionShardSpec{" +
-           "bucketId=" + bucketId +
+    return "RangeBucket{" +
+           ", bucketId=" + bucketId +
            ", dimension='" + dimension + '\'' +
            ", start='" + start + '\'' +
            ", end='" + end + '\'' +
-           ", partitionNum=" + partitionId +
            '}';
   }
 }

@@ -145,7 +145,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
     return createHashLookup(jsonMapper, partitionDimensions, shardSpecs, numBuckets);
   }
@@ -153,7 +153,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   static ShardSpecLookup createHashLookup(
       ObjectMapper jsonMapper,
       List<String> partitionDimensions,
-      List<ShardSpec> shardSpecs,
+      List<? extends ShardSpec> shardSpecs,
       int numBuckets
   )
   {
