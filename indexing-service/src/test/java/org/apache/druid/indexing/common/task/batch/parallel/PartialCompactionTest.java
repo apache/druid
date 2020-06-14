@@ -101,14 +101,14 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   @Test
   public void testPartialCompactHashAndDynamicPartitionedSegments()
   {
-    final List<DataSegment> hashPartitionedSegments = new ArrayList<>(
+    final Map<Interval, List<DataSegment>> hashPartitionedSegments = SegmentUtils.groupSegmentsByInterval(
         runTestTask(
             new HashedPartitionsSpec(null, 3, null),
             TaskState.SUCCESS,
             false
         )
     );
-    final List<DataSegment> linearlyPartitionedSegments = new ArrayList<>(
+    final Map<Interval, List<DataSegment>> linearlyPartitionedSegments = SegmentUtils.groupSegmentsByInterval(
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
@@ -116,15 +116,27 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         )
     );
     // Pick half of each partition lists to compact together
-    hashPartitionedSegments.sort(Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum()));
-    linearlyPartitionedSegments.sort(Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum()));
+    hashPartitionedSegments.values().forEach(
+        segmentsInInterval -> segmentsInInterval.sort(
+            Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
+        )
+    );
+    linearlyPartitionedSegments.values().forEach(
+        segmentsInInterval -> segmentsInInterval.sort(
+            Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
+        )
+    );
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
-    segmentsToCompact.addAll(
-        hashPartitionedSegments.subList(hashPartitionedSegments.size() / 2, hashPartitionedSegments.size())
-    );
-    segmentsToCompact.addAll(
-        linearlyPartitionedSegments.subList(0, linearlyPartitionedSegments.size() / 2)
-    );
+    for (List<DataSegment> segmentsInInterval : hashPartitionedSegments.values()) {
+      segmentsToCompact.addAll(
+          segmentsInInterval.subList(segmentsInInterval.size() / 2, segmentsInInterval.size())
+      );
+    }
+    for (List<DataSegment> segmentsInInterval : linearlyPartitionedSegments.values()) {
+      segmentsToCompact.addAll(
+          segmentsInInterval.subList(0, segmentsInInterval.size() / 2)
+      );
+    }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
         .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
@@ -143,14 +155,14 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   @Test
   public void testPartialCompactRangeAndDynamicPartitionedSegments()
   {
-    final List<DataSegment> rangePartitionedSegments = new ArrayList<>(
+    final Map<Interval, List<DataSegment>> rangePartitionedSegments = SegmentUtils.groupSegmentsByInterval(
         runTestTask(
             new SingleDimensionPartitionsSpec(10, null, "dim1", false),
             TaskState.SUCCESS,
             false
         )
     );
-    final List<DataSegment> linearlyPartitionedSegments = new ArrayList<>(
+    final Map<Interval, List<DataSegment>> linearlyPartitionedSegments = SegmentUtils.groupSegmentsByInterval(
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
@@ -158,15 +170,27 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         )
     );
     // Pick half of each partition lists to compact together
-    rangePartitionedSegments.sort(Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum()));
-    linearlyPartitionedSegments.sort(Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum()));
+    rangePartitionedSegments.values().forEach(
+        segmentsInInterval -> segmentsInInterval.sort(
+            Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
+        )
+    );
+    linearlyPartitionedSegments.values().forEach(
+        segmentsInInterval -> segmentsInInterval.sort(
+            Comparator.comparing(segment -> segment.getShardSpec().getPartitionNum())
+        )
+    );
     final List<DataSegment> segmentsToCompact = new ArrayList<>();
-    segmentsToCompact.addAll(
-        rangePartitionedSegments.subList(rangePartitionedSegments.size() / 2, rangePartitionedSegments.size())
-    );
-    segmentsToCompact.addAll(
-        linearlyPartitionedSegments.subList(0, linearlyPartitionedSegments.size() / 2)
-    );
+    for (List<DataSegment> segmentsInInterval : rangePartitionedSegments.values()) {
+      segmentsToCompact.addAll(
+          segmentsInInterval.subList(segmentsInInterval.size() / 2, segmentsInInterval.size())
+      );
+    }
+    for (List<DataSegment> segmentsInInterval : linearlyPartitionedSegments.values()) {
+      segmentsToCompact.addAll(
+          segmentsInInterval.subList(0, segmentsInInterval.size() / 2)
+      );
+    }
     final CompactionTask compactionTask = newCompactionTaskBuilder()
         .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
