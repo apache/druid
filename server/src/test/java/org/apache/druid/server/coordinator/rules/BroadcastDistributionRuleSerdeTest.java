@@ -19,9 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Period;
@@ -29,9 +27,11 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 @RunWith(Parameterized.class)
@@ -39,29 +39,24 @@ public class BroadcastDistributionRuleSerdeTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
-  @Parameterized.Parameters
-  public static List<Object[]> constructorFeeder()
+  @Parameters(name = "{0}")
+  public static List<Object> constructorFeeder()
   {
-    return Lists.newArrayList(
-        new Object[]{new ForeverBroadcastDistributionRule()},
-        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"))},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null)}
+    return Arrays.asList(
+        new ForeverBroadcastDistributionRule(),
+        new IntervalBroadcastDistributionRule(Intervals.of("0/1000")),
+        new PeriodBroadcastDistributionRule(new Period(1000), null)
     );
   }
 
-  private final Rule testRule;
-
-  public BroadcastDistributionRuleSerdeTest(Rule testRule)
-  {
-    this.testRule = testRule;
-  }
+  @Parameter
+  public Rule testRule;
 
   @Test
   public void testSerde() throws IOException
   {
-    final List<Rule> rules = Collections.singletonList(testRule);
-    final String json = MAPPER.writeValueAsString(rules);
-    final List<Rule> fromJson = MAPPER.readValue(json, new TypeReference<List<Rule>>(){});
-    Assert.assertEquals(rules, fromJson);
+    String json = MAPPER.writeValueAsString(testRule);
+    Rule fromJson = MAPPER.readValue(json, Rule.class);
+    Assert.assertEquals(testRule, fromJson);
   }
 }
