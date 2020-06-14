@@ -38,7 +38,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.druid.timeline.partition.RangeBucketShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
