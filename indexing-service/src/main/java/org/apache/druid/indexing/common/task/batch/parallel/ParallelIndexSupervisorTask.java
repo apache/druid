@@ -195,7 +195,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     this.ingestionSchema = ingestionSchema;
 
-    if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
+    if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
 
       if (ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals().isEmpty()) {
@@ -429,7 +429,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
       if (isParallelMode()) {
         this.toolbox = toolbox;
-        if (getIngestionSchema().getTuningConfig().isForceGuaranteedRollup()) {
+        if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
           return runMultiPhaseParallel(toolbox);
         } else {
           return runSinglePhaseParallel(toolbox);

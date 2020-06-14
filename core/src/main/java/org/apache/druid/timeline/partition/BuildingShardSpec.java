@@ -94,10 +94,4 @@ public interface BuildingShardSpec<T extends ShardSpec> extends ShardSpec
   {
     throw new UnsupportedOperationException();
   }
-
-  @Override
-  default boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    throw new UnsupportedOperationException();
-  }
 }

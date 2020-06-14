@@ -125,8 +125,12 @@ public interface ShardSpec
   boolean possibleInDomain(Map<String, RangeSet<String>> domain);
 
   /**
-   * Returns true if two segments of this and other shardSpecs can exist in the same time chunk.
+   * Returns true if this shardSpec and the given {@link PartialShardSpec} share the same partition space.
+   *
+   * @see PartitionIds
    */
-  @JsonIgnore
-  boolean isCompatible(Class<? extends ShardSpec> other);
+  default boolean sharePartitionSpace(PartialShardSpec partialShardSpec)
+  {
+    return !partialShardSpec.isPartiallyOverwriteTimeChunk();
+  }
 }

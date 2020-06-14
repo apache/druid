@@ -166,12 +166,6 @@ public class SingleDimensionShardSpec implements ShardSpec
   }
 
   @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    return other == SingleDimensionShardSpec.class;
-  }
-
-  @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     if (numCorePartitions == UNKNOWN_NUM_CORE_PARTITIONS) {

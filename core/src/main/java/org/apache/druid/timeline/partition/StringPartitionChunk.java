@@ -19,6 +19,8 @@
 
 package org.apache.druid.timeline.partition;
 
+import java.util.Objects;
+
 /**
  */
 public class StringPartitionChunk<T> implements PartitionChunk<T>
@@ -111,10 +113,7 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
   @Override
   public int hashCode()
   {
-    int result = start != null ? start.hashCode() : 0;
-    result = 31 * result + (end != null ? end.hashCode() : 0);
-    result = 31 * result + (object != null ? object.hashCode() : 0);
-    return result;
+    return Objects.hash(start, end, chunkNumber, object);
   }
 
   @Override

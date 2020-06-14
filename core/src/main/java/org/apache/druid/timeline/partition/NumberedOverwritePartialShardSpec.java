@@ -87,4 +87,10 @@ public class NumberedOverwritePartialShardSpec implements PartialShardSpec
   {
     return NumberedOverwriteShardSpec.class;
   }
+
+  @Override
+  public boolean isPartiallyOverwriteTimeChunk()
+  {
+    return true;
+  }
 }

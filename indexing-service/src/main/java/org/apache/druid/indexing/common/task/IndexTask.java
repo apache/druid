@@ -1196,7 +1196,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
     @Nullable
-    private static PartitionsSpec getDefaultPartitionsSpec(
+    private static PartitionsSpec getPartitionsSpec(
         boolean forceGuaranteedRollup,
         @Nullable PartitionsSpec partitionsSpec,
         @Nullable Integer maxRowsPerSegment,
@@ -1224,11 +1224,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         if (forceGuaranteedRollup) {
           if (!partitionsSpec.isForceGuaranteedRollupCompatibleType()) {
-            throw new ISE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
+            throw new IAE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
           }
         } else {
           if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {
-            throw new ISE("DynamicPartitionsSpec must be used for best-effort rollup");
+            throw new IAE("DynamicPartitionsSpec must be used for best-effort rollup");
           }
         }
         return partitionsSpec;
@@ -1263,7 +1263,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this(
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
-          getDefaultPartitionsSpec(
+          getPartitionsSpec(
               forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
               partitionsSpec,
               maxRowsPerSegment == null ? targetPartitionSize : maxRowsPerSegment,

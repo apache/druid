@@ -62,4 +62,13 @@ public interface PartialShardSpec
    */
   @JsonIgnore
   Class<? extends ShardSpec> getShardSpecClass();
+
+  /**
+   * Returns true if a task can overwrite a subset of segments in a time chunk with this PartialShardSpec.
+   * Any implementation of {@link OverwriteShardSpec} should return true.
+   */
+  default boolean isPartiallyOverwriteTimeChunk()
+  {
+    return false;
+  }
 }

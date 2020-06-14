@@ -105,13 +105,12 @@ public class SingleDimensionPartialShardSpec implements PartialShardSpec
   @Override
   public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
-    // TODO: bucketId and numBuckets should be added to SingleDimensionShardSpec in a follow-up PR.
     return new SingleDimensionShardSpec(
         partitionDimension,
         start,
         end,
         partitionId,
-        0
+        numBuckets
     );
   }
 

@@ -49,8 +49,10 @@ public class NumberedPartialShardSpec implements PartialShardSpec
       //   represented as a range. We always set 0 for the core partition set size.
       return new NumberedShardSpec(0, 0);
     } else {
-      final NumberedShardSpec prevSpec = (NumberedShardSpec) specOfPreviousMaxPartitionId;
-      return new NumberedShardSpec(prevSpec.getPartitionNum() + 1, prevSpec.getNumCorePartitions());
+      return new NumberedShardSpec(
+          specOfPreviousMaxPartitionId.getPartitionNum() + 1,
+          specOfPreviousMaxPartitionId.getNumCorePartitions()
+      );
     }
   }
 

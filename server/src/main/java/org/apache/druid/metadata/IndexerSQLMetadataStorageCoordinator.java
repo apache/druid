@@ -810,16 +810,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return null;
 
     } else {
-      //noinspection ConstantConditions
-      if (FluentIterable
-          .from(existingChunks)
-          .transformAndConcat(TimelineObjectHolder::getObject)
-          .anyMatch(chunk -> !chunk.getObject().getShardSpec().isCompatible(partialShardSpec.getShardSpecClass()))) {
-        // All existing segments should have a compatible shardSpec with partialShardSpec.
-        return null;
-      }
-
-      // max partitionId of the SAME shardSpec
+      // max partitionId of the shardSpecs which share the same partition space.
       SegmentIdWithShardSpec maxId = null;
 
       if (!existingChunks.isEmpty()) {
@@ -832,7 +823,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             // Here we check only the segments of the same shardSpec to find out the max partitionId.
             // Note that OverwriteShardSpec has the higher range for partitionId than others.
             // See PartitionIds.
-            .filter(segment -> segment.getShardSpec().getClass() == partialShardSpec.getShardSpecClass())) {
+            .filter(segment -> segment.getShardSpec().sharePartitionSpace(partialShardSpec))) {
           // Don't use the stream API for performance.
           if (maxId == null || maxId.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
             maxId = SegmentIdWithShardSpec.fromDataSegment(segment);
@@ -851,7 +842,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
 
       maxId = pendings.stream()
-                      .filter(id -> id.getShardSpec().getClass() == partialShardSpec.getShardSpecClass())
+                      .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
                       .max((id1, id2) -> {
                         final int versionCompare = id1.getVersion().compareTo(id2.getVersion());
                         if (versionCompare != 0) {
