@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.OverwriteShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -72,6 +73,8 @@ public final class SegmentPublisherHelper
         annotateFn = annotateAtomicUpdateGroupFn(segmentsPerInterval.size());
       } else if (firstShardSpec instanceof BuildingShardSpec) {
         annotateFn = annotateCorePartitionSetSizeFn(segmentsPerInterval.size());
+      } else if (firstShardSpec instanceof BucketNumberedShardSpec) {
+        throw new ISE("Cannot publish segments with shardSpec[%s]", firstShardSpec);
       } else {
         annotateFn = null;
       }
