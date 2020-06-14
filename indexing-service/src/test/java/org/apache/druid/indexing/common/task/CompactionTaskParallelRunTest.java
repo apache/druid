@@ -135,7 +135,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   {
     runIndexTask(null, true);
 
-    final CompactionTask compactionTask = new Builder(
+    final Builder builder = new Builder(
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -146,9 +146,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentLoaderFactory(),
         RETRY_POLICY_FACTORY,
         appenderatorsManager
-    ).inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
-     .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
-     .build();
+    );
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
+        .build();
 
     runTask(compactionTask);
   }
@@ -158,7 +160,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   {
     runIndexTask(new HashedPartitionsSpec(null, 2, null), false);
     runIndexTask(null, true);
-    final CompactionTask compactionTask = new Builder(
+    final Builder builder = new Builder(
         DATA_SOURCE,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -169,9 +171,11 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         getSegmentLoaderFactory(),
         RETRY_POLICY_FACTORY,
         appenderatorsManager
-    ).inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
-     .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
-     .build();
+    );
+    final CompactionTask compactionTask = builder
+        .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
+        .tuningConfig(AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING)
+        .build();
 
     final Map<Interval, List<DataSegment>> intervalToSegments = SegmentUtils.groupSegmentsByInterval(
         runTask(compactionTask)
