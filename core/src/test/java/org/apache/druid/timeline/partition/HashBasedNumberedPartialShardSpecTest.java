@@ -30,7 +30,7 @@ import java.util.Map;
 
 public class HashBasedNumberedPartialShardSpecTest
 {
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = ShardSpecTestUtils.initObjectMapper();
 
   @Test
   public void testEquals()

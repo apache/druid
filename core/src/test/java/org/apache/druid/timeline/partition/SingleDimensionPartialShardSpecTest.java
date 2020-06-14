@@ -47,7 +47,7 @@ public class SingleDimensionPartialShardSpecTest
         "end",
         10
     );
-    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     final byte[] json = mapper.writeValueAsBytes(expected);
     final SingleDimensionPartialShardSpec fromJson = (SingleDimensionPartialShardSpec) mapper.readValue(
         json,
