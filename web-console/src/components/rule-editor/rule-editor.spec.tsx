@@ -96,4 +96,22 @@ describe('rule editor', () => {
     const { container } = render(ruleEditor);
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('matches snapshot with broadcast rule', () => {
+    const ruleEditor = (
+      <RuleEditor
+        rule={{
+          type: 'broadcastByInterval',
+          period: '2010-01-01/2015-01-01',
+        }}
+        tiers={[]}
+        onChange={() => {}}
+        onDelete={() => {}}
+        moveUp={null}
+        moveDown={null}
+      />
+    );
+    const { container } = render(ruleEditor);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });

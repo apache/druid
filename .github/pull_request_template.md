@@ -44,7 +44,7 @@ This PR has:
 - [ ] added Javadocs for most classes and all non-trivial methods. Linked related entities via Javadoc links.
 - [ ] added or updated version, license, or notice information in [licenses.yaml](https://github.com/apache/druid/blob/master/licenses.yaml)
 - [ ] added comments explaining the "why" and the intent of the code wherever would not be obvious for an unfamiliar reader.
-- [ ] added unit tests or modified existing tests to cover new code paths.
+- [ ] added unit tests or modified existing tests to cover new code paths, ensuring the threshold for [code coverage](https://github.com/apache/druid/blob/master/dev/code-review/code-coverage.md) is met.
 - [ ] added integration tests.
 - [ ] been tested in a test Druid cluster.
 
