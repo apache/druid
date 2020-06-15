@@ -26,14 +26,14 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.util.Objects;
+
 public class PeriodDropBeforeRule extends DropRule
 {
   private final Period period;
 
   @JsonCreator
-  public PeriodDropBeforeRule(
-      @JsonProperty("period") Period period
-  )
+  public PeriodDropBeforeRule(@JsonProperty("period") Period period)
   {
     this.period = period;
   }
@@ -62,5 +62,30 @@ public class PeriodDropBeforeRule extends DropRule
   {
     final DateTime periodAgo = referenceTimestamp.minus(period);
     return theInterval.getEndMillis() <= periodAgo.getMillis();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    PeriodDropBeforeRule that = (PeriodDropBeforeRule) o;
+
+    if (period != null ? !period.equals(that.period) : that.period != null) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(period);
   }
 }

@@ -34,6 +34,7 @@ describe('retention dialog', () => {
             type: 'loadByPeriod',
           },
         ]}
+        allRules={{ _default: [{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }] }}
         defaultRules={[{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }]}
         tiers={['tier1', 'tier2']}
         onEditDefaults={() => {}}

@@ -119,13 +119,14 @@ public class CoordinatorRuleManagerTest
   {
     final Map<String, List<Rule>> rules = ImmutableMap.of(
         DATASOURCE1,
-        ImmutableList.of(new ForeverLoadRule(null)),
+        ImmutableList.of(new ForeverLoadRule(null), new ForeverLoadRule(ImmutableMap.of("__default", 2))),
         DATASOURCE2,
-        ImmutableList.of(new ForeverLoadRule(null), new IntervalDropRule(Intervals.of("2020-01-01/2020-01-02"))),
+        ImmutableList.of(new ForeverLoadRule(null), new IntervalDropRule(Intervals.of("2020-01-01/2020-01-02")), new ForeverLoadRule(ImmutableMap.of("__default", 2))),
         "datasource3",
         ImmutableList.of(
             new PeriodLoadRule(new Period("P1M"), true, null),
-            new ForeverDropRule()
+            new ForeverDropRule(),
+            new ForeverLoadRule(ImmutableMap.of("__default", 2))
         ),
         TieredBrokerConfig.DEFAULT_RULE_NAME,
         ImmutableList.of(new ForeverLoadRule(ImmutableMap.of("__default", 2)))

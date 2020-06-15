@@ -210,6 +210,11 @@ exports[`retention dialog matches snapshot 1`] = `
                                 >
                                   broadcastByPeriod
                                 </option>
+                                <option
+                                  value="importRules"
+                                >
+                                  importRules
+                                </option>
                               </select>
                               <span
                                 class="bp3-icon bp3-icon-double-caret-vertical"

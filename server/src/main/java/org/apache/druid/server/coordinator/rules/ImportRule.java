@@ -19,32 +19,59 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Objects;
+
 /**
  */
-public class ForeverDropRule extends DropRule
+public class ImportRule implements Rule
 {
+
+  private final String importedRuleset;
+
+  @JsonCreator
+  public ImportRule(@JsonProperty("importedRuleset") String importedRuleset)
+  {
+    this.importedRuleset = importedRuleset;
+  }
+
   @Override
   @JsonProperty
   public String getType()
   {
-    return "dropForever";
+    return "importRules";
+  }
+
+  @JsonProperty
+  public String getImportedRuleset()
+  {
+    return importedRuleset;
   }
 
   @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
-    return true;
+    return false;
   }
 
   @Override
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
-    return true;
+    return false;
+  }
+
+  @Override
+  public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
+  {
+    return new CoordinatorStats();
   }
   
   @Override
@@ -53,12 +80,23 @@ public class ForeverDropRule extends DropRule
     if (this == o) {
       return true;
     }
-    return o != null && getClass() == o.getClass();
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ImportRule that = (ImportRule) o;
+    return Objects.equals(importedRuleset, that.importedRuleset);
   }
   
   @Override
-  public int hashCode()
+  public int hashCode() 
   {
-    return ForeverDropRule.class.hashCode();
+    return Objects.hash(importedRuleset);
   }
+
+  @Override
+  public boolean canLoadSegments()
+  {
+    return false;
+  }
+
 }

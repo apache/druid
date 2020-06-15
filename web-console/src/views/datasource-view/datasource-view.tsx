@@ -155,6 +155,7 @@ interface Datasource {
 interface DatasourcesAndDefaultRules {
   datasources: Datasource[];
   defaultRules: Rule[];
+  allRules: Record<string, Rule[]>;
 }
 
 interface DatasourceQueryResultRow {
@@ -328,6 +329,7 @@ GROUP BY 1`;
           return {
             datasources,
             defaultRules: [],
+            allRules: {},
           };
         }
 
@@ -370,6 +372,7 @@ GROUP BY 1`;
         return {
           datasources: allDatasources,
           defaultRules: rules['_default'],
+          allRules: rules,
         };
       },
       onStateChange: datasourcesAndDefaultRulesState => {
@@ -814,9 +817,10 @@ GROUP BY 1`;
 
   renderRetentionDialog(): JSX.Element | undefined {
     const { retentionDialogOpenOn, tiersState, datasourcesAndDefaultRulesState } = this.state;
-    const { defaultRules } = datasourcesAndDefaultRulesState.data || {
+    const { defaultRules, allRules } = datasourcesAndDefaultRulesState.data || {
       datasources: [],
       defaultRules: [],
+      allRules: {},
     };
     if (!retentionDialogOpenOn) return;
 
@@ -826,6 +830,7 @@ GROUP BY 1`;
         rules={retentionDialogOpenOn.rules}
         tiers={tiersState.data || []}
         onEditDefaults={this.editDefaultRules}
+        allRules={allRules}
         defaultRules={defaultRules}
         onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}
         onSave={this.saveRules}
@@ -857,10 +862,12 @@ GROUP BY 1`;
       hiddenColumns,
     } = this.state;
 
-    let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data
-      ? datasourcesAndDefaultRulesState.data
-      : { datasources: [], defaultRules: [] };
-
+    let datasources: Datasource[] = [];
+    let defaultRules: Rule[] = [];
+    if (datasourcesAndDefaultRulesState.data) {
+      datasources = datasourcesAndDefaultRulesState.data.datasources;
+      defaultRules = datasourcesAndDefaultRulesState.data.defaultRules;
+    }
     if (!showUnused) {
       datasources = datasources.filter(d => !d.unused);
     }

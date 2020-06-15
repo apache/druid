@@ -26,6 +26,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.util.Objects;
+
 /**
  */
 public class PeriodDropRule extends DropRule
@@ -80,4 +82,30 @@ public class PeriodDropRule extends DropRule
       return currInterval.contains(theInterval);
     }
   }
+  
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    PeriodDropRule that = (PeriodDropRule) o;
+
+    if (period != null ? !period.equals(that.period) : that.period != null) {
+      return false;
+    }
+
+    return includeFuture == that.includeFuture;
+  }
+  
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(period, includeFuture);
+  }
 }
+

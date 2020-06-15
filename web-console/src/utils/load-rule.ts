@@ -28,12 +28,14 @@ export type RuleType =
   | 'dropBeforeByPeriod'
   | 'broadcastForever'
   | 'broadcastByInterval'
-  | 'broadcastByPeriod';
+  | 'broadcastByPeriod'
+  | 'importRules';
 
 export interface Rule {
   type: RuleType;
   interval?: string;
   period?: string;
+  importedRuleset?: string;
   includeFuture?: boolean;
   tieredReplicants?: Record<string, number>;
 }
@@ -50,6 +52,7 @@ export class RuleUtil {
     'broadcastForever',
     'broadcastByInterval',
     'broadcastByPeriod',
+    'importRules',
   ];
 
   static ruleToString(rule: Rule): string {
@@ -57,6 +60,7 @@ export class RuleUtil {
       rule.type,
       rule.period ? `(${rule.period}${rule.includeFuture ? `+future` : ''})` : '',
       rule.interval ? `(${rule.interval})` : '',
+      rule.importedRuleset ? `(${rule.importedRuleset})` : '',
     ].join('');
   }
 
@@ -68,6 +72,12 @@ export class RuleUtil {
     } else {
       delete newRule.period;
       delete newRule.includeFuture;
+    }
+
+    if (RuleUtil.hasImport(newRule)) {
+      if (!newRule.importedRuleset) newRule.importedRuleset = '_default';
+    } else {
+      delete newRule.importedRuleset;
     }
 
     if (RuleUtil.hasInterval(newRule)) {
@@ -83,6 +93,14 @@ export class RuleUtil {
     }
 
     return newRule;
+  }
+
+  static hasImport(rule: Rule): boolean {
+    return rule.type.startsWith('import');
+  }
+
+  static changeImport(rule: Rule, importedRuleset: string): Rule {
+    return deepSet(rule, 'importedRuleset', importedRuleset);
   }
 
   static hasPeriod(rule: Rule): boolean {

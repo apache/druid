@@ -19,46 +19,16 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
 /**
  */
-public class ForeverDropRule extends DropRule
+public class ForeverDropRuleTest
 {
-  @Override
-  @JsonProperty
-  public String getType()
+  @Test
+  public void testEquals()
   {
-    return "dropForever";
-  }
-
-  @Override
-  public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
-  {
-    return true;
-  }
-
-  @Override
-  public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
-  {
-    return true;
-  }
-  
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    return o != null && getClass() == o.getClass();
-  }
-  
-  @Override
-  public int hashCode()
-  {
-    return ForeverDropRule.class.hashCode();
+    EqualsVerifier.forClass(ForeverDropRule.class).usingGetClass().verify();
   }
 }

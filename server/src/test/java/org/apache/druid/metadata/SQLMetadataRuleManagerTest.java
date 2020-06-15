@@ -23,7 +23,9 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.curator.shaded.com.google.common.collect.Iterables;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
@@ -33,9 +35,13 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
+import org.apache.druid.server.coordinator.rules.ForeverDropRule;
+import org.apache.druid.server.coordinator.rules.ImportRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +49,7 @@ import org.junit.Test;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +63,7 @@ public class SQLMetadataRuleManagerTest
   private SQLMetadataRuleManager ruleManager;
   private AuditManager auditManager;
   private final ObjectMapper mapper = new DefaultObjectMapper();
-
+  private MetadataRuleManagerConfig ruleManagerConfig = new MetadataRuleManagerConfig();
 
   @Before
   public void setUp()
@@ -75,7 +82,7 @@ public class SQLMetadataRuleManagerTest
     connector.createRulesTable();
     ruleManager = new SQLMetadataRuleManager(
         mapper,
-        new MetadataRuleManagerConfig(),
+        ruleManagerConfig,
         tablesConfig,
         connector,
         auditManager
@@ -201,6 +208,253 @@ public class SQLMetadataRuleManagerTest
     }
   }
 
+  @Test
+  public void testImportOneRuleset()
+  {
+    //ensure default rule is created
+    ruleManager.start();
+    
+    List<Rule> rules = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1M"), true, null),
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        ),
+        new ForeverDropRule()
+    );
+    
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    
+    List<Rule> rulesWithImport = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1W"), true, null),
+        new ImportRule("test_dataSource")
+    );
+    
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
+    ruleManager.overrideRule("import_dataSource", rulesWithImport, auditInfo);
+    List<Rule> managerRules = ruleManager.getRules("test_dataSource");
+    Assert.assertTrue("List in manager matches origin list", Iterables.elementsEqual(rules, managerRules));
+    
+    List<Rule> rulesWithDefault = new ArrayList<>(rules);
+    rulesWithDefault.addAll(getDefaultRules());
+    Assert.assertTrue("Rules with default matches", Iterables.elementsEqual(rulesWithDefault, ruleManager.getRulesWithDefault("test_dataSource"))); 
+    
+    List<Rule> expandedImportRules = new ArrayList<>();
+    expandedImportRules.add(new PeriodLoadRule(new Period("P1W"), true, null));
+    expandedImportRules.addAll(rules);
+    expandedImportRules.addAll(getDefaultRules());
+    Assert.assertTrue("Expanded Import Rules matches", Iterables.elementsEqual(expandedImportRules, ruleManager.getRulesWithDefault("import_dataSource")));    
+
+    ruleManager.stop();
+  }
+  
+  @Test
+  public void testInvalidImport()
+  {
+    //ensure default rule is created
+    ruleManager.start();
+    
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    
+    List<Rule> rulesWithImport = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1W"), true, null),
+        new ImportRule("test_dataSource")
+    );
+    
+    ruleManager.overrideRule("import_dataSource", rulesWithImport, auditInfo);
+        
+    List<Rule> expandedImportRules = new ArrayList<>();
+    expandedImportRules.add(new PeriodLoadRule(new Period("P1W"), true, null));
+    expandedImportRules.addAll(getDefaultRules());
+    Assert.assertTrue("Expanded Import Rules matches", Iterables.elementsEqual(expandedImportRules, ruleManager.getRulesWithDefault("import_dataSource")));    
+
+    ruleManager.stop();    
+  }
+
+  @Test
+  public void testImportedRulesetChanges()
+  {
+    //ensure default rule is created
+    ruleManager.start();
+    
+    List<Rule> rules = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1M"), true, null),
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        ),
+        new ForeverDropRule()
+    );
+    
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    
+    List<Rule> rulesWithImport = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1W"), true, null),
+        new ImportRule("test_dataSource")
+    );
+    
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
+    ruleManager.overrideRule("import_dataSource", rulesWithImport, auditInfo);
+    
+    List<Rule> expandedImportRules = new ArrayList<>();
+    expandedImportRules.add(new PeriodLoadRule(new Period("P1W"), true, null));
+    expandedImportRules.addAll(rules);
+    expandedImportRules.addAll(getDefaultRules());
+    Assert.assertTrue("Check Import Before Change", Iterables.elementsEqual(expandedImportRules, ruleManager.getRulesWithDefault("import_dataSource")));    
+
+    List<Rule> modifiedImports = ImmutableList.of(
+        new PeriodLoadRule(new Period("P3M"), true, null)
+    );
+    ruleManager.overrideRule("test_dataSource", modifiedImports, auditInfo);
+    List<Rule> modifiedExpandedImportRules = new ArrayList<>();
+    modifiedExpandedImportRules.add(new PeriodLoadRule(new Period("P1W"), true, null));
+    modifiedExpandedImportRules.addAll(modifiedImports);
+    modifiedExpandedImportRules.addAll(getDefaultRules());
+    Assert.assertTrue("Check Import After Change", Iterables.elementsEqual(modifiedExpandedImportRules, ruleManager.getRulesWithDefault("import_dataSource")));    
+    
+    ruleManager.stop();
+
+  }
+  
+  @Test
+  public void testImportNestedRuleset()
+  {
+    //ensure default rule is created
+    ruleManager.start();
+    
+    List<Rule> rules = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1M"), true, null),
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        ),
+        new ForeverDropRule()
+    );
+    
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    
+    List<Rule> rulesWithImport = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1W"), true, null),
+        new ImportRule("test_dataSource")
+    );
+    
+    List<Rule> rulesWithImport2 = ImmutableList.of(
+        new PeriodLoadRule(new Period("P3W"), true, null),
+        new ImportRule("import_dataSource")
+    );
+    
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
+    ruleManager.overrideRule("import_dataSource", rulesWithImport, auditInfo);
+    ruleManager.overrideRule("import_dataSource2", rulesWithImport2, auditInfo);
+    
+    List<Rule> combinedImports = new ArrayList<Rule>(ImmutableList.of(
+        new PeriodLoadRule(new Period("P3W"), true, null),
+        new PeriodLoadRule(new Period("P1W"), true, null),
+        new PeriodLoadRule(new Period("P1M"), true, null),
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        ),
+        new ForeverDropRule()        
+    ));
+    combinedImports.addAll(getDefaultRules());
+    Assert.assertTrue("Check Import After Change", Iterables.elementsEqual(combinedImports, ruleManager.getRulesWithDefault("import_dataSource2")));    
+    
+    ruleManager.stop();
+  }
+
+  @Test
+  public void testImportNestedCycle()
+  {
+    //ensure default rule is created
+    ruleManager.start();
+    
+    List<Rule> rules = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1M"), true, null),
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        ),
+        new ForeverDropRule(),
+        new ImportRule("import_dataSource2")
+    );
+    
+    AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
+    ruleManager.overrideRule(
+        "test_dataSource",
+        rules,
+        auditInfo
+    );
+    
+    List<Rule> rulesWithImport = ImmutableList.of(
+        new PeriodLoadRule(new Period("P1W"), true, null),
+        new ImportRule("test_dataSource"),
+        new ImportRule("import_dataSource2")
+    );
+    
+    List<Rule> rulesWithImport2 = ImmutableList.of(
+        new ImportRule("import_dataSource2"),
+        new PeriodLoadRule(new Period("P3W"), true, null),
+        new ImportRule("import_dataSource"),
+        new ImportRule("import_dataSource")
+    );
+    
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
+    ruleManager.overrideRule("import_dataSource", rulesWithImport, auditInfo);
+    ruleManager.overrideRule("import_dataSource2", rulesWithImport2, auditInfo);
+    
+    List<Rule> combinedImports = new ArrayList<Rule>(ImmutableList.of(
+        new PeriodLoadRule(new Period("P3W"), true, null),
+        new PeriodLoadRule(new Period("P1W"), true, null),
+        new PeriodLoadRule(new Period("P1M"), true, null),
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
+            DruidServer.DEFAULT_TIER,
+            DruidServer.DEFAULT_NUM_REPLICANTS
+        )
+        ),
+        new ForeverDropRule()        
+    ));
+    combinedImports.addAll(getDefaultRules());
+    Assert.assertTrue("Check Import After Change", Iterables.elementsEqual(combinedImports, ruleManager.getRulesWithDefault("import_dataSource2")));    
+    
+    ruleManager.stop();
+  }
+  
+  @Test
+  public void testGetDefaultWithDefault()
+  {
+    //ensure default rule is created
+    ruleManager.start();
+    Assert.assertEquals(getDefaultRules(), ruleManager.getRulesWithDefault(ruleManagerConfig.getDefaultRule()));
+    ruleManager.stop();    
+  }
+  
   @After
   public void cleanup()
   {
@@ -222,6 +476,11 @@ public class SQLMetadataRuleManagerTest
           }
         }
     );
+  }
+  
+  private List<Rule> getDefaultRules()
+  {
+    return ruleManager.getRules(ruleManagerConfig.getDefaultRule());
   }
 
 }

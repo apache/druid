@@ -33,6 +33,7 @@ import './retention-dialog.scss';
 export interface RetentionDialogProps {
   datasource: string;
   rules: Rule[];
+  allRules: Record<string, Rule[]>;
   defaultRules: Rule[];
   tiers: string[];
   onEditDefaults: () => void;
@@ -41,7 +42,7 @@ export interface RetentionDialogProps {
 }
 
 export const RetentionDialog = React.memo(function RetentionDialog(props: RetentionDialogProps) {
-  const { datasource, onCancel, onEditDefaults, rules, defaultRules, tiers } = props;
+  const { datasource, onCancel, onEditDefaults, rules, defaultRules, tiers, allRules } = props;
   const [currentRules, setCurrentRules] = useState(props.rules);
 
   const [historyQueryState] = useQueryManager<string, any[]>({
@@ -85,6 +86,7 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
       <RuleEditor
         rule={rule}
         tiers={tiers}
+        allRules={allRules}
         key={index}
         onChange={r => changeRule(r, index)}
         onDelete={() => deleteRule(index)}

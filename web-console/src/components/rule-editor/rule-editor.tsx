@@ -21,6 +21,7 @@ import {
   Card,
   Collapse,
   ControlGroup,
+  Divider,
   FormGroup,
   HTMLSelect,
   InputGroup,
@@ -40,6 +41,7 @@ const PERIOD_SUGGESTIONS: string[] = ['P1D', 'P7D', 'P1M', 'P1Y', 'P1000Y'];
 export interface RuleEditorProps {
   rule: Rule;
   tiers: any[];
+  allRules: Record<string, Rule[]>;
   onChange: (newRule: Rule) => void;
   onDelete: () => void;
   moveUp: (() => void) | undefined;
@@ -47,7 +49,7 @@ export interface RuleEditorProps {
 }
 
 export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
-  const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
+  const { rule, onChange, allRules, tiers, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
 
   function removeTier(key: string) {
@@ -139,6 +141,14 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
     );
   }
 
+  function renderImportedRule(rule: Rule, index: number) {
+    return (
+      <div className="default-rule" key={index}>
+        <Button disabled>{RuleUtil.ruleToString(rule)}</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="rule-editor">
       <div className="title">
@@ -174,6 +184,22 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                   );
                 })}
               </HTMLSelect>
+              {RuleUtil.hasImport(rule) && (
+                <HTMLSelect
+                  value={rule.importedRuleset}
+                  onChange={(e: any) =>
+                    onChange(RuleUtil.changeImport(rule, e.target.value as any))
+                  }
+                >
+                  {Object.keys(allRules).map((type: any) => {
+                    return (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    );
+                  })}
+                </HTMLSelect>
+              )}
               {RuleUtil.hasPeriod(rule) && (
                 <SuggestibleInput
                   value={rule.period || ''}
@@ -213,6 +239,15 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               {renderTiers()}
               {renderTierAdder()}
             </FormGroup>
+          )}
+          {RuleUtil.hasImport(rule) && rule.importedRuleset !== undefined && (
+            <>
+              <Divider />
+              <FormGroup>
+                <p>Imported Rules:</p>
+                {allRules[rule.importedRuleset].map(renderImportedRule)}
+              </FormGroup>
+            </>
           )}
         </Card>
       </Collapse>

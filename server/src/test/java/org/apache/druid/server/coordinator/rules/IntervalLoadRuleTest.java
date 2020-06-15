@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -80,5 +81,13 @@ public class IntervalLoadRuleTest
     IntervalLoadRule inputIntervalLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
     IntervalLoadRule expectedIntervalLoadRule = jsonMapper.readValue(expectedJson, IntervalLoadRule.class);
     Assert.assertEquals(expectedIntervalLoadRule, inputIntervalLoadRule);
+  }
+  
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(IntervalLoadRule.class)
+                  .usingGetClass()
+                  .withIgnoredFields("targetReplicants", "currentReplicants", "strategyCache").verify();
   }
 }

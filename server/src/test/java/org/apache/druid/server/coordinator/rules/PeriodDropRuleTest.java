@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -132,5 +133,11 @@ public class PeriodDropRuleTest
             now
         )
     );
+  }
+  
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(PeriodDropRule.class).usingGetClass().verify();
   }
 }

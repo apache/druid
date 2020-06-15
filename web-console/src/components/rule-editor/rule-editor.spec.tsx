@@ -26,6 +26,7 @@ describe('rule editor', () => {
     const ruleEditor = (
       <RuleEditor
         rule={{ type: 'loadForever' }}
+        allRules={{ _default: [{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }] }}
         tiers={['test', 'test', 'test']}
         onChange={() => {}}
         onDelete={() => {}}
@@ -45,6 +46,7 @@ describe('rule editor', () => {
           period: '2010-01-01/2015-01-01',
           tieredReplicants: { nonexist: 2 },
         }}
+        allRules={{ _default: [{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }] }}
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
@@ -64,6 +66,7 @@ describe('rule editor', () => {
           period: '2010-01-01/2015-01-01',
           tieredReplicants: { test1: 2 },
         }}
+        allRules={{ _default: [{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }] }}
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
@@ -86,6 +89,7 @@ describe('rule editor', () => {
             nonexist: 1,
           },
         }}
+        allRules={{ _default: [{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }] }}
         tiers={['test1', 'test2', 'test3']}
         onChange={() => {}}
         onDelete={() => {}}
@@ -104,6 +108,7 @@ describe('rule editor', () => {
           type: 'broadcastByInterval',
           period: '2010-01-01/2015-01-01',
         }}
+        allRules={{ _default: [{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }] }}
         tiers={[]}
         onChange={() => {}}
         onDelete={() => {}}
