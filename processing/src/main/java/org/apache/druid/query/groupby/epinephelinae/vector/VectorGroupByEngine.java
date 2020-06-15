@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -42,6 +43,7 @@ import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
@@ -83,20 +85,8 @@ public class VectorGroupByEngine
 
     return GroupByQueryEngineV2.isAllSingleValueDims(adapter::getColumnCapabilities, query.getDimensions(), true)
            && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
-           && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
+           && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
            && adapter.canVectorize(filter, query.getVirtualColumns(), false);
-  }
-
-  public static boolean columnCanVectorize(VectorCursor cursor, List<AggregatorFactory> aggregatorFactories)
-  {
-    if (cursor != null) {
-      for (AggregatorFactory aggregatorFactory : aggregatorFactories) {
-        if (!aggregatorFactory.columnCanVectorize(cursor.getColumnSelectorFactory())) {
-          return false;
-        }
-      }
-    }
-    return true;
   }
 
   public static Sequence<ResultRow> process(
@@ -107,10 +97,10 @@ public class VectorGroupByEngine
       @Nullable final Filter filter,
       final Interval interval,
       final GroupByQueryConfig config,
-      final VectorCursor cursor
+      final QueryConfig queryConfig
   )
   {
-    if (!canVectorize(query, storageAdapter, filter) || !columnCanVectorize(cursor, query.getAggregatorSpecs())) {
+    if (!canVectorize(query, storageAdapter, filter)) {
       throw new ISE("Cannot vectorize");
     }
 
@@ -120,6 +110,15 @@ public class VectorGroupByEngine
           @Override
           public CloseableIterator<ResultRow> make()
           {
+            final VectorCursor cursor = storageAdapter.makeVectorCursor(
+                Filters.toFilter(query.getDimFilter()),
+                interval,
+                query.getVirtualColumns(),
+                false,
+                queryConfig.getVectorSize(),
+                null
+            );
+
             if (cursor == null) {
               // Return empty iterator.
               return new CloseableIterator<ResultRow>()

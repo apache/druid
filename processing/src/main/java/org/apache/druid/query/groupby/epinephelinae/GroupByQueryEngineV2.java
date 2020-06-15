@@ -65,7 +65,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -144,22 +143,9 @@ public class GroupByQueryEngineV2
       final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
       final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-      boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
+      final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
           VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
       );
-
-      VectorCursor cursor = null;
-      if (doVectorize) {
-        cursor = storageAdapter.makeVectorCursor(
-            Filters.toFilter(query.getDimFilter()),
-            interval,
-            query.getVirtualColumns(),
-            false,
-            queryConfig.getVectorSize(),
-            null
-        );
-        doVectorize = VectorGroupByEngine.columnCanVectorize(cursor, query.getAggregatorSpecs());
-      }
 
       final Sequence<ResultRow> result;
 
@@ -172,7 +158,7 @@ public class GroupByQueryEngineV2
             filter,
             interval,
             querySpecificConfig,
-            cursor
+            queryConfig
         );
       } else {
         result = processNonVectorized(

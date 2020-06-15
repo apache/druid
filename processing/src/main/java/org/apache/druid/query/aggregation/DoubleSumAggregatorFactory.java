@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.ColumnCapabilitiesProvider;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -80,16 +81,13 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   }
 
   @Override
-  public boolean canVectorize()
+  public boolean canVectorize(ColumnCapabilitiesProvider columnCapabilitiesProvider)
   {
+    if (fieldName != null) {
+      final ColumnCapabilities originalCapabilities = columnCapabilitiesProvider.getColumnCapabilities(fieldName);
+      return expression == null && (originalCapabilities == null || originalCapabilities.getType().isNumeric());
+    }
     return expression == null;
-  }
-
-  @Override
-  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
-  {
-    final ColumnCapabilities originalCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(fieldName);
-    return originalCapabilities == null || originalCapabilities.canVectorize();
   }
 
   @Override

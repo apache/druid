@@ -100,35 +100,15 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
     final boolean descending = query.isDescending();
 
-    boolean doVectorize = queryConfigToUse.getVectorize().shouldVectorize(
+    final boolean doVectorize = queryConfigToUse.getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
-        && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
+        && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
     );
-
-    VectorCursor cursor = null;
-    if (doVectorize) {
-      cursor = adapter.makeVectorCursor(
-          filter,
-          interval,
-          query.getVirtualColumns(),
-          descending,
-          queryConfigToUse.getVectorSize(),
-          null
-      );
-      if (cursor != null) {
-        for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-          if (!aggregatorFactory.columnCanVectorize(cursor.getColumnSelectorFactory())) {
-            doVectorize = false;
-            break;
-          }
-        }
-      }
-    }
 
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, adapter, interval, gran, cursor);
+      result = processVectorized(query, queryConfigToUse, adapter, filter, interval, gran, descending);
     } else {
       result = processNonVectorized(query, adapter, filter, interval, gran, descending);
     }
@@ -143,14 +123,25 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
+      final QueryConfig queryConfig,
       final StorageAdapter adapter,
+      @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final VectorCursor cursor
+      final boolean descending
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
+
+    final VectorCursor cursor = adapter.makeVectorCursor(
+        filter,
+        queryInterval,
+        query.getVirtualColumns(),
+        descending,
+        queryConfig.getVectorSize(),
+        null
+    );
 
     if (cursor == null) {
       return Sequences.empty();

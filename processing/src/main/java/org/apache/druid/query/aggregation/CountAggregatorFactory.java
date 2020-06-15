@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.segment.ColumnCapabilitiesProvider;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -72,13 +73,7 @@ public class CountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean canVectorize()
-  {
-    return true;
-  }
-
-  @Override
-  public boolean columnCanVectorize(VectorColumnSelectorFactory vectorColumnSelectorFactory)
+  public boolean canVectorize(ColumnCapabilitiesProvider columnCapabilitiesProvider)
   {
     return true;
   }
