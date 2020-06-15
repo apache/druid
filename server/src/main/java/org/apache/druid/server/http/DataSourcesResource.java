@@ -29,7 +29,6 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import org.apache.commons.collections4.IterableUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
@@ -435,7 +434,7 @@ public class DataSourcesResource
       return logAndCreateDataSourceNotFoundResponse(dataSourceName);
     }
 
-    if (IterableUtils.size(segments.get()) == 0) {
+    if (Iterables.size(segments.get()) == 0) {
       return Response
           .status(Response.Status.NO_CONTENT)
           .entity("No used segment found for the given datasource and interval")

@@ -121,9 +121,9 @@ You can verify if segments created by a recent ingestion task are loaded onto hi
 An example workflow for this is:
 1. Submit your ingestion task.
 2. Repeatedly poll the Overlord's task API ( `/druid/indexer/v1/task/{taskId}/status`) until your task is shown to be successfully completed.
-3. Poll the below datasource loadstatus API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=true` once.
+3. Poll the below `datasource loadstatus` API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=true` once.
 If there are segments not yet loaded, continue to step 4, otherwise you can now query the data.
-4. Repeatedly poll the below datasource loadstatus API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=false`. 
+4. Repeatedly poll the below `datasource loadstatus` API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=false`. 
 Continue polling until all segments are loaded. Once all segments are loaded you can now query the data.
 
 ##### GET
