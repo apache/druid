@@ -746,7 +746,7 @@ public interface Function
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
       } else if (param.type() == ExprType.DOUBLE) {
         double val = param.asDouble();
-        if (Double.isNaN(val) || val == Double.POSITIVE_INFINITY || val == Double.NEGATIVE_INFINITY) {
+        if (Double.isNaN(val) || Double.isInfinite(val)) {
           // This is the behavior of Math.round()
           return ExprEval.of(0L);
         }

@@ -97,7 +97,7 @@ class HavingSpecMetricComparator
     // fractional values, values out of range of max long/max int) without worrying about them ourselves.
     // The only edge case we need to handle is doubles that can not be converted to a BigDecimal, so fall back to using
     // Double.compare
-    if (Double.isNaN(a) || a == Double.POSITIVE_INFINITY || a == Double.NEGATIVE_INFINITY) {
+    if (Double.isNaN(a) || Double.isInfinite(a)) {
       return Double.compare(a, b);
     }
     return BigDecimal.valueOf(a).compareTo(BigDecimal.valueOf(b));

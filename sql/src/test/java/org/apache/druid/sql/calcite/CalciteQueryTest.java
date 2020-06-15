@@ -140,6 +140,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelectNonNumericNumberLiterals() throws Exception
+  {
+    // Tests to convert NaN, positive infinity and negative infinity as literals.
+    testQuery(
+        "SELECT"
+        + " CAST(1 / 0.0 AS BIGINT),"
+        + " CAST(1 / -0.0 AS BIGINT),"
+        + " CAST(-1 / 0.0 AS BIGINT),"
+        + " CAST(-1 / -0.0 AS BIGINT),"
+        + " CAST(0/ 0.0 AS BIGINT)",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[] {
+                Long.MAX_VALUE,
+                Long.MAX_VALUE,
+                Long.MIN_VALUE,
+                Long.MIN_VALUE,
+                0L
+            }
+        )
+    );
+  }
+
+  @Test
   public void testSelectConstantExpressionFromTable() throws Exception
   {
     testQuery(
