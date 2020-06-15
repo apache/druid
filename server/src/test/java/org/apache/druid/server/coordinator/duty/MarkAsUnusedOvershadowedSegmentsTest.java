@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -39,9 +41,11 @@ import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.util.List;
 
+@RunWith(JUnitParamsRunner.class)
 public class MarkAsUnusedOvershadowedSegmentsTest
 {
   MarkAsUnusedOvershadowedSegments markAsUnusedOvershadowedSegments;
@@ -69,8 +73,16 @@ public class MarkAsUnusedOvershadowedSegmentsTest
                                                            .build();
 
   @Test
-  public void testRun()
+  @Parameters(
+      {
+          "historical",
+          "broker"
+      }
+  )
+  public void testRun(String serverTypeString)
   {
+    ServerType serverType = ServerType.fromString(serverTypeString);
+
     markAsUnusedOvershadowedSegments =
         new MarkAsUnusedOvershadowedSegments(coordinator);
     usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
@@ -95,7 +107,7 @@ public class MarkAsUnusedOvershadowedSegmentsTest
             .andReturn("")
             .anyTimes();
     EasyMock.expect(druidServer.getType())
-            .andReturn(ServerType.HISTORICAL)
+            .andReturn(serverType)
             .anyTimes();
 
     EasyMock.expect(druidServer.getDataSources())

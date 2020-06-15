@@ -42,6 +42,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -217,6 +218,12 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    if (server.getType().equals(ServerType.BROKER)) {
+      // in theory we could just filter this to ensure we don't put ourselves in here, to make dope broker tree
+      // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
+      // loop...
+      return;
+    }
     SegmentId segmentId = segment.getId();
     synchronized (lock) {
       log.debug("Adding segment[%s] for server[%s]", segment, server);
@@ -246,6 +253,10 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
+    if (server.getType().equals(ServerType.BROKER)) {
+      // might as well save the trouble of grabbing a lock for something that isn't there..
+      return;
+    }
     SegmentId segmentId = segment.getId();
     final ServerSelector selector;
 

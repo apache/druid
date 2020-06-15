@@ -26,7 +26,6 @@ import {
   InputGroup,
   NumericInput,
   Switch,
-  TagInput,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
@@ -207,15 +206,6 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
             <FormGroup>
               {renderTiers()}
               {renderTierAdder()}
-            </FormGroup>
-          )}
-          {RuleUtil.hasColocatedDataSources(rule) && (
-            <FormGroup label="Colocated datasources">
-              <TagInput
-                values={rule.colocatedDataSources || []}
-                onChange={(v: any) => onChange(RuleUtil.changeColocatedDataSources(rule, v))}
-                fill
-              />
             </FormGroup>
           )}
         </Card>

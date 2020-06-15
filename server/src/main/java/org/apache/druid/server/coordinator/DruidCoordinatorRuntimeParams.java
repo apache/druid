@@ -226,7 +226,8 @@ public class DruidCoordinatorRuntimeParams
         coordinatorCompactionConfig,
         stats,
         balancerReferenceTimestamp,
-        balancerStrategy
+        balancerStrategy,
+        broadcastDatasources
     );
   }
 
@@ -246,7 +247,8 @@ public class DruidCoordinatorRuntimeParams
         coordinatorCompactionConfig,
         stats,
         balancerReferenceTimestamp,
-        balancerStrategy
+        balancerStrategy,
+        broadcastDatasources
     );
   }
 
@@ -300,7 +302,8 @@ public class DruidCoordinatorRuntimeParams
         CoordinatorCompactionConfig coordinatorCompactionConfig,
         CoordinatorStats stats,
         DateTime balancerReferenceTimestamp,
-        BalancerStrategy balancerStrategy
+        BalancerStrategy balancerStrategy,
+        Set<String> broadcastDatasources
     )
     {
       this.startTimeNanos = startTimeNanos;
@@ -317,6 +320,7 @@ public class DruidCoordinatorRuntimeParams
       this.stats = stats;
       this.balancerReferenceTimestamp = balancerReferenceTimestamp;
       this.balancerStrategy = balancerStrategy;
+      this.broadcastDatasources = broadcastDatasources;
     }
 
     public DruidCoordinatorRuntimeParams build()
