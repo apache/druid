@@ -868,7 +868,7 @@ public class SegmentAllocateActionTest
     Assert.assertNull(id1);
   }
 
-   @Test
+  @Test
   public void testWithPartialShardSpecAndOvershadowingSegments() throws IOException
   {
     final Task task = NoopTask.create();
