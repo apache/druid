@@ -373,6 +373,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
         toolbox,
+        getTaskLockHelper().getLockGranularityToUse(),
         segmentProvider,
         partitionConfigurationManager,
         dimensionsSpec,
@@ -481,6 +482,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   @VisibleForTesting
   static List<ParallelIndexIngestionSpec> createIngestionSchema(
       final TaskToolbox toolbox,
+      final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
@@ -494,7 +496,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
         toolbox,
-        segmentProvider
+        segmentProvider,
+        lockGranularityInUse
     );
     final Map<DataSegment, File> segmentFileMap = pair.lhs;
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.rhs;
@@ -632,10 +635,12 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   private static Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> prepareSegments(
       TaskToolbox toolbox,
-      SegmentProvider segmentProvider
+      SegmentProvider segmentProvider,
+      LockGranularity lockGranularityInUse
   ) throws IOException, SegmentLoadingException
   {
     final List<DataSegment> usedSegments = segmentProvider.findSegments(toolbox.getTaskActionClient());
+    segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
     final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = VersionedIntervalTimeline
         .forSegments(usedSegments)

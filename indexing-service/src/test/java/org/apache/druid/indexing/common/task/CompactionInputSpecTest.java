@@ -104,7 +104,7 @@ public class CompactionInputSpecTest
   {
     Assert.assertTrue(inputSpec.validateSegments(LockGranularity.TIME_CHUNK, SEGMENTS));
     Assert.assertTrue(inputSpec.validateSegments(LockGranularity.SEGMENT, SEGMENTS));
-    Assert.assertTrue(inputSpec.validateSegments(LockGranularity.SEGMENT, SEGMENTS.subList(0, SEGMENTS.size() - 1)));
+    Assert.assertFalse(inputSpec.validateSegments(LockGranularity.SEGMENT, SEGMENTS.subList(0, SEGMENTS.size() - 1)));
   }
 
   @Test
