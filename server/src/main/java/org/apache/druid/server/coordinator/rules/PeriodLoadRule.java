@@ -30,6 +30,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -98,5 +99,30 @@ public class PeriodLoadRule extends LoadRule
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
     return Rules.eligibleForLoad(period, interval, referenceTimestamp, includeFuture);
+  }
+  
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    PeriodLoadRule that = (PeriodLoadRule) o;
+
+    if (period != null ? !period.equals(that.period) : that.period != null) {
+      return false;
+    }
+
+    return includeFuture == that.includeFuture && Objects.equals(tieredReplicants, that.tieredReplicants);
+  }
+  
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(period, includeFuture, tieredReplicants);
   }
 }

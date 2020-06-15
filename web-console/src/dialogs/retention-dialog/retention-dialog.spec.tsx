@@ -27,6 +27,7 @@ describe('retention dialog', () => {
       <RetentionDialog
         datasource={'test'}
         rules={[null]}
+        allRules={null}
         tiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']}
         onEditDefaults={() => {}}
         onCancel={() => {}}

@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.ImportRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.FoldController;
@@ -57,8 +58,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -344,17 +347,36 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     return retVal == null ? new ArrayList<>() : retVal;
   }
 
+  private void expandRules(Map<String, List<Rule>> theRules, String datasource, List<Rule> expandedRules, Set<String> visited)
+  {
+    if (datasource == null || theRules.get(datasource) == null) {
+      return;
+    }
+
+    visited.add(datasource);
+
+    for (Rule rule : theRules.get(datasource)) {
+      if (rule instanceof ImportRule) {
+        ImportRule importRule = (ImportRule) rule;
+        if (!visited.contains(importRule.getImportedRuleset())) {
+          expandRules(theRules, importRule.getImportedRuleset(), expandedRules, visited);
+        }
+      } else {
+        expandedRules.add(rule);
+      }
+    }
+  }
+  
   @Override
   public List<Rule> getRulesWithDefault(final String dataSource)
   {
     List<Rule> retVal = new ArrayList<>();
     Map<String, List<Rule>> theRules = rules.get();
-    if (theRules.get(dataSource) != null) {
-      retVal.addAll(theRules.get(dataSource));
-    }
-    if (theRules.get(config.getDefaultRule()) != null) {
-      retVal.addAll(theRules.get(config.getDefaultRule()));
-    }
+    Set<String> visited = new HashSet<String>();
+    
+    expandRules(theRules, dataSource, retVal, visited);
+    expandRules(theRules, config.getDefaultRule(), retVal, visited);
+    
     return retVal;
   }
 

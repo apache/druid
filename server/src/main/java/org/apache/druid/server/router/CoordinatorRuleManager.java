@@ -43,7 +43,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.concurrent.GuardedBy;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -135,7 +134,7 @@ public class CoordinatorRuleManager
   {
     try {
       StringFullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, RulesResource.RULES_ENDPOINT)
+          druidLeaderClient.makeRequest(HttpMethod.GET, RulesResource.RULES_ENDPOINT + "?full")
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -158,17 +157,10 @@ public class CoordinatorRuleManager
 
   public List<Rule> getRulesWithDefault(final String dataSource)
   {
-    List<Rule> rulesWithDefault = new ArrayList<>();
-    Map<String, List<Rule>> theRules = rules.get();
-    List<Rule> dataSourceRules = theRules.get(dataSource);
-    if (dataSourceRules != null) {
-      rulesWithDefault.addAll(dataSourceRules);
+    if (!rules.get().containsKey(dataSource)) {
+      return rules.get().get(config.get().getDefaultRule());
     }
-    List<Rule> defaultRules = theRules.get(config.get().getDefaultRule());
-    if (defaultRules != null) {
-      rulesWithDefault.addAll(defaultRules);
-    }
-    return rulesWithDefault;
+    return rules.get().get(dataSource);
   }
 
   /**

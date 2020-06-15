@@ -27,6 +27,7 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{ type: 'loadForever' }}
         tiers={['test', 'test', 'test']}
+        allRules={{ _default: [{ type: 'loadForever' }] }}
         onChange={() => {}}
         onDelete={() => {}}
         moveUp={null}
@@ -46,6 +47,7 @@ describe('rule editor', () => {
           tieredReplicants: { nonexist: 2 },
         }}
         tiers={['test1', 'test2', 'test3']}
+        allRules={{ _default: [{ type: 'loadForever' }] }}
         onChange={() => {}}
         onDelete={() => {}}
         moveUp={null}
@@ -65,6 +67,7 @@ describe('rule editor', () => {
           tieredReplicants: { test1: 2 },
         }}
         tiers={['test1', 'test2', 'test3']}
+        allRules={{ _default: [{ type: 'loadForever' }] }}
         onChange={() => {}}
         onDelete={() => {}}
         moveUp={null}
@@ -87,6 +90,7 @@ describe('rule editor', () => {
           },
         }}
         tiers={['test1', 'test2', 'test3']}
+        allRules={{ _default: [{ type: 'loadForever' }] }}
         onChange={() => {}}
         onDelete={() => {}}
         moveUp={null}
@@ -105,6 +109,7 @@ describe('rule editor', () => {
           period: '2010-01-01/2015-01-01',
         }}
         tiers={[]}
+        allRules={{ _default: [{ type: 'loadForever' }] }}
         onChange={() => {}}
         onDelete={() => {}}
         moveUp={null}

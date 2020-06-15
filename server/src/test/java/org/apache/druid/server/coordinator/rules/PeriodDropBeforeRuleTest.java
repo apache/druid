@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.DataSegment;
@@ -84,5 +85,11 @@ public class PeriodDropBeforeRuleTest
             now
         )
     );
+  }
+  
+  @Test
+  public void testEquals() 
+  {
+    EqualsVerifier.forClass(PeriodDropBeforeRule.class).usingGetClass().verify();
   }
 }

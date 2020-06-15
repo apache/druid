@@ -146,6 +146,7 @@ export interface DatasourcesViewState {
   datasources: Datasource[] | null;
   tiers: string[];
   defaultRules: any[];
+  allRules: any;
   datasourcesError?: string;
   datasourceFilter: Filter[];
 
@@ -203,7 +204,7 @@ GROUP BY 1`;
 
   private datasourceQueryManager: QueryManager<
     Capabilities,
-    { tiers: string[]; defaultRules: any[]; datasources: Datasource[] }
+    { tiers: string[]; defaultRules: any[]; datasources: Datasource[]; allRules: any }
   >;
 
   constructor(props: DatasourcesViewProps, context: any) {
@@ -219,6 +220,7 @@ GROUP BY 1`;
       datasources: null,
       tiers: [],
       defaultRules: [],
+      allRules: {},
       datasourceFilter,
 
       showUnused: false,
@@ -274,6 +276,7 @@ GROUP BY 1`;
             datasources,
             tiers: [],
             defaultRules: [],
+            allRules: {},
           };
         }
 
@@ -313,6 +316,7 @@ GROUP BY 1`;
           datasources: allDatasources,
           tiers,
           defaultRules: rules['_default'],
+          allRules: rules,
         };
       },
       onStateChange: ({ result, loading, error }) => {
@@ -321,6 +325,7 @@ GROUP BY 1`;
           datasources: result ? result.datasources : null,
           tiers: result ? result.tiers : [],
           defaultRules: result ? result.defaultRules : [],
+          allRules: result ? result.allRules : {},
           datasourcesError: error || undefined,
         });
       },
@@ -700,7 +705,7 @@ GROUP BY 1`;
   }
 
   renderRetentionDialog() {
-    const { retentionDialogOpenOn, tiers } = this.state;
+    const { retentionDialogOpenOn, tiers, allRules } = this.state;
     if (!retentionDialogOpenOn) return null;
 
     return (
@@ -708,6 +713,7 @@ GROUP BY 1`;
         datasource={retentionDialogOpenOn.datasource}
         rules={retentionDialogOpenOn.rules}
         tiers={tiers}
+        allRules={allRules}
         onEditDefaults={this.editDefaultRules}
         onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}
         onSave={this.saveRules}

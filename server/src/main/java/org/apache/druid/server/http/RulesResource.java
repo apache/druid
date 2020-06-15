@@ -45,7 +45,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -70,8 +74,16 @@ public class RulesResource
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response getRules()
+  public Response getRules(@QueryParam("full") final String full)
   {
+    if (full != null) {
+      Map<String, List<Rule>> expandedRules = new HashMap<String, List<Rule>>();
+      Set<String> allRulesets = databaseRuleManager.getAllRules().keySet();
+      for (String ds : allRulesets) {
+        expandedRules.put(ds, databaseRuleManager.getRulesWithDefault(ds));
+      }
+      return Response.ok(expandedRules).build();
+    }
     return Response.ok(databaseRuleManager.getAllRules()).build();
   }
 

@@ -41,6 +41,7 @@ export function reorderArray<T>(items: T[], oldIndex: number, newIndex: number):
 export interface RetentionDialogProps {
   datasource: string;
   rules: any[];
+  allRules: any;
   tiers: string[];
   onEditDefaults: () => void;
   onCancel: () => void;
@@ -126,13 +127,14 @@ export class RetentionDialog extends React.PureComponent<
   }
 
   renderRule = (rule: any, index: number) => {
-    const { tiers } = this.props;
+    const { tiers, allRules } = this.props;
     const { currentRules } = this.state;
 
     return (
       <RuleEditor
         rule={rule}
         tiers={tiers}
+        allRules={allRules}
         key={index}
         onChange={r => this.changeRule(r, index)}
         onDelete={() => this.onDeleteRule(index)}

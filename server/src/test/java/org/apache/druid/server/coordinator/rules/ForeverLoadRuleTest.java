@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
@@ -87,5 +88,21 @@ public class ForeverLoadRuleTest
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+  }
+  
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(ForeverLoadRule.class)
+      .usingGetClass()
+      .withIgnoredFields("targetReplicants", "currentReplicants", "strategyCache")
+      .verify();
+  }
+  
+  @Test
+  public void testDefaultReplicants()
+  {
+    ForeverLoadRule rule = new ForeverLoadRule(null);
+    Assert.assertEquals(rule.getNumReplicants(DruidServer.DEFAULT_TIER), DruidServer.DEFAULT_NUM_REPLICANTS);
   }
 }

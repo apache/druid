@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -57,6 +58,15 @@ public class PeriodLoadRuleTest
     Assert.assertTrue(rule.appliesTo(BUILDER.interval(Intervals.of("2012-01-01/2012-12-31")).build(), now));
     Assert.assertTrue(rule.appliesTo(BUILDER.interval(Intervals.of("1000-01-01/2012-12-31")).build(), now));
     Assert.assertTrue(rule.appliesTo(BUILDER.interval(Intervals.of("0500-01-01/2100-12-31")).build(), now));
+  }
+  
+  @Test
+  public void testEquals() 
+  {
+    EqualsVerifier.forClass(PeriodLoadRule.class)
+            .usingGetClass()
+            .withIgnoredFields("targetReplicants", "currentReplicants", "strategyCache")
+            .verify();
   }
 
   @Test
@@ -185,5 +195,12 @@ public class PeriodLoadRuleTest
     Assert.assertEquals(expectedPeriodLoadRule.getTieredReplicants(), inputPeriodLoadRule.getTieredReplicants());
     Assert.assertEquals(expectedPeriodLoadRule.getPeriod(), inputPeriodLoadRule.getPeriod());
     Assert.assertEquals(expectedPeriodLoadRule.isIncludeFuture(), inputPeriodLoadRule.isIncludeFuture());
+  }
+  
+  @Test
+  public void testDefaultReplicants()
+  {
+    PeriodLoadRule rule = new PeriodLoadRule(new Period("P1D"), null, null);
+    Assert.assertEquals(rule.getNumReplicants(DruidServer.DEFAULT_TIER), DruidServer.DEFAULT_NUM_REPLICANTS);
   }
 }

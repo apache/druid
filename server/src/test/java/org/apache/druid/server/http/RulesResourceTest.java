@@ -20,14 +20,19 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.rules.ForeverDropRule;
+import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -87,6 +92,40 @@ public class RulesResourceTest
     Assert.assertEquals(entry2, rulesHistory.get(1));
 
     EasyMock.verify(auditManager);
+  }
+  
+  @Test
+  public void testGetAllRulesWithDefault()
+  {
+    Map<String, List<Rule>> sourceMap = ImmutableMap.of(
+        "datasource1", ImmutableList.of(new PeriodLoadRule(new Period("P1M"), true, null)),
+        "__default", ImmutableList.of(new ForeverDropRule())
+    );
+    
+    EasyMock.expect(databaseRuleManager.getAllRules())
+            .andReturn(sourceMap).once();
+    
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.eq("datasource1")))
+            .andReturn(ImmutableList.of(new PeriodLoadRule(new Period("P1M"), true, null), new ForeverDropRule()))
+            .once();
+    
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.eq("__default")))
+            .andReturn(ImmutableList.of(new ForeverDropRule()))
+            .once();    
+    
+    EasyMock.replay(databaseRuleManager);
+    
+    RulesResource rulesResource = new RulesResource(databaseRuleManager, auditManager);
+    Response response = rulesResource.getRules("full");
+    
+    Map allRules = (Map) response.getEntity();
+    
+    Map<String, List<Rule>> mapWithDefault = ImmutableMap.of(
+        "datasource1", ImmutableList.of(new PeriodLoadRule(new Period("P1M"), true, null), new ForeverDropRule()),
+        "__default", ImmutableList.of(new ForeverDropRule())
+    );
+    
+    Assert.assertEquals(allRules, mapWithDefault);
   }
 
   @Test

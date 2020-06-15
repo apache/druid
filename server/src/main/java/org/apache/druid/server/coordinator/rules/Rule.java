@@ -44,6 +44,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "dropBeforeByPeriod", value = PeriodDropBeforeRule.class),
     @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class),
     @JsonSubTypes.Type(name = "dropForever", value = ForeverDropRule.class),
+    @JsonSubTypes.Type(name = "importRules", value = ImportRule.class),
     @JsonSubTypes.Type(name = ForeverBroadcastDistributionRule.TYPE, value = ForeverBroadcastDistributionRule.class),
     @JsonSubTypes.Type(name = IntervalBroadcastDistributionRule.TYPE, value = IntervalBroadcastDistributionRule.class),
     @JsonSubTypes.Type(name = PeriodBroadcastDistributionRule.TYPE, value = PeriodBroadcastDistributionRule.class)

@@ -37,6 +37,7 @@ import './rule-editor.scss';
 export interface RuleEditorProps {
   rule: Rule;
   tiers: any[];
+  allRules: any;
   onChange: (newRule: Rule) => void;
   onDelete: () => void;
   moveUp: (() => void) | null;
@@ -44,7 +45,7 @@ export interface RuleEditorProps {
 }
 
 export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
-  const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
+  const { rule, onChange, tiers, allRules, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
   if (!rule) return null;
 
@@ -69,6 +70,16 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
     }
 
     onChange(RuleUtil.addTieredReplicant(rule, newTierName, 1));
+  }
+
+  function ImportedRules(props: any) {
+    return (
+      <ul>
+        {allRules[props.selectedRule].map((r: any) => {
+          return <li key={RuleUtil.ruleToString(r)}>{RuleUtil.ruleToString(r)}</li>;
+        })}
+      </ul>
+    );
   }
 
   function renderTiers() {
@@ -172,6 +183,22 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                   );
                 })}
               </HTMLSelect>
+              {RuleUtil.hasImport(rule) && (
+                <HTMLSelect
+                  value={rule.importedRuleset}
+                  onChange={(e: any) =>
+                    onChange(RuleUtil.changeImport(rule, e.target.value as any))
+                  }
+                >
+                  {Object.keys(allRules).map((type: any) => {
+                    return (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    );
+                  })}
+                </HTMLSelect>
+              )}
               {RuleUtil.hasPeriod(rule) && (
                 <InputGroup
                   value={rule.period || ''}
@@ -208,6 +235,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               {renderTierAdder()}
             </FormGroup>
           )}
+          {RuleUtil.hasImport(rule) && <ImportedRules selectedRule={rule.importedRuleset} />}
         </Card>
       </Collapse>
     </div>

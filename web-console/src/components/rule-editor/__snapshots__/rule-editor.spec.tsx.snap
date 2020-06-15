@@ -139,6 +139,11 @@ exports[`rule editor matches snapshot no tier in rule 1`] = `
                   >
                     broadcastByPeriod
                   </option>
+                  <option
+                    value="importRules"
+                  >
+                    importRules
+                  </option>
                 </select>
                 <span
                   class="bp3-icon bp3-icon-double-caret-vertical"
@@ -353,6 +358,11 @@ exports[`rule editor matches snapshot with broadcast rule 1`] = `
                   >
                     broadcastByPeriod
                   </option>
+                  <option
+                    value="importRules"
+                  >
+                    importRules
+                  </option>
                 </select>
                 <span
                   class="bp3-icon bp3-icon-double-caret-vertical"
@@ -532,6 +542,11 @@ exports[`rule editor matches snapshot with existing tier and non existing tier i
                     value="broadcastByPeriod"
                   >
                     broadcastByPeriod
+                  </option>
+                  <option
+                    value="importRules"
+                  >
+                    importRules
                   </option>
                 </select>
                 <span
@@ -1076,6 +1091,11 @@ exports[`rule editor matches snapshot with existing tier in rule 1`] = `
                   >
                     broadcastByPeriod
                   </option>
+                  <option
+                    value="importRules"
+                  >
+                    importRules
+                  </option>
                 </select>
                 <span
                   class="bp3-icon bp3-icon-double-caret-vertical"
@@ -1461,6 +1481,11 @@ exports[`rule editor matches snapshot with non existing tier in rule 1`] = `
                     value="broadcastByPeriod"
                   >
                     broadcastByPeriod
+                  </option>
+                  <option
+                    value="importRules"
+                  >
+                    importRules
                   </option>
                 </select>
                 <span
