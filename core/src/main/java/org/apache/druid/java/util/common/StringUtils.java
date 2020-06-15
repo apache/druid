@@ -502,7 +502,7 @@ public class StringUtils
     char[] data = new char[len];
 
     // Copy the padding
-    for (int i = 0; !pad.isEmpty() && i < pos; i += pad.length()) {
+    for (int i = 0; i < pos; i += pad.length()) {
       for (int j = 0; j < pad.length() && j < pos - i; j++) {
         data[i + j] = pad.charAt(j);
       }
@@ -548,8 +548,9 @@ public class StringUtils
 
     char[] data = new char[len];
 
+
     // Copy the padding
-    for (int i = len - paddingLen; !pad.isEmpty() && i < len; i += pad.length()) {
+    for (int i = len - paddingLen; i < len; i += pad.length()) {
       for (int j = 0; j < pad.length() && i + j < data.length; j++) {
         data[i + j] = pad.charAt(j);
       }
