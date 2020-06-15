@@ -45,12 +45,6 @@ public class LinearPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
-  {
-    return new LinearShardSpec(partitionId);
-  }
-
-  @Override
   public Class<? extends ShardSpec> getShardSpecClass()
   {
     return LinearShardSpec.class;

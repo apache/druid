@@ -68,28 +68,21 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPrevMaxPartitionId)
   {
-    // The shardSpec is created by the Overlord.
-    // For batch tasks, this code can be executed only with segment locking (forceTimeChunkLock = false).
-    // In this mode, you can have 2 or more tasks concurrently ingesting into the same time chunk of
-    // the same datasource. Since there is no restriction for those tasks in segment allocation, the
-    // allocated IDs for each task can interleave. As a result, the core partition set cannot be
-    // represented as a range. We always set 0 for the core partition set size if this is an initial segment.
+    // This code is executed when the Overlord coordinates segment allocation, which is either you append segments
+    // or you use segment lock. When appending segments, null specOfPrevMaxPartitionId means that this is
+    // the very initial segment. Since the core partitions set is not determined for appended segments, we set it 0.
+    // When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
+    // OvershadowableManager handles the atomic segment update.
     return new HashBasedNumberedShardSpec(
-        specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getPartitionNum() + 1,
-        specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getNumCorePartitions(),
+        specOfPrevMaxPartitionId == null ? 0 : specOfPrevMaxPartitionId.getPartitionNum() + 1,
+        specOfPrevMaxPartitionId == null ? 0 : PartialShardSpec.getValidNumCorePartitions(specOfPrevMaxPartitionId),
         bucketId,
         numBuckets,
         partitionDimensions,
         objectMapper
     );
-  }
-
-  @Override
-  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
-  {
-    return new HashBasedNumberedShardSpec(partitionId, 0, bucketId, numBuckets, partitionDimensions, objectMapper);
   }
 
   @Override

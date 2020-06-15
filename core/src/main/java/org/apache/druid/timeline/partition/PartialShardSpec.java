@@ -53,11 +53,6 @@ public interface PartialShardSpec
   ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
 
   /**
-   * Creates a new shardSpec having the given partitionId.
-   */
-  ShardSpec complete(ObjectMapper objectMapper, int partitionId);
-
-  /**
    * Returns the class of the shardSpec created by this factory.
    */
   @JsonIgnore
@@ -70,5 +65,18 @@ public interface PartialShardSpec
   default boolean isPartiallyOverwriteTimeChunk()
   {
     return false;
+  }
+
+  static int getValidNumCorePartitions(ShardSpec shardSpec)
+  {
+    if (shardSpec.getNumCorePartitions() == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
+      // SingleDimensionShardSpecs created in 0.18 or older versions can return
+      // SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS in getNumCorePartitions(),
+      // which means it will use a different mechanism to check the completeness of the core partition set.
+      // We simply return 0 for the core partition set of the new segment.
+      return 0;
+    } else {
+      return shardSpec.getNumCorePartitions();
+    }
   }
 }

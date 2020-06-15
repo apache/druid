@@ -37,9 +37,9 @@ public class NumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPrevMaxPartitionId)
   {
-    if (specOfPreviousMaxPartitionId == null) {
+    if (specOfPrevMaxPartitionId == null) {
       // The shardSpec is created by the Overlord.
       // - For streaming ingestion tasks, the core partition set is always 0.
       // - For batch tasks, this code is executed only with segment locking (forceTimeChunkLock = false).
@@ -50,16 +50,10 @@ public class NumberedPartialShardSpec implements PartialShardSpec
       return new NumberedShardSpec(0, 0);
     } else {
       return new NumberedShardSpec(
-          specOfPreviousMaxPartitionId.getPartitionNum() + 1,
-          specOfPreviousMaxPartitionId.getNumCorePartitions()
+          specOfPrevMaxPartitionId.getPartitionNum() + 1,
+          PartialShardSpec.getValidNumCorePartitions(specOfPrevMaxPartitionId)
       );
     }
-  }
-
-  @Override
-  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
-  {
-    return new NumberedShardSpec(partitionId, 0);
   }
 
   @Override
