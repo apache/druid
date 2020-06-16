@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @JsonTypeName("table")
@@ -99,32 +100,21 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public final boolean equals(Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TableDataSource)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    if ((o instanceof GlobalTableDataSource || this instanceof GlobalTableDataSource) &&
-        !getClass().equals(o.getClass())) {
-      return false;
-    }
-
     TableDataSource that = (TableDataSource) o;
-
-    if (!name.equals(that.name)) {
-      return false;
-    }
-
-    return true;
+    return name.equals(that.name);
   }
 
   @Override
-  public final int hashCode()
+  public int hashCode()
   {
-    return name.hashCode();
+    return Objects.hash(name);
   }
 }
