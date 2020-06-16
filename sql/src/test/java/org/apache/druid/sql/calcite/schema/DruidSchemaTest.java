@@ -29,7 +29,6 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -109,6 +108,7 @@ public class DruidSchemaTest extends CalciteTestBase
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
 
+  private TestServerInventoryView serverView;
   private List<ImmutableDruidServer> druidServers;
   private CountDownLatch getDatasourcesLatch = new CountDownLatch(1);
   private CountDownLatch buildTableLatch = new CountDownLatch(1);
@@ -219,7 +219,7 @@ public class DruidSchemaTest extends CalciteTestBase
         PruneSpecsHolder.DEFAULT
     );
     final List<DataSegment> realtimeSegments = ImmutableList.of(segment1);
-    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
+    serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
 
     schema = new DruidSchema(
@@ -468,7 +468,22 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
 
+    final DataSegment someNewBrokerSegment = new DataSegment(
+        "foo",
+        Intervals.of("2012/2013"),
+        "version1",
+        null,
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("met1", "met2"),
+        new NumberedShardSpec(2, 3),
+        null,
+        1,
+        100L,
+        PruneSpecsHolder.DEFAULT
+    );
     dataSourceNames.add("foo");
+    serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
+
     // wait for build
     buildTableLatch.await(1, TimeUnit.SECONDS);
     buildTableLatch = new CountDownLatch(1);
@@ -482,6 +497,24 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
     Assert.assertTrue(fooTable.getDataSource() instanceof GlobalTableDataSource);
+
+    // now remove it
+    dataSourceNames.remove("foo");
+    serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
+
+    // wait for build
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+    buildTableLatch = new CountDownLatch(1);
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
+    getDatasourcesLatch = new CountDownLatch(1);
+    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+
+    fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
   }
 
 }

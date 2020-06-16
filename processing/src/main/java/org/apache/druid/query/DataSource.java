@@ -36,7 +36,7 @@ import java.util.Set;
     @JsonSubTypes.Type(value = JoinDataSource.class, name = "join"),
     @JsonSubTypes.Type(value = LookupDataSource.class, name = "lookup"),
     @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
-    @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "global")
+    @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable")
 })
 public interface DataSource
 {

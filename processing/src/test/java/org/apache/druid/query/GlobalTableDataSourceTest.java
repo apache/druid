@@ -40,15 +40,17 @@ public class GlobalTableDataSourceTest
   }
 
   @Test
-  public void testIsGlobal()
+  public void testGlobalTableIsNotEqualsTable()
   {
-    Assert.assertTrue(GLOBAL_TABLE_DATA_SOURCE.isGlobal());
+    TableDataSource tbl = new TableDataSource(GLOBAL_TABLE_DATA_SOURCE.getName());
+    Assert.assertNotEquals(GLOBAL_TABLE_DATA_SOURCE, tbl);
+    Assert.assertNotEquals(tbl, GLOBAL_TABLE_DATA_SOURCE);
   }
 
   @Test
-  public void testIsCacheable()
+  public void testIsGlobal()
   {
-    Assert.assertFalse(GLOBAL_TABLE_DATA_SOURCE.isCacheable());
+    Assert.assertTrue(GLOBAL_TABLE_DATA_SOURCE.isGlobal());
   }
 
   @Test
