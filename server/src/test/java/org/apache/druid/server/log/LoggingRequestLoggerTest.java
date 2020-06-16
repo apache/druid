@@ -29,11 +29,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.LegacyDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -73,7 +73,7 @@ public class LoggingRequestLoggerTest
   final String remoteAddr = "some.host.tld";
   final Map<String, Object> queryContext = ImmutableMap.of("foo", "bar");
   final Query query = new FakeQuery(
-      new LegacyDataSource("datasource"),
+      new TableDataSource("datasource"),
       new QuerySegmentSpec()
       {
         @Override
@@ -127,7 +127,7 @@ public class LoggingRequestLoggerTest
   );
 
   final Query unionQuery = new FakeQuery(
-      new UnionDataSource(ImmutableList.of(new LegacyDataSource("A"), new LegacyDataSource("B"))),
+      new UnionDataSource(ImmutableList.of(new TableDataSource("A"), new TableDataSource("B"))),
       new QuerySegmentSpec()
       {
         @Override
