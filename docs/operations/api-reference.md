@@ -96,11 +96,11 @@ Returns the percentage of segments actually loaded in the cluster versus segment
 
  * `/druid/coordinator/v1/loadstatus?simple`
 
-Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include replica of segments.
+Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include segment replication counts.
 
 * `/druid/coordinator/v1/loadstatus?full`
 
-Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This include replica of segments.
+Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
 
 * `/druid/coordinator/v1/loadqueue`
 
@@ -117,15 +117,6 @@ Returns the serialized JSON of segments to load and drop for each Historical pro
 
 #### Segment Loading by Datasource
 
-You can verify if segments created by a recent ingestion task are loaded onto historicals and available for querying using the following APIs.
-An example workflow for this is:
-1. Submit your ingestion task.
-2. Repeatedly poll the Overlord's task API ( `/druid/indexer/v1/task/{taskId}/status`) until your task is shown to be successfully completed.
-3. Poll the below `datasource loadstatus` API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=true` once.
-If there are segments not yet loaded, continue to step 4, otherwise you can now query the data.
-4. Repeatedly poll the below `datasource loadstatus` API (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with `forceMetadataRefresh=false`. 
-Continue polling until all segments are loaded. Once all segments are loaded you can now query the data.
-
 ##### GET
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?forceMetadataRefresh={boolean}&interval={myInterval}`
@@ -139,7 +130,7 @@ If no used segments are found for the given inputs, this API returns `204 No Con
  * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?simple&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load until segments that should be loaded in the cluster are available for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). This does not include replica of segments. `forceMetadataRefresh` is required to be set. 
+over the given interval (or last 2 weeks if interval is not given). This does not include segment replication counts. `forceMetadataRefresh` is required to be set. 
 Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store. 
 Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
 If no used segments are found for the given inputs, this API returns `204 No Content` 
@@ -147,7 +138,7 @@ If no used segments are found for the given inputs, this API returns `204 No Con
 * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?full&forceMetadataRefresh={boolean}&interval={myInterval}`
 
 Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available for the given datasource 
-over the given interval (or last 2 weeks if interval is not given). This include replica of segments. `forceMetadataRefresh` is required to be set. 
+over the given interval (or last 2 weeks if interval is not given). This includes segment replication counts. `forceMetadataRefresh` is required to be set. 
 Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store. 
 Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
 If no used segments are found for the given inputs, this API returns `204 No Content`

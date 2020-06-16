@@ -66,6 +66,18 @@ Other common reasons that hand-off fails are as follows:
 
 Make sure to include the `druid-hdfs-storage` and all the hadoop configuration, dependencies (that can be obtained by running command `hadoop classpath` on a machine where hadoop has been setup) in the classpath. And, provide necessary HDFS settings as described in [deep storage](../dependencies/deep-storage.md) .
 
+## How do I know when I can make query to Druid after submitting ingestion task?
+
+You can verify if segments created by a recent ingestion task are loaded onto historicals and available for querying using the following workflow.
+1. Submit your ingestion task.
+2. Repeatedly poll the [Overlord's task API](../operations/api-reference.html#tasks) ( `/druid/indexer/v1/task/{taskId}/status`) until your task is shown to be successfully completed.
+3. Poll the [datasource loadstatus API](../operations/api-reference.html#segment-loading-by-datasource) (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with 
+`forceMetadataRefresh=true` and `interval=<INTERVAL_OF_INGESTED_DATA>` once.
+If there are segments not yet loaded, continue to step 4, otherwise you can now query the data.
+4. Repeatedly poll the [datasource loadstatus API](../operations/api-reference.html#segment-loading-by-datasource) (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with 
+`forceMetadataRefresh=false` and `interval=<INTERVAL_OF_INGESTED_DATA>`. 
+Continue polling until all segments are loaded. Once all segments are loaded you can now query the data. 
+
 ## I don't see my Druid segments on my Historical processes
 
 You can check the Coordinator console located at `<COORDINATOR_IP>:<PORT>`. Make sure that your segments have actually loaded on [Historical processes](../design/historical.md). If your segments are not present, check the Coordinator logs for messages about capacity of replication errors. One reason that segments are not downloaded is because Historical processes have maxSizes that are too small, making them incapable of downloading more data. You can change that with (for example):
