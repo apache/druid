@@ -40,6 +40,12 @@ public class TableDataSource implements DataSource
     this.name = Preconditions.checkNotNull(name, "'name' must be nonnull");
   }
 
+  @JsonCreator
+  public static TableDataSource create(final String name)
+  {
+    return new TableDataSource(name);
+  }
+
   @JsonProperty
   public String getName()
   {
