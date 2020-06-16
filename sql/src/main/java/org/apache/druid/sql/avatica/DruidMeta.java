@@ -443,19 +443,19 @@ public class DruidMeta extends MetaImpl
   {
     final List<String> whereBuilder = new ArrayList<>();
     if (catalog != null) {
-      whereBuilder.add("COLUMNS.TABLE_CATALOG = " + Calcites.escapeStringLiteral(catalog));
+      whereBuilder.add("COLUMNS.TABLE_CATALOG = " + Calcites.escapeStringLiteral(catalog) + " ESCAPE '\\'");
     }
 
     if (schemaPattern.s != null) {
-      whereBuilder.add("COLUMNS.TABLE_SCHEMA LIKE " + Calcites.escapeStringLiteral(schemaPattern.s));
+      whereBuilder.add("COLUMNS.TABLE_SCHEMA LIKE " + Calcites.escapeStringLiteral(schemaPattern.s) + " ESCAPE '\\'");
     }
 
     if (tableNamePattern.s != null) {
-      whereBuilder.add("COLUMNS.TABLE_NAME LIKE " + Calcites.escapeStringLiteral(tableNamePattern.s));
+      whereBuilder.add("COLUMNS.TABLE_NAME LIKE " + Calcites.escapeStringLiteral(tableNamePattern.s) + " ESCAPE '\\'");
     }
 
     if (columnNamePattern.s != null) {
-      whereBuilder.add("COLUMNS.COLUMN_NAME LIKE " + Calcites.escapeStringLiteral(columnNamePattern.s));
+      whereBuilder.add("COLUMNS.COLUMN_NAME LIKE " + Calcites.escapeStringLiteral(columnNamePattern.s)+ " ESCAPE '\\'");
     }
 
     final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);

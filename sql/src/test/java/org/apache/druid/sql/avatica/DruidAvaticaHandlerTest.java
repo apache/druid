@@ -346,8 +346,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ImmutableMap.of(
                 "PLAN",
-                StringUtils.format("DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
-                                   DUMMY_SQL_QUERY_ID
+                StringUtils.format(
+                    "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\",\"sqlTimeZone\":\"America/Los_Angeles\"}}], signature=[{a0:LONG}])\n",
+                    DUMMY_SQL_QUERY_ID
                 )
             )
         ),
@@ -537,6 +538,64 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         getRows(
             metaData.getColumns(null, "dr_id", "foo", null),
             ImmutableSet.of("IS_NULLABLE", "TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME")
+        )
+    );
+  }
+
+  @Test
+  public void testSearchStringEscapingForGetColumns() throws Exception
+  {
+    final DatabaseMetaData metaData = client.getMetaData();
+    List<Map<String, Object>> rows = getRows(
+        metaData.getColumns(null, "dr_id", CalciteTests.SOME_DATASOURCE, null),
+        ImmutableSet.of("TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME")
+    );
+    Assert.assertEquals(
+        ImmutableList.of(
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "__time")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "cnt")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "dim1")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "dim2")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "dim3")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "m1")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "m2")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("COLUMN_NAME", "unique_dim1")
+            )
+        ),
+        getRows(
+            metaData.getColumns(null, "dr_id", CalciteTests.SOME_DATASOURCE, null),
+            ImmutableSet.of("TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME")
         )
     );
   }
@@ -809,16 +868,16 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         CalciteTests.createSqlLifecycleFactory(
-          new PlannerFactory(
-              druidSchema,
-              systemSchema,
-              CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-              operatorTable,
-              macroTable,
-              plannerConfig,
-              AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-              CalciteTests.getJsonMapper()
-          )
+            new PlannerFactory(
+                druidSchema,
+                systemSchema,
+                CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+                operatorTable,
+                macroTable,
+                plannerConfig,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                CalciteTests.getJsonMapper()
+            )
         ),
         smallFrameConfig,
         injector
