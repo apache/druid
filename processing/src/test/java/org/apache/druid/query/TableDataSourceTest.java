@@ -89,20 +89,7 @@ public class TableDataSourceTest
   }
 
   @Test
-  public void test_equals_legacy()
-  {
-    final LegacyDataSource legacyFoo = new LegacyDataSource("foo");
-    final LegacyDataSource legacyBar = new LegacyDataSource("bar");
-
-    Assert.assertEquals(legacyFoo, fooDataSource);
-    Assert.assertEquals(fooDataSource, legacyFoo);
-
-    Assert.assertNotEquals(legacyBar, fooDataSource);
-    Assert.assertNotEquals(fooDataSource, legacyBar);
-  }
-
-  @Test
-  public void test_serde() throws Exception
+  public void test_serde_roundTrip() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final TableDataSource deserialized = (TableDataSource) jsonMapper.readValue(
@@ -111,5 +98,37 @@ public class TableDataSourceTest
     );
 
     Assert.assertEquals(fooDataSource, deserialized);
+  }
+
+  @Test
+  public void test_deserialize_fromObject() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final TableDataSource deserialized = (TableDataSource) jsonMapper.readValue(
+        "{\"type\":\"table\",\"name\":\"foo\"}",
+        DataSource.class
+    );
+
+    Assert.assertEquals(fooDataSource, deserialized);
+  }
+
+  @Test
+  public void test_deserialize_fromString() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final TableDataSource deserialized = (TableDataSource) jsonMapper.readValue(
+        "\"foo\"",
+        DataSource.class
+    );
+
+    Assert.assertEquals(fooDataSource, deserialized);
+  }
+
+  @Test
+  public void test_serialize() throws Exception
+  {
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    final String s = jsonMapper.writeValueAsString(fooDataSource);
+    Assert.assertEquals("{\"type\":\"table\",\"name\":\"foo\"}", s);
   }
 }
