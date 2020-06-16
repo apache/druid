@@ -694,6 +694,11 @@ public interface Function
 
   class Round implements Function
   {
+    //CHECKSTYLE.OFF: Regexp
+    private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
+    private static final BigDecimal MIN_FINITE_VALUE = BigDecimal.valueOf(-1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
+
     @Override
     public String name()
     {
@@ -746,13 +751,26 @@ public interface Function
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
       } else if (param.type() == ExprType.DOUBLE) {
         double val = param.asDouble();
-        if (Double.isNaN(val) || Double.isInfinite(val)) {
-          return ExprEval.of(Math.round(val));
-        }
-        return ExprEval.of(BigDecimal.valueOf(val).setScale(scale, RoundingMode.HALF_UP).doubleValue());
+        BigDecimal decimal = safeGetFromDouble(param.asDouble());
+        return ExprEval.of(decimal.setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
         return ExprEval.of(null);
       }
+    }
+
+    /**
+     * Converts non-finite doubles to BigDecimal values instead of throwing a NumberFormatException.
+     */
+    private static BigDecimal safeGetFromDouble(double val)
+    {
+      if (Double.isNaN(val)) {
+        return BigDecimal.ZERO;
+      } else if (val == Double.POSITIVE_INFINITY) {
+        return MAX_FINITE_VALUE;
+      } else if (val == Double.NEGATIVE_INFINITY) {
+        return MIN_FINITE_VALUE;
+      }
+      return BigDecimal.valueOf(val);
     }
   }
 

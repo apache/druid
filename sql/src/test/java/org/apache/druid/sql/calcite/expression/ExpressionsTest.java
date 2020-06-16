@@ -942,13 +942,13 @@ public class ExpressionsTest extends ExpressionTestBase
         roundFunction,
         testHelper.makeInputRef("nan"),
         DruidExpression.fromExpression("round(\"nan\")"),
-        0L
+        0D
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("fnan"),
         DruidExpression.fromExpression("round(\"fnan\")"),
-        0L
+        0D
     );
   }
 
@@ -957,30 +957,32 @@ public class ExpressionsTest extends ExpressionTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
+    //CHECKSTYLE.OFF: Regexp
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("inf"),
         DruidExpression.fromExpression("round(\"inf\")"),
-        0L
+        Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("-inf"),
         DruidExpression.fromExpression("round(\"-inf\")"),
-        0L
+        -1 * Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("finf"),
         DruidExpression.fromExpression("round(\"finf\")"),
-        0L
+        Double.MAX_VALUE
     );
     testHelper.testExpression(
         roundFunction,
         testHelper.makeInputRef("-finf"),
         DruidExpression.fromExpression("round(\"-finf\")"),
-        0L
+        -1 * Double.MAX_VALUE
     );
+    //CHECKSTYLE.ON: Regexp
   }
 
   @Test

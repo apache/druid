@@ -339,23 +339,30 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Test
   public void testRoundWithNonNumericValuesShouldReturn0()
   {
-    assertExpr("round(nan)", 0L);
-    assertExpr("round(nan, 5)", 0L);
-    assertExpr("round(inf)", Long.MAX_VALUE);
-    assertExpr("round(inf, 4)", Long.MAX_VALUE);
-    assertExpr("round(-inf)", Long.MIN_VALUE);
-    assertExpr("round(-inf, 3)", Long.MIN_VALUE);
+    assertExpr("round(nan)", 0D);
+    assertExpr("round(nan, 5)", 0D);
+    //CHECKSTYLE.OFF: Regexp
+    assertExpr("round(inf)", Double.MAX_VALUE);
+    assertExpr("round(inf, 4)", Double.MAX_VALUE);
+    assertExpr("round(-inf)", -1 * Double.MAX_VALUE);
+    assertExpr("round(-inf, 3)", -1 * Double.MAX_VALUE);
+    assertExpr("round(-inf, -5)", -1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
 
     // Calculations that result in non numeric numbers
-    assertExpr("round(0/od)", 0L);
-    assertExpr("round(od/od)", 0L);
-    assertExpr("round(1/od)", Long.MAX_VALUE);
-    assertExpr("round(-1/od)", Long.MIN_VALUE);
+    assertExpr("round(0/od)", 0D);
+    assertExpr("round(od/od)", 0D);
+    //CHECKSTYLE.OFF: Regexp
+    assertExpr("round(1/od)", Double.MAX_VALUE);
+    assertExpr("round(-1/od)", -1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
 
-    assertExpr("round(0/of)", 0L);
-    assertExpr("round(of/of)", 0L);
-    assertExpr("round(1/of)", Long.MAX_VALUE);
-    assertExpr("round(-1/of)", Long.MIN_VALUE);
+    assertExpr("round(0/of)", 0D);
+    assertExpr("round(of/of)", 0D);
+    //CHECKSTYLE.OFF: Regexp
+    assertExpr("round(1/of)", Double.MAX_VALUE);
+    assertExpr("round(-1/of)", -1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
   }
 
   @Test
