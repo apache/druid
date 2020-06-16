@@ -36,6 +36,7 @@ public class TableDataSourceTest
   public ExpectedException expectedException = ExpectedException.none();
 
   private final TableDataSource fooDataSource = new TableDataSource("foo");
+  private final TableDataSource barDataSource = new TableDataSource("bar");
 
   @Test
   public void test_getTableNames()
@@ -98,6 +99,7 @@ public class TableDataSourceTest
     );
 
     Assert.assertEquals(fooDataSource, deserialized);
+    Assert.assertNotEquals(barDataSource, deserialized);
   }
 
   @Test
@@ -110,6 +112,7 @@ public class TableDataSourceTest
     );
 
     Assert.assertEquals(fooDataSource, deserialized);
+    Assert.assertNotEquals(barDataSource, deserialized);
   }
 
   @Test
@@ -122,6 +125,7 @@ public class TableDataSourceTest
     );
 
     Assert.assertEquals(fooDataSource, deserialized);
+    Assert.assertNotEquals(barDataSource, deserialized);
   }
 
   @Test
