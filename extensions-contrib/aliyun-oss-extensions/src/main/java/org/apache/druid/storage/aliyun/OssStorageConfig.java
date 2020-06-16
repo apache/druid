@@ -21,6 +21,7 @@ package org.apache.druid.storage.aliyun;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
 public class OssStorageConfig
@@ -33,7 +34,8 @@ public class OssStorageConfig
 
   @JsonProperty
   @Min(1)
-  private int maxListingLength = 1024;
+  @Max(1000)
+  private int maxListingLength = 1000;
 
   public void setBucket(String bucket)
   {

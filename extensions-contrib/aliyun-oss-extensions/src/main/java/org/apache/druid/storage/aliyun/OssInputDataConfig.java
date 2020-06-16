@@ -21,6 +21,7 @@ package org.apache.druid.storage.aliyun;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
 /**
@@ -32,10 +33,12 @@ public class OssInputDataConfig
   /**
    * The maximum number of input files matching a given prefix to retrieve
    * from aliyun-oss at a time.
+   * valid range is [1,1000]
    */
   @JsonProperty
   @Min(1)
-  private int maxListingLength = 1024;
+  @Max(1000)
+  private int maxListingLength = 1000;
 
   public void setMaxListingLength(int maxListingLength)
   {

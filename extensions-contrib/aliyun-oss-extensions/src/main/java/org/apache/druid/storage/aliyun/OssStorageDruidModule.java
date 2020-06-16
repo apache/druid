@@ -92,13 +92,13 @@ public class OssStorageDruidModule implements DruidModule
            .to(OssDataSegmentArchiver.class)
            .in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(OssDataSegmentPusher.class).in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.aliyun-oss", OssClientConfig.class);
-    JsonConfigProvider.bind(binder, "druid.aliyun-oss.storage", OssInputDataConfig.class);
-    JsonConfigProvider.bind(binder, "druid.aliyun-oss.storage", OssStorageConfig.class);
-    JsonConfigProvider.bind(binder, "druid.aliyun-oss.storage", OssDataSegmentArchiverConfig.class);
+    JsonConfigProvider.bind(binder, "druid.aliyun.oss", OssClientConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.aliyun.oss", OssInputDataConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.aliyun.oss", OssStorageConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.aliyun.oss", OssDataSegmentArchiverConfig.class);
 
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(OssTaskLogs.class);
-    JsonConfigProvider.bind(binder, "druid.indexer.logs.aliyun-oss", OssTaskLogsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.logs.aliyun.oss", OssTaskLogsConfig.class);
     binder.bind(OssTaskLogs.class).in(LazySingleton.class);
   }
 

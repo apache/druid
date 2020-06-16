@@ -55,7 +55,7 @@ public class OssEntity extends RetryingInputEntity
   protected InputStream readFrom(long offset) throws IOException
   {
     final GetObjectRequest request = new GetObjectRequest(object.getBucket(), object.getPath());
-    request.setRange(offset, request.getRange()[1]);
+    request.setRange(offset, -1 /*from offset to end*/);
 
     try {
       final OSSObject ossObject = ossClient.getObject(request);

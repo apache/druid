@@ -51,7 +51,7 @@ public class OssDataSegmentPusherConfigTest
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\"}";
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\","
-                                + "\"maxListingLength\":1024}";
+                                + "\"maxListingLength\":1000}";
 
     OssStorageConfig config = JSON_MAPPER.readValue(jsonConfig, OssStorageConfig.class);
     Assert.assertEquals(expectedJsonConfig, JSON_MAPPER.writeValueAsString(config));
