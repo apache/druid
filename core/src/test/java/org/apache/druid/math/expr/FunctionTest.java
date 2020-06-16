@@ -29,6 +29,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Locale;
 import java.util.Set;
 
@@ -44,6 +46,8 @@ public class FunctionTest extends InitializedNullHandlingTest
         .put("y", 2)
         .put("z", 3.1)
         .put("d", 34.56D)
+        .put("maxLong", Long.MAX_VALUE)
+        .put("minLong", Long.MIN_VALUE)
         .put("f", 12.34F)
         .put("nan", Double.NaN)
         .put("inf", Double.POSITIVE_INFINITY)
@@ -337,21 +341,21 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     assertExpr("round(nan)", 0L);
     assertExpr("round(nan, 5)", 0L);
-    assertExpr("round(inf)", 0L);
-    assertExpr("round(inf, 4)", 0L);
-    assertExpr("round(-inf)", 0L);
-    assertExpr("round(-inf, 3)", 0L);
+    assertExpr("round(inf)", Long.MAX_VALUE);
+    assertExpr("round(inf, 4)", Long.MAX_VALUE);
+    assertExpr("round(-inf)", Long.MIN_VALUE);
+    assertExpr("round(-inf, 3)", Long.MIN_VALUE);
 
     // Calculations that result in non numeric numbers
     assertExpr("round(0/od)", 0L);
     assertExpr("round(od/od)", 0L);
-    assertExpr("round(1/od)", 0L);
-    assertExpr("round(-1/od)", 0L);
+    assertExpr("round(1/od)", Long.MAX_VALUE);
+    assertExpr("round(-1/od)", Long.MIN_VALUE);
 
     assertExpr("round(0/of)", 0L);
     assertExpr("round(of/of)", 0L);
-    assertExpr("round(1/of)", 0L);
-    assertExpr("round(-1/of)", 0L);
+    assertExpr("round(1/of)", Long.MAX_VALUE);
+    assertExpr("round(-1/of)", Long.MIN_VALUE);
   }
 
   @Test
@@ -380,6 +384,20 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("round(f, y)", 12.34D);
     assertExpr("round(f, 1)", 12.3D);
     assertExpr("round(f, -1)", 10D);
+  }
+
+  @Test
+  public void testRoundWithExtremeNumbers()
+  {
+    assertExpr("round(maxLong)", BigDecimal.valueOf(Long.MAX_VALUE).setScale(0, RoundingMode.HALF_UP).longValue());
+    assertExpr("round(minLong)", BigDecimal.valueOf(Long.MIN_VALUE).setScale(0, RoundingMode.HALF_UP).longValue());
+    // overflow
+    assertExpr("round(maxLong + 1, 1)", BigDecimal.valueOf(Long.MIN_VALUE).setScale(1, RoundingMode.HALF_UP).longValue());
+    // underflow
+    assertExpr("round(minLong - 1, -2)", BigDecimal.valueOf(Long.MAX_VALUE).setScale(-2, RoundingMode.HALF_UP).longValue());
+
+    assertExpr("round(CAST(maxLong, 'DOUBLE') + 1, 1)", BigDecimal.valueOf(((double) Long.MAX_VALUE) + 1).setScale(1, RoundingMode.HALF_UP).doubleValue());
+    assertExpr("round(CAST(minLong, 'DOUBLE') - 1, -2)", BigDecimal.valueOf(((double) Long.MIN_VALUE) - 1).setScale(-2, RoundingMode.HALF_UP).doubleValue());
   }
 
   @Test
