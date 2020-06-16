@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnCapabilitiesProvider;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -85,7 +86,7 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   {
     if (fieldName != null) {
       final ColumnCapabilities originalCapabilities = columnCapabilitiesProvider.getColumnCapabilities(fieldName);
-      return expression == null && (originalCapabilities == null || originalCapabilities.getType().isNumeric());
+      return expression == null && (originalCapabilities == null || ValueType.isNumeric(originalCapabilities.getType()));
     }
     return expression == null;
   }
