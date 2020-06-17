@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -155,13 +156,26 @@ public class JoinablesTest
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
         ImmutableList.of(clause),
-        (dataSource, condition) -> {
-          if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {
-            return Optional.of(
-                LookupJoinable.wrap(new MapLookupExtractor(ImmutableMap.of("k", "v"), false))
-            );
-          } else {
-            return Optional.empty();
+        new JoinableFactory()
+        {
+          @Override
+          public boolean isDirectlyJoinable(DataSource dataSource)
+          {
+            return dataSource.equals(lookupDataSource);
+          }
+
+          @Override
+          public Optional<Joinable> build(
+              DataSource dataSource, JoinConditionAnalysis condition
+          )
+          {
+            if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {
+              return Optional.of(
+                  LookupJoinable.wrap(new MapLookupExtractor(ImmutableMap.of("k", "v"), false))
+              );
+            } else {
+              return Optional.empty();
+            }
           }
         },
         new AtomicLong(),
