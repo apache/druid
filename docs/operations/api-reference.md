@@ -118,7 +118,7 @@ Returns the serialized JSON of segments to load and drop for each Historical pro
 #### Segment Loading by Datasource
 
 Note that all _interval_ query parameters are ISO 8601 strings (e.g., 2016-06-27/2016-06-28).
-Also note that these APIs only guarantees that the segments are avaiable at the time of the call. 
+Also note that these APIs only guarantees that the segments are available at the time of the call. 
 Segments can still become missing because of historical process failures or any other reasons afterward.
 
 ##### GET

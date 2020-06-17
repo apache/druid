@@ -78,7 +78,7 @@ If there are segments not yet loaded, continue to step 4, otherwise you can now 
 4. Repeatedly poll the [Segment Loading by Datasource API](../operations/api-reference.md#segment-loading-by-datasource) (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with 
 `forceMetadataRefresh=false` and `interval=<INTERVAL_OF_INGESTED_DATA>`. 
 Continue polling until all segments are loaded. Once all segments are loaded you can now query the data. 
-Note that this workflow only guarantees that the segments are avaiable at the time of the [Segment Loading by Datasource API](../operations/api-reference.md#segment-loading-by-datasource) call. Segments can still become missing because of historical process failures or any other reasons afterward.
+Note that this workflow only guarantees that the segments are available at the time of the [Segment Loading by Datasource API](../operations/api-reference.md#segment-loading-by-datasource) call. Segments can still become missing because of historical process failures or any other reasons afterward.
 
 ## I don't see my Druid segments on my Historical processes
 
