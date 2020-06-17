@@ -141,6 +141,7 @@ public class CalciteTests
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
   public static final String SOME_DATASOURCE = "some_datasource";
+  public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
   public static final String SOMEXDATASOURCE = "somexdatasource";
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
