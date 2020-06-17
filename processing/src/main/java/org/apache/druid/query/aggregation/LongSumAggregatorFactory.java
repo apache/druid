@@ -92,8 +92,8 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     if (fieldName != null) {
-      final ColumnCapabilities originalCapabilities = columnInspector.getColumnCapabilities(fieldName);
-      return expression == null && (originalCapabilities == null || originalCapabilities.getType().isNumeric());
+      final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+      return expression == null && (capabilities == null || capabilities.getType().isNumeric());
     }
     return expression == null;
   }

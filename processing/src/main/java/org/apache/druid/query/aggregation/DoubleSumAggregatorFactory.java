@@ -85,8 +85,8 @@ public class DoubleSumAggregatorFactory extends SimpleDoubleAggregatorFactory
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     if (fieldName != null) {
-      final ColumnCapabilities originalCapabilities = columnInspector.getColumnCapabilities(fieldName);
-      return expression == null && (originalCapabilities == null || ValueType.isNumeric(originalCapabilities.getType()));
+      final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+      return expression == null && (capabilities == null || ValueType.isNumeric(capabilities.getType()));
     }
     return expression == null;
   }
