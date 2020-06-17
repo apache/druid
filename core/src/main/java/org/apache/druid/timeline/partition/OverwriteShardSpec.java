@@ -49,6 +49,6 @@ public interface OverwriteShardSpec extends ShardSpec
   @Override
   default boolean sharePartitionSpace(PartialShardSpec partialShardSpec)
   {
-    return partialShardSpec.isPartiallyOverwriteTimeChunk();
+    return partialShardSpec.useNonRootGenerationPartitionSpace();
   }
 }

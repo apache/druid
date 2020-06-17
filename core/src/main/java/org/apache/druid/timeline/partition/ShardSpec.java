@@ -126,11 +126,12 @@ public interface ShardSpec
 
   /**
    * Returns true if this shardSpec and the given {@link PartialShardSpec} share the same partition space.
+   * Any implementation of {@link OverwriteShardSpec} should return true.
    *
    * @see PartitionIds
    */
   default boolean sharePartitionSpace(PartialShardSpec partialShardSpec)
   {
-    return !partialShardSpec.isPartiallyOverwriteTimeChunk();
+    return !partialShardSpec.useNonRootGenerationPartitionSpace();
   }
 }

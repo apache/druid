@@ -83,7 +83,7 @@ public class NumberedOverwritePartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public boolean isPartiallyOverwriteTimeChunk()
+  public boolean useNonRootGenerationPartitionSpace()
   {
     return true;
   }

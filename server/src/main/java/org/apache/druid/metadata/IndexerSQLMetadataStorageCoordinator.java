@@ -821,8 +821,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         for (DataSegment segment : FluentIterable
             .from(existingHolder.getObject())
             .transform(PartitionChunk::getObject)
-            // Here we check only the segments of the same shardSpec to find out the max partitionId.
-            // Note that OverwriteShardSpec has the higher range for partitionId than others.
+            // Here we check only the segments of the shardSpec which shares the same partition space with the given
+            // partialShardSpec. Note that OverwriteShardSpec doesn't share the partition space with others.
             // See PartitionIds.
             .filter(segment -> segment.getShardSpec().sharePartitionSpace(partialShardSpec))) {
           // Don't use the stream API for performance.

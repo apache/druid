@@ -59,10 +59,14 @@ public interface PartialShardSpec
   Class<? extends ShardSpec> getShardSpecClass();
 
   /**
-   * Returns true if a task can overwrite a subset of segments in a time chunk with this PartialShardSpec.
-   * Any implementation of {@link OverwriteShardSpec} should return true.
+   * Returns true if this partialShardSpec needs a partitionId of a non-root generation.
+   * Any partialShardSpec to overwrite a subset of segments in a time chunk such as
+   * {@link NumberedOverwritePartialShardSpec} should return true.
+   *
+   *
+   * @see PartitionIds
    */
-  default boolean isPartiallyOverwriteTimeChunk()
+  default boolean useNonRootGenerationPartitionSpace()
   {
     return false;
   }
