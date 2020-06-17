@@ -37,10 +37,10 @@ The Druid console can be accessed at:
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
-> Note that any Druid console user will have, effectively, the same permissions as 
-the user under which Druid runs. This is important to consider, since the file browser UI will show console users the files that 
-the underlying user can  access. In general, avoid running Druid as root user. Consider creating a dedicated user account 
-for running Druid.
+> It is important to note that any Druid console user will have, effectively, the same machine permission as 
+the user under which Druid runs. One way these permissions are manifested, for example, is in the file browser dialog. The dialog
+will show console users the files that the underlying user has permissions to. In general, avoid running Druid as 
+root user. Consider creating a dedicated user account for running Druid.
 
 Below is a description of the high-level features and functionality of the Druid Console
 
