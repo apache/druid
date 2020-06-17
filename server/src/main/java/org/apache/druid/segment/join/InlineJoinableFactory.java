@@ -37,6 +37,14 @@ import java.util.Set;
 public class InlineJoinableFactory implements JoinableFactory
 {
   @Override
+  public boolean isDirectlyJoinable(DataSource dataSource)
+  {
+    // i don't believe this should ever be legitimately called, because this method is used to avoid subquery joins
+    // which use the InlineJoinableFactory
+    return true;
+  }
+
+  @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
     final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;

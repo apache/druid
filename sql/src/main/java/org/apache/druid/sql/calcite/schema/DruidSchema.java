@@ -56,6 +56,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -104,6 +105,7 @@ public class DruidSchema extends AbstractSchema
   private final PlannerConfig config;
   private final SegmentManager segmentManager;
   private final ViewManager viewManager;
+  private final JoinableFactory joinableFactory;
   private final ExecutorService cacheExec;
   private final ConcurrentMap<String, DruidTable> tables;
 
@@ -148,6 +150,7 @@ public class DruidSchema extends AbstractSchema
       final QueryLifecycleFactory queryLifecycleFactory,
       final TimelineServerView serverView,
       final SegmentManager segmentManager,
+      final JoinableFactory joinableFactory,
       final PlannerConfig config,
       final ViewManager viewManager,
       final Escalator escalator
@@ -156,6 +159,7 @@ public class DruidSchema extends AbstractSchema
     this.queryLifecycleFactory = Preconditions.checkNotNull(queryLifecycleFactory, "queryLifecycleFactory");
     Preconditions.checkNotNull(serverView, "serverView");
     this.segmentManager = segmentManager;
+    this.joinableFactory = joinableFactory;
     this.config = Preconditions.checkNotNull(config, "config");
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
@@ -278,10 +282,11 @@ public class DruidSchema extends AbstractSchema
                 for (String dataSource : dataSourcesToRebuild) {
                   final DruidTable druidTable = buildDruidTable(dataSource);
                   final DruidTable oldTable = tables.put(dataSource, druidTable);
+                  final String description = druidTable.getDataSource().isGlobal() ? "global dataSource" : "dataSource";
                   if (oldTable == null || !oldTable.getRowSignature().equals(druidTable.getRowSignature())) {
-                    log.info("dataSource [%s] has new signature: %s.", dataSource, druidTable.getRowSignature());
+                    log.info("%s [%s] has new signature: %s.", description, dataSource, druidTable.getRowSignature());
                   } else {
-                    log.debug("dataSource [%s] signature is unchanged.", dataSource);
+                    log.debug("%s [%s] signature is unchanged.", description, dataSource);
                   }
                 }
 
@@ -627,8 +632,16 @@ public class DruidSchema extends AbstractSchema
       columnTypes.forEach(builder::add);
 
       final TableDataSource tableDataSource;
-      if (segmentManager.getDataSourceNames().contains(dataSource)) {
-        tableDataSource = new GlobalTableDataSource(dataSource);
+
+      // to be a GlobalTableDataSource instead of a TableDataSource, it must both:
+      // * appear on all servers (inferred by existing in the segment cache, which in this case belongs to the broker
+      //   meaning only broadcast segments live here)
+      // * be joinable, join analysis checks this, 'global' datasources are distributed everywhere and may be joined
+      //   against in an optimized manner - if the implementation exists.
+      // if neither of these criteria are true, assume a regular TableDataSource, backed by distributed Druid segments
+      final GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(dataSource);
+      if (segmentManager.getDataSourceNames().contains(dataSource) && joinableFactory.isDirectlyJoinable(maybeGlobal)) {
+        tableDataSource = maybeGlobal;
       } else {
         tableDataSource = new TableDataSource(dataSource);
       }

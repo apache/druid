@@ -73,6 +73,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
@@ -870,6 +871,7 @@ public class CalciteTests
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments()),
         new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
+        new MapJoinableFactory(ImmutableMap.of()),
         plannerConfig,
         viewManager,
         TEST_AUTHENTICATOR_ESCALATOR

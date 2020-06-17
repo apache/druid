@@ -708,55 +708,55 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testInformationSchemaTables() throws Exception
   {
     testQuery(
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
+        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, TABLE_AVAILABILITY\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
-            .add(new Object[]{"druid", "aview", "VIEW"})
-            .add(new Object[]{"druid", "bview", "VIEW"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
-            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
-            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", "aview", "VIEW", "VIRTUAL"})
+            .add(new Object[]{"druid", "bview", "VIEW", "VIRTUAL"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE", "GLOBAL"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "LOCAL"})
             .build()
     );
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
+        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, TABLE_AVAILABILITY\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
-            .add(new Object[]{"druid", "aview", "VIEW"})
-            .add(new Object[]{"druid", "bview", "VIEW"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
-            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
-            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "DISTRIBUTED"})
+            .add(new Object[]{"druid", "aview", "VIEW", "VIRTUAL"})
+            .add(new Object[]{"druid", "bview", "VIEW", "VIRTUAL"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE", "GLOBAL"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "LOCAL"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "LOCAL"})
             .build()
     );
   }

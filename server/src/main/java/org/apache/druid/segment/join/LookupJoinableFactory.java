@@ -43,6 +43,12 @@ public class LookupJoinableFactory implements JoinableFactory
   }
 
   @Override
+  public boolean isDirectlyJoinable(DataSource dataSource)
+  {
+    return true;
+  }
+
+  @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
     final LookupDataSource lookupDataSource = (LookupDataSource) dataSource;

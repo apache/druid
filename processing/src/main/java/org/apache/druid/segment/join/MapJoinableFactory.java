@@ -44,6 +44,17 @@ public class MapJoinableFactory implements JoinableFactory
   }
 
   @Override
+  public boolean isDirectlyJoinable(DataSource dataSource)
+  {
+    JoinableFactory factory = joinableFactories.get(dataSource.getClass());
+    if (factory == null) {
+      return false;
+    } else {
+      return factory.isDirectlyJoinable(dataSource);
+    }
+  }
+
+  @Override
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
     JoinableFactory factory = joinableFactories.get(dataSource.getClass());

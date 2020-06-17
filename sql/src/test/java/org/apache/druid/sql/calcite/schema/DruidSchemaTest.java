@@ -33,6 +33,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.TableDataSource;
@@ -43,6 +44,10 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.segment.join.Joinable;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryStackTests;
@@ -77,6 +82,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -132,12 +138,12 @@ public class DruidSchemaTest extends CalciteTestBase
   private SpecificSegmentsQuerySegmentWalker walker = null;
   private DruidSchema schema = null;
   private SegmentManager segmentManager;
-  private Set<String> dataSourceNames;
+  private Set<String> segmentDataSourceNames;
 
   @Before
   public void setUp() throws Exception
   {
-    dataSourceNames = Sets.newConcurrentHashSet();
+    segmentDataSourceNames = Sets.newConcurrentHashSet();
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
@@ -173,7 +179,7 @@ public class DruidSchemaTest extends CalciteTestBase
       public Set<String> getDataSourceNames()
       {
         getDatasourcesLatch.countDown();
-        return dataSourceNames;
+        return segmentDataSourceNames;
       }
     };
 
@@ -222,10 +228,29 @@ public class DruidSchemaTest extends CalciteTestBase
     serverView = new TestServerInventoryView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
 
+    final JoinableFactory globalTableJoinable = new JoinableFactory()
+    {
+      @Override
+      public boolean isDirectlyJoinable(DataSource dataSource)
+      {
+        return dataSource instanceof GlobalTableDataSource &&
+               segmentDataSourceNames.contains(((GlobalTableDataSource) dataSource).getName());
+      }
+
+      @Override
+      public Optional<Joinable> build(
+          DataSource dataSource, JoinConditionAnalysis condition
+      )
+      {
+        return Optional.empty();
+      }
+    };
+
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
         segmentManager,
+        new MapJoinableFactory(ImmutableMap.of(GlobalTableDataSource.class, globalTableJoinable)),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
@@ -481,12 +506,12 @@ public class DruidSchemaTest extends CalciteTestBase
         100L,
         PruneSpecsHolder.DEFAULT
     );
-    dataSourceNames.add("foo");
+    segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    // wait for build
+    // wait for build twice
     buildTableLatch.await(1, TimeUnit.SECONDS);
-    buildTableLatch = new CountDownLatch(1);
+    buildTableLatch = new CountDownLatch(2);
     buildTableLatch.await(1, TimeUnit.SECONDS);
 
     // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
@@ -499,7 +524,7 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertTrue(fooTable.getDataSource() instanceof GlobalTableDataSource);
 
     // now remove it
-    dataSourceNames.remove("foo");
+    segmentDataSourceNames.remove("foo");
     serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
 
     // wait for build

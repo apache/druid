@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
@@ -47,9 +48,11 @@ import org.apache.druid.query.ResultLevelCachingQueryRunner;
 import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.joda.time.Interval;
 
@@ -77,6 +80,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final QuerySegmentWalker clusterClient;
   private final QuerySegmentWalker localClient;
   private final QueryToolChestWarehouse warehouse;
+  private final JoinableFactory joinableFactory;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
   private final ServerConfig serverConfig;
@@ -88,6 +92,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       QuerySegmentWalker clusterClient,
       QuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
+      JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -99,6 +104,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.clusterClient = clusterClient;
     this.localClient = localClient;
     this.warehouse = warehouse;
+    this.joinableFactory = joinableFactory;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
     this.serverConfig = serverConfig;
@@ -112,6 +118,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       CachingClusteredClient clusterClient,
       LocalQuerySegmentWalker localClient,
       QueryToolChestWarehouse warehouse,
+      JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
       ServerConfig serverConfig,
@@ -124,6 +131,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         (QuerySegmentWalker) clusterClient,
         (QuerySegmentWalker) localClient,
         warehouse,
+        joinableFactory,
         retryConfig,
         objectMapper,
         serverConfig,
@@ -137,10 +145,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    // First, do an inlining dry run to see if any inlining is necessary, without actually running the queries.
+    // transform TableDataSource to GlobalTableDataSource when eligible
+    // before further transformation to potentially inline
+    final DataSource freeTradeDataSource = globalizeIfPossible(query.getDataSource());
+    // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = QueryContexts.getMaxSubqueryRows(query, serverConfig.getMaxSubqueryRows());
     final DataSource inlineDryRun = inlineIfNecessary(
-        query.getDataSource(),
+        freeTradeDataSource,
         toolChest,
         new AtomicInteger(),
         maxSubqueryRows,
@@ -156,7 +167,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // Now that we know the structure is workable, actually do the inlining (if necessary).
     final Query<T> newQuery = query.withDataSource(
         inlineIfNecessary(
-            query.getDataSource(),
+            freeTradeDataSource,
             toolChest,
             new AtomicInteger(),
             maxSubqueryRows,
@@ -187,10 +198,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    // Inlining isn't done for segments-based queries.
+    // Inlining isn't done for segments-based queries, but we still globalify the table datasources if possible
+    final Query<T> freeTradeQuery = query.withDataSource(globalizeIfPossible(query.getDataSource()));
 
     if (canRunQueryUsingClusterWalker(query)) {
-      return decorateClusterRunner(query, clusterClient.getQueryRunnerForSegments(query, specs));
+      return new QuerySwappingQueryRunner<>(
+          decorateClusterRunner(freeTradeQuery, clusterClient.getQueryRunnerForSegments(query, specs)),
+          query,
+          freeTradeQuery
+      );
     } else {
       // We don't expect end-users to see this message, since it only happens when specific segments are requested;
       // this is not typical end-user behavior.
@@ -233,6 +249,27 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return analysis.isConcreteTableBased()
            && (!analysis.isQuery()
                || toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery()));
+  }
+
+
+  private DataSource globalizeIfPossible(
+      final DataSource dataSource
+  )
+  {
+    if (dataSource instanceof TableDataSource) {
+      GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(((TableDataSource) dataSource).getName());
+      if (joinableFactory.isDirectlyJoinable(maybeGlobal)) {
+        return maybeGlobal;
+      }
+      return dataSource;
+    } else {
+      List<DataSource> currentChildren = dataSource.getChildren();
+      List<DataSource> newChildren = new ArrayList<>(currentChildren.size());
+      for (DataSource child : currentChildren) {
+        newChildren.add(globalizeIfPossible(child));
+      }
+      return dataSource.withChildren(newChildren);
+    }
   }
 
   /**

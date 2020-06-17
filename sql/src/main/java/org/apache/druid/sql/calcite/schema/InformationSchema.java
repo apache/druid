@@ -53,6 +53,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
@@ -83,6 +84,7 @@ public class InformationSchema extends AbstractSchema
       .add("TABLE_SCHEMA", ValueType.STRING)
       .add("TABLE_NAME", ValueType.STRING)
       .add("TABLE_TYPE", ValueType.STRING)
+      .add("TABLE_AVAILABILITY", ValueType.STRING)
       .build();
   private static final RowSignature COLUMNS_SIGNATURE = RowSignature
       .builder()
@@ -217,18 +219,24 @@ public class InformationSchema extends AbstractSchema
                   return Iterables.filter(
                       Iterables.concat(
                           FluentIterable.from(authorizedTableNames).transform(
-                              new Function<String, Object[]>()
-                              {
-                                @Override
-                                public Object[] apply(final String tableName)
-                                {
-                                  return new Object[]{
-                                      CATALOG_NAME, // TABLE_CATALOG
-                                      schemaName, // TABLE_SCHEMA
-                                      tableName, // TABLE_NAME
-                                      subSchema.getTable(tableName).getJdbcTableType().toString() // TABLE_TYPE
-                                  };
+                              tableName -> {
+                                final Table table = subSchema.getTable(tableName);
+                                final String availability;
+                                if (table instanceof DruidTable) {
+                                  availability = ((DruidTable) table).getDataSource().isGlobal()
+                                                 ? "GLOBAL"
+                                                 : "DISTRIBUTED";
+                                } else {
+                                  availability = "LOCAL";
                                 }
+
+                                return new Object[]{
+                                    CATALOG_NAME, // TABLE_CATALOG
+                                    schemaName, // TABLE_SCHEMA
+                                    tableName, // TABLE_NAME
+                                    table.getJdbcTableType().toString(), // TABLE_TYPE
+                                    availability // TABLE_AVAILABILITY
+                                };
                               }
                           ),
                           FluentIterable.from(authorizedFunctionNames).transform(
@@ -242,7 +250,8 @@ public class InformationSchema extends AbstractSchema
                                         CATALOG_NAME, // TABLE_CATALOG
                                         schemaName, // TABLE_SCHEMA
                                         functionName, // TABLE_NAME
-                                        "VIEW" // TABLE_TYPE
+                                        "VIEW", // TABLE_TYPE
+                                        "VIRTUAL" // TABLE_AVAILABILITY
                                     };
                                   } else {
                                     return null;
