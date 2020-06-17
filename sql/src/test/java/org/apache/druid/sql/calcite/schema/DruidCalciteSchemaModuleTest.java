@@ -39,6 +39,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -84,6 +85,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   private ObjectMapper objectMapper;
   @Mock
   private LookupReferencesManager lookupReferencesManager;
+  @Mock
+  private SegmentManager segmentManager;
 
   private DruidCalciteSchemaModule target;
   private Injector injector;
@@ -104,6 +107,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(Escalator.class).toInstance(escalator);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
           binder.bind(InventoryView.class).toInstance(serverInventoryView);
+          binder.bind(SegmentManager.class).toInstance(segmentManager);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
                 .toInstance(coordinatorDruidLeaderClient);
