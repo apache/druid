@@ -47,6 +47,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.TimeDim
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.TimeDimTupleFunnel;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -58,6 +59,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -200,6 +202,13 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     Preconditions.checkNotNull(partitionDimension, "partitionDimension required in partitionsSpec");
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
+    File indexingTmpDir = toolbox.getIndexingTmpDir();
+    LOG.info("Creating indexing temporary directory [%s]", indexingTmpDir);
+    indexingTmpDir.mkdirs();
+    if (!indexingTmpDir.exists()) {
+        throw new IOE("Could not create indexing temporary directory [%s]", indexingTmpDir);
+    }
+
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
@@ -217,7 +226,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
                 metricsNames
             ),
             inputFormat,
-            toolbox.getIndexingTmpDir()
+            indexingTmpDir
         )
     );
 
