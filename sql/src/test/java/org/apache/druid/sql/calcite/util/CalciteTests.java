@@ -140,6 +140,8 @@ public class CalciteTests
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String SOME_DATASOURCE = "some_datasource";
+  public static final String SOMEXDATASOURCE = "somexdatasource";
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
   public static final String SYSTEM_SCHEMA_NAME = "sys";
@@ -294,6 +296,16 @@ public class CalciteTests
       .withRollup(false)
       .build();
 
+  private static final IncrementalIndexSchema INDEX_SCHEMA_WITH_X_COLUMNS = new IncrementalIndexSchema.Builder()
+      .withMetrics(
+          new CountAggregatorFactory("cnt_x"),
+          new FloatSumAggregatorFactory("m1_x", "m1_x"),
+          new DoubleSumAggregatorFactory("m2_x", "m2_x"),
+          new HyperUniquesAggregatorFactory("unique_dim1_x", "dim1_x")
+      )
+      .withRollup(false)
+      .build();
+
   private static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
@@ -361,6 +373,68 @@ public class CalciteTests
           .put("dim1", "abc")
           .build()
   );
+
+  public static final List<InputRow> RAW_ROWS1_X = ImmutableList.of(
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-01")
+              .put("m1_x", "1.0")
+              .put("m2_x", "1.0")
+              .put("dim1_x", "")
+              .put("dim2_x", ImmutableList.of("a"))
+              .put("dim3_x", ImmutableList.of("a", "b"))
+              .build()
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-02")
+              .put("m1_x", "2.0")
+              .put("m2_x", "2.0")
+              .put("dim1_x", "10.1")
+              .put("dim2_x", ImmutableList.of())
+              .put("dim3_x", ImmutableList.of("b", "c"))
+              .build()
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-03")
+              .put("m1_x", "3.0")
+              .put("m2_x", "3.0")
+              .put("dim1_x", "2")
+              .put("dim2_x", ImmutableList.of(""))
+              .put("dim3_x", ImmutableList.of("d"))
+              .build()
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-01")
+              .put("m1_x", "4.0")
+              .put("m2_x", "4.0")
+              .put("dim1_x", "1")
+              .put("dim2_x", ImmutableList.of("a"))
+              .put("dim3_x", ImmutableList.of(""))
+              .build()
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-02")
+              .put("m1_x", "5.0")
+              .put("m2_x", "5.0")
+              .put("dim1_x", "def")
+              .put("dim2_x", ImmutableList.of("abc"))
+              .put("dim3_x", ImmutableList.of())
+              .build()
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-03")
+              .put("m1_x", "6.0")
+              .put("m2_x", "6.0")
+              .put("dim1_x", "abc")
+              .build()
+      )
+  );
+
   public static final List<InputRow> ROWS1 =
       RAW_ROWS1.stream().map(CalciteTests::createRow).collect(Collectors.toList());
 
@@ -635,6 +709,22 @@ public class CalciteTests
         .rows(ROWS_LOTS_OF_COLUMNS)
         .buildMMappedIndex();
 
+    final QueryableIndex someDatasourceIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "1"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA)
+        .rows(ROWS1)
+        .buildMMappedIndex();
+
+    final QueryableIndex someXDatasourceIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "1"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA_WITH_X_COLUMNS)
+        .rows(RAW_ROWS1_X)
+        .buildMMappedIndex();
+
 
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
@@ -695,6 +785,24 @@ public class CalciteTests
                    .size(0)
                    .build(),
         indexLotsOfColumns
+    ).add(
+        DataSegment.builder()
+                   .dataSource(SOME_DATASOURCE)
+                   .interval(indexLotsOfColumns.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        someDatasourceIndex
+    ).add(
+        DataSegment.builder()
+                   .dataSource(SOMEXDATASOURCE)
+                   .interval(indexLotsOfColumns.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        someXDatasourceIndex
     );
   }
 

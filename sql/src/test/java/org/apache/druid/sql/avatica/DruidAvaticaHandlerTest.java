@@ -414,8 +414,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             )
-
         ),
         getRows(
             metaData.getTables(null, "druid", "%", null),
@@ -465,8 +476,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
             )
-
         ),
         getRows(
             metaData.getTables(null, "druid", "%", null),
@@ -549,6 +571,129 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         getRows(
             metaData.getColumns(null, "dr_id", "foo", null),
             ImmutableSet.of("IS_NULLABLE", "TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME", "DATA_TYPE", "TYPE_NAME")
+        )
+    );
+  }
+
+  @Test
+  public void testSearchStringEscaping() throws Exception
+  {
+    final DatabaseMetaData metaData = client.getMetaData();
+    ImmutableList<Map<String, Object>> someDatasourceColumns = ImmutableList.of(
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "__time")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "cnt")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "dim1")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "dim2")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "dim3")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "m1")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "m2")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
+            Pair.of("COLUMN_NAME", "unique_dim1")
+        )
+    );
+    // If the escape clause wasn't correctly set, rows for potentially none or more than
+    // one datasource (some_datasource and somexdatasource) would have been returned
+    Assert.assertEquals(
+        someDatasourceColumns,
+        getRows(
+            metaData.getColumns(null, "dr_id", "some\\_datasource", null),
+            ImmutableSet.of("TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME")
+        )
+    );
+    ImmutableList<Map<String, Object>> someXDatasourceColumns = ImmutableList.of(
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+            Pair.of("COLUMN_NAME", "__time")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+            Pair.of("COLUMN_NAME", "cnt_x")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+            Pair.of("COLUMN_NAME", "m1_x")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+            Pair.of("COLUMN_NAME", "m2_x")
+        ),
+        row(
+            Pair.of("TABLE_SCHEM", "druid"),
+            Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+            Pair.of("COLUMN_NAME", "unique_dim1_x")
+        )
+    );
+    Assert.assertEquals(
+        someXDatasourceColumns,
+        getRows(
+            metaData.getColumns(null, "dr_id", "somexdatasource", null),
+            ImmutableSet.of("TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME")
+        )
+    );
+
+    List<Map<String, Object>> columnsOfBothTables = new ArrayList<>(someDatasourceColumns);
+    columnsOfBothTables.addAll(someXDatasourceColumns);
+
+    // Assert that the pattern matching still works when no escape string is provided
+    Assert.assertEquals(
+        columnsOfBothTables,
+        getRows(
+            metaData.getColumns(null, "dr_id", "some_datasource", null),
+            ImmutableSet.of("TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME")
+        )
+    );
+
+    // Assert column name pattern works correctly when _ is in the column names
+    Assert.assertEquals(
+        ImmutableList.of(
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+                Pair.of("COLUMN_NAME", "m1_x")
+            ),
+            row(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.SOMEXDATASOURCE),
+                Pair.of("COLUMN_NAME", "m2_x")
+            )
+        ),
+        getRows(
+            metaData.getColumns("druid", "dr_id", CalciteTests.SOMEXDATASOURCE, "m_\\_x"),
+            ImmutableSet.of("TABLE_NAME", "TABLE_SCHEM", "COLUMN_NAME")
         )
     );
   }

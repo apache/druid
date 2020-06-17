@@ -446,15 +446,16 @@ public class DruidMeta extends MetaImpl
     }
 
     if (schemaPattern.s != null) {
-      whereBuilder.add("COLUMNS.TABLE_SCHEMA LIKE " + Calcites.escapeStringLiteral(schemaPattern.s));
+      whereBuilder.add("COLUMNS.TABLE_SCHEMA LIKE " + Calcites.escapeStringLiteral(schemaPattern.s) + " ESCAPE '\\'");
     }
 
     if (tableNamePattern.s != null) {
-      whereBuilder.add("COLUMNS.TABLE_NAME LIKE " + Calcites.escapeStringLiteral(tableNamePattern.s));
+      whereBuilder.add("COLUMNS.TABLE_NAME LIKE " + Calcites.escapeStringLiteral(tableNamePattern.s) + " ESCAPE '\\'");
     }
 
     if (columnNamePattern.s != null) {
-      whereBuilder.add("COLUMNS.COLUMN_NAME LIKE " + Calcites.escapeStringLiteral(columnNamePattern.s));
+      whereBuilder.add("COLUMNS.COLUMN_NAME LIKE "
+                       + Calcites.escapeStringLiteral(columnNamePattern.s) + " ESCAPE '\\'");
     }
 
     final String where = whereBuilder.isEmpty() ? "" : "WHERE " + Joiner.on(" AND ").join(whereBuilder);
