@@ -884,7 +884,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         // In this case, we cannot append since the appended segments will be ignored in the timeline.
         // See StringPartitionChunk.abuts() for more details.
         if (maxId.getShardSpec().getNumCorePartitions() == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
-          log.warn(" Cannot allocate new segment because of unknown core partition size of segment[%s]", maxId);
+          log.warn(
+              " Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
+              maxId,
+              maxId.getShardSpec()
+          );
           return null;
         }
 
