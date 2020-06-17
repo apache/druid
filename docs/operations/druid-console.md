@@ -22,19 +22,25 @@ title: "Web console"
   ~ under the License.
   -->
 
+Druid include a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. Users can also run SQL and native Druid queries in the console.
 
 The Druid Console is hosted by the [Router](../design/router.md) process.
 
-In addition, the following cluster settings must be enabled:
+The following cluster settings must be enabled, as they are by default:
 
 - the Router's [management proxy](../design/router.html#enabling-the-management-proxy) must be enabled.
 - the Broker processes in the cluster must have [Druid SQL](../querying/sql.md) enabled.
 
-After enabling Druid SQL on the Brokers and deploying a Router with the management proxy enabled, the Druid console can be accessed at:
+The Druid console can be accessed at:
 
 ```
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
+
+> Note that any Druid console user will have, effectively, the same permissions as 
+the user under which Druid runs. This is important to consider, since the file browser UI will show console users the files that 
+the underlying user can  access. In general, avoid running Druid as root user. Consider creating a dedicated user account 
+for running Druid.
 
 Below is a description of the high-level features and functionality of the Druid Console
 
