@@ -239,7 +239,8 @@ public class DruidSchemaTest extends CalciteTestBase
 
       @Override
       public Optional<Joinable> build(
-          DataSource dataSource, JoinConditionAnalysis condition
+          DataSource dataSource,
+          JoinConditionAnalysis condition
       )
       {
         return Optional.empty();
