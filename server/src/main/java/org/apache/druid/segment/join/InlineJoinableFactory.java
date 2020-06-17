@@ -39,9 +39,10 @@ public class InlineJoinableFactory implements JoinableFactory
   @Override
   public boolean isDirectlyJoinable(DataSource dataSource)
   {
-    // i don't believe this should ever be legitimately called, because this method is used to avoid subquery joins
+    // this should always be true if this is access through MapJoinableFactory, but check just in case...
+    // further, this should not ever be legitimately called, because this method is used to avoid subquery joins
     // which use the InlineJoinableFactory
-    return true;
+    return dataSource instanceof InlineDataSource;
   }
 
   @Override

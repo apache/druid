@@ -45,7 +45,8 @@ public class LookupJoinableFactory implements JoinableFactory
   @Override
   public boolean isDirectlyJoinable(DataSource dataSource)
   {
-    return true;
+    // this should always be true if this is access through MapJoinableFactory, but check just in case...
+    return dataSource instanceof LookupDataSource;
   }
 
   @Override

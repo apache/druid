@@ -165,9 +165,7 @@ public class JoinablesTest
           }
 
           @Override
-          public Optional<Joinable> build(
-              DataSource dataSource, JoinConditionAnalysis condition
-          )
+          public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
           {
             if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {
               return Optional.of(
