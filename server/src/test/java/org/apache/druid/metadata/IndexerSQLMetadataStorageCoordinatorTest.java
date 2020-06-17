@@ -1141,7 +1141,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                   start,
                   end,
                   i,
-                  null // emulate shardSpecs created in older version of Druid
+                  null // emulate shardSpecs created in older versions of Druid
               ),
               9,
               10L
@@ -1158,8 +1158,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         version,
         false
     );
-    Assert.assertNotNull(id);
-    Assert.assertEquals(0, id.getShardSpec().getNumCorePartitions());
-    Assert.assertEquals(6, id.getShardSpec().getPartitionNum());
+    Assert.assertNull(id);
   }
 }

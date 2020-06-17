@@ -77,7 +77,7 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
     // OvershadowableManager handles the atomic segment update.
     return new HashBasedNumberedShardSpec(
         specOfPrevMaxPartitionId == null ? 0 : specOfPrevMaxPartitionId.getPartitionNum() + 1,
-        specOfPrevMaxPartitionId == null ? 0 : PartialShardSpec.getValidNumCorePartitions(specOfPrevMaxPartitionId),
+        specOfPrevMaxPartitionId == null ? 0 : specOfPrevMaxPartitionId.getNumCorePartitions(),
         bucketId,
         numBuckets,
         partitionDimensions,

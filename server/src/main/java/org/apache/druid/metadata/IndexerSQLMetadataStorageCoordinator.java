@@ -52,6 +52,7 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Folder3;
@@ -877,6 +878,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         );
         return null;
       } else {
+        // SingleDimensionShardSpecs created in 0.18 or older versions can return
+        // SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS in getNumCorePartitions(),
+        // which means it will use StringPartitionChunk to check the completeness of the core partition set.
+        // In this case, we cannot append since the appended segments will be ignored in the timeline.
+        // See StringPartitionChunk.abuts() for more details.
+        if (maxId.getShardSpec().getNumCorePartitions() == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
+          log.warn(" Cannot allocate new segment because of unknown core partition size of segment[%s]", maxId);
+          return null;
+        }
+
         final ShardSpec newShardSpec = partialShardSpec.complete(jsonMapper, maxId.getShardSpec());
         return new SegmentIdWithShardSpec(
             dataSource,

@@ -97,7 +97,7 @@ public class SingleDimensionPartialShardSpec implements PartialShardSpec
         start,
         end,
         specOfPrevMaxPartitionId == null ? 0 : specOfPrevMaxPartitionId.getPartitionNum() + 1,
-        specOfPrevMaxPartitionId == null ? 0 : PartialShardSpec.getValidNumCorePartitions(specOfPrevMaxPartitionId)
+        specOfPrevMaxPartitionId == null ? 0 : specOfPrevMaxPartitionId.getNumCorePartitions()
     );
   }
 
