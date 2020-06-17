@@ -110,11 +110,8 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnCapabilitiesProvider columnCapabilitiesProvider)
   {
-    if (fieldName != null) {
-      final ColumnCapabilities originalCapabilities = columnCapabilitiesProvider.getColumnCapabilities(fieldName);
-      return originalCapabilities == null || originalCapabilities.getType().isNumeric();
-    }
-    return true;
+    final ColumnCapabilities originalCapabilities = columnCapabilitiesProvider.getColumnCapabilities(fieldName);
+    return originalCapabilities == null || originalCapabilities.getType().isNumeric();
   }
 
   @Override

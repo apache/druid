@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -345,6 +346,7 @@ public class SchemaEvolutionTest
             ImmutableList.of(
                 new LongSumAggregatorFactory("a", "c1"),
                 new DoubleSumAggregatorFactory("b", "c1"),
+                new FloatSumAggregatorFactory("d", "c1"),
                 new CountAggregatorFactory("c")
             )
         )
@@ -353,19 +355,19 @@ public class SchemaEvolutionTest
 
     // Only string(1) -- which we can filter but not aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 
     // Only long(2) -- which we can filter and aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.0, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.0, "c", 2L, "d", 19.0f)),
         runQuery(query, factory, ImmutableList.of(index2))
     );
 
     // Only float(3) -- which we can't filter, but can aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f)),
         runQuery(query, factory, ImmutableList.of(index3))
     );
 
@@ -377,7 +379,9 @@ public class SchemaEvolutionTest
             "b",
             NullHandling.defaultDoubleValue(),
             "c",
-            0L
+            0L,
+            "d",
+            NullHandling.defaultFloatValue()
         )),
         runQuery(query, factory, ImmutableList.of(index4))
     );
@@ -387,7 +391,8 @@ public class SchemaEvolutionTest
         timeseriesResult(ImmutableMap.of(
             "a", 57L,
             "b", 57.2,
-            "c", 6L
+            "c", 6L,
+            "d", 57.20000076293945
         )),
         runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))
     );
