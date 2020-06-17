@@ -29,7 +29,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.IntervalDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
-import org.apache.druid.segment.ColumnCapabilitiesProvider;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -108,9 +108,9 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean canVectorize(ColumnCapabilitiesProvider columnCapabilitiesProvider)
+  public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return delegate.canVectorize(columnCapabilitiesProvider) && filter.canVectorizeMatcher();
+    return delegate.canVectorize(columnInspector) && filter.canVectorizeMatcher();
   }
 
   @Override

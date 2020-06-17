@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 /**
  */
 @PublicApi
-public interface StorageAdapter extends CursorFactory, ColumnCapabilitiesProvider
+public interface StorageAdapter extends CursorFactory, ColumnInspector
 {
   Interval getInterval();
   Indexed<String> getAvailableDimensions();

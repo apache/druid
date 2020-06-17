@@ -23,7 +23,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 
-public interface ColumnCapabilitiesProvider
+public interface ColumnInspector
 {
   /**
    * Returns capabilities of a particular column.
