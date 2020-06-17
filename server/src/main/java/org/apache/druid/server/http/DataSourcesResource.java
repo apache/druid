@@ -99,6 +99,7 @@ import java.util.stream.Collectors;
 public class DataSourcesResource
 {
   private static final Logger log = new Logger(DataSourcesResource.class);
+  private static final long DEFAULT_LOADSTATUS_INTERVAL_OFFSET = 14 * 24 * 60 * 60 * 1000;
 
   private final CoordinatorServerView serverInventoryView;
   private final SegmentsMetadataManager segmentsMetadataManager;
@@ -417,9 +418,8 @@ public class DataSourcesResource
     }
     final Interval theInterval;
     if (interval == null) {
-      long defaultIntervalOffset = 14 * 24 * 60 * 60 * 1000;
       long currentTimeInMs = System.currentTimeMillis();
-      theInterval = Intervals.utc(currentTimeInMs - defaultIntervalOffset, currentTimeInMs);
+      theInterval = Intervals.utc(currentTimeInMs - DEFAULT_LOADSTATUS_INTERVAL_OFFSET, currentTimeInMs);
     } else {
       theInterval = Intervals.of(interval.replace('_', '/'));
     }

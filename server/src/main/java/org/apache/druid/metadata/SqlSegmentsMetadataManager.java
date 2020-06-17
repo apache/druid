@@ -432,7 +432,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
    * made not longer than {@link #periodicPollDelay} from current time.
    * This method does wait untill completion for if the latest {@link DatabasePoll} is a
    * {@link PeriodicDatabasePoll} that has not completed it's first poll, or an {@link OnDemandDatabasePoll} that is
-   * alrady in the process of polling the database.
+   * already in the process of polling the database.
    * This means that any method using this check can read from snapshot that is
    * up to {@link SqlSegmentsMetadataManager#periodicPollDelay} old.
    */
