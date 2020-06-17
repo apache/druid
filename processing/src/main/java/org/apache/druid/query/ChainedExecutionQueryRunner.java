@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.MergeIterable;
@@ -144,10 +145,6 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                     )
                 );
 
-            Function<Throwable, Void> cancelFunction = (t) -> {
-              futures.forEach(f -> f.cancel(true));
-              return null;
-            };
             ListenableFuture<List<Iterable<T>>> future = Futures.allAsList(futures);
             queryWatcher.registerQueryFuture(query, future);
 
@@ -161,7 +158,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (InterruptedException e) {
               log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              cancelFunction.apply(e);
+              GuavaUtils.cancelAll(futures);
               throw new QueryInterruptedException(e);
             }
             catch (CancellationException e) {
@@ -169,11 +166,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (TimeoutException e) {
               log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
-              cancelFunction.apply(e);
+              GuavaUtils.cancelAll(futures);
               throw new QueryInterruptedException(e);
             }
             catch (ExecutionException e) {
-              cancelFunction.apply(e);
+              GuavaUtils.cancelAll(futures);
               throw new RuntimeException(e.getCause());
             }
           }

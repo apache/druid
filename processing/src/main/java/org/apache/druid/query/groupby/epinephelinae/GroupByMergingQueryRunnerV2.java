@@ -34,6 +34,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.Releaser;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -342,10 +343,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       long timeout
   )
   {
-    Function<Throwable, AggregateResult> cancelFunction = (t) -> {
-      futures.forEach(f -> f.cancel(true));
-      return null;
-    };
     try {
       ListenableFuture<List<AggregateResult>> future = Futures.allAsList(futures);
       if (queryWatcher != null) {
@@ -367,20 +364,20 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     }
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      cancelFunction.apply(e);
+      GuavaUtils.cancelAll(futures);
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {
-      cancelFunction.apply(e);
+      GuavaUtils.cancelAll(futures);
       throw new QueryInterruptedException(e);
     }
     catch (TimeoutException e) {
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      cancelFunction.apply(e);
+      GuavaUtils.cancelAll(futures);
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      cancelFunction.apply(e);
+      GuavaUtils.cancelAll(futures);
       throw new RuntimeException(e);
     }
   }

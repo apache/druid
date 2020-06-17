@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -361,11 +362,11 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
     }
     catch (InterruptedException | TimeoutException | CancellationException e) {
-      futures.forEach(f -> f.cancel(true));
+      GuavaUtils.cancelAll(futures);
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      futures.forEach(f -> f.cancel(true));
+      GuavaUtils.cancelAll(futures);
       throw new RuntimeException(e.getCause());
     }
   }

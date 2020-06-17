@@ -24,6 +24,8 @@ import com.google.common.base.Strings;
 import com.google.common.primitives.Longs;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.concurrent.Future;
 
 /**
  */
@@ -76,5 +78,25 @@ public class GuavaUtils
       return arg2;
     }
     return arg1;
+  }
+
+  /**
+   * Cancel futures manually, because sometime we can't cancel all futures in {@link com.google.common.util.concurrent.Futures.CombinedFuture}
+   * automatically. Especially when we call {@link  com.google.common.util.concurrent.Futures#allAsList(Iterable)} to create a batch of
+   * future.
+   * @param futures The futures that we want to cancel
+   * @param <T>   The result type returned by this Future's {@code get} method
+   */
+  public static <T, F  extends Future<T>> void cancelAll(List<F> futures){
+    if(futures == null || futures.isEmpty()){
+      return;
+    }
+    futures.forEach(f -> {
+      try {
+        f.cancel(true);
+      } catch (Throwable t){
+        //do nothing and continue the loop.
+      }
+    });
   }
 }
