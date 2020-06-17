@@ -218,50 +218,53 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    if (server.getType().equals(ServerType.BROKER)) {
-      // in theory we could just filter this to ensure we don't put ourselves in here, to make dope broker tree
-      // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
-      // loop...
-      return;
-    }
     SegmentId segmentId = segment.getId();
     synchronized (lock) {
-      log.debug("Adding segment[%s] for server[%s]", segment, server);
+      // in theory we could probably just filter this to ensure we don't put ourselves in here, to make broker tree
+      // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
+      // loop...
+      if (!server.getType().equals(ServerType.BROKER)) {
+        log.debug("Adding segment[%s] for server[%s]", segment, server);
+        ServerSelector selector = selectors.get(segmentId);
+        if (selector == null) {
+          selector = new ServerSelector(segment, tierSelectorStrategy);
 
-      ServerSelector selector = selectors.get(segmentId);
-      if (selector == null) {
-        selector = new ServerSelector(segment, tierSelectorStrategy);
+          VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+          if (timeline == null) {
+            timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+            timelines.put(segment.getDataSource(), timeline);
+          }
 
-        VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
-        if (timeline == null) {
-          timeline = new VersionedIntervalTimeline<>(Ordering.natural());
-          timelines.put(segment.getDataSource(), timeline);
+          timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
+          selectors.put(segmentId, selector);
         }
 
-        timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
-        selectors.put(segmentId, selector);
+        QueryableDruidServer queryableDruidServer = clients.get(server.getName());
+        if (queryableDruidServer == null) {
+          queryableDruidServer = addServer(baseView.getInventoryValue(server.getName()));
+        }
+        selector.addServerAndUpdateSegment(queryableDruidServer, segment);
       }
-
-      QueryableDruidServer queryableDruidServer = clients.get(server.getName());
-      if (queryableDruidServer == null) {
-        queryableDruidServer = addServer(baseView.getInventoryValue(server.getName()));
-      }
-      selector.addServerAndUpdateSegment(queryableDruidServer, segment);
+      // run the callbacks, even if the segment came from a broker, lets downstream watchers decide what to do with it
       runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
     }
   }
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
-    if (server.getType().equals(ServerType.BROKER)) {
-      // might as well save the trouble of grabbing a lock for something that isn't there..
-      return;
-    }
+
     SegmentId segmentId = segment.getId();
     final ServerSelector selector;
 
     synchronized (lock) {
       log.debug("Removing segment[%s] from server[%s].", segmentId, server);
+
+      // we don't store broker segments here, but still run the callbacks for the segment being removed from the server
+      // since the broker segments are not stored on the timeline, do not fire segmentRemoved event
+      if (server.getType().equals(ServerType.BROKER)) {
+        runTimelineCallbacks(callback -> callback.serverSegmentRemoved(server, segment));
+        return;
+      }
 
       selector = selectors.get(segmentId);
       if (selector == null) {

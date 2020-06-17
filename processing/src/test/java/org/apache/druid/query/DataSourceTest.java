@@ -99,5 +99,4 @@ public class DataSourceTest
     final DataSource serde = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(dataSource), DataSource.class);
     Assert.assertEquals(dataSource, serde);
   }
-
 }

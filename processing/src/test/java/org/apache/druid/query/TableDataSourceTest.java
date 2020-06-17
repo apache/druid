@@ -86,7 +86,7 @@ public class TableDataSourceTest
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(TableDataSource.class).withNonnullFields("name").verify();
+    EqualsVerifier.forClass(TableDataSource.class).usingGetClass().withNonnullFields("name").verify();
   }
 
   @Test
