@@ -92,4 +92,9 @@ public class GraphiteEmitterConfigTest
                                           .readValue(whiteListBasedConverterString);
     Assert.assertEquals(druidToGraphiteEventConverter, whiteListBasedConverter);
   }
+
+  @Test
+  public void testJacksonModules() {
+    Assert.assertTrue(new GraphiteEmitterModule().getJacksonModules().isEmpty());
+  }
 }
