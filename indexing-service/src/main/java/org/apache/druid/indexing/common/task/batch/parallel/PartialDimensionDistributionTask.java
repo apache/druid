@@ -206,7 +206,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     LOG.info("Creating indexing temporary directory [%s]", indexingTmpDir);
     indexingTmpDir.mkdirs();
     if (!indexingTmpDir.exists()) {
-        throw new IOE("Could not create indexing temporary directory [%s]", indexingTmpDir);
+      throw new IOE("Could not create indexing temporary directory [%s]", indexingTmpDir);
     }
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
