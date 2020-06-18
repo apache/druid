@@ -205,4 +205,10 @@ public class InfluxdbEmitterTest
     String actual = influxdbEmitter.transformForInfluxSystems(event);
     Assert.assertEquals(expected, actual);
   }
+
+  @Test
+  public void testJacksonModules()
+  {
+    Assert.assertTrue(new InfluxdbEmitterModule().getJacksonModules().isEmpty());
+  }
 }

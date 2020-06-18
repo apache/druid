@@ -72,13 +72,13 @@ public class DoubleMeanAggregationTest
   {
 
     groupByQueryTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         new GroupByQueryConfig(),
         tempFolder
     );
 
     timeseriesQueryTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         tempFolder
     );
 
