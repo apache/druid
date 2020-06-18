@@ -84,7 +84,7 @@ public class JoinFilterPreAnalysisGroup
       return preAnalysisForSingleLevelMode;
     }
 
-    JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, clauses, virtualColumns);
+    JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, virtualColumns);
     return analyses.computeIfAbsent(
         key,
         (groupKey) -> {
@@ -100,11 +100,10 @@ public class JoinFilterPreAnalysisGroup
 
   public JoinFilterPreAnalysis getAnalysis(
       Filter filter,
-      List<JoinableClause> clauses,
       VirtualColumns virtualColumns
   )
   {
-    JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, clauses, virtualColumns);
+    JoinFilterPreAnalysisGroupKey key = new JoinFilterPreAnalysisGroupKey(filter, virtualColumns);
     return analyses.get(key);
   }
 
@@ -116,17 +115,14 @@ public class JoinFilterPreAnalysisGroup
   public static class JoinFilterPreAnalysisGroupKey
   {
     private final Filter filter;
-    private final List<JoinableClause> clauses;
     private final VirtualColumns virtualColumns;
 
     public JoinFilterPreAnalysisGroupKey(
         Filter filter,
-        List<JoinableClause> clauses,
         VirtualColumns virtualColumns
     )
     {
       this.filter = filter;
-      this.clauses = clauses;
       this.virtualColumns = virtualColumns;
     }
 
@@ -141,14 +137,13 @@ public class JoinFilterPreAnalysisGroup
       }
       JoinFilterPreAnalysisGroupKey that = (JoinFilterPreAnalysisGroupKey) o;
       return Objects.equals(filter, that.filter) &&
-             Objects.equals(clauses, that.clauses) &&
              Objects.equals(virtualColumns, that.virtualColumns);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(filter, clauses, virtualColumns);
+      return Objects.hash(filter, virtualColumns);
     }
   }
 }

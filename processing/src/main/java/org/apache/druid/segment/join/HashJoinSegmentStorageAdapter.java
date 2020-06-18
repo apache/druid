@@ -215,7 +215,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     } else {
       jfpa = joinFilterPreAnalysisGroup.getAnalysis(
           filter,
-          clauses,
           virtualColumns
       );
     }

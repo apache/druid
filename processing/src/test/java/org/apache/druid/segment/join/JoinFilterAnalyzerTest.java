@@ -2663,7 +2663,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinFilterPreAnalysis joinFilterPreAnalysis = joinFilterPreAnalysisGroup.getAnalysis(
         originalFilter,
-        joinableClauses,
         VirtualColumns.EMPTY
     );
 
@@ -2686,7 +2685,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
   {
     EqualsVerifier.forClass(JoinFilterPreAnalysisGroup.JoinFilterPreAnalysisGroupKey.class)
                   .usingGetClass()
-                  .withNonnullFields("filter", "clauses", "virtualColumns")
+                  .withNonnullFields("filter", "virtualColumns")
                   .verify();
   }
 }
