@@ -312,8 +312,8 @@ public class DruidCoordinator
               ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
                   .addTo(segment.getDataSource(), 1);
             } else {
-              ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
-                  .addTo(segment.getDataSource(), 0);
+              // This make sure that every datasource has a entry even if the all segments are loaded
+              underReplicationPerDataSource.putIfAbsent(segment.getDataSource(), 0);
             }
           }
         }
