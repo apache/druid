@@ -139,11 +139,14 @@ public class DruidSchemaTest extends CalciteTestBase
   private DruidSchema schema = null;
   private SegmentManager segmentManager;
   private Set<String> segmentDataSourceNames;
+  private Set<String> joinableDataSourceNames;
 
   @Before
   public void setUp() throws Exception
   {
     segmentDataSourceNames = Sets.newConcurrentHashSet();
+    joinableDataSourceNames = Sets.newConcurrentHashSet();
+
     final File tmpDir = temporaryFolder.newFolder();
     final QueryableIndex index1 = IndexBuilder.create()
                                               .tmpDir(new File(tmpDir, "1"))
@@ -234,7 +237,7 @@ public class DruidSchemaTest extends CalciteTestBase
       public boolean isDirectlyJoinable(DataSource dataSource)
       {
         return dataSource instanceof GlobalTableDataSource &&
-               segmentDataSourceNames.contains(((GlobalTableDataSource) dataSource).getName());
+               joinableDataSourceNames.contains(((GlobalTableDataSource) dataSource).getName());
       }
 
       @Override
@@ -487,12 +490,83 @@ public class DruidSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testLocalSegmentCacheSetsDataSourceAsGlobal() throws InterruptedException
+  public void testLocalSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
   {
     DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
+
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    final DataSegment someNewBrokerSegment = new DataSegment(
+        "foo",
+        Intervals.of("2012/2013"),
+        "version1",
+        null,
+        ImmutableList.of("dim1", "dim2"),
+        ImmutableList.of("met1", "met2"),
+        new NumberedShardSpec(2, 3),
+        null,
+        1,
+        100L,
+        PruneSpecsHolder.DEFAULT
+    );
+    segmentDataSourceNames.add("foo");
+    joinableDataSourceNames.add("foo");
+    serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
+
+    // wait for build twice
+    buildTableLatch = new CountDownLatch(2);
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
+    getDatasourcesLatch = new CountDownLatch(1);
+    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+
+    fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertTrue(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertTrue(fooTable.isJoinable());
+    Assert.assertTrue(fooTable.isBroadcast());
+
+    // now remove it
+    joinableDataSourceNames.remove("foo");
+    segmentDataSourceNames.remove("foo");
+    serverView.removeSegment(someNewBrokerSegment, ServerType.BROKER);
+
+    // wait for build
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+    buildTableLatch = new CountDownLatch(1);
+    buildTableLatch.await(1, TimeUnit.SECONDS);
+
+    // wait for get again, just to make sure table has been updated (latch counts down just before tables are updated)
+    getDatasourcesLatch = new CountDownLatch(1);
+    getDatasourcesLatch.await(1, TimeUnit.SECONDS);
+
+    fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
+  }
+
+  @Test
+  public void testLocalSegmentCacheSetsDataSourceAsGlobalButNotJoinable() throws InterruptedException
+  {
+    DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo");
+    Assert.assertNotNull(fooTable);
+    Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isJoinable());
+    Assert.assertFalse(fooTable.isBroadcast());
+
+    // wait for build twice
+    buildTableLatch.await(1, TimeUnit.SECONDS);
 
     final DataSegment someNewBrokerSegment = new DataSegment(
         "foo",
@@ -510,8 +584,6 @@ public class DruidSchemaTest extends CalciteTestBase
     segmentDataSourceNames.add("foo");
     serverView.addSegment(someNewBrokerSegment, ServerType.BROKER);
 
-    // wait for build twice
-    buildTableLatch.await(1, TimeUnit.SECONDS);
     buildTableLatch = new CountDownLatch(2);
     buildTableLatch.await(1, TimeUnit.SECONDS);
 
@@ -522,7 +594,12 @@ public class DruidSchemaTest extends CalciteTestBase
     fooTable = (DruidTable) schema.getTableMap().get("foo");
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
-    Assert.assertTrue(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    // should not be a GlobalTableDataSource for now, because isGlobal is couple with joinability. idealy this will be
+    // changed in the future and we should expect
+    Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertTrue(fooTable.isBroadcast());
+    Assert.assertFalse(fooTable.isJoinable());
+
 
     // now remove it
     segmentDataSourceNames.remove("foo");
@@ -541,6 +618,7 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertNotNull(fooTable);
     Assert.assertTrue(fooTable.getDataSource() instanceof TableDataSource);
     Assert.assertFalse(fooTable.getDataSource() instanceof GlobalTableDataSource);
+    Assert.assertFalse(fooTable.isBroadcast());
+    Assert.assertFalse(fooTable.isJoinable());
   }
-
 }

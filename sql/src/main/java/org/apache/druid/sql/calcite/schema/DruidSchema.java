@@ -633,19 +633,20 @@ public class DruidSchema extends AbstractSchema
 
       final TableDataSource tableDataSource;
 
-      // to be a GlobalTableDataSource instead of a TableDataSource, it must both:
-      // * appear on all servers (inferred by existing in the segment cache, which in this case belongs to the broker
-      //   meaning only broadcast segments live here)
-      // * be joinable, join analysis checks this, 'global' datasources are distributed everywhere and may be joined
-      //   against in an optimized manner - if the implementation exists.
-      // if neither of these criteria are true, assume a regular TableDataSource, backed by distributed Druid segments
+      // to be a GlobalTableDataSource instead of a TableDataSource, it must appear on all servers (inferred by existing
+      // in the segment cache, which in this case belongs to the broker meaning only broadcast segments live here)
+      // to be joinable, it must be possibly joinable according to the factory. we only consider broadcast datasources
+      // at this time, and isGlobal is currently strongly coupled with joinable, so only make a global table datasource
+      // if also joinable
       final GlobalTableDataSource maybeGlobal = new GlobalTableDataSource(dataSource);
-      if (segmentManager.getDataSourceNames().contains(dataSource) && joinableFactory.isDirectlyJoinable(maybeGlobal)) {
+      final boolean isJoinable = joinableFactory.isDirectlyJoinable(maybeGlobal);
+      final boolean isBroadcast = segmentManager.getDataSourceNames().contains(dataSource);
+      if (isBroadcast && isJoinable) {
         tableDataSource = maybeGlobal;
       } else {
         tableDataSource = new TableDataSource(dataSource);
       }
-      return new DruidTable(tableDataSource, builder.build());
+      return new DruidTable(tableDataSource, builder.build(), isJoinable, isBroadcast);
     }
   }
 

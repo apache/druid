@@ -84,7 +84,8 @@ public class InformationSchema extends AbstractSchema
       .add("TABLE_SCHEMA", ValueType.STRING)
       .add("TABLE_NAME", ValueType.STRING)
       .add("TABLE_TYPE", ValueType.STRING)
-      .add("TABLE_AVAILABILITY", ValueType.STRING)
+      .add("IS_JOINABLE", ValueType.STRING)
+      .add("IS_BROADCAST", ValueType.STRING)
       .build();
   private static final RowSignature COLUMNS_SIGNATURE = RowSignature
       .builder()
@@ -110,6 +111,9 @@ public class InformationSchema extends AbstractSchema
   private static final Function<String, Iterable<ResourceAction>> DRUID_TABLE_RA_GENERATOR = datasourceName -> {
     return Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(datasourceName));
   };
+
+  private static final String INFO_TRUE = "YES";
+  private static final String INFO_FALSE = "NO";
 
   private final SchemaPlus rootSchema;
   private final Map<String, Table> tableMap;
@@ -221,13 +225,15 @@ public class InformationSchema extends AbstractSchema
                           FluentIterable.from(authorizedTableNames).transform(
                               tableName -> {
                                 final Table table = subSchema.getTable(tableName);
-                                final String availability;
+                                final boolean isJoinable;
+                                final boolean isBroadcast;
                                 if (table instanceof DruidTable) {
-                                  availability = ((DruidTable) table).getDataSource().isGlobal()
-                                                 ? "GLOBAL"
-                                                 : "DISTRIBUTED";
+                                  DruidTable druidTable = (DruidTable) table;
+                                  isJoinable = druidTable.isJoinable();
+                                  isBroadcast = druidTable.isBroadcast();
                                 } else {
-                                  availability = "LOCAL";
+                                  isJoinable = false;
+                                  isBroadcast = false;
                                 }
 
                                 return new Object[]{
@@ -235,7 +241,8 @@ public class InformationSchema extends AbstractSchema
                                     schemaName, // TABLE_SCHEMA
                                     tableName, // TABLE_NAME
                                     table.getJdbcTableType().toString(), // TABLE_TYPE
-                                    availability // TABLE_AVAILABILITY
+                                    isJoinable ? INFO_TRUE : INFO_FALSE, // IS_JOINABLE
+                                    isBroadcast ? INFO_TRUE : INFO_FALSE // IS_BROADCAST
                                 };
                               }
                           ),
@@ -251,7 +258,8 @@ public class InformationSchema extends AbstractSchema
                                         schemaName, // TABLE_SCHEMA
                                         functionName, // TABLE_NAME
                                         "VIEW", // TABLE_TYPE
-                                        "VIRTUAL" // TABLE_AVAILABILITY
+                                        INFO_FALSE, // IS_JOINABLE
+                                        INFO_FALSE // IS_BROADCAST
                                     };
                                   } else {
                                     return null;
@@ -415,7 +423,7 @@ public class InformationSchema extends AbstractSchema
                       field.getName(), // COLUMN_NAME
                       String.valueOf(field.getIndex()), // ORDINAL_POSITION
                       "", // COLUMN_DEFAULT
-                      type.isNullable() ? "YES" : "NO", // IS_NULLABLE
+                      type.isNullable() ? INFO_TRUE : INFO_FALSE, // IS_NULLABLE
                       type.getSqlTypeName().toString(), // DATA_TYPE
                       null, // CHARACTER_MAXIMUM_LENGTH
                       null, // CHARACTER_OCTET_LENGTH
