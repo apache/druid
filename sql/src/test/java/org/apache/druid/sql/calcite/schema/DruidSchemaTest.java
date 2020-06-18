@@ -556,7 +556,7 @@ public class DruidSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testLocalSegmentCacheSetsDataSourceAsGlobalButNotJoinable() throws InterruptedException
+  public void testLocalSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
   {
     DruidTable fooTable = (DruidTable) schema.getTableMap().get("foo");
     Assert.assertNotNull(fooTable);
