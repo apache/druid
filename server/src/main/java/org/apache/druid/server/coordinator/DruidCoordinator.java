@@ -263,6 +263,11 @@ public class DruidCoordinator
   }
 
   /**
+   * segmentReplicantLookup use in this method could potentially be stale since it is only updated on coordinator runs.
+   * However, this is ok as long as the {@param dataSegments} is refreshed/latest as this would at least still ensure
+   * that the stale data in segmentReplicantLookup would be under counting replication levels,
+   * rather than potentially falsely reporting that everything is available.
+   *
    * @return tier -> { dataSource -> underReplicationCount } map
    */
   public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegments(
