@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -168,6 +169,41 @@ public class ConcurrentGrouperTest
     Assert.assertEquals(expected, actual);
 
     grouper.close();
+  }
+
+  @Test()
+  public void testAggregateForInterruptedException() throws IOException
+  {
+    final ConcurrentGrouper<Long> grouper = new ConcurrentGrouper<>(
+        bufferSupplier,
+        TEST_RESOURCE_HOLDER,
+        KEY_SERDE_FACTORY,
+        KEY_SERDE_FACTORY,
+        NULL_FACTORY,
+        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+        1024,
+        0.7f,
+        1,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
+        new DefaultObjectMapper(),
+        8,
+        null,
+        false,
+        MoreExecutors.listeningDecorator(SERVICE),
+        0,
+        true,
+        0,
+        4,
+        8
+    );
+    grouper.init();
+
+    try {
+      grouper.iterator(true);
+    }
+    catch (Exception e) {
+      Assert.assertTrue(e instanceof QueryInterruptedException);
+    }
   }
 
   static class TestResourceHolder extends ReferenceCountingResourceHolder<ByteBuffer>
