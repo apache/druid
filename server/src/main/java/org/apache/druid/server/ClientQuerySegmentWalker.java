@@ -203,7 +203,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     if (canRunQueryUsingClusterWalker(query)) {
       return new QuerySwappingQueryRunner<>(
-          decorateClusterRunner(freeTradeQuery, clusterClient.getQueryRunnerForSegments(query, specs)),
+          decorateClusterRunner(freeTradeQuery, clusterClient.getQueryRunnerForSegments(freeTradeQuery, specs)),
           query,
           freeTradeQuery
       );
