@@ -28,8 +28,6 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -105,10 +103,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
   private LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
+  private boolean serverAddedCountExpected = true;
 
   @Before
   public void setUp() throws Exception
   {
+    serverAddedCountExpected = true;
     druidServer = EasyMock.createMock(DruidServer.class);
     serverInventoryView = EasyMock.createMock(SingleServerInventoryView.class);
     segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
@@ -376,37 +376,19 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // This coordinator should be leader by now
     Assert.assertTrue(coordinator.isLeader());
     Assert.assertEquals(druidNode.getHostAndPort(), coordinator.getCurrentLeader());
-
-    final CountDownLatch assignSegmentLatch = new CountDownLatch(1);
-    pathChildrenCache.getListenable().addListener(
-        new PathChildrenCacheListener()
-        {
-          @Override
-          public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent event)
-          {
-            if (CuratorUtils.isChildAdded(event)) {
-              if (assignSegmentLatch.getCount() > 0) {
-                //Coordinator should try to assign segment to druidServer historical
-                //Simulate historical loading segment
-                druidServer.addDataSegment(dataSegment);
-                assignSegmentLatch.countDown();
-              } else {
-                Assert.fail("The same segment is assigned to the same server multiple times");
-              }
-            }
-          }
-        }
-    );
     pathChildrenCache.start();
 
+    final CountDownLatch assignSegmentLatch = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
+        1, pathChildrenCache, ImmutableMap.of("2010-01-01T00:00:00.000Z_2010-01-02T00:00:00.000Z", dataSegment), druidServer
+    );
     assignSegmentLatch.await();
+    Assert.assertTrue(serverAddedCountExpected);
 
     final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
     serviceEmitter.latch = coordinatorRunLatch;
     coordinatorRunLatch.await();
 
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH, dataSegment.getId().toString()));
 
     Object2IntMap<String> numsUnavailableUsedSegmentsPerDataSource =
         coordinator.computeNumsUnavailableUsedSegmentsPerDataSource();
@@ -497,39 +479,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.start();
     leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
 
-    final CountDownLatch assignSegmentLatchHot = new CountDownLatch(2);
-    pathChildrenCache.getListenable().addListener(
-        (client, event) -> {
-          if (CuratorUtils.isChildAdded(event)) {
-            DataSegment segment = findSegmentRelatedToCuratorEvent(dataSegments, event);
-            if (segment != null) {
-              hotServer.addDataSegment(segment);
-              curator.delete().guaranteed().forPath(event.getData().getPath());
-            }
-
-            assignSegmentLatchHot.countDown();
-          }
-        }
-    );
-
-    final CountDownLatch assignSegmentLatchCold = new CountDownLatch(1);
-    pathChildrenCacheCold.getListenable().addListener(
-        (CuratorFramework client, PathChildrenCacheEvent event) -> {
-          if (CuratorUtils.isChildAdded(event)) {
-            DataSegment segment = findSegmentRelatedToCuratorEvent(dataSegments, event);
-
-            if (segment != null) {
-              coldServer.addDataSegment(segment);
-              curator.delete().guaranteed().forPath(event.getData().getPath());
-            }
-
-            assignSegmentLatchCold.countDown();
-          }
-        }
-    );
-
+    final CountDownLatch assignSegmentLatchHot = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(2, pathChildrenCache, dataSegments, hotServer);
+    final CountDownLatch assignSegmentLatchCold = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(1, pathChildrenCacheCold, dataSegments, coldServer);
     assignSegmentLatchHot.await();
     assignSegmentLatchCold.await();
+    Assert.assertTrue(serverAddedCountExpected);
 
     final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
     serviceEmitter.latch = coordinatorRunLatch;
@@ -679,90 +633,17 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinator.start();
     leaderAnnouncerLatch.await(); // Wait for this coordinator to become leader
 
-    final CountDownLatch assignSegmentLatchHot = new CountDownLatch(1);
-    pathChildrenCache.getListenable().addListener(
-        (client, event) -> {
-          if (CuratorUtils.isChildAdded(event)) {
-            DataSegment segment = findSegmentRelatedToCuratorEvent(dataSegments, event);
-            if (segment != null) {
-              hotServer.addDataSegment(segment);
-              curator.delete().guaranteed().forPath(event.getData().getPath());
-            }
-
-            assignSegmentLatchHot.countDown();
-          }
-        }
-    );
-
-    final CountDownLatch assignSegmentLatchCold = new CountDownLatch(1);
-    pathChildrenCacheCold.getListenable().addListener(
-        (CuratorFramework client, PathChildrenCacheEvent event) -> {
-          if (CuratorUtils.isChildAdded(event)) {
-            DataSegment segment = findSegmentRelatedToCuratorEvent(dataSegments, event);
-
-            if (segment != null) {
-              coldServer.addDataSegment(segment);
-              curator.delete().guaranteed().forPath(event.getData().getPath());
-            }
-
-            assignSegmentLatchCold.countDown();
-          }
-        }
-    );
-
-    final CountDownLatch assignSegmentLatchBroker1 = new CountDownLatch(1);
-    pathChildrenCacheBroker1.getListenable().addListener(
-        (CuratorFramework client, PathChildrenCacheEvent event) -> {
-          if (CuratorUtils.isChildAdded(event)) {
-            DataSegment segment = findSegmentRelatedToCuratorEvent(dataSegments, event);
-
-            if (segment != null) {
-              brokerServer1.addDataSegment(segment);
-              curator.delete().guaranteed().forPath(event.getData().getPath());
-            }
-
-            assignSegmentLatchBroker1.countDown();
-          }
-        }
-    );
-
-    final CountDownLatch assignSegmentLatchBroker2 = new CountDownLatch(1);
-    pathChildrenCacheBroker2.getListenable().addListener(
-        (CuratorFramework client, PathChildrenCacheEvent event) -> {
-          if (CuratorUtils.isChildAdded(event)) {
-            DataSegment segment = findSegmentRelatedToCuratorEvent(dataSegments, event);
-
-            if (segment != null) {
-              brokerServer2.addDataSegment(segment);
-              curator.delete().guaranteed().forPath(event.getData().getPath());
-            }
-
-            assignSegmentLatchBroker2.countDown();
-          }
-        }
-    );
-
-    final CountDownLatch assignSegmentLatchPeon = new CountDownLatch(1);
-    pathChildrenCachePeon.getListenable().addListener(
-        (CuratorFramework client, PathChildrenCacheEvent event) -> {
-          if (CuratorUtils.isChildAdded(event)) {
-            DataSegment segment = findSegmentRelatedToCuratorEvent(dataSegments, event);
-
-            if (segment != null) {
-              peonServer.addDataSegment(segment);
-              curator.delete().guaranteed().forPath(event.getData().getPath());
-            }
-
-            assignSegmentLatchPeon.countDown();
-          }
-        }
-    );
-
+    final CountDownLatch assignSegmentLatchHot = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCache, dataSegments, hotServer);
+    final CountDownLatch assignSegmentLatchCold = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCacheCold, dataSegments, coldServer);
+    final CountDownLatch assignSegmentLatchBroker1 = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCacheBroker1, dataSegments, brokerServer1);
+    final CountDownLatch assignSegmentLatchBroker2 = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCacheBroker2, dataSegments, brokerServer2);
+    final CountDownLatch assignSegmentLatchPeon = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(3, pathChildrenCachePeon, dataSegments, peonServer);
     assignSegmentLatchHot.await();
     assignSegmentLatchCold.await();
     assignSegmentLatchBroker1.await();
     assignSegmentLatchBroker2.await();
     assignSegmentLatchPeon.await();
+    Assert.assertTrue(serverAddedCountExpected);
 
     final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
     serviceEmitter.latch = coordinatorRunLatch;
@@ -784,6 +665,32 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(segmentsMetadataManager);
     EasyMock.verify(metadataRuleManager);
+  }
+
+  private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,
+                                                                                      PathChildrenCache pathChildrenCache,
+                                                                                      Map<String, DataSegment> segments,
+                                                                                      DruidServer server)
+  {
+    final CountDownLatch countDownLatch = new CountDownLatch(latchCount);
+    pathChildrenCache.getListenable().addListener(
+        (CuratorFramework client, PathChildrenCacheEvent event) -> {
+          if (CuratorUtils.isChildAdded(event)) {
+            if (countDownLatch.getCount() > 0) {
+              DataSegment segment = findSegmentRelatedToCuratorEvent(segments, event);
+              if (segment != null) {
+                server.addDataSegment(segment);
+                curator.delete().guaranteed().forPath(event.getData().getPath());
+              }
+              countDownLatch.countDown();
+            } else {
+              // The segment is assigned to the server more times than expected
+              serverAddedCountExpected = false;
+            }
+          }
+        }
+    );
+    return countDownLatch;
   }
 
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)

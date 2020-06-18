@@ -311,6 +311,9 @@ public class DruidCoordinator
             if (server.getSegment(segment.getId()) == null) {
               ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
                   .addTo(segment.getDataSource(), 1);
+            } else {
+              ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
+                  .addTo(segment.getDataSource(), 0);
             }
           }
         }
