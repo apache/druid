@@ -207,7 +207,8 @@ public class InfluxdbEmitterTest
   }
 
   @Test
-  public void testJacksonModules() {
+  public void testJacksonModules()
+  {
     Assert.assertTrue(new InfluxdbEmitterModule().getJacksonModules().isEmpty());
   }
 }

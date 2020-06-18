@@ -94,7 +94,8 @@ public class GraphiteEmitterConfigTest
   }
 
   @Test
-  public void testJacksonModules() {
+  public void testJacksonModules()
+  {
     Assert.assertTrue(new GraphiteEmitterModule().getJacksonModules().isEmpty());
   }
 }

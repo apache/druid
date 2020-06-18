@@ -238,7 +238,8 @@ public class StatsDEmitterTest
   }
 
   @Test
-  public void testJacksonModules() {
+  public void testJacksonModules()
+  {
     Assert.assertTrue(new StatsDEmitterModule().getJacksonModules().isEmpty());
   }
 }
