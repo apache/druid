@@ -379,7 +379,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     pathChildrenCache.start();
 
     final CountDownLatch assignSegmentLatch = createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
-        1, pathChildrenCache, ImmutableMap.of("2010-01-01T00:00:00.000Z_2010-01-02T00:00:00.000Z", dataSegment), druidServer
+        1,
+        pathChildrenCache,
+        ImmutableMap.of("2010-01-01T00:00:00.000Z_2010-01-02T00:00:00.000Z", dataSegment),
+        druidServer
     );
     assignSegmentLatch.await();
     Assert.assertTrue(serverAddedCountExpected);
