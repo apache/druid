@@ -38,8 +38,12 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.TestBigDecimalSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.having.EqualToHavingSpec;
+import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
+import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
@@ -280,5 +284,41 @@ public class GroupByQueryRunnerFailureTest
         holder.forEach(ReferenceCountingResourceHolder::close);
       }
     }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testTimeoutExceptionOnQueryable()
+  {
+    expectedException.expect(QueryInterruptedException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(TimeoutException.class));
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+          @Override
+          public String getDefaultStrategy()
+          {
+            return "v2";
+          }
+
+          @Override
+          public boolean isSingleThreaded() {
+            return true;
+          }
+        }
+    );
+    QueryRunner<ResultRow> _runnnner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    GroupByQueryRunnerTestHelper.runQuery(factory, _runnnner, query);
   }
 }
