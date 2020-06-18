@@ -9879,7 +9879,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Collections.EMPTY_LIST,
+                Collections.emptyList(),
                 6
             )
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
