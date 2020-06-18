@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -79,16 +78,17 @@ public class GuavaUtilsTest
     AtomicBoolean active = new AtomicBoolean(false);
     Function<Integer, List<ListenableFuture<Object>>> function = (taskCount) -> {
       List<ListenableFuture<Object>> futures = new ArrayList<>();
-      for(int i = 0; i < taskCount; i++){
+      for (int i = 0; i < taskCount; i++) {
         ListenableFuture<Object> future = exc.submit(new Callable<Object>() {
           @Override
-          public Object call() throws Exception {
-            int internalIndex =index.incrementAndGet();
-            while (true){
-                if(internalIndex == taskCount && active.get()){
-                  //here we simulate occurs exception in some one future.
-                  throw new RuntimeException("A big bug");
-                }
+          public Object call() throws RuntimeException
+          {
+            int internalIndex = index.incrementAndGet();
+            while (true) {
+              if (internalIndex == taskCount && active.get()) {
+                //here we simulate occurs exception in some one future.
+                throw new RuntimeException("A big bug");
+              }
             }
           }
         });
@@ -103,9 +103,10 @@ public class GuavaUtilsTest
     active.set(true);
 
     ListenableFuture<List<Object>> future = Futures.allAsList(futures);
-    try{
+    try {
       future.get();
-    }catch(Exception e){
+    }
+    catch (Exception e) {
       Assert.assertEquals("java.lang.RuntimeException: A big bug", e.getMessage());
       GuavaUtils.cancelAll(futures);
       Assert.assertEquals(0, futures.stream().filter(f -> !f.isDone()).count());

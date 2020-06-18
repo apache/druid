@@ -22,6 +22,7 @@ package org.apache.druid.common.guava;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.concurrent.Future;
  */
 public class GuavaUtils
 {
+  private static final Logger log = new Logger(GuavaUtils.class);
 
   /**
    * To fix semantic difference of Longs.tryParse() from Long.parseLong (Longs.tryParse() returns null for '+' started
@@ -87,15 +89,17 @@ public class GuavaUtils
    * @param futures The futures that we want to cancel
    * @param <T>   The result type returned by this Future's {@code get} method
    */
-  public static <T, F  extends Future<T>> void cancelAll(List<F> futures){
-    if(futures == null || futures.isEmpty()){
+  public static <T, F extends Future<T>> void cancelAll(List<F> futures)
+  {
+    if (futures == null || futures.isEmpty()) {
       return;
     }
     futures.forEach(f -> {
       try {
         f.cancel(true);
-      } catch (Throwable t){
-        //do nothing and continue the loop.
+      }
+      catch (Throwable t) {
+        log.warn(t, "Error while canceling future.");
       }
     });
   }
