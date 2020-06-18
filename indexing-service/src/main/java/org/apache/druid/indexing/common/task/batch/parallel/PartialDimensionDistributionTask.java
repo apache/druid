@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.hash.BloomFilter;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
@@ -47,7 +48,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.TimeDim
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.TimeDimTupleFunnel;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -202,12 +202,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     Preconditions.checkNotNull(partitionDimension, "partitionDimension required in partitionsSpec");
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
-    File indexingTmpDir = toolbox.getIndexingTmpDir();
-    LOG.info("Creating indexing temporary directory [%s]", indexingTmpDir);
-    indexingTmpDir.mkdirs();
-    if (!indexingTmpDir.exists()) {
-      throw new IOE("Could not create indexing temporary directory [%s]", indexingTmpDir);
-    }
+    final File tmpDir = toolbox.getIndexingTmpDir();
+    // Temporary directory is automatically removed when this IndexTask completes.
+    FileUtils.forceMkdir(tmpDir);
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
@@ -226,7 +223,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
                 metricsNames
             ),
             inputFormat,
-            indexingTmpDir
+            tmpDir
         )
     );
 
