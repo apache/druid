@@ -244,9 +244,18 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
             false
         )
     );
+    // Append
     publishedSegments.addAll(
         runTestTask(
             new DynamicPartitionsSpec(5, null),
+            TaskState.SUCCESS,
+            true
+        )
+    );
+    // And append again
+    publishedSegments.addAll(
+        runTestTask(
+            new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
             true
         )
