@@ -120,42 +120,74 @@ public class TopNQueryEngine
 
 
     final TopNAlgorithm<?, ?> topNAlgorithm;
-    if (
-        selector.isHasExtractionFn() &&
+    if (requiresHeapAlgorithm(selector, query, columnCapabilities)) {
+      // heap based algorithm selection
+      if (selector.isHasExtractionFn() && dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
         // TimeExtractionTopNAlgorithm can work on any single-value dimension of type long.
-        // Once we have arbitrary dimension types following check should be replaced by checking
-        // that the column is of type long and single-value.
-        dimension.equals(ColumnHolder.TIME_COLUMN_NAME)
-        ) {
-      // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
-      // currently relies on the dimension cardinality to support lexicographic sorting
-      topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
-    } else if (selector.isHasExtractionFn()) {
-      topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
-    } else if (columnCapabilities == null || !(columnCapabilities.getType() == ValueType.STRING
-                                               && columnCapabilities.isDictionaryEncoded())) {
-      // Use HeapBasedTopNAlgorithm for non-Strings and for non-dictionary-encoded Strings, and for things we don't know
-      // which can happen for 'inline' data sources when this is run on the broker
-      topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
-    } else if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
-      // Use HeapBasedTopNAlgorithm when the dimension output type is a non-String. (It's like an extractionFn: there can be
-      // a many-to-one mapping, since numeric types can't represent all possible values of other types.)
-      topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
-    } else if (selector.isAggregateAllMetrics()) {
-      // sorted by dimension
-      topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
-    } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
-      // high cardinality dimensions with larger result sets
-      topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
+        // We might be able to use this for any long column with an extraction function, that is
+        //  ValueType.LONG.equals(columnCapabilities.getType())
+        // but this needs investigation to ensure that it is an improvement over HeapBasedTopNAlgorithm
+
+        // A special TimeExtractionTopNAlgorithm is required since DimExtractionTopNAlgorithm
+        // currently relies on the dimension cardinality to support lexicographic sorting
+        topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
+      } else {
+        topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
+      }
     } else {
-      // anything else
-      topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
+      // pool based algorithm selection
+      if (selector.isAggregateAllMetrics()) {
+        // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
+        // this
+        topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
+      } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
+        // for high cardinality dimensions with larger result sets we aggregate with only the ordering aggregation to
+        // compute the first 'n' values, and then for the rest of the metrics but for only the 'n' values
+        topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
+      } else {
+        // anything else, use the regular pooled algorithm
+        topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
+      }
     }
     if (queryMetrics != null) {
       queryMetrics.algorithm(topNAlgorithm);
     }
 
     return new TopNMapFn(query, topNAlgorithm);
+  }
+
+  /**
+   * {@link PooledTopNAlgorithm} (and {@link AggregateTopNMetricFirstAlgorithm} which utilizes the pooled
+   * algorithm) are optimized off-heap algorithms for aggregating dictionary encoded string columns. These algorithms
+   * rely on dictionary ids being unique so to aggregate on the dictionary ids directly and defer
+   * {@link org.apache.druid.segment.DimensionSelector#lookupName(int)} until as late as possible in query processing.
+   *
+   * When these conditions are not true, we have an on-heap fall-back algorithm, the {@link HeapBasedTopNAlgorithm}
+   * (and {@link TimeExtractionTopNAlgorithm} for a specialized form for long columns) which aggregates on values of
+   * selectors.
+   */
+  private static boolean requiresHeapAlgorithm(
+      final TopNAlgorithmSelector selector,
+      final TopNQuery query,
+      final ColumnCapabilities capabilities
+  )
+  {
+    if (selector.isHasExtractionFn()) {
+      // extraction functions can have a many to one mapping, and should use a heap algorithm
+      return true;
+    }
+
+    if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
+      // non-string output cannot use the pooled algorith, even if the underlying selector supports it
+      return true;
+    }
+    if (capabilities != null && capabilities.getType() == ValueType.STRING) {
+      // string columns must use the on heap algorithm unless they have the following capabilites
+      return !(capabilities.isDictionaryEncoded() && capabilities.areDictionaryValuesUnique().isTrue());
+    } else {
+      // non-strings are not eligible to use the pooled algorithm, and should use a heap algorithm
+      return true;
+    }
   }
 
   public static boolean canApplyExtractionInPost(TopNQuery query)
