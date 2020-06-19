@@ -90,6 +90,12 @@ public abstract class LoadRule implements Rule
     }
   }
 
+  @Override
+  public boolean matchLoadStatusCount()
+  {
+    return true;
+  }
+
   /**
    * @param stats {@link CoordinatorStats} to accumulate assignment statistics.
    */

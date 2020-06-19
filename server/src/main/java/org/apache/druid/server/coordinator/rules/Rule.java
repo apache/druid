@@ -52,6 +52,14 @@ public interface Rule
   boolean appliesTo(Interval interval, DateTime referenceTimestamp);
 
   /**
+   * Returns whether this Rules should be matched and considered in loadstatus API.
+   * In general, Rules that load segment onto any Druid node should return true.
+   * Any Rule that returns true for this method should add a compute logic (as if case condition) for the particular
+   * Rule class in {@link DruidCoordinator#computeUnderReplicationCountsPerDataSourcePerTierForSegments}
+   */
+  boolean matchLoadStatusCount();
+
+  /**
    * {@link DruidCoordinatorRuntimeParams#getUsedSegments()} must not be called in Rule's code, because the used
    * segments are not specified for the {@link DruidCoordinatorRuntimeParams} passed into Rule's code. This is because
    * {@link DruidCoordinatorRuntimeParams} entangles two slightly different (nonexistent yet) abstractions:

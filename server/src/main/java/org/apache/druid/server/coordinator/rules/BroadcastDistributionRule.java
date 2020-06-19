@@ -71,6 +71,12 @@ public abstract class BroadcastDistributionRule implements Rule
                 .accumulate(drop(dropServerHolders, segment));
   }
 
+  @Override
+  public boolean matchLoadStatusCount()
+  {
+    return true;
+  }
+
   private CoordinatorStats assign(
       final Set<ServerHolder> serverHolders,
       final DataSegment segment

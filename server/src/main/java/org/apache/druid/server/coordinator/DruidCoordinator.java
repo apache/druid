@@ -293,7 +293,7 @@ public class DruidCoordinator
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
 
       for (final Rule rule : rules) {
-        if (!rule.appliesTo(segment, now)) {
+        if (!rule.matchLoadStatusCount() || !rule.appliesTo(segment, now)) {
           continue;
         }
 
@@ -307,9 +307,7 @@ public class DruidCoordinator
                 ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
                     .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
               });
-        }
-
-        if (rule instanceof BroadcastDistributionRule) {
+        } else if (rule instanceof BroadcastDistributionRule) {
           for (ImmutableDruidServer server : broadcastTargetServers) {
             Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
                 .computeIfAbsent(server.getTier(), ignored -> new Object2LongOpenHashMap<>());
@@ -321,9 +319,12 @@ public class DruidCoordinator
               underReplicationPerDataSource.putIfAbsent(segment.getDataSource(), 0);
             }
           }
+        } else {
+          log.error("Rule class [%s] returns matchLoadStatusCount=true but did not implement compute logic", rule.getClass());
         }
 
-        // only the first matching rule applies
+        // Only the first matching rule applies. This is because the Coordinator cycle through all used segments
+        // and match each segment with the first rule that applies. Each segment may only match a single rule.
         break;
       }
     }
