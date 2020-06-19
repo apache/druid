@@ -120,6 +120,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
             scheduler
         ),
         conglomerate,
+        joinableFactoryToUse,
         new ServerConfig()
     );
   }

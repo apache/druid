@@ -41,14 +41,20 @@ public class DruidTable implements TranslatableTable
 {
   private final DataSource dataSource;
   private final RowSignature rowSignature;
+  private final boolean joinable;
+  private final boolean broadcast;
 
   public DruidTable(
       final DataSource dataSource,
-      final RowSignature rowSignature
+      final RowSignature rowSignature,
+      final boolean isJoinable,
+      final boolean isBroadcast
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
+    this.joinable = isJoinable;
+    this.broadcast = isBroadcast;
   }
 
   public DataSource getDataSource()
@@ -59,6 +65,16 @@ public class DruidTable implements TranslatableTable
   public RowSignature getRowSignature()
   {
     return rowSignature;
+  }
+
+  public boolean isJoinable()
+  {
+    return joinable;
+  }
+
+  public boolean isBroadcast()
+  {
+    return broadcast;
   }
 
   @Override
