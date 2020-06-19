@@ -25,9 +25,12 @@ import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -41,6 +44,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
@@ -61,7 +65,10 @@ import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.LookupJoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactoryTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -273,4 +280,26 @@ public class QueryStackTests
     return conglomerate;
   }
 
+  public static JoinableFactory makeJoinableFactoryForLookup(
+      LookupExtractorFactoryContainerProvider lookupProvider
+  )
+  {
+    return makeJoinableFactoryFromDefault(lookupProvider, null);
+  }
+
+  public static JoinableFactory makeJoinableFactoryFromDefault(
+      @Nullable LookupExtractorFactoryContainerProvider lookupProvider,
+      @Nullable Map<Class<? extends DataSource>, JoinableFactory> custom
+  )
+  {
+    ImmutableMap.Builder<Class<? extends DataSource>, JoinableFactory> builder = ImmutableMap.builder();
+    builder.put(InlineDataSource.class, new InlineJoinableFactory());
+    if (lookupProvider != null) {
+      builder.put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider));
+    }
+    if (custom != null) {
+      builder.putAll(custom);
+    }
+    return MapJoinableFactoryTest.fromMap(builder.build());
+  }
 }

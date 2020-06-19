@@ -126,14 +126,20 @@ public class TopNQueryEngine
         // Once we have arbitrary dimension types following check should be replaced by checking
         // that the column is of type long and single-value.
         dimension.equals(ColumnHolder.TIME_COLUMN_NAME)
-        ) {
+    ) {
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting
       topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
     } else if (selector.isHasExtractionFn()) {
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
-    } else if (columnCapabilities == null || !(columnCapabilities.getType() == ValueType.STRING
-                                               && columnCapabilities.isDictionaryEncoded())) {
+    } else if (
+        columnCapabilities == null ||
+        !(columnCapabilities.getType() == ValueType.STRING &&
+          columnCapabilities.isDictionaryEncoded() &&
+          columnCapabilities.areDictionaryValuesSorted().isTrue() &&
+          columnCapabilities.areDictionaryValuesUnique().isTrue()
+        )
+    ) {
       // Use HeapBasedTopNAlgorithm for non-Strings and for non-dictionary-encoded Strings, and for things we don't know
       // which can happen for 'inline' data sources when this is run on the broker
       topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);

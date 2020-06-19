@@ -50,13 +50,17 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -72,8 +76,14 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
+import org.apache.druid.segment.join.Joinable;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.table.IndexedTableJoinable;
+import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
@@ -125,6 +135,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
@@ -140,6 +151,7 @@ public class CalciteTests
   public static final String DATASOURCE3 = "numfoo";
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
+  public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
@@ -214,7 +226,7 @@ public class CalciteTests
 
   private static final String TIMESTAMP_COLUMN = "t";
 
-  private static final Injector INJECTOR = Guice.createInjector(
+  public static final Injector INJECTOR = Guice.createInjector(
       binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
 
@@ -605,6 +617,68 @@ public class CalciteTests
       )
   );
 
+  private static final InlineDataSource JOINABLE_BACKING_DATA = InlineDataSource.fromIterable(
+      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(x -> new Object[]{
+          x.get("dim1"),
+          x.get("dim2"),
+          x.get("dim3"),
+          x.get("dim4"),
+          x.get("dim5"),
+          x.get("d1"),
+          x.get("d2"),
+          x.get("f1"),
+          x.get("f2"),
+          x.get("l1"),
+          x.get("l2")
+      }).collect(Collectors.toList()),
+      RowSignature.builder()
+                  .add("dim1", ValueType.STRING)
+                  .add("dim2", ValueType.STRING)
+                  .add("dim3", ValueType.STRING)
+                  .add("dim4", ValueType.STRING)
+                  .add("dim5", ValueType.STRING)
+                  .add("d1", ValueType.DOUBLE)
+                  .add("d2", ValueType.DOUBLE)
+                  .add("f1", ValueType.FLOAT)
+                  .add("f2", ValueType.FLOAT)
+                  .add("l1", ValueType.LONG)
+                  .add("l2", ValueType.LONG)
+                  .build()
+  );
+
+  private static final Set<String> KEY_COLUMNS = ImmutableSet.of("dim4");
+
+  private static final RowBasedIndexedTable JOINABLE_TABLE = new RowBasedIndexedTable(
+      JOINABLE_BACKING_DATA.getRowsAsList(),
+      JOINABLE_BACKING_DATA.rowAdapter(),
+      JOINABLE_BACKING_DATA.getRowSignature(),
+      KEY_COLUMNS,
+      DateTimes.nowUtc().toString()
+  );
+
+  public static GlobalTableDataSource CUSTOM_TABLE = new GlobalTableDataSource(BROADCAST_DATASOURCE);
+
+  public static JoinableFactory CUSTOM_ROW_TABLE_JOINABLE = new JoinableFactory()
+  {
+    @Override
+    public boolean isDirectlyJoinable(DataSource dataSource)
+    {
+      return dataSource.equals(CUSTOM_TABLE);
+    }
+
+    @Override
+    public Optional<Joinable> build(
+        DataSource dataSource,
+        JoinConditionAnalysis condition
+    )
+    {
+      if (dataSource instanceof GlobalTableDataSource) {
+        return Optional.of(new IndexedTableJoinable(JOINABLE_TABLE));
+      }
+      return Optional.empty();
+    }
+  };
+
   private CalciteTests()
   {
     // No instantiation.
@@ -649,18 +723,44 @@ public class CalciteTests
     return INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class));
   }
 
+  public static JoinableFactory createDefaultJoinableFactory()
+  {
+    return QueryStackTests.makeJoinableFactoryFromDefault(
+        INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
+        ImmutableMap.of(
+            GlobalTableDataSource.class,
+            CUSTOM_ROW_TABLE_JOINABLE
+        )
+    );
+  }
+
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir
   )
   {
-    return createMockWalker(conglomerate, tmpDir, QueryStackTests.DEFAULT_NOOP_SCHEDULER);
+    return createMockWalker(
+        conglomerate,
+        tmpDir,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        createDefaultJoinableFactory()
+    );
   }
 
   public static SpecificSegmentsQuerySegmentWalker createMockWalker(
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
       final QueryScheduler scheduler
+  )
+  {
+    return createMockWalker(conglomerate, tmpDir, scheduler, null);
+  }
+
+  public static SpecificSegmentsQuerySegmentWalker createMockWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final File tmpDir,
+      final QueryScheduler scheduler,
+      final JoinableFactory joinableFactory
   )
   {
     final QueryableIndex index1 = IndexBuilder
@@ -713,7 +813,7 @@ public class CalciteTests
 
     final QueryableIndex someDatasourceIndex = IndexBuilder
         .create()
-        .tmpDir(new File(tmpDir, "1"))
+        .tmpDir(new File(tmpDir, "6"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(INDEX_SCHEMA)
         .rows(ROWS1)
@@ -721,7 +821,7 @@ public class CalciteTests
 
     final QueryableIndex someXDatasourceIndex = IndexBuilder
         .create()
-        .tmpDir(new File(tmpDir, "1"))
+        .tmpDir(new File(tmpDir, "7"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(INDEX_SCHEMA_WITH_X_COLUMNS)
         .rows(RAW_ROWS1_X)
@@ -731,7 +831,7 @@ public class CalciteTests
     return new SpecificSegmentsQuerySegmentWalker(
         conglomerate,
         INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
-        null,
+        joinableFactory,
         scheduler
     ).add(
         DataSegment.builder()
@@ -805,6 +905,15 @@ public class CalciteTests
                    .size(0)
                    .build(),
         someXDatasourceIndex
+    ).add(
+        DataSegment.builder()
+                   .dataSource(BROADCAST_DATASOURCE)
+                   .interval(indexNumericDims.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexNumericDims
     );
   }
 
@@ -979,8 +1088,15 @@ public class CalciteTests
     final DruidSchema schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments()),
-        new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
-        new MapJoinableFactory(ImmutableMap.of()),
+        new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+        {
+          @Override
+          public Set<String> getDataSourceNames()
+          {
+            return ImmutableSet.of(BROADCAST_DATASOURCE);
+          }
+        },
+        createDefaultJoinableFactory(),
         plannerConfig,
         viewManager,
         TEST_AUTHENTICATOR_ESCALATOR
