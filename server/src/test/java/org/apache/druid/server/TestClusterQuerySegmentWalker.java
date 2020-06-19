@@ -48,6 +48,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -139,17 +140,19 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
+    final JoinFilterRewriteConfig joinFilterRewriteConfig = new JoinFilterRewriteConfig(
+        QueryContexts.getEnableJoinFilterPushDown(query),
+        QueryContexts.getEnableJoinFilterRewrite(query),
+        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+        QueryContexts.getJoinFilterRewriteMaxSize(query)
+    );
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
         joinableFactory,
         new AtomicLong(),
-        QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        joinFilterRewriteConfig,
+        query
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(

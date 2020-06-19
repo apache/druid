@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -44,23 +44,24 @@ public class HashJoinSegment implements SegmentReference
 {
   private final SegmentReference baseSegment;
   private final List<JoinableClause> clauses;
-  private final JoinFilterPreAnalysis joinFilterPreAnalysis;
+  private final JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup;
 
   /**
    * @param baseSegment           The left-hand side base segment
    * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
    *                              duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param joinFilterPreAnalysis Pre-analysis computed by {@link org.apache.druid.segment.join.filter.JoinFilterAnalyzer#computeJoinFilterPreAnalysis}
+   * @param joinFilterPreAnalysisGroup Pre-analysis group that holds all of the JoinFilterPreAnalysis results within
+   *                                   the scope of a query
    */
   public HashJoinSegment(
       SegmentReference baseSegment,
       List<JoinableClause> clauses,
-      JoinFilterPreAnalysis joinFilterPreAnalysis
+      JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup
   )
   {
     this.baseSegment = baseSegment;
     this.clauses = clauses;
-    this.joinFilterPreAnalysis = joinFilterPreAnalysis;
+    this.joinFilterPreAnalysisGroup = joinFilterPreAnalysisGroup;
 
     // Verify 'clauses' is nonempty (otherwise it's a waste to create this object, and the caller should know)
     if (clauses.isEmpty()) {
@@ -93,7 +94,7 @@ public class HashJoinSegment implements SegmentReference
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, joinFilterPreAnalysis);
+    return new HashJoinSegmentStorageAdapter(baseSegment.asStorageAdapter(), clauses, joinFilterPreAnalysisGroup);
   }
 
   @Override
