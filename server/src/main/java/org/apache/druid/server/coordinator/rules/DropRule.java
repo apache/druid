@@ -39,7 +39,7 @@ public abstract class DropRule implements Rule
   }
 
   @Override
-  public boolean matchLoadStatusCount()
+  public boolean canLoadSegments()
   {
     return false;
   }

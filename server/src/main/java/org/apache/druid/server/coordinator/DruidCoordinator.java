@@ -275,13 +275,6 @@ public class DruidCoordinator
   )
   {
     final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
-    final Set<String> decommissioningServers = getDynamicConfigs().getDecommissioningNodes();
-    final List<ImmutableDruidServer> broadcastTargetServers = serverInventoryView
-        .getInventory()
-        .stream()
-        .filter(druidServer -> druidServer.isSegmentBroadcastTarget() && !decommissioningServers.contains(druidServer.getHost()))
-        .map(DruidServer::toImmutableDruidServer)
-        .collect(Collectors.toList());
 
     if (segmentReplicantLookup == null) {
       return underReplicationCountsPerDataSourcePerTier;
@@ -293,35 +286,17 @@ public class DruidCoordinator
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
 
       for (final Rule rule : rules) {
-        if (!rule.matchLoadStatusCount() || !rule.appliesTo(segment, now)) {
+        if (!rule.appliesTo(segment, now)) {
+          // Rule did not match. Continue to the next Rule.
           continue;
         }
-
-        if (rule instanceof LoadRule) {
-          ((LoadRule) rule)
-              .getTieredReplicants()
-              .forEach((final String tier, final Integer ruleReplicants) -> {
-                int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
-                Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
-                    .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>());
-                ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
-                    .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
-              });
-        } else if (rule instanceof BroadcastDistributionRule) {
-          for (ImmutableDruidServer server : broadcastTargetServers) {
-            Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
-                .computeIfAbsent(server.getTier(), ignored -> new Object2LongOpenHashMap<>());
-            if (server.getSegment(segment.getId()) == null) {
-              ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
-                  .addTo(segment.getDataSource(), 1);
-            } else {
-              // This make sure that every datasource has a entry even if the all segments are loaded
-              underReplicationPerDataSource.putIfAbsent(segment.getDataSource(), 0);
-            }
-          }
-        } else {
-          log.error("Rule class [%s] returns matchLoadStatusCount=true but did not implement compute logic", rule.getClass());
+        if (!rule.canLoadSegments()) {
+          // Rule matched but rule does not and cannot load segments.
+          // Hence, there is no need to update underReplicationCountsPerDataSourcePerTier map
+          break;
         }
+
+        rule.updateUnderReplicated(underReplicationCountsPerDataSourcePerTier, segmentReplicantLookup, segment);
 
         // Only the first matching rule applies. This is because the Coordinator cycle through all used segments
         // and match each segment with the first rule that applies. Each segment may only match a single rule.
