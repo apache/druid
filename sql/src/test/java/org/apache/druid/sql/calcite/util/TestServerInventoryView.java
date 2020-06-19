@@ -26,6 +26,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -63,18 +64,31 @@ public class TestServerInventoryView implements TimelineServerView
       "dummy",
       0
   );
-  private final List<DataSegment> segments;
+  private static final DruidServerMetadata DUMMY_BROKER = new DruidServerMetadata(
+      "dummy3",
+      "dummy3",
+      null,
+      0,
+      ServerType.BROKER,
+      "dummy",
+      0
+  );
+  private List<DataSegment> segments = new ArrayList<>();
   private List<DataSegment> realtimeSegments = new ArrayList<>();
+  private List<DataSegment> brokerSegments = new ArrayList<>();
+
+  private List<Pair<Executor, SegmentCallback>> segmentCallbackExecs = new ArrayList<>();
+  private List<Pair<Executor, TimelineCallback>> timelineCallbackExecs = new ArrayList<>();
 
   public TestServerInventoryView(List<DataSegment> segments)
   {
-    this.segments = ImmutableList.copyOf(segments);
+    this.segments.addAll(segments);
   }
 
   public TestServerInventoryView(List<DataSegment> segments, List<DataSegment> realtimeSegments)
   {
-    this.segments = ImmutableList.copyOf(segments);
-    this.realtimeSegments = ImmutableList.copyOf(realtimeSegments);
+    this.segments.addAll(segments);
+    this.realtimeSegments.addAll(realtimeSegments);
   }
 
   @Override
@@ -87,6 +101,7 @@ public class TestServerInventoryView implements TimelineServerView
   @Override
   public List<ImmutableDruidServer> getDruidServers()
   {
+    // do not return broker on purpose to mimic behavior of BrokerServerView
     final ImmutableDruidDataSource dataSource = new ImmutableDruidDataSource("DUMMY", Collections.emptyMap(), segments);
     final ImmutableDruidServer server = new ImmutableDruidServer(
         DUMMY_SERVER,
@@ -118,6 +133,7 @@ public class TestServerInventoryView implements TimelineServerView
       exec.execute(() -> callback.segmentAdded(DUMMY_SERVER_REALTIME, segment));
     }
     exec.execute(callback::segmentViewInitialized);
+    segmentCallbackExecs.add(new Pair<>(exec, callback));
   }
 
   @Override
@@ -130,6 +146,7 @@ public class TestServerInventoryView implements TimelineServerView
       exec.execute(() -> callback.segmentAdded(DUMMY_SERVER_REALTIME, segment));
     }
     exec.execute(callback::timelineInitialized);
+    timelineCallbackExecs.add(new Pair<>(exec, callback));
   }
 
   @Override
@@ -142,5 +159,58 @@ public class TestServerInventoryView implements TimelineServerView
   public void registerServerRemovedCallback(Executor exec, ServerRemovedCallback callback)
   {
     // Do nothing
+  }
+
+  public void addSegment(DataSegment segment, ServerType serverType)
+  {
+    final Pair<DruidServerMetadata, List<DataSegment>> whichServerAndSegments =
+        getDummyServerAndSegmentsForType(serverType);
+    final DruidServerMetadata whichServer = whichServerAndSegments.lhs;
+    whichServerAndSegments.rhs.add(segment);
+    segmentCallbackExecs.forEach(
+        execAndCallback -> execAndCallback.lhs.execute(() -> execAndCallback.rhs.segmentAdded(whichServer, segment))
+    );
+    timelineCallbackExecs.forEach(
+        execAndCallback -> execAndCallback.lhs.execute(() -> execAndCallback.rhs.segmentAdded(whichServer, segment))
+    );
+  }
+
+  public void removeSegment(DataSegment segment, ServerType serverType)
+  {
+    final Pair<DruidServerMetadata, List<DataSegment>> whichServerAndSegments =
+        getDummyServerAndSegmentsForType(serverType);
+    final DruidServerMetadata whichServer = whichServerAndSegments.lhs;
+    whichServerAndSegments.rhs.remove(segment);
+    segmentCallbackExecs.forEach(
+        execAndCallback -> execAndCallback.lhs.execute(() -> execAndCallback.rhs.segmentRemoved(whichServer, segment))
+    );
+    timelineCallbackExecs.forEach(
+        execAndCallback -> execAndCallback.lhs.execute(() -> {
+          execAndCallback.rhs.serverSegmentRemoved(whichServer, segment);
+          // assume that all replicas have been removed and fire this one too
+          execAndCallback.rhs.segmentRemoved(segment);
+        })
+    );
+  }
+
+  private Pair<DruidServerMetadata, List<DataSegment>> getDummyServerAndSegmentsForType(ServerType serverType)
+  {
+    final DruidServerMetadata whichServer;
+    final List<DataSegment> whichSegments;
+    switch (serverType) {
+      case BROKER:
+        whichServer = DUMMY_BROKER;
+        whichSegments = brokerSegments;
+        break;
+      case REALTIME:
+        whichServer = DUMMY_SERVER_REALTIME;
+        whichSegments = realtimeSegments;
+        break;
+      default:
+        whichServer = DUMMY_SERVER;
+        whichSegments = segments;
+        break;
+    }
+    return new Pair<>(whichServer, whichSegments);
   }
 }

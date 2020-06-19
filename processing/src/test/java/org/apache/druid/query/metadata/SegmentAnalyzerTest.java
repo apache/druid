@@ -20,11 +20,11 @@
 package org.apache.druid.query.metadata;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.query.LegacyDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -190,7 +190,7 @@ public class SegmentAnalyzerTest
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
-        new LegacyDataSource("test"), new LegacySegmentSpec("2011/2012"), null, null, null, analyses, false, false
+        new TableDataSource("test"), new LegacySegmentSpec("2011/2012"), null, null, null, analyses, false, false
     );
     return runner.run(QueryPlus.wrap(query)).toList();
   }

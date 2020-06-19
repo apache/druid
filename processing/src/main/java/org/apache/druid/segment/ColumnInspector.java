@@ -17,17 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.segment;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.segment.column.ColumnCapabilities;
 
-@JsonTypeName("table")
-public class LegacyDataSource extends TableDataSource
+import javax.annotation.Nullable;
+
+public interface ColumnInspector
 {
-  @JsonCreator
-  public LegacyDataSource(String name)
-  {
-    super(name);
-  }
+  /**
+   * Returns capabilities of a particular column.
+   *
+   * @param column column name
+   *
+   * @return capabilities, or null
+   */
+  @Nullable
+  ColumnCapabilities getColumnCapabilities(String column);
 }

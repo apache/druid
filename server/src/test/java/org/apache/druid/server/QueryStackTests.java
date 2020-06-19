@@ -95,6 +95,7 @@ public class QueryStackTests
       final QuerySegmentWalker clusterWalker,
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactory joinableFactory,
       final ServerConfig serverConfig
   )
   {
@@ -110,6 +111,7 @@ public class QueryStackTests
             return conglomerate.findFactory(query).getToolchest();
           }
         },
+        joinableFactory,
         new RetryQueryRunnerConfig(),
         TestHelper.makeJsonMapper(),
         serverConfig,

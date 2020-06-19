@@ -132,6 +132,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter, cpuAccumulator);
   }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {

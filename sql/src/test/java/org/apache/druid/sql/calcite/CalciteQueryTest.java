@@ -139,6 +139,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelectNonNumericNumberLiterals() throws Exception
+  {
+    // Tests to convert NaN, positive infinity and negative infinity as literals.
+    testQuery(
+        "SELECT"
+        + " CAST(1 / 0.0 AS BIGINT),"
+        + " CAST(1 / -0.0 AS BIGINT),"
+        + " CAST(-1 / 0.0 AS BIGINT),"
+        + " CAST(-1 / -0.0 AS BIGINT),"
+        + " CAST(0/ 0.0 AS BIGINT)",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[] {
+                Long.MAX_VALUE,
+                Long.MAX_VALUE,
+                Long.MIN_VALUE,
+                Long.MIN_VALUE,
+                0L
+            }
+        )
+    );
+  }
+
+  @Test
   public void testSelectConstantExpressionFromTable() throws Exception
   {
     testQuery(
@@ -683,55 +707,59 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testInformationSchemaTables() throws Exception
   {
     testQuery(
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
+        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
-            .add(new Object[]{"druid", "aview", "VIEW"})
-            .add(new Object[]{"druid", "bview", "VIEW"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
-            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
-            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
             .build()
     );
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
+        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
-            .add(new Object[]{"druid", "aview", "VIEW"})
-            .add(new Object[]{"druid", "bview", "VIEW"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
-            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
-            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
             .build()
     );
   }
