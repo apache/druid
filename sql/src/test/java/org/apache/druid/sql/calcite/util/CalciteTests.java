@@ -663,7 +663,7 @@ public class CalciteTests
     @Override
     public boolean isDirectlyJoinable(DataSource dataSource)
     {
-      return dataSource.equals(CUSTOM_TABLE);
+      return CUSTOM_TABLE.equals(dataSource);
     }
 
     @Override
