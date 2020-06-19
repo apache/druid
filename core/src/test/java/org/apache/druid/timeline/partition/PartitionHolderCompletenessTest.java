@@ -48,8 +48,8 @@ public class PartitionHolderCompletenessTest
             // Simulate empty hash buckets
             ImmutableList.of(
                 new HashBasedNumberedShardSpec(2, 3, 3, 5, null, new ObjectMapper()),
-            new HashBasedNumberedShardSpec(0, 3, 0, 5, null, new ObjectMapper()),
-            new HashBasedNumberedShardSpec(1, 3, 2, 5, null, new ObjectMapper())
+                new HashBasedNumberedShardSpec(0, 3, 0, 5, null, new ObjectMapper()),
+                new HashBasedNumberedShardSpec(1, 3, 2, 5, null, new ObjectMapper())
             ),
             HashBasedNumberedShardSpec.class.getSimpleName()
         },
@@ -58,7 +58,7 @@ public class PartitionHolderCompletenessTest
             ImmutableList.of(
                 new SingleDimensionShardSpec("dim", null, "aaa", 0, 3),
                 new SingleDimensionShardSpec("dim", "ttt", "zzz", 2, 3),
-            new SingleDimensionShardSpec("dim", "bbb", "fff", 1, 3)
+                new SingleDimensionShardSpec("dim", "bbb", "fff", 1, 3)
             ),
             StringUtils.format(
                 "%s with empty buckets",
@@ -70,8 +70,8 @@ public class PartitionHolderCompletenessTest
             ImmutableList.of(
                 new SingleDimensionShardSpec("dim", "bbb", "fff", 1, null),
                 new SingleDimensionShardSpec("dim", "fff", null, 2, null),
-            new SingleDimensionShardSpec("dim", null, "bbb", 0, null)
-    ),
+                new SingleDimensionShardSpec("dim", null, "bbb", 0, null)
+            ),
             StringUtils.format(
                 "%s with missing numCorePartitions",
                 SingleDimensionShardSpec.class.getSimpleName()

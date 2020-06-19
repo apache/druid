@@ -147,7 +147,7 @@ public class InputRowSerdeTest
 
     Assert.assertEquals(timestamp, out.getTimestampFromEpoch());
     Assert.assertEquals(dims, out.getDimensions());
-    Assert.assertEquals(Collections.EMPTY_LIST, out.getDimension("dim_non_existing"));
+    Assert.assertEquals(Collections.emptyList(), out.getDimension("dim_non_existing"));
     Assert.assertEquals(ImmutableList.of("d1v"), out.getDimension("d1"));
     Assert.assertEquals(ImmutableList.of("d2v1", "d2v2"), out.getDimension("d2"));
     Assert.assertEquals(200L, out.getRaw("d3"));

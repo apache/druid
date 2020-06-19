@@ -134,29 +134,29 @@ public class NumberedShardSpecTest
     //incomplete partition sets
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk0),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk1),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk4),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk0, chunk4),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk1, chunk4),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
     //complete partition sets

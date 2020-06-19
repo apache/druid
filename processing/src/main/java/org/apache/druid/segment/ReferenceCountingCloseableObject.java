@@ -41,7 +41,7 @@ public abstract class ReferenceCountingCloseableObject<BaseObject extends Closea
   private static final Logger log = new Logger(ReferenceCountingCloseableObject.class);
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
-  private final Phaser referents = new Phaser(1)
+  protected final Phaser referents = new Phaser(1)
   {
     @Override
     protected boolean onAdvance(int phase, int registeredParties)
