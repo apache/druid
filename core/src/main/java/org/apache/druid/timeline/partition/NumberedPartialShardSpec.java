@@ -50,7 +50,7 @@ public class NumberedPartialShardSpec implements PartialShardSpec
       return new NumberedShardSpec(0, 0);
     } else {
       final NumberedShardSpec prevSpec = (NumberedShardSpec) specOfPreviousMaxPartitionId;
-      return new NumberedShardSpec(prevSpec.getPartitionNum() + 1, prevSpec.getPartitions());
+      return new NumberedShardSpec(prevSpec.getPartitionNum() + 1, prevSpec.getNumCorePartitions());
     }
   }
 

@@ -880,14 +880,14 @@ public class SegmentAllocateActionTest
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new SingleDimensionShardSpec("foo", null, "bar", 0))
+                       .shardSpec(new SingleDimensionShardSpec("foo", null, "bar", 0, 2))
                        .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new SingleDimensionShardSpec("foo", "bar", null, 1))
+                       .shardSpec(new SingleDimensionShardSpec("foo", "bar", null, 1, 2))
                        .size(0)
                        .build()
         )
@@ -914,14 +914,14 @@ public class SegmentAllocateActionTest
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new HashBasedNumberedShardSpec(0, 2, ImmutableList.of("dim1"), objectMapper))
+                       .shardSpec(new HashBasedNumberedShardSpec(0, 2, 0, 2, ImmutableList.of("dim1"), objectMapper))
                        .size(0)
                        .build(),
             DataSegment.builder()
                        .dataSource(DATA_SOURCE)
                        .interval(Granularities.HOUR.bucket(PARTY_TIME))
                        .version(PARTY_TIME.toString())
-                       .shardSpec(new HashBasedNumberedShardSpec(1, 2, ImmutableList.of("dim1"), objectMapper))
+                       .shardSpec(new HashBasedNumberedShardSpec(1, 2, 1, 2, ImmutableList.of("dim1"), objectMapper))
                        .size(0)
                        .build()
         )
@@ -935,7 +935,7 @@ public class SegmentAllocateActionTest
         "seq",
         null,
         true,
-        new HashBasedNumberedPartialShardSpec(ImmutableList.of("dim1"), 2),
+        new HashBasedNumberedPartialShardSpec(ImmutableList.of("dim1"), 1, 2),
         lockGranularity
     );
     final SegmentIdWithShardSpec segmentIdentifier = action.perform(task, taskActionTestKit.getTaskActionToolbox());
@@ -946,7 +946,7 @@ public class SegmentAllocateActionTest
 
     Assert.assertTrue(shardSpec instanceof HashBasedNumberedShardSpec);
     final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) shardSpec;
-    Assert.assertEquals(2, hashBasedNumberedShardSpec.getPartitions());
+    Assert.assertEquals(2, hashBasedNumberedShardSpec.getNumCorePartitions());
     Assert.assertEquals(ImmutableList.of("dim1"), hashBasedNumberedShardSpec.getPartitionDimensions());
   }
 
@@ -1029,10 +1029,7 @@ public class SegmentAllocateActionTest
 
     if (expected.getShardSpec().getClass() == NumberedShardSpec.class
         && actual.getShardSpec().getClass() == NumberedShardSpec.class) {
-      Assert.assertEquals(
-          ((NumberedShardSpec) expected.getShardSpec()).getPartitions(),
-          ((NumberedShardSpec) actual.getShardSpec()).getPartitions()
-      );
+      Assert.assertEquals(expected.getShardSpec().getNumCorePartitions(), actual.getShardSpec().getNumCorePartitions());
     } else if (expected.getShardSpec().getClass() == LinearShardSpec.class
                && actual.getShardSpec().getClass() == LinearShardSpec.class) {
       // do nothing

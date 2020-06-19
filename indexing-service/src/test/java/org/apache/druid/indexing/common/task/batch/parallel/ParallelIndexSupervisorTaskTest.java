@@ -19,9 +19,11 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -45,8 +47,8 @@ public class ParallelIndexSupervisorTaskTest
   public static class CreateMergeIoConfigsTest
   {
     private static final int TOTAL_NUM_MERGE_TASKS = 10;
-    private static final Function<List<HashPartitionLocation>, PartialHashSegmentMergeIOConfig>
-        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialHashSegmentMergeIOConfig::new;
+    private static final Function<List<GenericPartitionLocation>, PartialGenericSegmentMergeIOConfig>
+        CREATE_PARTIAL_SEGMENT_MERGE_IO_CONFIG = PartialGenericSegmentMergeIOConfig::new;
 
     @Parameterized.Parameters(name = "count = {0}")
     public static Iterable<? extends Object> data()
@@ -66,14 +68,14 @@ public class ParallelIndexSupervisorTaskTest
     @Test
     public void handlesLastPartitionCorrectly()
     {
-      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       assertNoMissingPartitions(count, assignedPartitionLocation);
     }
 
     @Test
     public void sizesPartitionsEvenly()
     {
-      List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
+      List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation = createMergeIOConfigs();
       List<Integer> actualPartitionSizes = assignedPartitionLocation.stream()
                                                                     .map(i -> i.getPartitionLocations().size())
                                                                     .collect(Collectors.toList());
@@ -89,7 +91,7 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private List<PartialHashSegmentMergeIOConfig> createMergeIOConfigs()
+    private List<PartialGenericSegmentMergeIOConfig> createMergeIOConfigs()
     {
       return ParallelIndexSupervisorTask.createMergeIOConfigs(
           TOTAL_NUM_MERGE_TASKS,
@@ -98,7 +100,7 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> createPartitionToLocations(int count)
+    private static Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> createPartitionToLocations(int count)
     {
       return IntStream.range(0, count).boxed().collect(
           Collectors.toMap(
@@ -108,15 +110,15 @@ public class ParallelIndexSupervisorTaskTest
       );
     }
 
-    private static HashPartitionLocation createPartitionLocation(int id)
+    private static GenericPartitionLocation createPartitionLocation(int id)
     {
-      return new HashPartitionLocation(
+      return new GenericPartitionLocation(
           "host",
           0,
           false,
           "subTaskId",
           createInterval(id),
-          id
+          new BuildingHashBasedNumberedShardSpec(id, id, id + 1, null, new ObjectMapper())
       );
     }
 
@@ -127,7 +129,7 @@ public class ParallelIndexSupervisorTaskTest
 
     private static void assertNoMissingPartitions(
         int count,
-        List<PartialHashSegmentMergeIOConfig> assignedPartitionLocation
+        List<PartialGenericSegmentMergeIOConfig> assignedPartitionLocation
     )
     {
       List<Integer> expectedIds = IntStream.range(0, count).boxed().collect(Collectors.toList());
@@ -136,7 +138,7 @@ public class ParallelIndexSupervisorTaskTest
                                                          .flatMap(
                                                              i -> i.getPartitionLocations()
                                                                    .stream()
-                                                                   .map(HashPartitionLocation::getPartitionId)
+                                                                   .map(GenericPartitionLocation::getBucketId)
                                                          )
                                                          .sorted()
                                                          .collect(Collectors.toList());

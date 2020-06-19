@@ -23,22 +23,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.List;
 
 public class BuildingNumberedShardSpecTest
 {
   @Test
-  public void testToNumberedShardSpec()
+  public void testConvert()
   {
-    Assert.assertEquals(new NumberedShardSpec(5, 10), new BuildingNumberedShardSpec(5).toNumberedShardSpec(10));
+    Assert.assertEquals(new NumberedShardSpec(5, 10), new BuildingNumberedShardSpec(5).convert(10));
   }
 
   @Test
@@ -51,32 +45,9 @@ public class BuildingNumberedShardSpecTest
   }
 
   @Test
-  public void testShardSpecLookup()
-  {
-    final List<ShardSpec> shardSpecs = ImmutableList.of(
-        new BuildingNumberedShardSpec(1),
-        new BuildingNumberedShardSpec(2),
-        new BuildingNumberedShardSpec(3)
-    );
-    final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
-    // Timestamp doesn't matter. It always returns the first shardSpec.
-    final long currentTime = DateTimes.nowUtc().getMillis();
-    Assert.assertEquals(
-        shardSpecs.get(0),
-        lookup.getShardSpec(
-            currentTime,
-            new MapBasedInputRow(
-                currentTime,
-                ImmutableList.of("dim"), ImmutableMap.of("dim", "val", "time", currentTime)
-            )
-        )
-    );
-  }
-
-  @Test
   public void testSerde() throws JsonProcessingException
   {
-    final ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.registerSubtypes(new NamedType(BuildingNumberedShardSpec.class, BuildingNumberedShardSpec.TYPE));
     final BuildingNumberedShardSpec original = new BuildingNumberedShardSpec(5);

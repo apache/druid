@@ -87,15 +87,19 @@ public class SingleDimensionPartialShardSpec implements PartialShardSpec
   @Override
   public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
-    final int partitionId;
-    if (specOfPreviousMaxPartitionId != null) {
-      assert specOfPreviousMaxPartitionId instanceof SingleDimensionShardSpec;
-      final SingleDimensionShardSpec prevSpec = (SingleDimensionShardSpec) specOfPreviousMaxPartitionId;
-      partitionId = prevSpec.getPartitionNum() + 1;
-    } else {
-      partitionId = 0;
-    }
-    return complete(objectMapper, partitionId);
+    // The shardSpec is created by the Overlord.
+    // For batch tasks, this code can be executed only with segment locking (forceTimeChunkLock = false).
+    // In this mode, you can have 2 or more tasks concurrently ingesting into the same time chunk of
+    // the same datasource. Since there is no restriction for those tasks in segment allocation, the
+    // allocated IDs for each task can interleave. As a result, the core partition set cannot be
+    // represented as a range. We always set 0 for the core partition set size if this is an initial segment.
+    return new SingleDimensionShardSpec(
+        partitionDimension,
+        start,
+        end,
+        specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getPartitionNum() + 1,
+        specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getNumCorePartitions()
+    );
   }
 
   @Override
@@ -106,7 +110,8 @@ public class SingleDimensionPartialShardSpec implements PartialShardSpec
         partitionDimension,
         start,
         end,
-        partitionId
+        partitionId,
+        0
     );
   }
 

@@ -21,9 +21,12 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Collections;
 
 public class GenericPartitionStatTest
 {
@@ -39,7 +42,12 @@ public class GenericPartitionStatTest
         ParallelIndexTestingFactory.TASK_EXECUTOR_PORT,
         ParallelIndexTestingFactory.USE_HTTPS,
         ParallelIndexTestingFactory.INTERVAL,
-        ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC,
+        new HashBucketShardSpec(
+            ParallelIndexTestingFactory.PARTITION_ID,
+            ParallelIndexTestingFactory.PARTITION_ID + 1,
+            Collections.singletonList("dim"),
+            new ObjectMapper()
+        ),
         ParallelIndexTestingFactory.NUM_ROWS,
         ParallelIndexTestingFactory.SIZE_BYTES
     );
@@ -54,6 +62,6 @@ public class GenericPartitionStatTest
   @Test
   public void hasPartitionIdThatMatchesSecondaryPartition()
   {
-    Assert.assertEquals(target.getSecondaryPartition().getPartitionNum(), target.getPartitionId());
+    Assert.assertEquals(target.getSecondaryPartition().getBucketId(), target.getBucketId());
   }
 }

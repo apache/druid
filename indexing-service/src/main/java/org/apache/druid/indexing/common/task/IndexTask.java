@@ -97,7 +97,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -877,35 +876,33 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final long pushTimeout = tuningConfig.getPushTimeout();
 
-    final SegmentAllocator segmentAllocator;
+    final SegmentAllocatorForBatch segmentAllocator;
     final SequenceNameFunction sequenceNameFunction;
     switch (partitionsSpec.getType()) {
       case HASH:
       case RANGE:
-        final CachingSegmentAllocator localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
+        final SegmentAllocatorForBatch localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
             toolbox,
             getDataSource(),
             getId(),
-            dataSchema.getGranularitySpec().getQueryGranularity(),
+            dataSchema.getGranularitySpec(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
         );
-        sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
-            getId(),
-            localSegmentAllocator.getShardSpecs()
-        );
+        sequenceNameFunction = localSegmentAllocator.getSequenceNameFunction();
         segmentAllocator = localSegmentAllocator;
         break;
       case LINEAR:
         segmentAllocator = SegmentAllocators.forLinearPartitioning(
             toolbox,
+            getId(),
             null,
             dataSchema,
             getTaskLockHelper(),
             ingestionSchema.getIOConfig().isAppendToExisting(),
             partitionAnalysis.getPartitionsSpec()
         );
-        sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(getId());
+        sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
         break;
       default:
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());

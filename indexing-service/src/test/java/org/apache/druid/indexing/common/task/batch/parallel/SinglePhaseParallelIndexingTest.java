@@ -221,14 +221,14 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         for (DataSegment segment : segmentsPerInterval) {
           Assert.assertSame(NumberedShardSpec.class, segment.getShardSpec().getClass());
           final NumberedShardSpec shardSpec = (NumberedShardSpec) segment.getShardSpec();
-          Assert.assertEquals(segmentsPerInterval.size(), shardSpec.getPartitions());
+          Assert.assertEquals(segmentsPerInterval.size(), shardSpec.getNumCorePartitions());
         }
       }
     } else {
       for (DataSegment segment : segments) {
         Assert.assertSame(NumberedShardSpec.class, segment.getShardSpec().getClass());
         final NumberedShardSpec shardSpec = (NumberedShardSpec) segment.getShardSpec();
-        Assert.assertEquals(0, shardSpec.getPartitions());
+        Assert.assertEquals(0, shardSpec.getNumCorePartitions());
       }
     }
   }
@@ -248,7 +248,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         for (DataSegment segment : segmentsPerInterval) {
           Assert.assertSame(NumberedShardSpec.class, segment.getShardSpec().getClass());
           final NumberedShardSpec shardSpec = (NumberedShardSpec) segment.getShardSpec();
-          Assert.assertEquals(segmentsPerInterval.size(), shardSpec.getPartitions());
+          Assert.assertEquals(segmentsPerInterval.size(), shardSpec.getNumCorePartitions());
         }
       }
     } else {
