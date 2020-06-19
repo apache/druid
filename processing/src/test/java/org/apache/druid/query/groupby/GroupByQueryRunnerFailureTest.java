@@ -38,11 +38,8 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.ResourceLimitExceededException;
-import org.apache.druid.query.TestBigDecimalSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.having.EqualToHavingSpec;
-import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
@@ -313,7 +310,8 @@ public class GroupByQueryRunnerFailureTest
           }
 
           @Override
-          public boolean isSingleThreaded() {
+          public boolean isSingleThreaded()
+          {
             return true;
           }
         }
