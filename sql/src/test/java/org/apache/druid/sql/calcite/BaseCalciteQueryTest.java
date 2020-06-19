@@ -422,7 +422,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+    walker = CalciteTests.createMockWalker(
+        conglomerate,
+        temporaryFolder.newFolder()
+    );
   }
 
   @After
