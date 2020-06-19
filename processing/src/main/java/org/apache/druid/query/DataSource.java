@@ -71,6 +71,15 @@ public interface DataSource
   /**
    * Returns true if all servers have a full copy of this datasource. True for things like inline, lookup, etc, or
    * for queries of those.
+   *
+   * Currently this is coupled with joinability - if this returns true then the query engine expects there exists a
+   * {@link org.apache.druid.segment.join.JoinableFactory} which might build a
+   * {@link org.apache.druid.segment.join.Joinable} for this datasource directly. If a subquery 'inline' join is
+   * required to join this datasource on the right hand side, then this value must be false for now.
+   *
+   * In the future, instead of directly using this method, the query planner and engine should consider
+   * {@link org.apache.druid.segment.join.JoinableFactory#isDirectlyJoinable(DataSource)} when determining if the
+   * right hand side is directly joinable, which would allow decoupling this property from joins.
    */
   boolean isGlobal();
 

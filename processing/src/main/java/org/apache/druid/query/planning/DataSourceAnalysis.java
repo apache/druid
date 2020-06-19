@@ -205,7 +205,7 @@ public class DataSourceAnalysis
 
   /**
    * Returns true if all servers have the ability to compute this datasource. These datasources depend only on
-   * globally broadcast data, like lookups or inline data.
+   * globally broadcast data, like lookups or inline data or broadcast segments.
    */
   public boolean isGlobal()
   {
