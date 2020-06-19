@@ -115,7 +115,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean isServingSegment(DataSegment segment)
   {
-    return server.getSegment(segment.getId()) != null;
+    return isServingSegment(segment.getId());
   }
 
   public boolean isLoadingSegment(DataSegment segment)

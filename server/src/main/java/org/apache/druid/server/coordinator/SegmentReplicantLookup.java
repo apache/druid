@@ -134,10 +134,14 @@ public class SegmentReplicantLookup
   {
     Object2LongOpenHashMap<String> perTier = new Object2LongOpenHashMap<>();
     for (ServerHolder holder : cluster.getAllServers()) {
-      if (holder.getServer().getType().isSegmentBroadcastTarget() && !holder.isServingSegment(segmentId)) {
-        perTier.addTo(holder.getServer().getTier(), 1L);
-      } else {
-        perTier.putIfAbsent(holder.getServer().getTier(), 0);
+      // Only record tier entry for server that is segment broadcast target
+      if (holder.getServer().getType().isSegmentBroadcastTarget()) {
+        // Every broadcast target server should be serving 1 replica of the segment
+        if (!holder.isServingSegment(segmentId)) {
+          perTier.addTo(holder.getServer().getTier(), 1L);
+        } else {
+          perTier.putIfAbsent(holder.getServer().getTier(), 0);
+        }
       }
     }
     return perTier;

@@ -89,7 +89,9 @@ public abstract class BroadcastDistributionRule implements Rule
   )
   {
     Object2LongMap<String> underReplicatedBroadcastTiers = segmentReplicantLookup.getBroadcastUnderReplication(segment.getId());
-    for (String tier : underReplicatedBroadcastTiers.keySet()) {
+    for (final Object2LongMap.Entry<String> entry : underReplicatedBroadcastTiers.object2LongEntrySet()) {
+      final String tier = entry.getKey();
+      final long underReplicatedCount = entry.getLongValue();
       underReplicatedPerTier.compute(tier, (_tier, existing) -> {
         Object2LongMap<String> underReplicationPerDataSource = existing;
         if (existing == null) {
@@ -97,7 +99,7 @@ public abstract class BroadcastDistributionRule implements Rule
         }
         underReplicationPerDataSource.compute(
             segment.getDataSource(),
-            (datasource, count) -> count != null ? count + 1L : 0L
+            (_datasource, count) -> count != null ? count + underReplicatedCount : underReplicatedCount
         );
         return underReplicationPerDataSource;
       });
