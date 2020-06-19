@@ -22,17 +22,13 @@ package org.apache.druid.indexing.common.task;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 
 /**
- * SegmentAllocator that allocates all necessary segments upfront. This allocator should be used for the hash or range
- * secondary partitioning.
  *
- * In the hash or range secondary partitioning, the information about all partition buckets should be known before
- * the task starts to allocate segments. For example, for the hash partitioning, the task should know how many hash
- * buckets it will create, what is the hash value allocated for each bucket, etc. Similar for the range partitioning.
  */
-public interface CachingSegmentAllocator extends SegmentAllocator
+public interface SegmentAllocatorForBatch extends SegmentAllocator
 {
   /**
-   * Returns the {@link org.apache.druid.timeline.partition.ShardSpec}s of all segments allocated upfront.
+   *
+   * @return
    */
-  ShardSpecs getShardSpecs();
+  SequenceNameFunction getSequenceNameFunction();
 }

@@ -53,6 +53,6 @@ public class GenericPartitionLocationTest
   @Test
   public void hasPartitionIdThatMatchesShardSpec()
   {
-    Assert.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getPartitionId());
+    Assert.assertEquals(ParallelIndexTestingFactory.PARTITION_ID, target.getBucketId());
   }
 }

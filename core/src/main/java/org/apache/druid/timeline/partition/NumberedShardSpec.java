@@ -66,12 +66,17 @@ public class NumberedShardSpec implements ShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
+  {
+    return createNumberedLookup(shardSpecs);
+  }
+
+  static ShardSpecLookup createNumberedLookup(List<? extends ShardSpec> shardSpecs)
   {
     return createLookup(shardSpecs);
   }
 
-  static ShardSpecLookup createLookup(List<ShardSpec> shardSpecs)
+  static ShardSpecLookup createLookup(List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
@@ -94,8 +99,9 @@ public class NumberedShardSpec implements ShardSpec
     return other == NumberedShardSpec.class || other == NumberedOverwriteShardSpec.class;
   }
 
+  @Override
   @JsonProperty("partitions")
-  public int getPartitions()
+  public int getNumCorePartitions()
   {
     return partitions;
   }
@@ -127,16 +133,12 @@ public class NumberedShardSpec implements ShardSpec
     if (this == o) {
       return true;
     }
-
-    if (!(o instanceof NumberedShardSpec)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final NumberedShardSpec that = (NumberedShardSpec) o;
-    if (partitionNum != that.partitionNum) {
-      return false;
-    }
-    return partitions == that.partitions;
+    NumberedShardSpec that = (NumberedShardSpec) o;
+    return partitionNum == that.partitionNum &&
+           partitions == that.partitions;
   }
 
   @Override

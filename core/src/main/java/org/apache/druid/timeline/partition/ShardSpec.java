@@ -40,7 +40,16 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpec.class),
     @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpec.class),
     @JsonSubTypes.Type(name = NumberedOverwriteShardSpec.TYPE, value = NumberedOverwriteShardSpec.class),
-    @JsonSubTypes.Type(name = BuildingNumberedShardSpec.TYPE, value = BuildingNumberedShardSpec.class)
+    // BuildingShardSpecs are the shardSpec with missing numCorePartitions, and thus must not be published.
+    // See BuildingShardSpec for more details.
+    @JsonSubTypes.Type(name = BuildingNumberedShardSpec.TYPE, value = BuildingNumberedShardSpec.class),
+    @JsonSubTypes.Type(name = BuildingHashBasedNumberedShardSpec.TYPE, value = BuildingHashBasedNumberedShardSpec.class),
+    @JsonSubTypes.Type(name = BuildingSingleDimensionShardSpec.TYPE, value = BuildingSingleDimensionShardSpec.class),
+    // BucketShardSpecs are the shardSpec with missing partitionId and numCorePartitions.
+    // These shardSpecs must not be used in segment push.
+    // See BucketShardSpec for more details.
+    @JsonSubTypes.Type(name = HashBucketShardSpec.TYPE, value = HashBucketShardSpec.class),
+    @JsonSubTypes.Type(name = RangeBucketShardSpec.TYPE, value = RangeBucketShardSpec.class)
 })
 public interface ShardSpec
 {
@@ -54,6 +63,8 @@ public interface ShardSpec
    * Returns the partition ID of this segment.
    */
   int getPartitionNum();
+
+  int getNumCorePartitions();
 
   /**
    * Returns the start root partition ID of the atomic update group which this segment belongs to.
@@ -96,7 +107,7 @@ public interface ShardSpec
   }
 
   @JsonIgnore
-  ShardSpecLookup getLookup(List<ShardSpec> shardSpecs);
+  ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs);
 
   /**
    * Get dimensions who have possible range for the rows this shard contains.

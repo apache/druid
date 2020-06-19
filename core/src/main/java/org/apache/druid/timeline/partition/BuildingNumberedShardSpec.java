@@ -20,45 +20,20 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.RangeSet;
-import org.apache.druid.data.input.InputRow;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
- * This is a special shardSpec which is temporarily used during batch ingestion. In Druid, there is a concept
- * of core partition set which is a set of segments atomically becoming queryable together in Brokers. The core
- * partition set is represented as a range of partitionIds. For {@link NumberedShardSpec}, the core partition set
- * is [0, {@link NumberedShardSpec#partitions}).
+ * See {@link BuildingShardSpec} for how this class is used.
  *
- * The NumberedShardSpec is used for dynamic partitioning which is based on the number of rows in each segment.
- * In streaming ingestion, the core partition set size cannot be determined since it's impossible to know how many
- * segments will be created per time chunk. However, in batch ingestion with time chunk locking, the core partition
- * set is the set of segments created by an initial task or an overwriting task. Since the core partition set is
- * determined when the task publishes segments at the end, the task postpones creating proper NumberedShardSpec
- * until the end.
- *
- * This shardSpec is used for such use case. A non-appending batch task can use this shardSpec until it publishes
- * segments at last. When it publishes segments, it should convert the shardSpec of those segments to NumberedShardSpec.
- * See {@code SegmentPublisherHelper#annotateShardSpec} for converting to NumberedShardSpec. Note that, when
- * the segment lock is used, the Overlord coordinates the segment allocation and this class is never used. Instead,
- * the task sends {@link PartialShardSpec} to the Overlord to allocate a new segment. The result segment could have
- * either a {@link ShardSpec} (for root generation segments) or an {@link OverwriteShardSpec} (for non-root
- * generation segments).
- *
- * This class should be Jackson-serializable as the subtasks can send it to the parallel task in parallel ingestion.
- *
- * Finally, this shardSpec has only partitionId which is same as {@link LinearShardSpec}. The difference between
+ * This shardSpec has only partitionId which is same as {@link LinearShardSpec}. The difference between
  * them is this shardSpec should never be published and so never be used in other places such as Broker timeline.
  *
  * @see NumberedShardSpec
  */
-public class BuildingNumberedShardSpec implements ShardSpec
+public class BuildingNumberedShardSpec implements BuildingShardSpec<NumberedShardSpec>
 {
   public static final String TYPE = "building_numbered";
 
@@ -71,7 +46,15 @@ public class BuildingNumberedShardSpec implements ShardSpec
     this.partitionId = partitionId;
   }
 
-  public NumberedShardSpec toNumberedShardSpec(int numTotalPartitions)
+  @Override
+  public int getBucketId()
+  {
+    // This method is currently not called when the shardSpec type is this class.
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public NumberedShardSpec convert(int numTotalPartitions)
   {
     return new NumberedShardSpec(partitionId, numTotalPartitions);
   }
@@ -89,39 +72,6 @@ public class BuildingNumberedShardSpec implements ShardSpec
   public int getPartitionNum()
   {
     return partitionId;
-  }
-
-  @Override
-  public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
-  {
-    return NumberedShardSpec.createLookup(shardSpecs);
-  }
-
-  // The below methods are used on the query side, and so must not be called for this shardSpec.
-
-  @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @JsonIgnore
-  @Override
-  public List<String> getDomainDimensions()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
