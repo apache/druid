@@ -121,7 +121,7 @@ public class TopNQueryEngine
 
     final TopNAlgorithm<?, ?> topNAlgorithm;
     if (canUsePooledAlgorithm(selector, query, columnCapabilities)) {
-      // pool based algorithm selection
+      // pool based algorithm selection, if we can
       if (selector.isAggregateAllMetrics()) {
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
         // this
@@ -135,7 +135,7 @@ public class TopNQueryEngine
         topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
       }
     } else {
-      // heap based algorithm selection, if we have to
+      // heap based algorithm selection, if we must
       if (selector.isHasExtractionFn() && dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
         // TimeExtractionTopNAlgorithm can work on any single-value dimension of type long.
         // We might be able to use this for any long column with an extraction function, that is
