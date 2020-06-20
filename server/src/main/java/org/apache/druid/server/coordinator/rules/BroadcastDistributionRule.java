@@ -19,15 +19,19 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -69,6 +73,37 @@ public abstract class BroadcastDistributionRule implements Rule
     final CoordinatorStats stats = new CoordinatorStats();
     return stats.accumulate(assign(loadServerHolders, segment))
                 .accumulate(drop(dropServerHolders, segment));
+  }
+
+  @Override
+  public boolean canLoadSegments()
+  {
+    return true;
+  }
+
+  @Override
+  public void updateUnderReplicated(
+      Map<String, Object2LongMap<String>> underReplicatedPerTier,
+      SegmentReplicantLookup segmentReplicantLookup,
+      DataSegment segment
+  )
+  {
+    Object2LongMap<String> underReplicatedBroadcastTiers = segmentReplicantLookup.getBroadcastUnderReplication(segment.getId());
+    for (final Object2LongMap.Entry<String> entry : underReplicatedBroadcastTiers.object2LongEntrySet()) {
+      final String tier = entry.getKey();
+      final long underReplicatedCount = entry.getLongValue();
+      underReplicatedPerTier.compute(tier, (_tier, existing) -> {
+        Object2LongMap<String> underReplicationPerDataSource = existing;
+        if (existing == null) {
+          underReplicationPerDataSource = new Object2LongOpenHashMap<>();
+        }
+        underReplicationPerDataSource.compute(
+            segment.getDataSource(),
+            (_datasource, count) -> count != null ? count + underReplicatedCount : underReplicatedCount
+        );
+        return underReplicationPerDataSource;
+      });
+    }
   }
 
   private CoordinatorStats assign(
