@@ -40,7 +40,6 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;

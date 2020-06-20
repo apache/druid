@@ -37,7 +37,6 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -862,8 +861,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // the final publishing.
       caughtExceptionOuter = e;
       try {
-        GuavaUtils.cancelAll(publishWaitList);
-        GuavaUtils.cancelAll(handOffWaitList);
+        Futures.allAsList(publishWaitList).cancel(true);
+        Futures.allAsList(handOffWaitList).cancel(true);
         if (appenderator != null) {
           appenderator.closeNow();
         }
@@ -888,8 +887,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // (3) catch all other exceptions thrown for the whole ingestion steps including the final publishing.
       caughtExceptionOuter = e;
       try {
-        GuavaUtils.cancelAll(publishWaitList);
-        GuavaUtils.cancelAll(handOffWaitList);
+        Futures.allAsList(publishWaitList).cancel(true);
+        Futures.allAsList(handOffWaitList).cancel(true);
         if (appenderator != null) {
           appenderator.closeNow();
         }
