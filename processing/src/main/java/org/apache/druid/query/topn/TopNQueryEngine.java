@@ -53,6 +53,12 @@ public class TopNQueryEngine
     this.bufferPool = bufferPool;
   }
 
+  /**
+   * Do the thing - process a {@link StorageAdapter} into a {@link Sequence} of {@link TopNResultValue}, with one of the
+   * fine {@link TopNAlgorithm} available chosen based on the type of column being aggregated. The algorithm provides a
+   * mapping function to process rows from the adapter {@link org.apache.druid.segment.Cursor} to apply
+   * {@link AggregatorFactory} and create or update {@link TopNResultValue}
+   */
   public Sequence<Result<TopNResultValue>> query(
       final TopNQuery query,
       final StorageAdapter adapter,
@@ -71,7 +77,9 @@ public class TopNQueryEngine
     final TopNMapFn mapFn = getMapFn(query, adapter, queryMetrics);
 
     Preconditions.checkArgument(
-        queryIntervals.size() == 1, "Can only handle a single interval, got[%s]", queryIntervals
+        queryIntervals.size() == 1,
+        "Can only handle a single interval, got[%s]",
+        queryIntervals
     );
 
     return Sequences.filter(
@@ -95,6 +103,9 @@ public class TopNQueryEngine
     );
   }
 
+  /**
+   * Choose the best {@link TopNAlgorithm} for the given query.
+   */
   private TopNMapFn getMapFn(
       final TopNQuery query,
       final StorageAdapter adapter,
@@ -190,6 +201,14 @@ public class TopNQueryEngine
     }
   }
 
+  /**
+   * {@link ExtractionFn} which are one to one may have their execution deferred until as late as possible, since the
+   * which value is used as the grouping key itself doesn't particularly matter. For top-n, this method allows the
+   * query to be transformed in {@link TopNQueryQueryToolChest#preMergeQueryDecoration} to strip off the
+   * {@link ExtractionFn} on the broker, so that a more optimized algorithm (e.g. {@link PooledTopNAlgorithm}) can be
+   * chosen for processing segments, and then added back and evaluated against the final merged result sets on the
+   * broker via {@link TopNQueryQueryToolChest#postMergeQueryDecoration}.
+   */
   public static boolean canApplyExtractionInPost(TopNQuery query)
   {
     return query.getDimensionSpec() != null
