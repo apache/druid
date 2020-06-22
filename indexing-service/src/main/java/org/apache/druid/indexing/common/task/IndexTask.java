@@ -97,7 +97,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -108,7 +107,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CircularBuffer;
 import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.Interval;
@@ -878,34 +876,33 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final long pushTimeout = tuningConfig.getPushTimeout();
 
-    final SegmentAllocator segmentAllocator;
+    final SegmentAllocatorForBatch segmentAllocator;
     final SequenceNameFunction sequenceNameFunction;
     switch (partitionsSpec.getType()) {
       case HASH:
       case RANGE:
-        final CachingSegmentAllocator localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
+        final SegmentAllocatorForBatch localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
             toolbox,
             getDataSource(),
             getId(),
+            dataSchema.getGranularitySpec(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
         );
-        sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
-            getId(),
-            localSegmentAllocator.getShardSpecs()
-        );
+        sequenceNameFunction = localSegmentAllocator.getSequenceNameFunction();
         segmentAllocator = localSegmentAllocator;
         break;
       case LINEAR:
         segmentAllocator = SegmentAllocators.forLinearPartitioning(
             toolbox,
+            getId(),
             null,
             dataSchema,
             getTaskLockHelper(),
             ingestionSchema.getIOConfig().isAppendToExisting(),
             partitionAnalysis.getPartitionsSpec()
         );
-        sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(getId());
+        sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
         break;
       default:
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
@@ -1010,36 +1007,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return publishFuture.get();
     } else {
       return publishFuture.get(publishTimeout, TimeUnit.MILLISECONDS);
-    }
-  }
-
-  /**
-   * This class represents a map of (Interval, ShardSpec) and is used for easy shardSpec generation.
-   */
-  static class ShardSpecs
-  {
-    private final Map<Interval, List<ShardSpec>> map;
-
-    ShardSpecs(final Map<Interval, List<ShardSpec>> map)
-    {
-      this.map = map;
-    }
-
-    /**
-     * Return a shardSpec for the given interval and input row.
-     *
-     * @param interval interval for shardSpec
-     * @param row      input row
-     *
-     * @return a shardSpec
-     */
-    ShardSpec getShardSpec(Interval interval, InputRow row)
-    {
-      final List<ShardSpec> shardSpecs = map.get(interval);
-      if (shardSpecs == null || shardSpecs.isEmpty()) {
-        throw new ISE("Failed to get shardSpec for interval[%s]", interval);
-      }
-      return shardSpecs.get(0).getLookup(shardSpecs).getShardSpec(row.getTimestampFromEpoch(), row);
     }
   }
 

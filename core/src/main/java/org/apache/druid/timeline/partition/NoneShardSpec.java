@@ -66,7 +66,13 @@ public class NoneShardSpec implements ShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
+  public int getNumCorePartitions()
+  {
+    return 0;
+  }
+
+  @Override
+  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }

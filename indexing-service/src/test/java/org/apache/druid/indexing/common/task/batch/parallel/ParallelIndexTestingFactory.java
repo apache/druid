@@ -44,7 +44,7 @@ import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -100,7 +100,8 @@ class ParallelIndexTestingFactory
   private static final String SCHEMA_DIMENSION = "dim";
   private static final String DATASOURCE = "datasource";
 
-  static final HashBasedNumberedShardSpec HASH_BASED_NUMBERED_SHARD_SPEC = new HashBasedNumberedShardSpec(
+  static final BuildingHashBasedNumberedShardSpec HASH_BASED_NUMBERED_SHARD_SPEC = new BuildingHashBasedNumberedShardSpec(
+      PARTITION_ID,
       PARTITION_ID,
       PARTITION_ID + 1,
       Collections.singletonList("dim"),

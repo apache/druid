@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.timeline.Overshadowable;
@@ -46,6 +47,12 @@ import java.util.Set;
 public class NumberedShardSpecTest
 {
   @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(NumberedShardSpec.class).usingGetClass().verify();
+  }
+
+  @Test
   public void testSerdeRoundTrip() throws Exception
   {
     final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
@@ -53,7 +60,7 @@ public class NumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, ((NumberedShardSpec) spec).getNumCorePartitions());
   }
 
   @Test
@@ -64,7 +71,7 @@ public class NumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, ((NumberedShardSpec) spec).getNumCorePartitions());
   }
 
   @Test
@@ -128,29 +135,29 @@ public class NumberedShardSpecTest
     //incomplete partition sets
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk0),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk1),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk4),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk0, chunk4),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
 
     testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
         ImmutableList.of(chunk1, chunk4),
-        Collections.EMPTY_SET
+        Collections.emptySet()
     );
 
     //complete partition sets

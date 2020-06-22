@@ -233,7 +233,8 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   private final DimensionDictionary dimLookup;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
-  private boolean hasMultipleValues = false;
+  private volatile boolean hasMultipleValues = false;
+  private volatile boolean isSparse = false;
 
   @Nullable
   private SortedDimensionDictionary sortedLookup;
@@ -299,6 +300,12 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     }
 
     return encodedDimensionValues;
+  }
+
+  @Override
+  public void setSparseIndexed()
+  {
+    isSparse = true;
   }
 
   @Override
@@ -623,7 +630,9 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
-        return true;
+        // name lookup is possible in advance if we got a value for every row (setSparseIndexed was not called on this
+        // column) or we've encountered an actual null value and it is present in our dictionary
+        return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
       }
 
       @Nullable

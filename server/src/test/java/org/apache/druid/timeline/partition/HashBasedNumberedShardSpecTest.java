@@ -19,10 +19,12 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
@@ -42,6 +44,16 @@ import java.util.stream.IntStream;
 public class HashBasedNumberedShardSpecTest
 {
   @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(HashBasedNumberedShardSpec.class)
+                  .withIgnoredFields("jsonMapper")
+                  .withPrefabValues(ObjectMapper.class, new ObjectMapper(), new ObjectMapper())
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
   public void testSerdeRoundTrip() throws Exception
   {
 
@@ -50,6 +62,8 @@ public class HashBasedNumberedShardSpecTest
             new HashBasedNumberedShardSpec(
                 1,
                 2,
+                1,
+                3,
                 ImmutableList.of("visitor_id"),
                 ServerTestHelper.MAPPER
             )
@@ -57,7 +71,9 @@ public class HashBasedNumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, spec.getNumCorePartitions());
+    Assert.assertEquals(1, ((HashBasedNumberedShardSpec) spec).getBucketId());
+    Assert.assertEquals(3, ((HashBasedNumberedShardSpec) spec).getNumBuckets());
     Assert.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) spec).getPartitionDimensions());
   }
 
@@ -69,24 +85,28 @@ public class HashBasedNumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getNumCorePartitions());
 
     final ShardSpec specWithPartitionDimensions = ServerTestHelper.MAPPER.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
         ShardSpec.class
     );
     Assert.assertEquals(1, specWithPartitionDimensions.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitions());
-    Assert.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionDimensions());
+    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumCorePartitions());
+    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumBuckets());
+    Assert.assertEquals(
+        ImmutableList.of("visitor_id"),
+        ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionDimensions()
+    );
   }
 
   @Test
   public void testPartitionChunks()
   {
     final List<ShardSpec> specs = ImmutableList.of(
-        new HashBasedNumberedShardSpec(0, 3, null, ServerTestHelper.MAPPER),
-        new HashBasedNumberedShardSpec(1, 3, null, ServerTestHelper.MAPPER),
-        new HashBasedNumberedShardSpec(2, 3, null, ServerTestHelper.MAPPER)
+        new HashBasedNumberedShardSpec(0, 3, 0, 3, null, ServerTestHelper.MAPPER),
+        new HashBasedNumberedShardSpec(1, 3, 1, 3, null, ServerTestHelper.MAPPER),
+        new HashBasedNumberedShardSpec(2, 3, 2, 3, null, ServerTestHelper.MAPPER)
     );
 
     final List<PartitionChunk<String>> chunks = Lists.transform(
@@ -157,35 +177,26 @@ public class HashBasedNumberedShardSpecTest
   @Test
   public void testGetGroupKey()
   {
-    final HashBasedNumberedShardSpec shardSpec1 = new HashBasedNumberedShardSpec(
-        1,
-        2,
-        ImmutableList.of("visitor_id"),
-        ServerTestHelper.MAPPER
-    );
+    final List<String> partitionDimensions1 = ImmutableList.of("visitor_id");
     final DateTime time = DateTimes.nowUtc();
     final InputRow inputRow = new MapBasedInputRow(
         time,
         ImmutableList.of("visitor_id", "cnt"),
         ImmutableMap.of("visitor_id", "v1", "cnt", 10)
     );
-    Assert.assertEquals(ImmutableList.of(Collections.singletonList("v1")), shardSpec1.getGroupKey(time.getMillis(), inputRow));
-
-    final HashBasedNumberedShardSpec shardSpec2 = new HashBasedNumberedShardSpec(
-        1,
-        2,
-        null,
-        ServerTestHelper.MAPPER
+    Assert.assertEquals(
+        ImmutableList.of(Collections.singletonList("v1")),
+        HashBasedNumberedShardSpec.getGroupKey(partitionDimensions1, time.getMillis(), inputRow)
     );
-    Assert.assertEquals(ImmutableList.of(
+
+    Assert.assertEquals(
+        ImmutableList.of(
         time.getMillis(),
-        ImmutableMap.of(
-            "cnt",
-            Collections.singletonList(10),
-            "visitor_id",
-            Collections.singletonList("v1")
-        )
-    ).toString(), shardSpec2.getGroupKey(time.getMillis(), inputRow).toString());
+        ImmutableMap.of("cnt", Collections.singletonList(10), "visitor_id", Collections.singletonList("v1")))
+                     .toString(),
+        // empty list when partitionDimensions is null
+        HashBasedNumberedShardSpec.getGroupKey(ImmutableList.of(), time.getMillis(), inputRow).toString()
+    );
   }
 
   public boolean assertExistsInOneSpec(List<ShardSpec> specs, InputRow row)
@@ -202,7 +213,7 @@ public class HashBasedNumberedShardSpecTest
   {
     public HashOverridenShardSpec(int partitionNum, int partitions)
     {
-      super(partitionNum, partitions, null, ServerTestHelper.MAPPER);
+      super(partitionNum, partitions, partitionNum, partitions, null, ServerTestHelper.MAPPER);
     }
 
     @Override

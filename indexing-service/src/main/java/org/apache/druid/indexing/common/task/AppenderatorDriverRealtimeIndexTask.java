@@ -29,6 +29,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
@@ -65,7 +66,6 @@ import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -243,6 +243,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     }
 
     return (queryPlus, responseContext) -> queryPlus.run(appenderator, responseContext);
+  }
+
+  @Override
+  public boolean supportsQueries()
+  {
+    return true;
   }
 
   @Override
@@ -682,7 +688,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-    pendingHandoffs.add(ListenableFutures.transformAsync(publishFuture, driver::registerHandoff));
+    pendingHandoffs.add(Futures.transform(
+        publishFuture,
+        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) driver::registerHandoff
+    ));
   }
 
   private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,

@@ -45,8 +45,10 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -138,17 +140,19 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
     }
-
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
-        analysis.getPreJoinableClauses(),
-        joinableFactory,
-        new AtomicLong(),
+    final JoinFilterRewriteConfig joinFilterRewriteConfig = new JoinFilterRewriteConfig(
         QueryContexts.getEnableJoinFilterPushDown(query),
         QueryContexts.getEnableJoinFilterRewrite(query),
         QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        QueryContexts.getJoinFilterRewriteMaxSize(query)
+    );
+
+    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+        analysis.getPreJoinableClauses(),
+        joinableFactory,
+        new AtomicLong(),
+        joinFilterRewriteConfig,
+        query
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
@@ -197,7 +201,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       final QueryToolChest<T, Query<T>> toolChest,
       final QueryRunnerFactory<T, Query<T>> factory,
       final Iterable<WindowedSegment> segments,
-      final Function<Segment, Segment> segmentMapFn
+      final Function<SegmentReference, SegmentReference> segmentMapFn
   )
   {
     final List<WindowedSegment> segmentsList = Lists.newArrayList(segments);
@@ -217,7 +221,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                     .transform(
                         segment ->
                             new SpecificSegmentQueryRunner<>(
-                                factory.createRunner(segmentMapFn.apply(segment.getSegment())),
+                                factory.createRunner(segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(segment.getSegment()))),
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )
                     )

@@ -53,11 +53,11 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
-import org.apache.druid.segment.ReferenceCounter;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -193,17 +193,20 @@ public class ServerManager implements QuerySegmentWalker
       return new NoopQueryRunner<>();
     }
 
-    // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
-        analysis.getPreJoinableClauses(),
-        joinableFactory,
-        cpuTimeAccumulator,
+    final JoinFilterRewriteConfig joinFilterRewriteConfig = new JoinFilterRewriteConfig(
         QueryContexts.getEnableJoinFilterPushDown(query),
         QueryContexts.getEnableJoinFilterRewrite(query),
         QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        QueryContexts.getJoinFilterRewriteMaxSize(query)
+    );
+
+    // segmentMapFn maps each base Segment into a joined Segment if necessary.
+    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+        analysis.getPreJoinableClauses(),
+        joinableFactory,
+        cpuTimeAccumulator,
+        joinFilterRewriteConfig,
+        query
     );
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
@@ -230,7 +233,6 @@ public class ServerManager implements QuerySegmentWalker
                       factory,
                       toolChest,
                       segmentMapFn.apply(segment),
-                      segment.referenceCounter(),
                       descriptor,
                       cpuTimeAccumulator
                   )
@@ -253,8 +255,7 @@ public class ServerManager implements QuerySegmentWalker
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
-      final Segment segment,
-      final ReferenceCounter segmentReferenceCounter,
+      final SegmentReference segment,
       final SegmentDescriptor segmentDescriptor,
       final AtomicLong cpuTimeAccumulator
   )
@@ -266,7 +267,7 @@ public class ServerManager implements QuerySegmentWalker
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
-        new ReferenceCountingSegmentQueryRunner<>(factory, segment, segmentReferenceCounter, segmentDescriptor),
+        new ReferenceCountingSegmentQueryRunner<>(factory, segment, segmentDescriptor),
         QueryMetrics::reportSegmentTime,
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );

@@ -694,6 +694,11 @@ public interface Function
 
   class Round implements Function
   {
+    //CHECKSTYLE.OFF: Regexp
+    private static final BigDecimal MAX_FINITE_VALUE = BigDecimal.valueOf(Double.MAX_VALUE);
+    private static final BigDecimal MIN_FINITE_VALUE = BigDecimal.valueOf(-1 * Double.MAX_VALUE);
+    //CHECKSTYLE.ON: Regexp
+
     @Override
     public String name()
     {
@@ -705,7 +710,11 @@ public interface Function
     {
       ExprEval value1 = args.get(0).eval(bindings);
       if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
-        throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
+        throw new IAE(
+            "The first argument to the function[%s] should be integer or double type but got the type: %s",
+            name(),
+            value1.type()
+        );
       }
 
       if (args.size() == 1) {
@@ -713,7 +722,11 @@ public interface Function
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
         if (value2.type() != ExprType.LONG) {
-          throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
+          throw new IAE(
+              "The second argument to the function[%s] should be integer type but got the type: %s",
+              name(),
+              value2.type()
+          );
         }
         return eval(value1, value2.asInt());
       }
@@ -737,10 +750,26 @@ public interface Function
       if (param.type() == ExprType.LONG) {
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
       } else if (param.type() == ExprType.DOUBLE) {
-        return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale, RoundingMode.HALF_UP).doubleValue());
+        BigDecimal decimal = safeGetFromDouble(param.asDouble());
+        return ExprEval.of(decimal.setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
         return ExprEval.of(null);
       }
+    }
+
+    /**
+     * Converts non-finite doubles to BigDecimal values instead of throwing a NumberFormatException.
+     */
+    private static BigDecimal safeGetFromDouble(double val)
+    {
+      if (Double.isNaN(val)) {
+        return BigDecimal.ZERO;
+      } else if (val == Double.POSITIVE_INFINITY) {
+        return MAX_FINITE_VALUE;
+      } else if (val == Double.NEGATIVE_INFINITY) {
+        return MIN_FINITE_VALUE;
+      }
+      return BigDecimal.valueOf(val);
     }
   }
 
