@@ -36,6 +36,13 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
+ * This {@link TopNAlgorithm} is tailored to processing aggregates on high cardility columns which are likely to have
+ * larger result sets. Internally it uses a 2 phase approach to compute the top-n result using the
+ * {@link PooledTopNAlgorithm} for each phase. The first phase is to process the segment with only the order-by
+ * aggregator to compute which values constitute the top 'n' results. With this information, a actual result set
+ * is computed by a second run of the {@link PooledTopNAlgorithm}, this time with all aggregators, but only considering
+ * the values from the 'n' results to avoid performing any aggregations that would have been thrown away for results
+ * that didn't make the top-n.
  */
 public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], TopNParams>
 {
