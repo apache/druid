@@ -141,6 +141,9 @@ public class SystemSchema extends AbstractSchema
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
       .add("is_overshadowed", ValueType.LONG)
+      .add("shardSpec", ValueType.STRING)
+      .add("dimensions", ValueType.STRING)
+      .add("metrics", ValueType.STRING)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -314,7 +317,10 @@ public class SystemSchema extends AbstractSchema
                 IS_PUBLISHED_TRUE, //is_published is true for published segments
                 isAvailable,
                 isRealtime,
-                val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE
+                val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
+                segment.getShardSpec(),
+                segment.getDimensions(),
+                segment.getMetrics()
             };
           });
 
@@ -343,7 +349,10 @@ public class SystemSchema extends AbstractSchema
                 // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                 IS_AVAILABLE_TRUE,
                 val.getValue().isRealtime(),
-                IS_OVERSHADOWED_FALSE // there is an assumption here that unpublished segments are never overshadowed
+                IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
+                null,
+                null,
+                null
             };
           });
 
