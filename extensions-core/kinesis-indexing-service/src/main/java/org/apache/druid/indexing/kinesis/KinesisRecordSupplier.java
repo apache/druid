@@ -90,7 +90,7 @@ import java.util.stream.Collectors;
 public class KinesisRecordSupplier implements RecordSupplier<String, String>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
-  private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
+  private static final long KINESIS_RETRYABLE_ERROR_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
 
   private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
@@ -263,7 +263,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               + "that the request rate for the stream is too high, or the requested data is too large for "
               + "the available throughput. Reduce the frequency or size of your requests."
           );
-          long retryMs = Math.max(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS, fetchDelayMillis);
+          long retryMs = Math.max(KINESIS_RETRYABLE_ERROR_BACKOFF_MS, fetchDelayMillis);
           rescheduleRunnable(retryMs);
         }
         catch (InterruptedException e) {
@@ -732,13 +732,30 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             + "the number of shards to increase throughput."
         );
         try {
-          Thread.sleep(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS);
+          Thread.sleep(KINESIS_RETRYABLE_ERROR_BACKOFF_MS);
           continue;
         }
         catch (InterruptedException e1) {
           log.warn(e1, "Thread interrupted!");
           Thread.currentThread().interrupt();
           break;
+        }
+      }
+      catch (AmazonServiceException ase) {
+        if (isServiceExceptionRecoverable(ase)) {
+          log.warn(ase, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
+          try {
+            Thread.sleep(KINESIS_RETRYABLE_ERROR_BACKOFF_MS);
+            continue;
+          }
+          catch (InterruptedException e1) {
+            log.warn(e1, "Thread interrupted!");
+            Thread.currentThread().interrupt();
+            break;
+          }
+        } else {
+          log.warn(ase, "encounted unknown unrecoverable AWS exception, will not retry");
+          throw new RuntimeException(ase);
         }
       }
 
