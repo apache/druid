@@ -810,6 +810,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                 );
                 return true;
               }
+              if (throwable instanceof AmazonServiceException) {
+                AmazonServiceException ase = (AmazonServiceException) throwable;
+                return isServiceExceptionRecoverable(ase);
+              }
               return false;
             },
             GET_SEQUENCE_NUMBER_RETRY_COUNT
