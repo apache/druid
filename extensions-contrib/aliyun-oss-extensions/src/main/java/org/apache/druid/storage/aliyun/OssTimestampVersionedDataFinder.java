@@ -34,8 +34,6 @@ import java.util.regex.Pattern;
 
 public class OssTimestampVersionedDataFinder extends OssDataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
-  private static final int MAX_LISTING_KEYS = 1000;
-
   @Inject
   public OssTimestampVersionedDataFinder(OSS client)
   {
@@ -46,11 +44,11 @@ public class OssTimestampVersionedDataFinder extends OssDataSegmentPuller implem
    * Gets the key with the most recently modified timestamp.
    * `pattern` is evaluated against the entire key AFTER the path given in `uri`.
    * The substring `pattern` is matched against will have a leading `/` removed.
-   * For example `aliyun-oss://some_bucket/some_prefix/some_key` with a URI of `aliyun-oss://some_bucket/some_prefix` will match against `some_key`.
-   * `aliyun-oss://some_bucket/some_prefixsome_key` with a URI of `aliyun-oss://some_bucket/some_prefix` will match against `some_key`
-   * `aliyun-oss://some_bucket/some_prefix//some_key` with a URI of `aliyun-oss://some_bucket/some_prefix` will match against `/some_key`
+   * For example `oss://some_bucket/some_prefix/some_key` with a URI of `oss://some_bucket/some_prefix` will match against `some_key`.
+   * `oss://some_bucket/some_prefixsome_key` with a URI of `oss://some_bucket/some_prefix` will match against `some_key`
+   * `oss://some_bucket/some_prefix//some_key` with a URI of `oss://some_bucket/some_prefix` will match against `/some_key`
    *
-   * @param uri     The URI of in the form of `aliyun-oss://some_bucket/some_key`
+   * @param uri     The URI of in the form of `oss://some_bucket/some_key`
    * @param pattern The pattern matcher to determine if a *key* is of interest, or `null` to match everything.
    * @return A URI to the most recently modified object which matched the pattern.
    */
@@ -64,7 +62,7 @@ public class OssTimestampVersionedDataFinder extends OssDataSegmentPuller implem
       final Iterator<OSSObjectSummary> objectSummaryIterator = OssUtils.objectSummaryIterator(
           client,
           Collections.singletonList(uri),
-          MAX_LISTING_KEYS
+          OssUtils.MAX_LISTING_LENGTH
       );
       while (objectSummaryIterator.hasNext()) {
         final OSSObjectSummary objectSummary = objectSummaryIterator.next();

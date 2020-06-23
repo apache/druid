@@ -21,8 +21,6 @@ package org.apache.druid.storage.aliyun;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
-import com.aliyun.oss.model.AccessControlList;
-import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.DeleteObjectsRequest;
 import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
@@ -50,6 +48,7 @@ public class OssUtils
   private static final String SCHEME = OssStorageDruidModule.SCHEME;
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
   private static final Logger log = new Logger(OssUtils.class);
+  public static final int MAX_LISTING_LENGTH = 1000; //limited by Aliyun OSS SDK
 
 
   static boolean isServiceExceptionRecoverable(OSSException ex)
@@ -78,7 +77,7 @@ public class OssUtils
   };
 
   /**
-   * Retries aliyun-oss operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
+   * Retries aliyun OSS operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
    * found, etc) are not retried.
    */
   static <T> T retry(Task<T> f) throws Exception
@@ -106,12 +105,12 @@ public class OssUtils
   }
 
   /**
-   * Create an iterator over a set of aliyun-oss objects specified by a set of prefixes.
+   * Create an iterator over a set of aliyun OSS objects specified by a set of prefixes.
    * <p>
    * For each provided prefix URI, the iterator will walk through all objects that are in the same bucket as the
    * provided URI and whose keys start with that URI's path, except for directory placeholders (which will be
    * ignored). The iterator is computed incrementally by calling {@link OSS#listObjects} for
-   * each prefix in batches of {@param maxListLength}. The first call is made at the same time the iterator is
+   * each prefix in batches of {@param maxListingLength}. The first call is made at the same time the iterator is
    * constructed.
    */
   public static Iterator<OSSObjectSummary> objectSummaryIterator(
@@ -120,14 +119,14 @@ public class OssUtils
       final int maxListingLength
   )
   {
-    return new ObjectSummaryIterator(client, prefixes, maxListingLength);
+    return new OssObjectSummaryIterator(client, prefixes, maxListingLength);
   }
 
   /**
    * Create an {@link URI} from the given {@link OSSObjectSummary}. The result URI is composed as below.
    *
    * <pre>
-   * {@code aliyun-oss://{BUCKET_NAME}/{OBJECT_KEY}}
+   * {@code oss://{BUCKET_NAME}/{OBJECT_KEY}}
    * </pre>
    */
   public static URI summaryToUri(OSSObjectSummary object)
@@ -148,13 +147,6 @@ public class OssUtils
     ) + "/index.zip";
   }
 
-  static CannedAccessControlList grantFullControlToBucketOwner(OSS client, String bucket)
-  {
-    final AccessControlList acl = client.getBucketAcl(bucket);
-    return acl.getCannedACL();
-    //acl.grantAllPermissions(new Grant(new Grantee(acl.getOwner().getId()), Permission.FullControl));
-  }
-
   public static String extractKey(URI uri)
   {
     return StringUtils.maybeRemoveLeadingSlash(uri.getPath());
@@ -169,12 +161,12 @@ public class OssUtils
   }
 
   /**
-   * Gets a single {@link OSSObjectSummary} from aliyun-oss. Since this method might return a wrong object if there are multiple
+   * Gets a single {@link OSSObjectSummary} from aliyun OSS. Since this method might return a wrong object if there are multiple
    * objects that match the given key, this method should be used only when it's guaranteed that the given key is unique
    * in the given bucket.
    *
-   * @param client aliyun-oss client
-   * @param bucket aliyun-oss bucket
+   * @param client aliyun OSS client
+   * @param bucket aliyun OSS bucket
    * @param key    unique key for the object to be retrieved
    */
   public static OSSObjectSummary getSingleObjectSummary(OSS client, String bucket, String key)
@@ -200,11 +192,11 @@ public class OssUtils
   }
 
   /**
-   * Delete the files from aliyun-oss in a specified bucket, matching a specified prefix and filter
+   * Delete the files from aliyun OSS in a specified bucket, matching a specified prefix and filter
    *
-   * @param client aliyun-oss client
-   * @param config specifies the configuration to use when finding matching files in aliyun-oss to delete
-   * @param bucket aliyun-oss bucket
+   * @param client aliyun OSS client
+   * @param config specifies the configuration to use when finding matching files in aliyun OSS to delete
+   * @param bucket aliyun OSS bucket
    * @param prefix the file prefix
    * @param filter function which returns true if the prefix file found should be deleted and false otherwise.
    * @throws Exception
@@ -219,7 +211,7 @@ public class OssUtils
       throws Exception
   {
     final List<String> keysToDelete = new ArrayList<>(config.getMaxListingLength());
-    final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
+    final OssObjectSummaryIterator iterator = new OssObjectSummaryIterator(
         client,
         ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("http")),
         config.getMaxListingLength()
@@ -258,11 +250,11 @@ public class OssUtils
   }
 
   /**
-   * Uploads a file to aliyun-oss if possible. First trying to set ACL to give the bucket owner full control of the file before uploading.
+   * Uploads a file to aliyun OSS if possible. First trying to set ACL to give the bucket owner full control of the file before uploading.
    *
    * @param client     aliyun OSS client
    * @param key        The key under which to store the new object.
-   * @param file       The path of the file to upload to aliyun-oss.
+   * @param file       The path of the file to upload to aliyun OSS.
    */
   static void uploadFileIfPossible(
       OSS client,

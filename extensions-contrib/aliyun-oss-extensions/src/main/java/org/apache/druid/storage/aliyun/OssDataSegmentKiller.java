@@ -62,7 +62,7 @@ public class OssDataSegmentKiller implements DataSegmentKiller
       String path = MapUtils.getString(loadSpec, "key");
 
       if (client.doesObjectExist(bucket, path)) {
-        log.info("Removing index file[aliyun-oss://%s/%s] from aliyun OSS!", bucket, path);
+        log.info("Removing index file[%s://%s/%s] from aliyun OSS!", OssStorageDruidModule.SCHEME, bucket, path);
         client.deleteObject(bucket, path);
       }
     }

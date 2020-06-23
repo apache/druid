@@ -37,9 +37,8 @@ import java.util.List;
 
 public class OssStorageDruidModule implements DruidModule
 {
-  public static final String SCHEME = "aliyun-oss";
-  public static final String SCHEME_S3N = "aliyun-oss_3n";
-  public static final String SCHEME_ZIP = "aliyun-oss_zip";
+  public static final String SCHEME = "oss";
+  public static final String SCHEME_ZIP = "oss_zip";
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -75,10 +74,6 @@ public class OssStorageDruidModule implements DruidModule
              .addBinding(SCHEME)
              .to(OssTimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
-    MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
-             .addBinding(SCHEME_S3N)
-             .to(OssTimestampVersionedDataFinder.class)
-             .in(LazySingleton.class);
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME_ZIP)
            .to(OssDataSegmentKiller.class)
@@ -92,13 +87,13 @@ public class OssStorageDruidModule implements DruidModule
            .to(OssDataSegmentArchiver.class)
            .in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(OssDataSegmentPusher.class).in(LazySingleton.class);
-    JsonConfigProvider.bind(binder, "druid.aliyun.oss", OssClientConfig.class);
-    JsonConfigProvider.bind(binder, "druid.storage.aliyun.oss", OssInputDataConfig.class);
-    JsonConfigProvider.bind(binder, "druid.storage.aliyun.oss", OssStorageConfig.class);
-    JsonConfigProvider.bind(binder, "druid.storage.aliyun.oss", OssDataSegmentArchiverConfig.class);
+    JsonConfigProvider.bind(binder, "druid.oss", OssClientConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.oss", OssInputDataConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.oss", OssStorageConfig.class);
+    JsonConfigProvider.bind(binder, "druid.storage.oss", OssDataSegmentArchiverConfig.class);
 
     Binders.taskLogsBinder(binder).addBinding(SCHEME).to(OssTaskLogs.class);
-    JsonConfigProvider.bind(binder, "druid.indexer.logs.aliyun.oss", OssTaskLogsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.indexer.logs.oss", OssTaskLogsConfig.class);
     binder.bind(OssTaskLogs.class).in(LazySingleton.class);
   }
 

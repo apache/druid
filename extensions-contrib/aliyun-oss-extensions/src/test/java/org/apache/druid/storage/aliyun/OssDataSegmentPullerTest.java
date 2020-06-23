@@ -75,7 +75,7 @@ public class OssDataSegmentPullerTest
 
     EasyMock.replay(s3Client);
 
-    String version = puller.getVersion(URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, objectSummary.getKey())));
+    String version = puller.getVersion(URI.create(StringUtils.format(OssStorageDruidModule.SCHEME + "://%s/%s", bucket, objectSummary.getKey())));
 
     EasyMock.verify(s3Client);
 

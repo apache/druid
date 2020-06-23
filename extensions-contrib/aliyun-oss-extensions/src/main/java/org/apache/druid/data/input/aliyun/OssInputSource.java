@@ -65,7 +65,7 @@ public class OssInputSource extends CloudObjectInputSource
    * @param uris              User provided uris to read input data
    * @param prefixes          User provided prefixes to read input data
    * @param objects           User provided cloud objects values to read input data
-   * @param inputSourceConfig User provided properties for overriding the default aliyun-oss configuration
+   * @param inputSourceConfig User provided properties for overriding the default aliyun OSS configuration
    */
   @JsonCreator
   public OssInputSource(

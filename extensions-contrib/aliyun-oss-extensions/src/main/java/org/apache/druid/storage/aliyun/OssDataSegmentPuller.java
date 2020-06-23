@@ -299,7 +299,7 @@ public class OssDataSegmentPuller implements URIDataPuller
       );
     }
     catch (OSSException | IOException e) {
-      throw new SegmentLoadingException(e, "aliyun-oss fail! Key[%s]", coords);
+      throw new SegmentLoadingException(e, "fail! Key[%s]", coords);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

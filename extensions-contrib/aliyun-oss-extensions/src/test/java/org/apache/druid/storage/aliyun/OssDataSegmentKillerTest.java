@@ -46,12 +46,12 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
   private static final String KEY_2 = "key2";
   private static final String TEST_BUCKET = "test_bucket";
   private static final String TEST_PREFIX = "test_prefix";
-  private static final URI PREFIX_URI = URI.create(StringUtils.format("aliyun-oss://%s/%s", TEST_BUCKET, TEST_PREFIX));
+  private static final URI PREFIX_URI = URI.create(StringUtils.format(OssStorageDruidModule.SCHEME + "://%s/%s", TEST_BUCKET, TEST_PREFIX));
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final int MAX_KEYS = 1;
-  private static final Exception RECOVERABLE_EXCEPTION = new ClientException(new IOException());
-  private static final Exception NON_RECOVERABLE_EXCEPTION = new ClientException(new NullPointerException());
+  private static final Exception RECOVERABLE_EXCEPTION = new ClientException(new IOException("mocked by test case"));
+  private static final Exception NON_RECOVERABLE_EXCEPTION = new ClientException(new NullPointerException("mocked by test case"));
 
   @Mock
   private OSS client;

@@ -118,7 +118,7 @@ public class OssDataSegmentPusherTest
         segment.getLoadSpec().get("key").toString(),
         Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches()
     );
-    Assert.assertEquals("aliyun-oss_zip", segment.getLoadSpec().get("type"));
+    Assert.assertEquals("oss_zip", segment.getLoadSpec().get("type"));
 
     EasyMock.verify(client);
   }

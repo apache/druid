@@ -26,19 +26,19 @@ import javax.validation.constraints.Min;
 
 /**
  * Stores the configuration for options related to reading
- * input data from aliyun-oss into Druid
+ * input data from aliyun OSS into Druid
  */
 public class OssInputDataConfig
 {
   /**
    * The maximum number of input files matching a given prefix to retrieve
-   * from aliyun-oss at a time.
+   * from aliyun OSS at a time.
    * valid range is [1,1000]
    */
   @JsonProperty
   @Min(1)
-  @Max(1000)
-  private int maxListingLength = 1000;
+  @Max(OssUtils.MAX_LISTING_LENGTH)
+  private int maxListingLength = OssUtils.MAX_LISTING_LENGTH;
 
   public void setMaxListingLength(int maxListingLength)
   {

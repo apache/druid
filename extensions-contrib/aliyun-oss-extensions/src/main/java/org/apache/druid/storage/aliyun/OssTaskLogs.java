@@ -40,7 +40,7 @@ import java.util.Collections;
 import java.util.Date;
 
 /**
- * Provides task logs archived on aliyun-oss.
+ * Provides task logs archived in aliyun OSS
  */
 public class OssTaskLogs implements TaskLogs
 {
@@ -166,7 +166,7 @@ public class OssTaskLogs implements TaskLogs
   public void killAll() throws IOException
   {
     log.info(
-        "Deleting all task logs from aliyun-oss location [bucket: '%s' prefix: '%s'].",
+        "Deleting all task logs from aliyun OSS location [bucket: '%s' prefix: '%s'].",
         config.getBucket(),
         config.getPrefix()
     );
@@ -179,7 +179,7 @@ public class OssTaskLogs implements TaskLogs
   public void killOlderThan(long timestamp) throws IOException
   {
     log.info(
-        "Deleting all task logs from aliyun-oss location [bucket: '%s' prefix: '%s'] older than %s.",
+        "Deleting all task logs from aliyun OSS location [bucket: '%s' prefix: '%s'] older than %s.",
         config.getBucket(),
         config.getPrefix(),
         new Date(timestamp)
@@ -194,7 +194,7 @@ public class OssTaskLogs implements TaskLogs
       );
     }
     catch (Exception e) {
-      log.error("Error occurred while deleting task log files from oss. Error: %s", e.getMessage());
+      log.error("Error occurred while deleting task log files from aliyun OSS. Error: %s", e.getMessage());
       throw new IOException(e);
     }
   }

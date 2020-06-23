@@ -36,6 +36,7 @@ import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFa
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
 import org.apache.druid.utils.CompressionUtils;
 
@@ -51,12 +52,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Builds firehoses that read from a predefined list of aliyun-oss objects and then dry up.
+ * Builds firehoses that read from a predefined list of aliyun OSS objects and then dry up.
  */
 public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<URI>
 {
   private static final Logger log = new Logger(StaticOssFirehoseFactory.class);
-  private static final int MAX_LISTING_LENGTH = 1024;
 
   private final OSS client;
   private final List<URI> uris;
@@ -88,11 +88,17 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
     }
 
     for (final URI inputURI : this.uris) {
-      Preconditions.checkArgument("aliyun-oss".equals(inputURI.getScheme()), "input uri scheme == aliyun-oss (%s)", inputURI);
+      Preconditions.checkArgument(OssStorageDruidModule.SCHEME.equals(inputURI.getScheme()),
+                                  "input uri scheme == %s (%s)",
+                                  OssStorageDruidModule.SCHEME,
+                                  inputURI);
     }
 
     for (final URI inputURI : this.prefixes) {
-      Preconditions.checkArgument("aliyun-oss".equals(inputURI.getScheme()), "input uri scheme == aliyun-oss (%s)", inputURI);
+      Preconditions.checkArgument(OssStorageDruidModule.SCHEME.equals(inputURI.getScheme()),
+                                  "input uri scheme == %s (%s)",
+                                  OssStorageDruidModule.SCHEME,
+                                  inputURI);
     }
   }
 
@@ -119,7 +125,7 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
         final Iterator<OSSObjectSummary> objectSummaryIterator = OssUtils.objectSummaryIterator(
             client,
             Collections.singletonList(prefix),
-            MAX_LISTING_LENGTH
+            OssUtils.MAX_LISTING_LENGTH
         );
 
         objectSummaryIterator.forEachRemaining(objects::add);
@@ -138,7 +144,7 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
 
       final OSSObject ossObject = client.getObject(bucket, key);
       if (ossObject == null) {
-        throw new ISE("Failed to get an aliyun-oss object for bucket[%s] and key[%s]", bucket, key);
+        throw new ISE("Failed to get an Aliyun OSS object for bucket[%s] and key[%s]", bucket, key);
       }
       return ossObject.getObjectContent();
     }
@@ -158,7 +164,7 @@ public class StaticOssFirehoseFactory extends PrefetchableTextFilesFirehoseFacto
       final OSSObject ossObject = client.getObject(request);
       if (ossObject == null) {
         throw new ISE(
-            "Failed to get an aliyun-oss object for bucket[%s], key[%s], and start[%d]",
+            "Failed to get an Aliyun OSS object for bucket[%s], key[%s], and start[%d]",
             bucket,
             key,
             start

@@ -123,9 +123,11 @@ public class OssDataSegmentMover implements DataSegmentMover
       OssUtils.retry(
           () -> {
             final String copyMsg = StringUtils.format(
-                "[aliyun-oss://%s/%s] to [aliyun-oss://%s/%s]",
+                "[%s://%s/%s] to [%s://%s/%s]",
+                OssStorageDruidModule.SCHEME,
                 srcBucket,
                 srcPath,
+                OssStorageDruidModule.SCHEME,
                 targetBucket,
                 targetPath
             );
@@ -162,7 +164,7 @@ public class OssDataSegmentMover implements DataSegmentMover
   ) throws IOException, SegmentLoadingException
   {
     if (srcBucket.equals(dstBucket) && srcPath.equals(dstPath)) {
-      log.info("No need to move file[aliyun-oss://%s/%s] onto itself", srcBucket, srcPath);
+      log.info("No need to move file[%s://%s/%s] onto itself", OssStorageDruidModule.SCHEME, srcBucket, srcPath);
       return;
     }
     if (client.doesObjectExist(srcBucket, srcPath)) {
@@ -174,14 +176,15 @@ public class OssDataSegmentMover implements DataSegmentMover
       // keyCount is still zero.
       if (listResult.getObjectSummaries().size() == 0) {
         // should never happen
-        throw new ISE("Unable to list object [aliyun-oss://%s/%s]", srcBucket, srcPath);
+        throw new ISE("Unable to list object [%s://%s/%s]", OssStorageDruidModule.SCHEME, srcBucket, srcPath);
       }
       final OSSObjectSummary objectSummary = listResult.getObjectSummaries().get(0);
       if (objectSummary.getStorageClass() != null &&
           objectSummary.getStorageClass().equals(StorageClass.IA.name())) {
         throw new OSSException(
             StringUtils.format(
-                "Cannot move file[aliyun-oss://%s/%s] of storage class glacier, skipping.",
+                "Cannot move file[%s://%s/%s] of storage class glacier, skipping.",
+                OssStorageDruidModule.SCHEME,
                 srcBucket,
                 srcPath
             )
@@ -203,9 +206,11 @@ public class OssDataSegmentMover implements DataSegmentMover
       // ensure object exists in target location
       if (client.doesObjectExist(dstBucket, dstPath)) {
         log.info(
-            "Not moving file [aliyun-oss://%s/%s], already present in target location [aliyun-oss://%s/%s]",
+            "Not moving file [%s://%s/%s], already present in target location [%s://%s/%s]",
+            OssStorageDruidModule.SCHEME,
             srcBucket,
             srcPath,
+            OssStorageDruidModule.SCHEME,
             dstBucket,
             dstPath
         );
@@ -224,7 +229,7 @@ public class OssDataSegmentMover implements DataSegmentMover
       deleteWithRetries(bucket, path);
     }
     catch (Exception e) {
-      log.error(e, "Failed to delete file [aliyun-oss://%s/%s], giving up", bucket, path);
+      log.error(e, "Failed to delete file [%s://%s/%s], giving up", OssStorageDruidModule.SCHEME, bucket, path);
     }
   }
 
@@ -237,7 +242,7 @@ public class OssDataSegmentMover implements DataSegmentMover
             return null;
           }
           catch (Exception e) {
-            log.info(e, "Error while trying to delete [aliyun-oss://%s/%s]", bucket, path);
+            log.info(e, "Error while trying to delete [%s://%s/%s]", OssStorageDruidModule.SCHEME, bucket, path);
             throw e;
           }
         },

@@ -29,7 +29,7 @@ import org.apache.druid.metadata.PasswordProvider;
 import java.util.Objects;
 
 /**
- * Contains properties for aliyun-oss input source.
+ * Contains properties for aliyun OSS input source.
  * Properties can be specified by ingestionSpec which will override system default.
  */
 public class OssClientConfig

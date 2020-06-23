@@ -61,7 +61,7 @@ public class OssEntity extends RetryingInputEntity
       final OSSObject ossObject = ossClient.getObject(request);
       if (ossObject == null) {
         throw new ISE(
-            "Failed to get an s3 object for bucket[%s], key[%s], and start[%d]",
+            "Failed to get an Aliyun OSS object for bucket[%s], key[%s], and start[%d]",
             object.getBucket(),
             object.getPath(),
             offset

@@ -37,7 +37,7 @@ import java.util.NoSuchElementException;
  * {@code maxListLength}. The first call is made at the same time the iterator is constructed.
  *
  */
-public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
+public class OssObjectSummaryIterator implements Iterator<OSSObjectSummary>
 {
   private final OSS client;
   private final Iterator<URI> prefixesIterator;
@@ -48,7 +48,7 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
   private Iterator<OSSObjectSummary> objectSummaryIterator;
   private OSSObjectSummary currentObjectSummary;
 
-  ObjectSummaryIterator(
+  OssObjectSummaryIterator(
       final OSS client,
       final Iterable<URI> prefixes,
       final int maxListingLength
@@ -56,7 +56,7 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
   {
     this.client = client;
     this.prefixesIterator = prefixes.iterator();
-    this.maxListingLength = maxListingLength;
+    this.maxListingLength = Math.min(OssUtils.MAX_LISTING_LENGTH, maxListingLength);
 
     prepareNextRequest();
     fetchNextBatch();
@@ -100,7 +100,7 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
     catch (OSSException e) {
       throw new RE(
           e,
-          "Failed to get object summaries from S3 bucket[%s], prefix[%s]; S3 error: %s",
+          "Failed to get object summaries from aliyun OSS bucket[%s], prefix[%s]; error: %s",
           request.getBucketName(),
           request.getPrefix(),
           e.getMessage()
@@ -109,7 +109,7 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
     catch (Exception e) {
       throw new RE(
           e,
-          "Failed to get object summaries from S3 bucket[%s], prefix[%s]",
+          "Failed to get object summaries from aliyun OSS bucket[%s], prefix[%s]",
           request.getBucketName(),
           request.getPrefix()
       );
@@ -125,7 +125,7 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
       while (objectSummaryIterator.hasNext()) {
         currentObjectSummary = objectSummaryIterator.next();
         // skips directories and empty objects
-        if (!isDirectoryPlaceholder(currentObjectSummary) && currentObjectSummary.getSize() > 0) {
+        if (currentObjectSummary.getSize() > 0 && !isDirectory(currentObjectSummary)) {
           return;
         }
       }
@@ -146,18 +146,8 @@ public class ObjectSummaryIterator implements Iterator<OSSObjectSummary>
   /**
    * Checks if a given object is a directory placeholder and should be ignored.
    */
-  private static boolean isDirectoryPlaceholder(final OSSObjectSummary objectSummary)
+  private static boolean isDirectory(final OSSObjectSummary objectSummary)
   {
-    // Recognize "standard" directory place-holder indications used by Amazon's AWS Console and Panic's Transmit.
-    if (objectSummary.getKey().endsWith("/") && objectSummary.getSize() == 0) {
-      return true;
-    }
-
-    // Recognize place-holder objects created by the Google Storage console or S3 Organizer Firefox extension.
-    if (objectSummary.getKey().endsWith("_$folder$") && objectSummary.getSize() == 0) {
-      return true;
-    }
-
-    return false;
+    return objectSummary.getSize() == 0 && objectSummary.getKey().endsWith("/");
   }
 }

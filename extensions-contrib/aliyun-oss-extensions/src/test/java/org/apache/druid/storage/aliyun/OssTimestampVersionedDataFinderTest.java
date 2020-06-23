@@ -69,11 +69,11 @@ public class OssTimestampVersionedDataFinderTest
     EasyMock.replay(client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, keyPrefix)), pattern);
 
     EasyMock.verify(client);
 
-    URI expected = URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, object1.getKey()));
+    URI expected = URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object1.getKey()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -98,7 +98,7 @@ public class OssTimestampVersionedDataFinderTest
     EasyMock.replay(oss);
 
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, keyPrefix)), pattern);
 
     EasyMock.verify(oss);
 
@@ -133,11 +133,11 @@ public class OssTimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, keyPrefix)), pattern);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object0.getKey()));
 
     Assert.assertEquals(expected, latest);
   }
@@ -167,11 +167,11 @@ public class OssTimestampVersionedDataFinderTest
 
     EasyMock.replay(s3Client);
 
-    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, object0.getKey())), null);
+    URI latest = finder.getLatestVersion(URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object0.getKey())), null);
 
     EasyMock.verify(s3Client);
 
-    URI expected = URI.create(StringUtils.format("aliyun-oss://%s/%s", bucket, object0.getKey()));
+    URI expected = URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object0.getKey()));
 
     Assert.assertEquals(expected, latest);
   }

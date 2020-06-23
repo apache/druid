@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ObjectSummaryIteratorTest
+public class OssObjectSummaryIteratorTest
 {
   private static final ImmutableList<OSSObjectSummary> TEST_OBJECTS =
       ImmutableList.of(
@@ -54,8 +54,8 @@ public class ObjectSummaryIteratorTest
   public void testSingleObject()
   {
     test(
-        ImmutableList.of("aliyun-oss://b/foo/baz"),
-        ImmutableList.of("aliyun-oss://b/foo/baz"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/baz"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/baz"),
         5
     );
   }
@@ -65,13 +65,13 @@ public class ObjectSummaryIteratorTest
   {
     test(
         ImmutableList.of(
-            "aliyun-oss://b/foo/bar1",
-            "aliyun-oss://b/foo/bar2",
-            "aliyun-oss://b/foo/bar3",
-            "aliyun-oss://b/foo/bar4",
-            "aliyun-oss://b/foo/baz"
+            OssStorageDruidModule.SCHEME + "://b/foo/bar1",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar2",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar3",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar4",
+            OssStorageDruidModule.SCHEME + "://b/foo/baz"
         ),
-        ImmutableList.of("aliyun-oss://b/foo/"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/"),
         1
     );
   }
@@ -81,13 +81,13 @@ public class ObjectSummaryIteratorTest
   {
     test(
         ImmutableList.of(
-            "aliyun-oss://b/foo/bar1",
-            "aliyun-oss://b/foo/bar2",
-            "aliyun-oss://b/foo/bar3",
-            "aliyun-oss://b/foo/bar4",
-            "aliyun-oss://b/foo/baz"
+            OssStorageDruidModule.SCHEME + "://b/foo/bar1",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar2",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar3",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar4",
+            OssStorageDruidModule.SCHEME + "://b/foo/baz"
         ),
-        ImmutableList.of("aliyun-oss://b/foo/"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/"),
         2
     );
   }
@@ -97,13 +97,13 @@ public class ObjectSummaryIteratorTest
   {
     test(
         ImmutableList.of(
-            "aliyun-oss://b/foo/bar1",
-            "aliyun-oss://b/foo/bar2",
-            "aliyun-oss://b/foo/bar3",
-            "aliyun-oss://b/foo/bar4",
-            "aliyun-oss://b/foo/baz"
+            OssStorageDruidModule.SCHEME + "://b/foo/bar1",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar2",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar3",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar4",
+            OssStorageDruidModule.SCHEME + "://b/foo/baz"
         ),
-        ImmutableList.of("aliyun-oss://b/foo/"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/"),
         10
     );
   }
@@ -112,8 +112,8 @@ public class ObjectSummaryIteratorTest
   public void testPrefixInMiddleOfKey()
   {
     test(
-        ImmutableList.of("aliyun-oss://b/foo/bar1", "aliyun-oss://b/foo/bar2", "aliyun-oss://b/foo/bar3", "aliyun-oss://b/foo/bar4"),
-        ImmutableList.of("aliyun-oss://b/foo/bar"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/bar1", OssStorageDruidModule.SCHEME + "://b/foo/bar2", OssStorageDruidModule.SCHEME + "://b/foo/bar3", OssStorageDruidModule.SCHEME + "://b/foo/bar4"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/bar"),
         10
     );
   }
@@ -123,14 +123,14 @@ public class ObjectSummaryIteratorTest
   {
     test(
         ImmutableList.of(
-            "aliyun-oss://b/foo",
-            "aliyun-oss://b/foo/bar1",
-            "aliyun-oss://b/foo/bar2",
-            "aliyun-oss://b/foo/bar3",
-            "aliyun-oss://b/foo/bar4",
-            "aliyun-oss://b/foo/baz"
+            OssStorageDruidModule.SCHEME + "://b/foo",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar1",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar2",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar3",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar4",
+            OssStorageDruidModule.SCHEME + "://b/foo/baz"
         ),
-        ImmutableList.of("aliyun-oss://b"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b"),
         10
     );
   }
@@ -140,14 +140,14 @@ public class ObjectSummaryIteratorTest
   {
     test(
         ImmutableList.of(
-            "aliyun-oss://b/foo",
-            "aliyun-oss://b/foo/bar1",
-            "aliyun-oss://b/foo/bar2",
-            "aliyun-oss://b/foo/bar3",
-            "aliyun-oss://b/foo/bar4",
-            "aliyun-oss://b/foo/baz"
+            OssStorageDruidModule.SCHEME + "://b/foo",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar1",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar2",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar3",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar4",
+            OssStorageDruidModule.SCHEME + "://b/foo/baz"
         ),
-        ImmutableList.of("aliyun-oss://b/"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/"),
         10
     );
   }
@@ -157,7 +157,7 @@ public class ObjectSummaryIteratorTest
   {
     test(
         ImmutableList.of(),
-        ImmutableList.of("aliyun-oss://bx/foo/"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://bx/foo/"),
         10
     );
   }
@@ -167,13 +167,13 @@ public class ObjectSummaryIteratorTest
   {
     test(
         ImmutableList.of(
-            "aliyun-oss://b/foo/bar1",
-            "aliyun-oss://b/foo/bar2",
-            "aliyun-oss://b/foo/bar3",
-            "aliyun-oss://b/foo/bar4",
-            "aliyun-oss://b/foo/baz"
+            OssStorageDruidModule.SCHEME + "://b/foo/bar1",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar2",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar3",
+            OssStorageDruidModule.SCHEME + "://b/foo/bar4",
+            OssStorageDruidModule.SCHEME + "://b/foo/baz"
         ),
-        ImmutableList.of("aliyun-oss://b/foo/bar", "aliyun-oss://b/foo/baz"),
+        ImmutableList.of(OssStorageDruidModule.SCHEME + "://b/foo/bar", OssStorageDruidModule.SCHEME + "://b/foo/baz"),
         10
     );
   }
@@ -214,8 +214,8 @@ public class ObjectSummaryIteratorTest
   }
 
   /**
-   * Makes a mock S3 client that handles enough of "listObjectsV2" to test the functionality of the
-   * {@link ObjectSummaryIterator} class.
+   * Makes a mock OSS client that handles enough of "listObjects" to test the functionality of the
+   * {@link OssObjectSummaryIterator} class.
    */
   private static OSS makeMockClient(
       final List<OSSObjectSummary> objects

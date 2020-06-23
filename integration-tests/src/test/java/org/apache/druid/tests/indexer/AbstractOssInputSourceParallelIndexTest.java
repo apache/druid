@@ -48,14 +48,14 @@ public abstract class AbstractOssInputSourceParallelIndexTest extends AbstractIT
     return new Object[][]{
         {new Pair<>(INPUT_SOURCE_URIS_KEY,
                     ImmutableList.of(
-                        "aliyun-oss://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
-                        "aliyun-oss://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
-                        "aliyun-oss://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
+                        "oss://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_1,
+                        "oss://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_2,
+                        "oss://%%BUCKET%%/%%PATH%%" + WIKIPEDIA_DATA_3
                     )
         )},
         {new Pair<>(INPUT_SOURCE_PREFIXES_KEY,
                     ImmutableList.of(
-                        "aliyun-oss://%%BUCKET%%/%%PATH%%"
+                        "oss://%%BUCKET%%/%%PATH%%"
                     )
         )},
         {new Pair<>(INPUT_SOURCE_OBJECTS_KEY,
@@ -100,7 +100,7 @@ public abstract class AbstractOssInputSourceParallelIndexTest extends AbstractIT
           spec = StringUtils.replace(
               spec,
               "%%INPUT_SOURCE_TYPE%%",
-              "aliyun-oss"
+              "oss"
           );
           spec = StringUtils.replace(
               spec,

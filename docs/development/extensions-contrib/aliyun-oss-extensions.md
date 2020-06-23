@@ -27,28 +27,28 @@ To use this Apache Druid extension, make sure to [include](../../development/ext
 
 ## Deep Storage
 
-[Aliyun](https://www.aliyun.com) is the 3rd largest cloud infrastructure provider in the world. It also provides its own storage solution, that is OSS, [Object Storage Service](https://www.aliyun.com/product/oss). 
+[Aliyun](https://www.aliyun.com) is the 3rd largest cloud infrastructure provider in the world. It provides its own storage solution known as OSS, [Object Storage Service](https://www.aliyun.com/product/oss). 
 
-To use aliyun OSS, first config as below
+To use aliyun OSS as deep storage, first config as below
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
-|`druid.aliyun.oss.accessKey`|the 'AccessKey ID' of your account which can be used to access the bucket||Must be set.|
-|`druid.aliyun.oss.secretKey`|the 'AccessKey Secret' of your account which can be used to access the bucket| |Must be set. |
-|`druid.aliyun.oss.endpoint`|the endpoint url of your OSS storage| |Must be set.|
+|`druid.oss.accessKey`|the 'AccessKey ID' of your account which can be used to access the bucket||Must be set.|
+|`druid.oss.secretKey`|the 'AccessKey Secret' of your account which can be used to access the bucket| |Must be set. |
+|`druid.oss.endpoint`|the endpoint url of your OSS storage| |Must be set.|
 
 if you want to use OSS as deep storage, use the configurations below
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
-|`druid.storage.type`| | aliyun-oss|Must be set.|
-|`druid.storage.aliyun.oss.bucket`||storage bucket name.|Must be set.|
-|`druid.storage.aliyun.oss.prefix`|a prefix string prepended to the file names for the segments published to Aliyun OSS deep storage| druid/segments | |
+|`druid.storage.type`| | oss|Must be set.|
+|`druid.storage.oss.bucket`||storage bucket name.|Must be set.|
+|`druid.storage.oss.prefix`|a prefix string prepended to the file names for the segments published to Aliyun OSS deep storage| druid/segments | |
 
 To save index logs to OSS, apply the configurations below:
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
-|`druid.indexer.logs.type`| | aliyun-oss|Must be set.|
-|`druid.indexer.logs.aliyun.oss.bucket`|the bucket used to keep logs||Must be set.|
-|`druid.indexer.logs.aliyun.oss.prefix`|a prefix string prepended to the log files| ||
+|`druid.indexer.logs.type`| | oss|Must be set.|
+|`druid.indexer.logs.oss.bucket`|the bucket used to keep logs||Must be set.|
+|`druid.indexer.logs.oss.prefix`|a prefix string prepended to the log files| ||

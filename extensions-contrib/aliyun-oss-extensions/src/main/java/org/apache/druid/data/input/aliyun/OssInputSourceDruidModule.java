@@ -30,7 +30,7 @@ import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import java.util.List;
 
 /**
- * Druid module to wire up native batch support for aliyun-oss input
+ * Druid module to wire up native batch support for aliyun OSS input
  */
 public class OssInputSourceDruidModule implements DruidModule
 {
@@ -45,6 +45,5 @@ public class OssInputSourceDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-
   }
 }
