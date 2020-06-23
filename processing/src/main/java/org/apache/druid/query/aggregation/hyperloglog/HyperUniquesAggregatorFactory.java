@@ -58,22 +58,13 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
   public static Object estimateCardinality(@Nullable Object object, boolean round)
   {
-    if (object == null) {
-      if (round) {
-        return 0L;
-      } else {
-        return 0d;
-
-      }
-    }
-
     final HyperLogLogCollector collector = (HyperLogLogCollector) object;
 
-    // Avoid ternary, it causes estimateCardinalityRound to be cast to double.
+    // Avoid ternary for round check as it causes estimateCardinalityRound to be cast to double.
     if (round) {
-      return collector.estimateCardinalityRound();
+      return collector == null ? 0L : collector.estimateCardinalityRound();
     } else {
-      return collector.estimateCardinality();
+      return collector == null ? 0d : collector.estimateCardinality();
     }
   }
 
