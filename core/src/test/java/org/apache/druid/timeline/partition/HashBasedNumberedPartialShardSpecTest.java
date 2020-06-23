@@ -75,4 +75,19 @@ public class HashBasedNumberedPartialShardSpecTest
     Assert.assertEquals(expected.getNumBuckets(), map.get("numPartitions"));
     Assert.assertEquals(expected.getBucketId(), map.get("bucketId"));
   }
+
+  @Test
+  public void testComplete()
+  {
+    final HashBasedNumberedPartialShardSpec partialShardSpec = new HashBasedNumberedPartialShardSpec(
+        ImmutableList.of("dim"),
+        2,
+        4
+    );
+    final ShardSpec shardSpec = partialShardSpec.complete(new ObjectMapper(), 1, 3);
+    Assert.assertEquals(
+        new HashBasedNumberedShardSpec(1, 3, 2, 4, ImmutableList.of("dim"), new ObjectMapper()),
+        shardSpec
+    );
+  }
 }

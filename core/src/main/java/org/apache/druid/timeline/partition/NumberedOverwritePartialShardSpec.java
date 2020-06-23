@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import javax.annotation.Nullable;
-
 public class NumberedOverwritePartialShardSpec implements PartialShardSpec
 {
   private final int startRootPartitionId;
@@ -62,14 +60,10 @@ public class NumberedOverwritePartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId, int numCorePartitions)
   {
-    // specOfPreviousMaxPartitionId is the max partitionId of the same shardSpec
-    // and could be null if all existing segments are first-generation segments.
     return new NumberedOverwriteShardSpec(
-        specOfPreviousMaxPartitionId == null
-        ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
-        : specOfPreviousMaxPartitionId.getPartitionNum() + 1,
+        partitionId,
         startRootPartitionId,
         endRootPartitionId,
         minorVersion

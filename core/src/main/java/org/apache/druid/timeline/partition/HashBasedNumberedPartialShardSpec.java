@@ -68,16 +68,11 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPrevMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId, int numCorePartitions)
   {
-    // This code is executed when the Overlord coordinates segment allocation, which is either you append segments
-    // or you use segment lock. When appending segments, null specOfPrevMaxPartitionId means that this is
-    // the very initial segment. Since the core partitions set is not determined for appended segments, we set it 0.
-    // When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
-    // OvershadowableManager handles the atomic segment update.
     return new HashBasedNumberedShardSpec(
-        specOfPrevMaxPartitionId == null ? 0 : specOfPrevMaxPartitionId.getPartitionNum() + 1,
-        specOfPrevMaxPartitionId == null ? 0 : specOfPrevMaxPartitionId.getNumCorePartitions(),
+        partitionId,
+        numCorePartitions,
         bucketId,
         numBuckets,
         partitionDimensions,

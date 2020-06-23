@@ -55,4 +55,18 @@ public class SingleDimensionPartialShardSpecTest
     );
     Assert.assertEquals(expected, fromJson);
   }
+
+  @Test
+  public void testComplete()
+  {
+    final SingleDimensionPartialShardSpec partialShardSpec = new SingleDimensionPartialShardSpec(
+        "dim",
+        2,
+        "end2",
+        null,
+        3
+    );
+    final ShardSpec shardSpec = partialShardSpec.complete(new ObjectMapper(), 1, 2);
+    Assert.assertEquals(new SingleDimensionShardSpec("dim", "end2", null, 1, 2), shardSpec);
+  }
 }

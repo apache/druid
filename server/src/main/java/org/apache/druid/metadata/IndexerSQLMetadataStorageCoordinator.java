@@ -51,7 +51,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
@@ -865,9 +865,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
 
       if (maxId == null) {
-        final ShardSpec shardSpec = partialShardSpec.complete(jsonMapper, null);
+        // This code is executed when the Overlord coordinates segment allocation, which is either you append segments
+        // or you use segment lock. When appending segments, null maxId means that we are allocating the very initial
+        // segment for this time chunk. Since the core partitions set is not determined for appended segments, we set
+        // it 0. When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
+        // OvershadowableManager handles the atomic segment update.
+        final int newPartitionId = partialShardSpec.useNonRootGenerationPartitionSpace()
+                                   ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
+                                   : PartitionIds.ROOT_GEN_START_PARTITION_ID;
         String version = versionOfExistingChunks == null ? maxVersion : versionOfExistingChunks;
-        return new SegmentIdWithShardSpec(dataSource, interval, version, shardSpec);
+        return new SegmentIdWithShardSpec(
+            dataSource,
+            interval,
+            version,
+            partialShardSpec.complete(jsonMapper, newPartitionId, 0)
+        );
       } else if (!maxId.getInterval().equals(interval) || maxId.getVersion().compareTo(maxVersion) > 0) {
         log.warn(
             "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: conflicting segment[%s].",
@@ -877,27 +889,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             maxId
         );
         return null;
+      } else if (maxId.getShardSpec().getNumCorePartitions() == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
+        log.warn(
+            "Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
+            maxId,
+            maxId.getShardSpec()
+        );
+        return null;
       } else {
-        // SingleDimensionShardSpecs created in 0.18 or older versions can return
-        // SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS in getNumCorePartitions(),
-        // which means it will use StringPartitionChunk to check the completeness of the core partition set.
-        // In this case, we cannot append since the appended segments will be ignored in the timeline.
-        // See StringPartitionChunk.abuts() for more details.
-        if (maxId.getShardSpec().getNumCorePartitions() == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
-          log.warn(
-              " Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
-              maxId,
-              maxId.getShardSpec()
-          );
-          return null;
-        }
-
-        final ShardSpec newShardSpec = partialShardSpec.complete(jsonMapper, maxId.getShardSpec());
         return new SegmentIdWithShardSpec(
             dataSource,
             maxId.getInterval(),
             Preconditions.checkNotNull(versionOfExistingChunks, "versionOfExistingChunks"),
-            newShardSpec
+            partialShardSpec.complete(
+                jsonMapper,
+                maxId.getShardSpec().getPartitionNum() + 1,
+                maxId.getShardSpec().getNumCorePartitions()
+            )
         );
       }
     }

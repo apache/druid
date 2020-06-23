@@ -20,30 +20,28 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class LinearPartialShardSpec implements PartialShardSpec
+import java.io.IOException;
+
+public class NumberedPartialShardSpecTest
 {
-  private static final LinearPartialShardSpec INSTANCE = new LinearPartialShardSpec();
-
-  public static LinearPartialShardSpec instance()
+  @Test
+  public void testSerde() throws IOException
   {
-    return INSTANCE;
+    final NumberedPartialShardSpec expected = NumberedPartialShardSpec.instance();
+    final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
+    final byte[] json = mapper.writeValueAsBytes(expected);
+    final PartialShardSpec fromJson = mapper.readValue(json, PartialShardSpec.class);
+    Assert.assertSame(NumberedPartialShardSpec.class, fromJson.getClass());
   }
 
-  private LinearPartialShardSpec()
+  @Test
+  public void testComplete()
   {
-  }
-
-  @Override
-  public ShardSpec complete(ObjectMapper objectMapper, int partitionId, int numCorePartitions)
-  {
-    // numCorePartitions is ignored
-    return new LinearShardSpec(partitionId);
-  }
-
-  @Override
-  public Class<? extends ShardSpec> getShardSpecClass()
-  {
-    return LinearShardSpec.class;
+    final NumberedPartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
+    final ShardSpec shardSpec = partialShardSpec.complete(new ObjectMapper(), 1, 3);
+    Assert.assertEquals(new NumberedShardSpec(1, 3), shardSpec);
   }
 }
