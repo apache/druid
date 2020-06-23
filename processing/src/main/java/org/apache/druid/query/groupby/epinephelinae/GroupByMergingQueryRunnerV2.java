@@ -64,6 +64,7 @@ import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -343,8 +344,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       long timeout
   )
   {
+    ListenableFuture<List<AggregateResult>> future = Futures.allAsList(futures);
     try {
-      ListenableFuture<List<AggregateResult>> future = Futures.allAsList(futures);
       if (queryWatcher != null) {
         queryWatcher.registerQueryFuture(query, future);
       }
@@ -364,20 +365,20 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
     }
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      GuavaUtils.cancelAll(futures);
+      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {
-      GuavaUtils.cancelAll(futures);
+      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
       throw new QueryInterruptedException(e);
     }
     catch (TimeoutException e) {
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      GuavaUtils.cancelAll(futures);
+      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      GuavaUtils.cancelAll(futures);
+      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
       throw new RuntimeException(e);
     }
   }

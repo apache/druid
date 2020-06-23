@@ -86,20 +86,22 @@ public class GuavaUtils
    * Cancel futures manually, because sometime we can't cancel all futures in {@link com.google.common.util.concurrent.Futures.CombinedFuture}
    * automatically. Especially when we call {@link  com.google.common.util.concurrent.Futures#allAsList(Iterable)} to create a batch of
    * future.
+   * @param mayInterruptIfRunning {@code true} if the thread executing this
+   * task should be interrupted; otherwise, in-progress tasks are allowed
+   * to complete
    * @param futures The futures that we want to cancel
-   * @param <T>   The result type returned by this Future's {@code get} method
    */
-  public static <T, F extends Future<T>> void cancelAll(List<F> futures)
+  public static <F extends Future<?>> void cancelAll(boolean mayInterruptIfRunning, List<F> futures)
   {
     if (futures == null || futures.isEmpty()) {
       return;
     }
     futures.forEach(f -> {
       try {
-        f.cancel(true);
+        f.cancel(mayInterruptIfRunning);
       }
       catch (Throwable t) {
-        log.warn(t, "Error while canceling future.");
+        log.warn(t, "Error while cancelling future.");
       }
     });
   }

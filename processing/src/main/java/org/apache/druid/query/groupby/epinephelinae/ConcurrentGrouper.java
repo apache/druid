@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -356,17 +357,17 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 .collect(Collectors.toList()
     );
 
+    ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
     try {
-      ListenableFuture<List<CloseableIterator<Entry<KeyType>>>> future = Futures.allAsList(futures);
       final long timeout = queryTimeoutAt - System.currentTimeMillis();
       return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
     }
     catch (InterruptedException | TimeoutException | CancellationException e) {
-      GuavaUtils.cancelAll(futures);
+      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      GuavaUtils.cancelAll(futures);
+      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
       throw new RuntimeException(e.getCause());
     }
   }

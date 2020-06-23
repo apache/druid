@@ -208,6 +208,33 @@ public class BackgroundCachePopulatorTest
     Assert.assertEquals(5, results.size());
   }
 
+  @Test
+  public void testWrapOnFailure()
+  {
+    String cacheId = "segment";
+    SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
+
+
+    CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
+    Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
+        cacheId,
+        segmentDescriptor,
+        cacheStrategy.computeCacheKey(query)
+    );
+
+    Sequence res = this.backgroundCachePopulator.wrap(this.baseRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()),
+        (value) -> {throw new RuntimeException("Error");}, cache, cacheKey);
+    Assert.assertFalse("sequence must not be closed", closable.isClosed());
+    Assert.assertNull("cache must be empty", cache.get(cacheKey));
+
+    List results = res.toList();
+    Assert.assertTrue(closable.isClosed());
+    List<Result> expectedRes = makeTopNResults(false, OBJECTS);
+    Assert.assertEquals(expectedRes.toString(), results.toString());
+    Assert.assertEquals(5, results.size());
+  }
+
+
   private List<Result> makeTopNResults(boolean cachedResults, Object... objects)
   {
     List<Result> retVal = new ArrayList<>();
