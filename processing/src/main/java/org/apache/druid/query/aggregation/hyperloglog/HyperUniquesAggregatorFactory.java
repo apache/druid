@@ -59,7 +59,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   public static Object estimateCardinality(@Nullable Object object, boolean round)
   {
     if (object == null) {
-      return 0;
+      if (round) {
+        return 0L;
+      } else {
+        return 0d;
+
+      }
     }
 
     final HyperLogLogCollector collector = (HyperLogLogCollector) object;
