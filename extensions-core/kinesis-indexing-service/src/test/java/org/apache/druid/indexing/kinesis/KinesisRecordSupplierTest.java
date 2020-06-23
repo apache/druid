@@ -337,11 +337,17 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     getException.setServiceName("AmazonKinesis");
     EasyMock.expect(getRecordsResult0.getRecords()).andThrow(getException).once();
     EasyMock.expect(getRecordsResult0.getRecords()).andReturn(SHARD0_RECORDS).once();
+    AmazonServiceException getException2 = new AmazonServiceException("InternalFailure");
+    getException2.setErrorCode("InternalFailure");
+    getException2.setStatusCode(503);
+    getException2.setServiceName("AmazonKinesis");
+    EasyMock.expect(getRecordsResult1.getRecords()).andThrow(getException2).once();
     EasyMock.expect(getRecordsResult1.getRecords()).andReturn(SHARD1_RECORDS).once();
     EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
     EasyMock.expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
     EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(SHARD0_LAG_MILLIS).once();
     EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(SHARD0_LAG_MILLIS).once();
+    EasyMock.expect(getRecordsResult1.getMillisBehindLatest()).andReturn(SHARD1_LAG_MILLIS).once();
     EasyMock.expect(getRecordsResult1.getMillisBehindLatest()).andReturn(SHARD1_LAG_MILLIS).once();
 
     replayAll();
@@ -370,7 +376,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     recordSupplier.seekToEarliest(partitions);
     recordSupplier.start();
 
-    while (recordSupplier.bufferSize() < 12) {
+    while (recordSupplier.bufferSize() < 14) {
       Thread.sleep(100);
     }
 
