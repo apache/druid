@@ -302,7 +302,7 @@ and then by the hash value of `partitionDimensions` (secondary partition key) in
 The partitioned data is stored in local storage of 
 the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 - The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
-The Parallel task spawns a new set of worker tasks (type `partial_index_merge`) to merge the partitioned data
+The Parallel task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned data
 created in the previous phase. Here, the partitioned data is shuffled based on
 the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data
 falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges

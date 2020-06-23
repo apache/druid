@@ -33,15 +33,18 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
 
   @Nullable
   private final List<String> partitionDimensions;
+  private final int bucketId;
   private final int numBuckets;
 
   @JsonCreator
   public HashBasedNumberedPartialShardSpec(
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+      @JsonProperty("bucketId") int bucketId,
       @JsonProperty("numPartitions") int numBuckets
   )
   {
     this.partitionDimensions = partitionDimensions;
+    this.bucketId = bucketId;
     this.numBuckets = numBuckets;
   }
 
@@ -50,6 +53,12 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   public List<String> getPartitionDimensions()
   {
     return partitionDimensions;
+  }
+
+  @JsonProperty
+  public int getBucketId()
+  {
+    return bucketId;
   }
 
   @JsonProperty("numPartitions")
@@ -61,9 +70,16 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   @Override
   public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
   {
-    final HashBasedNumberedShardSpec prevSpec = (HashBasedNumberedShardSpec) specOfPreviousMaxPartitionId;
+    // The shardSpec is created by the Overlord.
+    // For batch tasks, this code can be executed only with segment locking (forceTimeChunkLock = false).
+    // In this mode, you can have 2 or more tasks concurrently ingesting into the same time chunk of
+    // the same datasource. Since there is no restriction for those tasks in segment allocation, the
+    // allocated IDs for each task can interleave. As a result, the core partition set cannot be
+    // represented as a range. We always set 0 for the core partition set size if this is an initial segment.
     return new HashBasedNumberedShardSpec(
-        prevSpec == null ? 0 : prevSpec.getPartitionNum() + 1,
+        specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getPartitionNum() + 1,
+        specOfPreviousMaxPartitionId == null ? 0 : specOfPreviousMaxPartitionId.getNumCorePartitions(),
+        bucketId,
         numBuckets,
         partitionDimensions,
         objectMapper
@@ -73,7 +89,7 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   @Override
   public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
   {
-    return new HashBasedNumberedShardSpec(partitionId, numBuckets, partitionDimensions, objectMapper);
+    return new HashBasedNumberedShardSpec(partitionId, 0, bucketId, numBuckets, partitionDimensions, objectMapper);
   }
 
   @Override
@@ -92,13 +108,14 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
       return false;
     }
     HashBasedNumberedPartialShardSpec that = (HashBasedNumberedPartialShardSpec) o;
-    return numBuckets == that.numBuckets &&
+    return bucketId == that.bucketId &&
+           numBuckets == that.numBuckets &&
            Objects.equals(partitionDimensions, that.partitionDimensions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionDimensions, numBuckets);
+    return Objects.hash(partitionDimensions, bucketId, numBuckets);
   }
 }

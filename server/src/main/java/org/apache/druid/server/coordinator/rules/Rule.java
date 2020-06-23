@@ -21,12 +21,17 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Preconditions;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+
+import java.util.Map;
 
 /**
  */
@@ -50,6 +55,27 @@ public interface Rule
   boolean appliesTo(DataSegment segment, DateTime referenceTimestamp);
 
   boolean appliesTo(Interval interval, DateTime referenceTimestamp);
+
+  /**
+   * Return true if this Rule can load segment onto one or more type of Druid node, otherwise return false.
+   * Any Rule that returns true for this method should implement logic for calculating segment under replicated
+   * in {@link Rule#updateUnderReplicated}
+   */
+  boolean canLoadSegments();
+
+  /**
+   * This method should update the {@param underReplicatedPerTier} with the replication count of the
+   * {@param segment}. Rule that returns true for {@link Rule#canLoadSegments()} must override this method.
+   * Note that {@param underReplicatedPerTier} is a map of tier -> { dataSource -> underReplicationCount }
+   */
+  default void updateUnderReplicated(
+      Map<String, Object2LongMap<String>> underReplicatedPerTier,
+      SegmentReplicantLookup segmentReplicantLookup,
+      DataSegment segment
+  )
+  {
+    Preconditions.checkArgument(!canLoadSegments());
+  }
 
   /**
    * {@link DruidCoordinatorRuntimeParams#getUsedSegments()} must not be called in Rule's code, because the used

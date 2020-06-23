@@ -29,7 +29,6 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DataSourcesSnapshot;
@@ -262,6 +261,11 @@ public class DruidCoordinator
   }
 
   /**
+   * segmentReplicantLookup use in this method could potentially be stale since it is only updated on coordinator runs.
+   * However, this is ok as long as the {@param dataSegments} is refreshed/latest as this would at least still ensure
+   * that the stale data in segmentReplicantLookup would be under counting replication levels,
+   * rather than potentially falsely reporting that everything is available.
+   *
    * @return tier -> { dataSource -> underReplicationCount } map
    */
   public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegments(
@@ -280,20 +284,21 @@ public class DruidCoordinator
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
 
       for (final Rule rule : rules) {
-        if (!(rule instanceof LoadRule && rule.appliesTo(segment, now))) {
+        if (!rule.appliesTo(segment, now)) {
+          // Rule did not match. Continue to the next Rule.
           continue;
         }
+        if (!rule.canLoadSegments()) {
+          // Rule matched but rule does not and cannot load segments.
+          // Hence, there is no need to update underReplicationCountsPerDataSourcePerTier map
+          break;
+        }
 
-        ((LoadRule) rule)
-            .getTieredReplicants()
-            .forEach((final String tier, final Integer ruleReplicants) -> {
-              int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
-              Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
-                  .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>());
-              ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
-                  .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
-            });
-        break; // only the first matching rule applies
+        rule.updateUnderReplicated(underReplicationCountsPerDataSourcePerTier, segmentReplicantLookup, segment);
+
+        // Only the first matching rule applies. This is because the Coordinator cycle through all used segments
+        // and match each segment with the first rule that applies. Each segment may only match a single rule.
+        break;
       }
     }
 

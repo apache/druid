@@ -562,6 +562,8 @@ public class IndexGeneratorJobTest
         specs.add(new HashBasedNumberedShardSpec(
             shardInfo[0],
             shardInfo[1],
+            shardInfo[0],
+            shardInfo[1],
             null,
             HadoopDruidIndexerConfig.JSON_MAPPER
         ));
@@ -573,7 +575,8 @@ public class IndexGeneratorJobTest
             "host",
             shardInfo[0],
             shardInfo[1],
-            partitionNum++
+            partitionNum++,
+            shardInfoForEachShard.length
         ));
       }
     } else {
@@ -693,12 +696,12 @@ public class IndexGeneratorJobTest
         if (forceExtendableShardSpecs) {
           NumberedShardSpec spec = (NumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals(i, spec.getPartitionNum());
-          Assert.assertEquals(shardInfo.length, spec.getPartitions());
+          Assert.assertEquals(shardInfo.length, spec.getNumCorePartitions());
         } else if ("hashed".equals(partitionType)) {
           Integer[] hashShardInfo = (Integer[]) shardInfo[i];
           HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
           Assert.assertEquals((int) hashShardInfo[0], spec.getPartitionNum());
-          Assert.assertEquals((int) hashShardInfo[1], spec.getPartitions());
+          Assert.assertEquals((int) hashShardInfo[1], spec.getNumCorePartitions());
         } else if ("single".equals(partitionType)) {
           String[] singleDimensionShardInfo = (String[]) shardInfo[i];
           SingleDimensionShardSpec spec = (SingleDimensionShardSpec) dataSegment.getShardSpec();

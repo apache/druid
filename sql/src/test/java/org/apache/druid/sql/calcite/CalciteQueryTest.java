@@ -31,7 +31,6 @@ import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -39,6 +38,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -708,59 +708,61 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testInformationSchemaTables() throws Exception
   {
     testQuery(
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
+        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE"})
-            .add(new Object[]{"druid", "aview", "VIEW"})
-            .add(new Object[]{"druid", "bview", "VIEW"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
-            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
-            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+            .add(new Object[]{"druid", CalciteTests.BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
             .build()
     );
 
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE\n"
+        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST\n"
         + "FROM INFORMATION_SCHEMA.TABLES\n"
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE"})
-            .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE"})
-            .add(new Object[]{"druid", "aview", "VIEW"})
-            .add(new Object[]{"druid", "bview", "VIEW"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
-            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
-            .add(new Object[]{"lookup", "lookyloo", "TABLE"})
-            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE"})
-            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+            .add(new Object[]{"druid", CalciteTests.BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
+            .add(new Object[]{"druid", "aview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"druid", "bview", "VIEW", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
             .build()
     );
   }
@@ -11917,79 +11919,75 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testNestedGroupByOnInlineDataSourceWithFilter(Map<String, Object> queryContext) throws Exception
   {
-    try {
-      testQuery(
-          "with abc as"
-          + "("
-          + "  SELECT dim1, m2 from druid.foo where \"__time\" >= '2001-01-02'"
-          + ")"
-          + ", def as"
-          + "("
-          + "  SELECT t1.dim1, SUM(t2.m2) as \"metricSum\" "
-          + "  from abc as t1 inner join abc as t2 on t1.dim1 = t2.dim1"
-          + "  where t1.dim1='def'"
-          + "  group by 1"
-          + ")"
-          + "SELECT count(*) from def",
-          queryContext,
-          ImmutableList.of(
-              GroupByQuery
-                  .builder()
-                  .setDataSource(
-                      GroupByQuery
-                          .builder()
-                          .setDataSource(
-                              join(
-                                  new QueryDataSource(
-                                      newScanQueryBuilder()
-                                          .dataSource(CalciteTests.DATASOURCE1)
-                                          .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                                          .columns("dim1", "m2")
-                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                          .context(queryContext)
-                                          .build()
-                                  ),
-                                  new QueryDataSource(
-                                      newScanQueryBuilder()
-                                          .dataSource(CalciteTests.DATASOURCE1)
-                                          .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                                          .columns("dim1", "m2")
-                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                          .context(queryContext)
-                                          .build()
-                                  ),
-                                  "j0",
-                                  equalsCondition(
-                                      DruidExpression.fromColumn("dim1"),
-                                      DruidExpression.fromColumn("j0.dim1")
-                                  ),
-                                  JoinType.INNER
-                              )
-                          )
-                          .setGranularity(Granularities.ALL)
-                          .setInterval(querySegmentSpec(Filtration.eternity()))
-                          .build()
-                  )
-                  .setGranularity(Granularities.ALL)
-                  .setInterval(querySegmentSpec(Filtration.eternity()))
-                  .build()
-          ),
-          ImmutableList.of(new Object[] {1})
-      );
-      Assert.fail("Expected an ISE to be thrown");
-    }
-    catch (RuntimeException e) {
-      Throwable cause = e.getCause();
-      boolean foundISE = false;
-      while (cause != null) {
-        if (cause instanceof ISE) {
-          foundISE = true;
-          break;
-        }
-        cause = cause.getCause();
-      }
-      Assert.assertTrue(foundISE);
-    }
+    // Cannot vectorize due to virtual columns.
+    cannotVectorize();
+
+    testQuery(
+        "with abc as"
+        + "("
+        + "  SELECT dim1, m2 from druid.foo where \"__time\" >= '2001-01-02'"
+        + ")"
+        + ", def as"
+        + "("
+        + "  SELECT t1.dim1, SUM(t2.m2) as \"metricSum\" "
+        + "  from abc as t1 inner join abc as t2 on t1.dim1 = t2.dim1"
+        + "  where t1.dim1='def'"
+        + "  group by 1"
+        + ")"
+        + "SELECT count(*) from def",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery
+                .builder()
+                .setDataSource(
+                    GroupByQuery
+                        .builder()
+                        .setDataSource(
+                            join(
+                                new QueryDataSource(
+                                    newScanQueryBuilder()
+                                        .dataSource(CalciteTests.DATASOURCE1)
+                                        .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                                        .columns("dim1")
+                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                        .context(queryContext)
+                                        .build()
+                                ),
+                                new QueryDataSource(
+                                    newScanQueryBuilder()
+                                        .dataSource(CalciteTests.DATASOURCE1)
+                                        .intervals(querySegmentSpec(Intervals.of("2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                                        .columns("dim1", "m2")
+                                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                        .context(queryContext)
+                                        .build()
+                                ),
+                                "j0.",
+                                equalsCondition(
+                                    DruidExpression.fromColumn("dim1"),
+                                    DruidExpression.fromColumn("j0.dim1")
+                                ),
+                                JoinType.INNER
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(selector("dim1", "def", null))
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0")
+                            )
+                        )
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'def'", ValueType.STRING))
+                        .build()
+                )
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setGranularity(Granularities.ALL)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .build()
+        ),
+        ImmutableList.of(new Object[] {1L})
+    );
   }
 
   @Test
@@ -14999,6 +14997,46 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT REGEXP_LIKE('x', 1) FROM foo",
         ImmutableList.of(),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testTopNOnStringWithNonSortedOrUniqueDictionary(Map<String, Object> queryContext) throws Exception
+  {
+    testQuery(
+        "SELECT druid.broadcast.dim4, COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4\n"
+        + "GROUP BY 1 ORDER BY 2 LIMIT 4",
+        queryContext,
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE3),
+                        new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE),
+                        "j0.",
+                        equalsCondition(
+                            DruidExpression.fromColumn("dim4"),
+                            DruidExpression.fromColumn("j0.dim4")
+                        ),
+                        JoinType.INNER
+
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dimension(new DefaultDimensionSpec("j0.dim4", "_d0", ValueType.STRING))
+                .threshold(4)
+                .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                .context(queryContext)
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", 9L},
+            new Object[]{"b", 9L}
+        )
     );
   }
 

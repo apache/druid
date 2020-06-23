@@ -1032,7 +1032,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   @Test
   public void testAllocatePendingSegmentsForHashBasedNumberedShardSpec() throws IOException
   {
-    final PartialShardSpec partialShardSpec = new HashBasedNumberedPartialShardSpec(null, 5);
+    final PartialShardSpec partialShardSpec = new HashBasedNumberedPartialShardSpec(null, 2, 5);
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
 
@@ -1048,7 +1048,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(0, shardSpec.getPartitionNum());
-    Assert.assertEquals(5, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getNumCorePartitions());
+    Assert.assertEquals(5, shardSpec.getNumBuckets());
 
     coordinator.announceHistoricalSegments(
         Collections.singleton(
@@ -1078,7 +1079,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(1, shardSpec.getPartitionNum());
-    Assert.assertEquals(5, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getNumCorePartitions());
+    Assert.assertEquals(5, shardSpec.getNumBuckets());
 
     coordinator.announceHistoricalSegments(
         Collections.singleton(
@@ -1101,13 +1103,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         "seq3",
         null,
         interval,
-        new HashBasedNumberedPartialShardSpec(null, 3),
+        new HashBasedNumberedPartialShardSpec(null, 2, 3),
         "version",
         true
     );
 
     shardSpec = (HashBasedNumberedShardSpec) id.getShardSpec();
     Assert.assertEquals(2, shardSpec.getPartitionNum());
-    Assert.assertEquals(3, shardSpec.getPartitions());
+    Assert.assertEquals(0, shardSpec.getNumCorePartitions());
+    Assert.assertEquals(3, shardSpec.getNumBuckets());
   }
 }

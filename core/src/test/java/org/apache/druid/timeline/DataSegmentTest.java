@@ -75,7 +75,13 @@ public class DataSegmentTest
       }
 
       @Override
-      public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+      public int getNumCorePartitions()
+      {
+        return 0;
+      }
+
+      @Override
+      public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
       {
         return null;
       }

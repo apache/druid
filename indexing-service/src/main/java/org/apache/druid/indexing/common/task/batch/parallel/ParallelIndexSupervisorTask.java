@@ -29,6 +29,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
@@ -79,6 +81,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.druid.utils.CollectionUtils;
@@ -337,24 +340,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @VisibleForTesting
-  PartialHashSegmentMergeParallelIndexTaskRunner createPartialHashSegmentMergeRunner(
-      TaskToolbox toolbox,
-      List<PartialHashSegmentMergeIOConfig> ioConfigs
-  )
-  {
-    return new PartialHashSegmentMergeParallelIndexTaskRunner(
-        toolbox,
-        getId(),
-        getGroupId(),
-        getIngestionSchema().getDataSchema(),
-        ioConfigs,
-        getIngestionSchema().getTuningConfig(),
-        getContext(),
-        indexingServiceClient
-    );
-  }
-
-  @VisibleForTesting
   PartialGenericSegmentMergeParallelIndexTaskRunner createPartialGenericSegmentMergeRunner(
       TaskToolbox toolbox,
       List<PartialGenericSegmentMergeIOConfig> ioConfigs
@@ -544,10 +529,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private TaskStatus runHashPartitionMultiPhaseParallel(TaskToolbox toolbox) throws Exception
   {
     // 1. Partial segment generation phase
-    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedHashPartitionsReport> indexingRunner = createRunner(
-        toolbox,
-        this::createPartialHashSegmentGenerateRunner
-    );
+    ParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>> indexingRunner
+        = createRunner(toolbox, this::createPartialHashSegmentGenerateRunner);
 
     TaskState state = runNextPhase(indexingRunner);
     if (state.isFailure()) {
@@ -557,16 +540,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     // 2. Partial segment merge phase
 
     // partition (interval, partitionId) -> partition locations
-    Map<Pair<Interval, Integer>, List<HashPartitionLocation>> partitionToLocations =
-        groupHashPartitionLocationsPerPartition(indexingRunner.getReports());
-    final List<PartialHashSegmentMergeIOConfig> ioConfigs = createHashMergeIOConfigs(
+    Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> partitionToLocations =
+        groupGenericPartitionLocationsPerPartition(indexingRunner.getReports());
+    final List<PartialGenericSegmentMergeIOConfig> ioConfigs = createGenericMergeIOConfigs(
         ingestionSchema.getTuningConfig().getTotalNumMergeTasks(),
         partitionToLocations
     );
 
-    final ParallelIndexTaskRunner<PartialHashSegmentMergeTask, PushedSegmentsReport> mergeRunner = createRunner(
+    final ParallelIndexTaskRunner<PartialGenericSegmentMergeTask, PushedSegmentsReport> mergeRunner = createRunner(
         toolbox,
-        tb -> createPartialHashSegmentMergeRunner(tb, ioConfigs)
+        tb -> createPartialGenericSegmentMergeRunner(tb, ioConfigs)
     );
     state = runNextPhase(mergeRunner);
     if (state.isSuccess()) {
@@ -659,38 +642,35 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return partitions;
   }
 
-  private static Map<Pair<Interval, Integer>, List<HashPartitionLocation>> groupHashPartitionLocationsPerPartition(
-      Map<String, GeneratedHashPartitionsReport> subTaskIdToReport
-  )
-  {
-    BiFunction<String, HashPartitionStat, HashPartitionLocation> createPartitionLocationFunction =
-        (subtaskId, partitionStat) ->
-            new HashPartitionLocation(
-                partitionStat.getTaskExecutorHost(),
-                partitionStat.getTaskExecutorPort(),
-                partitionStat.isUseHttps(),
-                subtaskId,
-                partitionStat.getInterval(),
-                partitionStat.getSecondaryPartition()
-            );
-
-    return groupPartitionLocationsPerPartition(subTaskIdToReport, createPartitionLocationFunction);
-  }
-
   private static Map<Pair<Interval, Integer>, List<GenericPartitionLocation>> groupGenericPartitionLocationsPerPartition(
       Map<String, GeneratedPartitionsReport<GenericPartitionStat>> subTaskIdToReport
   )
   {
-    BiFunction<String, GenericPartitionStat, GenericPartitionLocation> createPartitionLocationFunction =
-        (subtaskId, partitionStat) ->
-            new GenericPartitionLocation(
-                partitionStat.getTaskExecutorHost(),
-                partitionStat.getTaskExecutorPort(),
-                partitionStat.isUseHttps(),
-                subtaskId,
-                partitionStat.getInterval(),
-                partitionStat.getSecondaryPartition()
-            );
+    final Map<Pair<Interval, Integer>, BuildingShardSpec<?>> intervalAndIntegerToShardSpec = new HashMap<>();
+    final Object2IntMap<Interval> intervalToNextPartitionId = new Object2IntOpenHashMap<>();
+    final BiFunction<String, GenericPartitionStat, GenericPartitionLocation> createPartitionLocationFunction =
+        (subtaskId, partitionStat) -> {
+          final BuildingShardSpec<?> shardSpec = intervalAndIntegerToShardSpec.computeIfAbsent(
+              Pair.of(partitionStat.getInterval(), partitionStat.getBucketId()),
+              key -> {
+                // Lazily determine the partitionId to create packed partitionIds for the core partitions.
+                // See the Javadoc of BucketNumberedShardSpec for details.
+                final int partitionId = intervalToNextPartitionId.computeInt(
+                    partitionStat.getInterval(),
+                    ((interval, nextPartitionId) -> nextPartitionId == null ? 0 : nextPartitionId + 1)
+                );
+                return partitionStat.getSecondaryPartition().convert(partitionId);
+              }
+          );
+          return new GenericPartitionLocation(
+              partitionStat.getTaskExecutorHost(),
+              partitionStat.getTaskExecutorPort(),
+              partitionStat.isUseHttps(),
+              subtaskId,
+              partitionStat.getInterval(),
+              shardSpec
+          );
+        };
 
     return groupPartitionLocationsPerPartition(subTaskIdToReport, createPartitionLocationFunction);
   }
@@ -708,7 +688,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       final GeneratedPartitionsReport<S> report = entry.getValue();
       for (S partitionStat : report.getPartitionStats()) {
         final List<L> locationsOfSamePartition = partitionToLocations.computeIfAbsent(
-            Pair.of(partitionStat.getInterval(), partitionStat.getPartitionId()),
+            Pair.of(partitionStat.getInterval(), partitionStat.getBucketId()),
             k -> new ArrayList<>()
         );
         locationsOfSamePartition.add(createPartitionLocationFunction.apply(subTaskId, partitionStat));
@@ -716,18 +696,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
 
     return partitionToLocations;
-  }
-
-  private static List<PartialHashSegmentMergeIOConfig> createHashMergeIOConfigs(
-      int totalNumMergeTasks,
-      Map<Pair<Interval, Integer>, List<HashPartitionLocation>> partitionToLocations
-  )
-  {
-    return createMergeIOConfigs(
-        totalNumMergeTasks,
-        partitionToLocations,
-        PartialHashSegmentMergeIOConfig::new
-    );
   }
 
   private static List<PartialGenericSegmentMergeIOConfig> createGenericMergeIOConfigs(

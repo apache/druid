@@ -32,6 +32,7 @@ import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import java.util.ArrayList;
@@ -85,23 +86,14 @@ public class JoinFilterAnalyzer
    * @param joinableClauses                 The joinable clauses from the query
    * @param virtualColumns                  The virtual columns from the query
    * @param originalFilter                  The original filter from the query
-   * @param enableFilterPushDown            Whether to enable filter push down
-   * @param enableFilterRewrite             Whether to enable rewrites of filters involving RHS columns
-   * @param enableRewriteValueColumnFilters Whether to enable rewrites of filters invovling RHS non-key columns
-   * @param filterRewriteMaxSize            The maximum size of the correlated value set for rewritten filters.
-   *                                        If the correlated value set size exceeds this, the filter will not be
-   *                                        rewritten and pushed down.
-   *
+   * @param joinFilterRewriteConfig         Configuration options for the join rewrites
    * @return A JoinFilterPreAnalysis containing information determined in this pre-analysis step.
    */
   public static JoinFilterPreAnalysis computeJoinFilterPreAnalysis(
       JoinableClauses joinableClauses,
       VirtualColumns virtualColumns,
       Filter originalFilter,
-      boolean enableFilterPushDown,
-      boolean enableFilterRewrite,
-      boolean enableRewriteValueColumnFilters,
-      long filterRewriteMaxSize
+      JoinFilterRewriteConfig joinFilterRewriteConfig
   )
   {
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
@@ -109,10 +101,8 @@ public class JoinFilterAnalyzer
 
     joinableClauses.splitVirtualColumns(virtualColumns, preJoinVirtualColumns, postJoinVirtualColumns);
     JoinFilterPreAnalysis.Builder preAnalysisBuilder =
-        new JoinFilterPreAnalysis.Builder(joinableClauses, originalFilter, postJoinVirtualColumns)
-            .withEnableFilterPushDown(enableFilterPushDown)
-            .withEnableFilterRewrite(enableFilterRewrite);
-    if (originalFilter == null || !enableFilterPushDown) {
+        new JoinFilterPreAnalysis.Builder(joinFilterRewriteConfig, joinableClauses, originalFilter, postJoinVirtualColumns);
+    if (originalFilter == null || !joinFilterRewriteConfig.isEnableFilterPushDown()) {
       return preAnalysisBuilder.build();
     }
 
@@ -135,7 +125,7 @@ public class JoinFilterAnalyzer
     preAnalysisBuilder
         .withNormalizedBaseTableClauses(normalizedBaseTableClauses)
         .withNormalizedJoinTableClauses(normalizedJoinTableClauses);
-    if (!enableFilterRewrite) {
+    if (!joinFilterRewriteConfig.isEnableFilterRewrite()) {
       return preAnalysisBuilder.build();
     }
 
@@ -146,8 +136,8 @@ public class JoinFilterAnalyzer
         normalizedJoinTableClauses,
         equiconditions,
         joinableClauses,
-        enableRewriteValueColumnFilters,
-        filterRewriteMaxSize
+        joinFilterRewriteConfig.isEnableRewriteValueColumnFilters(),
+        joinFilterRewriteConfig.getFilterRewriteMaxSize()
     );
 
     return preAnalysisBuilder.withCorrelations(correlations)
