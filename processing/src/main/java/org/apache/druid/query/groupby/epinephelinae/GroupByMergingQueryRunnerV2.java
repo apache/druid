@@ -358,7 +358,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
       for (AggregateResult result : results) {
         if (!result.isOk()) {
-          future.cancel(true);
+          GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
           throw new ResourceLimitExceededException(result.getReason());
         }
       }
