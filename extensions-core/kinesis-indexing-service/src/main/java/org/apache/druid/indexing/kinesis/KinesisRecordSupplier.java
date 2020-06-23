@@ -743,7 +743,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       }
       catch (AmazonServiceException ase) {
         if (isServiceExceptionRecoverable(ase)) {
-          log.warn(ase, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
+          log.warn(ase, "encounted unknown recoverable AWS exception, retrying in [%,dms]", KINESIS_RETRYABLE_ERROR_BACKOFF_MS);
           try {
             Thread.sleep(KINESIS_RETRYABLE_ERROR_BACKOFF_MS);
             continue;
