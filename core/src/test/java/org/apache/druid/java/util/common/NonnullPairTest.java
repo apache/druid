@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,6 +29,12 @@ public class NonnullPairTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(NonnullPair.class).withNonnullFields("lhs", "rhs").usingGetClass().verify();
+  }
 
   @Test
   public void testConstructorWithNull()
@@ -42,7 +49,7 @@ public class NonnullPairTest
   public void testGets()
   {
     final NonnullPair<Integer, Integer> pair = new NonnullPair<>(20, 30);
-    Assert.assertEquals(20, pair.left().intValue());
-    Assert.assertEquals(30, pair.right().intValue());
+    Assert.assertEquals(20, pair.lhs.intValue());
+    Assert.assertEquals(30, pair.rhs.intValue());
   }
 }

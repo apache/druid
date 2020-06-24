@@ -21,20 +21,45 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.base.Preconditions;
 
-public class NonnullPair<L, R> extends Pair<L, R>
+import java.util.Objects;
+
+public class NonnullPair<L, R>
 {
+  public final L lhs;
+  public final R rhs;
+
   public NonnullPair(L lhs, R rhs)
   {
-    super(Preconditions.checkNotNull(lhs, "lhs"), Preconditions.checkNotNull(rhs, "rhs"));
+    this.lhs = Preconditions.checkNotNull(lhs, "lhs");
+    this.rhs = Preconditions.checkNotNull(rhs, "rhs");
   }
 
-  public L left()
+  @Override
+  public boolean equals(Object o)
   {
-    return lhs;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    NonnullPair<?, ?> that = (NonnullPair<?, ?>) o;
+    return Objects.equals(lhs, that.lhs) &&
+           Objects.equals(rhs, that.rhs);
   }
 
-  public R right()
+  @Override
+  public int hashCode()
   {
-    return rhs;
+    return Objects.hash(lhs, rhs);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NonnullPair{" +
+           "lhs=" + lhs +
+           ", rhs=" + rhs +
+           '}';
   }
 }

@@ -496,8 +496,8 @@ public class CompactionTask extends AbstractBatchIndexTask
         toolbox,
         segmentProvider
     );
-    final Map<DataSegment, File> segmentFileMap = pair.left();
-    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.right();
+    final Map<DataSegment, File> segmentFileMap = pair.lhs;
+    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.rhs;
 
     if (timelineSegments.size() == 0) {
       return Collections.emptyList();
@@ -519,7 +519,7 @@ public class CompactionTask extends AbstractBatchIndexTask
           Comparators.intervalsByStartThenEnd()
       );
       queryableIndexAndSegments.forEach(
-          p -> intervalToSegments.computeIfAbsent(p.right().getInterval(), k -> new ArrayList<>())
+          p -> intervalToSegments.computeIfAbsent(p.rhs.getInterval(), k -> new ArrayList<>())
                                  .add(p)
       );
 
@@ -546,8 +546,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
       final List<ParallelIndexIngestionSpec> specs = new ArrayList<>(intervalToSegmentsUnified.size());
       for (NonnullPair<Interval, List<NonnullPair<QueryableIndex, DataSegment>>> entry : intervalToSegmentsUnified) {
-        final Interval interval = entry.left();
-        final List<NonnullPair<QueryableIndex, DataSegment>> segmentsToCompact = entry.right();
+        final Interval interval = entry.lhs;
+        final List<NonnullPair<QueryableIndex, DataSegment>> segmentsToCompact = entry.rhs;
         final DataSchema dataSchema = createDataSchema(
             segmentProvider.dataSource,
             segmentsToCompact,
@@ -651,9 +651,9 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     // check index metadata
     for (NonnullPair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
-      final QueryableIndex index = pair.left();
+      final QueryableIndex index = pair.lhs;
       if (index.getMetadata() == null) {
-        throw new RE("Index metadata doesn't exist for segment[%s]", pair.right().getId());
+        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
       }
     }
 
@@ -661,12 +661,12 @@ public class CompactionTask extends AbstractBatchIndexTask
     // set rollup only if rollup is set for all segments
     final boolean rollup = queryableIndexAndSegments.stream().allMatch(pair -> {
       // We have already checked getMetadata() doesn't return null
-      final Boolean isRollup = pair.left().getMetadata().isRollup();
+      final Boolean isRollup = pair.lhs.getMetadata().isRollup();
       return isRollup != null && isRollup;
     });
 
     final Interval totalInterval = JodaUtils.umbrellaInterval(
-        queryableIndexAndSegments.stream().map(p -> p.right().getInterval()).collect(Collectors.toList())
+        queryableIndexAndSegments.stream().map(p -> p.rhs.getInterval()).collect(Collectors.toList())
     );
 
     final GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -700,7 +700,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final List<AggregatorFactory[]> aggregatorFactories = queryableIndexAndSegments
         .stream()
-        .map(pair -> pair.left().getMetadata().getAggregators()) // We have already done null check on index.getMetadata()
+        .map(pair -> pair.lhs.getMetadata().getAggregators()) // We have already done null check on index.getMetadata()
         .collect(Collectors.toList());
     final AggregatorFactory[] mergedAggregators = AggregatorFactory.mergeAggregators(aggregatorFactories);
 
@@ -729,12 +729,12 @@ public class CompactionTask extends AbstractBatchIndexTask
 
     // sort timelineSegments in order of interval, see https://github.com/apache/druid/pull/9905
     queryableIndices.sort(
-        (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.right().getInterval(), o2.right().getInterval())
+        (o1, o2) -> Comparators.intervalsByStartThenEnd().compare(o1.rhs.getInterval(), o2.rhs.getInterval())
     );
 
     int index = 0;
     for (NonnullPair<QueryableIndex, DataSegment> pair : Lists.reverse(queryableIndices)) {
-      final QueryableIndex queryableIndex = pair.left();
+      final QueryableIndex queryableIndex = pair.lhs;
       final Map<String, DimensionHandler> dimensionHandlerMap = queryableIndex.getDimensionHandlers();
 
       for (String dimension : queryableIndex.getAvailableDimensions()) {
