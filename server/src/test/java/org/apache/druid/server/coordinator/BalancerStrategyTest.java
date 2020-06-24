@@ -19,10 +19,8 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -62,7 +60,7 @@ public class BalancerStrategyTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     this.proposedDataSegment = new DataSegment(
         "datasource1",
@@ -75,25 +73,52 @@ public class BalancerStrategyTest
         0,
         11L
     );
-    final ServerHolder serverHolder = new ServerHolder(new ImmutableDruidServer(
-        new DruidServerMetadata(
-            "server1",
-            "localhost:8081",
-            null,
-            10L,
-            ServerType.HISTORICAL,
-            "_default_tier",
-            0
-        ), 0L, ImmutableMap.of(), 0), new LoadQueuePeonTester());
-    serverHolders = new ArrayList<>();
-    serverHolders.add(serverHolder);
   }
+
 
   @Test
   public void findNewSegmentHomeReplicatorNotEnoughSpace()
   {
-    final ServerHolder serverHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
+    final ServerHolder serverHolder = new ServerHolder(
+        new DruidServer("server1", "host1", null, 10L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
+        new LoadQueuePeonTester());
+    serverHolders = new ArrayList<>();
+    serverHolders.add(serverHolder);
+    final ServerHolder foundServerHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
     // since there is not enough space on server having avaialable size 10L to host a segment of size 11L, it should be null
-    Assert.assertNull(serverHolder);
+    Assert.assertNull(foundServerHolder);
+  }
+
+  @Test(timeout = 5000L)
+  public void findNewSegmentHomeReplicatorNotEnoughNodesForReplication()
+  {
+    final ServerHolder serverHolder1 = new ServerHolder(
+        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
+        new LoadQueuePeonTester());
+
+    final ServerHolder serverHolder2 = new ServerHolder(
+        new DruidServer("server2", "host2", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
+        new LoadQueuePeonTester());
+
+    serverHolders = new ArrayList<>();
+    serverHolders.add(serverHolder1);
+    serverHolders.add(serverHolder2);
+
+    final ServerHolder foundServerHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
+    // since there is not enough nodes to load 3 replicas of segment
+    Assert.assertNull(foundServerHolder);
+  }
+
+  @Test
+  public void findNewSegmentHomeReplicatorEnoughSpace()
+  {
+    final ServerHolder serverHolder = new ServerHolder(
+        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).toImmutableDruidServer(),
+        new LoadQueuePeonTester());
+    serverHolders = new ArrayList<>();
+    serverHolders.add(serverHolder);
+    final ServerHolder foundServerHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
+    // since there is enough space on server it should be selected
+    Assert.assertEquals(serverHolder, foundServerHolder);
   }
 }
