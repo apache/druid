@@ -334,7 +334,7 @@
         "title": "kubernetes"
       },
       "operations/management-uis": {
-        "title": "Management UIs"
+        "title": "Legacy Management UIs"
       },
       "operations/metadata-migration": {
         "title": "Metadata Migration"
