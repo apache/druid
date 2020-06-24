@@ -1104,7 +1104,7 @@ public class RunRulesTest
 
     DataSegment dataSegment = new DataSegment(
         "test",
-        new Interval(0, 1),
+        Intervals.utc(0, 1),
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
         new ArrayList<>(),
@@ -1172,7 +1172,7 @@ public class RunRulesTest
 
     DataSegment dataSegment = new DataSegment(
         "test",
-        new Interval(0, 1),
+        Intervals.utc(0, 1),
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
         new ArrayList<>(),
@@ -1231,7 +1231,7 @@ public class RunRulesTest
 
     DataSegment dataSegment = new DataSegment(
         "test",
-        new Interval(0, 1),
+        Intervals.utc(0, 1),
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
         new ArrayList<>(),
@@ -1291,7 +1291,7 @@ public class RunRulesTest
 
     DataSegment dataSegment = new DataSegment(
         "test",
-        new Interval(0, 1),
+        Intervals.utc(0, 1),
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
         new ArrayList<>(),

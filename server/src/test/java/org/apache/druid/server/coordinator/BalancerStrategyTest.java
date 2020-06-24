@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +48,7 @@ public class BalancerStrategyTest
   {
     return Arrays.asList(
         new Object[][]{
-            {new CostBalancerStrategy(MoreExecutors.sameThreadExecutor())},
+            {new CostBalancerStrategy(Execs.directExecutor())},
             {new RandomBalancerStrategy()}
         }
     );
@@ -64,7 +64,7 @@ public class BalancerStrategyTest
   {
     this.proposedDataSegment = new DataSegment(
         "datasource1",
-        new Interval(0, 1),
+        Intervals.utc(0, 1),
         "",
         new HashMap<>(),
         new ArrayList<>(),
