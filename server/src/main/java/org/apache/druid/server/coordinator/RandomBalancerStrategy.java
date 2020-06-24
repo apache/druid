@@ -35,8 +35,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   @Override
   public ServerHolder findNewSegmentHomeReplicator(DataSegment proposalSegment, List<ServerHolder> serverHolders)
   {
-    // filter out servers whose avaialable size is less than required to serve this segment and those who are already
-    // serving this segment
+    // filter out servers whose avaialable size is less than required for this segment and those already serving this segment
     final List<ServerHolder> usableServerHolders = serverHolders.stream().filter(
         serverHolder -> serverHolder.getAvailableSize() >= proposalSegment.getSize() && !serverHolder.isServingSegment(
             proposalSegment)
