@@ -223,7 +223,9 @@ public class BackgroundCachePopulatorTest
     );
 
     Sequence res = this.backgroundCachePopulator.wrap(this.baseRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()),
-        (value) -> { throw new RuntimeException("Error"); }, cache, cacheKey);
+        (value) -> {
+        throw new RuntimeException("Error");
+      }, cache, cacheKey);
     Assert.assertFalse("sequence must not be closed", closable.isClosed());
     Assert.assertNull("cache must be empty", cache.get(cacheKey));
 

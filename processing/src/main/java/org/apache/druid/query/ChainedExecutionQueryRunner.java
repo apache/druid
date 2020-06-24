@@ -172,6 +172,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (ExecutionException e) {
               GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+              Throwables.propagateIfPossible(e.getCause());
               throw new RuntimeException(e.getCause());
             }
           }
