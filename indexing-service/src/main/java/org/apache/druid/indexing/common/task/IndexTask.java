@@ -108,7 +108,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CircularBuffer;
-import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -489,8 +488,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
 
       final File tmpDir = toolbox.getIndexingTmpDir();
-      // Temporary directory is automatically removed when this IndexTask completes.
-      FileUtils.forceMkdir(tmpDir);
 
       ingestionState = IngestionState.DETERMINE_PARTITIONS;
 

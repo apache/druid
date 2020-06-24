@@ -26,7 +26,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.hash.BloomFilter;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
@@ -59,7 +58,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -202,10 +200,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     Preconditions.checkNotNull(partitionDimension, "partitionDimension required in partitionsSpec");
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
-    final File tmpDir = toolbox.getIndexingTmpDir();
-    // Temporary directory is automatically removed when this IndexTask completes.
-    FileUtils.forceMkdir(tmpDir);
-
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
@@ -223,7 +217,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
                 metricsNames
             ),
             inputFormat,
-            tmpDir
+            toolbox.getIndexingTmpDir()
         )
     );
 
