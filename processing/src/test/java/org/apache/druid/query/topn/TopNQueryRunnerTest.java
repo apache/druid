@@ -647,15 +647,15 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put("market", "spot")
-                        .put("uniques", 0)
+                        .put("uniques", 0d)
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put("market", "total_market")
-                        .put("uniques", 0)
+                        .put("uniques", 0d)
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put("market", "upfront")
-                        .put("uniques", 0)
+                        .put("uniques", 0d)
                         .build()
                 )
             )
