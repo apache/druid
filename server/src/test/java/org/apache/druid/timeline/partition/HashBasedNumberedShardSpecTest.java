@@ -199,6 +199,23 @@ public class HashBasedNumberedShardSpecTest
     );
   }
 
+  @Test
+  public void testSharePartitionSpace()
+  {
+    final HashBasedNumberedShardSpec shardSpec = new HashBasedNumberedShardSpec(
+        1,
+        2,
+        1,
+        3,
+        ImmutableList.of("visitor_id"),
+        ServerTestHelper.MAPPER
+    );
+    Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+  }
+
   public boolean assertExistsInOneSpec(List<ShardSpec> specs, InputRow row)
   {
     for (ShardSpec spec : specs) {

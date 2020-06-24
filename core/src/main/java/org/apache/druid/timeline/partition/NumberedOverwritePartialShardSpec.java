@@ -22,6 +22,7 @@ package org.apache.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 
 public class NumberedOverwritePartialShardSpec implements PartialShardSpec
 {
@@ -39,6 +40,12 @@ public class NumberedOverwritePartialShardSpec implements PartialShardSpec
     this.startRootPartitionId = startRootPartitionId;
     this.endRootPartitionId = endRootPartitionId;
     this.minorVersion = minorVersion;
+  }
+
+  @VisibleForTesting
+  public NumberedOverwritePartialShardSpec(int startRootPartitionId, int endRootPartitionId, int minorVersion)
+  {
+    this(startRootPartitionId, endRootPartitionId, (short)  minorVersion);
   }
 
   @JsonProperty

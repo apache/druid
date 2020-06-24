@@ -30,9 +30,13 @@ import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.SingleDimensionPartialShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -192,6 +196,16 @@ public class NumberedShardSpecTest
         ImmutableList.of(chunk4, chunk0),
         ImmutableSet.of(new OvershadowableString("0", 0), new OvershadowableString("4", 4))
     );
+  }
+
+  @Test
+  public void testSharePartitionSpace()
+  {
+    final NumberedShardSpec shardSpec = new NumberedShardSpec(0, 1);
+    Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 
   private void testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
