@@ -52,7 +52,7 @@ public class ProtobufInputRowParserTest
   public ExpectedException expectedException = ExpectedException.none();
 
   private ParseSpec parseSpec;
-  private ParseSpec flattenParseSpec;
+  private ParseSpec flatParseSpec;
 
   @Before
   public void setUp()
@@ -77,7 +77,7 @@ public class ProtobufInputRowParserTest
         null
     );
 
-    flattenParseSpec = new JSONParseSpec(
+    flatParseSpec = new JSONParseSpec(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(Lists.newArrayList(
                     new StringDimensionSchema("event"),
@@ -172,7 +172,6 @@ public class ProtobufInputRowParserTest
     event.writeTo(out);
 
     InputRow row = parser.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
-    System.out.println(row);
 
     Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
@@ -192,10 +191,10 @@ public class ProtobufInputRowParserTest
   }
 
   @Test
-  public void testParseFlattenData() throws Exception
+  public void testParseFlatData() throws Exception
   {
     //configure parser with desc file
-    ProtobufInputRowParser parser = new ProtobufInputRowParser(flattenParseSpec, "prototest.desc", "ProtoTestEvent");
+    ProtobufInputRowParser parser = new ProtobufInputRowParser(flatParseSpec, "prototest.desc", "ProtoTestEvent");
 
     //create binary of proto test event
     DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());

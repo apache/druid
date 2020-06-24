@@ -69,8 +69,8 @@ public class ProtobufParserBenchmark
 
   private ParseSpec nestedParseSpec;
   private ProtobufInputRowParser nestedParser;
-  private ParseSpec flattenParseSpec;
-  private ProtobufInputRowParser flattenParser;
+  private ParseSpec flatParseSpec;
+  private ProtobufInputRowParser flatParser;
   private byte[] protoInputs;
   private String protoFilePath;
 
@@ -97,7 +97,7 @@ public class ProtobufParserBenchmark
                 null
     );
 
-    flattenParseSpec = new JSONParseSpec(
+    flatParseSpec = new JSONParseSpec(
             new TimestampSpec("timestamp", "iso", null),
             new DimensionsSpec(Lists.newArrayList(
                     new StringDimensionSchema("event"),
@@ -113,16 +113,16 @@ public class ProtobufParserBenchmark
     protoFilePath = "ProtoFile";
     protoInputs = getProtoInputs(protoFilePath);
     nestedParser = new ProtobufInputRowParser(nestedParseSpec, "prototest.desc", "ProtoTestEvent");
-    flattenParser = new ProtobufInputRowParser(flattenParseSpec, "prototest.desc", "ProtoTestEvent");
+    flatParser = new ProtobufInputRowParser(flatParseSpec, "prototest.desc", "ProtoTestEvent");
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void consumeFlattenData(Blackhole blackhole)
+  public void consumeFlatData(Blackhole blackhole)
   {
     for (int i = 0; i < rowsPerSegment; i++) {
-      InputRow row = flattenParser.parseBatch(ByteBuffer.wrap(protoInputs)).get(0);
+      InputRow row = flatParser.parseBatch(ByteBuffer.wrap(protoInputs)).get(0);
       blackhole.consume(row);
     }
   }
