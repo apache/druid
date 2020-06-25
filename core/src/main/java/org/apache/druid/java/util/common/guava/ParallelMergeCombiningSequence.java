@@ -853,34 +853,24 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
      */
     static <E> Yielder<ResultBatch<E>> fromSequence(Sequence<E> sequence, int batchSize)
     {
-      Yielder<ResultBatch<E>> theYielder = null;
-      try {
-        theYielder = sequence.toYielder(
-            new ResultBatch<>(batchSize),
-            new YieldingAccumulator<ResultBatch<E>, E>()
-            {
-              int count = 0;
+      return sequence.toYielder(
+          new ResultBatch<>(batchSize),
+          new YieldingAccumulator<ResultBatch<E>, E>()
+          {
+            int count = 0;
 
-              @Override
-              public ResultBatch<E> accumulate(ResultBatch<E> accumulated, E in)
-              {
-                accumulated.add(in);
-                count++;
-                if (count % batchSize == 0) {
-                  yield();
-                }
-                return accumulated;
+            @Override
+            public ResultBatch<E> accumulate(ResultBatch<E> accumulated, E in)
+            {
+              accumulated.add(in);
+              count++;
+              if (count % batchSize == 0) {
+                yield();
               }
+              return accumulated;
             }
-        );
-        return theYielder;
-      }
-      catch (Exception ex) {
-        if (theYielder != null) {
-          CloseQuietly.close(theYielder);
-        }
-        throw ex;
-      }
+          }
+      );
     }
   }
 
