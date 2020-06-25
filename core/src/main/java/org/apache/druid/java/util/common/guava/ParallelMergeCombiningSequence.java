@@ -31,6 +31,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -950,7 +951,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
 
     @Override
-    public void close()
+    public void close() throws IOException
     {
       // nothing to close for blocking queue, but yielders will need to clean up or they will leak resources
     }
@@ -1045,15 +1046,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
 
     @Override
-    public void close()
+    public void close() throws IOException
     {
       if (yielder != null) {
-        try {
-          yielder.close();
-        }
-        catch (IOException e) {
-          throw new RuntimeException("Failed to close yielder", e);
-        }
+        yielder.close();
       }
     }
   }
@@ -1364,23 +1360,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
   }
 
-  private static <T> void closeAllCursors(final PriorityQueue<BatchedResultsCursor<T>> pQueue)
+  private static <T> void closeAllCursors(final Collection<BatchedResultsCursor<T>> cursors)
   {
     Closer closer = Closer.create();
-    while (!pQueue.isEmpty()) {
-      final BatchedResultsCursor<T> yielder = pQueue.poll();
-      if (yielder != null) {
-        // Note: yielder can be null if our comparator threw an exception during queue.add.
-        closer.register(yielder);
-      }
-    }
-    CloseQuietly.close(closer);
-  }
-
-  private static <T> void closeAllCursors(final List<BatchedResultsCursor<T>> list)
-  {
-    Closer closer = Closer.create();
-    closer.registerAll(list);
+    closer.registerAll(cursors);
     CloseQuietly.close(closer);
   }
 }
