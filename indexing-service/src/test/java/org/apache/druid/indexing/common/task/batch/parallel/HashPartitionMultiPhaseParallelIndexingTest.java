@@ -27,13 +27,16 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,9 +52,12 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPhaseParallelIndexingTest
@@ -128,9 +134,78 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   @Test
   public void testRun() throws Exception
   {
-    final Set<DataSegment> publishedSegments;
+    final Set<DataSegment> publishedSegments = runTestTask(
+        new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+        TaskState.SUCCESS,
+        false
+    );
+    assertHashedPartition(publishedSegments);
+  }
+
+  @Test
+  public void testAppendLinearlyPartitionedSegmensToHashPartitionedDatasourceSuccessfullyAppend()
+  {
+    final Set<DataSegment> publishedSegments = new HashSet<>();
+    publishedSegments.addAll(
+        runTestTask(
+            new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+            TaskState.SUCCESS,
+            false
+        )
+    );
+    // Append
+    publishedSegments.addAll(
+        runTestTask(
+            new DynamicPartitionsSpec(5, null),
+            TaskState.SUCCESS,
+            true
+        )
+    );
+    // And append again
+    publishedSegments.addAll(
+        runTestTask(
+            new DynamicPartitionsSpec(10, null),
+            TaskState.SUCCESS,
+            true
+        )
+    );
+
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    publishedSegments.forEach(
+        segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+    );
+    for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
+      final List<DataSegment> segments = entry.getValue();
+      final List<DataSegment> hashedSegments = segments
+          .stream()
+          .filter(segment -> segment.getShardSpec().getClass() == HashBasedNumberedShardSpec.class)
+          .collect(Collectors.toList());
+      final List<DataSegment> linearSegments = segments
+          .stream()
+          .filter(segment -> segment.getShardSpec().getClass() == NumberedShardSpec.class)
+          .collect(Collectors.toList());
+
+      for (DataSegment hashedSegment : hashedSegments) {
+        final HashBasedNumberedShardSpec hashShardSpec = (HashBasedNumberedShardSpec) hashedSegment.getShardSpec();
+        for (DataSegment linearSegment : linearSegments) {
+          Assert.assertEquals(hashedSegment.getInterval(), linearSegment.getInterval());
+          Assert.assertEquals(hashedSegment.getVersion(), linearSegment.getVersion());
+          final NumberedShardSpec numberedShardSpec = (NumberedShardSpec) linearSegment.getShardSpec();
+          Assert.assertEquals(hashShardSpec.getNumCorePartitions(), numberedShardSpec.getNumCorePartitions());
+          Assert.assertTrue(hashShardSpec.getPartitionNum() < numberedShardSpec.getPartitionNum());
+        }
+      }
+    }
+  }
+
+  private Set<DataSegment> runTestTask(
+      PartitionsSpec partitionsSpec,
+      TaskState expectedTaskState,
+      boolean appendToExisting
+  )
+  {
     if (isUseInputFormatApi()) {
-      publishedSegments = runTestTask(
+      return runTestTask(
           TIMESTAMP_SPEC,
           DIMENSIONS_SPEC,
           INPUT_FORMAT,
@@ -138,12 +213,13 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           INTERVAL_TO_INDEX,
           inputDir,
           "test_*",
-          new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+          partitionsSpec,
           maxNumConcurrentSubTasks,
-          TaskState.SUCCESS
+          expectedTaskState,
+          appendToExisting
       );
     } else {
-      publishedSegments = runTestTask(
+      return runTestTask(
           null,
           null,
           null,
@@ -151,12 +227,12 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
           INTERVAL_TO_INDEX,
           inputDir,
           "test_*",
-          new HashedPartitionsSpec(null, 2, ImmutableList.of("dim1", "dim2")),
+          partitionsSpec,
           maxNumConcurrentSubTasks,
-          TaskState.SUCCESS
+          expectedTaskState,
+          appendToExisting
       );
     }
-    assertHashedPartition(publishedSegments);
   }
 
   private void assertHashedPartition(Set<DataSegment> publishedSegments) throws IOException

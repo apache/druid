@@ -47,6 +47,7 @@ import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -342,8 +343,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final List<DataSegment> segments = segmentProvider.checkAndGetSegments(taskActionClient);
-    return determineLockGranularityandTryLockWithSegments(taskActionClient, segments);
+    final List<DataSegment> segments = segmentProvider.findSegments(taskActionClient);
+    return determineLockGranularityandTryLockWithSegments(taskActionClient, segments, segmentProvider::checkSegments);
   }
 
   @Override
@@ -372,6 +373,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = createIngestionSchema(
         toolbox,
+        getTaskLockHelper().getLockGranularityToUse(),
         segmentProvider,
         partitionConfigurationManager,
         dimensionsSpec,
@@ -480,6 +482,7 @@ public class CompactionTask extends AbstractBatchIndexTask
   @VisibleForTesting
   static List<ParallelIndexIngestionSpec> createIngestionSchema(
       final TaskToolbox toolbox,
+      final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
       final PartitionConfigurationManager partitionConfigurationManager,
       @Nullable final DimensionsSpec dimensionsSpec,
@@ -493,7 +496,8 @@ public class CompactionTask extends AbstractBatchIndexTask
   {
     Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> pair = prepareSegments(
         toolbox,
-        segmentProvider
+        segmentProvider,
+        lockGranularityInUse
     );
     final Map<DataSegment, File> segmentFileMap = pair.lhs;
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = pair.rhs;
@@ -631,10 +635,12 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   private static Pair<Map<DataSegment, File>, List<TimelineObjectHolder<String, DataSegment>>> prepareSegments(
       TaskToolbox toolbox,
-      SegmentProvider segmentProvider
+      SegmentProvider segmentProvider,
+      LockGranularity lockGranularityInUse
   ) throws IOException, SegmentLoadingException
   {
-    final List<DataSegment> usedSegments = segmentProvider.checkAndGetSegments(toolbox.getTaskActionClient());
+    final List<DataSegment> usedSegments = segmentProvider.findSegments(toolbox.getTaskActionClient());
+    segmentProvider.checkSegments(lockGranularityInUse, usedSegments);
     final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = VersionedIntervalTimeline
         .forSegments(usedSegments)
@@ -852,19 +858,21 @@ public class CompactionTask extends AbstractBatchIndexTask
       this.interval = inputSpec.findInterval(dataSource);
     }
 
-    List<DataSegment> checkAndGetSegments(TaskActionClient actionClient) throws IOException
+    List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
     {
-      final List<DataSegment> latestSegments = new ArrayList<>(
+      return new ArrayList<>(
           actionClient.submit(new RetrieveUsedSegmentsAction(dataSource, interval, null, Segments.ONLY_VISIBLE))
       );
+    }
 
-      if (!inputSpec.validateSegments(latestSegments)) {
+    void checkSegments(LockGranularity lockGranularityInUse, List<DataSegment> latestSegments)
+    {
+      if (!inputSpec.validateSegments(lockGranularityInUse, latestSegments)) {
         throw new ISE(
             "Specified segments in the spec are different from the current used segments. "
             + "Possibly new segments would have been added or some segments have been unpublished."
         );
       }
-      return latestSegments;
     }
   }
 

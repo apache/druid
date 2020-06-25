@@ -44,6 +44,7 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.assertj.core.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -60,6 +61,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -1112,5 +1114,50 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     Assert.assertEquals(2, shardSpec.getPartitionNum());
     Assert.assertEquals(0, shardSpec.getNumCorePartitions());
     Assert.assertEquals(3, shardSpec.getNumBuckets());
+  }
+
+  @Test
+  public void testAddNumberedShardSpecAfterSingleDimensionsShardSpecWithUnknownCorePartitionSize() throws IOException
+  {
+    final String datasource = "datasource";
+    final Interval interval = Intervals.of("2020-01-01/P1D");
+    final String version = "version";
+    final List<String> dimensions = ImmutableList.of("dim");
+    final List<String> metrics = ImmutableList.of("met");
+    final Set<DataSegment> originalSegments = new HashSet<>();
+    for (int i = 0; i < 6; i++) {
+      final String start = i == 0 ? null : String.valueOf(i - 1);
+      final String end = i == 5 ? null : String.valueOf(i);
+      originalSegments.add(
+          new DataSegment(
+              datasource,
+              interval,
+              version,
+              ImmutableMap.of(),
+              dimensions,
+              metrics,
+              new SingleDimensionShardSpec(
+                  "dim",
+                  start,
+                  end,
+                  i,
+                  null // emulate shardSpecs created in older versions of Druid
+              ),
+              9,
+              10L
+          )
+      );
+    }
+    coordinator.announceHistoricalSegments(originalSegments);
+    final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
+        datasource,
+        "seq",
+        null,
+        interval,
+        NumberedPartialShardSpec.instance(),
+        version,
+        false
+    );
+    Assert.assertNull(id);
   }
 }

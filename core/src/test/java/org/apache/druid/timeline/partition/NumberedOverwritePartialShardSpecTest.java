@@ -19,31 +19,22 @@
 
 package org.apache.druid.timeline.partition;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class LinearPartialShardSpec implements PartialShardSpec
+public class NumberedOverwritePartialShardSpecTest
 {
-  private static final LinearPartialShardSpec INSTANCE = new LinearPartialShardSpec();
-
-  public static LinearPartialShardSpec instance()
+  @Test
+  public void testUseNonRootGenerationPartitionSpace()
   {
-    return INSTANCE;
+    final NumberedOverwritePartialShardSpec partialShardSpec = new NumberedOverwritePartialShardSpec(0, 1, (short) 1);
+    Assert.assertTrue(partialShardSpec.useNonRootGenerationPartitionSpace());
   }
 
-  private LinearPartialShardSpec()
+  @Test
+  public void tetsGetShardSpecClass()
   {
-  }
-
-  @Override
-  public ShardSpec complete(ObjectMapper objectMapper, int partitionId, int numCorePartitions)
-  {
-    // numCorePartitions is ignored
-    return new LinearShardSpec(partitionId);
-  }
-
-  @Override
-  public Class<? extends ShardSpec> getShardSpecClass()
-  {
-    return LinearShardSpec.class;
+    final NumberedOverwritePartialShardSpec partialShardSpec = new NumberedOverwritePartialShardSpec(0, 1, (short) 1);
+    Assert.assertSame(NumberedOverwriteShardSpec.class, partialShardSpec.getShardSpecClass());
   }
 }

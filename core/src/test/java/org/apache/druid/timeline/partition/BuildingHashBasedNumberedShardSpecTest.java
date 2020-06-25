@@ -31,7 +31,7 @@ import org.junit.Test;
 public class BuildingHashBasedNumberedShardSpecTest
 {
   private final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
-  
+
   @Test
   public void testConvert()
   {

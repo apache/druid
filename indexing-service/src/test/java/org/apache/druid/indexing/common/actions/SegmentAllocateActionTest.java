@@ -47,7 +47,6 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -865,37 +864,6 @@ public class SegmentAllocateActionTest
     taskActionTestKit.getTaskLockbox().add(task);
 
     final SegmentIdWithShardSpec id1 = allocate(task, PARTY_TIME, Granularities.DAY, Granularities.HOUR, "s1", null);
-
-    Assert.assertNull(id1);
-  }
-
-  @Test
-  public void testCannotAddToExistingSingleDimensionShardSpecs() throws Exception
-  {
-    final Task task = NoopTask.create();
-
-    taskActionTestKit.getMetadataStorageCoordinator().announceHistoricalSegments(
-        ImmutableSet.of(
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
-                       .shardSpec(new SingleDimensionShardSpec("foo", null, "bar", 0, 2))
-                       .size(0)
-                       .build(),
-            DataSegment.builder()
-                       .dataSource(DATA_SOURCE)
-                       .interval(Granularities.HOUR.bucket(PARTY_TIME))
-                       .version(PARTY_TIME.toString())
-                       .shardSpec(new SingleDimensionShardSpec("foo", "bar", null, 1, 2))
-                       .size(0)
-                       .build()
-        )
-    );
-
-    taskActionTestKit.getTaskLockbox().add(task);
-
-    final SegmentIdWithShardSpec id1 = allocate(task, PARTY_TIME, Granularities.NONE, Granularities.HOUR, "s1", null);
 
     Assert.assertNull(id1);
   }

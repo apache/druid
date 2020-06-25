@@ -30,7 +30,11 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.SingleDimensionPartialShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -140,6 +144,16 @@ public class SingleDimensionShardSpecTest
     Assert.assertFalse(shard5.possibleInDomain(domain2));
     Assert.assertTrue(shard6.possibleInDomain(domain2));
     Assert.assertTrue(shard7.possibleInDomain(domain2));
+  }
+
+  @Test
+  public void testSharePartitionSpace()
+  {
+    final SingleDimensionShardSpec shardSpec = makeSpec("start", "end");
+    Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 
   private static RangeSet<String> rangeSet(List<Range<String>> ranges)
