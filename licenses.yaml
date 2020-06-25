@@ -1295,7 +1295,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.15.0
+version: 1.17.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -1303,13 +1303,13 @@ libraries:
 notices:
   - avatica-core: |
       Apache Calcite Avatica
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
   - avatica-metrics: |
       Apache Calcite Avatica Metrics
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
   - avatica-server: |
       Apache Calcite Avatica Server
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
 ---
 
 name: Apache Curator

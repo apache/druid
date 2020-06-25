@@ -992,6 +992,36 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   @Test
+  public void testExtendedCharacters() throws Exception
+  {
+    final ResultSet resultSet = client.createStatement().executeQuery(
+        "SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'"
+    );
+    final List<Map<String, Object>> rows = getRows(resultSet);
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 1L)
+        ),
+        rows
+    );
+
+
+    PreparedStatement statement = client.prepareStatement(
+        "SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = ?"
+    );
+    statement.setString(1, "ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ");
+    final ResultSet resultSet2 = statement.executeQuery();
+    final List<Map<String, Object>> rows2 = getRows(resultSet2);
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 1L)
+        ),
+        rows
+    );
+    Assert.assertEquals(rows, rows2);
+  }
+
+  @Test
   public void testEscapingForGetColumns() throws Exception
   {
     final DatabaseMetaData metaData = client.getMetaData();
