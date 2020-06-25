@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -71,7 +70,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Timer;
@@ -359,7 +357,6 @@ public class RealtimeIndexTask extends AbstractTask
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     final Supplier<Committer> committerSupplier = Committers.nilSupplier();
-    final File firehoseTempDir = toolbox.getIndexingTmpDir();
 
     LookupNodeService lookupNodeService = getContextValue(CTX_KEY_LOOKUP_TIER) == null ?
                                           toolbox.getLookupNodeService() :
@@ -383,9 +380,6 @@ public class RealtimeIndexTask extends AbstractTask
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
 
-      // Firehose temporary directory is automatically removed when this RealtimeIndexTask completes.
-      FileUtils.forceMkdir(firehoseTempDir);
-
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
       final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
@@ -395,7 +389,7 @@ public class RealtimeIndexTask extends AbstractTask
         if (!gracefullyStopped) {
           firehose = firehoseFactory.connect(
               Preconditions.checkNotNull(spec.getDataSchema().getParser(), "inputRowParser"),
-              firehoseTempDir
+              toolbox.getIndexingTmpDir()
           );
         }
       }

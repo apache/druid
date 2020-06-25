@@ -192,10 +192,6 @@
             <artifactId>error_prone_annotations</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-utils</artifactId>
-        </dependency>
-        <dependency>
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
         </dependency>

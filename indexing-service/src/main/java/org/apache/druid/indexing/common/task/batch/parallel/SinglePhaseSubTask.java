@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -203,10 +202,6 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         ingestionSchema.getDataSchema().getParser()
     );
 
-    final File tmpDir = toolbox.getIndexingTmpDir();
-    // Firehose temporary directory is automatically removed when this IndexTask completes.
-    FileUtils.forceMkdir(tmpDir);
-
     final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
         getId(),
@@ -218,7 +213,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         toolbox,
         taskClient,
         inputSource,
-        tmpDir
+        toolbox.getIndexingTmpDir()
     );
 
     // Find inputSegments overshadowed by pushedSegments
