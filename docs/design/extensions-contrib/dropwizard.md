@@ -465,19 +465,19 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/dr
   },
   "jvm/bufferpool/counter": {
     "dimensions": [
-      "bufferPoolName"
+      "bufferpoolName"
     ],
     "type": "gauge"
   },
   "jvm/bufferpool/used": {
     "dimensions": [
-      "bufferPoolName"
+      "bufferpoolName"
     ],
     "type": "gauge"
   },
   "jvm/bufferpool/capacity": {
     "dimensions": [
-      "bufferPoolName"
+      "bufferpoolName"
     ],
     "type": "gauge"
   },
