@@ -30,7 +30,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.server.ServerTestHelper;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,6 +42,7 @@ import java.util.stream.IntStream;
 
 public class HashBasedNumberedShardSpecTest
 {
+  private final ObjectMapper objectMapper = ShardSpecTestUtils.initObjectMapper();
   @Test
   public void testEquals()
   {
@@ -56,16 +56,15 @@ public class HashBasedNumberedShardSpecTest
   @Test
   public void testSerdeRoundTrip() throws Exception
   {
-
-    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
-        ServerTestHelper.MAPPER.writeValueAsBytes(
+    final ShardSpec spec = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(
             new HashBasedNumberedShardSpec(
                 1,
                 2,
                 1,
                 3,
                 ImmutableList.of("visitor_id"),
-                ServerTestHelper.MAPPER
+                objectMapper
             )
         ),
         ShardSpec.class
@@ -80,14 +79,14 @@ public class HashBasedNumberedShardSpecTest
   @Test
   public void testSerdeBackwardsCompat() throws Exception
   {
-    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
+    final ShardSpec spec = objectMapper.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1}",
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
     Assert.assertEquals(2, spec.getNumCorePartitions());
 
-    final ShardSpec specWithPartitionDimensions = ServerTestHelper.MAPPER.readValue(
+    final ShardSpec specWithPartitionDimensions = objectMapper.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
         ShardSpec.class
     );
@@ -104,9 +103,9 @@ public class HashBasedNumberedShardSpecTest
   public void testPartitionChunks()
   {
     final List<ShardSpec> specs = ImmutableList.of(
-        new HashBasedNumberedShardSpec(0, 3, 0, 3, null, ServerTestHelper.MAPPER),
-        new HashBasedNumberedShardSpec(1, 3, 1, 3, null, ServerTestHelper.MAPPER),
-        new HashBasedNumberedShardSpec(2, 3, 2, 3, null, ServerTestHelper.MAPPER)
+        new HashBasedNumberedShardSpec(0, 3, 0, 3, null, objectMapper),
+        new HashBasedNumberedShardSpec(1, 3, 1, 3, null, objectMapper),
+        new HashBasedNumberedShardSpec(2, 3, 2, 3, null, objectMapper)
     );
 
     final List<PartitionChunk<String>> chunks = Lists.transform(
@@ -208,7 +207,7 @@ public class HashBasedNumberedShardSpecTest
         1,
         3,
         ImmutableList.of("visitor_id"),
-        ServerTestHelper.MAPPER
+        objectMapper
     );
     Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
     Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
@@ -226,11 +225,11 @@ public class HashBasedNumberedShardSpecTest
     throw new ISE("None of the partition matches");
   }
 
-  public static class HashOverridenShardSpec extends HashBasedNumberedShardSpec
+  public class HashOverridenShardSpec extends HashBasedNumberedShardSpec
   {
     public HashOverridenShardSpec(int partitionNum, int partitions)
     {
-      super(partitionNum, partitions, partitionNum, partitions, null, ServerTestHelper.MAPPER);
+      super(partitionNum, partitions, partitionNum, partitions, null, objectMapper);
     }
 
     @Override
