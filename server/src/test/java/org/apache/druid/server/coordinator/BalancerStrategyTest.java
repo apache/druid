@@ -85,7 +85,7 @@ public class BalancerStrategyTest
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder);
     final ServerHolder foundServerHolder = balancerStrategy.findNewSegmentHomeReplicator(proposedDataSegment, serverHolders);
-    // since there is not enough space on server having avaialable size 10L to host a segment of size 11L, it should be null
+    // since there is not enough space on server having available size 10L to host a segment of size 11L, it should be null
     Assert.assertNull(foundServerHolder);
   }
 
