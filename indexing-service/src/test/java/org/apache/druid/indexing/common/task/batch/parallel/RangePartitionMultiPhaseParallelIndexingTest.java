@@ -225,7 +225,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   }
 
   @Test
-  public void testAppendLinearlyPartitionedSegmensToHashPartitionedDatasourceSuccessfullyAppend()
+  public void testAppendLinearlyPartitionedSegmentsToHashPartitionedDatasourceSuccessfullyAppend()
   {
     if (useMultivalueDim) {
       return;

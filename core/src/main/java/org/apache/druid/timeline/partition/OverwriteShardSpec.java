@@ -46,6 +46,12 @@ public interface OverwriteShardSpec extends ShardSpec
 
   OverwriteShardSpec withAtomicUpdateGroupSize(short atomicUpdateGroupSize);
 
+  /**
+   * Returns true if this shardSpec and the given {@link PartialShardSpec} share the same partition space.
+   * This shardSpec uses non-root-generation partition space and thus does not share the space with other shardSpecs.
+   *
+   * @see PartitionIds
+   */
   @Override
   default boolean sharePartitionSpace(PartialShardSpec partialShardSpec)
   {

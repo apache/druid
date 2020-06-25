@@ -126,7 +126,8 @@ public interface ShardSpec
 
   /**
    * Returns true if this shardSpec and the given {@link PartialShardSpec} share the same partition space.
-   * Any implementation of {@link OverwriteShardSpec} should return true.
+   * All shardSpecs except {@link OverwriteShardSpec} use the root-generation partition space and thus share the same
+   * space.
    *
    * @see PartitionIds
    */
