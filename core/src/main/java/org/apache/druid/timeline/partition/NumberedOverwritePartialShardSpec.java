@@ -45,7 +45,7 @@ public class NumberedOverwritePartialShardSpec implements PartialShardSpec
   @VisibleForTesting
   public NumberedOverwritePartialShardSpec(int startRootPartitionId, int endRootPartitionId, int minorVersion)
   {
-    this(startRootPartitionId, endRootPartitionId, (short)  minorVersion);
+    this(startRootPartitionId, endRootPartitionId, (short) minorVersion);
   }
 
   @JsonProperty
