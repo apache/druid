@@ -133,7 +133,20 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
   /**
    * A lazy iterator populating {@link Sequence} by retrying the query. The first returned sequence is always the base
-   * sequence given in the constructor. Subsequent sequences are created dynamically whenever it retries the query.
+   * sequence given in the constructor. Subsequent sequences are created dynamically whenever it retries the query. All
+   * the sequences populated by this iterator will be merged (not combined) with the base sequence.
+   *
+   * The design of this iterator depends on how {@link MergeSequence} works; the MergeSequence pops an item from
+   * each underlying sequence and pushes them to a {@link java.util.PriorityQueue}. Whenever it pops from the queue,
+   * it pushes a new item from the sequence where the returned item was originally from. Since the first returned
+   * sequence from this iterator is always the base sequence, the MergeSequence will call {@link Sequence#toYielder}
+   * on the base sequence first which in turn initializing query distribution tree. Once this tree is built, the query
+   * nodes (historicals and realtime tasks) will lock all segments to read and report missing segments to the broker.
+   * If there are missing segments reported, this iterator will rewrite the query with those reported segments and
+   * reissue the rewritten query.
+   *
+   * @see org.apache.druid.client.CachingClusteredClient
+   * @see org.apache.druid.client.DirectDruidClient
    */
   private class RetryingSequenceIterator implements Iterator<Sequence<T>>
   {
