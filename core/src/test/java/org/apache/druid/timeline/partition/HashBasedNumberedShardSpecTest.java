@@ -43,6 +43,7 @@ import java.util.stream.IntStream;
 public class HashBasedNumberedShardSpecTest
 {
   private final ObjectMapper objectMapper = ShardSpecTestUtils.initObjectMapper();
+
   @Test
   public void testEquals()
   {
