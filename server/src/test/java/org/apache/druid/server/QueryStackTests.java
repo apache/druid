@@ -178,6 +178,39 @@ public class QueryStackTests
     );
   }
 
+  public static DruidProcessingConfig getDefaultProcessingConfig()
+  {
+    return new DruidProcessingConfig()
+    {
+      @Override
+      public String getFormatString()
+      {
+        return null;
+      }
+
+      @Override
+      public int intermediateComputeSizeBytes()
+      {
+        return COMPUTE_BUFFER_SIZE;
+      }
+
+      @Override
+      public int getNumThreads()
+      {
+        // Only use 1 thread for tests.
+        return 1;
+      }
+
+      @Override
+      public int getNumMergeBuffers()
+      {
+        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
+        // Two buffers for the broker and one for the queryable.
+        return 3;
+      }
+    };
+  }
+
   /**
    * Returns a new {@link QueryRunnerFactoryConglomerate}. Adds relevant closeables to the passed-in {@link Closer}.
    */
@@ -201,35 +234,7 @@ public class QueryStackTests
                 return GroupByStrategySelector.STRATEGY_V2;
               }
             },
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int intermediateComputeSizeBytes()
-              {
-                return COMPUTE_BUFFER_SIZE;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                // Only use 1 thread for tests.
-                return 1;
-              }
-
-              @Override
-              public int getNumMergeBuffers()
-              {
-                // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-                // Two buffers for the broker and one for the queryable.
-                return 3;
-              }
-            }
+            getDefaultProcessingConfig()
         );
 
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory = factoryCloserPair.lhs;

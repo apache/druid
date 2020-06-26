@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext.Key;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -132,6 +133,11 @@ public class ResponseContextTest
         Arrays.asList(interval01, interval12, interval23).toArray(),
         ((List) ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS)).toArray()
     );
+
+    ctx.put(Key.REMAINING_RESPONSES_FROM_QUERY_NODES, 3);
+    ctx.add(Key.REMAINING_RESPONSES_FROM_QUERY_NODES, -1);
+    ctx.add(Key.REMAINING_RESPONSES_FROM_QUERY_NODES, -2);
+    Assert.assertEquals(0, ctx.get(Key.REMAINING_RESPONSES_FROM_QUERY_NODES));
 
     final SegmentDescriptor sd01 = new SegmentDescriptor(interval01, "01", 0);
     ctx.add(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(sd01));

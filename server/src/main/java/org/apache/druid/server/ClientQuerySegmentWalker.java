@@ -396,6 +396,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                 serverConfig,
                 new RetryQueryRunner<>(
                     baseClusterRunner,
+                    clusterClient::getQueryRunnerForSegments,
                     retryConfig,
                     objectMapper
                 )

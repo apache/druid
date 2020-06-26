@@ -766,7 +766,6 @@ public class DruidCoordinator
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
-                   .withBalancerReferenceTimestamp(DateTimes.nowUtc())
                    .build();
     }
 

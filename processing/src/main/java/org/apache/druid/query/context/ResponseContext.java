@@ -113,6 +113,16 @@ public abstract class ResponseContext
             (oldValue, newValue) -> (boolean) oldValue || (boolean) newValue
     ),
     /**
+     * Expected remaining number of responses from query nodes.
+     * The value is initialized in {@code CachingClusteredClient} when it initializes the connection to the query nodes,
+     * and is updated whenever they respond (@code DirectDruidClient). {@code RetryQueryRunner} uses this value to
+     * check if the {@link #MISSING_SEGMENTS} is valid.
+     */
+    REMAINING_RESPONSES_FROM_QUERY_NODES(
+        "remainingResponsesFromQueryNodes",
+            (totalRemaining, numResponses) -> ((Number) totalRemaining).intValue() + ((Number) numResponses).intValue()
+    ),
+    /**
      * Lists missing segments.
      */
     MISSING_SEGMENTS(

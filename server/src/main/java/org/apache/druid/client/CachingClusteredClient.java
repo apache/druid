@@ -65,6 +65,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -618,6 +619,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer
     )
     {
+      responseContext.put(Key.REMAINING_RESPONSES_FROM_QUERY_NODES, segmentsByServer.size());
       segmentsByServer.forEach((server, segmentsOfServer) -> {
         final QueryRunner serverRunner = serverView.getQueryRunner(server);
 

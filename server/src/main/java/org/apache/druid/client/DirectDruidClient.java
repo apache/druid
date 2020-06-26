@@ -86,6 +86,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public static final String QUERY_FAIL_TIME = "queryFailTime";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
+  private static final int VAL_TO_REDUCE_REMAINING_RESPONSES = -1;
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
@@ -232,6 +233,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final boolean continueReading;
           try {
             final String responseContext = response.headers().get(QueryResource.HEADER_RESPONSE_CONTEXT);
+            context.add(ResponseContext.Key.REMAINING_RESPONSES_FROM_QUERY_NODES, VAL_TO_REDUCE_REMAINING_RESPONSES);
             // context may be null in case of error or query timeout
             if (responseContext != null) {
               context.merge(ResponseContext.deserialize(responseContext, objectMapper));
