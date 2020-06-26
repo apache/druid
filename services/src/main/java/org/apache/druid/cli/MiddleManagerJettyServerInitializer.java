@@ -82,6 +82,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
     AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());
+    AuthenticationUtils.addAllowHttpMethodsFilter(root, serverConfig.getAllowedHttpMethods());
 
     JettyServerInitUtils.addExtensionFilters(root, injector);
 

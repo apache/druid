@@ -19,6 +19,7 @@
 
 package org.apache.druid.initialization;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
@@ -51,7 +52,8 @@ public class ServerConfigSerdeTest
         defaultConfig.getUnannouncePropagationDelay(),
         defaultConfig.getInflateBufferSize(),
         defaultConfig.getCompressionLevel(),
-        true
+        true,
+        ImmutableList.of("OPTIONS")
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -59,5 +61,7 @@ public class ServerConfigSerdeTest
     Assert.assertEquals(999, modifiedConfig2.getNumThreads());
     Assert.assertEquals(888, modifiedConfig2.getQueueSize());
     Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
+    Assert.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
+    Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains("OPTIONS"));
   }
 }

@@ -1312,6 +1312,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
+|`druid.server.http.allowedHttpMethods`|List of http methods allowed in addition to the ones needed by Druid. GET, PUT, POST, DELETE and OPTIONS are always allowed. `druid.auth.allowUnauthenticatedHttpOptions` can be used to disable the OPTIONS method.|[]|
 
 #### Indexer Processing Resources
 
