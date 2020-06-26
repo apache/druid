@@ -921,11 +921,12 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 > `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
 
 #### SCHEMATA table
+`INFORMATION_SCHEMA.SCHEMATA` provides a list of all known schemas, which include `druid` for standard Druid `dataSources`, `lookup` for lookups, `sys` for the virtual System metadata tables, and `INFORMATION_SCHEMA` for these tables. Tables are allowed to have the same name across different schemas, so the schema may be included in an SQL statement to distinguish them, e.g. `lookup.table` vs `druid.table`.
 
 |Column|Notes|
 |------|-----|
-|CATALOG_NAME|Unused|
-|SCHEMA_NAME||
+|CATALOG_NAME|Always set as `druid`|
+|SCHEMA_NAME|`druid`, `lookup`, `sys`, or `INFORMATION_SCHEMA`|
 |SCHEMA_OWNER|Unused|
 |DEFAULT_CHARACTER_SET_CATALOG|Unused|
 |DEFAULT_CHARACTER_SET_SCHEMA|Unused|
@@ -933,23 +934,27 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |SQL_PATH|Unused|
 
 #### TABLES table
+`INFORMATION_SCHEMA.TABLES` provides a list of all known tables and schemas.
 
 |Column|Notes|
 |------|-----|
-|TABLE_CATALOG|Always set as 'druid'|
-|TABLE_SCHEMA||
-|TABLE_NAME||
+|TABLE_CATALOG|Always set as `druid`|
+|TABLE_SCHEMA|The 'schema' which the table falls under, see [SCHEMATA table for details](#schemata-table)|
+|TABLE_NAME|Table name. For the `druid` schema, this is the `dataSource`.|
 |TABLE_TYPE|"TABLE" or "SYSTEM_TABLE"|
+|IS_JOINABLE|If a table is directly joinable if on the right hand side of a `JOIN` statement, without performing a subquery, this value will be set to `YES`, otherwise `NO`. Lookups are always joinable because they are globally distributed among Druid query processing nodes, but Druid datasources are not, and will use a less efficient subquery join.|
+|IS_BROADCAST|If a table is 'broadcast' and distributed among all Druid query processing nodes, this value will be set to `YES`, such as lookups and Druid datasources which have a 'broadcast' load rule, else `NO`.|
 
 #### COLUMNS table
+`INFORMATION_SCHEMA.COLUMNS` provides a list of all known columns across all tables and schema.
 
 |Column|Notes|
 |------|-----|
-|TABLE_CATALOG|Always set as 'druid'|
-|TABLE_SCHEMA||
-|TABLE_NAME||
-|COLUMN_NAME||
-|ORDINAL_POSITION||
+|TABLE_CATALOG|Always set as `druid`|
+|TABLE_SCHEMA|The 'schema' which the table column falls under, see [SCHEMATA table for details](#schemata-table)|
+|TABLE_NAME|The 'table' which the column belongs to, see [TABLES table for details](#tables-table)|
+|COLUMN_NAME|The column name|
+|ORDINAL_POSITION|The order in which the column is stored in a table|
 |COLUMN_DEFAULT|Unused|
 |IS_NULLABLE||
 |DATA_TYPE||
