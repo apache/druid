@@ -106,7 +106,7 @@ public class GuavaUtils
     }
     allFuturesToCancel.forEach(f -> {
       try {
-        if(f != null) {
+        if (f != null) {
           f.cancel(mayInterruptIfRunning);
         }
       }
