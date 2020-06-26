@@ -145,6 +145,9 @@ public class OssObjectSummaryIterator implements Iterator<OSSObjectSummary>
 
   /**
    * Checks if a given object is a directory placeholder and should be ignored.
+   *
+   * Based on {@link org.apache.druid.storage.s3.ObjectSummaryIterator} which is adapted from org.jets3t.service.model.StorageObject.isDirectoryPlaceholder().
+   *
    */
   private static boolean isDirectory(final OSSObjectSummary objectSummary)
   {
