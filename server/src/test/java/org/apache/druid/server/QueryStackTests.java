@@ -178,7 +178,7 @@ public class QueryStackTests
     );
   }
 
-  public static DruidProcessingConfig getDefaultProcessingConfig()
+  public static DruidProcessingConfig getProcessingConfig(boolean useParallelMergePoolConfigured)
   {
     return new DruidProcessingConfig()
     {
@@ -208,6 +208,12 @@ public class QueryStackTests
         // Two buffers for the broker and one for the queryable.
         return 3;
       }
+
+      @Override
+      public boolean useParallelMergePoolConfigured()
+      {
+        return useParallelMergePoolConfigured;
+      }
     };
   }
 
@@ -215,6 +221,14 @@ public class QueryStackTests
    * Returns a new {@link QueryRunnerFactoryConglomerate}. Adds relevant closeables to the passed-in {@link Closer}.
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
+  {
+    return createQueryRunnerFactoryConglomerate(closer, true);
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final boolean useParallelMergePoolConfigured
+  )
   {
     final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
@@ -234,7 +248,7 @@ public class QueryStackTests
                 return GroupByStrategySelector.STRATEGY_V2;
               }
             },
-            getDefaultProcessingConfig()
+            getProcessingConfig(useParallelMergePoolConfigured)
         );
 
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory = factoryCloserPair.lhs;

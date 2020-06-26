@@ -64,12 +64,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class RetryQueryRunnerTest
 {
   private static final Closer CLOSER = Closer.create();
   private static final String DATASOURCE = "datasource";
   private static final GeneratorSchemaInfo SCHEMA_INFO = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
+  private static final boolean USE_PARALLEL_MERGE_POOL_CONFIGURED = false;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -86,7 +89,7 @@ public class RetryQueryRunnerTest
 
   public RetryQueryRunnerTest()
   {
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER);
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER, USE_PARALLEL_MERGE_POOL_CONFIGURED);
 
     toolChestWarehouse = new QueryToolChestWarehouse()
     {
@@ -118,7 +121,7 @@ public class RetryQueryRunnerTest
         new ForegroundCachePopulator(objectMapper, new CachePopulatorStats(), 0),
         new CacheConfig(),
         new DruidHttpClientConfig(),
-        QueryStackTests.getDefaultProcessingConfig(),
+        QueryStackTests.getProcessingConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
@@ -151,12 +154,7 @@ public class RetryQueryRunnerTest
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
     Assert.assertEquals(0, queryRunner.getNumTotalRetries());
     Assert.assertFalse(queryResult.isEmpty());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 100L)))
-        ),
-        queryResult
-    );
+    Assert.assertEquals(expectedTimeseriesResult(10), queryResult);
   }
 
   @Test
@@ -175,26 +173,11 @@ public class RetryQueryRunnerTest
 
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
     Assert.assertEquals(1, queryRunner.getNumTotalRetries());
-    Assert.assertFalse(queryResult.isEmpty());
     // Note that we dropped a segment from a server, but it's still announced in the server view.
     // As a result, we may get the full result or not depending on what server will get the retry query.
     // If we hit the same server, the query will return incomplete result.
-    if (queryResult.size() == 2) {
-      Assert.assertEquals(
-          ImmutableList.of(
-              new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 90L))),
-              new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 10)))
-          ),
-          queryResult
-      );
-    } else {
-      Assert.assertEquals(
-          ImmutableList.of(
-              new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 90L)))
-          ),
-          queryResult
-      );
-    }
+    Assert.assertTrue(queryResult.size() > 8);
+    Assert.assertEquals(expectedTimeseriesResult(queryResult.size()), queryResult);
   }
 
   @Test
@@ -203,7 +186,7 @@ public class RetryQueryRunnerTest
     prepareCluster(10);
     final TimeseriesQuery query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
-        newRetryQueryRunnerConfig(Integer.MAX_VALUE, false),
+        newRetryQueryRunnerConfig(100, false), // retry up to 100
         query
     );
     final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query));
@@ -213,13 +196,7 @@ public class RetryQueryRunnerTest
 
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
     Assert.assertTrue(0 < queryRunner.getNumTotalRetries());
-    Assert.assertEquals(
-        ImmutableList.of(
-            new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 90L))),
-            new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 10)))
-        ),
-        queryResult
-    );
+    Assert.assertEquals(expectedTimeseriesResult(10), queryResult);
   }
 
   @Test
@@ -318,6 +295,14 @@ public class RetryQueryRunnerTest
                      )
                  )
                  .build();
+  }
+
+  private static List<Result<TimeseriesResultValue>> expectedTimeseriesResult(int expectedNumResultRows)
+  {
+    return IntStream
+        .range(0, expectedNumResultRows)
+        .mapToObj(i -> new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 10))))
+        .collect(Collectors.toList());
   }
 
   private static DataSegment fromSegmentId(SegmentId segmentId)
