@@ -741,8 +741,7 @@ public class ClientQuerySegmentWalkerTest
   {
     issuedQueries.clear();
 
-    final Sequence<T> resultSequence =
-        QueryPlus.wrap(query).run(walker, ResponseContext.createEmpty());
+    final Sequence<T> resultSequence = QueryPlus.wrap(query).run(walker, ResponseContext.createEmpty());
 
     final List<Object[]> arrays =
         conglomerate.findFactory(query).getToolchest().resultsAsArrays(query, resultSequence).toList();
