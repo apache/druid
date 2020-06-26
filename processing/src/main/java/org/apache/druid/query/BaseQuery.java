@@ -247,7 +247,7 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @Override
-  public Query withId(String id)
+  public Query<T> withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
   }

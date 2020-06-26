@@ -40,6 +40,7 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -619,7 +620,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer
     )
     {
-      responseContext.put(Key.REMAINING_RESPONSES_FROM_QUERY_NODES, segmentsByServer.size());
+      responseContext.add(
+          Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
+          new NonnullPair<>(query.getMostRelevantId(), segmentsByServer.size())
+      );
       segmentsByServer.forEach((server, segmentsOfServer) -> {
         final QueryRunner serverRunner = serverView.getQueryRunner(server);
 

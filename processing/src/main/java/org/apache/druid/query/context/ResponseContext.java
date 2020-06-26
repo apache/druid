@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
@@ -40,6 +41,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 /**
@@ -113,14 +115,28 @@ public abstract class ResponseContext
             (oldValue, newValue) -> (boolean) oldValue || (boolean) newValue
     ),
     /**
-     * Expected remaining number of responses from query nodes.
+     * Map of most relevant query ID to remaining number of responses from query nodes.
      * The value is initialized in {@code CachingClusteredClient} when it initializes the connection to the query nodes,
      * and is updated whenever they respond (@code DirectDruidClient). {@code RetryQueryRunner} uses this value to
      * check if the {@link #MISSING_SEGMENTS} is valid.
+     *
+     * Currently, the broker doesn't run subqueries in parallel, the remaining number of responses will be updated
+     * one by one per subquery. However, since we are planning to parallelize running subqueries, we store them
+     * in a ConcurrentHashMap.
+     *
+     * @see org.apache.druid.query.Query#getMostRelevantId
      */
-    REMAINING_RESPONSES_FROM_QUERY_NODES(
-        "remainingResponsesFromQueryNodes",
-            (totalRemaining, numResponses) -> ((Number) totalRemaining).intValue() + ((Number) numResponses).intValue()
+    REMAINING_RESPONSES_FROM_QUERY_SERVERS(
+        "remainingResponsesFromQueryServers",
+            (totalRemainingPerId, idAndNumResponses) -> {
+              final ConcurrentHashMap<String, Integer> map = (ConcurrentHashMap<String, Integer>) totalRemainingPerId;
+              final NonnullPair<String, Integer> pair = (NonnullPair<String, Integer>) idAndNumResponses;
+              map.compute(
+                  pair.lhs,
+                  (id, remaining) -> remaining == null ? pair.rhs : remaining + pair.rhs
+              );
+              return map;
+            }
     ),
     /**
      * Lists missing segments.

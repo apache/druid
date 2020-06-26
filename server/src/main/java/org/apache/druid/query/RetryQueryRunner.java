@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 public class RetryQueryRunner<T> implements QueryRunner<T>
@@ -52,7 +53,13 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   private final RetryQueryRunnerConfig config;
   private final ObjectMapper jsonMapper;
 
-  private int numTotalRetries;
+  /**
+   * Runnable executed after the broker creates query distribution tree for the first attempt. This is only
+   * for testing and must not be used in production code.
+   */
+  private final Runnable runnableAfterFirstAttempt;
+
+  private int totalNumRetries;
 
   public RetryQueryRunner(
       QueryRunner<T> baseRunner,
@@ -61,22 +68,37 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       ObjectMapper jsonMapper
   )
   {
+    this(baseRunner, retryRunnerCreateFn, config, jsonMapper, () -> {});
+  }
+
+  /**
+   * Constructor only for testing.
+   */
+  @VisibleForTesting
+  RetryQueryRunner(
+      QueryRunner<T> baseRunner,
+      BiFunction<Query<T>, List<SegmentDescriptor>, QueryRunner<T>> retryRunnerCreateFn,
+      RetryQueryRunnerConfig config,
+      ObjectMapper jsonMapper,
+      Runnable runnableAfterFirstAttempt
+  )
+  {
     this.baseRunner = baseRunner;
     this.retryRunnerCreateFn = retryRunnerCreateFn;
     this.config = config;
     this.jsonMapper = jsonMapper;
+    this.runnableAfterFirstAttempt = runnableAfterFirstAttempt;
   }
 
   @VisibleForTesting
-  int getNumTotalRetries()
+  int getTotalNumRetries()
   {
-    return numTotalRetries;
+    return totalNumRetries;
   }
 
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext context)
   {
-    final Sequence<T> baseSequence = baseRunner.run(queryPlus, context);
     return new YieldingSequenceBase<T>()
     {
       @Override
@@ -88,13 +110,13 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
               @Override
               public RetryingSequenceIterator make()
               {
-                return new RetryingSequenceIterator(queryPlus, context, baseSequence);
+                return new RetryingSequenceIterator(queryPlus, context, baseRunner, runnableAfterFirstAttempt);
               }
 
               @Override
               public void cleanup(RetryingSequenceIterator iterFromMake)
               {
-                numTotalRetries = iterFromMake.retryCount;
+                totalNumRetries = iterFromMake.retryCount;
               }
             }
         );
@@ -104,15 +126,22 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
     };
   }
 
-  private List<SegmentDescriptor> getMissingSegments(final ResponseContext context)
+  private List<SegmentDescriptor> getMissingSegments(QueryPlus<T> queryPlus, final ResponseContext context)
   {
     // Sanity check before retrieving missingSegments from responseContext.
     // The missingSegments in the responseContext is only valid when all servers have responded to the broker.
     // The remainingResponses must be not null but 0 in the responseContext at this point.
+    final ConcurrentHashMap<String, Integer> idToRemainingResponses =
+        (ConcurrentHashMap<String, Integer>) Preconditions.checkNotNull(
+            context.get(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS),
+            "%s in responseContext",
+            Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS.getName()
+        );
+
     final int remainingResponses = Preconditions.checkNotNull(
-        (Integer) context.get(Key.REMAINING_RESPONSES_FROM_QUERY_NODES),
-        "%s in responseContext",
-        Key.REMAINING_RESPONSES_FROM_QUERY_NODES.getName()
+        idToRemainingResponses.get(queryPlus.getQuery().getMostRelevantId()),
+        "Number of remaining responses for query[%s]",
+        queryPlus.getQuery().getMostRelevantId()
     );
     if (remainingResponses > 0) {
       throw new ISE("Failed to check missing segments due to missing responds from [%d] servers", remainingResponses);
@@ -133,7 +162,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
   /**
    * A lazy iterator populating {@link Sequence} by retrying the query. The first returned sequence is always the base
-   * sequence given in the constructor. Subsequent sequences are created dynamically whenever it retries the query. All
+   * sequence from the baseQueryRunner. Subsequent sequences are created dynamically whenever it retries the query. All
    * the sequences populated by this iterator will be merged (not combined) with the base sequence.
    *
    * The design of this iterator depends on how {@link MergeSequence} works; the MergeSequence pops an item from
@@ -141,7 +170,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
    * it pushes a new item from the sequence where the returned item was originally from. Since the first returned
    * sequence from this iterator is always the base sequence, the MergeSequence will call {@link Sequence#toYielder}
    * on the base sequence first which in turn initializing query distribution tree. Once this tree is built, the query
-   * nodes (historicals and realtime tasks) will lock all segments to read and report missing segments to the broker.
+   * servers (historicals and realtime tasks) will lock all segments to read and report missing segments to the broker.
    * If there are missing segments reported, this iterator will rewrite the query with those reported segments and
    * reissue the rewritten query.
    *
@@ -152,23 +181,39 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   {
     private final QueryPlus<T> queryPlus;
     private final ResponseContext context;
-    private Sequence<T> sequence;
+    private final QueryRunner<T> baseQueryRunner;
+    private final Runnable runnableAfterFirstAttempt;
+
+    private boolean first = true;
+    private Sequence<T> sequence = null;
     private int retryCount = 0;
 
-    private RetryingSequenceIterator(QueryPlus<T> queryPlus, ResponseContext context, Sequence<T> baseSequence)
+    private RetryingSequenceIterator(
+        QueryPlus<T> queryPlus,
+        ResponseContext context,
+        QueryRunner<T> baseQueryRunner,
+        Runnable runnableAfterFirstAttempt
+    )
     {
       this.queryPlus = queryPlus;
       this.context = context;
-      this.sequence = baseSequence;
+      this.baseQueryRunner = baseQueryRunner;
+      this.runnableAfterFirstAttempt = runnableAfterFirstAttempt;
     }
 
     @Override
     public boolean hasNext()
     {
-      if (sequence != null) {
+      if (first) {
+        sequence = baseQueryRunner.run(queryPlus, context);
+        // runnableAfterFirstAttempt is only for testing, it must be no-op for production code.
+        runnableAfterFirstAttempt.run();
+        first = false;
+        return true;
+      } else if (sequence != null) {
         return true;
       } else {
-        final List<SegmentDescriptor> missingSegments = getMissingSegments(context);
+        final List<SegmentDescriptor> missingSegments = getMissingSegments(queryPlus, context);
         if (missingSegments.isEmpty()) {
           return false;
         } else if (retryCount >= config.getNumTries()) {
@@ -178,7 +223,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
             return false;
           }
         } else {
-          LOG.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), retryCount++);
+          retryCount++;
+          LOG.info("[%,d] missing segments found. Retry attempt [%,d]", missingSegments.size(), retryCount);
 
           context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
           final QueryPlus<T> retryQueryPlus = queryPlus.withQuery(

@@ -40,7 +40,9 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentMissingException;
@@ -63,6 +65,8 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -145,14 +149,15 @@ public class RetryQueryRunnerTest
   public void testNoRetry()
   {
     prepareCluster(10);
-    final TimeseriesQuery query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(1, false),
-        query
+        query,
+        () -> {}
     );
-    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query));
+    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
-    Assert.assertEquals(0, queryRunner.getNumTotalRetries());
+    Assert.assertEquals(0, queryRunner.getTotalNumRetries());
     Assert.assertFalse(queryResult.isEmpty());
     Assert.assertEquals(expectedTimeseriesResult(10), queryResult);
   }
@@ -161,22 +166,23 @@ public class RetryQueryRunnerTest
   public void testRetryForMovedSegment()
   {
     prepareCluster(10);
-    final TimeseriesQuery query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(1, true),
-        query
+        query,
+        () -> {
+          // Let's move a segment
+          dropSegmentFromServerAndAddNewServerForSegment(servers.get(0));
+        }
     );
-    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query));
-
-    // Let's move a segment
-    dropSegmentFromServerAndAddNewServerForSegment(servers.get(0));
+    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
 
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
-    Assert.assertEquals(1, queryRunner.getNumTotalRetries());
+    Assert.assertEquals(1, queryRunner.getTotalNumRetries());
     // Note that we dropped a segment from a server, but it's still announced in the server view.
     // As a result, we may get the full result or not depending on what server will get the retry query.
     // If we hit the same server, the query will return incomplete result.
-    Assert.assertTrue(queryResult.size() > 8);
+    Assert.assertTrue(queryResult.size() == 9 || queryResult.size() == 10);
     Assert.assertEquals(expectedTimeseriesResult(queryResult.size()), queryResult);
   }
 
@@ -184,18 +190,19 @@ public class RetryQueryRunnerTest
   public void testRetryUntilWeGetFullResult()
   {
     prepareCluster(10);
-    final TimeseriesQuery query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(100, false), // retry up to 100
-        query
+        query,
+        () -> {
+          // Let's move a segment
+          dropSegmentFromServerAndAddNewServerForSegment(servers.get(0));
+        }
     );
-    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query));
-
-    // Let's move a segment
-    dropSegmentFromServerAndAddNewServerForSegment(servers.get(0));
+    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
 
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
-    Assert.assertTrue(0 < queryRunner.getNumTotalRetries());
+    Assert.assertTrue(0 < queryRunner.getTotalNumRetries());
     Assert.assertEquals(expectedTimeseriesResult(10), queryResult);
   }
 
@@ -203,13 +210,13 @@ public class RetryQueryRunnerTest
   public void testFailWithPartialResultsAfterRetry()
   {
     prepareCluster(10);
-    final TimeseriesQuery query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(1, false),
-        query
+        query,
+        () -> dropSegmentFromServer(servers.get(0))
     );
-    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query));
-    dropSegmentFromServer(servers.get(0));
+    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
 
     expectedException.expect(SegmentMissingException.class);
     expectedException.expectMessage("No results found for segments");
@@ -217,7 +224,7 @@ public class RetryQueryRunnerTest
       sequence.toList();
     }
     finally {
-      Assert.assertEquals(1, queryRunner.getNumTotalRetries());
+      Assert.assertEquals(1, queryRunner.getTotalNumRetries());
     }
   }
 
@@ -233,6 +240,10 @@ public class RetryQueryRunnerTest
     }
   }
 
+  /**
+   * Drops a segment from the DruidServer. This method doesn't update the server view, but the server will stop
+   * serving queries for the dropped segment.
+   */
   private Pair<SegmentId, QueryableIndex> dropSegmentFromServer(DruidServer fromServer)
   {
     final SimpleServerManager serverManager = httpClient.getServerManager(fromServer);
@@ -240,6 +251,11 @@ public class RetryQueryRunnerTest
     return serverManager.dropSegment();
   }
 
+  /**
+   * Drops a segment from the {@code fromServer} and creates a new server serving the dropped segment.
+   * After this method is called, the broker server view will have 2 servers serving the dropped segment, but
+   * only the new server will actually serve the query.
+   */
   private void dropSegmentFromServerAndAddNewServerForSegment(DruidServer fromServer)
   {
     final Pair<SegmentId, QueryableIndex> pair = dropSegmentFromServer(fromServer);
@@ -252,14 +268,19 @@ public class RetryQueryRunnerTest
     );
   }
 
-  private <T> RetryQueryRunner<T> createQueryRunner(RetryQueryRunnerConfig retryQueryRunnerConfig, Query<T> query)
+  private <T> RetryQueryRunner<T> createQueryRunner(
+      RetryQueryRunnerConfig retryQueryRunnerConfig,
+      Query<T> query,
+      Runnable runnableAfterFirstAttempt
+  )
   {
     final QueryRunner<T> baseRunner = cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals());
     return new RetryQueryRunner<>(
         baseRunner,
         cachingClusteredClient::getQueryRunnerForSegments,
         retryQueryRunnerConfig,
-        objectMapper
+        objectMapper,
+        runnableAfterFirstAttempt
     );
   }
 
@@ -281,7 +302,7 @@ public class RetryQueryRunnerTest
     };
   }
 
-  private static TimeseriesQuery timeseriesQuery(Interval interval)
+  private static Query<Result<TimeseriesResultValue>> timeseriesQuery(Interval interval)
   {
     return Druids.newTimeseriesQueryBuilder()
                  .dataSource(DATASOURCE)
@@ -294,7 +315,15 @@ public class RetryQueryRunnerTest
                          System.currentTimeMillis() + 10000
                      )
                  )
-                 .build();
+                 .build()
+                 .withId(UUID.randomUUID().toString());
+  }
+
+  private ResponseContext responseContext()
+  {
+    final ResponseContext responseContext = ConcurrentResponseContext.createEmpty();
+    responseContext.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    return responseContext;
   }
 
   private static List<Result<TimeseriesResultValue>> expectedTimeseriesResult(int expectedNumResultRows)
