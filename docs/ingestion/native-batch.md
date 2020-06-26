@@ -1342,6 +1342,7 @@ An example SqlInputSource spec is shown below:
             }
         },
         "sqls": ["SELECT * FROM table1 WHERE timestamp BETWEEN '2013-01-01 00:00:00' AND '2013-01-01 11:59:59'", "SELECT * FROM table2 WHERE timestamp BETWEEN '2013-01-01 00:00:00' AND '2013-01-01 11:59:59'"]
+      }
     },
 ...
 ```
