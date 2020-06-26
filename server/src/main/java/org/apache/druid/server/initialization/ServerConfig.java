@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
-import javax.annotation.concurrent.Immutable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -36,7 +35,6 @@ import java.util.zip.Deflater;
 /**
  *
  */
-@Immutable
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;

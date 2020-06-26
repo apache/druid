@@ -40,14 +40,11 @@ import java.util.Set;
 public class AllowHttpMethodsResourceFilter implements Filter
 {
   /**
-   * DRUID always allows GET, POST, PUT, DELETE and OPTIONS methods.
-   *
-   * NOTE: the OPTIONS method is allowed because prior to Druid 0.19, this method can be disabled by using the
-   * {@link AllowOptionsResourceFilter} and is configurable via {@link AuthConfig#allowUnauthenticatedHttpOptions}.
+   * Druid always allows GET, POST, PUT and DELETE methods.
    */
   @VisibleForTesting
   static final List<String> SUPPORTED_METHODS =
-      ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.DELETE, HttpMethod.OPTIONS);
+      ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.DELETE);
 
   private final Set<String> supportedMethods;
 
