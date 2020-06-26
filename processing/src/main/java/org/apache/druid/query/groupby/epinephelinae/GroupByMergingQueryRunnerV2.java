@@ -358,27 +358,27 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
 
       for (AggregateResult result : results) {
         if (!result.isOk()) {
-          GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+          GuavaUtils.cancelAll(true, future, futures);
           throw new ResourceLimitExceededException(result.getReason());
         }
       }
     }
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+      GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {
-      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+      GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
     catch (TimeoutException e) {
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+      GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+      GuavaUtils.cancelAll(true, future, futures);
       throw new RuntimeException(e);
     }
   }

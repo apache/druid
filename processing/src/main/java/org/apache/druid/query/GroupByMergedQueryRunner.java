@@ -178,8 +178,8 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
       IncrementalIndex<?> closeOnFailure
   )
   {
+    ListenableFuture<List<Void>> future = Futures.allAsList(futures);
     try {
-      ListenableFuture<List<Void>> future = Futures.allAsList(futures);
       queryWatcher.registerQueryFuture(query, future);
       if (QueryContexts.hasTimeout(query)) {
         future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
@@ -189,7 +189,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     }
     catch (InterruptedException e) {
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      GuavaUtils.cancelAll(true, futures);
+      GuavaUtils.cancelAll(true, future, futures);
       closeOnFailure.close();
       throw new QueryInterruptedException(e);
     }
@@ -200,11 +200,11 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     catch (TimeoutException e) {
       closeOnFailure.close();
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      GuavaUtils.cancelAll(true, futures);
+      GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      GuavaUtils.cancelAll(true, futures);
+      GuavaUtils.cancelAll(true, future, futures);
       closeOnFailure.close();
       Throwables.propagateIfPossible(e.getCause());
       throw new RuntimeException(e.getCause());

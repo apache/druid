@@ -101,7 +101,7 @@ public class BackgroundCachePopulator implements CachePopulator
                 @Override
                 public void onFailure(Throwable t)
                 {
-                  GuavaUtils.cancelAll(true, cacheFutures);
+                  GuavaUtils.cancelAll(true, null, cacheFutures);
                   log.error(t, "Background caching failed");
                 }
               },

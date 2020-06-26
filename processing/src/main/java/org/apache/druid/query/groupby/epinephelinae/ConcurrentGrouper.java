@@ -363,11 +363,11 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
     }
     catch (InterruptedException | TimeoutException | CancellationException e) {
-      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+      GuavaUtils.cancelAll(true, future, futures);
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+      GuavaUtils.cancelAll(true, future, futures);
       throw new RuntimeException(e.getCause());
     }
   }

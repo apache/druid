@@ -108,7 +108,7 @@ public class GuavaUtilsTest
     }
     catch (Exception e) {
       Assert.assertEquals("java.lang.RuntimeException: A big bug", e.getMessage());
-      GuavaUtils.cancelAll(true, futures);
+      GuavaUtils.cancelAll(true, future, futures);
       Assert.assertEquals(0, futures.stream().filter(f -> !f.isDone()).count());
     }
   }

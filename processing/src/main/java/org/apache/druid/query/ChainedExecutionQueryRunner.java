@@ -159,7 +159,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (InterruptedException e) {
               log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+              GuavaUtils.cancelAll(true, future, futures);
               throw new QueryInterruptedException(e);
             }
             catch (CancellationException e) {
@@ -167,11 +167,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (TimeoutException e) {
               log.warn("Query timeout, cancelling pending results for query id [%s]", query.getId());
-              GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+              GuavaUtils.cancelAll(true, future, futures);
               throw new QueryInterruptedException(e);
             }
             catch (ExecutionException e) {
-              GuavaUtils.cancelAll(true, ImmutableList.<Future>builder().add(future).addAll(futures).build());
+              GuavaUtils.cancelAll(true, future, futures);
               Throwables.propagateIfPossible(e.getCause());
               throw new RuntimeException(e.getCause());
             }

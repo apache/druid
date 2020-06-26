@@ -315,7 +315,7 @@ public class GroupByQueryRunnerFailureTest
           }
         }
     );
-    QueryRunner<ResultRow> _runnnner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
-    GroupByQueryRunnerTestHelper.runQuery(factory, _runnnner, query);
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query);
   }
 }
