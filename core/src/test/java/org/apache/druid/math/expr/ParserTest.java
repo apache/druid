@@ -173,6 +173,18 @@ public class ParserTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testBitwiseOps()
+  {
+    validateFlatten("3 & 1", "(& 3 1)", "1");
+    validateFlatten("3 & 1", "(& 3 1)", "1");
+    validateFlatten("2 & 1", "(& 2 1)", "0");
+    validateFlatten("3 | 1", "(| 3 1)", "3");
+    validateFlatten("2 | 1", "(| 2 1)", "3");
+    validateFlatten("(~1) & 7", "(& ~1 7)", "6");
+    validateFlatten("8 xor 1", "(xor 8 1)", "9");
+  }
+
+  @Test
   public void testIdentifiers()
   {
     validateParser("foo", "foo", ImmutableList.of("foo"), ImmutableSet.of());

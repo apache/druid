@@ -1441,6 +1441,45 @@ class UnaryNotExpr extends UnaryExpr
   }
 }
 
+class UnaryBitwiseNegateExpr extends UnaryExpr
+{
+  UnaryBitwiseNegateExpr(Expr expr)
+  {
+    super(expr);
+  }
+
+  @Override
+  UnaryExpr copy(Expr expr)
+  {
+    return new UnaryBitwiseNegateExpr(expr);
+  }
+
+  @Override
+  public ExprEval eval(ObjectBinding bindings)
+  {
+    ExprEval ret = expr.eval(bindings);
+    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+      return ExprEval.of(null);
+    }
+    if (ret.type().equals(ExprType.LONG)) {
+      return ExprEval.of(~ret.asLong());
+    }
+    throw new IllegalArgumentException("unsupported type " + ret.type());
+  }
+
+  @Override
+  public String stringify()
+  {
+    return StringUtils.format("~%s", expr.stringify());
+  }
+
+  @Override
+  public String toString()
+  {
+    return StringUtils.format("~%s", expr);
+  }
+}
+
 /**
  * Base type for all binary operators, this {@link Expr} has two children {@link Expr} for the left and right side
  * operands.
@@ -1971,6 +2010,82 @@ class BinOrExpr extends BinaryOpExprBase
     ExprEval leftVal = left.eval(bindings);
     return leftVal.asBoolean() ? leftVal : right.eval(bindings);
   }
-
 }
 
+class BinBitwiseAndExpr extends BinaryEvalOpExprBase
+{
+  BinBitwiseAndExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinBitwiseAndExpr(op, left, right);
+  }
+
+  @Override
+  protected final long evalLong(long left, long right)
+  {
+    return left & right;
+  }
+
+  @Override
+  protected final double evalDouble(double left, double right)
+  {
+    throw new IllegalArgumentException("unsupported type " + ExprType.DOUBLE);
+  }
+}
+
+class BinBitwiseOrExpr extends BinaryEvalOpExprBase
+{
+  BinBitwiseOrExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinBitwiseOrExpr(op, left, right);
+  }
+
+  @Override
+  protected final long evalLong(long left, long right)
+  {
+    return left | right;
+  }
+
+  @Override
+  protected final double evalDouble(double left, double right)
+  {
+    throw new IllegalArgumentException("unsupported type " + ExprType.DOUBLE);
+  }
+}
+
+class BinBitwiseXorExpr extends BinaryEvalOpExprBase
+{
+  BinBitwiseXorExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  protected BinaryOpExprBase copy(Expr left, Expr right)
+  {
+    return new BinBitwiseXorExpr(op, left, right);
+  }
+
+  @Override
+  protected final long evalLong(long left, long right)
+  {
+    return left ^ right;
+  }
+
+  @Override
+  protected final double evalDouble(double left, double right)
+  {
+    throw new IllegalArgumentException("unsupported type " + ExprType.DOUBLE);
+  }
+}

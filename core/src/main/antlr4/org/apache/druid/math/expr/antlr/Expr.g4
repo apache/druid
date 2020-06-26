@@ -16,8 +16,9 @@
 grammar Expr;
 
 expr : NULL                                                         # null
-     | ('-'|'!') expr                                               # unaryOpExpr
+     | ('-'|'!'|'~') expr                                           # unaryOpExpr
      |<assoc=right> expr '^' expr                                   # powOpExpr
+     | expr ('&'|'|'|' xor ') expr                                  # bitwiseOpExpr
      | expr ('*'|'/'|'%') expr                                      # mulDivModuloExpr
      | expr ('+'|'-') expr                                          # addSubExpr
      | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr                      # logicalOpExpr
@@ -76,3 +77,7 @@ EQ : '==' ;
 NEQ : '!=' ;
 AND : '&&' ;
 OR : '||' ;
+BITAND : '&' ;
+BITOR : '|' ;
+BITNEG : '~' ;
+BITXOR : ' xor ' ;

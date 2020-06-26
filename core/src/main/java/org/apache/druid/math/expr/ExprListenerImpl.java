@@ -78,6 +78,9 @@ public class ExprListenerImpl extends ExprBaseListener
       case ExprParser.NOT:
         nodes.put(ctx, new UnaryNotExpr((Expr) nodes.get(ctx.getChild(1))));
         break;
+      case ExprParser.BITNEG:
+        nodes.put(ctx, new UnaryBitwiseNegateExpr((Expr) nodes.get(ctx.getChild(1))));
+        break;
       default:
         throw new RE("Unrecognized unary operator %s", ctx.getChild(0).getText());
     }
@@ -298,6 +301,46 @@ public class ExprListenerImpl extends ExprBaseListener
         break;
       default:
         throw new RE("Unrecognized binary operator %s", ctx.getChild(1).getText());
+    }
+  }
+
+  @Override
+  public void exitBitwiseOpExpr(ExprParser.BitwiseOpExprContext ctx)
+  {
+    int opCode = ((TerminalNode) ctx.getChild(1)).getSymbol().getType();
+    switch (opCode) {
+      case ExprParser.BITAND:
+        nodes.put(
+            ctx,
+            new BinBitwiseAndExpr(
+                ctx.getChild(1).getText(),
+                (Expr) nodes.get(ctx.getChild(0)),
+                (Expr) nodes.get(ctx.getChild(2))
+            )
+        );
+        break;
+      case ExprParser.BITOR:
+        nodes.put(
+            ctx,
+            new BinBitwiseOrExpr(
+                ctx.getChild(1).getText(),
+                (Expr) nodes.get(ctx.getChild(0)),
+                (Expr) nodes.get(ctx.getChild(2))
+            )
+        );
+        break;
+      case ExprParser.BITXOR:
+        nodes.put(
+            ctx,
+            new BinBitwiseXorExpr(
+                ctx.getChild(1).getText().trim(),
+                (Expr) nodes.get(ctx.getChild(0)),
+                (Expr) nodes.get(ctx.getChild(2))
+            )
+        );
+        break;
+      default:
+        throw new RE("Unrecognized bitwise operator %s", ctx.getChild(1).getText());
     }
   }
 

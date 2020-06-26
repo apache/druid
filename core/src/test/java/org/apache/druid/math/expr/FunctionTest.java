@@ -496,7 +496,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   {
     // Same types
     assertExpr("least(y, 0)", 0L);
-    assertExpr("least(34.0, z, 5.0, 767.0", 3.1);
+    assertExpr("least(34.0, z, 5.0, 767.0)", 3.1);
     assertExpr("least('B', x, 'A')", "A");
 
     // Different types
