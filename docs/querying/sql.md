@@ -901,7 +901,7 @@ Connection context can be specified as JDBC connection properties or as a "conte
 
 Druid Brokers infer table and column metadata for each datasource from segments loaded in the cluster, and use this to
 plan SQL queries. This metadata is cached on Broker startup and also updated periodically in the background through
-[SegmentMetadata queries](segmentmetadataquery.md). Background metadata refreshing is triggered by
+[SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
 Druid exposes system information through special system tables. There are two such schemas available: Information Schema and Sys Schema.
