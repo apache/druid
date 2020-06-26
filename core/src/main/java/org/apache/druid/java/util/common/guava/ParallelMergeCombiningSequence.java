@@ -343,9 +343,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           spawnParallelTasks(parallelTaskCount);
         }
       }
-      catch (Exception ex) {
+      catch (Throwable t) {
         closeAllCursors(sequenceCursors);
-        cancellationGizmo.cancel(ex);
+        cancellationGizmo.cancel(t);
         out.offer(ResultBatch.TERMINAL);
       }
     }
@@ -641,9 +641,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           LOG.debug("merge combine complete after %s tasks", metricsAccumulator.getTaskCount());
         }
       }
-      catch (Exception ex) {
+      catch (Throwable t) {
         closeAllCursors(pQueue);
-        cancellationGizmo.cancel(ex);
+        cancellationGizmo.cancel(t);
         outputQueue.offer(ResultBatch.TERMINAL);
       }
     }
@@ -731,9 +731,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           outputQueue.offer(ResultBatch.TERMINAL);
         }
       }
-      catch (Exception ex) {
+      catch (Throwable t) {
         closeAllCursors(partition);
-        cancellationGizmo.cancel(ex);
+        cancellationGizmo.cancel(t);
         outputQueue.offer(ResultBatch.TERMINAL);
       }
     }
@@ -1144,21 +1144,21 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class CancellationGizmo
   {
-    private final AtomicReference<Exception> exception = new AtomicReference<>(null);
+    private final AtomicReference<Throwable> throwable = new AtomicReference<>(null);
 
-    void cancel(Exception ex)
+    void cancel(Throwable t)
     {
-      exception.compareAndSet(null, ex);
+      throwable.compareAndSet(null, t);
     }
 
     boolean isCancelled()
     {
-      return exception.get() != null;
+      return throwable.get() != null;
     }
 
     RuntimeException getRuntimeException()
     {
-      Exception ex = exception.get();
+      Throwable ex = throwable.get();
       if (ex instanceof RuntimeException) {
         return (RuntimeException) ex;
       }
