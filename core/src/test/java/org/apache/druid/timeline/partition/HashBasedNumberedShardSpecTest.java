@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
