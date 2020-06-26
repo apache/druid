@@ -37,7 +37,7 @@ This expression language supports the following operators (listed in decreasing 
 |---------|-----------|
 |!, -, ^|Unary NOT, Minus, and bitwise Negate|
 |^|Binary power op|
-|&, &#124;, xor|Bitwise AND, OR, XOR|
+|&, &#124;|Binary bitwise AND, OR|
 |*, /, %|Binary multiplicative|
 |+, -|Binary additive|
 |<, <=, >, >=, ==, !=|Binary Comparison|

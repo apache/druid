@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.common.config.NullHandling;
@@ -1461,10 +1462,7 @@ class UnaryBitwiseNegateExpr extends UnaryExpr
     if (NullHandling.sqlCompatible() && (ret.value() == null)) {
       return ExprEval.of(null);
     }
-    if (ret.type().equals(ExprType.LONG)) {
-      return ExprEval.of(~ret.asLong());
-    }
-    throw new IllegalArgumentException("unsupported type " + ret.type());
+    return ExprEval.of(~ret.asLong());
   }
 
   @Override
@@ -2036,6 +2034,17 @@ class BinBitwiseAndExpr extends BinaryEvalOpExprBase
   {
     throw new IllegalArgumentException("unsupported type " + ExprType.DOUBLE);
   }
+
+  @Override
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
+  {
+    Long l1 = Longs.tryParse(left);
+    Long l2 = Longs.tryParse(right);
+    if (l1 == null || l2 == null) {
+      return ExprEval.of(null);
+    }
+    return ExprEval.of(l1 & l2);
+  }
 }
 
 class BinBitwiseOrExpr extends BinaryEvalOpExprBase
@@ -2062,30 +2071,15 @@ class BinBitwiseOrExpr extends BinaryEvalOpExprBase
   {
     throw new IllegalArgumentException("unsupported type " + ExprType.DOUBLE);
   }
-}
-
-class BinBitwiseXorExpr extends BinaryEvalOpExprBase
-{
-  BinBitwiseXorExpr(String op, Expr left, Expr right)
-  {
-    super(op, left, right);
-  }
 
   @Override
-  protected BinaryOpExprBase copy(Expr left, Expr right)
+  protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return new BinBitwiseXorExpr(op, left, right);
-  }
-
-  @Override
-  protected final long evalLong(long left, long right)
-  {
-    return left ^ right;
-  }
-
-  @Override
-  protected final double evalDouble(double left, double right)
-  {
-    throw new IllegalArgumentException("unsupported type " + ExprType.DOUBLE);
+    Long l1 = Longs.tryParse(left);
+    Long l2 = Longs.tryParse(right);
+    if (l1 == null || l2 == null) {
+      return ExprEval.of(null);
+    }
+    return ExprEval.of(l1 | l2);
   }
 }

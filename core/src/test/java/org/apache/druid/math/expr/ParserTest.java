@@ -181,7 +181,26 @@ public class ParserTest extends InitializedNullHandlingTest
     validateFlatten("3 | 1", "(| 3 1)", "3");
     validateFlatten("2 | 1", "(| 2 1)", "3");
     validateFlatten("(~1) & 7", "(& ~1 7)", "6");
-    validateFlatten("8 xor 1", "(xor 8 1)", "9");
+
+    validateFlatten("'2' & '1'", "(& 2 1)", "0");
+    validateFlatten("'3' | '1'", "(| 3 1)", "3");
+    validateFlatten("(~'1') & 7", "(& ~1 7)", "6");
+  }
+
+  @Test
+  public void testBitwiseDoubleAndExplosion()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("DOUBLE");
+    validateFlatten("3.0 & 1", "(& 3.0 1)", "1");
+  }
+
+  @Test
+  public void testBitwiseDoubleOrExplosion()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("DOUBLE");
+    validateFlatten("3.0 | 1", "(| 3.0 1)", "1");
   }
 
   @Test

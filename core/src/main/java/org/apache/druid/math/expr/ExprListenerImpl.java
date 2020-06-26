@@ -329,16 +329,6 @@ public class ExprListenerImpl extends ExprBaseListener
             )
         );
         break;
-      case ExprParser.BITXOR:
-        nodes.put(
-            ctx,
-            new BinBitwiseXorExpr(
-                ctx.getChild(1).getText().trim(),
-                (Expr) nodes.get(ctx.getChild(0)),
-                (Expr) nodes.get(ctx.getChild(2))
-            )
-        );
-        break;
       default:
         throw new RE("Unrecognized bitwise operator %s", ctx.getChild(1).getText());
     }
