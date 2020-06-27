@@ -37,6 +37,12 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Filters requests based on the HTTP method.
+ *
+ * Any method that is not explicitly allowed by a Druid admin or one of the {@link #SUPPORTED_METHODS} that Druid
+ * requires to operate, will be rejected.
+ */
 public class AllowHttpMethodsResourceFilter implements Filter
 {
   /**
