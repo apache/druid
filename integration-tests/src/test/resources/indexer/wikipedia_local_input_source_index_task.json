@@ -71,7 +71,7 @@
         "filter" : "%%INPUT_SOURCE_FILTER%%",
         "baseDir": "%%INPUT_SOURCE_BASE_DIR%%"
       },
-      "inputFormat": %%AVRO_INPUT_FORMAT%%
+      "inputFormat": %%INPUT_FORMAT%%
     },
     "tuningConfig": {
       "type": "index_parallel",

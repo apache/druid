@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.datasketches.quantiles.UpdateDoublesSketch;
@@ -77,7 +78,7 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
           // This corresponds to "A" in base64, so it is not a digit
           if (objectString.isEmpty()) {
             return DoublesSketchOperations.EMPTY_SKETCH;
-          } else if (Character.isDigit(objectString.charAt(0))) {
+          } else if (StringUtils.isNumeric(objectString)) {
             try {
               double doubleValue = Double.parseDouble(objectString);
               UpdateDoublesSketch sketch = DoublesSketch.builder().setK(MIN_K).build();

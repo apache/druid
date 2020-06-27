@@ -50,10 +50,10 @@ mkdir -p $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
 mv $SHARED_DIR/docker/lib/druid-kinesis-indexing-service-* $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
 # For druid-parquet-extensions
 mkdir -p $SHARED_DIR/docker/extensions/druid-parquet-extensions
-mv $SHARED_DIR/docker/lib/druid-parquet-extensions-* $SHARED_DIR/docker/extensions/druid-parquet-extensions
+cp $SHARED_DIR/docker/lib/druid-parquet-extensions-* $SHARED_DIR/docker/extensions/druid-parquet-extensions
 # For druid-orc-extensions
 mkdir -p $SHARED_DIR/docker/extensions/druid-orc-extensions
-mv $SHARED_DIR/docker/lib/druid-orc-extensions-* $SHARED_DIR/docker/extensions/druid-orc-extensions
+cp $SHARED_DIR/docker/lib/druid-orc-extensions-* $SHARED_DIR/docker/extensions/druid-orc-extensions
 
 # Pull Hadoop dependency if needed
 if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
