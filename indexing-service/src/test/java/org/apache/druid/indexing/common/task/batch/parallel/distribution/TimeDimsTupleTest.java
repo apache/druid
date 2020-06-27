@@ -19,20 +19,14 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
-import com.google.common.hash.Funnel;
-import com.google.common.hash.PrimitiveSink;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-/**
- * Utility class for adding {@link TimeDimTuple}s to a {@link com.google.common.hash.BloomFilter}.
- */
-public enum TimeDimTupleFunnel implements Funnel<TimeDimTuple>
+public class TimeDimsTupleTest
 {
-  INSTANCE;
-
-  @Override
-  public void funnel(TimeDimTuple timeDimTuple, PrimitiveSink into)
+  @Test
+  public void abidesEqualsContract()
   {
-    into.putLong(timeDimTuple.getTimestamp())
-        .putUnencodedChars(timeDimTuple.getDimensionValue());
+    EqualsVerifier.forClass(TimeDimsTuple.class).usingGetClass().verify();
   }
 }

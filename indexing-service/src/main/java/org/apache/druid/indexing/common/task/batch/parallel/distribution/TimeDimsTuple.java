@@ -19,20 +19,21 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
- * Tuple of timestamp and dimension value
+ * Tuple of timestamp and dimension values
  */
-public class TimeDimTuple implements Comparable<TimeDimTuple>
+public class TimeDimsTuple
 {
   private final long timestamp;
-  private final String dimensionValue;
+  private final List<Object> dimensionValues;
 
-  TimeDimTuple(long timestamp, String dimensionValue)
+  TimeDimsTuple(long timestamp, List<Object> dimensionValues)
   {
     this.timestamp = timestamp;
-    this.dimensionValue = dimensionValue;
+    this.dimensionValues = dimensionValues;
   }
 
   public long getTimestamp()
@@ -40,46 +41,37 @@ public class TimeDimTuple implements Comparable<TimeDimTuple>
     return timestamp;
   }
 
-  public String getDimensionValue()
+  public List<Object> getDimensionValues()
   {
-    return dimensionValue;
-  }
-
-  @Override
-  public int compareTo(TimeDimTuple o)
-  {
-    if (timestamp < o.timestamp) {
-      return -1;
-    }
-
-    if (o.timestamp < timestamp) {
-      return 1;
-    }
-
-    return dimensionValue.compareTo(o.dimensionValue);
+    return dimensionValues;
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (!(o instanceof TimeDimTuple)) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    return compareTo((TimeDimTuple) o) == 0;
+    TimeDimsTuple that = (TimeDimsTuple) o;
+    return timestamp == that.timestamp &&
+           Objects.equals(dimensionValues, that.dimensionValues);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(timestamp, dimensionValue);
+    return Objects.hash(timestamp, dimensionValues);
   }
 
   @Override
   public String toString()
   {
-    return "TimeDimTuple{" +
+    return "TimeDimsTuple{" +
            "timestamp=" + timestamp +
-           ", dimensionValue='" + dimensionValue + '\'' +
+           ", dimensionValues=" + dimensionValues +
            '}';
   }
 }

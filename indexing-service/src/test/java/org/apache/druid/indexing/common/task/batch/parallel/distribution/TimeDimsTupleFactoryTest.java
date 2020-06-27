@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -27,40 +28,42 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TimeDimTupleFactoryTest
+import java.util.List;
+
+public class TimeDimsTupleFactoryTest
 {
   private static final Granularity GRANULARITY = Granularities.SECOND;
   private static final DateTime TIMESTAMP = DateTimes.utc(0);
-  private static final String DIMENSION_VALUE = "abc";
+  private static final List<Object> DIMENSIONS = ImmutableList.of("a", ImmutableList.of("m", "z"));
 
-  private TimeDimTupleFactory target;
+  private TimeDimsTupleFactory target;
 
   @Before
   public void setup()
   {
-    target = new TimeDimTupleFactory(GRANULARITY);
+    target = new TimeDimsTupleFactory(GRANULARITY);
   }
 
   @Test
   public void adjustsTimestamps()
   {
-    TimeDimTuple timeDimTuple = target.createWithBucketedTimestamp(TIMESTAMP, DIMENSION_VALUE);
-    Assert.assertEquals(TIMESTAMP.getMillis(), timeDimTuple.getTimestamp());
+    TimeDimsTuple timeDimsTuple = target.createWithBucketedTimestamp(TIMESTAMP, DIMENSIONS);
+    Assert.assertEquals(TIMESTAMP.getMillis(), timeDimsTuple.getTimestamp());
 
-    TimeDimTuple timeDimTuple_plus_1msec = target.createWithBucketedTimestamp(TIMESTAMP.plus(1), DIMENSION_VALUE);
-    Assert.assertEquals(TIMESTAMP.getMillis(), timeDimTuple_plus_1msec.getTimestamp());
+    TimeDimsTuple timeDimsTuple_plus_1Msec = target.createWithBucketedTimestamp(TIMESTAMP.plus(1), DIMENSIONS);
+    Assert.assertEquals(TIMESTAMP.getMillis(), timeDimsTuple_plus_1Msec.getTimestamp());
 
-    TimeDimTuple timeDimTuple_plus_999msec = target.createWithBucketedTimestamp(TIMESTAMP.plus(999), DIMENSION_VALUE);
-    Assert.assertEquals(TIMESTAMP.getMillis(), timeDimTuple_plus_999msec.getTimestamp());
+    TimeDimsTuple timeDimsTuple_plus_999Msec = target.createWithBucketedTimestamp(TIMESTAMP.plus(999), DIMENSIONS);
+    Assert.assertEquals(TIMESTAMP.getMillis(), timeDimsTuple_plus_999Msec.getTimestamp());
 
-    TimeDimTuple timeDimTuple_plus_1sec = target.createWithBucketedTimestamp(TIMESTAMP.plus(1000), DIMENSION_VALUE);
-    Assert.assertEquals(TIMESTAMP.getMillis() + 1000, timeDimTuple_plus_1sec.getTimestamp());
+    TimeDimsTuple timeDimsTuple_plus_1Sec = target.createWithBucketedTimestamp(TIMESTAMP.plus(1000), DIMENSIONS);
+    Assert.assertEquals(TIMESTAMP.getMillis() + 1000, timeDimsTuple_plus_1Sec.getTimestamp());
   }
 
   @Test
-  public void setsDimensionValue()
+  public void setsDimensionValues()
   {
-    TimeDimTuple timeDimTuple = target.createWithBucketedTimestamp(TIMESTAMP, DIMENSION_VALUE);
-    Assert.assertEquals(DIMENSION_VALUE, timeDimTuple.getDimensionValue());
+    TimeDimsTuple timeDimsTuple = target.createWithBucketedTimestamp(TIMESTAMP, DIMENSIONS);
+    Assert.assertEquals(DIMENSIONS, timeDimsTuple.getDimensionValues());
   }
 }

@@ -19,17 +19,18 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.hash.BloomFilter;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TimeDimTupleFunnelTest
+public class TimeDimsTupleFunnelTest
 {
   @Test
   public void worksWithBloomFilter()
   {
-    TimeDimTuple tuple = new TimeDimTuple(1000, "a");
-    BloomFilter<TimeDimTuple> bloomFilter = BloomFilter.create(TimeDimTupleFunnel.INSTANCE, 10);
+    TimeDimsTuple tuple = new TimeDimsTuple(1000, ImmutableList.of("a", ImmutableList.of("m", "z")));
+    BloomFilter<TimeDimsTuple> bloomFilter = BloomFilter.create(TimeDimsTupleFunnel.INSTANCE, 10);
     Assert.assertFalse(bloomFilter.mightContain(tuple));
     bloomFilter.put(tuple);
     Assert.assertTrue(bloomFilter.mightContain(tuple));

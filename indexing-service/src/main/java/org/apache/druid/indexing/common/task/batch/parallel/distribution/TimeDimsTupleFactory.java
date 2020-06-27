@@ -22,21 +22,23 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 
+import java.util.List;
+
 /**
- * Creates {@link TimeDimTuple}s with time stamp adjust according to a {@link Granularity}.
+ * Creates {@link TimeDimsTuple}s with time stamp adjust according to a {@link Granularity}.
  */
-public class TimeDimTupleFactory
+public class TimeDimsTupleFactory
 {
   private final Granularity granularity;
 
-  public TimeDimTupleFactory(Granularity granularity)
+  public TimeDimsTupleFactory(Granularity granularity)
   {
     this.granularity = granularity;
   }
 
-  public TimeDimTuple createWithBucketedTimestamp(DateTime timestamp, String dimensionValue)
+  public TimeDimsTuple createWithBucketedTimestamp(DateTime timestamp, List<Object> dimensionValues)
   {
-    return new TimeDimTuple(getBucketTimestamp(timestamp), dimensionValue);
+    return new TimeDimsTuple(getBucketTimestamp(timestamp), dimensionValues);
   }
 
   private long getBucketTimestamp(DateTime dateTime)
