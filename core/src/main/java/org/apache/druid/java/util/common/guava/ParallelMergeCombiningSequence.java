@@ -22,13 +22,16 @@ package org.apache.druid.java.util.common.guava;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -300,6 +303,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     protected void compute()
     {
+      List<BatchedResultsCursor<T>> sequenceCursors = new ArrayList<>(sequences.size());
       try {
         final int parallelTaskCount = computeNumTasks();
 
@@ -315,7 +319,6 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
           QueuePusher<ResultBatch<T>> resultsPusher = new QueuePusher<>(out, hasTimeout, timeoutAt);
 
-          List<BatchedResultsCursor<T>> sequenceCursors = new ArrayList<>(sequences.size());
           for (Sequence<T> s : sequences) {
             sequenceCursors.add(new YielderBatchedResultsCursor<>(new SequenceBatcher<>(s, batchSize), orderingFn));
           }
@@ -340,8 +343,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           spawnParallelTasks(parallelTaskCount);
         }
       }
-      catch (Exception ex) {
-        cancellationGizmo.cancel(ex);
+      catch (Throwable t) {
+        closeAllCursors(sequenceCursors);
+        cancellationGizmo.cancel(t);
         out.offer(ResultBatch.TERMINAL);
       }
     }
@@ -624,6 +628,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           // if we got the cancellation signal, go ahead and write terminal value into output queue to help gracefully
           // allow downstream stuff to stop
           LOG.debug("cancelled after %s tasks", metricsAccumulator.getTaskCount());
+          // make sure to close underlying cursors
+          closeAllCursors(pQueue);
           outputQueue.offer(ResultBatch.TERMINAL);
         } else {
           // if priority queue is empty, push the final accumulated value into the output batch and push it out
@@ -635,8 +641,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           LOG.debug("merge combine complete after %s tasks", metricsAccumulator.getTaskCount());
         }
       }
-      catch (Exception ex) {
-        cancellationGizmo.cancel(ex);
+      catch (Throwable t) {
+        closeAllCursors(pQueue);
+        cancellationGizmo.cancel(t);
         outputQueue.offer(ResultBatch.TERMINAL);
       }
     }
@@ -695,13 +702,15 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     protected void compute()
     {
+      PriorityQueue<BatchedResultsCursor<T>> cursors = new PriorityQueue<>(partition.size());
       try {
-        PriorityQueue<BatchedResultsCursor<T>> cursors = new PriorityQueue<>(partition.size());
         for (BatchedResultsCursor<T> cursor : partition) {
           // this is blocking
           cursor.initialize();
           if (!cursor.isDone()) {
             cursors.offer(cursor);
+          } else {
+            cursor.close();
           }
         }
 
@@ -722,8 +731,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           outputQueue.offer(ResultBatch.TERMINAL);
         }
       }
-      catch (Exception ex) {
-        cancellationGizmo.cancel(ex);
+      catch (Throwable t) {
+        closeAllCursors(partition);
+        cancellationGizmo.cancel(t);
         outputQueue.offer(ResultBatch.TERMINAL);
       }
     }
@@ -849,6 +859,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           new YieldingAccumulator<ResultBatch<E>, E>()
           {
             int count = 0;
+
             @Override
             public ResultBatch<E> accumulate(ResultBatch<E> accumulated, E in)
             {
@@ -913,7 +924,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    * from these cursors, and combine results with the same ordering using the combining function.
    */
   abstract static class BatchedResultsCursor<E>
-      implements ForkJoinPool.ManagedBlocker, Comparable<BatchedResultsCursor<E>>
+      implements ForkJoinPool.ManagedBlocker, Comparable<BatchedResultsCursor<E>>, Closeable
   {
     final Ordering<E> ordering;
     volatile ResultBatch<E> resultBatch;
@@ -939,7 +950,8 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
 
-    public void close()
+    @Override
+    public void close() throws IOException
     {
       // nothing to close for blocking queue, but yielders will need to clean up or they will leak resources
     }
@@ -1034,13 +1046,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     }
 
     @Override
-    public void close()
+    public void close() throws IOException
     {
-      try {
+      if (yielder != null) {
         yielder.close();
-      }
-      catch (IOException e) {
-        throw new RuntimeException("Failed to close yielder", e);
       }
     }
   }
@@ -1135,21 +1144,21 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class CancellationGizmo
   {
-    private final AtomicReference<Exception> exception = new AtomicReference<>(null);
+    private final AtomicReference<Throwable> throwable = new AtomicReference<>(null);
 
-    void cancel(Exception ex)
+    void cancel(Throwable t)
     {
-      exception.compareAndSet(null, ex);
+      throwable.compareAndSet(null, t);
     }
 
     boolean isCancelled()
     {
-      return exception.get() != null;
+      return throwable.get() != null;
     }
 
     RuntimeException getRuntimeException()
     {
-      Exception ex = exception.get();
+      Throwable ex = throwable.get();
       if (ex instanceof RuntimeException) {
         return (RuntimeException) ex;
       }
@@ -1349,5 +1358,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     {
       return totalCpuTimeNanos;
     }
+  }
+
+  private static <T> void closeAllCursors(final Collection<BatchedResultsCursor<T>> cursors)
+  {
+    Closer closer = Closer.create();
+    closer.registerAll(cursors);
+    CloseQuietly.close(closer);
   }
 }

@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.inject.Provider;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -305,7 +306,14 @@ public class TaskToolbox
 
   public File getIndexingTmpDir()
   {
-    return new File(taskWorkDir, "indexing-tmp");
+    final File tmpDir = new File(taskWorkDir, "indexing-tmp");
+    try {
+      FileUtils.forceMkdir(tmpDir);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return tmpDir;
   }
 
   public File getMergeDir()

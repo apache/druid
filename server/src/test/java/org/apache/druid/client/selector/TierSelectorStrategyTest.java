@@ -111,6 +111,80 @@ public class TierSelectorStrategyTest
     );
   }
 
+  @Test
+  public void testEmptyCustomPriorityTierSelectorStrategy()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    QueryableDruidServer lowPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
+        client
+    );
+    QueryableDruidServer mediumPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        client
+    );
+    QueryableDruidServer highPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+        client
+    );
+
+    testTierSelectorStrategy(
+        new CustomTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            new CustomTierSelectorStrategyConfig()
+            {
+              @Override
+              public List<Integer> getPriorities()
+              {
+                return new ArrayList<>();
+              }
+            }
+        ),
+        highPriority, mediumPriority, lowPriority
+    );
+  }
+
+  @Test
+  public void testIncompleteCustomPriorityTierSelectorStrategy()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    QueryableDruidServer p0 = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, -1),
+        client
+    );
+    QueryableDruidServer p1 = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0),
+        client
+    );
+    QueryableDruidServer p2 = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 1),
+        client
+    );
+    QueryableDruidServer p3 = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 2),
+        client
+    );
+    QueryableDruidServer p4 = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 3),
+        client
+    );
+
+    testTierSelectorStrategy(
+        new CustomTierSelectorStrategy(
+            new ConnectionCountServerSelectorStrategy(),
+            new CustomTierSelectorStrategyConfig()
+            {
+              @Override
+              public List<Integer> getPriorities()
+              {
+                return Arrays.asList(2, 0, -1);
+              }
+            }
+        ),
+        p3, p1, p0, p4, p2
+    );
+  }
+
   private void testTierSelectorStrategy(
       TierSelectorStrategy tierSelectorStrategy,
       QueryableDruidServer... expectedSelection

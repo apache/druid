@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -100,7 +99,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -280,7 +278,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     this.metrics = fireDepartmentForMetrics.getMetrics();
 
     final Supplier<Committer> committerSupplier = Committers.nilSupplier();
-    final File firehoseTempDir = toolbox.getIndexingTmpDir();
 
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
@@ -332,9 +329,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
 
-      // Firehose temporary directory is automatically removed when this RealtimeIndexTask completes.
-      FileUtils.forceMkdir(firehoseTempDir);
-
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
       final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
@@ -359,7 +353,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         if (!gracefullyStopped) {
           firehose = firehoseFactory.connect(
               Preconditions.checkNotNull(spec.getDataSchema().getParser(), "inputRowParser"),
-              firehoseTempDir
+              toolbox.getIndexingTmpDir()
           );
         }
       }

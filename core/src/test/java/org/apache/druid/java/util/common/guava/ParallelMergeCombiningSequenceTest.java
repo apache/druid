@@ -40,6 +40,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 
@@ -63,6 +64,9 @@ public class ParallelMergeCombiningSequenceTest
 
   private ForkJoinPool pool;
 
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Before
   public void setup()
   {
@@ -80,8 +84,6 @@ public class ParallelMergeCombiningSequenceTest
     pool.shutdown();
   }
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testOrderedResultBatchFromSequence() throws IOException
@@ -448,12 +450,21 @@ public class ParallelMergeCombiningSequenceTest
         "exploded"
     );
     assertException(input);
+  }
 
+  @Test
+  public void testExceptionOnInputSequenceRead2() throws Exception
+  {
+    List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(25));
     input.add(explodingSequence(11));
     input.add(nonBlockingSequence(12));
 
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage(
+        "exploded"
+    );
     assertException(input);
   }
 
@@ -653,6 +664,12 @@ public class ParallelMergeCombiningSequenceTest
       parallelMergeCombineYielder.close();
     }
     catch (Exception ex) {
+      sequences.forEach(sequence -> {
+        if (sequence instanceof ExplodingSequence) {
+          ExplodingSequence exploder = (ExplodingSequence) sequence;
+          Assert.assertEquals(1, exploder.getCloseCount());
+        }
+      });
       LOG.warn(ex, "exception:");
       throw ex;
     }
@@ -808,42 +825,60 @@ public class ParallelMergeCombiningSequenceTest
   private static Sequence<IntPair> explodingSequence(int explodeAfter)
   {
     final int explodeAt = explodeAfter + 1;
-    return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
-        {
-          @Override
-          public Iterator<IntPair> make()
+
+    // we start at one because we only need to close if the sequence is actually made
+    AtomicInteger explodedIteratorMakerCleanup = new AtomicInteger(1);
+
+    // just hijacking this class to use it's interface... which i override..
+    return new ExplodingSequence(
+        new BaseSequence<>(
+          new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
           {
-            return new Iterator<IntPair>()
+            @Override
+            public Iterator<IntPair> make()
             {
-              int mergeKey = 0;
-              int rowCounter = 0;
-              @Override
-              public boolean hasNext()
+              // we got yielder, decrement so we expect it to be incremented again on cleanup
+              explodedIteratorMakerCleanup.decrementAndGet();
+              return new Iterator<IntPair>()
               {
-                return rowCounter < explodeAt;
-              }
-
-              @Override
-              public IntPair next()
-              {
-                if (rowCounter == explodeAfter) {
-                  throw new RuntimeException("exploded");
+                int mergeKey = 0;
+                int rowCounter = 0;
+                @Override
+                public boolean hasNext()
+                {
+                  return rowCounter < explodeAt;
                 }
-                mergeKey += incrementMergeKeyAmount();
-                rowCounter++;
-                return makeIntPair(mergeKey);
-              }
-            };
-          }
 
-          @Override
-          public void cleanup(Iterator<IntPair> iterFromMake)
-          {
-            // nothing to cleanup
+                @Override
+                public IntPair next()
+                {
+                  if (rowCounter == explodeAfter) {
+                    throw new RuntimeException("exploded");
+                  }
+                  mergeKey += incrementMergeKeyAmount();
+                  rowCounter++;
+                  return makeIntPair(mergeKey);
+                }
+              };
+            }
+
+            @Override
+            public void cleanup(Iterator<IntPair> iterFromMake)
+            {
+              explodedIteratorMakerCleanup.incrementAndGet();
+            }
           }
-        }
-    );
+        ),
+        false,
+        false
+    )
+    {
+      @Override
+      public long getCloseCount()
+      {
+        return explodedIteratorMakerCleanup.get();
+      }
+    };
   }
 
   private static List<IntPair> generateOrderedPairs(int length)
