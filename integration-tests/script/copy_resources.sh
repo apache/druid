@@ -49,9 +49,11 @@ mv $SHARED_DIR/docker/lib/druid-hdfs-storage-* $SHARED_DIR/docker/extensions/dru
 mkdir -p $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
 mv $SHARED_DIR/docker/lib/druid-kinesis-indexing-service-* $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
 # For druid-parquet-extensions
+# Using cp so that this extensions is included when running Druid without loadList and as a option for the loadList
 mkdir -p $SHARED_DIR/docker/extensions/druid-parquet-extensions
 cp $SHARED_DIR/docker/lib/druid-parquet-extensions-* $SHARED_DIR/docker/extensions/druid-parquet-extensions
 # For druid-orc-extensions
+# Using cp so that this extensions is included when running Druid without loadList and as a option for the loadList
 mkdir -p $SHARED_DIR/docker/extensions/druid-orc-extensions
 cp $SHARED_DIR/docker/lib/druid-orc-extensions-* $SHARED_DIR/docker/extensions/druid-orc-extensions
 
