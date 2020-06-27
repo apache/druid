@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
@@ -29,10 +28,12 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexer.partitions.DimensionBasedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.QueryPlus;
@@ -69,6 +70,8 @@ import java.util.Set;
 @SuppressWarnings("SameParameterValue")
 abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIndexSupervisorTaskTest
 {
+  protected static final String DATASOURCE = "dataSource";
+
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
       new ScanQueryQueryToolChest(
           new ScanQueryConfig().setLegacy(false),
@@ -85,6 +88,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     this.lockGranularity = lockGranularity;
     this.useInputFormatApi = useInputFormatApi;
+    getObjectMapper().registerSubtypes(ParallelIndexTuningConfig.class, DruidInputSource.class);
   }
 
   boolean isUseInputFormatApi()
@@ -100,9 +104,38 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Interval interval,
       File inputDir,
       String filter,
-      DimensionBasedPartitionsSpec partitionsSpec,
+      PartitionsSpec partitionsSpec,
       int maxNumConcurrentSubTasks,
       TaskState expectedTaskStatus
+  )
+  {
+    return runTestTask(
+        timestampSpec,
+        dimensionsSpec,
+        inputFormat,
+        parseSpec,
+        interval,
+        inputDir,
+        filter,
+        partitionsSpec,
+        maxNumConcurrentSubTasks,
+        expectedTaskStatus,
+        false
+    );
+  }
+
+  Set<DataSegment> runTestTask(
+      @Nullable TimestampSpec timestampSpec,
+      @Nullable DimensionsSpec dimensionsSpec,
+      @Nullable InputFormat inputFormat,
+      @Nullable ParseSpec parseSpec,
+      Interval interval,
+      File inputDir,
+      String filter,
+      PartitionsSpec partitionsSpec,
+      int maxNumConcurrentSubTasks,
+      TaskState expectedTaskStatus,
+      boolean appendToExisting
   )
   {
     final ParallelIndexSupervisorTask task = newTask(
@@ -114,53 +147,19 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         inputDir,
         filter,
         partitionsSpec,
-        maxNumConcurrentSubTasks
+        maxNumConcurrentSubTasks,
+        appendToExisting
     );
 
     return runTask(task, expectedTaskStatus);
   }
 
-  Set<DataSegment> runTask(ParallelIndexSupervisorTask task, TaskState expectedTaskStatus)
+  Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
     Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
     return getIndexingServiceClient().getPublishedSegments(task);
-  }
-
-  ParallelIndexTuningConfig newTuningConfig(
-      DimensionBasedPartitionsSpec partitionsSpec,
-      int maxNumConcurrentSubTasks
-  )
-  {
-    return new ParallelIndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new MaxSizeSplitHintSpec(1L), // set maxSplitSize to 1 so that each split has only one file.
-        partitionsSpec,
-        null,
-        null,
-        null,
-        true,
-        null,
-        null,
-        null,
-        null,
-        maxNumConcurrentSubTasks,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
   }
 
   private ParallelIndexSupervisorTask newTask(
@@ -171,8 +170,9 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Interval interval,
       File inputDir,
       String filter,
-      DimensionBasedPartitionsSpec partitionsSpec,
-      int maxNumConcurrentSubTasks
+      PartitionsSpec partitionsSpec,
+      int maxNumConcurrentSubTasks,
+      boolean appendToExisting
   )
   {
     GranularitySpec granularitySpec = new UniformGranularitySpec(
@@ -181,7 +181,11 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
         interval == null ? null : Collections.singletonList(interval)
     );
 
-    ParallelIndexTuningConfig tuningConfig = newTuningConfig(partitionsSpec, maxNumConcurrentSubTasks);
+    ParallelIndexTuningConfig tuningConfig = newTuningConfig(
+        partitionsSpec,
+        maxNumConcurrentSubTasks,
+        !appendToExisting
+    );
 
     final ParallelIndexIngestionSpec ingestionSpec;
 
@@ -191,11 +195,11 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           null,
           new LocalInputSource(inputDir, filter),
           inputFormat,
-          false
+          appendToExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
-              "dataSource",
+              DATASOURCE,
               timestampSpec,
               dimensionsSpec,
               new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
@@ -209,7 +213,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
       Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
           new LocalFirehoseFactory(inputDir, filter, null),
-          false
+          appendToExisting
       );
       //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(

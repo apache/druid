@@ -85,14 +85,14 @@ public class HashBasedNumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getNumCorePartitions());
+    Assert.assertEquals(2, spec.getNumCorePartitions());
 
     final ShardSpec specWithPartitionDimensions = ServerTestHelper.MAPPER.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
         ShardSpec.class
     );
     Assert.assertEquals(1, specWithPartitionDimensions.getPartitionNum());
-    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumCorePartitions());
+    Assert.assertEquals(2, specWithPartitionDimensions.getNumCorePartitions());
     Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumBuckets());
     Assert.assertEquals(
         ImmutableList.of("visitor_id"),
@@ -197,6 +197,23 @@ public class HashBasedNumberedShardSpecTest
         // empty list when partitionDimensions is null
         HashBasedNumberedShardSpec.getGroupKey(ImmutableList.of(), time.getMillis(), inputRow).toString()
     );
+  }
+
+  @Test
+  public void testSharePartitionSpace()
+  {
+    final HashBasedNumberedShardSpec shardSpec = new HashBasedNumberedShardSpec(
+        1,
+        2,
+        1,
+        3,
+        ImmutableList.of("visitor_id"),
+        ServerTestHelper.MAPPER
+    );
+    Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 
   public boolean assertExistsInOneSpec(List<ShardSpec> specs, InputRow row)

@@ -241,7 +241,7 @@ public class SchemaEvolutionTest
 
     // index1 has no "uniques" column
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("uniques", 0)),
+        timeseriesResult(ImmutableMap.of("uniques", 0d)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 

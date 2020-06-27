@@ -206,12 +206,6 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
   }
 
   @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    return other == NumberedOverwriteShardSpec.class || other == NumberedShardSpec.class;
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

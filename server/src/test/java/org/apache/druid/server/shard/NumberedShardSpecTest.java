@@ -30,10 +30,13 @@ import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
+import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.SingleDimensionPartialShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -60,7 +63,7 @@ public class NumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) spec).getNumCorePartitions());
+    Assert.assertEquals(2, spec.getNumCorePartitions());
   }
 
   @Test
@@ -71,7 +74,7 @@ public class NumberedShardSpecTest
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) spec).getNumCorePartitions());
+    Assert.assertEquals(2, spec.getNumCorePartitions());
   }
 
   @Test
@@ -195,6 +198,16 @@ public class NumberedShardSpecTest
     );
   }
 
+  @Test
+  public void testSharePartitionSpace()
+  {
+    final NumberedShardSpec shardSpec = new NumberedShardSpec(0, 1);
+    Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
+    Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+  }
+
   private void testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
       List<PartitionChunk<OvershadowableString>> chunks,
       Set<OvershadowableString> expectedObjects
@@ -215,14 +228,6 @@ public class NumberedShardSpecTest
       }
     }
     Assert.assertEquals(expectedObjects, actualObjects);
-  }
-
-  @Test
-  public void testCompatible()
-  {
-    final NumberedShardSpec spec = new NumberedShardSpec(0, 0);
-    Assert.assertTrue(spec.isCompatible(NumberedShardSpec.class));
-    Assert.assertTrue(spec.isCompatible(NumberedOverwriteShardSpec.class));
   }
 
   private static final class OvershadowableString implements Overshadowable<OvershadowableString>

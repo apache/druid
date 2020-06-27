@@ -95,7 +95,7 @@ public class GroupByQueryConfig
   private int numParallelCombineThreads = 1;
 
   @JsonProperty
-  private boolean vectorize = false;
+  private boolean vectorize = true;
 
   public String getDefaultStrategy()
   {

@@ -21,14 +21,28 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.hamcrest.Matchers;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -144,6 +158,84 @@ public class ParallelIndexSupervisorTaskTest
                                                          .collect(Collectors.toList());
 
       Assert.assertEquals(expectedIds, actualIds);
+    }
+  }
+
+  public static class ConstructorTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    @Test
+    public void testFailToConstructWhenBothAppendToExistingAndForceGuaranteedRollupAreSet()
+    {
+      final boolean appendToExisting = true;
+      final boolean forceGuaranteedRollup = true;
+      final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
+          null,
+          new InlineInputSource("test"),
+          new JsonInputFormat(null, null, null),
+          appendToExisting
+      );
+      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
+          null,
+          null,
+          10,
+          1000L,
+          null,
+          null,
+          null,
+          new HashedPartitionsSpec(null, 10, null),
+          new IndexSpec(
+              new RoaringBitmapSerdeFactory(true),
+              CompressionStrategy.UNCOMPRESSED,
+              CompressionStrategy.LZF,
+              LongEncodingStrategy.LONGS
+          ),
+          new IndexSpec(),
+          1,
+          forceGuaranteedRollup,
+          true,
+          10000L,
+          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+          null,
+          10,
+          100,
+          20L,
+          new Duration(3600),
+          128,
+          null,
+          null,
+          false,
+          null,
+          null
+      );
+      final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
+          new DataSchema(
+              "datasource",
+              new TimestampSpec(null, null, null),
+              DimensionsSpec.EMPTY,
+              null,
+              null,
+              null
+          ),
+          ioConfig,
+          tuningConfig
+      );
+      expectedException.expect(IllegalArgumentException.class);
+      expectedException.expectMessage("Perfect rollup cannot be guaranteed when appending to existing dataSources");
+      new ParallelIndexSupervisorTask(
+          null,
+          null,
+          null,
+          indexIngestionSpec,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
     }
   }
 }

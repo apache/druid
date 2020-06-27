@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
@@ -107,10 +106,6 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         ingestionSchema.getDataSchema().getParser()
     );
 
-    final File tmpDir = toolbox.getIndexingTmpDir();
-    // Firehose temporary directory is automatically removed when this IndexTask completes.
-    FileUtils.forceMkdir(tmpDir);
-
     final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
         getId(),
@@ -119,7 +114,12 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
 
-    final List<DataSegment> segments = generateSegments(toolbox, taskClient, inputSource, tmpDir);
+    final List<DataSegment> segments = generateSegments(
+        toolbox,
+        taskClient,
+        inputSource,
+        toolbox.getIndexingTmpDir()
+    );
     taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments));
 
     return TaskStatus.success(getId());
