@@ -157,6 +157,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (InterruptedException e) {
               log.noStackTrace().warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+              //Note: canceling combinedFuture first so that it can complete with INTERRUPTED as its final state. See ChainedExecutionQueryRunnerTest.testQueryTimeout()
               GuavaUtils.cancelAll(true, future, futures);
               throw new QueryInterruptedException(e);
             }
