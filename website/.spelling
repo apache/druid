@@ -196,6 +196,7 @@ backfills
 backpressure
 base64
 big-endian
+bitwise
 blobstore
 boolean
 breakpoint

@@ -26,10 +26,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -1459,7 +1459,7 @@ class UnaryBitwiseNegateExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
-    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+    if ((NullHandling.sqlCompatible() && (ret.value() == null)) || ret.isNumericNull()) {
       return ExprEval.of(null);
     }
     return ExprEval.of(~ret.asLong());
@@ -2038,8 +2038,8 @@ class BinBitwiseAndExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    Long l1 = Longs.tryParse(left);
-    Long l2 = Longs.tryParse(right);
+    Long l1 = GuavaUtils.tryParseLong(left);
+    Long l2 = GuavaUtils.tryParseLong(right);
     if (l1 == null || l2 == null) {
       return ExprEval.of(null);
     }
@@ -2075,8 +2075,8 @@ class BinBitwiseOrExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    Long l1 = Longs.tryParse(left);
-    Long l2 = Longs.tryParse(right);
+    Long l1 = GuavaUtils.tryParseLong(left);
+    Long l2 = GuavaUtils.tryParseLong(right);
     if (l1 == null || l2 == null) {
       return ExprEval.of(null);
     }

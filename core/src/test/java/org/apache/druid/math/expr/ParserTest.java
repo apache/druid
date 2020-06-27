@@ -29,6 +29,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -185,6 +186,12 @@ public class ParserTest extends InitializedNullHandlingTest
     validateFlatten("'2' & '1'", "(& 2 1)", "0");
     validateFlatten("'3' | '1'", "(| 3 1)", "3");
     validateFlatten("(~'1') & 7", "(& ~1 7)", "6");
+
+    validateFlatten("'notanumber' & '1'", "(& notanumber 1)", null);
+    validateFlatten("'3' | 'notanumber'", "(| 3 notanumber)", null);
+    validateFlatten("~'notanumber'", "~notanumber", null);
+    validateFlatten("(~'notanumber') & '7'", "(& ~notanumber 7)", null);
+    validateFlatten("(~'notanumber') | '7'", "(| ~notanumber 7)", null);
   }
 
   @Test
@@ -574,7 +581,7 @@ public class ParserTest extends InitializedNullHandlingTest
   }
 
 
-  private void validateFlatten(String expression, String withoutFlatten, String withFlatten)
+  private void validateFlatten(String expression, String withoutFlatten, @Nullable String withFlatten)
   {
     Expr notFlat = Parser.parse(expression, ExprMacroTable.nil(), false);
     Expr flat = Parser.parse(expression, ExprMacroTable.nil(), true);

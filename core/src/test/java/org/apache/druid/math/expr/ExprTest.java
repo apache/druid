@@ -103,6 +103,14 @@ public class ExprTest
   }
 
   @Test
+  public void testEqualsContractForBitwiseExpr()
+  {
+    EqualsVerifier.forClass(BinBitwiseAndExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(BinBitwiseOrExpr.class).usingGetClass().verify();
+    EqualsVerifier.forClass(UnaryBitwiseNegateExpr.class).usingGetClass().verify();
+  }
+
+  @Test
   public void testEqualsContractForFunctionExpr()
   {
     EqualsVerifier.forClass(FunctionExpr.class).usingGetClass().withIgnoredFields("function").verify();

@@ -18,7 +18,7 @@ grammar Expr;
 expr : NULL                                                         # null
      | ('-'|'!'|'~') expr                                           # unaryOpExpr
      |<assoc=right> expr '^' expr                                   # powOpExpr
-     | expr ('&'|'|'|) expr                                         # bitwiseOpExpr
+     | expr ('&'|'|') expr                                         # bitwiseOpExpr
      | expr ('*'|'/'|'%') expr                                      # mulDivModuloExpr
      | expr ('+'|'-') expr                                          # addSubExpr
      | expr ('<'|'<='|'>'|'>='|'=='|'!=') expr                      # logicalOpExpr
