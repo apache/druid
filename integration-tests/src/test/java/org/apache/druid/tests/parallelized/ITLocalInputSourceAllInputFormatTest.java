@@ -30,12 +30,12 @@ import org.testng.annotations.Test;
 import java.util.List;
 import java.util.Map;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = TestNGGroup.INPUT_FORMAT)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSourceParallelIndexTest
 {
   @Test
-  public void testAvroInputFormatIndexDataIngestionSpecWithoutSchema() throws Exception
+  public void testAvroInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
     List fieldList = ImmutableList.of(
         ImmutableMap.of("name", "timestamp", "type", "string"),
@@ -63,7 +63,7 @@ public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSour
   }
 
   @Test
-  public void testAvroInputFormatIndexDataIngestionSpecWithSchema() throws Exception
+  public void testAvroInputFormatIndexDataIngestionSpecWithoutSchema() throws Exception
   {
     doIndexTest(InputFormatDetails.AVRO);
   }
