@@ -39,7 +39,8 @@ import java.util.List;
  * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
  * or {@link InputRowParser}. This class will be useful untill we remove the deprecated InputRowParser.
  */
-class StreamChunkParser
+// TODO(aditya-r-m): find a cleaner way to use it for pubsub indexing service
+public class StreamChunkParser
 {
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
@@ -49,7 +50,7 @@ class StreamChunkParser
   /**
    * Either parser or inputFormat shouldn't be null.
    */
-  StreamChunkParser(
+  public StreamChunkParser(
       @Nullable InputRowParser<ByteBuffer> parser,
       @Nullable InputFormat inputFormat,
       InputRowSchema inputRowSchema,
@@ -73,7 +74,7 @@ class StreamChunkParser
     }
   }
 
-  List<InputRow> parse(List<byte[]> streamChunk) throws IOException
+  public List<InputRow> parse(List<byte[]> streamChunk) throws IOException
   {
     if (byteEntityReader != null) {
       return parseWithInputFormat(byteEntityReader, streamChunk);

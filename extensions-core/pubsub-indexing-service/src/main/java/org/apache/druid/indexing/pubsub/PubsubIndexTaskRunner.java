@@ -34,11 +34,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.pubsub.v1.ReceivedMessage;
 import org.apache.druid.data.input.Committer;
-import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
@@ -54,9 +52,10 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
+import org.apache.druid.indexing.seekablestream.StreamChunkParser;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -65,7 +64,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
+import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -88,6 +87,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -139,8 +139,8 @@ public class PubsubIndexTaskRunner implements ChatHandler
   private final Condition hasPaused = pauseLock.newCondition();
   private final Condition shouldResume = pauseLock.newCondition();
   private final AtomicBoolean publishOnStop = new AtomicBoolean(false);
-  private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
-  private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
+  private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
   protected volatile boolean pauseRequested = false;
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -246,6 +246,15 @@ public class PubsubIndexTaskRunner implements ChatHandler
     log.info(records.size() + "");
     log.info(records.toString());
 
+    // Now we can initialize StreamChunkReader with the given toolbox.
+    final StreamChunkParser parser = new StreamChunkParser(
+        this.parser,
+        inputFormat,
+        inputRowSchema,
+        task.getDataSchema().getTransformSpec(),
+        toolbox.getIndexingTmpDir()
+    );
+
     // Set up FireDepartmentMetrics
     final FireDepartment fireDepartmentForMetrics = new FireDepartment(
         task.getDataSchema(),
@@ -324,7 +333,13 @@ public class PubsubIndexTaskRunner implements ChatHandler
       };
     };
     for (ReceivedMessage record : records) {
-      List<InputRow> rows = parseBytes(Arrays.asList(record.getMessage().getData().toByteArray()));
+      final List<byte[]> valueBytess = Collections.singletonList(record.getMessage().getData().toByteArray());
+      final List<InputRow> rows;
+      if (valueBytess == null || valueBytess.isEmpty()) {
+        rows = Utils.nullableListOf((InputRow) null);
+      } else {
+        rows = parser.parse(valueBytess);
+      }
       for (InputRow row : rows) {
         final AppenderatorDriverAddResult addResult = driver.add(
             row,
@@ -358,58 +373,58 @@ public class PubsubIndexTaskRunner implements ChatHandler
 
   private void publishAndRegisterHandoff(Committer committer)
   {
-    final ListenableFuture<SegmentsAndMetadata> publishFuture = Futures.transform(
+    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         driver.publish(
             new PubsubTransactionalSegmentPublisher(this, toolbox, false),
             committer,
             Arrays.asList(getSequenceName())
         ),
-        publishedSegmentsAndMetadata -> {
-          if (publishedSegmentsAndMetadata == null) {
+        publishedSegmentsAndCommitMetadata -> {
+          if (publishedSegmentsAndCommitMetadata == null) {
             throw new ISE(
                 "Transaction failure publishing segments for sequence"
             );
           } else {
-            return publishedSegmentsAndMetadata;
+            return publishedSegmentsAndCommitMetadata;
           }
         }
     );
 
     // Create a handoffFuture for every publishFuture. The created handoffFuture must fail if publishFuture fails.
-    final SettableFuture<SegmentsAndMetadata> handoffFuture = SettableFuture.create();
+    final SettableFuture<SegmentsAndCommitMetadata> handoffFuture = SettableFuture.create();
 
     Futures.addCallback(
         publishFuture,
-        new FutureCallback<SegmentsAndMetadata>()
+        new FutureCallback<SegmentsAndCommitMetadata>()
         {
           @Override
-          public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
+          public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)
           {
             log.info(
                 "Published segments [%s] for sequence [%s] with metadata [%s].",
-                String.join(", ", Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::toString)),
+                String.join(", ", Lists.transform(publishedSegmentsAndCommitMetadata.getSegments(), DataSegment::toString)),
                 getSequenceName(),
-                Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
+                Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
             );
 
             Futures.transform(
-                driver.registerHandoff(publishedSegmentsAndMetadata),
-                new Function<SegmentsAndMetadata, Void>()
+                driver.registerHandoff(publishedSegmentsAndCommitMetadata),
+                new Function<SegmentsAndCommitMetadata, Void>()
                 {
                   @Nullable
                   @Override
-                  public Void apply(@Nullable SegmentsAndMetadata handoffSegmentsAndMetadata)
+                  public Void apply(@Nullable SegmentsAndCommitMetadata handoffSegmentsAndCommitMetadata)
                   {
-                    if (handoffSegmentsAndMetadata == null) {
+                    if (handoffSegmentsAndCommitMetadata == null) {
                       log.warn(
                           "Failed to hand off segments: %s",
                           String.join(
                               ", ",
-                              Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::toString)
+                              Lists.transform(publishedSegmentsAndCommitMetadata.getSegments(), DataSegment::toString)
                           )
                       );
                     }
-                    handoffFuture.set(handoffSegmentsAndMetadata);
+                    handoffFuture.set(handoffSegmentsAndCommitMetadata);
                     return null;
                   }
                 }
@@ -435,42 +450,6 @@ public class PubsubIndexTaskRunner implements ChatHandler
     catch (ExecutionException e) {
       log.error(e, "pubsub error");
     }
-  }
-
-  private List<InputRow> parseBytes(List<byte[]> valueBytess) throws IOException
-  {
-    if (parser != null) {
-      return parseWithParser(valueBytess);
-    } else {
-      return parseWithInputFormat(valueBytess);
-    }
-  }
-
-  private List<InputRow> parseWithParser(List<byte[]> valueBytess)
-  {
-    final List<InputRow> rows = new ArrayList<>();
-    for (byte[] valueBytes : valueBytess) {
-      rows.addAll(parser.parseBatch(ByteBuffer.wrap(valueBytes)));
-    }
-    return rows;
-  }
-
-  private List<InputRow> parseWithInputFormat(List<byte[]> valueBytess) throws IOException
-  {
-    final List<InputRow> rows = new ArrayList<>();
-    for (byte[] valueBytes : valueBytess) {
-      final InputEntityReader reader = task.getDataSchema().getTransformSpec().decorate(
-          Preconditions.checkNotNull(inputFormat, "inputFormat").createReader(
-              inputRowSchema,
-              new ByteEntity(valueBytes),
-              toolbox.getIndexingTmpDir()
-          )
-      );
-      try (CloseableIterator<InputRow> rowIterator = reader.read()) {
-        rowIterator.forEachRemaining(rows::add);
-      }
-    }
-    return rows;
   }
 
   @GET

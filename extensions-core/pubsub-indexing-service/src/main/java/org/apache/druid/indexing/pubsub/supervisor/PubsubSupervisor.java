@@ -21,7 +21,6 @@ package org.apache.druid.indexing.pubsub.supervisor;
 
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -29,13 +28,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.utils.RandomIdUtils;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -63,7 +62,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -251,7 +249,7 @@ public class PubsubSupervisor implements Supervisor
         try {
           while (true) {
             while (taskIds.size() < taskCount) {
-              String taskId = Joiner.on("_").join(subscriptionName, RandomIdUtils.getRandomId());
+              String taskId = TaskIdUtils.getRandomIdWithPrefix(subscriptionName);
               PubsubIndexTask pubsubIndexTask = new PubsubIndexTask(
                   taskId,
                   new TaskResource(subscriptionName, 1),

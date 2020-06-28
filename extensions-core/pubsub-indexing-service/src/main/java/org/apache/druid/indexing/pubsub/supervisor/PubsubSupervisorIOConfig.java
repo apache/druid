@@ -114,11 +114,7 @@ public class PubsubSupervisorIOConfig
   @Nullable
   public InputFormat getInputFormat(@Nullable ParseSpec parseSpec)
   {
-    if (inputFormat == null) {
-      return Preconditions.checkNotNull(parseSpec, "parseSpec").toInputFormat();
-    } else {
-      return inputFormat;
-    }
+    return inputFormat;
   }
 
   @JsonProperty

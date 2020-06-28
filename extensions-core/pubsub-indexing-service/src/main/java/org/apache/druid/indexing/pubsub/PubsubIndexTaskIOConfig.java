@@ -22,7 +22,6 @@ package org.apache.druid.indexing.pubsub;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.indexing.pubsub.supervisor.PubsubSupervisorIOConfig;
@@ -109,7 +108,7 @@ public class PubsubIndexTaskIOConfig implements IOConfig
 
   public InputFormat getInputFormat(ParseSpec parseSpec)
   {
-    return inputFormat == null ? Preconditions.checkNotNull(parseSpec, "parseSpec").toInputFormat() : inputFormat;
+    return inputFormat;
   }
 
   @Override
