@@ -291,6 +291,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           dataSourceAnalysis
       );
       if (!maybeTimeline.isPresent()) {
+        initializeNumRemainingResponsesInResponseContext(0);
         return Sequences.empty();
       }
 
@@ -308,6 +309,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         @Nullable
         final String currentEtag = computeCurrentEtag(segmentServers, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
+          initializeNumRemainingResponsesInResponseContext(0);
           return Sequences.empty();
         }
       }
@@ -320,6 +322,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
+        initializeNumRemainingResponsesInResponseContext(segmentsByServer.size());
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
@@ -571,6 +574,14 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return serverSegments;
     }
 
+    private void initializeNumRemainingResponsesInResponseContext(int numQueryServers)
+    {
+      responseContext.add(
+          Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
+          new NonnullPair<>(query.getMostRelevantId(), numQueryServers)
+      );
+    }
+
     private void addSequencesFromCache(
         final List<Sequence<T>> listOfSequences,
         final List<Pair<Interval, byte[]>> cachedResults
@@ -620,10 +631,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer
     )
     {
-      responseContext.add(
-          Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-          new NonnullPair<>(query.getMostRelevantId(), segmentsByServer.size())
-      );
       segmentsByServer.forEach((server, segmentsOfServer) -> {
         final QueryRunner serverRunner = serverView.getQueryRunner(server);
 
