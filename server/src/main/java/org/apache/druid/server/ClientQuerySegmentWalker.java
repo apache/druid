@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingClusteredClient;
+import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.ISE;
@@ -336,7 +337,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           queryResults = Sequences.empty();
         } else {
           final QueryRunner subqueryRunner = subQueryWithId.getRunner(this);
-          queryResults = subqueryRunner.run(QueryPlus.wrap(subQueryWithId));
+          queryResults = subqueryRunner.run(
+              QueryPlus.wrap(subQueryWithId),
+              DirectDruidClient.makeResponseContextForQuery()
+          );
         }
 
         return toInlineDataSource(
