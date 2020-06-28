@@ -1186,6 +1186,7 @@ remoteAddress
 serviceName
 taskStatus
 taskType
+uri
  - ../docs/operations/other-hadoop.md
 CDH
 Classloader
