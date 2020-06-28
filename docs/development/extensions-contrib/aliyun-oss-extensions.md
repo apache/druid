@@ -33,7 +33,7 @@ To use aliyun OSS as deep storage, first config as below
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
-|`druid.oss.accessKey`|the 'AccessKey ID' of your account which can be used to access the bucket||Must be set.|
+|`druid.oss.accessKey`|the 'AccessKey ID' of your account which can be used to access the bucket| |Must be set.|
 |`druid.oss.secretKey`|the 'AccessKey Secret' of your account which can be used to access the bucket| |Must be set. |
 |`druid.oss.endpoint`|the endpoint url of your OSS storage| |Must be set.|
 
@@ -41,14 +41,14 @@ if you want to use OSS as deep storage, use the configurations below
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
-|`druid.storage.type`| | oss|Must be set.|
-|`druid.storage.oss.bucket`||storage bucket name.|Must be set.|
-|`druid.storage.oss.prefix`|a prefix string prepended to the file names for the segments published to Aliyun OSS deep storage| druid/segments | |
+|`druid.storage.type`| Global deep storage provider. Must be set to `oss` to make use of this extension. | oss |Must be set.|
+|`druid.storage.oss.bucket`|storage bucket name.| | Must be set.|
+|`druid.storage.oss.prefix`|a prefix string prepended to the file names for the segments published to aliyun OSS deep storage| druid/segments | |
 
 To save index logs to OSS, apply the configurations below:
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
-|`druid.indexer.logs.type`| | oss|Must be set.|
-|`druid.indexer.logs.oss.bucket`|the bucket used to keep logs||Must be set.|
-|`druid.indexer.logs.oss.prefix`|a prefix string prepended to the log files| ||
+|`druid.indexer.logs.type`| Global deep storage provider. Must be set to `oss` to make use of this extension. | oss |Must be set.|
+|`druid.indexer.logs.oss.bucket`|the bucket used to keep logs| |Must be set.|
+|`druid.indexer.logs.oss.prefix`|a prefix string prepended to the log files.| | |
