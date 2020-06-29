@@ -350,9 +350,9 @@ public class SystemSchema extends AbstractSchema
                 IS_AVAILABLE_TRUE,
                 val.getValue().isRealtime(),
                 IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
-                null,
-                null,
-                null
+                val.getValue().getSegment().getShardSpec(),
+                val.getValue().getSegment().getDimensions(),
+                val.getValue().getSegment().getMetrics()
             };
           });
 
