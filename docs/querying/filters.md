@@ -32,7 +32,7 @@ A filter is a JSON object indicating which rows of data should be included in th
 
 **Note**
 
-Filters are commonly applied on dimensions, but can be applied on metrics as well.
+Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [filtered-aggregator](./aggregations.md#filtered-aggregator) and [having-filters](./having.md).
 
 ### Selector filter
 
