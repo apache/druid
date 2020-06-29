@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
@@ -34,6 +34,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.Rows;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -43,9 +44,6 @@ import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.TimeDimsTuple;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.TimeDimsTupleFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.distribution.TimeDimsTupleFunnel;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -86,7 +84,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
 
   // For testing
-  private final Supplier<DedupRowDimensionValuesFilter> dedupRowDimValueFilterSupplier;
+  private final Supplier<DedupInputRowFilter> dedupInputRowFilterSupplier;
 
   @JsonCreator
   PartialDimensionDistributionTask(
@@ -112,7 +110,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         context,
         indexingServiceClient,
         taskClientFactory,
-        () -> new DedupRowDimensionValuesFilter(
+        () -> new DedupInputRowFilter(
             ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity()
         )
     );
@@ -129,7 +127,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       final Map<String, Object> context,
       IndexingServiceClient indexingServiceClient,
       IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      Supplier<DedupRowDimensionValuesFilter> dedupRowDimValueFilterSupplier
+      Supplier<DedupInputRowFilter> dedupRowDimValueFilterSupplier
   )
   {
     super(
@@ -152,7 +150,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     this.supervisorTaskId = supervisorTaskId;
     this.indexingServiceClient = indexingServiceClient;
     this.taskClientFactory = taskClientFactory;
-    this.dedupRowDimValueFilterSupplier = dedupRowDimValueFilterSupplier;
+    this.dedupInputRowFilterSupplier = dedupRowDimValueFilterSupplier;
   }
 
   @JsonProperty
@@ -236,7 +234,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
           iterator,
           granularitySpec,
           partitionDimension,
-          dataSchema.getDimensionsSpec().getDimensionNames(),
           isAssumeGrouped,
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions()
@@ -251,17 +248,16 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       HandlingInputRowIterator inputRowIterator,
       GranularitySpec granularitySpec,
       String partitionDimension,
-      List<String> dimensions,
       boolean isAssumeGrouped,
       boolean isLogParseExceptions,
       int maxParseExceptions
   )
   {
     Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
-    DimensionValuesFilter dimValueFilter =
+    InputRowFilter inputRowFilter =
         !isAssumeGrouped && granularitySpec.isRollup()
-        ? dedupRowDimValueFilterSupplier.get()
-        : new PassthroughRowDimensionValuesFilter();
+        ? dedupInputRowFilterSupplier.get()
+        : new PassthroughInputRowFilter();
 
     int numParseExceptions = 0;
 
@@ -276,12 +272,11 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 
         //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
         Interval interval = granularitySpec.bucketInterval(timestamp).get();
-        StringDistribution stringDistribution =
-            intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
-
         String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
-        List<Object> partitionValues = Lists.transform(dimensions, inputRow::getDimension);
-        if (dimValueFilter.accept(interval, timestamp, partitionDimensionValue, partitionValues)) {
+
+        if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
+          StringDistribution stringDistribution =
+              intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
           stringDistribution.put(partitionDimensionValue);
         }
       }
@@ -297,11 +292,11 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       }
     }
 
-    // DedupRowDimensionValuesFilter may not accept the min/max dimensionValue. If needed, add the min/max
+    // DedupInputRowFilter may not accept the min/max dimensionValue. If needed, add the min/max
     // values to the distributions so they have an accurate min/max.
-    dimValueFilter.getIntervalToMinPartitionDimensionValue()
+    inputRowFilter.getIntervalToMinPartitionDimensionValue()
                   .forEach((interval, min) -> intervalToDistribution.get(interval).putIfNewMin(min));
-    dimValueFilter.getIntervalToMaxPartitionDimensionValue()
+    inputRowFilter.getIntervalToMaxPartitionDimensionValue()
                   .forEach((interval, max) -> intervalToDistribution.get(interval).putIfNewMax(max));
 
     return intervalToDistribution;
@@ -319,17 +314,12 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     taskClient.report(supervisorTaskId, report);
   }
 
-  private interface DimensionValuesFilter
+  private interface InputRowFilter
   {
     /**
-     * @return True if dimension values should be accepted, else false
+     * @return True if input row should be accepted, else false
      */
-    boolean accept(
-        Interval interval,
-        DateTime timestamp,
-        String partitionDimensionValue,
-        List<Object> dimensionValues
-    );
+    boolean accept(Interval interval, String partitionDimensionValue, InputRow inputRow);
 
     /**
      * @return Minimum partition dimension value for each interval processed so far.
@@ -347,7 +337,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
    * Approximate matching is used, so there is a small probability that rows that are not reoccurences are discarded.
    */
   @VisibleForTesting
-  static class DedupRowDimensionValuesFilter implements DimensionValuesFilter
+  static class DedupInputRowFilter implements InputRowFilter
   {
     // A bloom filter is used to approximately group rows by query granularity. These values assume
     // time chunks have fewer than BLOOM_FILTER_EXPECTED_INSERTIONS rows. With the below values, the
@@ -358,48 +348,51 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     private static final int BLOOM_FILTER_EXPECTED_INSERTIONS = 100_000_000;
     private static final double BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY = 0.001;
 
-    private final PassthroughRowDimensionValuesFilter delegate;
-    private final TimeDimsTupleFactory timeDimsTupleFactory;
-    private final BloomFilter<TimeDimsTuple> timeDimTupleBloomFilter;
+    private final PassthroughInputRowFilter delegate;
+    private final Granularity queryGranularity;
+    private final BloomFilter<CharSequence> groupingBloomFilter;
 
-    DedupRowDimensionValuesFilter(Granularity queryGranularity)
+    DedupInputRowFilter(Granularity queryGranularity)
     {
       this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
     }
 
     @VisibleForTesting  // to allow controlling false positive rate of bloom filter
-    DedupRowDimensionValuesFilter(
+    DedupInputRowFilter(
         Granularity queryGranularity,
         int bloomFilterExpectedInsertions,
         double bloomFilterFalsePositiveProbability
     )
     {
-      delegate = new PassthroughRowDimensionValuesFilter();
-      timeDimsTupleFactory = new TimeDimsTupleFactory(queryGranularity);
-      timeDimTupleBloomFilter = BloomFilter.create(
-          TimeDimsTupleFunnel.INSTANCE,
+      delegate = new PassthroughInputRowFilter();
+      this.queryGranularity = queryGranularity;
+      groupingBloomFilter = BloomFilter.create(
+          Funnels.unencodedCharsFunnel(),
           bloomFilterExpectedInsertions,
           bloomFilterFalsePositiveProbability
       );
     }
 
     @Override
-    public boolean accept(
-        Interval interval,
-        DateTime timestamp,
-        String partitionDimensionValue,
-        List<Object> dimensionValues
-    )
+    public boolean accept(Interval interval, String partitionDimensionValue, InputRow inputRow)
     {
-      delegate.accept(interval, timestamp, partitionDimensionValue, dimensionValues);
+      delegate.accept(interval, partitionDimensionValue, inputRow);
 
-      TimeDimsTuple timeDimsTuple = timeDimsTupleFactory.createWithBucketedTimestamp(timestamp, dimensionValues);
-      if (timeDimTupleBloomFilter.mightContain(timeDimsTuple)) {
+      long bucketTimestamp = getBucketTimestamp(inputRow);
+      List<Object> groupKey = Rows.toGroupKey(bucketTimestamp, inputRow);
+      String serializedGroupKey = groupKey.toString();
+      if (groupingBloomFilter.mightContain(serializedGroupKey)) {
         return false;
       } else {
-        timeDimTupleBloomFilter.put(timeDimsTuple);
+        groupingBloomFilter.put(serializedGroupKey);
         return true;
       }
+    }
+
+    private long getBucketTimestamp(InputRow inputRow)
+    {
+      DateTime timestamp = inputRow.getTimestamp();
+      return queryGranularity.bucketStart(timestamp).getMillis();
     }
 
     @Override
@@ -419,24 +412,19 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
    * Accepts all input rows, even if they are reoccurrences of timestamps with the same query granularity and dimension
    * value.
    */
-  private static class PassthroughRowDimensionValuesFilter implements DimensionValuesFilter
+  private static class PassthroughInputRowFilter implements InputRowFilter
   {
     private final Map<Interval, String> intervalToMinDimensionValue;
     private final Map<Interval, String> intervalToMaxDimensionValue;
 
-    PassthroughRowDimensionValuesFilter()
+    PassthroughInputRowFilter()
     {
       this.intervalToMinDimensionValue = new HashMap<>();
       this.intervalToMaxDimensionValue = new HashMap<>();
     }
 
     @Override
-    public boolean accept(
-        Interval interval,
-        DateTime timestamp,
-        String partitionDimensionValue,
-        List<Object> dimensionValues
-    )
+    public boolean accept(Interval interval, String partitionDimensionValue, InputRow inputRow)
     {
       updateMinDimensionValue(interval, partitionDimensionValue);
       updateMaxDimensionValue(interval, partitionDimensionValue);
