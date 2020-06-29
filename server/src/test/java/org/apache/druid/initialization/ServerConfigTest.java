@@ -27,6 +27,8 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.ws.rs.HttpMethod;
+
 public class ServerConfigTest
 {
   private static final DefaultObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
@@ -55,7 +57,7 @@ public class ServerConfigTest
         defaultConfig.getInflateBufferSize(),
         defaultConfig.getCompressionLevel(),
         true,
-        ImmutableList.of("OPTIONS")
+        ImmutableList.of(HttpMethod.OPTIONS)
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -64,7 +66,7 @@ public class ServerConfigTest
     Assert.assertEquals(888, modifiedConfig2.getQueueSize());
     Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
     Assert.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
-    Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains("OPTIONS"));
+    Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains(HttpMethod.OPTIONS));
   }
 
   @Test

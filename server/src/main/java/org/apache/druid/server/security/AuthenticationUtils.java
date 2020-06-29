@@ -27,16 +27,6 @@ import java.util.List;
 
 public class AuthenticationUtils
 {
-  public static void addAllowHttpMethodsFilter(ServletContextHandler root, List<String> allowedHttpMethods)
-  {
-    FilterHolder holder = new FilterHolder(new AllowHttpMethodsResourceFilter(allowedHttpMethods));
-    root.addFilter(
-        holder,
-        "/*",
-        null
-    );
-  }
-
   public static void addAllowOptionsFilter(ServletContextHandler root, boolean allowUnauthenticatedHttpOptions)
   {
     FilterHolder holder = new FilterHolder(new AllowOptionsResourceFilter(allowUnauthenticatedHttpOptions));
