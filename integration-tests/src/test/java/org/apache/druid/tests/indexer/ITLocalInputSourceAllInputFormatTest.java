@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.tests.parallelized;
+package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
