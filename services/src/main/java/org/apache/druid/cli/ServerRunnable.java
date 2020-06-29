@@ -19,7 +19,7 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -27,6 +27,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
@@ -39,14 +40,19 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 
+import javax.annotation.Nullable;
 import java.lang.annotation.Annotation;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  *
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
+  protected static final String ALWAYS_ENABLED = "";
+
   public ServerRunnable(Logger log)
   {
     super(log);
@@ -132,7 +138,7 @@ public abstract class ServerRunnable extends GuiceRunnable
     public static class Builder
     {
       private NodeRole nodeRole;
-      private List<Class<? extends DruidService>> serviceClasses = ImmutableList.of();
+      private Map<Class<? extends DruidService>, String> serviceClasses = ImmutableMap.of();
       private boolean useLegacyAnnouncer;
 
       public Builder(final NodeRole nodeRole)
@@ -140,9 +146,16 @@ public abstract class ServerRunnable extends GuiceRunnable
         this.nodeRole = nodeRole;
       }
 
-      public Builder serviceClasses(final List<Class<? extends DruidService>> serviceClasses)
+      public Builder serviceClasses(final Map<Class<? extends DruidService>, String> serviceClasses)
       {
         this.serviceClasses = serviceClasses;
+        return this;
+      }
+
+      public Builder serviceClasses(final List<Class<? extends DruidService>> serviceClasses)
+      {
+        this.serviceClasses =
+            serviceClasses.stream().collect(Collectors.toMap(clazz -> clazz, clazz -> ALWAYS_ENABLED));
         return this;
       }
 
@@ -154,7 +167,11 @@ public abstract class ServerRunnable extends GuiceRunnable
 
       public DiscoverySideEffectsProvider build()
       {
-        return new DiscoverySideEffectsProvider(nodeRole, serviceClasses, useLegacyAnnouncer);
+        return new DiscoverySideEffectsProvider(
+            nodeRole,
+            serviceClasses,
+            useLegacyAnnouncer
+        );
       }
     }
 
@@ -180,17 +197,17 @@ public abstract class ServerRunnable extends GuiceRunnable
     private Injector injector;
 
     private final NodeRole nodeRole;
-    private final List<Class<? extends DruidService>> serviceClasses;
+    private final Map<Class<? extends DruidService>, String> serviceClassAndBindingMap;
     private final boolean useLegacyAnnouncer;
 
     private DiscoverySideEffectsProvider(
         final NodeRole nodeRole,
-        final List<Class<? extends DruidService>> serviceClasses,
+        final Map<Class<? extends DruidService>, String> serviceClassAndBindingMap,
         final boolean useLegacyAnnouncer
     )
     {
       this.nodeRole = nodeRole;
-      this.serviceClasses = serviceClasses;
+      this.serviceClassAndBindingMap = serviceClassAndBindingMap;
       this.useLegacyAnnouncer = useLegacyAnnouncer;
     }
 
@@ -198,11 +215,17 @@ public abstract class ServerRunnable extends GuiceRunnable
     public Child get()
     {
       ImmutableMap.Builder<String, DruidService> builder = new ImmutableMap.Builder<>();
-      for (Class<? extends DruidService> clazz : serviceClasses) {
-        DruidService service = injector.getInstance(clazz);
-        builder.put(service.getName(), service);
-      }
 
+      for (Map.Entry<Class<? extends DruidService>, String> clazzAndBindingName : serviceClassAndBindingMap.entrySet()) {
+        @Nullable String bindingName = clazzAndBindingName.getValue();
+        boolean isServiceEnabled = Strings.isNullOrEmpty(bindingName) || injector.getInstance(
+            Key.get(Boolean.class, Names.named(bindingName))
+        );
+        if (isServiceEnabled) {
+          DruidService service = injector.getInstance(clazzAndBindingName.getKey());
+          builder.put(service.getName(), service);
+        }
+      }
       DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build());
 
       lifecycle.addHandler(
@@ -232,7 +255,6 @@ public abstract class ServerRunnable extends GuiceRunnable
           },
           Lifecycle.Stage.ANNOUNCEMENTS
       );
-
       return new Child();
     }
   }

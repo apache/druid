@@ -23,6 +23,7 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
+import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.DataNodeService;
@@ -39,6 +40,8 @@ import javax.annotation.Nullable;
  */
 public class StorageNodeModule implements Module
 {
+  public static final String IS_SEGMENT_CACHE_CONFIGURED = "IS_SEGMENT_CACHE_CONFIGURED";
+
   @Override
   public void configure(Binder binder)
   {
@@ -86,5 +89,13 @@ public class StorageNodeModule implements Module
         serverTypeConfig.getServerType(),
         config.getPriority()
     );
+  }
+
+  @Provides
+  @LazySingleton
+  @Named(IS_SEGMENT_CACHE_CONFIGURED)
+  public Boolean isSegmentCacheConfigured(SegmentLoaderConfig segmentLoaderConfig)
+  {
+    return !segmentLoaderConfig.getLocations().isEmpty();
   }
 }
