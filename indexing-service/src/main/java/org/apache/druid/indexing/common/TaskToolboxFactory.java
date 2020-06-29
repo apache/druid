@@ -74,7 +74,7 @@ public class TaskToolboxFactory
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final ExecutorService queryExecutorService;
   private final JoinableFactory joinableFactory;
-  private final MonitorScheduler monitorScheduler;
+  private final Provider<MonitorScheduler> monitorSchedulerProvider;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
@@ -105,7 +105,7 @@ public class TaskToolboxFactory
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       @Processing ExecutorService queryExecutorService,
       JoinableFactory joinableFactory,
-      MonitorScheduler monitorScheduler,
+      Provider<MonitorScheduler> monitorSchedulerProvider,
       SegmentLoaderFactory segmentLoaderFactory,
       @Json ObjectMapper jsonMapper,
       IndexIO indexIO,
@@ -135,7 +135,7 @@ public class TaskToolboxFactory
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.queryExecutorService = queryExecutorService;
     this.joinableFactory = joinableFactory;
-    this.monitorScheduler = monitorScheduler;
+    this.monitorSchedulerProvider = monitorSchedulerProvider;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.jsonMapper = jsonMapper;
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
@@ -169,7 +169,7 @@ public class TaskToolboxFactory
         queryRunnerFactoryConglomerateProvider,
         queryExecutorService,
         joinableFactory,
-        monitorScheduler,
+        monitorSchedulerProvider,
         segmentLoaderFactory.manufacturate(taskWorkDir),
         jsonMapper,
         taskWorkDir,
