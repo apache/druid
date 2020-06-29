@@ -174,7 +174,7 @@ public class BasicHTTPAuthenticatorTest
     EasyMock.replay(req);
 
     HttpServletResponse resp = EasyMock.createMock(HttpServletResponse.class);
-    resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authentication failed username[userA].");
+    resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authentication failed.");
     EasyMock.expectLastCall().times(1);
     EasyMock.replay(resp);
 
@@ -220,7 +220,7 @@ public class BasicHTTPAuthenticatorTest
     EasyMock.replay(req);
 
     HttpServletResponse resp = EasyMock.createMock(HttpServletResponse.class);
-    resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authentication failed username[userA].");
+    resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authentication failed.");
     EasyMock.expectLastCall().times(1);
     EasyMock.replay(resp);
 

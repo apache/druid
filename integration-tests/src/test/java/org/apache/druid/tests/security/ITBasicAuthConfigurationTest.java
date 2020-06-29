@@ -291,8 +291,8 @@ public class ITBasicAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                     .collect(Collectors.toList())
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
     );
 
     // as user that can read auth_test and STATE
@@ -317,7 +317,8 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         adminServerSegments.stream()
-                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains("auth_test"))
+                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains(
+                               "auth_test"))
                            .collect(Collectors.toList())
     );
 
@@ -326,8 +327,8 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                     .collect(Collectors.toList())
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
     );
 
     // as user that can only read STATE
@@ -469,6 +470,23 @@ public class ITBasicAuthConfigurationTest
 
     LOG.info("Checking OPTIONS requests on services...");
     testOptionsRequests(adminClient);
+  }
+
+  @Test
+  public void testMaliciousUser()
+  {
+    HttpClient maliciousClient = new CredentialedHttpClient(
+        new BasicCredentials("admin", "priest"),
+        httpClient
+    );
+    StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
+        maliciousClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/status",
+        null,
+        HttpResponseStatus.UNAUTHORIZED);
+    Assert.assertEquals("User authentication failed.", responseHolder.getContent());
+    Assert.fail("Request should not succeed");
   }
 
   private void testOptionsRequests(HttpClient httpClient)
