@@ -190,7 +190,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
-    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+    final NonnullPair<Sequence<T>, Integer> pair = new SpecificQueryRunnable<>(queryPlus, responseContext)
+        .run(timelineConverter);
+    final int totalNumQueryServers = pair.rhs;
+    initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, totalNumQueryServers);
+    return pair.lhs;
+  }
+
+  private static <T> void initializeNumRemainingResponsesInResponseContext(
+      final Query<T> query,
+      final ResponseContext responseContext,
+      final int numQueryServers
+  )
+  {
+    responseContext.add(
+        Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
+        new NonnullPair<>(query.getMostSpecificId(), numQueryServers)
+    );
   }
 
   @Override
@@ -285,14 +301,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return contextBuilder.build();
     }
 
-    Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
+    /**
+     * Builds a query distribution and merge plan.
+     *
+     * This method returns an empty sequence if the query datasource is unknown or there is matching result-level cache.
+     * Otherwise, it creates a sequence merging sequences from the regular broker cache and remote servers. If parallel
+     * merge is enabled, it can merge and *combine* the underlying sequences in parallel.
+     *
+     * @return a pair of a sequence merging results from remote query servers and the number of remote servers
+     *         participating in query processing.
+     */
+    NonnullPair<Sequence<T>, Integer> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
       final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
           dataSourceAnalysis
       );
       if (!maybeTimeline.isPresent()) {
-        initializeNumRemainingResponsesInResponseContext(0);
-        return Sequences.empty();
+        return new NonnullPair<>(Sequences.empty(), 0);
       }
 
       final TimelineLookup<String, ServerSelector> timeline = timelineConverter.apply(maybeTimeline.get());
@@ -309,8 +334,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         @Nullable
         final String currentEtag = computeCurrentEtag(segmentServers, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
-          initializeNumRemainingResponsesInResponseContext(0);
-          return Sequences.empty();
+          return new NonnullPair<>(Sequences.empty(), 0);
         }
       }
 
@@ -322,14 +346,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);
       LazySequence<T> mergedResultSequence = new LazySequence<>(() -> {
-        initializeNumRemainingResponsesInResponseContext(segmentsByServer.size());
         List<Sequence<T>> sequencesByInterval = new ArrayList<>(alreadyCachedResults.size() + segmentsByServer.size());
         addSequencesFromCache(sequencesByInterval, alreadyCachedResults);
         addSequencesFromServer(sequencesByInterval, segmentsByServer);
         return merge(sequencesByInterval);
       });
 
-      return scheduler.run(query, mergedResultSequence);
+      return new NonnullPair<>(scheduler.run(query, mergedResultSequence), segmentsByServer.size());
     }
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
@@ -574,14 +597,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return serverSegments;
     }
 
-    private void initializeNumRemainingResponsesInResponseContext(int numQueryServers)
-    {
-      responseContext.add(
-          Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-          new NonnullPair<>(query.getMostRelevantId(), numQueryServers)
-      );
-    }
-
     private void addSequencesFromCache(
         final List<Sequence<T>> listOfSequences,
         final List<Pair<Interval, byte[]>> cachedResults
@@ -626,6 +641,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
+    /**
+     * Create sequences that reads from remote query servers (historicals and tasks). Note that the broker will
+     * hold an HTTP connection per server after this method is called.
+     */
     private void addSequencesFromServer(
         final List<Sequence<T>> listOfSequences,
         final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -40,7 +40,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.QueryResource;
-import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.buffer.HeapChannelBufferFactory;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -152,19 +152,19 @@ public class TestHttpClient implements HttpClient
   public static class SimpleServerManager
   {
     private final QueryRunnerFactoryConglomerate conglomerate;
-    private final SegmentId segmentId;
+    private final DataSegment segment;
     private final QueryableIndex queryableIndex;
 
     private boolean isSegmentDropped = false;
 
     public SimpleServerManager(
         QueryRunnerFactoryConglomerate conglomerate,
-        SegmentId segmentId,
+        DataSegment segment,
         QueryableIndex queryableIndex
     )
     {
       this.conglomerate = conglomerate;
-      this.segmentId = segmentId;
+      this.segment = segment;
       this.queryableIndex = queryableIndex;
     }
 
@@ -172,17 +172,17 @@ public class TestHttpClient implements HttpClient
     {
       if (isSegmentDropped) {
         return new ReportTimelineMissingSegmentQueryRunner(
-            new SegmentDescriptor(segmentId.getInterval(), segmentId.getVersion(), segmentId.getPartitionNum())
+            new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
         );
       } else {
-        return new SimpleQueryRunner(conglomerate, segmentId, queryableIndex);
+        return new SimpleQueryRunner(conglomerate, segment.getId(), queryableIndex);
       }
     }
 
-    public Pair<SegmentId, QueryableIndex> dropSegment()
+    public NonnullPair<DataSegment, QueryableIndex> dropSegment()
     {
       this.isSegmentDropped = true;
-      return Pair.of(segmentId, queryableIndex);
+      return new NonnullPair<>(segment, queryableIndex);
     }
   }
 }

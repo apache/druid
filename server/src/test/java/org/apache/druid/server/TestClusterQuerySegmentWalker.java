@@ -179,7 +179,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       responseContext.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
       responseContext.add(
           Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-          new NonnullPair<>(theQuery.getQuery().getMostRelevantId(), 0)
+          new NonnullPair<>(theQuery.getQuery().getMostSpecificId(), 0)
       );
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();

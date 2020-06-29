@@ -162,11 +162,11 @@ public interface Query<T>
   }
 
   /**
-   * Returns a most relevant ID of this query; if it is a subquery, this will return its subquery ID.
+   * Returns a most specific ID of this query; if it is a subquery, this will return its subquery ID.
    * If it is a regular query without subqueries, this will return its query ID.
    * This method should be called after the relevant ID is assigned using {@link #withId} or {@link #withSubQueryId}.
    */
-  default String getMostRelevantId()
+  default String getMostSpecificId()
   {
     final String subqueryId = getSubQueryId();
     return subqueryId == null ? Preconditions.checkNotNull(getId(), "queryId") : subqueryId;

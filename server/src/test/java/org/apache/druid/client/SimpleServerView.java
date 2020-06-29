@@ -27,6 +27,7 @@ import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -99,6 +100,26 @@ public class SimpleServerView implements TimelineServerView
   public void removeServer(DruidServer server)
   {
     servers.remove(server);
+  }
+
+  public void unannounceSegmentFromServer(DruidServer server, DataSegment segment)
+  {
+    final QueryableDruidServer queryableDruidServer = servers.get(server);
+    if (queryableDruidServer == null) {
+      throw new ISE("Unknown server [%s]", server);
+    }
+    final ServerSelector selector = selectors.get(segment.getId().toString());
+    if (selector == null) {
+      throw new ISE("Unknown segment [%s]", segment.getId());
+    }
+    if (!selector.removeServer(queryableDruidServer)) {
+      throw new ISE("Failed to remove segment[%s] from server[%s]", segment.getId(), server);
+    }
+    final VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+    if (timeline == null) {
+      throw new ISE("Unknown datasource [%s]", segment.getDataSource());
+    }
+    timeline.remove(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
   }
 
   private void addSegmentToServer(DruidServer server, DataSegment segment)

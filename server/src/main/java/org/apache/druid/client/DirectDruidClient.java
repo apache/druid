@@ -237,10 +237,18 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           final boolean continueReading;
           try {
+            if (query.getId() != null && query.getSubQueryId() != null) {
+              log.debug(
+                  "Got a response from [%s] for query ID[%s], subquery ID [%s]",
+                  url,
+                  query.getId(),
+                  query.getSubQueryId()
+              );
+            }
             final String responseContext = response.headers().get(QueryResource.HEADER_RESPONSE_CONTEXT);
             context.add(
                 ResponseContext.Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-                new NonnullPair<>(query.getMostRelevantId(), VAL_TO_REDUCE_REMAINING_RESPONSES)
+                new NonnullPair<>(query.getMostSpecificId(), VAL_TO_REDUCE_REMAINING_RESPONSES)
             );
             // context may be null in case of error or query timeout
             if (responseContext != null) {

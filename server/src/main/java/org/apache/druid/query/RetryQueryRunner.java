@@ -139,9 +139,9 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
         );
 
     final int remainingResponses = Preconditions.checkNotNull(
-        idToRemainingResponses.get(queryPlus.getQuery().getMostRelevantId()),
+        idToRemainingResponses.get(queryPlus.getQuery().getMostSpecificId()),
         "Number of remaining responses for query[%s]",
-        queryPlus.getQuery().getMostRelevantId()
+        queryPlus.getQuery().getMostSpecificId()
     );
     if (remainingResponses > 0) {
       throw new ISE("Failed to check missing segments due to missing responds from [%d] servers", remainingResponses);

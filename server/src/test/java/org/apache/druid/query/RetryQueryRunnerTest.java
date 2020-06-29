@@ -35,7 +35,7 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -51,7 +51,6 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -142,7 +141,7 @@ public class RetryQueryRunnerTest
   {
     servers.add(server);
     simpleServerView.addServer(server, dataSegment);
-    httpClient.addServerAndRunner(server, new SimpleServerManager(conglomerate, dataSegment.getId(), queryableIndex));
+    httpClient.addServerAndRunner(server, new SimpleServerManager(conglomerate, dataSegment, queryableIndex));
   }
 
   @Test
@@ -244,7 +243,7 @@ public class RetryQueryRunnerTest
    * Drops a segment from the DruidServer. This method doesn't update the server view, but the server will stop
    * serving queries for the dropped segment.
    */
-  private Pair<SegmentId, QueryableIndex> dropSegmentFromServer(DruidServer fromServer)
+  private NonnullPair<DataSegment, QueryableIndex> dropSegmentFromServer(DruidServer fromServer)
   {
     final SimpleServerManager serverManager = httpClient.getServerManager(fromServer);
     Assert.assertNotNull(serverManager);
@@ -252,14 +251,23 @@ public class RetryQueryRunnerTest
   }
 
   /**
+   * Drops a segment from the DruidServer and update the server view.
+   */
+  private NonnullPair<DataSegment, QueryableIndex> unannounceSegmentFromServer(DruidServer fromServer)
+  {
+    final NonnullPair<DataSegment, QueryableIndex> pair = dropSegmentFromServer(fromServer);
+    simpleServerView.unannounceSegmentFromServer(fromServer, pair.lhs);
+    return pair;
+  }
+
+  /**
    * Drops a segment from the {@code fromServer} and creates a new server serving the dropped segment.
-   * After this method is called, the broker server view will have 2 servers serving the dropped segment, but
-   * only the new server will actually serve the query.
+   * This method updates the server view.
    */
   private void dropSegmentFromServerAndAddNewServerForSegment(DruidServer fromServer)
   {
-    final Pair<SegmentId, QueryableIndex> pair = dropSegmentFromServer(fromServer);
-    final DataSegment segmentToMove = fromSegmentId(pair.lhs);
+    final NonnullPair<DataSegment, QueryableIndex> pair = unannounceSegmentFromServer(fromServer);
+    final DataSegment segmentToMove = pair.lhs;
     final QueryableIndex queryableIndexToMove = pair.rhs;
     addServer(
         SimpleServerView.createServer(11),
@@ -332,11 +340,6 @@ public class RetryQueryRunnerTest
         .range(0, expectedNumResultRows)
         .mapToObj(i -> new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 10))))
         .collect(Collectors.toList());
-  }
-
-  private static DataSegment fromSegmentId(SegmentId segmentId)
-  {
-    return newSegment(segmentId.getInterval(), segmentId.getPartitionNum());
   }
 
   private static DataSegment newSegment(

@@ -124,7 +124,7 @@ public abstract class ResponseContext
      * one by one per subquery. However, since we are planning to parallelize running subqueries, we store them
      * in a ConcurrentHashMap.
      *
-     * @see org.apache.druid.query.Query#getMostRelevantId
+     * @see org.apache.druid.query.Query#getMostSpecificId
      */
     REMAINING_RESPONSES_FROM_QUERY_SERVERS(
         "remainingResponsesFromQueryServers",
