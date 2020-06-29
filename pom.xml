@@ -1264,6 +1264,10 @@
                 <version>0.8.5</version>
                 <configuration>
                     <excludes>
+                        <!-- Ignore initialization classes, these are tested by the integration tests. -->
+                        <exclude>org/apache/druid/cli/Cli*</exclude>
+                        <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
+                      
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
                         <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
