@@ -19,6 +19,7 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
@@ -199,6 +200,28 @@ public abstract class ServerRunnable extends GuiceRunnable
       this.nodeRole = nodeRole;
       this.serviceClasses = serviceClasses;
       this.useLegacyAnnouncer = useLegacyAnnouncer;
+    }
+
+    @VisibleForTesting
+    DiscoverySideEffectsProvider(
+        final NodeRole nodeRole,
+        final List<Class<? extends DruidService>> serviceClasses,
+        final boolean useLegacyAnnouncer,
+        final DruidNode druidNode,
+        final DruidNodeAnnouncer announcer,
+        final ServiceAnnouncer legacyAnnouncer,
+        final Lifecycle lifecycle,
+        final Injector injector
+    )
+    {
+      this.nodeRole = nodeRole;
+      this.serviceClasses = serviceClasses;
+      this.useLegacyAnnouncer = useLegacyAnnouncer;
+      this.druidNode = druidNode;
+      this.announcer = announcer;
+      this.legacyAnnouncer = legacyAnnouncer;
+      this.lifecycle = lifecycle;
+      this.injector = injector;
     }
 
     @Override

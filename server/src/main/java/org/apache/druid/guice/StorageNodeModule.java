@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -43,7 +44,8 @@ import javax.annotation.Nullable;
 public class StorageNodeModule implements Module
 {
   private static final EmittingLogger log = new EmittingLogger(StorageNodeModule.class);
-  private static final String IS_SEGMENT_CACHE_CONFIGURED = "IS_SEGMENT_CACHE_CONFIGURED";
+  @VisibleForTesting
+  static final String IS_SEGMENT_CACHE_CONFIGURED = "IS_SEGMENT_CACHE_CONFIGURED";
 
   @Override
   public void configure(Binder binder)
@@ -87,7 +89,7 @@ public class StorageNodeModule implements Module
   )
   {
     if (serverTypeConfig == null) {
-      throw new ProvisionException("Must override the binding for ServerTypeConfig if you want a DruidServerMetadata.");
+      throw new ProvisionException("Must override the binding for ServerTypeConfig if you want a DataNodeService.");
     }
     if (!isSegmentCacheConfigured) {
       log.info("Segment cache not configured on ServerType [%s]", serverTypeConfig.getServerType());
