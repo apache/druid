@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -49,7 +48,6 @@ import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
@@ -141,19 +139,11 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, ZkCoordinator.class);
 
-          // We only want the broker to announce itself as a data node if the segment cache is configured.
-          // This is because, prior to 0.19, the BROKER type node did not exist, so older nodes will not be able to
-          // de-serialize any announcements made by a newer node. If a Druid admin configures the segment cache on the
-          // broker, it is assumed that all other nodes in the cluster are at the minimum version required to support
-          // the broker running as a data node.
           bindNodeRoleAndAnnouncer(
               binder,
               DiscoverySideEffectsProvider
                   .builder(NodeRole.BROKER)
-                  .serviceClasses(ImmutableMap.of(
-                      LookupNodeService.class, ALWAYS_ENABLED,
-                      DataNodeService.class, StorageNodeModule.IS_SEGMENT_CACHE_CONFIGURED)
-                  )
+                  .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
                   .useLegacyAnnouncer(true)
                   .build()
           );
