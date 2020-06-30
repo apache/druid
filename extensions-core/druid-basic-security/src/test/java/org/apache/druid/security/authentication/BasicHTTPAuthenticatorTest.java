@@ -210,7 +210,7 @@ public class BasicHTTPAuthenticatorTest
             validator.validateCredentials(EasyMock.eq("basic"), EasyMock.eq("basic"), EasyMock.eq("userA"), EasyMock.aryEq("badpassword".toCharArray()))
         )
         .andThrow(
-            new BasicSecurityAuthenticationException("User authentication failed username[%s].", "userA")
+            new BasicSecurityAuthenticationException("User authentication failed.")
         )
         .times(1);
     EasyMock.replay(validator);
