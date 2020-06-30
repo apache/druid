@@ -90,6 +90,8 @@ IANA
 IETF
 IP
 IPv4
+IS_BROADCAST
+IS_JOINABLE
 IS0
 ISO-8601
 ISO8601
@@ -264,6 +266,7 @@ inlined
 interruptible
 jackson-jq
 javadoc
+joinable
 kerberos
 keystore
 keytab
