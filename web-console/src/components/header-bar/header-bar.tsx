@@ -32,20 +32,14 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { AboutDialog } from '../../dialogs/about-dialog/about-dialog';
-import { CoordinatorDynamicConfigDialog } from '../../dialogs/coordinator-dynamic-config-dialog/coordinator-dynamic-config-dialog';
-import { DoctorDialog } from '../../dialogs/doctor-dialog/doctor-dialog';
-import { OverlordDynamicConfigDialog } from '../../dialogs/overlord-dynamic-config-dialog/overlord-dynamic-config-dialog';
-import { Capabilities } from '../../utils/capabilities';
 import {
-  DRUID_ASF_SLACK,
-  DRUID_DOCS,
-  DRUID_DOCS_API,
-  DRUID_DOCS_SQL,
-  DRUID_DOCS_VERSION,
-  DRUID_GITHUB,
-  DRUID_USER_GROUP,
-} from '../../variables';
+  AboutDialog,
+  CoordinatorDynamicConfigDialog,
+  DoctorDialog,
+  OverlordDynamicConfigDialog,
+} from '../../dialogs';
+import { getLink } from '../../links';
+import { Capabilities } from '../../utils/capabilities';
 import { ExternalLink } from '../external-link/external-link';
 import { PopoverText } from '../popover-text/popover-text';
 
@@ -137,9 +131,10 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
       message = (
         <p>
           It appears that the SQL endpoint is disabled. The console will fall back to{' '}
-          <ExternalLink href={DRUID_DOCS_API}>native Druid APIs</ExternalLink> and will be limited
-          in functionality. Look at <ExternalLink href={DRUID_DOCS_SQL}>the SQL docs</ExternalLink>{' '}
-          to enable the SQL endpoint.
+          <ExternalLink href={getLink('DOCS_API')}>native Druid APIs</ExternalLink> and will be
+          limited in functionality. Look at{' '}
+          <ExternalLink href={getLink('DOCS_SQL')}>the SQL docs</ExternalLink> to enable the SQL
+          endpoint.
         </p>
       );
       break;
@@ -205,9 +200,7 @@ const RestrictedMode = React.memo(function RestrictedMode(props: RestrictedModeP
           {message}
           <p>
             For more info check out the{' '}
-            <ExternalLink
-              href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/operations/management-uis.html#druid-console`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/operations/management-uis.html#druid-console`}>
               console documentation
             </ExternalLink>
             .
@@ -239,15 +232,25 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const helpMenu = (
     <Menu>
       <MenuItem icon={IconNames.GRAPH} text="About" onClick={() => setAboutDialogOpen(true)} />
-      <MenuItem icon={IconNames.TH} text="Docs" href={DRUID_DOCS} target="_blank" />
-      <MenuItem icon={IconNames.USER} text="User group" href={DRUID_USER_GROUP} target="_blank" />
+      <MenuItem icon={IconNames.TH} text="Docs" href={getLink('DOCS')} target="_blank" />
+      <MenuItem
+        icon={IconNames.USER}
+        text="User group"
+        href={getLink('USER_GROUP')}
+        target="_blank"
+      />
       <MenuItem
         icon={IconNames.CHAT}
         text="ASF Slack channel"
-        href={DRUID_ASF_SLACK}
+        href={getLink('SLACK')}
         target="_blank"
       />
-      <MenuItem icon={IconNames.GIT_BRANCH} text="GitHub" href={DRUID_GITHUB} target="_blank" />
+      <MenuItem
+        icon={IconNames.GIT_BRANCH}
+        text="GitHub"
+        href={getLink('GITHUB')}
+        target="_blank"
+      />
     </Menu>
   );
 
