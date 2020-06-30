@@ -19,6 +19,7 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
@@ -37,6 +38,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
@@ -47,6 +49,8 @@ import java.util.List;
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
+  private static final EmittingLogger log = new EmittingLogger(ServerRunnable.class);
+
   public ServerRunnable(Logger log)
   {
     super(log);
@@ -154,7 +158,11 @@ public abstract class ServerRunnable extends GuiceRunnable
 
       public DiscoverySideEffectsProvider build()
       {
-        return new DiscoverySideEffectsProvider(nodeRole, serviceClasses, useLegacyAnnouncer);
+        return new DiscoverySideEffectsProvider(
+            nodeRole,
+            serviceClasses,
+            useLegacyAnnouncer
+        );
       }
     }
 
@@ -194,15 +202,43 @@ public abstract class ServerRunnable extends GuiceRunnable
       this.useLegacyAnnouncer = useLegacyAnnouncer;
     }
 
+    @VisibleForTesting
+    DiscoverySideEffectsProvider(
+        final NodeRole nodeRole,
+        final List<Class<? extends DruidService>> serviceClasses,
+        final boolean useLegacyAnnouncer,
+        final DruidNode druidNode,
+        final DruidNodeAnnouncer announcer,
+        final ServiceAnnouncer legacyAnnouncer,
+        final Lifecycle lifecycle,
+        final Injector injector
+    )
+    {
+      this.nodeRole = nodeRole;
+      this.serviceClasses = serviceClasses;
+      this.useLegacyAnnouncer = useLegacyAnnouncer;
+      this.druidNode = druidNode;
+      this.announcer = announcer;
+      this.legacyAnnouncer = legacyAnnouncer;
+      this.lifecycle = lifecycle;
+      this.injector = injector;
+    }
+
     @Override
     public Child get()
     {
       ImmutableMap.Builder<String, DruidService> builder = new ImmutableMap.Builder<>();
       for (Class<? extends DruidService> clazz : serviceClasses) {
         DruidService service = injector.getInstance(clazz);
-        builder.put(service.getName(), service);
+        if (service.isDiscoverable()) {
+          builder.put(service.getName(), service);
+        } else {
+          log.info(
+              "Service[%s] is not discoverable. This will not be listed as a service provided by this node.",
+              service.getName()
+          );
+        }
       }
-
       DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build());
 
       lifecycle.addHandler(
@@ -232,7 +268,6 @@ public abstract class ServerRunnable extends GuiceRunnable
           },
           Lifecycle.Stage.ANNOUNCEMENTS
       );
-
       return new Child();
     }
   }

@@ -19,12 +19,17 @@
 
 package org.apache.druid.initialization;
 
+import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ServerConfigSerdeTest
+import javax.ws.rs.HttpMethod;
+
+public class ServerConfigTest
 {
   private static final DefaultObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
@@ -51,7 +56,8 @@ public class ServerConfigSerdeTest
         defaultConfig.getUnannouncePropagationDelay(),
         defaultConfig.getInflateBufferSize(),
         defaultConfig.getCompressionLevel(),
-        true
+        true,
+        ImmutableList.of(HttpMethod.OPTIONS)
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
@@ -59,5 +65,18 @@ public class ServerConfigSerdeTest
     Assert.assertEquals(999, modifiedConfig2.getNumThreads());
     Assert.assertEquals(888, modifiedConfig2.getQueueSize());
     Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
+    Assert.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
+    Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains(HttpMethod.OPTIONS));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ServerConfig.class)
+                  // this class uses non-final fields for serialization / de-serialization.
+                  // There are no setters that mutate the fields, once the object is instantiated.
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .usingGetClass()
+                  .verify();
   }
 }

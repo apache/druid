@@ -20,6 +20,7 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -30,6 +31,7 @@ public class ShardSpecTestUtils
   {
     // Copied configurations from org.apache.druid.jackson.DefaultObjectMapper
     final ObjectMapper mapper = new ObjectMapper();
+    mapper.setInjectableValues(new Std().addValue(ObjectMapper.class, mapper));
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(MapperFeature.AUTO_DETECT_GETTERS, false);
     // See https://github.com/FasterXML/jackson-databind/issues/170

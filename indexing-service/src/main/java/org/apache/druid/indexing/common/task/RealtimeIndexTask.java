@@ -378,7 +378,7 @@ public class RealtimeIndexTask extends AbstractTask
       plumber.startJob();
 
       // Set up metrics emission
-      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
+      toolbox.addMonitor(metricsMonitor);
 
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
@@ -473,7 +473,7 @@ public class RealtimeIndexTask extends AbstractTask
           if (firehose != null) {
             CloseQuietly.close(firehose);
           }
-          toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
+          toolbox.removeMonitor(metricsMonitor);
         }
       }
 

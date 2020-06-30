@@ -327,7 +327,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       );
 
       // Set up metrics emission
-      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
+      toolbox.addMonitor(metricsMonitor);
 
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
@@ -444,7 +444,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       appenderator.close();
       CloseQuietly.close(driver);
 
-      toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
+      toolbox.removeMonitor(metricsMonitor);
 
       if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().unannounce();
