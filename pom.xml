@@ -1268,6 +1268,7 @@
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
                         <exclude>org/apache/druid/query/Druids</exclude>  <!-- query builder classes for testing -->
                         <exclude>org/apache/druid/query/topn/TopNQueryBuilder</exclude>  <!-- topN query builder classe for testing -->
+                        <exclude>org/apache/druid/query/groupby/GroupByQuery$Builder</exclude>  <!-- groupBy query builder classe for testing -->
                     </excludes>
                 </configuration>
                 <executions>
