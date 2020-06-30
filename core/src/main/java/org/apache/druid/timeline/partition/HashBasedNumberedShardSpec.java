@@ -99,9 +99,38 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
+  public List<String> getDomainDimensions()
+  {
+    return partitionDimensions;
+  }
+
+  @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    return Math.abs(hash(timestamp, inputRow) % numBuckets) == bucketId;
+    return Math.abs(hash(timestamp, inputRow) % numBuckets) == bucketId % numBuckets;
+  }
+
+  /**
+   * Check if the current segment possibly holds records if the values of dimensions in {@link #partitionDimensions}
+   * are of {@code partitionDimensionsValues}
+   *
+   * @param partitionDimensionsValues An instance of values of dimensions in {@link #partitionDimensions}
+   *
+   * @return Whether the current segment possibly holds records for the given values of partition dimensions
+   */
+  private boolean isInChunk(Map<String, String> partitionDimensionsValues)
+  {
+    assert !partitionDimensions.isEmpty();
+    List<Object> groupKey = Lists.transform(
+        partitionDimensions,
+        o -> Collections.singletonList(partitionDimensionsValues.get(o))
+    );
+    try {
+      return Math.abs(hash(jsonMapper, groupKey) % numBuckets) == bucketId % numBuckets;
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -266,28 +295,5 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     }
 
     return false;
-  }
-
-  /**
-   * Check if the current segment possibly holds records if the values of dimensions in {@link #partitionDimensions}
-   * are of {@code partitionDimensionsValues}
-   *
-   * @param partitionDimensionsValues An instance of values of dimensions in {@link #partitionDimensions}
-   *
-   * @return Whether the current segment possibly holds records for the given values of partition dimensions
-   */
-  private boolean isInChunk(Map<String, String> partitionDimensionsValues)
-  {
-    assert !partitionDimensions.isEmpty();
-    List<Object> groupKey = Lists.transform(
-        partitionDimensions,
-        o -> Collections.singletonList(partitionDimensionsValues.get(o))
-    );
-    try {
-      return Math.abs(hash(jsonMapper, groupKey) % numBuckets) == bucketId;
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

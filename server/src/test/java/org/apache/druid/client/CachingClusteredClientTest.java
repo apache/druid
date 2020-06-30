@@ -1549,10 +1549,10 @@ public class CachingClusteredClientTest
     DimFilter filter = new AndDimFilter(
         new SelectorDimFilter("dim1", "a", null),
         new BoundDimFilter("dim2", "e", "zzz", true, true, false, null, StringComparators.LEXICOGRAPHIC),
-        // Equivalent filter of dim2 below is InDimFilter("dim3", Arrays.asList("c", "e", "g"), null)
+        // Equivalent filter of dim3 below is InDimFilter("dim3", Arrays.asList("c"), null)
         new AndDimFilter(
             new InDimFilter("dim3", Arrays.asList("a", "c", "e", "g"), null),
-            new BoundDimFilter("dim3", "aaa", "hi", false, false, false, null, StringComparators.LEXICOGRAPHIC)
+            new BoundDimFilter("dim3", "aaa", "ddd", false, false, false, null, StringComparators.LEXICOGRAPHIC)
         )
     );
 
@@ -1574,11 +1574,8 @@ public class CachingClusteredClientTest
     final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
     final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
 
-    List<String> partitionDimensions1 = ImmutableList.of("dim1");
-    List<String> partitionDimensions2 = ImmutableList.of("dim2");
-    List<String> partitionDimensions3 = ImmutableList.of("dim1", "dim3");
-
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    List<String> partitionDimensions1 = ImmutableList.of("dim1");
     ServerSelector selector1 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 0, 6);
     ServerSelector selector2 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 1, 6);
     ServerSelector selector3 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 2, 6);
@@ -1586,10 +1583,12 @@ public class CachingClusteredClientTest
     ServerSelector selector5 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 4, 6);
     ServerSelector selector6 = makeMockHashBasedSelector(lastServer, partitionDimensions1, 5, 6);
 
+    List<String> partitionDimensions2 = ImmutableList.of("dim2");
     ServerSelector selector7 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 0, 3);
     ServerSelector selector8 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 1, 3);
     ServerSelector selector9 = makeMockHashBasedSelector(lastServer, partitionDimensions2, 2, 3);
 
+    List<String> partitionDimensions3 = ImmutableList.of("dim1", "dim3");
     ServerSelector selector10 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 0, 4);
     ServerSelector selector11 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 1, 4);
     ServerSelector selector12 = makeMockHashBasedSelector(lastServer, partitionDimensions3, 2, 4);
@@ -1624,16 +1623,17 @@ public class CachingClusteredClientTest
     EasyMock.replay(serverView);
     EasyMock.replay(mockRunner);
 
-    List<SegmentDescriptor> descriptors = new ArrayList<>();
-    descriptors.add(new SegmentDescriptor(interval1, "v", 3));
+    List<SegmentDescriptor> expcetedDescriptors = new ArrayList<>();
+    // Narrow down to 1 chunk
+    expcetedDescriptors.add(new SegmentDescriptor(interval1, "v", 3));
+    // Can't filter out any chunks
+    expcetedDescriptors.add(new SegmentDescriptor(interval2, "v", 0));
+    expcetedDescriptors.add(new SegmentDescriptor(interval2, "v", 1));
+    expcetedDescriptors.add(new SegmentDescriptor(interval2, "v", 2));
+    // Narrow down to 1 chunk
+    expcetedDescriptors.add(new SegmentDescriptor(interval3, "v", 2));
 
-    descriptors.add(new SegmentDescriptor(interval2, "v", 0));
-    descriptors.add(new SegmentDescriptor(interval2, "v", 1));
-    descriptors.add(new SegmentDescriptor(interval2, "v", 2));
-
-    descriptors.add(new SegmentDescriptor(interval3, "v", 2));
-
-    MultipleSpecificSegmentSpec expected = new MultipleSpecificSegmentSpec(descriptors);
+    MultipleSpecificSegmentSpec expected = new MultipleSpecificSegmentSpec(expcetedDescriptors);
 
     runner.run(QueryPlus.wrap(query)).toList();
     Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
@@ -1651,7 +1651,14 @@ public class CachingClusteredClientTest
         null,
         null,
         null,
-        new HashBasedNumberedShardSpec(partitionNum, partitions, partitionDimensions, ServerTestHelper.MAPPER),
+        new HashBasedNumberedShardSpec(
+            partitionNum,
+            partitions,
+            partitionNum,
+            partitions,
+            partitionDimensions,
+            ServerTestHelper.MAPPER
+        ),
         null,
         9,
         0L
