@@ -58,9 +58,7 @@
       <!--<property name="max" value="120"/>-->
     <!--</module>-->
     <module name="AvoidStarImport"/>
-    <module name="AvoidStaticImport">
-      <property name="excludes" value="org.junit.Assert.*, org.easymock.EasyMock.*, org.assertj.core.api.Assertions.*, org.powermock.api.easymock.PowerMock.*, org.testng.Assert.*, org.hamcrest.CoreMatchers.*, org.hamcrest.Matchers.*, org.hamcrest.MatcherAssert.*, org.hamcrest.core.IsInstanceOf.*, org.hamcrest.number.OrderingComparison.*, org.hamcrest.core.Is.*"/>
-    </module>
+    <module name="AvoidStaticImport"/>
     <module name="RedundantImport"/>
     <module name="UnusedImports" />
     <module name="NeedBraces"/>
