@@ -83,7 +83,7 @@ Example:
 {
   "queryType": "groupBy",
   "dataSource": "sample_datasource",
-  "dimensions": "[sample_dim]",
+  "dimensions": ["sample_dim"],
   "granularity": "all",
   "aggregations": [
     {
