@@ -476,7 +476,7 @@ public class ITBasicAuthConfigurationTest
   public void testMaliciousUser()
   {
     HttpClient maliciousClient = new CredentialedHttpClient(
-        new BasicCredentials("admin", "priest"),
+        new BasicCredentials("<script>alert('hello')</script>", "noPass"),
         httpClient
     );
     StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
