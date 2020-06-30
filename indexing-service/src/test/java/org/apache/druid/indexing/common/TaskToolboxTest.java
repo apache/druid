@@ -111,7 +111,7 @@ public class TaskToolboxTest
         () -> mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         NoopJoinableFactory.INSTANCE,
-        mockMonitorScheduler,
+        () -> mockMonitorScheduler,
         mockSegmentLoaderFactory,
         ObjectMapper,
         mockIndexIO,

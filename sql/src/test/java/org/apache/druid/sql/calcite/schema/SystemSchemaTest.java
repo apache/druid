@@ -67,9 +67,12 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
@@ -88,6 +91,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -239,6 +243,8 @@ public class SystemSchemaTest extends CalciteTestBase
     druidSchema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestServerInventoryView(walker.getSegments(), realtimeSegments),
+        new SegmentManager(EasyMock.createMock(SegmentLoader.class)),
+        new MapJoinableFactory(ImmutableMap.of()),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
@@ -467,7 +473,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(14, fields.size());
+    Assert.assertEquals(16, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -1243,6 +1249,10 @@ public class SystemSchemaTest extends CalciteTestBase
           case STRING:
             if (signature.getColumnName(i).equals("segment_id")) {
               expectedClass = SegmentId.class;
+            } else if (signature.getColumnName(i).equals("shardSpec")) {
+              expectedClass = ShardSpec.class;
+            } else if (signature.getColumnName(i).equals("dimensions") || signature.getColumnName(i).equals("metrics")) {
+              expectedClass = List.class;
             } else {
               expectedClass = String.class;
             }

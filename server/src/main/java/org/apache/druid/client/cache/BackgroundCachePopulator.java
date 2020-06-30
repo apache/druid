@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -100,6 +101,7 @@ public class BackgroundCachePopulator implements CachePopulator
                 @Override
                 public void onFailure(Throwable t)
                 {
+                  GuavaUtils.cancelAll(true, null, cacheFutures);
                   log.error(t, "Background caching failed");
                 }
               },

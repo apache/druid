@@ -146,7 +146,6 @@ interface SegmentQueryResultRow {
   version: string;
   size: 0;
   partition_num: number;
-  payload: any;
   num_rows: number;
   num_replicas: number;
   is_available: number;
@@ -211,6 +210,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             `FROM sys.segments`,
             whereClause ? `WHERE ${whereClause}` : '',
             `GROUP BY 1`,
+            `ORDER BY 1 DESC`,
             `LIMIT ${totalQuerySize}`,
           ]).join('\n');
 
@@ -221,7 +221,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           queryParts = compact([
             `SELECT`,
             `  ("start" || '/' || "end") AS "interval",`,
-            `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed"`,
             `FROM sys.segments`,
             `WHERE`,
             intervals ? `  ("start" || '/' || "end") IN (${intervals})` : 'FALSE',
@@ -240,7 +240,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           queryParts.push(`LIMIT ${totalQuerySize * 1000}`);
         } else {
           queryParts = [
-            `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed"`,
             `FROM sys.segments`,
           ];
 
@@ -264,13 +264,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         const results: any[] = (await queryDruidSql({ query: sqlQuery })).slice(
           query.page * query.pageSize,
         );
-        results.forEach(result => {
-          try {
-            result.payload = JSON.parse(result.payload);
-          } catch {
-            result.payload = {};
-          }
-        });
         return results;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -299,7 +292,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 version: segment.version,
                 partition_num: segment.shardSpec.partitionNum ? 0 : segment.shardSpec.partitionNum,
                 size: segment.size,
-                payload: segment,
                 num_rows: -1,
                 num_replicas: -1,
                 is_available: -1,

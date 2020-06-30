@@ -253,7 +253,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while submitting supervisor to overlord, response [%s %s]",
+            "Error while submitting supervisor to overlord, response [%s: %s]",
             response.getStatus(),
             response.getContent()
         );

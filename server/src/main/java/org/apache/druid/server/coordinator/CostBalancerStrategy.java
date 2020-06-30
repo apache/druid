@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -211,9 +212,12 @@ public class CostBalancerStrategy implements BalancerStrategy
 
 
   @Override
-  public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders)
+  public BalancerSegmentHolder pickSegmentToMove(
+      final List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources
+  )
   {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders);
+    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders, broadcastDatasources);
   }
 
   @Override
@@ -363,7 +367,8 @@ public class CostBalancerStrategy implements BalancerStrategy
       final boolean includeCurrentServer
   )
   {
-    Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
+    final Pair<Double, ServerHolder> noServer = Pair.of(Double.POSITIVE_INFINITY, null);
+    Pair<Double, ServerHolder> bestServer = noServer;
 
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
 
@@ -387,7 +392,11 @@ public class CostBalancerStrategy implements BalancerStrategy
           bestServers.add(server);
         }
       }
-
+      // If the best server list contains server whose cost of serving the segment is INFINITE then this means
+      // no usable servers are found so return a null server so that segment assignment does not happen
+      if (bestServers.get(0).lhs.isInfinite()) {
+        return noServer;
+      }
       // Randomly choose a server from the best servers
       bestServer = bestServers.get(ThreadLocalRandom.current().nextInt(bestServers.size()));
     }

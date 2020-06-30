@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -33,8 +34,6 @@ import java.util.function.Function;
 
 public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamIndexingTest
 {
-  protected abstract boolean isKafkaWriterTransactionalEnabled();
-
   @Override
   StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config)
   {
@@ -42,15 +41,19 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   }
 
   @Override
-  public StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config)
+  public StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, Boolean transactionEnabled)
   {
-    return new KafkaEventWriter(config, isKafkaWriterTransactionalEnabled());
+    return new KafkaEventWriter(config, Preconditions.checkNotNull(transactionEnabled, "transactionEnabled"));
   }
 
   @Override
-  Function<String, String> generateStreamIngestionPropsTransform(String streamName,
-                                                                 String fullDatasourceName,
-                                                                 IntegrationTestingConfig config)
+  Function<String, String> generateStreamIngestionPropsTransform(
+      String streamName,
+      String fullDatasourceName,
+      String parserType,
+      String parserOrInputFormat,
+      IntegrationTestingConfig config
+  )
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties consumerProperties = new Properties();
@@ -78,6 +81,29 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
             "%%TOPIC_VALUE%%",
             streamName
         );
+        if (AbstractStreamIndexingTest.INPUT_FORMAT.equals(parserType)) {
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT%%",
+              parserOrInputFormat
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARSER%%",
+              "null"
+          );
+        } else if (AbstractStreamIndexingTest.INPUT_ROW_PARSER.equals(parserType)) {
+          spec = StringUtils.replace(
+              spec,
+              "%%PARSER%%",
+              parserOrInputFormat
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT%%",
+              "null"
+          );
+        }
         spec = StringUtils.replace(
             spec,
             "%%USE_EARLIEST_KEY%%",

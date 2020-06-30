@@ -42,7 +42,6 @@ import org.apache.calcite.rel.rules.AggregateValuesRule;
 import org.apache.calcite.rel.rules.CalcRemoveRule;
 import org.apache.calcite.rel.rules.ExchangeRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
-import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
@@ -63,7 +62,6 @@ import org.apache.calcite.rel.rules.SortRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.SortRemoveRule;
 import org.apache.calcite.rel.rules.SortUnionTransposeRule;
 import org.apache.calcite.rel.rules.TableScanRule;
-import org.apache.calcite.rel.rules.UnionMergeRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
@@ -76,6 +74,7 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
 import org.apache.druid.sql.calcite.rule.DruidTableScanRule;
+import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 
@@ -103,7 +102,6 @@ public class Rules
           FilterTableScanRule.INSTANCE,
           ProjectFilterTransposeRule.INSTANCE,
           FilterProjectTransposeRule.INSTANCE,
-          FilterJoinRule.FILTER_ON_JOIN,
           JoinPushExpressionsRule.INSTANCE,
           AggregateCaseToFilterRule.INSTANCE,
           FilterAggregateTransposeRule.INSTANCE,
@@ -125,14 +123,17 @@ public class Rules
           ProjectTableScanRule.INTERPRETER
       );
 
-  // Rules from RelOptUtil's registerReductionRules.
+  // Rules from RelOptUtil's registerReductionRules, minus:
+  //
+  // 1) ReduceExpressionsRule.JOIN_INSTANCE
+  //    Removed by https://github.com/apache/druid/pull/9941 due to issue in https://github.com/apache/druid/issues/9942
+  //    TODO: Re-enable when https://github.com/apache/druid/issues/9942 is fixed
   private static final List<RelOptRule> REDUCTION_RULES =
       ImmutableList.of(
           ReduceExpressionsRule.PROJECT_INSTANCE,
           ReduceExpressionsRule.FILTER_INSTANCE,
           ReduceExpressionsRule.CALC_INSTANCE,
           ReduceExpressionsRule.WINDOW_INSTANCE,
-          ReduceExpressionsRule.JOIN_INSTANCE,
           ValuesReduceRule.FILTER_INSTANCE,
           ValuesReduceRule.PROJECT_FILTER_INSTANCE,
           ValuesReduceRule.PROJECT_INSTANCE,
@@ -141,6 +142,8 @@ public class Rules
 
   // Rules from RelOptUtil's registerAbstractRules.
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
+  // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
+  // expensive in terms of planning time.
   private static final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
@@ -155,9 +158,6 @@ public class Rules
           PruneEmptyRules.JOIN_LEFT_INSTANCE,
           PruneEmptyRules.JOIN_RIGHT_INSTANCE,
           PruneEmptyRules.SORT_FETCH_ZERO_INSTANCE,
-          UnionMergeRule.INSTANCE,
-          UnionMergeRule.INTERSECT_INSTANCE,
-          UnionMergeRule.MINUS_INSTANCE,
           ProjectToWindowRule.PROJECT,
           FilterMergeRule.INSTANCE,
           IntersectToDistinctRule.INSTANCE
@@ -169,10 +169,11 @@ public class Rules
   // 2) SemiJoinRule.PROJECT and SemiJoinRule.JOIN (we don't need to detect semi-joins, because they are handled
   //    fine as-is by DruidJoinRule).
   // 3) JoinCommuteRule (we don't support reordering joins yet).
+  // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
+  //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
+  //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
-          FilterJoinRule.FILTER_ON_JOIN,
-          FilterJoinRule.JOIN,
           AbstractConverter.ExpandConversionRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
           UnionToDistinctRule.INSTANCE,
@@ -245,6 +246,7 @@ public class Rules
     }
 
     // Rules that we wrote.
+    rules.add(FilterJoinExcludePushToChildRule.FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD);
     rules.add(SortCollapseRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
 

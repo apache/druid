@@ -79,7 +79,7 @@ public class JoinConditionAnalysis
                                                                 .allMatch(expr -> expr.isLiteral() && expr.eval(
                                                                     ExprUtils.nilBindings()).asBoolean());
     canHashJoin = nonEquiConditions.stream().allMatch(Expr::isLiteral);
-    rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).distinct().collect(Collectors.toSet());
+    rightKeyColumns = getEquiConditions().stream().map(Equality::getRightColumn).collect(Collectors.toSet());
   }
 
   /**
@@ -108,14 +108,18 @@ public class JoinConditionAnalysis
         nonEquiConditions.add(childExpr);
       } else {
         final Pair<Expr, Expr> decomposed = maybeDecomposed.get();
-        final Expr lhs = decomposed.lhs;
-        final Expr rhs = decomposed.rhs;
+        final Expr lhs = Objects.requireNonNull(decomposed.lhs);
+        final Expr rhs = Objects.requireNonNull(decomposed.rhs);
 
         if (isLeftExprAndRightColumn(lhs, rhs, rightPrefix)) {
           // rhs is a right-hand column; lhs is an expression solely of the left-hand side.
-          equiConditions.add(new Equality(lhs, rhs.getBindingIfIdentifier().substring(rightPrefix.length())));
+          equiConditions.add(
+              new Equality(lhs, Objects.requireNonNull(rhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
+          );
         } else if (isLeftExprAndRightColumn(rhs, lhs, rightPrefix)) {
-          equiConditions.add(new Equality(rhs, lhs.getBindingIfIdentifier().substring(rightPrefix.length())));
+          equiConditions.add(
+              new Equality(rhs, Objects.requireNonNull(lhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
+          );
         } else {
           nonEquiConditions.add(childExpr);
         }

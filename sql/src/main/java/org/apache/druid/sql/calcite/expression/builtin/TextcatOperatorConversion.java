@@ -36,7 +36,7 @@ public class TextcatOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("textcat")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .requiredOperands(2)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeNonNull(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
 

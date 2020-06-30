@@ -125,10 +125,10 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
-import org.apache.druid.timeline.partition.StringPartitionChunk;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
@@ -1486,19 +1486,19 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
 
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
-    ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 1);
-    ServerSelector selector2 = makeMockSingleDimensionSelector(lastServer, "dim1", "e", "f", 2);
-    ServerSelector selector3 = makeMockSingleDimensionSelector(lastServer, "dim1", "hi", "zzz", 3);
-    ServerSelector selector4 = makeMockSingleDimensionSelector(lastServer, "dim2", "a", "e", 4);
-    ServerSelector selector5 = makeMockSingleDimensionSelector(lastServer, "dim2", null, null, 5);
-    ServerSelector selector6 = makeMockSingleDimensionSelector(lastServer, "other", "b", null, 6);
+    ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 0);
+    ServerSelector selector2 = makeMockSingleDimensionSelector(lastServer, "dim1", "e", "f", 1);
+    ServerSelector selector3 = makeMockSingleDimensionSelector(lastServer, "dim1", "hi", "zzz", 2);
+    ServerSelector selector4 = makeMockSingleDimensionSelector(lastServer, "dim2", "a", "e", 0);
+    ServerSelector selector5 = makeMockSingleDimensionSelector(lastServer, "dim2", null, null, 1);
+    ServerSelector selector6 = makeMockSingleDimensionSelector(lastServer, "other", "b", null, 0);
 
-    timeline.add(interval1, "v", new StringPartitionChunk<>(null, "a", 1, selector1));
-    timeline.add(interval1, "v", new StringPartitionChunk<>("a", "b", 2, selector2));
-    timeline.add(interval1, "v", new StringPartitionChunk<>("b", null, 3, selector3));
-    timeline.add(interval2, "v", new StringPartitionChunk<>(null, "d", 4, selector4));
-    timeline.add(interval2, "v", new StringPartitionChunk<>("d", null, 5, selector5));
-    timeline.add(interval3, "v", new StringPartitionChunk<>(null, null, 6, selector6));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(0, 3, selector1));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(1, 3, selector2));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(2, 3, selector3));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(0, 2, selector4));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(1, 2, selector5));
+    timeline.add(interval3, "v", new NumberedPartitionChunk<>(0, 1, selector6));
 
     final Capture<QueryPlus> capture = Capture.newInstance();
     final Capture<ResponseContext> contextCap = Capture.newInstance();
@@ -1514,10 +1514,10 @@ public class CachingClusteredClientTest
     EasyMock.replay(mockRunner);
 
     List<SegmentDescriptor> descriptors = new ArrayList<>();
-    descriptors.add(new SegmentDescriptor(interval1, "v", 1));
-    descriptors.add(new SegmentDescriptor(interval1, "v", 3));
-    descriptors.add(new SegmentDescriptor(interval2, "v", 5));
-    descriptors.add(new SegmentDescriptor(interval3, "v", 6));
+    descriptors.add(new SegmentDescriptor(interval1, "v", 0));
+    descriptors.add(new SegmentDescriptor(interval1, "v", 2));
+    descriptors.add(new SegmentDescriptor(interval2, "v", 1));
+    descriptors.add(new SegmentDescriptor(interval3, "v", 0));
     MultipleSpecificSegmentSpec expected = new MultipleSpecificSegmentSpec(descriptors);
 
     runner.run(QueryPlus.wrap(query)).toList();
@@ -1538,7 +1538,13 @@ public class CachingClusteredClientTest
         null,
         null,
         null,
-        new SingleDimensionShardSpec(dimension, start, end, partitionNum),
+        new SingleDimensionShardSpec(
+            dimension,
+            start,
+            end,
+            partitionNum,
+            SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS
+        ),
         null,
         9,
         0L
@@ -1966,7 +1972,7 @@ public class CachingClusteredClientTest
 
         final ShardSpec shardSpec;
         if (numChunks == 1) {
-          shardSpec = new SingleDimensionShardSpec("dimAll", null, null, 0);
+          shardSpec = new SingleDimensionShardSpec("dimAll", null, null, 0, 1);
         } else {
           String start = null;
           String end = null;
@@ -1976,7 +1982,7 @@ public class CachingClusteredClientTest
           if (j + 1 < numChunks) {
             end = String.valueOf(j + 1);
           }
-          shardSpec = new SingleDimensionShardSpec("dim" + k, start, end, j);
+          shardSpec = new SingleDimensionShardSpec("dim" + k, start, end, j, numChunks);
         }
         DataSegment mockSegment = makeMock(mocks, DataSegment.class);
         ServerExpectation<Object> expectation = new ServerExpectation<>(

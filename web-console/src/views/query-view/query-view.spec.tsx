@@ -27,6 +27,11 @@ describe('sql view', () => {
     expect(sqlView).toMatchSnapshot();
   });
 
+  it('matches snapshot with query', () => {
+    const sqlView = shallow(<QueryView initQuery={'SELECT +3'} />);
+    expect(sqlView).toMatchSnapshot();
+  });
+
   it('trimSemicolon', () => {
     expect(QueryView.trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
     expect(QueryView.trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');

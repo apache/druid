@@ -52,12 +52,18 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
     final Expr patternExpr = args.get(1);
     final Expr indexExpr = args.size() > 2 ? args.get(2) : null;
 
-    if (!patternExpr.isLiteral() || (indexExpr != null && !indexExpr.isLiteral())) {
-      throw new IAE("Function[%s] pattern and index must be literals", name());
+    if (!ExprUtils.isStringLiteral(patternExpr)) {
+      throw new IAE("Function[%s] pattern must be a string literal", name());
+    }
+
+    if (indexExpr != null && (!indexExpr.isLiteral() || !(indexExpr.getLiteralValue() instanceof Number))) {
+      throw new IAE("Function[%s] index must be a numeric literal", name());
     }
 
     // Precompile the pattern.
-    final Pattern pattern = Pattern.compile(String.valueOf(patternExpr.getLiteralValue()));
+    final Pattern pattern = Pattern.compile(
+        StringUtils.nullToEmptyNonDruidDataString((String) patternExpr.getLiteralValue())
+    );
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
 
@@ -72,10 +78,16 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        String s = arg.eval(bindings).asString();
-        final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
-        final String retVal = matcher.find() ? matcher.group(index) : null;
-        return ExprEval.of(NullHandling.emptyToNullIfNeeded(retVal));
+        final String s = NullHandling.nullToEmptyIfNeeded(arg.eval(bindings).asString());
+
+        if (s == null) {
+          // True nulls do not match anything. Note: this branch only executes in SQL-compatible null handling mode.
+          return ExprEval.of(null);
+        } else {
+          final Matcher matcher = pattern.matcher(NullHandling.nullToEmptyIfNeeded(s));
+          final String retVal = matcher.find() ? matcher.group(index) : null;
+          return ExprEval.of(retVal);
+        }
       }
 
       @Override

@@ -27,8 +27,6 @@ public class TestNGGroup
 {
   public static final String BATCH_INDEX = "batch-index";
 
-  public static final String HADOOP_INDEX = "hadoop-index";
-
   public static final String KAFKA_INDEX = "kafka-index";
 
   public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
@@ -36,6 +34,8 @@ public class TestNGGroup
   public static final String TRANSACTIONAL_KAFKA_INDEX = "kafka-transactional-index";
 
   public static final String TRANSACTIONAL_KAFKA_INDEX_SLOW = "kafka-transactional-index-slow";
+
+  public static final String KAFKA_DATA_FORMAT = "kafka-data-format";
 
   public static final String OTHER_INDEX = "other-index";
 
@@ -84,6 +84,15 @@ public class TestNGGroup
    */
   public static final String HDFS_DEEP_STORAGE = "hdfs-deep-storage";
 
+  public static final String HADOOP_S3_TO_S3 = "hadoop-s3-to-s3-deep-storage";
+  public static final String HADOOP_S3_TO_HDFS = "hadoop-s3-to-hdfs-deep-storage";
+
+  public static final String HADOOP_AZURE_TO_AZURE = "hadoop-azure-to-azure-deep-storage";
+  public static final String HADOOP_AZURE_TO_HDFS = "hadoop-azure-to-hdfs-deep-storage";
+
+  public static final String HADOOP_GCS_TO_GCS = "hadoop-gcs-to-gcs-deep-storage";
+  public static final String HADOOP_GCS_TO_HDFS = "hadoop-gcs-to-hdfs-deep-storage";
+
   /**
    * This group is not part of CI. To run this group, s3 configs/credentials for your s3 must be provided in a file.
    * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
@@ -110,4 +119,12 @@ public class TestNGGroup
    * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
    */
   public static final String KINESIS_INDEX = "kinesis-index";
+
+  /**
+   * This group is not part of CI. To run this group, AWS kinesis configs/credentials for your AWS kinesis must be
+   * provided in a file. The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
+   * See integration-tests/docker/environment-configs/override-examples/kinesis for env vars to provide.
+   * Kinesis stream endpoint for a region must also be pass to mvn with -Ddruid.test.config.streamEndpoint=<ENDPOINT>
+   */
+  public static final String KINESIS_DATA_FORMAT = "kinesis-data-format";
 }

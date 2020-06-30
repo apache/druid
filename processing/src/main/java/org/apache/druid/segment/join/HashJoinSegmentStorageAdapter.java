@@ -37,6 +37,7 @@ import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -53,22 +54,23 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
   private final StorageAdapter baseAdapter;
   private final List<JoinableClause> clauses;
-  private final JoinFilterPreAnalysis joinFilterPreAnalysis;
+  private final JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup;
 
   /**
    * @param baseAdapter          A StorageAdapter for the left-hand side base segment
    * @param clauses              The right-hand side clauses. The caller is responsible for ensuring that there are no
-   *                             duplicate prefixes or prefixes that shadow each other across the clauses
+   * @param joinFilterPreAnalysisGroup Pre-analysis group that holds all of the JoinFilterPreAnalysis results within
+   *                                   the scope of a query
    */
   HashJoinSegmentStorageAdapter(
       StorageAdapter baseAdapter,
       List<JoinableClause> clauses,
-      final JoinFilterPreAnalysis joinFilterPreAnalysis
+      final JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup
   )
   {
     this.baseAdapter = baseAdapter;
     this.clauses = clauses;
-    this.joinFilterPreAnalysis = joinFilterPreAnalysis;
+    this.joinFilterPreAnalysisGroup = joinFilterPreAnalysisGroup;
   }
 
   @Override
@@ -207,6 +209,16 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
+    JoinFilterPreAnalysis jfpa;
+    if (joinFilterPreAnalysisGroup.isSingleLevelMode()) {
+      jfpa = joinFilterPreAnalysisGroup.getPreAnalysisForSingleLevelMode();
+    } else {
+      jfpa = joinFilterPreAnalysisGroup.getAnalysis(
+          filter,
+          virtualColumns
+      );
+    }
+
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
     final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
 
@@ -216,7 +228,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         postJoinVirtualColumns
     );
 
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(jfpa);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
     // Soon, we will need a way to push filters past a join when possible. This could potentially be done right here
@@ -236,6 +248,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     return Sequences.map(
         baseCursorSequence,
         cursor -> {
+          assert cursor != null;
           Cursor retVal = cursor;
 
           for (JoinableClause clause : clauses) {

@@ -34,6 +34,21 @@ an alias name. You can do this in Using `File` -> `Project Structure...` -> `Pla
 ## Code Style
 The Code Style is available in XML format at [druid_intellij_formatting.xml](druid_intellij_formatting.xml) and can be [imported into IntelliJ](https://www.jetbrains.com/help/idea/2017.1/copying-code-style-settings.html).
 
+## Set Code Coverage Runner
+Druid CI checks are configured to enforce code coverage using JaCoCo. The checks will prevent PR from being merged 
+if test coverage of new added code is below the set threshold. You should run the tests locally to make sure that
+your code pass the coverage threshold. In IntelliJ, edit the template of JUnit tests in "Run Configurations..." 
+to use Jacoco for code coverage (this provides branch coverage instead of the default which is only line coverage).
+You can then right click src/test/java folder of the modules you are modifying and click run with coverage. This
+will generate a report to show the current code coverage on the code (not just your change).
+![Code Coverage Runner Setup 1](intellij-images/code_coverage_1.png)
+![Code Coverage Runner Setup 2](intellij-images/code_coverage_2.png)
+
+## Git Checkstyle Verification Hook (Optional)
+Git Checkstyle pre-commit hook can be installed to automatically run checkstyle verification before committing, 
+saving cycle from avoiding the checkstyle failing later in Travis/CI environment.
+The hook can be setup easily by running the <DRUID_HOME>/setup-hooks.sh script.
+
 ## Metadata
 The installation of a MySQL metadata store is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/development/extensions-core/mysql.md](/docs/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.
 
@@ -42,8 +57,17 @@ Use of other databases such as Postgres or Derby are entirely reasonable, but do
 ## ZooKeeper
 This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
 
+On macOS, you can also achieve this through the following commands
+
+1. `brew install zookeeper`
+2. `brew services start zookeeper`
+
 ## Initial Build
-Before running the apps, you should do a `mvn clean install -DskipTests` in the Druid source in order to make sure directories are populated correctly.
+Before running or debugging the apps, you should do a `mvn clean install -Pdist -DskipTests` in the Druid source in order to make sure directories are populated correctly.
+
+`-Pdist` is required because it puts all core extensions under `distribution\target\extensions` directory, where `runConfigurations` below could load extensions from.
+
+You may also add `-Ddruid.console.skip=true` to the command if you're focusing on backend servers instead of frontend project. This option saves great building time.
 
 ## XML App Def
 You can configure application definitions in XML for import into IntelliJ. Below are a few examples. These should be placed in an XML file in `.idea/runConfigurations` in the Druid source code.
@@ -89,3 +113,8 @@ You can configure application definitions in XML for import into IntelliJ. Below
   </configuration>
 </component>
 ```
+## property files
+
+You can also provide a property file for running or debugging the application through intellij. 
+
+For example, put a file named as `common.properties` under `.idea/conf` directory, then add `-Ddruid.properties.file=$PROJECT_DIR$/.idea/conf/common.properties` to `VM_PARAMETERS` in the App Def file.

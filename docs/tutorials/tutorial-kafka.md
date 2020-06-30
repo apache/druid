@@ -89,7 +89,7 @@ Select `Apache Kafka` and click `Connect data`.
 
 Enter `localhost:9092` as the bootstrap server and `wikipedia` as the topic.
 
-Click `Preview` and make sure that the data you are seeing is correct.
+Click `Apply` and make sure that the data you are seeing is correct.
 
 Once the data is located, you can click "Next: Parse data" to go to the next step.
 
@@ -264,7 +264,14 @@ Please follow the [query tutorial](../tutorials/tutorial-query.md) to run some e
 
 ## Cleanup
 
-If you wish to go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package, as the other tutorials will write to the same "wikipedia" datasource.
+To go through any of the other ingestion tutorials, you will need to shut down the cluster and reset the cluster state by removing the contents of the `var` directory in the Druid home, as the other tutorials will write to the same "wikipedia" datasource.
+
+You should additionally clear out any Kafka state. Do so by shutting down the Kafka broker with CTRL-C before stopping ZooKeeper and the Druid services, and then deleting the Kafka log directory at `/tmp/kafka-logs`:
+
+```bash
+rm -rf /tmp/kafka-logs
+```
+
 
 ## Further reading
 

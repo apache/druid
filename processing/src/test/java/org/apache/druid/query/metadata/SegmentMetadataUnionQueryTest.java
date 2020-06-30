@@ -102,7 +102,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                !mmap,
+                false,
                 mmap ? 43524 : 43056,
                 1,
                 "preferred",

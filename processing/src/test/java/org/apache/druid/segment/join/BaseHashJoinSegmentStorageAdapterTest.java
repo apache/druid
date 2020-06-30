@@ -24,11 +24,12 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
-import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -43,9 +44,17 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.List;
 
 public class BaseHashJoinSegmentStorageAdapterTest
 {
+  public static JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
+      true,
+      true,
+      true,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+  );
+
   public static final String FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX = "c1.";
   public static final String FACT_TO_COUNTRY_ON_NUMBER_PREFIX = "c2.";
   public static final String FACT_TO_REGION_PREFIX = "r1.";
@@ -186,20 +195,12 @@ public class BaseHashJoinSegmentStorageAdapterTest
 
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {
-    JoinFilterPreAnalysis preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
-        VirtualColumns.EMPTY,
-        null,
-        true,
-        true,
-        true,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
-    );
+    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup();
 
     return new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
         ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
-        preAnalysis
+        joinFilterPreAnalysisGroup
     );
   }
 
@@ -220,5 +221,33 @@ public class BaseHashJoinSegmentStorageAdapterTest
         expectedVirtualColumn.getParsedExpression().get().toString(),
         actualVirtualColumn.getParsedExpression().get().toString()
     );
+  }
+
+  protected static JoinFilterPreAnalysisGroup makeDefaultConfigPreAnalysisGroup()
+  {
+    return new JoinFilterPreAnalysisGroup(
+        DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
+        true
+    );
+  }
+
+  protected static JoinFilterPreAnalysisGroup makeDefaultConfigPreAnalysisGroup(
+      Filter originalFilter,
+      List<JoinableClause> joinableClauses,
+      VirtualColumns virtualColumns
+  )
+  {
+    JoinFilterPreAnalysisGroup group = new JoinFilterPreAnalysisGroup(
+        DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
+        true
+    );
+
+    group.computeJoinFilterPreAnalysisIfAbsent(
+        originalFilter,
+        joinableClauses,
+        virtualColumns
+    );
+
+    return group;
   }
 }

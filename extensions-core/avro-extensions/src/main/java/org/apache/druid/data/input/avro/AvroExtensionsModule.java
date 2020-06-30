@@ -54,7 +54,8 @@ public class AvroExtensionsModule implements DruidModule
             .registerSubtypes(
                 new NamedType(AvroStreamInputRowParser.class, "avro_stream"),
                 new NamedType(AvroHadoopInputRowParser.class, "avro_hadoop"),
-                new NamedType(AvroParseSpec.class, "avro")
+                new NamedType(AvroParseSpec.class, "avro"),
+                new NamedType(AvroOCFInputFormat.class, "avro_ocf")
             )
             .setMixInAnnotation(Repository.class, RepositoryMixIn.class)
             .setMixInAnnotation(JsonUtil.class, JsonUtilMixIn.class)

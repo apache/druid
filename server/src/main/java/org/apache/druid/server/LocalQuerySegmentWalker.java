@@ -24,6 +24,7 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
@@ -35,10 +36,13 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.joda.time.Interval;
 
 import java.util.HashSet;
@@ -89,20 +93,26 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
       throw new IAE("Cannot query dataSource locally: %s", analysis.getDataSource());
     }
 
-    final Iterable<Segment> segments = segmentWrangler.getSegmentsForIntervals(analysis.getBaseDataSource(), intervals);
+    // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
+    // matter, but at least some or all will be in a future PR
+    final Iterable<ReferenceCountingSegment> segments =
+        FunctionalIterable.create(segmentWrangler.getSegmentsForIntervals(analysis.getBaseDataSource(), intervals))
+                          .transform(ReferenceCountingSegment::wrapRootGenerationSegment);
     final Query<T> prioritizedAndLaned = prioritizeAndLaneQuery(query, segments);
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
-    final Function<Segment, Segment> segmentMapFn = Joinables.createSegmentMapFn(
-        analysis.getPreJoinableClauses(),
-        joinableFactory,
-        cpuAccumulator,
+    final JoinFilterRewriteConfig joinFilterRewriteConfig = new JoinFilterRewriteConfig(
         QueryContexts.getEnableJoinFilterPushDown(prioritizedAndLaned),
         QueryContexts.getEnableJoinFilterRewrite(prioritizedAndLaned),
         QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(prioritizedAndLaned),
-        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned),
-        prioritizedAndLaned.getFilter() == null ? null : prioritizedAndLaned.getFilter().toFilter(),
-        prioritizedAndLaned.getVirtualColumns()
+        QueryContexts.getJoinFilterRewriteMaxSize(prioritizedAndLaned)
+    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
+        analysis.getPreJoinableClauses(),
+        joinableFactory,
+        cpuAccumulator,
+        joinFilterRewriteConfig,
+        query
     );
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(prioritizedAndLaned);
@@ -122,6 +132,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter, cpuAccumulator);
   }
+
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
@@ -129,7 +140,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     throw new ISE("Cannot run with specific segments");
   }
 
-  private <T> Query<T> prioritizeAndLaneQuery(Query<T> query, Iterable<Segment> segments)
+  private <T> Query<T> prioritizeAndLaneQuery(Query<T> query, Iterable<? extends Segment> segments)
   {
     Set<SegmentServerSelector> segmentServerSelectors = new HashSet<>();
     for (Segment s : segments) {

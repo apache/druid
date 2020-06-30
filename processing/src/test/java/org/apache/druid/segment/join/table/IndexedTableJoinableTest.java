@@ -22,6 +22,7 @@ package org.apache.druid.segment.join.table;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -36,11 +37,24 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Set;
 
 public class IndexedTableJoinableTest
 {
   private static final String PREFIX = "j.";
+  private static final String KEY_COLUMN = "str";
+  private static final String VALUE_COLUMN = "long";
+  private static final String UNKNOWN_COLUMN = "unknown";
+  private static final String SEARCH_KEY_NULL_VALUE = "baz";
+  private static final String SEARCH_KEY_VALUE = "foo";
+  private static final String SEARCH_VALUE_VALUE = "1";
+  private static final String SEARCH_VALUE_UNKNOWN = "10";
+  private static final long MAX_CORRELATION_SET_SIZE = 10_000L;
 
   static {
     NullHandling.initializeForTests();
@@ -70,96 +84,98 @@ public class IndexedTableJoinableTest
   private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{"foo", 1L},
-          new Object[]{"bar", 2L}
+          new Object[]{"bar", 2L},
+          new Object[]{"baz", null}
       ),
-      RowSignature.builder().add("str", ValueType.STRING).add("long", ValueType.LONG).build()
+      RowSignature.builder()
+                  .add("str", ValueType.STRING)
+                  .add("long", ValueType.LONG)
+                  .build()
   );
 
   private final RowBasedIndexedTable<Object[]> indexedTable = new RowBasedIndexedTable<>(
       inlineDataSource.getRowsAsList(),
       inlineDataSource.rowAdapter(),
       inlineDataSource.getRowSignature(),
-      ImmutableSet.of("str")
+      ImmutableSet.of("str"),
+      DateTimes.nowUtc().toString()
   );
 
-  @Test
-  public void test_getAvailableColumns()
+  private IndexedTableJoinable target;
+
+  @Before
+  public void setUp()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    Assert.assertEquals(ImmutableList.of("str", "long"), joinable.getAvailableColumns());
+    target = new IndexedTableJoinable(indexedTable);
+  }
+  @Test
+  public void getAvailableColumns()
+  {
+    Assert.assertEquals(ImmutableList.of("str", "long"), target.getAvailableColumns());
   }
 
   @Test
-  public void test_getCardinality_string()
+  public void getCardinalityForStringColumn()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    Assert.assertEquals(indexedTable.numRows() + 1, joinable.getCardinality("str"));
+    Assert.assertEquals(indexedTable.numRows() + 1, target.getCardinality("str"));
   }
 
   @Test
-  public void test_getCardinality_long()
+  public void getCardinalityForLongColumn()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    Assert.assertEquals(indexedTable.numRows() + 1, joinable.getCardinality("long"));
+    Assert.assertEquals(indexedTable.numRows() + 1, target.getCardinality("long"));
   }
 
   @Test
-  public void test_getCardinality_nonexistent()
+  public void getCardinalityForNonexistentColumn()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    Assert.assertEquals(1, joinable.getCardinality("nonexistent"));
+    Assert.assertEquals(1, target.getCardinality("nonexistent"));
   }
 
   @Test
-  public void test_getColumnCapabilities_string()
+  public void getColumnCapabilitiesForStringColumn()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    final ColumnCapabilities capabilities = joinable.getColumnCapabilities("str");
+    final ColumnCapabilities capabilities = target.getColumnCapabilities("str");
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.isDictionaryEncoded());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
-    Assert.assertFalse(capabilities.hasMultipleValues());
+    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
-    Assert.assertTrue(capabilities.isComplete());
   }
 
   @Test
-  public void test_getColumnCapabilities_long()
+  public void getColumnCapabilitiesForLongColumn()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    final ColumnCapabilities capabilities = joinable.getColumnCapabilities("long");
+    final ColumnCapabilities capabilities = target.getColumnCapabilities("long");
     Assert.assertEquals(ValueType.LONG, capabilities.getType());
     Assert.assertFalse(capabilities.isDictionaryEncoded());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
-    Assert.assertFalse(capabilities.hasMultipleValues());
+    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
-    Assert.assertTrue(capabilities.isComplete());
   }
 
   @Test
-  public void test_getColumnCapabilities_nonexistent()
+  public void getColumnCapabilitiesForNonexistentColumnShouldReturnNull()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
-    final ColumnCapabilities capabilities = joinable.getColumnCapabilities("nonexistent");
+    final ColumnCapabilities capabilities = target.getColumnCapabilities("nonexistent");
     Assert.assertNull(capabilities);
   }
 
   @Test
-  public void test_makeJoinMatcher_dimensionSelectorOnString()
+  public void makeJoinMatcherWithDimensionSelectorOnString()
   {
-    final IndexedTableJoinable joinable = new IndexedTableJoinable(indexedTable);
     final JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression(
         "x == \"j.str\"",
         PREFIX,
         ExprMacroTable.nil()
     );
-    final JoinMatcher joinMatcher = joinable.makeJoinMatcher(dummyColumnSelectorFactory, condition, false);
+    final JoinMatcher joinMatcher = target.makeJoinMatcher(dummyColumnSelectorFactory, condition, false);
 
     final DimensionSelector selector = joinMatcher.getColumnSelectorFactory()
                                                   .makeDimensionSelector(DefaultDimensionSpec.of("str"));
 
     // getValueCardinality
-    Assert.assertEquals(3, selector.getValueCardinality());
+    Assert.assertEquals(4, selector.getValueCardinality());
 
     // nameLookupPossibleInAdvance
     Assert.assertTrue(selector.nameLookupPossibleInAdvance());
@@ -167,9 +183,153 @@ public class IndexedTableJoinableTest
     // lookupName
     Assert.assertEquals("foo", selector.lookupName(0));
     Assert.assertEquals("bar", selector.lookupName(1));
-    Assert.assertNull(selector.lookupName(2));
+    Assert.assertEquals("baz", selector.lookupName(2));
+    Assert.assertNull(selector.lookupName(3));
 
     // lookupId
     Assert.assertNull(selector.idLookup());
+  }
+
+  @Test
+  public void getCorrelatedColummnValuesMissingSearchColumnShouldReturnEmpty()
+  {
+    Optional<Set<String>> correlatedValues =
+        target.getCorrelatedColumnValues(
+            UNKNOWN_COLUMN,
+            "foo",
+            VALUE_COLUMN,
+            MAX_CORRELATION_SET_SIZE,
+            false);
+
+    Assert.assertEquals(Optional.empty(), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColummnValuesMissingRetrievalColumnShouldReturnEmpty()
+  {
+    Optional<Set<String>> correlatedValues =
+        target.getCorrelatedColumnValues(
+            KEY_COLUMN,
+            "foo",
+            UNKNOWN_COLUMN,
+            MAX_CORRELATION_SET_SIZE,
+            false);
+
+    Assert.assertEquals(Optional.empty(), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnShouldReturnSearchValue()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        KEY_COLUMN,
+        SEARCH_KEY_VALUE,
+        KEY_COLUMN,
+        MAX_CORRELATION_SET_SIZE,
+        false);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchKeyAndRetrieveKeyColumnAboveLimitShouldReturnEmpty()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        KEY_COLUMN,
+        SEARCH_KEY_VALUE,
+        KEY_COLUMN,
+        0,
+        false);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchKeyAndRetrieveValueColumnShouldReturnExtractedValue()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        KEY_COLUMN,
+        SEARCH_KEY_VALUE,
+        VALUE_COLUMN,
+        MAX_CORRELATION_SET_SIZE,
+        false);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchKeyMissingAndRetrieveValueColumnShouldReturnExtractedValue()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        KEY_COLUMN,
+        SEARCH_KEY_NULL_VALUE,
+        VALUE_COLUMN,
+        MAX_CORRELATION_SET_SIZE,
+        false);
+    Assert.assertEquals(Optional.of(Collections.singleton(null)), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnAndNonKeyColumnSearchDisabledShouldReturnEmpty()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        VALUE_COLUMN,
+        SEARCH_VALUE_VALUE,
+        VALUE_COLUMN,
+        MAX_CORRELATION_SET_SIZE,
+        false);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
+    correlatedValues = target.getCorrelatedColumnValues(
+        VALUE_COLUMN,
+        SEARCH_VALUE_VALUE,
+        KEY_COLUMN,
+        10,
+        false);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchValueAndRetrieveValueColumnShouldReturnSearchValue()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        VALUE_COLUMN,
+        SEARCH_VALUE_VALUE,
+        VALUE_COLUMN,
+        MAX_CORRELATION_SET_SIZE,
+        true);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_VALUE_VALUE)), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnShouldReturnUnAppliedValue()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        VALUE_COLUMN,
+        SEARCH_VALUE_VALUE,
+        KEY_COLUMN,
+        10,
+        true);
+    Assert.assertEquals(Optional.of(ImmutableSet.of(SEARCH_KEY_VALUE)), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchValueAndRetrieveKeyColumnWithMaxLimitSetShouldHonorMaxLimit()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        VALUE_COLUMN,
+        SEARCH_VALUE_VALUE,
+        KEY_COLUMN,
+        0,
+        true);
+    Assert.assertEquals(Optional.empty(), correlatedValues);
+  }
+
+  @Test
+  public void getCorrelatedColumnValuesForSearchUnknownValueAndRetrieveKeyColumnShouldReturnNoCorrelatedValues()
+  {
+    Optional<Set<String>> correlatedValues = target.getCorrelatedColumnValues(
+        VALUE_COLUMN,
+        SEARCH_VALUE_UNKNOWN,
+        KEY_COLUMN,
+        10,
+        true);
+    Assert.assertEquals(Optional.of(ImmutableSet.of()), correlatedValues);
   }
 }

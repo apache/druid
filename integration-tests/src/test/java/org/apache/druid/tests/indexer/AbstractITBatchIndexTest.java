@@ -25,7 +25,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
@@ -85,14 +84,14 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(AbstractITBatchIndexTest.class);
 
   @Inject
-  IntegrationTestingConfig config;
+  protected IntegrationTestingConfig config;
   @Inject
   protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath,
@@ -104,7 +103,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     doIndexTest(dataSource, indexTaskFilePath, Function.identity(), queryFilePath, waitForNewVersion, runTestQueries, waitForSegmentsToLoad);
   }
 
-  void doIndexTest(
+  protected void doIndexTest(
       String dataSource,
       String indexTaskFilePath,
       Function<String, String> taskSpecTransform,
@@ -151,7 +150,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  void doReindexTest(
+  protected void doReindexTest(
       String baseDataSource,
       String reindexDataSource,
       String reindexTaskFilePath,
@@ -312,7 +311,6 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                       return t.getType().equals(SinglePhaseSubTask.TYPE);
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
-                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);

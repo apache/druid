@@ -203,7 +203,7 @@ public class HttpShuffleClientTest
     }
 
     @Override
-    int getPartitionId()
+    int getBucketId()
     {
       return getSecondaryPartition();
     }

@@ -26,6 +26,7 @@ import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
@@ -33,9 +34,11 @@ import java.util.BitSet;
 
 /**
  * TODO rewrite this benchmark to JMH
+ * If you want to run locally, remove @Ignore on the class.
  */
 @Category({Benchmark.class})
 @BenchmarkHistoryChart(labelWith = LabelType.CUSTOM_KEY, maxRuns = 20)
+@Ignore
 public class RangeBitmapBenchmarkTest extends BitmapBenchmark
 {
 

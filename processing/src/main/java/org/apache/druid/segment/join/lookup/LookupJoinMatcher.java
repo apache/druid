@@ -26,6 +26,7 @@ import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -71,9 +72,12 @@ public class LookupJoinMatcher implements JoinMatcher
 
             if (row.size() == 1) {
               return selector.lookupName(row.get(0));
-            } else {
-              // Multi-valued rows are not handled by the join system right now; treat them as nulls.
+            } else if (row.size() == 0) {
               return null;
+            } else {
+              // Multi-valued rows are not handled by the join system right now
+              // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
+              throw new QueryUnsupportedException("Joining against a multi-value dimension is not supported.");
             }
           };
         }
@@ -275,6 +279,7 @@ public class LookupJoinMatcher implements JoinMatcher
     } else if (condition.isAlwaysTrue()) {
       currentIterator = Collections.emptyIterator();
     } else {
+      //noinspection ConstantConditions - entry can not be null because extractor.iterable() prevents this
       currentIterator = Iterators.filter(
           extractor.iterable().iterator(),
           entry -> !matchedKeys.contains(entry.getKey())

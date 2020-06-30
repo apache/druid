@@ -337,6 +337,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   {
     expectPublishedSegments(1);
     final AppenderatorDriverRealtimeIndexTask task = makeRealtimeTask(null);
+    Assert.assertTrue(task.supportsQueries());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task);
 
     // Wait for firehose to show up, it starts off null.
@@ -1593,7 +1594,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         () -> conglomerate,
         Execs.directExecutor(), // queryExecutorService
         NoopJoinableFactory.INSTANCE,
-        EasyMock.createMock(MonitorScheduler.class),
+        () -> EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),

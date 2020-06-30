@@ -33,15 +33,18 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
 
   @Nullable
   private final List<String> partitionDimensions;
+  private final int bucketId;
   private final int numBuckets;
 
   @JsonCreator
   public HashBasedNumberedPartialShardSpec(
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+      @JsonProperty("bucketId") int bucketId,
       @JsonProperty("numPartitions") int numBuckets
   )
   {
     this.partitionDimensions = partitionDimensions;
+    this.bucketId = bucketId;
     this.numBuckets = numBuckets;
   }
 
@@ -52,6 +55,12 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
     return partitionDimensions;
   }
 
+  @JsonProperty
+  public int getBucketId()
+  {
+    return bucketId;
+  }
+
   @JsonProperty("numPartitions")
   public int getNumBuckets()
   {
@@ -59,21 +68,16 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
   }
 
   @Override
-  public ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId)
+  public ShardSpec complete(ObjectMapper objectMapper, int partitionId, int numCorePartitions)
   {
-    final HashBasedNumberedShardSpec prevSpec = (HashBasedNumberedShardSpec) specOfPreviousMaxPartitionId;
     return new HashBasedNumberedShardSpec(
-        prevSpec == null ? 0 : prevSpec.getPartitionNum() + 1,
+        partitionId,
+        numCorePartitions,
+        bucketId,
         numBuckets,
         partitionDimensions,
         objectMapper
     );
-  }
-
-  @Override
-  public ShardSpec complete(ObjectMapper objectMapper, int partitionId)
-  {
-    return new HashBasedNumberedShardSpec(partitionId, numBuckets, partitionDimensions, objectMapper);
   }
 
   @Override
@@ -92,13 +96,14 @@ public class HashBasedNumberedPartialShardSpec implements PartialShardSpec
       return false;
     }
     HashBasedNumberedPartialShardSpec that = (HashBasedNumberedPartialShardSpec) o;
-    return numBuckets == that.numBuckets &&
+    return bucketId == that.bucketId &&
+           numBuckets == that.numBuckets &&
            Objects.equals(partitionDimensions, that.partitionDimensions);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(partitionDimensions, numBuckets);
+    return Objects.hash(partitionDimensions, bucketId, numBuckets);
   }
 }

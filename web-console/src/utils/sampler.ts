@@ -107,6 +107,9 @@ export function getCacheRowsFromSampleResponse(
 export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   if (!cacheRows) return sampleSpec;
 
+  // In order to prevent potential data loss null columns should be kept by the sampler and shown in the ingestion flow
+  sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat.keepNullColumns', true);
+
   // If this is already an inline spec there is nothing to do
   if (deepGet(sampleSpec, 'spec.ioConfig.inputSource.type') === 'inline') return sampleSpec;
 
@@ -120,7 +123,7 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   });
 
   const flattenSpec = deepGet(sampleSpec, 'spec.ioConfig.inputFormat.flattenSpec');
-  const inputFormat: InputFormat = { type: 'json' };
+  const inputFormat: InputFormat = { type: 'json', keepNullColumns: true };
   if (flattenSpec) inputFormat.flattenSpec = flattenSpec;
   sampleSpec = deepSet(sampleSpec, 'spec.ioConfig.inputFormat', inputFormat);
 
@@ -198,6 +201,8 @@ function makeSamplerIoConfig(
   } else if (specType === 'kinesis') {
     ioConfig = deepSet(ioConfig, 'useEarliestSequenceNumber', sampleStrategy === 'start');
   }
+  // In order to prevent potential data loss null columns should be kept by the sampler and shown in the ingestion flow
+  ioConfig = deepSet(ioConfig, 'inputFormat.keepNullColumns', true);
   return ioConfig;
 }
 

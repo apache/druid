@@ -29,9 +29,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -65,7 +65,6 @@ import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -100,7 +99,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -246,6 +244,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
+  public boolean supportsQueries()
+  {
+    return true;
+  }
+
+  @Override
   public boolean isReady(TaskActionClient taskActionClient)
   {
     return true;
@@ -274,7 +278,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     this.metrics = fireDepartmentForMetrics.getMetrics();
 
     final Supplier<Committer> committerSupplier = Committers.nilSupplier();
-    final File firehoseTempDir = toolbox.getIndexingTmpDir();
 
     DiscoveryDruidNode discoveryDruidNode = createDiscoveryDruidNode(toolbox);
 
@@ -324,10 +327,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       );
 
       // Set up metrics emission
-      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
-
-      // Firehose temporary directory is automatically removed when this RealtimeIndexTask completes.
-      FileUtils.forceMkdir(firehoseTempDir);
+      toolbox.addMonitor(metricsMonitor);
 
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
@@ -353,7 +353,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         if (!gracefullyStopped) {
           firehose = firehoseFactory.connect(
               Preconditions.checkNotNull(spec.getDataSchema().getParser(), "inputRowParser"),
-              firehoseTempDir
+              toolbox.getIndexingTmpDir()
           );
         }
       }
@@ -444,7 +444,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       appenderator.close();
       CloseQuietly.close(driver);
 
-      toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
+      toolbox.removeMonitor(metricsMonitor);
 
       if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().unannounce();
@@ -682,7 +682,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         committerSupplier.get(),
         Collections.singletonList(sequenceName)
     );
-    pendingHandoffs.add(ListenableFutures.transformAsync(publishFuture, driver::registerHandoff));
+    pendingHandoffs.add(Futures.transform(
+        publishFuture,
+        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) driver::registerHandoff
+    ));
   }
 
   private void waitForSegmentPublishAndHandoff(long timeout) throws InterruptedException, ExecutionException,

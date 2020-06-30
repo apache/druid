@@ -20,16 +20,20 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.KinesisAdminClient;
 import org.apache.druid.testing.utils.KinesisEventWriter;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
 
+import javax.annotation.Nullable;
 import java.util.function.Function;
 
 public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamIndexingTest
 {
+  private static final Logger LOG = new Logger(AbstractKinesisIndexingServiceTest.class);
+
   @Override
   StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config) throws Exception
   {
@@ -37,15 +41,26 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
   }
 
   @Override
-  StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config) throws Exception
+  StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, @Nullable Boolean transactionEnabled)
+      throws Exception
   {
+    if (transactionEnabled != null) {
+      LOG.warn(
+          "Kinesis event writer doesn't support transaction. Ignoring the given parameter transactionEnabled[%s]",
+          transactionEnabled
+      );
+    }
     return new KinesisEventWriter(config.getStreamEndpoint(), false);
   }
 
   @Override
-  Function<String, String> generateStreamIngestionPropsTransform(String streamName,
-                                                                 String fullDatasourceName,
-                                                                 IntegrationTestingConfig config)
+  Function<String, String> generateStreamIngestionPropsTransform(
+      String streamName,
+      String fullDatasourceName,
+      String parserType,
+      String parserOrInputFormat,
+      IntegrationTestingConfig config
+  )
   {
     return spec -> {
       try {
@@ -69,6 +84,29 @@ public abstract class AbstractKinesisIndexingServiceTest extends AbstractStreamI
             "%%TOPIC_VALUE%%",
             streamName
         );
+        if (AbstractStreamIndexingTest.INPUT_FORMAT.equals(parserType)) {
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT%%",
+              parserOrInputFormat
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%PARSER%%",
+              "null"
+          );
+        } else if (AbstractStreamIndexingTest.INPUT_ROW_PARSER.equals(parserType)) {
+          spec = StringUtils.replace(
+              spec,
+              "%%PARSER%%",
+              parserOrInputFormat
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%INPUT_FORMAT%%",
+              "null"
+          );
+        }
         spec = StringUtils.replace(
             spec,
             "%%USE_EARLIEST_KEY%%",

@@ -40,7 +40,6 @@ Core extensions are maintained by Druid committers.
 |druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-core/azure.md)|
 |druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.md)|
 |druid-bloom-filter|Support for providing Bloom filters in druid queries.|[link](../development/extensions-core/bloom-filter.md)|
-|druid-caffeine-cache|A local cache implementation backed by Caffeine.|[link](../configuration/index.md#cache-configuration)|
 |druid-datasketches|Support for approximate counts and set operations with [DataSketches](https://datasketches.github.io/).|[link](../development/extensions-core/datasketches-extension.md)|
 |druid-google-extensions|Google Cloud Storage deep storage.|[link](../development/extensions-core/google.md)|
 |druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.md)|
@@ -91,6 +90,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-influxdb-emitter|InfluxDB metrics emitter|[link](../development/extensions-contrib/influxdb-emitter.md)|
 |druid-momentsketch|Support for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library|[link](../development/extensions-contrib/momentsketch-quantiles.md)|
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
+|gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
 
 ## Promoting community extensions to core extensions
 

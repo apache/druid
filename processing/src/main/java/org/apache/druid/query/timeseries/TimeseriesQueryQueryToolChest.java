@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,6 +52,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -286,6 +288,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             .appendCacheable(query.getVirtualColumns())
             .appendCacheables(query.getPostAggregatorSpecs())
             .appendInt(query.getLimit())
+            .appendString(query.getTimestampResultField())
             .appendBoolean(query.isGrandTotal());
         return builder.build();
       }
@@ -404,11 +407,15 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    return RowSignature.builder()
-                       .addTimeColumn()
-                       .addAggregators(query.getAggregatorSpecs())
-                       .addPostAggregators(query.getPostAggregatorSpecs())
-                       .build();
+
+    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    rowSignatureBuilder.addTimeColumn();
+    if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
+      rowSignatureBuilder.add(query.getTimestampResultField(), ValueType.LONG);
+    }
+    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs());
+    rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
+    return rowSignatureBuilder.build();
   }
 
   @Override
@@ -447,13 +454,22 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return result -> {
       final TimeseriesResultValue holder = result.getValue();
       final Map<String, Object> values = new HashMap<>(holder.getBaseObject());
-      if (calculatePostAggs && !query.getPostAggregatorSpecs().isEmpty()) {
-        // put non finalized aggregators for calculating dependent post Aggregators
-        for (AggregatorFactory agg : query.getAggregatorSpecs()) {
-          values.put(agg.getName(), holder.getMetric(agg.getName()));
+      if (calculatePostAggs) {
+        if (!query.getPostAggregatorSpecs().isEmpty()) {
+          // put non finalized aggregators for calculating dependent post Aggregators
+          for (AggregatorFactory agg : query.getAggregatorSpecs()) {
+            values.put(agg.getName(), holder.getMetric(agg.getName()));
+          }
+          for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
+            values.put(postAgg.getName(), postAgg.compute(values));
+          }
         }
-        for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
-          values.put(postAgg.getName(), postAgg.compute(values));
+        // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
+        // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
+        // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
+        if (StringUtils.isNotEmpty(query.getTimestampResultField()) && result.getTimestamp() != null) {
+          final DateTime timestamp = result.getTimestamp();
+          values.put(query.getTimestampResultField(), timestamp.getMillis());
         }
       }
       for (AggregatorFactory agg : query.getAggregatorSpecs()) {

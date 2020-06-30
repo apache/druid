@@ -31,12 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public class KafkaEventWriter implements StreamEventWriter
 {
   private static final String TEST_PROPERTY_PREFIX = "kafka.test.property.";
-  private final KafkaProducer<String, String> producer;
+  private final KafkaProducer<String, byte[]> producer;
   private final boolean txnEnabled;
   private final List<Future<RecordMetadata>> pendingWriteRecords = new ArrayList<>();
 
@@ -57,11 +58,17 @@ public class KafkaEventWriter implements StreamEventWriter
     this.producer = new KafkaProducer<>(
         properties,
         new StringSerializer(),
-        new StringSerializer()
+        new ByteArraySerializer()
     );
     if (txnEnabled) {
       producer.initTransactions();
     }
+  }
+
+  @Override
+  public boolean supportTransaction()
+  {
+    return true;
   }
 
   @Override
@@ -91,25 +98,42 @@ public class KafkaEventWriter implements StreamEventWriter
   }
 
   @Override
-  public void write(String topic, String event)
+  public void write(String topic, byte[] event)
   {
     Future<RecordMetadata> future = producer.send(new ProducerRecord<>(topic, event));
     pendingWriteRecords.add(future);
   }
 
   @Override
-  public void shutdown()
+  public void close()
   {
+    flush();
     producer.close();
   }
 
   @Override
-  public void flush() throws Exception
+  public void flush()
   {
+    Exception e = null;
     for (Future<RecordMetadata> future : pendingWriteRecords) {
-      future.get();
+      try {
+        future.get();
+      }
+      catch (InterruptedException | ExecutionException ex) {
+        if (ex instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        if (e == null) {
+          e = ex;
+        } else {
+          e.addSuppressed(ex);
+        }
+      }
     }
     pendingWriteRecords.clear();
+    if (e != null) {
+      throw new RuntimeException(e);
+    }
   }
 
   private void addFilteredProperties(IntegrationTestingConfig config, Properties properties)
