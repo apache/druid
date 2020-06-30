@@ -787,15 +787,6 @@ public class Druids
       this.context = computeContextToReplace(context, c);
       return this;
     }
-
-    public SegmentMetadataQueryBuilder queryId(String queryId)
-    {
-      if (context == null) {
-        context = new HashMap<>();
-      }
-      context.put(BaseQuery.QUERY_ID, queryId);
-      return this;
-    }
   }
 
   public static SegmentMetadataQueryBuilder newSegmentMetadataQueryBuilder()
@@ -912,15 +903,6 @@ public class Druids
     public ScanQueryBuilder context(Map<String, Object> c)
     {
       this.context = computeContextToReplace(context, c);
-      return this;
-    }
-
-    public ScanQueryBuilder queryId(String queryId)
-    {
-      if (context == null) {
-        context = new HashMap<>();
-      }
-      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
 
@@ -1049,15 +1031,6 @@ public class Druids
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
       this.context = computeContextToReplace(context, c);
-      return this;
-    }
-
-    public DataSourceMetadataQueryBuilder queryId(String queryId)
-    {
-      if (context == null) {
-        context = new HashMap<>();
-      }
-      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
