@@ -19,9 +19,11 @@
 
 package org.apache.druid.query.topn;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -40,9 +42,11 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * A Builder for TopNQuery.
@@ -91,7 +95,8 @@ public class TopNQueryBuilder
     granularity = Granularities.ALL;
     aggregatorSpecs = new ArrayList<>();
     postAggregatorSpecs = new ArrayList<>();
-    context = null;
+    context = new HashMap<>();
+    context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
   }
 
   public TopNQueryBuilder(final TopNQuery query)
@@ -107,6 +112,7 @@ public class TopNQueryBuilder
     this.aggregatorSpecs = query.getAggregatorSpecs();
     this.postAggregatorSpecs = query.getPostAggregatorSpecs();
     this.context = query.getContext();
+    this.context.putIfAbsent(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
   }
 
   public TopNQuery build()
@@ -276,7 +282,10 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder context(Map<String, Object> c)
   {
-    context = c;
+    final String queryId = (String) Preconditions.checkNotNull(context.get(BaseQuery.QUERY_ID), "queryId");
+    context = new HashMap<>();
+    context.putAll(c);
+    context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
     return this;
   }
 

@@ -73,11 +73,13 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -881,6 +883,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder()
     {
+      context = new HashMap<>();
+      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public Builder(GroupByQuery query)
@@ -898,6 +902,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       subtotalsSpec = query.subtotalsSpec;
       postProcessingFn = query.postProcessingFn;
       context = query.getContext();
+      context.putIfAbsent(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public Builder(Builder builder)
@@ -1111,7 +1116,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder setContext(Map<String, Object> context)
     {
-      this.context = context;
+      final Object queryId = context.get(BaseQuery.QUERY_ID);
+      this.context = new HashMap<>();
+      this.context.putAll(context);
+      this.context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
       return this;
     }
 

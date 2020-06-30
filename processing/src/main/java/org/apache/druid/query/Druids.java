@@ -56,9 +56,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  */
@@ -120,7 +122,8 @@ public class Druids
       aggregatorSpecs = new ArrayList<>();
       postAggregatorSpecs = new ArrayList<>();
       limit = 0;
-      context = null;
+      context = new HashMap<>();
+      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public TimeseriesQuery build()
@@ -259,7 +262,10 @@ public class Druids
 
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      final Object queryId = context.get(BaseQuery.QUERY_ID);
+      context = new HashMap<>();
+      context.putAll(c);
+      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
       return this;
     }
 
@@ -316,7 +322,8 @@ public class Druids
       dimensions = null;
       querySpec = null;
       sortSpec = null;
-      context = null;
+      context = new HashMap<>();
+      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public SearchQuery build()
@@ -466,7 +473,10 @@ public class Druids
 
     public SearchQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      final Object queryId = context.get(BaseQuery.QUERY_ID);
+      context = new HashMap<>();
+      context.putAll(c);
+      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
@@ -504,7 +514,8 @@ public class Druids
       querySegmentSpec = null;
       bound = null;
       dimFilter = null;
-      context = null;
+      context = new HashMap<>();
+      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public TimeBoundaryQuery build()
@@ -572,7 +583,10 @@ public class Druids
 
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      final Object queryId = context.get(BaseQuery.QUERY_ID);
+      context = new HashMap<>();
+      context.putAll(c);
+      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
@@ -617,7 +631,8 @@ public class Druids
       merge = null;
       lenientAggregatorMerge = null;
       usingDefaultInterval = null;
-      context = null;
+      context = new HashMap<>();
+      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public SegmentMetadataQuery build()
@@ -721,7 +736,10 @@ public class Druids
 
     public SegmentMetadataQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      final Object queryId = context.get(BaseQuery.QUERY_ID);
+      context = new HashMap<>();
+      context.putAll(c);
+      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
@@ -765,7 +783,8 @@ public class Druids
       dataSource = null;
       querySegmentSpec = null;
       virtualColumns = null;
-      context = null;
+      context = new HashMap<>();
+      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
       resultFormat = null;
       batchSize = 0;
       limit = 0;
@@ -839,7 +858,10 @@ public class Druids
 
     public ScanQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      final Object queryId = context.get(BaseQuery.QUERY_ID);
+      context = new HashMap<>();
+      context.putAll(c);
+      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
       return this;
     }
 
@@ -921,7 +943,8 @@ public class Druids
     {
       dataSource = null;
       querySegmentSpec = null;
-      context = null;
+      context = new HashMap<>();
+      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public DataSourceMetadataQuery build()
@@ -967,7 +990,10 @@ public class Druids
 
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      final Object queryId = context.get(BaseQuery.QUERY_ID);
+      context = new HashMap<>();
+      context.putAll(c);
+      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }

@@ -499,11 +499,10 @@ public class CachingClusteredClientTest
     );
 
 
-    TimeseriesQuery query = (TimeseriesQuery) builder.intervals("2011-01-01/2011-01-10")
-                                                     .aggregators(RENAMED_AGGS)
-                                                     .postAggregators(RENAMED_POST_AGGS)
-                                                     .build()
-                                                     .withId("queryId");
+    TimeseriesQuery query = builder.intervals("2011-01-01/2011-01-10")
+                                   .aggregators(RENAMED_AGGS)
+                                   .postAggregators(RENAMED_POST_AGGS)
+                                   .build();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
             DateTimes.of("2011-01-01"), 50, 5000,
@@ -541,7 +540,7 @@ public class CachingClusteredClientTest
                                         .context(CONTEXT)
                                         .build();
 
-    final ResponseContext context = ResponseContext.createEmpty();
+    final ResponseContext context = initializeResponseContext();
     final Cache cache = EasyMock.createStrictMock(Cache.class);
     final Capture<Iterable<Cache.NamedKey>> cacheKeyCapture = EasyMock.newCapture();
     EasyMock.expect(cache.getBulk(EasyMock.capture(cacheKeyCapture)))
@@ -616,12 +615,11 @@ public class CachingClusteredClientTest
         )
     );
 
-    TimeseriesQuery query = (TimeseriesQuery) builder
+    TimeseriesQuery query = builder
         .intervals("2011-01-05/2011-01-10")
         .aggregators(RENAMED_AGGS)
         .postAggregators(RENAMED_POST_AGGS)
-        .build()
-        .withId("queryId");
+        .build();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
             DateTimes.of("2011-01-05T00"), 85, 102,
@@ -665,12 +663,11 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), 85, 102
         )
     );
-    TimeseriesQuery query = (TimeseriesQuery) builder
+    TimeseriesQuery query = builder
         .intervals("2011-11-04/2011-11-08")
         .aggregators(RENAMED_AGGS)
         .postAggregators(RENAMED_POST_AGGS)
-        .build()
-        .withId("queryId");
+        .build();
     TestHelper.assertExpectedResults(
         makeRenamedTimeResults(
             new DateTime("2011-11-04", TIMEZONE), 50, 5000,
@@ -798,13 +795,12 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09T01"), "c2", 50, 4985, "b", 50, 4984, "c", 50, 4983
         )
     );
-    TopNQuery query = (TopNQuery) builder
+    TopNQuery query = builder
         .intervals("2011-01-01/2011-01-10")
         .metric("imps")
         .aggregators(RENAMED_AGGS)
         .postAggregators(DIFF_ORDER_POST_AGGS)
-        .build()
-        .withId("queryId");
+        .build();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
             DateTimes.of("2011-01-01"), "a", 50, 5000, "b", 50, 4999, "c", 50, 4998,
@@ -856,13 +852,12 @@ public class CachingClusteredClientTest
             new DateTime("2011-11-07", TIMEZONE), "a", 50, 4988, "b", 50, 4987, "c", 50, 4986
         )
     );
-    TopNQuery query = (TopNQuery) builder
+    TopNQuery query = builder
         .intervals("2011-11-04/2011-11-08")
         .metric("imps")
         .aggregators(RENAMED_AGGS)
         .postAggregators(DIFF_ORDER_POST_AGGS)
-        .build()
-        .withId("queryId");
+        .build();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
 
@@ -975,13 +970,12 @@ public class CachingClusteredClientTest
         )
     );
 
-    TopNQuery query = (TopNQuery) builder
+    TopNQuery query = builder
         .intervals("2011-01-01/2011-01-10")
         .metric("imps")
         .aggregators(RENAMED_AGGS)
         .postAggregators(DIFF_ORDER_POST_AGGS)
-        .build()
-        .withId("queryId");
+        .build();
     TestHelper.assertExpectedResults(
         makeRenamedTopNResults(
             DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
@@ -1047,13 +1041,12 @@ public class CachingClusteredClientTest
         )
     );
 
-    TopNQuery query = (TopNQuery) builder
+    TopNQuery query = builder
         .intervals("2011-01-01/2011-01-10")
         .metric("avg_imps_per_row_double")
         .aggregators(AGGS)
         .postAggregators(DIFF_ORDER_POST_AGGS)
-        .build()
-        .withId("queryId");
+        .build();
     TestHelper.assertExpectedResults(
         makeTopNResultsWithoutRename(
             DateTimes.of("2011-01-05"), "a", 50, 4994, "b", 50, 4993, "c", 50, 4992,
@@ -1086,7 +1079,7 @@ public class CachingClusteredClientTest
 
     testQueryCaching(
         getDefaultQueryRunner(),
-        builder.build().withId("queryId"),
+        builder.build(),
         Intervals.of("2011-01-01/2011-01-02"),
         makeSearchResults(TOP_DIM, DateTimes.of("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
 
@@ -1135,7 +1128,7 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
             DateTimes.of("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
-        runner.run(QueryPlus.wrap(builder.intervals("2011-01-01/2011-01-10").build().withId("queryId2")))
+        runner.run(QueryPlus.wrap(builder.intervals("2011-01-01/2011-01-10").build()))
     );
   }
 
@@ -1154,7 +1147,7 @@ public class CachingClusteredClientTest
 
     testQueryCaching(
         getDefaultQueryRunner(),
-        builder.build().withId("queryId"),
+        builder.build(),
         Intervals.of("2011-01-01/2011-01-02"),
         makeSearchResults(TOP_DIM, DateTimes.of("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
 
@@ -1187,8 +1180,7 @@ public class CachingClusteredClientTest
         new SearchQueryQueryToolChest(new SearchQueryConfig())
     );
 
-    ResponseContext context = ResponseContext.createEmpty();
-    context.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    ResponseContext context = initializeResponseContext();
     TestHelper.assertExpectedResults(
         makeSearchResults(
             TOP_DIM,
@@ -1205,13 +1197,12 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
             DateTimes.of("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
-        runner.run(QueryPlus.wrap(builder.intervals("2011-01-01/2011-01-10").build().withId("queryId2")), context)
+        runner.run(QueryPlus.wrap(builder.intervals("2011-01-01/2011-01-10").build()), context)
     );
-    SearchQuery query = (SearchQuery) builder
+    SearchQuery query = builder
         .intervals("2011-01-01/2011-01-10")
         .dimensions(new DefaultDimensionSpec(TOP_DIM, "new_dim"))
-        .build()
-        .withId("queryId3");
+        .build();
     TestHelper.assertExpectedResults(
         makeSearchResults(
             "new_dim",
@@ -1259,7 +1250,7 @@ public class CachingClusteredClientTest
 
     testQueryCaching(
         getDefaultQueryRunner(),
-        query.withId("queryId"),
+        query,
         Intervals.of("2011-01-01/2011-01-02"),
         makeGroupByResults(
             query,
@@ -1333,7 +1324,7 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09T01"),
             ImmutableMap.of("a", "g", "rows", 7, "imps", 7, "impers", 7, "uniques", collector)
         ),
-        runner.run(QueryPlus.wrap(builder.setInterval("2011-01-05/2011-01-10").build().withId("queryId2"))),
+        runner.run(QueryPlus.wrap(builder.setInterval("2011-01-05/2011-01-10").build())),
         ""
     );
   }
@@ -1447,7 +1438,7 @@ public class CachingClusteredClientTest
     testQueryCachingWithFilter(
         runner,
         3,
-        builder.build().withId("queryId"),
+        builder.build(),
         expectedResult,
         Intervals.of("2011-01-01/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000),
         Intervals.of("2011-01-01/2011-01-05"), makeTimeResults(DateTimes.of("2011-01-02"), 10, 1252),
@@ -1488,7 +1479,7 @@ public class CachingClusteredClientTest
                                                         .aggregators(RENAMED_AGGS)
                                                         .postAggregators(RENAMED_POST_AGGS);
 
-    TimeseriesQuery query = (TimeseriesQuery) builder.build().withId("queryId");
+    TimeseriesQuery query = builder.build();
 
     final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
     final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
@@ -1779,8 +1770,6 @@ public class CachingClusteredClientTest
       Object... args // does this assume query intervals must be ordered?
   )
   {
-    final Query theQuery = query.withId("queryId");
-
     final List<Interval> queryIntervals = Lists.newArrayListWithCapacity(args.length / 2);
     final List<List<Iterable<Result<Object>>>> expectedResults = Lists.newArrayListWithCapacity(queryIntervals.size());
 
@@ -1819,7 +1808,7 @@ public class CachingClusteredClientTest
         queryCaptures.add(capture);
         QueryRunner queryable = expectations.getQueryRunner();
 
-        if (theQuery instanceof TimeseriesQuery) {
+        if (query instanceof TimeseriesQuery) {
           List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<TimeseriesResultValue>>> results = new ArrayList<>();
@@ -1832,7 +1821,7 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableTimeseriesResults(expectBySegment, segmentIds, intervals, results))
                   .once();
 
-        } else if (theQuery instanceof TopNQuery) {
+        } else if (query instanceof TopNQuery) {
           List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<TopNResultValue>>> results = new ArrayList<>();
@@ -1844,7 +1833,7 @@ public class CachingClusteredClientTest
           EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
                   .once();
-        } else if (theQuery instanceof SearchQuery) {
+        } else if (query instanceof SearchQuery) {
           List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<SearchResultValue>>> results = new ArrayList<>();
@@ -1856,7 +1845,7 @@ public class CachingClusteredClientTest
           EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
                   .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
                   .once();
-        } else if (theQuery instanceof GroupByQuery) {
+        } else if (query instanceof GroupByQuery) {
           List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<ResultRow>> results = new ArrayList<>();
@@ -1866,9 +1855,9 @@ public class CachingClusteredClientTest
             results.add(expectation.getResults());
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andReturn(toQueryableGroupByResults((GroupByQuery) theQuery, segmentIds, intervals, results))
+                  .andReturn(toQueryableGroupByResults((GroupByQuery) query, segmentIds, intervals, results))
                   .once();
-        } else if (theQuery instanceof TimeBoundaryQuery) {
+        } else if (query instanceof TimeBoundaryQuery) {
           List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<TimeBoundaryResultValue>>> results = new ArrayList<>();
@@ -1881,13 +1870,13 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableTimeBoundaryResults(segmentIds, intervals, results))
                   .once();
         } else {
-          throw new ISE("Unknown query type[%s]", theQuery.getClass());
+          throw new ISE("Unknown query type[%s]", query.getClass());
         }
       }
 
       final int expectedResultsRangeStart;
       final int expectedResultsRangeEnd;
-      if (theQuery instanceof TimeBoundaryQuery) {
+      if (query instanceof TimeBoundaryQuery) {
         expectedResultsRangeStart = i;
         expectedResultsRangeEnd = i + 1;
       } else {
@@ -1904,8 +1893,8 @@ public class CachingClusteredClientTest
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable(
-                        theQuery instanceof GroupByQuery
-                        ? ((GroupByQuery) theQuery).getResultOrdering()
+                        query instanceof GroupByQuery
+                        ? ((GroupByQuery) query).getResultOrdering()
                         : Comparators.naturalNullsFirst(),
                         FunctionalIterable
                             .create(new RangeIterable(expectedResultsRangeStart, expectedResultsRangeEnd))
@@ -1931,10 +1920,11 @@ public class CachingClusteredClientTest
                     ),
                     runner.run(
                         QueryPlus.wrap(
-                            theQuery.withQuerySegmentSpec(
+                            query.withQuerySegmentSpec(
                                 new MultipleIntervalSegmentSpec(ImmutableList.of(actualQueryInterval))
                             )
-                        )
+                        ),
+                        initializeResponseContext()
                     )
                 );
                 if (queryCompletedCallback != null) {
@@ -2859,8 +2849,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         WAREHOUSE.getToolChest(query1)
     );
-    ResponseContext context = ResponseContext.createEmpty();
-    context.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    final ResponseContext context = initializeResponseContext();
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
             query1,
@@ -2875,15 +2864,14 @@ public class CachingClusteredClientTest
             DateTimes.of("2011-01-09T"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7),
             DateTimes.of("2011-01-09T01"), ImmutableMap.of("output", "g", "rows", 7, "imps", 7, "impers", 7)
         ),
-        runner.run(QueryPlus.wrap(builder.setInterval("2011-01-05/2011-01-10").build().withId("queryId")), context),
+        runner.run(QueryPlus.wrap(builder.setInterval("2011-01-05/2011-01-10").build()), context),
         ""
     );
 
-    final GroupByQuery query2 = (GroupByQuery) builder
+    final GroupByQuery query2 = builder
         .setInterval("2011-01-05/2011-01-10").setDimensions(new DefaultDimensionSpec("a", "output2"))
         .setAggregatorSpecs(RENAMED_AGGS)
-        .build()
-        .withId("queryId2");
+        .build();
     TestHelper.assertExpectedObjects(
         makeGroupByResults(
             query2,
@@ -2935,7 +2923,7 @@ public class CachingClusteredClientTest
                                     .build();
 
 
-    ResponseContext responseContext = ResponseContext.createEmpty();
+    final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
     Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.get(ResponseContext.Key.ETAG));
@@ -2981,7 +2969,7 @@ public class CachingClusteredClientTest
                                            .build();
 
 
-    final ResponseContext responseContext = ResponseContext.createEmpty();
+    final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
     final Object etag1 = responseContext.get(ResponseContext.Key.ETAG);
@@ -3002,5 +2990,12 @@ public class CachingClusteredClientTest
                      .run(queryPlus, responseContext);
       }
     };
+  }
+
+  private static ResponseContext initializeResponseContext()
+  {
+    final ResponseContext context = ResponseContext.createEmpty();
+    context.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    return context;
   }
 }
