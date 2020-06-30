@@ -286,11 +286,15 @@ public class Druids
     }
   }
 
+  @Nullable
   public static Map<String, Object> computeContextToReplace(
-      Map<String, Object> oldContext,
+      @Nullable Map<String, Object> oldContext,
       @Nullable Map<String, Object> newContext
   )
   {
+    if (oldContext == null && newContext == null) {
+      return null;
+    }
     final Map<String, Object> contextToReplace = new HashMap<>();
     if (newContext != null) {
       contextToReplace.putAll(newContext);
@@ -784,11 +788,6 @@ public class Druids
       return this;
     }
 
-    public SegmentMetadataQueryBuilder randomQueryId()
-    {
-      return queryId(UUID.randomUUID().toString());
-    }
-
     public SegmentMetadataQueryBuilder queryId(String queryId)
     {
       if (context == null) {
@@ -914,11 +913,6 @@ public class Druids
     {
       this.context = computeContextToReplace(context, c);
       return this;
-    }
-
-    public ScanQueryBuilder randomQueryId()
-    {
-      return queryId(UUID.randomUUID().toString());
     }
 
     public ScanQueryBuilder queryId(String queryId)
@@ -1056,11 +1050,6 @@ public class Druids
     {
       this.context = computeContextToReplace(context, c);
       return this;
-    }
-
-    public DataSourceMetadataQueryBuilder randomQueryId()
-    {
-      return queryId(UUID.randomUUID().toString());
     }
 
     public DataSourceMetadataQueryBuilder queryId(String queryId)
