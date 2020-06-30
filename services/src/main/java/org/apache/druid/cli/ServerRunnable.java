@@ -233,7 +233,10 @@ public abstract class ServerRunnable extends GuiceRunnable
         if (service.isDiscoverable()) {
           builder.put(service.getName(), service);
         } else {
-          log.info("Service[%s] is not discoverable", service.getName());
+          log.info(
+              "Service[%s] is not discoverable. This will not be listed as a service provided by this node.",
+              service.getName()
+          );
         }
       }
       DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(druidNode, nodeRole, builder.build());

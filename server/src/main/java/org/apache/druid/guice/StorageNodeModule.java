@@ -92,7 +92,10 @@ public class StorageNodeModule implements Module
       throw new ProvisionException("Must override the binding for ServerTypeConfig if you want a DataNodeService.");
     }
     if (!isSegmentCacheConfigured) {
-      log.info("Segment cache not configured on ServerType [%s]", serverTypeConfig.getServerType());
+      log.info(
+          "Segment cache not configured on ServerType [%s]. It will not be assignable for segment placement",
+          serverTypeConfig.getServerType()
+      );
       if (ServerType.HISTORICAL.equals(serverTypeConfig.getServerType())) {
         throw new ProvisionException("Segment cache locations must be set on historicals.");
       }

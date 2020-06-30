@@ -48,8 +48,11 @@ public class DiscoverySideEffectsProviderTest
   private NodeRole nodeRole;
   @Mock
   private DruidNode druidNode;
+  /**
+   * This announcer is mocked to fail if it tries to announce a Druid service that is not discoverable.
+   */
   @Mock
-  private DruidNodeAnnouncer announcer;
+  private DruidNodeAnnouncer discoverableOnlyAnnouncer;
   @Mock
   private ServiceAnnouncer legacyAnnouncer;
   @Mock
@@ -73,7 +76,7 @@ public class DiscoverySideEffectsProviderTest
           discoveryDruidNode.getServices().values().stream().allMatch(DruidService::isDiscoverable);
       Assert.assertTrue(isAllServicesDiscoverable);
       return null;
-    }).when(announcer).announce(ArgumentMatchers.any(DiscoveryDruidNode.class));
+    }).when(discoverableOnlyAnnouncer).announce(ArgumentMatchers.any(DiscoveryDruidNode.class));
     Mockito.doAnswer((invocation) -> lifecycleHandlers.add(invocation.getArgument(0)))
            .when(lifecycle).addHandler(
         ArgumentMatchers.any(Lifecycle.Handler.class),
@@ -84,7 +87,7 @@ public class DiscoverySideEffectsProviderTest
         ImmutableList.of(DiscoverableDruidService.class, UnDiscoverableDruidService.class),
         USE_LEGACY_ANNOUNCER,
         druidNode,
-        announcer,
+        discoverableOnlyAnnouncer,
         legacyAnnouncer,
         lifecycle,
         injector
@@ -97,6 +100,7 @@ public class DiscoverySideEffectsProviderTest
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
     Assert.assertNotNull(child);
     Assert.assertEquals(1, lifecycleHandlers.size());
+    // Start the lifecycle handler. This will make announcements via the announcer
     lifecycleHandlers.get(0).start();
   }
 
