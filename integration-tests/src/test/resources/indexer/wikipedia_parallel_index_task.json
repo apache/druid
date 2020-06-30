@@ -64,7 +64,7 @@
         },
         "tuningConfig": {
             "type": "index_parallel",
-            "maxNumConcurrentSubTasks": 10,
+            "maxNumConcurrentSubTasks": 4,
             "forceGuaranteedRollup": "%%FORCE_GUARANTEED_ROLLUP%%",
             "splitHintSpec": {
                 "type": "maxSize",
