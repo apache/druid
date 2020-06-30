@@ -20,12 +20,14 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
@@ -56,7 +58,8 @@ public class ServerConfig
       @NotNull Period unannouncePropagationDelay,
       int inflateBufferSize,
       int compressionLevel,
-      boolean enableForwardedRequestCustomizer
+      boolean enableForwardedRequestCustomizer,
+      @NotNull List<String> allowedHttpMethods
   )
   {
     this.numThreads = numThreads;
@@ -73,6 +76,7 @@ public class ServerConfig
     this.inflateBufferSize = inflateBufferSize;
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
+    this.allowedHttpMethods = allowedHttpMethods;
   }
 
   public ServerConfig()
@@ -133,6 +137,10 @@ public class ServerConfig
 
   @JsonProperty
   private boolean enableForwardedRequestCustomizer = false;
+
+  @JsonProperty
+  @NotNull
+  private List<String> allowedHttpMethods = ImmutableList.of();
 
   public int getNumThreads()
   {
@@ -204,6 +212,12 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
+  @NotNull
+  public List<String> getAllowedHttpMethods()
+  {
+    return allowedHttpMethods;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -227,7 +241,8 @@ public class ServerConfig
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
            maxIdleTime.equals(that.maxIdleTime) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
-           unannouncePropagationDelay.equals(that.unannouncePropagationDelay);
+           unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
+           allowedHttpMethods.equals(that.allowedHttpMethods);
   }
 
   @Override
@@ -247,7 +262,8 @@ public class ServerConfig
         unannouncePropagationDelay,
         inflateBufferSize,
         compressionLevel,
-        enableForwardedRequestCustomizer
+        enableForwardedRequestCustomizer,
+        allowedHttpMethods
     );
   }
 
@@ -269,6 +285,7 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
+           ", allowedMethods=" + allowedHttpMethods +
            '}';
   }
 
