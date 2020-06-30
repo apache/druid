@@ -23,6 +23,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.indexing.overlord.http.security.AuthorizerResourceFilter;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.ResourceAction;
@@ -100,7 +101,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/users")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response getAllUsers(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName
@@ -118,7 +119,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/groupMappings")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response getAllGroupMappings(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName
@@ -137,7 +138,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response getUser(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -159,7 +160,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/groupMappings/{groupMappingName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response getGroupMapping(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -182,7 +183,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response createUser(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -204,7 +205,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/users/{userName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response deleteUser(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -226,7 +227,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/groupMappings/{groupMappingName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response createGroupMapping(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -252,7 +253,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/groupMappings/{groupMappingName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response deleteGroupMapping(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -271,7 +272,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/roles")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response getAllRoles(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName
@@ -292,7 +293,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response getRole(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -316,7 +317,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response createRole(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -338,7 +339,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response deleteRole(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -361,7 +362,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response assignRoleToUser(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -385,7 +386,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/users/{userName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response unassignRoleFromUser(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -409,7 +410,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response assignRoleToGroupMapping(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -433,7 +434,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/groupMappings/{groupMappingName}/roles/{roleName}")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response unassignRoleFromGroupMapping(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,
@@ -457,7 +458,7 @@ public class BasicAuthorizerResource
   @Path("/db/{authorizerName}/roles/{roleName}/permissions")
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  @ResourceFilters(BasicSecurityResourceFilter.class)
+  @ResourceFilters({BasicSecurityResourceFilter.class, AuthorizerResourceFilter.class})
   public Response setRolePermissions(
       @Context HttpServletRequest req,
       @PathParam("authorizerName") final String authorizerName,

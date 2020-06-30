@@ -25,6 +25,7 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
+import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
@@ -38,6 +39,8 @@ import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.AuthorizerNameValidator;
+import org.apache.druid.server.security.AuthorizerValidation;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class AuthorizerMapperModule implements DruidModule
 {
@@ -58,7 +62,10 @@ public class AuthorizerMapperModule implements DruidModule
     binder.bind(AuthorizerMapper.class)
           .toProvider(new AuthorizerMapperProvider())
           .in(LazySingleton.class);
-
+    binder.bind(new TypeLiteral<Consumer<String>>() {})
+          .annotatedWith(AuthorizerValidation.class)
+          .to(AuthorizerNameValidator.class)
+          .in(LazySingleton.class);
     LifecycleModule.register(binder, AuthorizerMapper.class);
   }
 
