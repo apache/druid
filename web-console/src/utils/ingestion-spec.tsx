@@ -21,7 +21,7 @@ import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
-import { DRUID_DOCS_VERSION } from '../variables';
+import { getLink } from '../links';
 
 import {
   BASIC_TIME_FORMATS,
@@ -175,13 +175,13 @@ export function getIngestionDocLink(spec: IngestionSpec): string {
 
   switch (type) {
     case 'kafka':
-      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion.html`;
+      return `${getLink('DOCS')}/development/extensions-core/kafka-ingestion.html`;
 
     case 'kinesis':
-      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kinesis-ingestion.html`;
+      return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
 
     default:
-      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/native-batch.html#firehoses`;
+      return `${getLink('DOCS')}/ingestion/native-batch.html#firehoses`;
   }
 }
 
@@ -317,9 +317,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
         <p>The parser used to parse the data.</p>
         <p>
           For more information see{' '}
-          <ExternalLink
-            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/data-formats.html`}
-          >
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
             the documentation
           </ExternalLink>
           .
@@ -609,12 +607,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     info: (
       <>
         Specify a flatten{' '}
-        <ExternalLink
-          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/flatten-json`}
-        >
-          expression
-        </ExternalLink>
-        .
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/flatten-json`}>expression</ExternalLink>.
       </>
     ),
   },
@@ -656,12 +649,7 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     info: (
       <>
         A valid Druid{' '}
-        <ExternalLink
-          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/misc/math-expr.html`}
-        >
-          expression
-        </ExternalLink>
-        .
+        <ExternalLink href={`${getLink('DOCS')}/misc/math-expr.html`}>expression</ExternalLink>.
       </>
     ),
   },
@@ -931,7 +919,9 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
         <p>
           Supported modes are <Code>ignore</Code>, <Code>overflow</Code>, and <Code>clip</Code>. See
           <ExternalLink
-            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
+            href={`${getLink(
+              'DOCS',
+            )}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
           >
             outlier handling modes
           </ExternalLink>{' '}
@@ -1024,9 +1014,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink
-          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html`}
-        >
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -1079,9 +1067,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -1105,9 +1091,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           ],
           info: (
             <>
-              <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
                 inputSource.filter
               </ExternalLink>
               <p>
@@ -1177,11 +1161,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <p>
               The{' '}
-              <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/filters.html`}
-              >
-                filter
-              </ExternalLink>{' '}
+              <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filter</ExternalLink>{' '}
               to apply to the data as part of querying.
             </p>
           ),
@@ -1241,9 +1221,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink
-                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/s3.html`}
-                >
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3.html`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -1405,9 +1383,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink
-                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/azure.html`}
-                >
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure.html`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -1465,9 +1441,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink
-                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/google.html`}
-                >
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google.html`}>
                   Google Cloud Storage Objects
                 </ExternalLink>
                 .
@@ -1500,7 +1474,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                href={`${getLink(
+                  'DOCS',
+                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
               >
                 consumerProperties
               </ExternalLink>
@@ -1524,7 +1500,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                href={`${getLink(
+                  'DOCS',
+                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
               >
                 consumerProperties
               </ExternalLink>
@@ -1575,9 +1553,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink
-                href={`http://docs.aws.amazon.com/general/${DRUID_DOCS_VERSION}/gr/rande.html#ak_region`}
-              >
+              <ExternalLink href={`https://docs.aws.amazon.com/general/latest/gr/ak.html`}>
                 here
               </ExternalLink>
               .
