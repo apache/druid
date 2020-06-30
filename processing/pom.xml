@@ -183,6 +183,19 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>5.7.0-M1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+            <version>1.7.0-M1</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.carrotsearch</groupId>
             <artifactId>junit-benchmarks</artifactId>
             <scope>test</scope>
@@ -243,6 +256,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
+                    <fork>true</fork>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.apache.druid</groupId>
@@ -269,6 +283,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M5</version>
                 <configuration>
                     <!-- locale settings must be set on the command line before startup -->
                     <!-- set default options -->
@@ -299,6 +314,7 @@
                 <plugins>
                     <plugin>
                         <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.0.0-M5</version>
                         <configuration>
                             <argLine>-server -Xms3G -Xmx3G -Djub.consumers=CONSOLE,H2 -Djub.db.file=benchmarks/benchmarks</argLine>
                             <groups>org.apache.druid.collections.test.annotation.Benchmark</groups>
