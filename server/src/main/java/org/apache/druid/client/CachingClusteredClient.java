@@ -190,11 +190,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
-    final NonnullPair<Sequence<T>, Integer> pair = new SpecificQueryRunnable<>(queryPlus, responseContext)
-        .run(timelineConverter);
-    final int totalNumQueryServers = pair.rhs;
-    initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, totalNumQueryServers);
-    return pair.lhs;
+    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+    initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, result.numQueryServers);
+    return result.sequence;
   }
 
   private static <T> void initializeNumRemainingResponsesInResponseContext(
@@ -237,6 +235,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
         );
       }
     };
+  }
+
+  private static class ClusterQueryResult<T>
+  {
+    private final Sequence<T> sequence;
+    private final int numQueryServers;
+
+    private ClusterQueryResult(Sequence<T> sequence, int numQueryServers)
+    {
+      this.sequence = sequence;
+      this.numQueryServers = numQueryServers;
+    }
   }
 
   /**
@@ -311,13 +321,13 @@ public class CachingClusteredClient implements QuerySegmentWalker
      * @return a pair of a sequence merging results from remote query servers and the number of remote servers
      *         participating in query processing.
      */
-    NonnullPair<Sequence<T>, Integer> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
+    ClusterQueryResult<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
       final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
           dataSourceAnalysis
       );
       if (!maybeTimeline.isPresent()) {
-        return new NonnullPair<>(Sequences.empty(), 0);
+        return new ClusterQueryResult<>(Sequences.empty(), 0);
       }
 
       final TimelineLookup<String, ServerSelector> timeline = timelineConverter.apply(maybeTimeline.get());
@@ -334,7 +344,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         @Nullable
         final String currentEtag = computeCurrentEtag(segmentServers, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
-          return new NonnullPair<>(Sequences.empty(), 0);
+          return new ClusterQueryResult<>(Sequences.empty(), 0);
         }
       }
 
@@ -352,7 +362,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return merge(sequencesByInterval);
       });
 
-      return new NonnullPair<>(scheduler.run(query, mergedResultSequence), segmentsByServer.size());
+      return new ClusterQueryResult<>(scheduler.run(query, mergedResultSequence), segmentsByServer.size());
     }
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)

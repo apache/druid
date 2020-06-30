@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -869,7 +870,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     private List<PostAggregator> postAggregatorSpecs;
     @Nullable
     private HavingSpec havingSpec;
-
+    @Nullable
     private Map<String, Object> context;
 
     @Nullable
@@ -883,8 +884,6 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder()
     {
-      context = new HashMap<>();
-      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public Builder(GroupByQuery query)
@@ -902,7 +901,6 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       subtotalsSpec = query.subtotalsSpec;
       postProcessingFn = query.postProcessingFn;
       context = query.getContext();
-      context.putIfAbsent(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
     }
 
     public Builder(Builder builder)
@@ -1116,10 +1114,21 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder setContext(Map<String, Object> context)
     {
-      final Object queryId = context.get(BaseQuery.QUERY_ID);
-      this.context = new HashMap<>();
-      this.context.putAll(context);
-      this.context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
+      this.context = Druids.computeContextToReplace(this.context, context);
+      return this;
+    }
+
+    public Builder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public Builder queryId(String queryId)
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
 

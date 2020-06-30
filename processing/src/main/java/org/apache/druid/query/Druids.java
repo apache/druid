@@ -122,8 +122,7 @@ public class Druids
       aggregatorSpecs = new ArrayList<>();
       postAggregatorSpecs = new ArrayList<>();
       limit = 0;
-      context = new HashMap<>();
-      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context = null;
     }
 
     public TimeseriesQuery build()
@@ -262,10 +261,21 @@ public class Druids
 
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
-      final Object queryId = context.get(BaseQuery.QUERY_ID);
-      context = new HashMap<>();
-      context.putAll(c);
-      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
+      this.context = computeContextToReplace(context, c);
+      return this;
+    }
+
+    public TimeseriesQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public TimeseriesQueryBuilder queryId(String queryId)
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
 
@@ -274,6 +284,21 @@ public class Druids
       limit = lim;
       return this;
     }
+  }
+
+  public static Map<String, Object> computeContextToReplace(
+      Map<String, Object> oldContext,
+      @Nullable Map<String, Object> newContext
+  )
+  {
+    final Map<String, Object> contextToReplace = new HashMap<>();
+    if (newContext != null) {
+      contextToReplace.putAll(newContext);
+    }
+    if (oldContext != null && oldContext.get(BaseQuery.QUERY_ID) != null) {
+      contextToReplace.putIfAbsent(BaseQuery.QUERY_ID, oldContext.get(BaseQuery.QUERY_ID));
+    }
+    return contextToReplace;
   }
 
   public static TimeseriesQueryBuilder newTimeseriesQueryBuilder()
@@ -322,8 +347,7 @@ public class Druids
       dimensions = null;
       querySpec = null;
       sortSpec = null;
-      context = new HashMap<>();
-      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context = null;
     }
 
     public SearchQuery build()
@@ -473,10 +497,21 @@ public class Druids
 
     public SearchQueryBuilder context(Map<String, Object> c)
     {
-      final Object queryId = context.get(BaseQuery.QUERY_ID);
-      context = new HashMap<>();
-      context.putAll(c);
-      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
+      this.context = computeContextToReplace(context, c);
+      return this;
+    }
+
+    public SearchQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public SearchQueryBuilder queryId(String queryId)
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
@@ -514,8 +549,7 @@ public class Druids
       querySegmentSpec = null;
       bound = null;
       dimFilter = null;
-      context = new HashMap<>();
-      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context = null;
     }
 
     public TimeBoundaryQuery build()
@@ -583,10 +617,21 @@ public class Druids
 
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
-      final Object queryId = context.get(BaseQuery.QUERY_ID);
-      context = new HashMap<>();
-      context.putAll(c);
-      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
+      this.context = computeContextToReplace(context, c);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public TimeBoundaryQueryBuilder queryId(String queryId)
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
@@ -631,8 +676,7 @@ public class Druids
       merge = null;
       lenientAggregatorMerge = null;
       usingDefaultInterval = null;
-      context = new HashMap<>();
-      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context = null;
     }
 
     public SegmentMetadataQuery build()
@@ -736,10 +780,21 @@ public class Druids
 
     public SegmentMetadataQueryBuilder context(Map<String, Object> c)
     {
-      final Object queryId = context.get(BaseQuery.QUERY_ID);
-      context = new HashMap<>();
-      context.putAll(c);
-      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
+      this.context = computeContextToReplace(context, c);
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public SegmentMetadataQueryBuilder queryId(String queryId)
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
@@ -783,8 +838,7 @@ public class Druids
       dataSource = null;
       querySegmentSpec = null;
       virtualColumns = null;
-      context = new HashMap<>();
-      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context = null;
       resultFormat = null;
       batchSize = 0;
       limit = 0;
@@ -858,10 +912,21 @@ public class Druids
 
     public ScanQueryBuilder context(Map<String, Object> c)
     {
-      final Object queryId = context.get(BaseQuery.QUERY_ID);
-      context = new HashMap<>();
-      context.putAll(c);
-      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
+      this.context = computeContextToReplace(context, c);
+      return this;
+    }
+
+    public ScanQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public ScanQueryBuilder queryId(String queryId)
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
 
@@ -943,8 +1008,7 @@ public class Druids
     {
       dataSource = null;
       querySegmentSpec = null;
-      context = new HashMap<>();
-      context.put(BaseQuery.QUERY_ID, UUID.randomUUID().toString());
+      context = null;
     }
 
     public DataSourceMetadataQuery build()
@@ -990,10 +1054,21 @@ public class Druids
 
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
-      final Object queryId = context.get(BaseQuery.QUERY_ID);
-      context = new HashMap<>();
-      context.putAll(c);
-      context.putIfAbsent(BaseQuery.QUERY_ID, queryId);
+      this.context = computeContextToReplace(context, c);
+      return this;
+    }
+
+    public DataSourceMetadataQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public DataSourceMetadataQueryBuilder queryId(String queryId)
+    {
+      if (context == null) {
+        context = new HashMap<>();
+      }
+      context.put(BaseQuery.QUERY_ID, queryId);
       return this;
     }
   }
