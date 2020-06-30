@@ -35,7 +35,6 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -143,14 +142,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
     this.exec = exec;
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
-
-    if (config.getLocations().isEmpty()) {
-      if (ServerType.HISTORICAL.equals(serverTypeConfig.getServerType())) {
-        throw new IAE("Segment cache locations must be set on historicals.");
-      } else {
-        log.info("Not starting SegmentLoadDropHandler with empty segment cache locations.");
-      }
-    }
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
   }
 

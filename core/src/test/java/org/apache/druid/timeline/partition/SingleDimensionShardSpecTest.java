@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.shard;
+package org.apache.druid.timeline.partition;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -30,12 +30,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
-import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
-import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionPartialShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 

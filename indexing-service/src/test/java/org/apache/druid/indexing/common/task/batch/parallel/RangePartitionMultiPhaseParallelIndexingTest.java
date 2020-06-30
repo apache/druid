@@ -164,7 +164,15 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           for (int d = 0; d < DIM_FILE_CARDINALITY; d++) {
             int rowIndex = i * DIM_FILE_CARDINALITY + d;
             String dim1Value = createDim1Value(rowIndex, fileIndex, useMultivalueDim);
+
+            // This is the original row
             writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should not get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex + NUM_FILE, intervalToDims);
           }
         }
       }
@@ -207,7 +215,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   @Test
   public void createsCorrectRangePartitions() throws Exception
   {
-    int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
     final Set<DataSegment> publishedSegments = runTestTask(
         new SingleDimensionPartitionsSpec(
             targetRowsPerSegment,
