@@ -19,6 +19,11 @@
 
 package org.apache.druid.segment.join.filter.rewrite;
 
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
+
+import java.util.Objects;
+
 /**
  * A config class that holds properties that control how join filter rewrites behave.
  */
@@ -61,6 +66,16 @@ public class JoinFilterRewriteConfig
     this.filterRewriteMaxSize = filterRewriteMaxSize;
   }
 
+  public static JoinFilterRewriteConfig forQuery(final Query<?> query)
+  {
+    return new JoinFilterRewriteConfig(
+        QueryContexts.getEnableJoinFilterPushDown(query),
+        QueryContexts.getEnableJoinFilterRewrite(query),
+        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
+        QueryContexts.getJoinFilterRewriteMaxSize(query)
+    );
+  }
+
   public boolean isEnableFilterPushDown()
   {
     return enableFilterPushDown;
@@ -81,4 +96,30 @@ public class JoinFilterRewriteConfig
     return filterRewriteMaxSize;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    JoinFilterRewriteConfig that = (JoinFilterRewriteConfig) o;
+    return enableFilterPushDown == that.enableFilterPushDown &&
+           enableFilterRewrite == that.enableFilterRewrite &&
+           enableRewriteValueColumnFilters == that.enableRewriteValueColumnFilters &&
+           filterRewriteMaxSize == that.filterRewriteMaxSize;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        enableFilterPushDown,
+        enableFilterRewrite,
+        enableRewriteValueColumnFilters,
+        filterRewriteMaxSize
+    );
+  }
 }
