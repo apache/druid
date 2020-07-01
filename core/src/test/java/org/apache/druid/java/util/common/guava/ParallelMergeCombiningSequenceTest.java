@@ -556,7 +556,10 @@ public class ParallelMergeCombiningSequenceTest
       Assert.assertEquals(2, reportMetrics.getParallelism());
       Assert.assertEquals(6, reportMetrics.getInputSequences());
       // 49166 is total set of results if yielder were fully processed, expect somewhere more than 0 but less than that
-      // this isn't super indicative of anything really, since closing the yielder would have killed
+      // this isn't super indicative of anything really, since closing the yielder would have triggered the baggage
+      // to run, which runs this metrics reporter function, while the actual processing could still be occuring on the
+      // pool in the background and the yielder still operates as intended if cancellation isn't in fact happening.
+      // other tests ensure that this is true though (yielder.next throwing an exception for example)
       Assert.assertTrue(49166 > reportMetrics.getInputRows());
       Assert.assertTrue(0 < reportMetrics.getInputRows());
     });
