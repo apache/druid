@@ -78,7 +78,7 @@ public class ITBasicAuthConfigurationTest
                                                     + "</head>\n"
                                                     + "<body><h2>HTTP ERROR 401</h2>\n"
                                                     + "<p>Problem accessing /status. Reason:\n"
-                                                    + "<pre>    Unauthorized</pre></p><hr><a href=\"http://eclipse.org/jetty\">Powered by Jetty:// 9.4.12.v20180830</a><hr/>\n"
+                                                    + "<pre>    Unauthorized</pre></p><hr><a href=\"http://eclipse.org/jetty\">Powered by Jetty:// 9.4.12.v20180830</a><hr/>\n\n"
                                                     + "</body>\n"
                                                     + "</html>\n";
 
