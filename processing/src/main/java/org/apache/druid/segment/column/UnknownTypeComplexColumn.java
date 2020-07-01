@@ -25,7 +25,6 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorObjectSelector;
-import org.apache.druid.segment.vector.VectorSizeInspector;
 
 import javax.annotation.Nullable;
 
@@ -37,22 +36,6 @@ public class UnknownTypeComplexColumn implements ComplexColumn
   {
     return INSTANCE;
   }
-
-  private static final NilVectorSelector NIL_VECTOR_SELECTOR_INSTANCE =
-      NilVectorSelector.create(new VectorSizeInspector()
-      {
-        @Override
-        public int getMaxVectorSize()
-        {
-          return 0;
-        }
-
-        @Override
-        public int getCurrentVectorSize()
-        {
-          return 0;
-        }
-      });
 
   @Override
   public Class<?> getClazz()
@@ -94,6 +77,6 @@ public class UnknownTypeComplexColumn implements ComplexColumn
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    return NIL_VECTOR_SELECTOR_INSTANCE;
+    return NilVectorSelector.create(offset);
   }
 }
