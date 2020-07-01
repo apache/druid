@@ -229,14 +229,14 @@ public class ResponseContextTest
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
     Assert.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of("ETag", "string-value")),
-        ctx1.serializeWith(mapper, Integer.MAX_VALUE).getTruncatedResult()
+        ctx1.serializeWith(mapper, Integer.MAX_VALUE).getResult()
     );
 
     final ResponseContext ctx2 = ResponseContext.createEmpty();
     ctx2.add(ResponseContext.Key.NUM_SCANNED_ROWS, 100);
     Assert.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of("count", 100)),
-        ctx2.serializeWith(mapper, Integer.MAX_VALUE).getTruncatedResult()
+        ctx2.serializeWith(mapper, Integer.MAX_VALUE).getResult()
     );
   }
 
@@ -249,7 +249,7 @@ public class ResponseContextTest
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(fullString, res1.getTruncatedResult());
+    Assert.assertEquals(fullString, res1.getResult());
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     ctxCopy.merge(ctx);
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 30);
@@ -257,7 +257,7 @@ public class ResponseContextTest
     ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
     Assert.assertEquals(
         ctxCopy.getDelegate(),
-        ResponseContext.deserialize(res2.getTruncatedResult(), objectMapper).getDelegate()
+        ResponseContext.deserialize(res2.getResult(), objectMapper).getDelegate()
     );
   }
 
@@ -277,7 +277,7 @@ public class ResponseContextTest
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(fullString, res1.getTruncatedResult());
+    Assert.assertEquals(fullString, res1.getResult());
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     ctxCopy.merge(ctx);
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 70);
@@ -286,7 +286,7 @@ public class ResponseContextTest
     ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
     Assert.assertEquals(
         ctxCopy.getDelegate(),
-        ResponseContext.deserialize(res2.getTruncatedResult(), objectMapper).getDelegate()
+        ResponseContext.deserialize(res2.getResult(), objectMapper).getDelegate()
     );
   }
 

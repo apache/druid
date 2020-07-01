@@ -454,11 +454,17 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         throw new RE("Query[%s] url[%s] timed out.", query.getId(), url);
       }
 
+      // Some logics in brokers such as retry on missing segments rely on the response context,
+      // and thus truncated response contexts are not allowed.
+      final Query<T> queryToSend = QueryContexts.setFailOnTruncatedResponseContext(
+          QueryContexts.withTimeout(query, timeLeft)
+      );
+
       future = httpClient.go(
           new Request(
               HttpMethod.POST,
               new URL(url)
-          ).setContent(objectMapper.writeValueAsBytes(QueryContexts.withTimeout(query, timeLeft)))
+          ).setContent(objectMapper.writeValueAsBytes(queryToSend))
            .setHeader(
                HttpHeaders.Names.CONTENT_TYPE,
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON

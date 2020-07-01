@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -361,7 +362,7 @@ public abstract class ResponseContext
   {
     final String fullSerializedString = objectMapper.writeValueAsString(getDelegate());
     if (fullSerializedString.length() <= maxCharsNumber) {
-      return new SerializationResult(fullSerializedString, fullSerializedString);
+      return new SerializationResult(null, fullSerializedString);
     } else {
       // Indicates that the context is truncated during serialization.
       add(Key.TRUNCATED, true);
@@ -437,18 +438,22 @@ public abstract class ResponseContext
    */
   public static class SerializationResult
   {
+    @Nullable
     private final String truncatedResult;
     private final String fullResult;
 
-    SerializationResult(String truncatedResult, String fullResult)
+    SerializationResult(@Nullable String truncatedResult, String fullResult)
     {
       this.truncatedResult = truncatedResult;
       this.fullResult = fullResult;
     }
 
-    public String getTruncatedResult()
+    /**
+     * Returns the truncated result if it exists otherwise returns the full result.
+     */
+    public String getResult()
     {
-      return truncatedResult;
+      return isTruncated() ? truncatedResult : fullResult;
     }
 
     public String getFullResult()
@@ -456,9 +461,9 @@ public abstract class ResponseContext
       return fullResult;
     }
 
-    public Boolean isReduced()
+    public boolean isTruncated()
     {
-      return !truncatedResult.equals(fullResult);
+      return truncatedResult != null;
     }
   }
 }

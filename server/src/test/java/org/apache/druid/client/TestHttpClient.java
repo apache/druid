@@ -132,7 +132,7 @@ public class TestHttpClient implements HttpClient
           RESPONSE_CTX_HEADER_LEN_LIMIT
       );
       final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      response.headers().add(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getTruncatedResult());
+      response.headers().add(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
       response.setContent(
           HeapChannelBufferFactory.getInstance().getBuffer(serializedContent, 0, serializedContent.length)
       );
