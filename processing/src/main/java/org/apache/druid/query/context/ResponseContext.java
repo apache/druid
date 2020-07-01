@@ -121,7 +121,7 @@ public abstract class ResponseContext
      * check if the {@link #MISSING_SEGMENTS} is valid.
      *
      * Currently, the broker doesn't run subqueries in parallel, the remaining number of responses will be updated
-     * one by one per subquery. However, since we are planning to parallelize running subqueries, we store them
+     * one by one per subquery. However, since it can be parallelized to run subqueries simultaneously, we store them
      * in a ConcurrentHashMap.
      *
      * @see org.apache.druid.query.Query#getMostSpecificId
