@@ -58,7 +58,7 @@ public class OssDataSegmentPullerTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    OSS s3Client = EasyMock.createStrictMock(OSS.class);
+    OSS ossClient = EasyMock.createStrictMock(OSS.class);
 
     final OSSObjectSummary objectSummary = new OSSObjectSummary();
     objectSummary.setBucketName(bucket);
@@ -68,16 +68,16 @@ public class OssDataSegmentPullerTest
     final ObjectListing result = new ObjectListing();
     result.getObjectSummaries().add(objectSummary);
 
-    EasyMock.expect(s3Client.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
+    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
             .andReturn(result)
             .once();
-    OssDataSegmentPuller puller = new OssDataSegmentPuller(s3Client);
+    OssDataSegmentPuller puller = new OssDataSegmentPuller(ossClient);
 
-    EasyMock.replay(s3Client);
+    EasyMock.replay(ossClient);
 
     String version = puller.getVersion(URI.create(StringUtils.format(OssStorageDruidModule.SCHEME + "://%s/%s", bucket, objectSummary.getKey())));
 
-    EasyMock.verify(s3Client);
+    EasyMock.verify(ossClient);
 
     Assert.assertEquals(StringUtils.format("%d", new Date(0).getTime()), version);
   }
@@ -87,7 +87,7 @@ public class OssDataSegmentPullerTest
   {
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
-    final OSS s3Client = EasyMock.createStrictMock(OSS.class);
+    final OSS ossClient = EasyMock.createStrictMock(OSS.class);
     final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
@@ -112,25 +112,25 @@ public class OssDataSegmentPullerTest
 
     final File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
-    EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
+    EasyMock.expect(ossClient.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(true)
             .once();
-    EasyMock.expect(s3Client.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
+    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
             .andReturn(listObjectsResult)
             .once();
-    EasyMock.expect(s3Client.getObject(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
+    EasyMock.expect(ossClient.getObject(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(object0)
             .once();
-    OssDataSegmentPuller puller = new OssDataSegmentPuller(s3Client);
+    OssDataSegmentPuller puller = new OssDataSegmentPuller(ossClient);
 
-    EasyMock.replay(s3Client);
+    EasyMock.replay(ossClient);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
         new CloudObjectLocation(
             bucket,
             object0.getKey()
         ), tmpDir
     );
-    EasyMock.verify(s3Client);
+    EasyMock.verify(ossClient);
 
     Assert.assertEquals(value.length, result.size());
     File expected = new File(tmpDir, "renames-0");
@@ -143,7 +143,7 @@ public class OssDataSegmentPullerTest
   {
     final String bucket = "bucket";
     final String keyPrefix = "prefix/dir/0";
-    final OSS s3Client = EasyMock.createStrictMock(OSS.class);
+    final OSS ossClient = EasyMock.createStrictMock(OSS.class);
     final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
@@ -170,31 +170,31 @@ public class OssDataSegmentPullerTest
     File tmpDir = temporaryFolder.newFolder("gzTestDir");
 
     OSSException exception = new OSSException("OssDataSegmentPullerTest", "NoSuchKey", null, null, null, null, null);
-    EasyMock.expect(s3Client.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
+    EasyMock.expect(ossClient.doesObjectExist(EasyMock.eq(object0.getBucketName()), EasyMock.eq(object0.getKey())))
             .andReturn(true)
             .once();
-    EasyMock.expect(s3Client.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
+    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
             .andReturn(listObjectsResult)
             .once();
-    EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
+    EasyMock.expect(ossClient.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
             .andThrow(exception)
             .once();
-    EasyMock.expect(s3Client.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
+    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
             .andReturn(listObjectsResult)
             .once();
-    EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
+    EasyMock.expect(ossClient.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
             .andReturn(object0)
             .once();
-    OssDataSegmentPuller puller = new OssDataSegmentPuller(s3Client);
+    OssDataSegmentPuller puller = new OssDataSegmentPuller(ossClient);
 
-    EasyMock.replay(s3Client);
+    EasyMock.replay(ossClient);
     FileUtils.FileCopyResult result = puller.getSegmentFiles(
         new CloudObjectLocation(
             bucket,
             object0.getKey()
         ), tmpDir
     );
-    EasyMock.verify(s3Client);
+    EasyMock.verify(ossClient);
 
     Assert.assertEquals(value.length, result.size());
     File expected = new File(tmpDir, "renames-0");

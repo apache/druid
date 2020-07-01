@@ -117,8 +117,8 @@ public class OssDataSegmentMoverTest
   @Test(expected = SegmentLoadingException.class)
   public void testMoveException() throws Exception
   {
-    MockClient mockS3Client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssStorageConfig());
+    MockClient mockClient = new MockClient();
+    OssDataSegmentMover mover = new OssDataSegmentMover(mockClient, new OssStorageConfig());
 
     mover.move(
         SOURCE_SEGMENT,

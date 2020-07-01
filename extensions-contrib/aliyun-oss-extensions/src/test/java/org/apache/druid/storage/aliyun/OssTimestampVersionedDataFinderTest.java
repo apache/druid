@@ -110,7 +110,7 @@ public class OssTimestampVersionedDataFinderTest
   {
     String bucket = "bucket";
     String keyPrefix = "prefix/dir/0";
-    OSS s3Client = EasyMock.createStrictMock(OSS.class);
+    OSS ossClient = EasyMock.createStrictMock(OSS.class);
 
     OSSObjectSummary object0 = new OSSObjectSummary();
 
@@ -123,19 +123,19 @@ public class OssTimestampVersionedDataFinderTest
     result.getObjectSummaries().add(object0);
     result.setTruncated(false);
 
-    EasyMock.expect(s3Client.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
+    EasyMock.expect(ossClient.listObjects(EasyMock.anyObject(ListObjectsRequest.class)))
             .andReturn(result)
             .once();
-    OssTimestampVersionedDataFinder finder = new OssTimestampVersionedDataFinder(s3Client);
+    OssTimestampVersionedDataFinder finder = new OssTimestampVersionedDataFinder(ossClient);
 
     Pattern pattern = Pattern.compile("renames-[0-9]*\\.gz");
 
-    EasyMock.replay(s3Client);
+    EasyMock.replay(ossClient);
 
 
     URI latest = finder.getLatestVersion(URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, keyPrefix)), pattern);
 
-    EasyMock.verify(s3Client);
+    EasyMock.verify(ossClient);
 
     URI expected = URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object0.getKey()));
 

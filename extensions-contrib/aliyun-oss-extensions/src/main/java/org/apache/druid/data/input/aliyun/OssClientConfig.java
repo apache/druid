@@ -22,6 +22,7 @@ package org.apache.druid.data.input.aliyun;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.metadata.PasswordProvider;
@@ -74,6 +75,13 @@ public class OssClientConfig
   public PasswordProvider getSecretKey()
   {
     return secretKey;
+  }
+
+  @JsonIgnore
+  public boolean isCredentialsConfigured()
+  {
+    return accessKey != null &&
+           secretKey != null;
   }
 
   @Override

@@ -57,7 +57,7 @@ public class OssTaskLogsTest extends EasyMockSupport
   private static final String KEY_2 = "key2";
   private static final String TEST_BUCKET = "test_bucket";
   private static final String TEST_PREFIX = "test_prefix";
-  private static final URI PREFIX_URI = URI.create(StringUtils.format("s3://%s/%s", TEST_BUCKET, TEST_PREFIX));
+  private static final URI PREFIX_URI = URI.create(StringUtils.format("oss://%s/%s", TEST_BUCKET, TEST_PREFIX));
   private static final long TIME_0 = 0L;
   private static final long TIME_1 = 1L;
   private static final long TIME_NOW = 2L;

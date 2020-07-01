@@ -49,7 +49,7 @@ public class OssStorageDruidModule implements DruidModule
           @Override
           public String getModuleName()
           {
-            return "DruidOss-" + System.identityHashCode(this);
+            return "DruidAliyunOss-" + System.identityHashCode(this);
           }
 
           @Override

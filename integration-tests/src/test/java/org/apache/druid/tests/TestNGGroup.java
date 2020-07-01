@@ -77,9 +77,9 @@ public class TestNGGroup
   public static final String AZURE_DEEP_STORAGE = "azure-deep-storage";
 
   /**
-   * This group is not part of CI. To run this group, azure configs/credentials for your azure must be provided in a file.
+   * This group is not part of CI. To run this group, azure configs/credentials for your oss must be provided in a file.
    * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
-   * See integration-tests/docker/environment-configs/override-examples/azures for env vars to provide.
+   * See integration-tests/docker/environment-configs/override-examples/oss for env vars to provide.
    */
   public static final String ALIYUN_OSS_DEEP_STORAGE = "aliyun-oss-deep-storage";
 
