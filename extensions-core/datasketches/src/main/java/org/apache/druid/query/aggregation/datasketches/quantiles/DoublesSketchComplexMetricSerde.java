@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.google.common.primitives.Doubles;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.datasketches.quantiles.UpdateDoublesSketch;
@@ -75,18 +76,13 @@ public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
           // Autodetection of the input format: empty string, number, or base64 encoded sketch
           // A serialized DoublesSketch, as currently implemented, always has 0 in the first 6 bits.
           // This corresponds to "A" in base64, so it is not a digit
+          final Double doubleValue;
           if (objectString.isEmpty()) {
             return DoublesSketchOperations.EMPTY_SKETCH;
-          } else if (Character.isDigit(objectString.charAt(0))) {
-            try {
-              double doubleValue = Double.parseDouble(objectString);
-              UpdateDoublesSketch sketch = DoublesSketch.builder().setK(MIN_K).build();
-              sketch.update(doubleValue);
-              return sketch;
-            }
-            catch (NumberFormatException e) {
-              throw new IAE("Expected a string with a number, received value " + objectString);
-            }
+          } else if ((doubleValue = Doubles.tryParse(objectString)) != null) {
+            UpdateDoublesSketch sketch = DoublesSketch.builder().setK(MIN_K).build();
+            sketch.update(doubleValue);
+            return sketch;
           }
         } else if (object instanceof Number) { // this is for reindexing
           UpdateDoublesSketch sketch = DoublesSketch.builder().setK(MIN_K).build();

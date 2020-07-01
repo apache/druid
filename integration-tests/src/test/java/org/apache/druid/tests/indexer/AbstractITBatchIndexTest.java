@@ -51,6 +51,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   public enum InputFormatDetails
   {
     ORC("orc", ".orc", "/orc"),
+    TSV("tsv", ".tsv", "/tsv"),
     JSON("json", ".json", "/json"),
     PARQUET("parquet", ".parquet", "/parquet");
 
