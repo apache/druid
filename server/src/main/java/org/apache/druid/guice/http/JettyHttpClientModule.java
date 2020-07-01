@@ -20,6 +20,7 @@
 package org.apache.druid.guice.http;
 
 import com.google.inject.Binder;
+import com.google.inject.Binding;
 import com.google.inject.Module;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -29,10 +30,12 @@ import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class JettyHttpClientModule implements Module
 {
@@ -47,21 +50,10 @@ public class JettyHttpClientModule implements Module
   private Annotation annotation = null;
   private Class<? extends Annotation> annotationClazz = null;
 
-  public JettyHttpClientModule(String propertyPrefix)
-  {
-    this.propertyPrefix = propertyPrefix;
-  }
-
   public JettyHttpClientModule(String propertyPrefix, Class<? extends Annotation> annotation)
   {
     this.propertyPrefix = propertyPrefix;
     this.annotationClazz = annotation;
-  }
-
-  public JettyHttpClientModule(String propertyPrefix, Annotation annotation)
-  {
-    this.propertyPrefix = propertyPrefix;
-    this.annotation = annotation;
   }
 
   @Override
@@ -109,9 +101,10 @@ public class JettyHttpClientModule implements Module
       final DruidHttpClientConfig config = getConfigProvider().get().get();
 
       final HttpClient httpClient;
-      if (getSslContextBinding() != null) {
-        final SslContextFactory sslContextFactory = new SslContextFactory();
-        sslContextFactory.setSslContext(getSslContextBinding().getProvider().get());
+      final Binding<SSLContext> sslContextBinding = getSslContextBinding();
+      if (sslContextBinding != null) {
+        final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
+        sslContextFactory.setSslContext(sslContextBinding.getProvider().get());
         httpClient = new HttpClient(sslContextFactory);
       } else {
         httpClient = new HttpClient();

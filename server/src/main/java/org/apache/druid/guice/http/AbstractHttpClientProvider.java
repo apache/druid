@@ -32,6 +32,7 @@ import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
 
 /**
+ *
  */
 public abstract class AbstractHttpClientProvider<HttpClientType> implements Provider<HttpClientType>
 {
@@ -76,20 +77,11 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
     this.injector = injector;
   }
 
-  public Key<Supplier<DruidHttpClientConfig>> getConfigKey()
-  {
-    return configKey;
-  }
-
-  public Key<SSLContext> getSslContextKey()
-  {
-    return sslContextKey;
-  }
-
   public Provider<Supplier<DruidHttpClientConfig>> getConfigProvider()
   {
     return injector.getProvider(configKey);
   }
+
   public Provider<Lifecycle> getLifecycleProvider()
   {
     return injector.getProvider(Lifecycle.class);
