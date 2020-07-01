@@ -71,7 +71,8 @@ public class ITBasicAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
 
-  private static final String AUTH_FAILED_CONTENT = "<head>\n"
+  private static final String AUTH_FAILED_CONTENT = "<html>\n"
+                                                    + "<head>\n"
                                                     + "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"/>\n"
                                                     + "<title>Error 401 Unauthorized</title>\n"
                                                     + "</head>\n"
@@ -79,7 +80,7 @@ public class ITBasicAuthConfigurationTest
                                                     + "<p>Problem accessing /status. Reason:\n"
                                                     + "<pre>    Unauthorized</pre></p><hr><a href=\"http://eclipse.org/jetty\">Powered by Jetty:// 9.4.12.v20180830</a><hr/>\n"
                                                     + "</body>\n"
-                                                    + "</html>";
+                                                    + "</html>\n";
 
   private static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
       new TypeReference<List<Map<String, Object>>>()
@@ -496,7 +497,7 @@ public class ITBasicAuthConfigurationTest
         null,
         HttpResponseStatus.UNAUTHORIZED
     );
-    Assert.assertEquals(AUTH_FAILED_CONTENT, responseHolder.getContent());
+    Assert.assertEquals(responseHolder.getContent(), AUTH_FAILED_CONTENT);
   }
 
   private void testOptionsRequests(HttpClient httpClient)
