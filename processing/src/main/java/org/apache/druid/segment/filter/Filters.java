@@ -160,7 +160,7 @@ public class Filters
    *
    * @return an iterable of bitmaps
    */
-  static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
+  public static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
   {
     // Do not use Iterables.transform() to avoid boxing/unboxing integers.
     return new Iterable<ImmutableBitmap>()
@@ -404,7 +404,7 @@ public class Filters
     };
   }
 
-  static boolean supportsSelectivityEstimation(
+  public static boolean supportsSelectivityEstimation(
       Filter filter,
       String dimension,
       ColumnSelector columnSelector,
