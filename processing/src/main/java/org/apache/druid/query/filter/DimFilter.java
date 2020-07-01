@@ -23,7 +23,11 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.VirtualColumns;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Set;
@@ -57,6 +61,18 @@ public interface DimFilter extends Cacheable
    * returning the same filter can be a straightforward default implementation.
    */
   DimFilter optimize();
+
+  /**
+   * @return Return a Filter that implements this DimFilter, after applying optimizations to this DimFilter.
+   * A typical implementation will return the result of `optimize().toFilter()`
+   * See abstract base class {@link AbstractOptimizableDimFilter} for a common implementation shared by
+   * current DimFilters.
+   *
+   * The Filter returned by this method across multiple calls must be the same object: parts of the query stack
+   * compare Filters, and returning the same object allows these checks to avoid deep comparisons.
+   * (see {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter#makeCursors for an example}
+   */
+  Filter toOptimizedFilter();
 
   /**
    * Returns a Filter that implements this DimFilter. This does not generally involve optimizing the DimFilter,

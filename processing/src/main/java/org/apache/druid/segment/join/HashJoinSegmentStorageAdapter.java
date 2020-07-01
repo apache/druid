@@ -223,6 +223,10 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
 
+    if (keyIn.getFilter() != keyCached.getFilter()) {
+      throw new ISE("Pre-analysis filter and cursor filter are not the same object");
+    }
+
     if (!keyIn.equals(keyCached)) {
       // It is a bug if this happens. We expect the comparison to be quick, because in the sane case, identical objects
       // will be used and therefore deep equality checks will be unnecessary.

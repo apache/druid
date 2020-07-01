@@ -19,32 +19,22 @@
 
 package org.apache.druid.query.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.io.IOException;
-
-public class FalseDimFilterTest
+/**
+ * Base class for DimFilters that support optimization.
+ */
+abstract class AbstractOptimizableDimFilter implements DimFilter
 {
-  @Test
-  public void testSerde() throws IOException
-  {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    final FalseDimFilter original = FalseDimFilter.instance();
-    final byte[] bytes = mapper.writeValueAsBytes(original);
-    final FalseDimFilter fromBytes = (FalseDimFilter) mapper.readValue(bytes, DimFilter.class);
-    Assert.assertSame(original, fromBytes);
-  }
+  private Filter cachedOptimizedFilter = null;
 
-  @Test
-  public void testEquals()
+  @JsonIgnore
+  @Override
+  public Filter toOptimizedFilter()
   {
-    EqualsVerifier.forClass(FalseDimFilter.class)
-                  .usingGetClass()
-                  .withIgnoredFields("cachedOptimizedFilter")
-                  .verify();
+    if (cachedOptimizedFilter == null) {
+      cachedOptimizedFilter = optimize().toFilter();
+    }
+    return cachedOptimizedFilter;
   }
 }
