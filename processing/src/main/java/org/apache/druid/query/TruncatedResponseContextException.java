@@ -17,25 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.query;
 
-public class CoordinatorRuntimeParamsTestHelpers
+import org.apache.druid.java.util.common.StringUtils;
+
+/**
+ * This exception is thrown when {@link org.apache.druid.query.context.ResponseContext} is truncated after serialization
+ * in historicals or realtime tasks. The serialized response context can be truncated if its size is larger than
+ * {@code QueryResource#RESPONSE_CTX_HEADER_LEN_LIMIT}.
+ * 
+ * @see org.apache.druid.query.context.ResponseContext#serializeWith
+ * @see QueryContexts#shouldFailOnTruncatedResponseContext
+ */
+public class TruncatedResponseContextException extends RuntimeException
 {
-  public static DruidCoordinatorRuntimeParams.Builder newBuilder()
+  public TruncatedResponseContextException(String message, Object... arguments)
   {
-    return DruidCoordinatorRuntimeParams
-        .newBuilder()
-        .withStartTimeNanos(System.nanoTime());
-  }
-
-  public static DruidCoordinatorRuntimeParams.Builder newBuilder(DruidCluster druidCluster)
-  {
-    return newBuilder()
-        .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster));
-  }
-
-  private CoordinatorRuntimeParamsTestHelpers()
-  {
+    super(StringUtils.nonStrictFormat(message, arguments));
   }
 }
