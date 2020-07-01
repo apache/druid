@@ -334,7 +334,7 @@ JavaScript functions are expected to return floating-point values.
 
 #### Apache DataSketches Theta Sketch
 
-The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.md) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [Apache DataKketches](https://datasketches.apache.org/) library.
+The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.md) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [Apache DataSketches](https://datasketches.apache.org/) library.
 
 #### Apache DataSketches HLL Sketch
 
