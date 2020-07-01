@@ -275,7 +275,7 @@ public class ClientQuerySegmentWalkerTest
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(1, scheduler.getTotalAcquired().get());
     Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
@@ -318,7 +318,7 @@ public class ClientQuerySegmentWalkerTest
     // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
     // invocation of either the cluster or local walker in ClientQuerySegmentWalker
     Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
@@ -506,7 +506,7 @@ public class ClientQuerySegmentWalkerTest
     );
 
     Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
@@ -561,7 +561,7 @@ public class ClientQuerySegmentWalkerTest
     );
 
     Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }

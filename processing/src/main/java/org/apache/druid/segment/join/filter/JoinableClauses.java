@@ -38,18 +38,22 @@ import java.util.stream.Collectors;
 
 public class JoinableClauses
 {
-  @Nonnull private final List<JoinableClause> joinableClauses;
+  @Nonnull
+  private final List<JoinableClause> joinableClauses;
 
   /**
    * Builds a list of {@link JoinableClause} corresponding to a list of {@link PreJoinableClause}. This will call
    * {@link JoinableFactory#build} on each one and therefore may be an expensive operation.
    */
-  public static JoinableClauses createClauses(final List<PreJoinableClause> clauses, final JoinableFactory joinableFactory)
+  public static JoinableClauses createClauses(
+      final List<PreJoinableClause> preClauses,
+      final JoinableFactory joinableFactory
+  )
   {
     // Since building a JoinableClause can be expensive, check for prefix conflicts before building
-    checkPreJoinableClausesForDuplicatesAndShadowing(clauses);
+    checkPreJoinableClausesForDuplicatesAndShadowing(preClauses);
 
-    List<JoinableClause> joinableClauses = clauses.stream().map(preJoinableClause -> {
+    List<JoinableClause> joinableClauses = preClauses.stream().map(preJoinableClause -> {
       final Optional<Joinable> joinable = joinableFactory.build(
           preJoinableClause.getDataSource(),
           preJoinableClause.getCondition()
@@ -63,6 +67,14 @@ public class JoinableClauses
       );
     }).collect(Collectors.toList());
     return new JoinableClauses(joinableClauses);
+  }
+
+  /**
+   * Wraps the provided list of pre-built {@link JoinableClause}. This is an inexpensive operation.
+   */
+  public static JoinableClauses fromList(final List<JoinableClause> clauses)
+  {
+    return new JoinableClauses(clauses);
   }
 
   private JoinableClauses(@Nonnull List<JoinableClause> joinableClauses)
@@ -127,10 +139,5 @@ public class JoinableClauses
     }
 
     Joinables.checkPrefixesForDuplicatesAndShadowing(prefixes);
-  }
-
-  public static JoinableClauses fromList(List<JoinableClause> clauses)
-  {
-    return new JoinableClauses(clauses);
   }
 }
