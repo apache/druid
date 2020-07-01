@@ -30,6 +30,11 @@ import org.apache.druid.server.security.AuthorizerValidation;
 import javax.inject.Inject;
 import java.util.function.Consumer;
 
+/**
+ * A resource filter that validates the "authorizerName" path param provided in the request.
+ *
+ * Any API that accepts an authorizerName, should use this filter.
+ */
 public class AuthorizerResourceFilter implements ResourceFilter, ContainerRequestFilter
 {
   private final Consumer<String> authorizerNameValidator;
