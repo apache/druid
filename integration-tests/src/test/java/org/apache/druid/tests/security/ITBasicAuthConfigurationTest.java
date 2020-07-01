@@ -496,7 +496,7 @@ public class ITBasicAuthConfigurationTest
         null,
         HttpResponseStatus.UNAUTHORIZED
     );
-    Assert.assertEquals(responseHolder.getContent(), AUTH_FAILED_CONTENT);
+    Assert.assertEquals(AUTH_FAILED_CONTENT, responseHolder.getContent());
   }
 
   private void testOptionsRequests(HttpClient httpClient)
