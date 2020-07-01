@@ -91,10 +91,10 @@ public class OssDataSegmentMoverTest
   @Test
   public void testMoveNoop() throws Exception
   {
-    MockClient mockS3Client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssStorageConfig());
+    MockClient mockOssClient = new MockClient();
+    OssDataSegmentMover mover = new OssDataSegmentMover(mockOssClient, new OssStorageConfig());
 
-    mockS3Client.putObject(
+    mockOssClient.putObject(
         "archive",
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
     );
@@ -111,7 +111,7 @@ public class OssDataSegmentMoverTest
         MapUtils.getString(targetLoadSpec, "key")
     );
     Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertFalse(mockS3Client.didMove());
+    Assert.assertFalse(mockOssClient.didMove());
   }
 
   @Test(expected = SegmentLoadingException.class)
@@ -129,8 +129,8 @@ public class OssDataSegmentMoverTest
   @Test
   public void testIgnoresGoneButAlreadyMoved() throws Exception
   {
-    MockClient mockS3Client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(mockS3Client, new OssStorageConfig());
+    MockClient mockOssClient = new MockClient();
+    OssDataSegmentMover mover = new OssDataSegmentMover(mockOssClient, new OssStorageConfig());
     mover.move(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
