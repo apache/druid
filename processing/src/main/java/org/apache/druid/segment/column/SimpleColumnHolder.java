@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
@@ -39,6 +40,7 @@ class SimpleColumnHolder implements ColumnHolder
   private final Supplier<SpatialIndex> spatialIndex;
   private static final InvalidComplexColumnTypeValueSelector INVALID_COMPLEX_COLUMN_TYPE_VALUE_SELECTOR
       = new InvalidComplexColumnTypeValueSelector();
+  private static final Logger log = new Logger(SimpleColumnHolder.class);
 
   SimpleColumnHolder(
       ColumnCapabilities capabilities,
@@ -61,6 +63,8 @@ class SimpleColumnHolder implements ColumnHolder
           capabilities.getType() == ValueType.COMPLEX,
           "Only complex column types can have nullable column suppliers"
       );
+      log.warn("Null column supplier for a complex column was passed which indicates "
+               + "failure in deserializing the complex column from the index file");
     }
     this.bitmapIndex = bitmapIndex;
     this.spatialIndex = spatialIndex;
