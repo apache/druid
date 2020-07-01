@@ -23,7 +23,7 @@ title: "Aliyun OSS"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-aliyun-oss-extensions` extension.
+To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `aliyun-oss-extensions` extension.
 
 ## Deep Storage
 
@@ -33,8 +33,8 @@ To use aliyun OSS as deep storage, first config as below
 
 |Property|Description|Possible Values|Default|
 |--------|---------------|-----------|-------|
-|`druid.oss.accessKey`|the 'AccessKey ID' of your account which can be used to access the bucket| |Must be set.|
-|`druid.oss.secretKey`|the 'AccessKey Secret' of your account which can be used to access the bucket| |Must be set. |
+|`druid.oss.accessKey`|the `AccessKey ID` of your account which can be used to access the bucket| |Must be set.|
+|`druid.oss.secretKey`|the `AccessKey Secret` of your account which can be used to access the bucket| |Must be set. |
 |`druid.oss.endpoint`|the endpoint url of your OSS storage| |Must be set.|
 
 if you want to use OSS as deep storage, use the configurations below

@@ -21,11 +21,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>org.apache.druid.extensions</groupId>
-    <artifactId>druid-aliyun-oss-extensions</artifactId>
-    <name>druid-aliyun-oss-extensions</name>
-    <description>druid-aliyun-oss-extensions</description>
+    <groupId>org.apache.druid.extensions.contrib</groupId>
+    <artifactId>aliyun-oss-extensions</artifactId>
+    <name>aliyun-oss-extensions</name>
+    <description>aliyun-oss-extensions</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
@@ -110,6 +109,13 @@
         </dependency>
             
         <!-- Tests -->
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-core</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

@@ -21,10 +21,10 @@
 # Example of override config file to provide.
 # Please replace <OVERRIDE_THIS> with your cloud configs/credentials
 #
-druid_storage_type=aliyun-oss
-druid_storage_aliyun_oss_bucket=<OVERRIDE_THIS>
-druid_storage_aliyun_oss_prefix=<OVERRIDE_THIS>
-druid_aliyun_oss_accessKey=<OVERRIDE_THIS>
-druid_aliyun_oss_secretKey=<OVERRIDE_THIS>
-druid_aliyun_oss_endpoint=<OVERRIDE_THIS>
-druid_extensions_loadList=["druid-aliyun-oss-extensions"]
+druid_storage_type=oss
+druid_storage_oss_bucket=<OVERRIDE_THIS>
+druid_storage_oss_prefix=<OVERRIDE_THIS>
+druid_oss_accessKey=<OVERRIDE_THIS>
+druid_oss_secretKey=<OVERRIDE_THIS>
+druid_oss_endpoint=<OVERRIDE_THIS>
+druid_extensions_loadList=["aliyun-oss-extensions"]
