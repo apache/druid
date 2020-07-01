@@ -159,7 +159,8 @@ public class CliIndexerServerModule implements Module
         oldConfig.getUnannouncePropagationDelay(),
         oldConfig.getInflateBufferSize(),
         oldConfig.getCompressionLevel(),
-        oldConfig.isEnableForwardedRequestCustomizer()
+        oldConfig.isEnableForwardedRequestCustomizer(),
+        oldConfig.getAllowedHttpMethods()
     );
   }
 }

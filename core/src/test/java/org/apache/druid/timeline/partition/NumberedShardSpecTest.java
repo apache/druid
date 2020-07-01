@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.server.shard;
+package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -26,17 +27,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
-import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
-import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpec;
-import org.apache.druid.timeline.partition.SingleDimensionPartialShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -58,8 +51,9 @@ public class NumberedShardSpecTest
   @Test
   public void testSerdeRoundTrip() throws Exception
   {
-    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
-        ServerTestHelper.MAPPER.writeValueAsBytes(new NumberedShardSpec(1, 2)),
+    final ObjectMapper objectMapper = ShardSpecTestUtils.initObjectMapper();
+    final ShardSpec spec = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(new NumberedShardSpec(1, 2)),
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
@@ -69,7 +63,8 @@ public class NumberedShardSpecTest
   @Test
   public void testSerdeBackwardsCompat() throws Exception
   {
-    final ShardSpec spec = ServerTestHelper.MAPPER.readValue(
+    final ObjectMapper objectMapper = ShardSpecTestUtils.initObjectMapper();
+    final ShardSpec spec = objectMapper.readValue(
         "{\"type\": \"numbered\", \"partitions\": 2, \"partitionNum\": 1}",
         ShardSpec.class
     );
