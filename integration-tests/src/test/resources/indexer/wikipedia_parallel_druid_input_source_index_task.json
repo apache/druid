@@ -51,7 +51,7 @@
     },
     "tuningConfig": {
       "type": "index_parallel",
-      "maxNumConcurrentSubTasks": 4,
+      "maxNumConcurrentSubTasks": 10,
       "forceGuaranteedRollup": "%%FORCE_GUARANTEED_ROLLUP%%",
       "partitionsSpec": %%PARTITIONS_SPEC%%,
       "splitHintSpec": {

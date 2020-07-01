@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.Guice;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -71,12 +72,6 @@ public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSour
   public void testJsonInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
     doIndexTest(InputFormatDetails.JSON);
-  }
-
-  @Test
-  public void testTsvInputFormatIndexDataIngestionSpecWithSchema() throws Exception
-  {
-    doIndexTest(InputFormatDetails.TSV, ImmutableMap.of("findColumnsFromHeader", true));
   }
 
   @Test
