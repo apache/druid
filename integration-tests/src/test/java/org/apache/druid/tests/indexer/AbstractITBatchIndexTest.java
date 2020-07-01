@@ -52,6 +52,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     ORC("orc", ".orc", "/orc"),
     JSON("json", ".json", "/json"),
+    CSV("csv", ".csv", "/csv"),
     PARQUET("parquet", ".parquet", "/parquet");
 
     private final String inputFormatType;
