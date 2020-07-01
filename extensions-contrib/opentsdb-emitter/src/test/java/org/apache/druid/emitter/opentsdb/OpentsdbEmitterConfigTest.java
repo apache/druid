@@ -76,4 +76,9 @@ public class OpentsdbEmitterConfigTest
     Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
   }
 
+  @Test
+  public void testJacksonModules()
+  {
+    Assert.assertTrue(new OpentsdbEmitterModule().getJacksonModules().isEmpty());
+  }
 }

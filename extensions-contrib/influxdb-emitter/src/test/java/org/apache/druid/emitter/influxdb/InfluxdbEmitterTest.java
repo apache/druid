@@ -222,6 +222,12 @@ public class InfluxdbEmitterTest
     Assert.assertEquals(expected, actual);
   }
 
+  @Test
+  public void testJacksonModules()
+  {
+    Assert.assertTrue(new InfluxdbEmitterModule().getJacksonModules().isEmpty());
+  }
+
   @Test(expected = IllegalStateException.class)
   public void testBuildInfluxdbClientWithHttpsProtocolAndNoTrustStore()
   {

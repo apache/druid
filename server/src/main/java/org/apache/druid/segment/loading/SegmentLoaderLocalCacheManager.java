@@ -89,7 +89,6 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     this.indexIO = indexIO;
     this.config = config;
     this.jsonMapper = mapper;
-
     this.locations = new ArrayList<>();
     for (StorageLocationConfig locationConfig : config.getLocations()) {
       locations.add(

@@ -64,7 +64,7 @@ public class MapLookupExtractorTest
       );
     }
     Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(fn.unapply("empty_string")));
-    Assert.assertEquals("not existing value returns empty list", Collections.EMPTY_LIST, fn.unapply("not There"));
+    Assert.assertEquals("not existing value returns empty list", Collections.emptyList(), fn.unapply("not There"));
   }
 
   @Test

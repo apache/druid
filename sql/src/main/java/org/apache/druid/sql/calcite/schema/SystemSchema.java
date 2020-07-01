@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,7 +55,6 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
@@ -143,7 +141,9 @@ public class SystemSchema extends AbstractSchema
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
       .add("is_overshadowed", ValueType.LONG)
-      .add("payload", ValueType.STRING)
+      .add("shardSpec", ValueType.STRING)
+      .add("dimensions", ValueType.STRING)
+      .add("metrics", ValueType.STRING)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -294,37 +294,34 @@ public class SystemSchema extends AbstractSchema
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
           .transform(val -> {
-            try {
-              final DataSegment segment = val.getDataSegment();
-              segmentsAlreadySeen.add(segment.getId());
-              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
-              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
-              if (partialSegmentData != null) {
-                numReplicas = partialSegmentData.getNumReplicas();
-                numRows = partialSegmentData.getNumRows();
-                isAvailable = partialSegmentData.isAvailable();
-                isRealtime = partialSegmentData.isRealtime();
-              }
-              return new Object[]{
-                  segment.getId(),
-                  segment.getDataSource(),
-                  segment.getInterval().getStart().toString(),
-                  segment.getInterval().getEnd().toString(),
-                  segment.getSize(),
-                  segment.getVersion(),
-                  Long.valueOf(segment.getShardSpec().getPartitionNum()),
-                  numReplicas,
-                  numRows,
-                  IS_PUBLISHED_TRUE, //is_published is true for published segments
-                  isAvailable,
-                  isRealtime,
-                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
-                  jsonMapper.writeValueAsString(val)
-              };
+            final DataSegment segment = val.getDataSegment();
+            segmentsAlreadySeen.add(segment.getId());
+            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
+            long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
+            if (partialSegmentData != null) {
+              numReplicas = partialSegmentData.getNumReplicas();
+              numRows = partialSegmentData.getNumRows();
+              isAvailable = partialSegmentData.isAvailable();
+              isRealtime = partialSegmentData.isRealtime();
             }
-            catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getDataSegment().getId());
-            }
+            return new Object[]{
+                segment.getId(),
+                segment.getDataSource(),
+                segment.getInterval().getStart().toString(),
+                segment.getInterval().getEnd().toString(),
+                segment.getSize(),
+                segment.getVersion(),
+                Long.valueOf(segment.getShardSpec().getPartitionNum()),
+                numReplicas,
+                numRows,
+                IS_PUBLISHED_TRUE, //is_published is true for published segments
+                isAvailable,
+                isRealtime,
+                val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
+                segment.getShardSpec(),
+                segment.getDimensions(),
+                segment.getMetrics()
+            };
           });
 
       final FluentIterable<Object[]> availableSegments = FluentIterable
@@ -333,33 +330,30 @@ public class SystemSchema extends AbstractSchema
               root
           ))
           .transform(val -> {
-            try {
-              if (segmentsAlreadySeen.contains(val.getKey())) {
-                return null;
-              }
-              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
-              final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
-              return new Object[]{
-                  val.getKey(),
-                  val.getKey().getDataSource(),
-                  val.getKey().getInterval().getStart().toString(),
-                  val.getKey().getInterval().getEnd().toString(),
-                  val.getValue().getSegment().getSize(),
-                  val.getKey().getVersion(),
-                  (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
-                  numReplicas,
-                  val.getValue().getNumRows(),
-                  IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
-                  // is_available is assumed to be always true for segments announced by historicals or realtime tasks
-                  IS_AVAILABLE_TRUE,
-                  val.getValue().isRealtime(),
-                  IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
-                  jsonMapper.writeValueAsString(val.getKey())
-              };
+            if (segmentsAlreadySeen.contains(val.getKey())) {
+              return null;
             }
-            catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getKey());
-            }
+            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
+            final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
+            return new Object[]{
+                val.getKey(),
+                val.getKey().getDataSource(),
+                val.getKey().getInterval().getStart().toString(),
+                val.getKey().getInterval().getEnd().toString(),
+                val.getValue().getSegment().getSize(),
+                val.getKey().getVersion(),
+                (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
+                numReplicas,
+                val.getValue().getNumRows(),
+                IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
+                // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                IS_AVAILABLE_TRUE,
+                val.getValue().isRealtime(),
+                IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
+                val.getValue().getSegment().getShardSpec(),
+                val.getValue().getSegment().getDimensions(),
+                val.getValue().getSegment().getMetrics()
+            };
           });
 
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(

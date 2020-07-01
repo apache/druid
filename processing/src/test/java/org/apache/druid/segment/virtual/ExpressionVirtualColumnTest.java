@@ -357,8 +357,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       {
         return new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                            .setHasMultipleValues(true)
-                                           .setDictionaryEncoded(true)
-                                           .setIsComplete(true);
+                                           .setDictionaryEncoded(true);
       }
     };
     final BaseObjectColumnValueSelector selectorImplicit =
@@ -814,9 +813,9 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
+    Assert.assertTrue(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertFalse(caps.isComplete());
 
     caps = Z_CONCAT_X.capabilities("expr");
     Assert.assertEquals(ValueType.STRING, caps.getType());
@@ -824,8 +823,8 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertTrue(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
+    Assert.assertTrue(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertFalse(caps.isComplete());
   }
 }

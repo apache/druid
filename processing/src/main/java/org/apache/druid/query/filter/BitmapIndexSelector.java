@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.CloseableIndexed;
 
 import javax.annotation.Nullable;
@@ -35,7 +36,7 @@ public interface BitmapIndexSelector
   @MustBeClosed
   @Nullable
   CloseableIndexed<String> getDimensionValues(String dimension);
-  boolean hasMultipleValues(String dimension);
+  ColumnCapabilities.Capable hasMultipleValues(String dimension);
   int getNumRows();
   BitmapFactory getBitmapFactory();
   @Nullable

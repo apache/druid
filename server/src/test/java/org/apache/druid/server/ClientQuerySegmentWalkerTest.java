@@ -33,6 +33,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
@@ -70,7 +71,9 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.InlineJoinableFactory;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -96,6 +99,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Tests ClientQuerySegmentWalker.
@@ -112,6 +116,7 @@ public class ClientQuerySegmentWalkerTest
   private static final String FOO = "foo";
   private static final String BAR = "bar";
   private static final String MULTI = "multi";
+  private static final String GLOBAL = "broadcast";
 
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
@@ -219,6 +224,40 @@ public class ClientQuerySegmentWalkerTest
   }
 
   @Test
+  public void testTimeseriesOnAutomaticGlobalTable()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(GLOBAL)
+              .granularity(Granularities.ALL)
+              .intervals(Collections.singletonList(INTERVAL))
+              .aggregators(new LongSumAggregatorFactory("sum", "n"))
+              .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+              .build();
+
+    // expect global/joinable datasource to be automatically translated into a GlobalTableDataSource
+    final TimeseriesQuery expectedClusterQuery =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(new GlobalTableDataSource(GLOBAL))
+              .granularity(Granularities.ALL)
+              .intervals(Collections.singletonList(INTERVAL))
+              .aggregators(new LongSumAggregatorFactory("sum", "n"))
+              .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+              .build();
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(expectedClusterQuery)),
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), 10L})
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
   public void testTimeseriesOnInline()
   {
     final TimeseriesQuery query =
@@ -236,7 +275,7 @@ public class ClientQuerySegmentWalkerTest
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
-    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(0, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(1, scheduler.getTotalAcquired().get());
     Assert.assertEquals(1, scheduler.getTotalReleased().get());
   }
@@ -279,7 +318,7 @@ public class ClientQuerySegmentWalkerTest
     // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
     // invocation of either the cluster or local walker in ClientQuerySegmentWalker
     Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
@@ -467,7 +506,7 @@ public class ClientQuerySegmentWalkerTest
     );
 
     Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
@@ -522,7 +561,7 @@ public class ClientQuerySegmentWalkerTest
     );
 
     Assert.assertEquals(2, scheduler.getTotalRun().get());
-    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
   }
@@ -606,6 +645,20 @@ public class ClientQuerySegmentWalkerTest
     final JoinableFactory joinableFactory = new MapJoinableFactory(
         ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
             .put(InlineDataSource.class, new InlineJoinableFactory())
+            .put(GlobalTableDataSource.class, new JoinableFactory()
+            {
+              @Override
+              public boolean isDirectlyJoinable(DataSource dataSource)
+              {
+                return ((GlobalTableDataSource) dataSource).getName().equals(GLOBAL);
+              }
+
+              @Override
+              public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
+              {
+                return Optional.empty();
+              }
+            })
             .build()
     );
 
@@ -651,7 +704,8 @@ public class ClientQuerySegmentWalkerTest
                 ImmutableMap.of(
                     FOO, makeTimeline(FOO, FOO_INLINE),
                     BAR, makeTimeline(BAR, BAR_INLINE),
-                    MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE)
+                    MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE),
+                    GLOBAL, makeTimeline(GLOBAL, FOO_INLINE)
                 ),
                 joinableFactory,
                 conglomerate,
@@ -669,6 +723,7 @@ public class ClientQuerySegmentWalkerTest
             ClusterOrLocal.LOCAL
         ),
         conglomerate,
+        joinableFactory,
         serverConfig
     );
   }

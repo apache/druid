@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class InfluxdbEmitterConfig
@@ -65,7 +65,6 @@ public class InfluxdbEmitterConfig
   @JsonProperty
   private final ImmutableSet<String> dimensionWhitelist;
 
-  private static Logger log = new Logger(InfluxdbEmitterConfig.class);
 
   @JsonCreator
   public InfluxdbEmitterConfig(
@@ -157,20 +156,9 @@ public class InfluxdbEmitterConfig
   @Override
   public int hashCode()
   {
-    int result = getHostname().hashCode();
-    result = 31 * result + getPort();
-    result = 31 * result + getProtocol().hashCode();
-    result = 31 * result + (getTrustStorePath() != null ? getTrustStorePath().hashCode() : 0);
-    result = 31 * result + (getTrustStoreType() != null ? getTrustStoreType().hashCode() : 0);
-    result = 31 * result + (getTrustStorePassword() != null ? getTrustStorePassword().hashCode() : 0);
-    result = 31 * result + getDatabaseName().hashCode();
-    result = 31 * result + getFlushPeriod();
-    result = 31 * result + getMaxQueueSize();
-    result = 31 * result + getFlushDelay();
-    result = 31 * result + getInfluxdbUserName().hashCode();
-    result = 31 * result + getInfluxdbPassword().hashCode();
-    result = 31 * result + getDimensionWhitelist().hashCode();
-    return result;
+    return Objects.hash(hostname, port, protocol, trustStorePath, trustStoreType,
+                        trustStorePassword, databaseName, flushPeriod, maxQueueSize,
+                        flushDelay, influxdbUserName, influxdbPassword, dimensionWhitelist);
   }
 
   @JsonProperty

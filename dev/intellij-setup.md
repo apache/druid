@@ -34,6 +34,21 @@ an alias name. You can do this in Using `File` -> `Project Structure...` -> `Pla
 ## Code Style
 The Code Style is available in XML format at [druid_intellij_formatting.xml](druid_intellij_formatting.xml) and can be [imported into IntelliJ](https://www.jetbrains.com/help/idea/2017.1/copying-code-style-settings.html).
 
+## Set Code Coverage Runner
+Druid CI checks are configured to enforce code coverage using JaCoCo. The checks will prevent PR from being merged 
+if test coverage of new added code is below the set threshold. You should run the tests locally to make sure that
+your code pass the coverage threshold. In IntelliJ, edit the template of JUnit tests in "Run Configurations..." 
+to use Jacoco for code coverage (this provides branch coverage instead of the default which is only line coverage).
+You can then right click src/test/java folder of the modules you are modifying and click run with coverage. This
+will generate a report to show the current code coverage on the code (not just your change).
+![Code Coverage Runner Setup 1](intellij-images/code_coverage_1.png)
+![Code Coverage Runner Setup 2](intellij-images/code_coverage_2.png)
+
+## Git Checkstyle Verification Hook (Optional)
+Git Checkstyle pre-commit hook can be installed to automatically run checkstyle verification before committing, 
+saving cycle from avoiding the checkstyle failing later in Travis/CI environment.
+The hook can be setup easily by running the <DRUID_HOME>/setup-hooks.sh script.
+
 ## Metadata
 The installation of a MySQL metadata store is outside the scope of this document, but instructions on setting up MySQL can be found at [docs/development/extensions-core/mysql.md](/docs/development/extensions-core/mysql.md). This assumes you followed the example there and have a database named `druid` with proper permissions for a user named `druid` and a password of `diurd`.
 

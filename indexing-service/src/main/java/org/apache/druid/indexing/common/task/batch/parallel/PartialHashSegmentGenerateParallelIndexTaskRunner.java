@@ -27,11 +27,9 @@ import java.util.Map;
 
 /**
  * {@link ParallelIndexTaskRunner} for the phase to create hash partitioned segments in multi-phase parallel indexing.
- *
- * @see PartialHashSegmentMergeParallelIndexTaskRunner
  */
 class PartialHashSegmentGenerateParallelIndexTaskRunner
-    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedHashPartitionsReport>
+    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
 {
   private static final String PHASE_NAME = "partial segment generation";
 

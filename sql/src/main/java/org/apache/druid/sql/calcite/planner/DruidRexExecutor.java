@@ -121,10 +121,13 @@ public class DruidRexExecutor implements RexExecutor
           } else {
             if (exprResult.type() == ExprType.LONG) {
               bigDecimal = BigDecimal.valueOf(exprResult.asLong());
+
             } else {
+              // if exprResult evaluates to Nan or infinity, this will throw a NumberFormatException.
+              // If you find yourself in such a position, consider casting the literal to a BIGINT so that
+              // the query can execute.
               bigDecimal = BigDecimal.valueOf(exprResult.asDouble());
             }
-
             literal = rexBuilder.makeLiteral(bigDecimal, constExp.getType(), true);
           }
         } else if (sqlTypeName == SqlTypeName.ARRAY) {

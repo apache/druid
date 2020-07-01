@@ -261,7 +261,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = dataSourceAnalysis.getBaseQuerySegmentSpec()
                                          .map(QuerySegmentSpec::getIntervals)
-                                         .orElse(query.getIntervals());
+                                         .orElseGet(() -> query.getIntervals());
     }
 
     private ImmutableMap<String, Object> makeDownstreamQueryContext()
@@ -452,7 +452,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Hasher hasher = Hashing.sha1().newHasher();
       boolean hasOnlyHistoricalSegments = true;
       for (SegmentServerSelector p : segments) {
-        if (!p.getServer().pick().getServer().segmentReplicatable()) {
+        if (!p.getServer().pick().getServer().isSegmentReplicationTarget()) {
           hasOnlyHistoricalSegments = false;
           break;
         }
@@ -633,7 +633,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
         if (isBySegment) {
           serverResults = getBySegmentServerResults(serverRunner, segmentsOfServer, maxQueuedBytesPerServer);
-        } else if (!server.segmentReplicatable() || !populateCache) {
+        } else if (!server.isSegmentReplicationTarget() || !populateCache) {
           serverResults = getSimpleServerResults(serverRunner, segmentsOfServer, maxQueuedBytesPerServer);
         } else {
           serverResults = getAndCacheServerResults(serverRunner, segmentsOfServer, maxQueuedBytesPerServer);

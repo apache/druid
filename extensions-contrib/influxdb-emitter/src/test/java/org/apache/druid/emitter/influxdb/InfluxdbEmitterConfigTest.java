@@ -22,6 +22,7 @@ package org.apache.druid.emitter.influxdb;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -268,6 +269,14 @@ public class InfluxdbEmitterConfigTest
     );
     String expectedProtocol = "http";
     Assert.assertEquals(expectedProtocol, influxdbEmitterConfig.getProtocol());
+  }
+
+  @Test
+  public void testConfigEquals()
+  {
+    EqualsVerifier.forClass(InfluxdbEmitterConfig.class).withNonnullFields(
+        "hostname", "databaseName", "influxdbUserName", "influxdbPassword"
+    ).usingGetClass().verify();
   }
 
 }

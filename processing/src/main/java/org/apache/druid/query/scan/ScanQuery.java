@@ -183,8 +183,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return maxSegmentPartitionsOrderedInMemory;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;

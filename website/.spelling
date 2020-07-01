@@ -90,6 +90,8 @@ IANA
 IETF
 IP
 IPv4
+IS_BROADCAST
+IS_JOINABLE
 IS0
 ISO-8601
 ISO8601
@@ -98,6 +100,7 @@ IndexTask
 InfluxDB
 InputFormat
 InputSource
+InputSources
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -151,6 +154,7 @@ S3
 SDK
 SIGAR
 SPNEGO
+SqlInputSource
 SQLServer
 SSD
 SSDs
@@ -262,6 +266,7 @@ inlined
 interruptible
 jackson-jq
 javadoc
+joinable
 kerberos
 keystore
 keytab
@@ -1069,6 +1074,7 @@ nextafter
 nvl
 parse_long
 regexp_extract
+regexp_like
 result1
 result2
 rint
@@ -1158,7 +1164,7 @@ Sys
 SysMonitor
 TaskCountStatsMonitor
 bufferCapacity
-bufferPoolName
+bufferpoolName
 cms
 cpuName
 cpuTime
