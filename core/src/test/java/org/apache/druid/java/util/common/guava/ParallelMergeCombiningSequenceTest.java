@@ -699,7 +699,8 @@ public class ParallelMergeCombiningSequenceTest
       parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
       // this should explode so the contradictory next statement should not be reached
       Assert.assertTrue(false);
-    } catch (RuntimeException rex) {
+    }
+    catch (RuntimeException rex) {
       Assert.assertEquals(expectedExceptionMsg, rex.getMessage());
     }
 
