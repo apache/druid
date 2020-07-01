@@ -20,21 +20,23 @@
 package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 /**
- * Base class for DimFilters that support optimization.
+ * Base class for DimFilters that support optimization. This abstract class provides a default implementation of
+ * toOptimizedFilter that relies on the existing optimize() and toFilter() methods. It uses a memoized supplier.
  */
 abstract class AbstractOptimizableDimFilter implements DimFilter
 {
-  private Filter cachedOptimizedFilter = null;
+  private final Supplier<Filter> cachedOptimizedFilter = Suppliers.memoize(
+      () -> optimize().toFilter()
+  );
 
   @JsonIgnore
   @Override
   public Filter toOptimizedFilter()
   {
-    if (cachedOptimizedFilter == null) {
-      cachedOptimizedFilter = optimize().toFilter();
-    }
-    return cachedOptimizedFilter;
+    return cachedOptimizedFilter.get();
   }
 }
