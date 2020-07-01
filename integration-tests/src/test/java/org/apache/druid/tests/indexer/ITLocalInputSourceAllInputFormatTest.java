@@ -74,6 +74,12 @@ public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSour
   }
 
   @Test
+  public void testTsvInputFormatIndexDataIngestionSpecWithSchema() throws Exception
+  {
+    doIndexTest(InputFormatDetails.TSV, ImmutableMap.of("findColumnsFromHeader", true));
+  }
+
+  @Test
   public void testParquetInputFormatIndexDataIngestionSpecWithSchema() throws Exception
   {
     doIndexTest(InputFormatDetails.PARQUET);
