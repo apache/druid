@@ -35,7 +35,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.SelectorFilter;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -298,7 +298,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -307,7 +307,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -362,7 +362,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -371,7 +371,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -424,7 +424,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryInner()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER));
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -433,7 +433,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -481,7 +481,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_factToCountryInnerUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.INNER));
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -490,7 +490,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -540,7 +540,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     // is interpreted as 0 (a.k.a. Australia).
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnNumber(JoinType.INNER));
     Filter filter = new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -549,7 +549,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -605,7 +605,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     // is interpreted as 0 (a.k.a. Australia).
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingNumberLookup(JoinType.INNER));
     Filter filter = new SelectorDimFilter("channel", "#en.wikipedia", null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -614,7 +614,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -666,7 +666,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -675,7 +675,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -702,7 +702,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -711,7 +711,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -737,7 +737,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -746,7 +746,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -775,7 +775,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.RIGHT));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -784,7 +784,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -812,7 +812,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -821,7 +821,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -850,7 +850,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.FULL));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -859,7 +859,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -892,7 +892,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         null
     ).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -901,7 +901,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -934,7 +934,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         null
     ).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -943,7 +943,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -976,7 +976,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber", "10", null)
     ).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -985,7 +985,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1018,7 +1018,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new SelectorDimFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", "Norway", null)
     ).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1027,7 +1027,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1073,7 +1073,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         ExprMacroTable.nil()
     ).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1082,7 +1082,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1149,7 +1149,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         StringUtils.format("\"%sk\" == countryIsoCode", FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX),
         ExprMacroTable.nil()
     ).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1158,7 +1158,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1208,7 +1208,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         factToRegion(JoinType.LEFT),
         regionToCountry(JoinType.LEFT)
     );
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1217,7 +1217,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1282,7 +1282,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     );
 
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1291,7 +1291,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1345,7 +1345,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
 
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1355,7 +1355,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1392,7 +1392,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
 
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1401,7 +1401,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1455,7 +1455,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
 
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1465,7 +1465,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1511,7 +1511,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         virtualColumns
@@ -1520,7 +1520,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1572,7 +1572,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         virtualColumns
@@ -1581,7 +1581,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1625,7 +1625,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1634,7 +1634,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1677,7 +1677,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1686,7 +1686,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1731,7 +1731,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     );
 
     Filter filter = new SelectorDimFilter("regionIsoCode", "VA", null).toFilter();
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1740,7 +1740,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             filter,
             Intervals.ETERNITY,
@@ -1786,7 +1786,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1796,7 +1796,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1828,7 +1828,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1838,7 +1838,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1870,7 +1870,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1880,7 +1880,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1897,7 +1897,8 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   public void test_makeCursors_errorOnNonKeyBasedJoinUsingLookup()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot join lookup with condition referring to non-key column: x == \"c1.countryName");
+    expectedException.expectMessage(
+        "Cannot join lookup with condition referring to non-key column: x == \"c1.countryName");
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
@@ -1911,7 +1912,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         )
     );
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         null,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1921,7 +1922,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             null,
             Intervals.ETERNITY,
@@ -1940,7 +1941,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     Filter originalFilter = new SelectorFilter("page", "this matches nothing");
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
 
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         originalFilter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1949,7 +1950,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             originalFilter,
             Intervals.ETERNITY,
@@ -1974,7 +1975,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     Filter originalFilter = new SelectorFilter("page", "this matches nothing");
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         originalFilter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -1983,7 +1984,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         new HashJoinSegmentStorageAdapter(
             factSegment.asStorageAdapter(),
             joinableClauses,
-            joinFilterPreAnalysisGroup
+            joinFilterPreAnalysis
         ).makeCursors(
             originalFilter,
             Intervals.ETERNITY,
@@ -2007,7 +2008,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
     Filter filter = new SelectorFilter("page", "this matches nothing");
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup(
+    JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
         filter,
         joinableClauses,
         VirtualColumns.EMPTY
@@ -2016,7 +2017,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
         joinableClauses,
-        joinFilterPreAnalysisGroup
+        joinFilterPreAnalysis
     ).makeCursors(
         filter,
         Intervals.ETERNITY,
