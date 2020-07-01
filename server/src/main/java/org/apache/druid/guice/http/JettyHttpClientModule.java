@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice.http;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Module;
@@ -47,49 +48,26 @@ public class JettyHttpClientModule implements Module
   }
 
   private final String propertyPrefix;
-  private Annotation annotation = null;
-  private Class<? extends Annotation> annotationClazz = null;
+  private final Class<? extends Annotation> annotationClazz;
 
-  public JettyHttpClientModule(String propertyPrefix, Class<? extends Annotation> annotation)
+  public JettyHttpClientModule(String propertyPrefix, Class<? extends Annotation> annotationClazz)
   {
-    this.propertyPrefix = propertyPrefix;
-    this.annotationClazz = annotation;
+    this.propertyPrefix = Preconditions.checkNotNull(propertyPrefix, "propertyPrefix");
+    this.annotationClazz = Preconditions.checkNotNull(annotationClazz, "annotationClazz");
   }
 
   @Override
   public void configure(Binder binder)
   {
-    if (annotation != null) {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotation);
-      binder.bind(HttpClient.class)
-            .annotatedWith(annotation)
-            .toProvider(new HttpClientProvider(annotation))
-            .in(LazySingleton.class);
-    } else if (annotationClazz != null) {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
-      binder.bind(HttpClient.class)
-            .annotatedWith(annotationClazz)
-            .toProvider(new HttpClientProvider(annotationClazz))
-            .in(LazySingleton.class);
-    } else {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class);
-      binder.bind(HttpClient.class)
-            .toProvider(new HttpClientProvider())
-            .in(LazySingleton.class);
-    }
+    JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
+    binder.bind(HttpClient.class)
+          .annotatedWith(annotationClazz)
+          .toProvider(new HttpClientProvider(annotationClazz))
+          .in(LazySingleton.class);
   }
 
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
-    public HttpClientProvider()
-    {
-    }
-
-    public HttpClientProvider(Annotation annotation)
-    {
-      super(annotation);
-    }
-
     public HttpClientProvider(Class<? extends Annotation> annotation)
     {
       super(annotation);

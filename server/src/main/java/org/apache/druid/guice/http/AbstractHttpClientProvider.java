@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice.http;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
@@ -41,28 +42,10 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
 
   private Injector injector;
 
-  public AbstractHttpClientProvider()
-  {
-    configKey = Key.get(
-        new TypeLiteral<Supplier<DruidHttpClientConfig>>()
-        {
-        }
-    );
-    sslContextKey = Key.get(SSLContext.class);
-  }
-
-  public AbstractHttpClientProvider(Annotation annotation)
-  {
-    configKey = Key.get(
-        new TypeLiteral<Supplier<DruidHttpClientConfig>>()
-        {
-        }, annotation
-    );
-    sslContextKey = Key.get(SSLContext.class, annotation);
-  }
-
   public AbstractHttpClientProvider(Class<? extends Annotation> annotation)
   {
+    Preconditions.checkNotNull(annotation, "annotation");
+
     configKey = Key.get(
         new TypeLiteral<Supplier<DruidHttpClientConfig>>()
         {
