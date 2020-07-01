@@ -93,7 +93,10 @@ public class Rules
   // reduced. Hence, this resulted in an infinite loop of Calcite trying to reducing the same expression over and over.
   // Calcite 1.23.0 fixes this issue by not consider expression as reduced if this case happens. However, while
   // we are still using Calcite 1.21.0, a workaround is to limit the number of pattern matches to avoid infinite loop.
-  private static final int HEP_DEFAULT_MATCH_LIMIT = 1200;
+  private static final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
+  private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
+      System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
+  );
 
   // Rules from RelOptUtil's registerBaseRules, minus:
   //
