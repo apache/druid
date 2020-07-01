@@ -140,6 +140,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExpressionContainingNull() throws Exception
+  {
+    List<String> expectedResult = new ArrayList<>();
+    expectedResult.add("Hello");
+    expectedResult.add(null);
+    testQuery(
+        "SELECT ARRAY ['Hello', NULL]",
+        ImmutableList.of(),
+        ImmutableList.of(new Object[]{expectedResult})
+    );
+  }
+
+  @Test
   public void testSelectNonNumericNumberLiterals() throws Exception
   {
     // Tests to convert NaN, positive infinity and negative infinity as literals.
