@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.topn;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -42,7 +42,6 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -280,7 +279,7 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder context(Map<String, Object> c)
   {
-    this.context = Druids.computeContextToReplace(context, c);
+    this.context = c;
     return this;
   }
 
@@ -291,10 +290,7 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder queryId(String queryId)
   {
-    if (context == null) {
-      context = new HashMap<>();
-    }
-    context.put(BaseQuery.QUERY_ID, queryId);
+    context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
     return this;
   }
 }

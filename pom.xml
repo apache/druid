@@ -1266,9 +1266,6 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
-                        <exclude>org/apache/druid/query/Druids*</exclude>  <!-- query builder classes for testing -->
-                        <exclude>org/apache/druid/query/topn/TopNQueryBuilder.class</exclude>  <!-- topN query builder classe for testing -->
-                        <exclude>org/apache/druid/query/groupby/GroupByQuery$Builder.class</exclude>  <!-- groupBy query builder classe for testing -->
                     </excludes>
                 </configuration>
                 <executions>

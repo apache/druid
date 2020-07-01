@@ -199,7 +199,7 @@ public abstract class BaseQuery<T> implements Query<T>
     return computeOverriddenContext(getContext(), overrides);
   }
 
-  protected static Map<String, Object> computeOverriddenContext(
+  public static Map<String, Object> computeOverriddenContext(
       final Map<String, Object> context,
       final Map<String, Object> overrides
   )

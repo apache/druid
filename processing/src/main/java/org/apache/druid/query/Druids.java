@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -56,7 +57,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -261,7 +261,7 @@ public class Druids
 
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
-      this.context = computeContextToReplace(context, c);
+      this.context = c;
       return this;
     }
 
@@ -272,10 +272,7 @@ public class Druids
 
     public TimeseriesQueryBuilder queryId(String queryId)
     {
-      if (context == null) {
-        context = new HashMap<>();
-      }
-      context.put(BaseQuery.QUERY_ID, queryId);
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
 
@@ -284,25 +281,6 @@ public class Druids
       limit = lim;
       return this;
     }
-  }
-
-  @Nullable
-  public static Map<String, Object> computeContextToReplace(
-      @Nullable Map<String, Object> oldContext,
-      @Nullable Map<String, Object> newContext
-  )
-  {
-    if (oldContext == null && newContext == null) {
-      return null;
-    }
-    final Map<String, Object> contextToReplace = new HashMap<>();
-    if (newContext != null) {
-      contextToReplace.putAll(newContext);
-    }
-    if (oldContext != null && oldContext.get(BaseQuery.QUERY_ID) != null) {
-      contextToReplace.putIfAbsent(BaseQuery.QUERY_ID, oldContext.get(BaseQuery.QUERY_ID));
-    }
-    return contextToReplace;
   }
 
   public static TimeseriesQueryBuilder newTimeseriesQueryBuilder()
@@ -501,7 +479,7 @@ public class Druids
 
     public SearchQueryBuilder context(Map<String, Object> c)
     {
-      this.context = computeContextToReplace(context, c);
+      this.context = c;
       return this;
     }
 
@@ -512,10 +490,7 @@ public class Druids
 
     public SearchQueryBuilder queryId(String queryId)
     {
-      if (context == null) {
-        context = new HashMap<>();
-      }
-      context.put(BaseQuery.QUERY_ID, queryId);
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
   }
@@ -621,7 +596,7 @@ public class Druids
 
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
-      this.context = computeContextToReplace(context, c);
+      this.context = c;
       return this;
     }
 
@@ -632,10 +607,7 @@ public class Druids
 
     public TimeBoundaryQueryBuilder queryId(String queryId)
     {
-      if (context == null) {
-        context = new HashMap<>();
-      }
-      context.put(BaseQuery.QUERY_ID, queryId);
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
   }
@@ -784,7 +756,7 @@ public class Druids
 
     public SegmentMetadataQueryBuilder context(Map<String, Object> c)
     {
-      this.context = computeContextToReplace(context, c);
+      this.context = c;
       return this;
     }
   }
@@ -902,7 +874,7 @@ public class Druids
 
     public ScanQueryBuilder context(Map<String, Object> c)
     {
-      this.context = computeContextToReplace(context, c);
+      this.context = c;
       return this;
     }
 
@@ -1030,7 +1002,7 @@ public class Druids
 
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
-      this.context = computeContextToReplace(context, c);
+      this.context = c;
       return this;
     }
   }

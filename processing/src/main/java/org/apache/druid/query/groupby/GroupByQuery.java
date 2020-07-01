@@ -27,6 +27,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
@@ -42,7 +43,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.Druids;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -74,7 +74,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1114,7 +1113,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder setContext(Map<String, Object> context)
     {
-      this.context = Druids.computeContextToReplace(this.context, context);
+      this.context = context;
       return this;
     }
 
@@ -1125,10 +1124,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder queryId(String queryId)
     {
-      if (context == null) {
-        context = new HashMap<>();
-      }
-      context.put(BaseQuery.QUERY_ID, queryId);
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
 
