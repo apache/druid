@@ -2999,6 +2999,51 @@ public class CachingClusteredClientTest
     Assert.assertNotEquals(etag1, etag2);
   }
 
+  @Test
+  public void testGetQueryRunnerForSegments()
+  {
+    final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
+    final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
+
+    final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    ServerSelector selector1 = makeMockSingleDimensionSelector(lastServer, "dim1", null, "b", 0);
+    ServerSelector selector2 = makeMockSingleDimensionSelector(lastServer, "dim1", "e", "f", 1);
+    ServerSelector selector3 = makeMockSingleDimensionSelector(lastServer, "dim1", "hi", "zzz", 2);
+    ServerSelector selector4 = makeMockSingleDimensionSelector(lastServer, "dim2", "a", "e", 0);
+    ServerSelector selector5 = makeMockSingleDimensionSelector(lastServer, "dim2", null, null, 1);
+
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(0, 3, selector1));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(1, 3, selector2));
+    timeline.add(interval1, "v", new NumberedPartitionChunk<>(2, 3, selector3));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(0, 2, selector4));
+    timeline.add(interval2, "v", new NumberedPartitionChunk<>(1, 2, selector5));
+
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(DATA_SOURCE)
+                                        .intervals("2011-01-05/2011-01-10")
+                                        .filters(DIM_FILTER)
+                                        .granularity(GRANULARITY)
+                                        .aggregators(AGGS)
+                                        .postAggregators(POST_AGGS)
+                                        .context(CONTEXT)
+                                        .randomQueryId()
+                                        .build();
+
+    final QueryRunner<Result<TimeseriesResultValue>> runner = new FinalizeResultsQueryRunner(
+        client.getQueryRunnerForSegments(
+            query,
+            ImmutableList.of(new SegmentDescriptor(interval1, "v", 0), new SegmentDescriptor(interval2, "v", 0))
+        ),
+        new TimeseriesQueryQueryToolChest()
+    );
+
+    final Sequence<Result<TimeseriesResultValue>> sequence = runner.run(
+        QueryPlus.wrap(query),
+        initializeResponseContext()
+    );
+    System.out.println(sequence.toList());
+  }
+
   @SuppressWarnings("unchecked")
   private QueryRunner getDefaultQueryRunner()
   {
