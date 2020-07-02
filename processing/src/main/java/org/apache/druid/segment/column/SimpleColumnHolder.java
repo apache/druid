@@ -21,7 +21,6 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
