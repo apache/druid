@@ -337,7 +337,7 @@ public class RetryQueryRunnerTest
                  .context(
                      ImmutableMap.of(
                          DirectDruidClient.QUERY_FAIL_TIME,
-                         System.currentTimeMillis() + 1000000
+                         System.currentTimeMillis() + 10000
                      )
                  )
                  .build()
