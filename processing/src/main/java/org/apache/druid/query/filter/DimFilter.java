@@ -23,11 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.Cacheable;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.segment.VirtualColumns;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Set;
