@@ -19,32 +19,24 @@
 
 package org.apache.druid.query.filter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
-import java.io.IOException;
-
-public class FalseDimFilterTest
+/**
+ * Base class for DimFilters that support optimization. This abstract class provides a default implementation of
+ * toOptimizedFilter that relies on the existing optimize() and toFilter() methods. It uses a memoized supplier.
+ */
+abstract class AbstractOptimizableDimFilter implements DimFilter
 {
-  @Test
-  public void testSerde() throws IOException
-  {
-    final ObjectMapper mapper = new DefaultObjectMapper();
-    final FalseDimFilter original = FalseDimFilter.instance();
-    final byte[] bytes = mapper.writeValueAsBytes(original);
-    final FalseDimFilter fromBytes = (FalseDimFilter) mapper.readValue(bytes, DimFilter.class);
-    Assert.assertSame(original, fromBytes);
-  }
+  private final Supplier<Filter> cachedOptimizedFilter = Suppliers.memoize(
+      () -> optimize().toFilter()
+  );
 
-  @Test
-  public void testEquals()
+  @JsonIgnore
+  @Override
+  public Filter toOptimizedFilter()
   {
-    EqualsVerifier.forClass(FalseDimFilter.class)
-                  .usingGetClass()
-                  .withIgnoredFields("cachedOptimizedFilter")
-                  .verify();
+    return cachedOptimizedFilter.get();
   }
 }
