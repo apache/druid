@@ -41,7 +41,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
     this.typeName = typeName;
     this.serde = ComplexMetrics.getSerdeForType(typeName);
     if (this.serde == null) {
-      // Not chosing to fail here since this gets handled as
+      // Not choosing to fail here since this gets handled as
       // an UnknownTypeComplexColumn. See SimpleColumnHolder#getColumn.
       log.warn("Unknown complex column of type %s detected", typeName);
     }
