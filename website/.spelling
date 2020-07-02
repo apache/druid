@@ -574,6 +574,14 @@ thriftJar
  - ../docs/development/extensions-contrib/time-min-max.md
 timeMax
 timeMin
+ - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Aliyun
+aliyun
+OSS
+AccessKey
+aliyun-oss
+oss
+url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold

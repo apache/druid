@@ -30,6 +30,10 @@ sidebar_label: "Filters"
 
 A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL. Apache Druid supports the following types of filters.
 
+**Note**
+
+Filters are commonly applied on dimensions, but can be applied on aggregated metrics, for example, see [filtered-aggregator](./aggregations.md#filtered-aggregator) and [having-filters](./having.md).
+
 ### Selector filter
 
 The simplest filter is a selector filter. The selector filter will match a specific dimension with a specific value. Selector filters can be used as the base filters for more complex Boolean expressions of filters.

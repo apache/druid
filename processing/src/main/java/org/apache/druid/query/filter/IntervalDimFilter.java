@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-public class IntervalDimFilter implements DimFilter
+public class IntervalDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final List<Interval> intervals;
   private final List<Pair<Long, Long>> intervalLongs;

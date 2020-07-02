@@ -181,6 +181,7 @@
       "development/extensions-core/druid-basic-security",
       "development/extensions-core/druid-kerberos",
       "development/extensions-core/druid-lookups",
+      "development/extensions-core/druid-ranger-security",
       "development/extensions-core/google",
       "development/extensions-core/hdfs",
       "development/extensions-core/kafka-extraction-namespace",
