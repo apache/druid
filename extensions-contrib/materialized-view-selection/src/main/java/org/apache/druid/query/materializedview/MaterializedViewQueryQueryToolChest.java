@@ -20,6 +20,7 @@
 package org.apache.druid.query.materializedview;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -94,6 +95,13 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   {
     Query realQuery = getRealQuery(query);
     return warehouse.getToolChest(realQuery).makePostComputeManipulatorFn(realQuery, fn);
+  }
+
+  @Override
+  public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final Query query)
+  {
+    Query realQuery = getRealQuery(query);
+    return warehouse.getToolChest(realQuery).decorateObjectMapper(objectMapper, realQuery);
   }
 
   @Override

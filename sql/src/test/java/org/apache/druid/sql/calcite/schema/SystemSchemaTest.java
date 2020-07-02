@@ -91,6 +91,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -472,7 +473,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(14, fields.size());
+    Assert.assertEquals(16, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -1248,6 +1249,10 @@ public class SystemSchemaTest extends CalciteTestBase
           case STRING:
             if (signature.getColumnName(i).equals("segment_id")) {
               expectedClass = SegmentId.class;
+            } else if (signature.getColumnName(i).equals("shardSpec")) {
+              expectedClass = ShardSpec.class;
+            } else if (signature.getColumnName(i).equals("dimensions") || signature.getColumnName(i).equals("metrics")) {
+              expectedClass = List.class;
             } else {
               expectedClass = String.class;
             }

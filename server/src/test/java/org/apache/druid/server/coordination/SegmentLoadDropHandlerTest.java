@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -274,40 +273,6 @@ public class SegmentLoadDropHandlerTest
     Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
 
     segmentLoadDropHandler.stop();
-  }
-
-  @Test
-  public void testSegmentLoading1BrokerWithNoLocations() throws Exception
-  {
-    SegmentLoadDropHandler segmentLoadDropHandlerBrokerWithNoLocations = new SegmentLoadDropHandler(
-        jsonMapper,
-        segmentLoaderConfigNoLocations,
-        announcer,
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-brokerNoLocations-[%d]"),
-        new ServerTypeConfig(ServerType.BROKER)
-    );
-
-    segmentLoadDropHandlerBrokerWithNoLocations.start();
-    segmentLoadDropHandler.stop();
-  }
-
-  @Test
-  public void testSegmentLoading1HistoricalWithNoLocations()
-  {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Segment cache locations must be set on historicals.");
-
-    new SegmentLoadDropHandler(
-        jsonMapper,
-        segmentLoaderConfigNoLocations,
-        announcer,
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
-        new ServerTypeConfig(ServerType.HISTORICAL)
-    );
   }
 
   /**

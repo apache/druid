@@ -178,10 +178,57 @@ public class QueryStackTests
     );
   }
 
+  public static DruidProcessingConfig getProcessingConfig(boolean useParallelMergePoolConfigured)
+  {
+    return new DruidProcessingConfig()
+    {
+      @Override
+      public String getFormatString()
+      {
+        return null;
+      }
+
+      @Override
+      public int intermediateComputeSizeBytes()
+      {
+        return COMPUTE_BUFFER_SIZE;
+      }
+
+      @Override
+      public int getNumThreads()
+      {
+        // Only use 1 thread for tests.
+        return 1;
+      }
+
+      @Override
+      public int getNumMergeBuffers()
+      {
+        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
+        // Two buffers for the broker and one for the queryable.
+        return 3;
+      }
+
+      @Override
+      public boolean useParallelMergePoolConfigured()
+      {
+        return useParallelMergePoolConfigured;
+      }
+    };
+  }
+
   /**
    * Returns a new {@link QueryRunnerFactoryConglomerate}. Adds relevant closeables to the passed-in {@link Closer}.
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
+  {
+    return createQueryRunnerFactoryConglomerate(closer, true);
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final boolean useParallelMergePoolConfigured
+  )
   {
     final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
@@ -201,35 +248,7 @@ public class QueryStackTests
                 return GroupByStrategySelector.STRATEGY_V2;
               }
             },
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int intermediateComputeSizeBytes()
-              {
-                return COMPUTE_BUFFER_SIZE;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                // Only use 1 thread for tests.
-                return 1;
-              }
-
-              @Override
-              public int getNumMergeBuffers()
-              {
-                // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-                // Two buffers for the broker and one for the queryable.
-                return 3;
-              }
-            }
+            getProcessingConfig(useParallelMergePoolConfigured)
         );
 
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory = factoryCloserPair.lhs;

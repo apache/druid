@@ -40,6 +40,7 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -65,6 +66,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -188,7 +190,21 @@ public class CachingClusteredClient implements QuerySegmentWalker
       final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
   )
   {
-    return new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+    initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, result.numQueryServers);
+    return result.sequence;
+  }
+
+  private static <T> void initializeNumRemainingResponsesInResponseContext(
+      final Query<T> query,
+      final ResponseContext responseContext,
+      final int numQueryServers
+  )
+  {
+    responseContext.add(
+        Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
+        new NonnullPair<>(query.getMostSpecificId(), numQueryServers)
+    );
   }
 
   @Override
@@ -219,6 +235,18 @@ public class CachingClusteredClient implements QuerySegmentWalker
         );
       }
     };
+  }
+
+  private static class ClusterQueryResult<T>
+  {
+    private final Sequence<T> sequence;
+    private final int numQueryServers;
+
+    private ClusterQueryResult(Sequence<T> sequence, int numQueryServers)
+    {
+      this.sequence = sequence;
+      this.numQueryServers = numQueryServers;
+    }
   }
 
   /**
@@ -283,13 +311,23 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return contextBuilder.build();
     }
 
-    Sequence<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
+    /**
+     * Builds a query distribution and merge plan.
+     *
+     * This method returns an empty sequence if the query datasource is unknown or there is matching result-level cache.
+     * Otherwise, it creates a sequence merging sequences from the regular broker cache and remote servers. If parallel
+     * merge is enabled, it can merge and *combine* the underlying sequences in parallel.
+     *
+     * @return a pair of a sequence merging results from remote query servers and the number of remote servers
+     *         participating in query processing.
+     */
+    ClusterQueryResult<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
     {
       final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
           dataSourceAnalysis
       );
       if (!maybeTimeline.isPresent()) {
-        return Sequences.empty();
+        return new ClusterQueryResult<>(Sequences.empty(), 0);
       }
 
       final TimelineLookup<String, ServerSelector> timeline = timelineConverter.apply(maybeTimeline.get());
@@ -306,7 +344,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         @Nullable
         final String currentEtag = computeCurrentEtag(segmentServers, queryCacheKey);
         if (currentEtag != null && currentEtag.equals(prevEtag)) {
-          return Sequences.empty();
+          return new ClusterQueryResult<>(Sequences.empty(), 0);
         }
       }
 
@@ -324,7 +362,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         return merge(sequencesByInterval);
       });
 
-      return scheduler.run(query, mergedResultSequence);
+      return new ClusterQueryResult<>(scheduler.run(query, mergedResultSequence), segmentsByServer.size());
     }
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
@@ -613,6 +651,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
+    /**
+     * Create sequences that reads from remote query servers (historicals and tasks). Note that the broker will
+     * hold an HTTP connection per server after this method is called.
+     */
     private void addSequencesFromServer(
         final List<Sequence<T>> listOfSequences,
         final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer

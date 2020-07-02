@@ -97,10 +97,4 @@ public interface BucketNumberedShardSpec<T extends BuildingShardSpec> extends Sh
   {
     throw new UnsupportedOperationException();
   }
-
-  @Override
-  default boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    throw new UnsupportedOperationException();
-  }
 }

@@ -608,7 +608,7 @@ public class CalciteTests
               .put("metFloatNormal", 4999.0)
               .put("dimZipf", "9")
               .put("dimUniform", "50515")
-              .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "World", "World"))
+              .put("dimMultivalEnumerated", Arrays.asList("Baz", "World", "ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ"))
               .put("metLongSequential", 8)
               .put("dimHyperUnique", "8")
               .put("dimSequential", "8")
