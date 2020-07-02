@@ -24,25 +24,19 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -61,23 +55,23 @@ public class AvgSqlAggregator implements SqlAggregator
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
-          final PlannerContext plannerContext,
-          final RowSignature rowSignature,
-          final VirtualColumnRegistry virtualColumnRegistry,
-          final RexBuilder rexBuilder,
-          final String name,
-          final AggregateCall aggregateCall,
-          final Project project,
-          final List<Aggregation> existingAggregations,
-          final boolean finalizeAggregations
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final VirtualColumnRegistry virtualColumnRegistry,
+      final RexBuilder rexBuilder,
+      final String name,
+      final AggregateCall aggregateCall,
+      final Project project,
+      final List<Aggregation> existingAggregations,
+      final boolean finalizeAggregations
   )
   {
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
-            plannerContext,
-            rowSignature,
-            aggregateCall,
-            project
+        plannerContext,
+        rowSignature,
+        aggregateCall,
+        project
     );
 
     if (arguments == null) {
@@ -109,48 +103,32 @@ public class AvgSqlAggregator implements SqlAggregator
     final String sumName = Calcites.makePrefixedName(name, "sum");
     final String countName = Calcites.makePrefixedName(name, "count");
     final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
-            sumType,
-            sumName,
-            fieldName,
-            expression,
-            macroTable
+        sumType,
+        sumName,
+        fieldName,
+        expression,
+        macroTable
     );
-
-    final AggregatorFactory count;
-
-    final RexNode rexNode = Expressions.fromFieldAccess(
-            rowSignature,
-            project,
-            Iterables.getOnlyElement(aggregateCall.getArgList())
+    final AggregatorFactory count = CountSqlAggregator.createCountAggregatorFactory(
+        countName,
+        plannerContext,
+        rowSignature,
+        virtualColumnRegistry,
+        rexBuilder,
+        aggregateCall,
+        project
     );
-
-    if (rexNode.getType().isNullable()) {
-      final DimFilter nonNullFilter = Expressions.toFilter(
-              plannerContext,
-              rowSignature,
-              virtualColumnRegistry,
-              rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ImmutableList.of(rexNode))
-      );
-
-      if (nonNullFilter == null) {
-        // Don't expect this to happen.
-        throw new ISE("Could not create not-null filter for rexNode[%s]", rexNode);
-      }
-      count = new FilteredAggregatorFactory(new CountAggregatorFactory(countName), nonNullFilter);
-    } else {
-      count = new CountAggregatorFactory(countName);
-    }
 
     return Aggregation.create(
-            ImmutableList.of(sum, count),
-            new ArithmeticPostAggregator(
-                    name,
-                    "quotient",
-                    ImmutableList.of(
-                            new FieldAccessPostAggregator(null, sumName),
-                            new FieldAccessPostAggregator(null, countName)
-                    )
+        ImmutableList.of(sum, count),
+        new ArithmeticPostAggregator(
+            name,
+            "quotient",
+            ImmutableList.of(
+                new FieldAccessPostAggregator(null, sumName),
+                new FieldAccessPostAggregator(null, countName)
             )
+        )
     );
   }
 }
