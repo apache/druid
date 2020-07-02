@@ -28,7 +28,9 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterPreAnalysisGroup;
+import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
@@ -193,14 +195,16 @@ public class BaseHashJoinSegmentStorageAdapterTest
     );
   }
 
+  /**
+   * Creates a fact-to-country join segment without a {@link JoinFilterPreAnalysis}. This means it cannot
+   * have {@link org.apache.druid.segment.StorageAdapter#makeCursors} called on it.
+   */
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {
-    JoinFilterPreAnalysisGroup joinFilterPreAnalysisGroup = makeDefaultConfigPreAnalysisGroup();
-
     return new HashJoinSegmentStorageAdapter(
         factSegment.asStorageAdapter(),
         ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT)),
-        joinFilterPreAnalysisGroup
+        null
     );
   }
 
@@ -223,31 +227,19 @@ public class BaseHashJoinSegmentStorageAdapterTest
     );
   }
 
-  protected static JoinFilterPreAnalysisGroup makeDefaultConfigPreAnalysisGroup()
-  {
-    return new JoinFilterPreAnalysisGroup(
-        DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
-        true
-    );
-  }
-
-  protected static JoinFilterPreAnalysisGroup makeDefaultConfigPreAnalysisGroup(
+  protected static JoinFilterPreAnalysis makeDefaultConfigPreAnalysis(
       Filter originalFilter,
       List<JoinableClause> joinableClauses,
       VirtualColumns virtualColumns
   )
   {
-    JoinFilterPreAnalysisGroup group = new JoinFilterPreAnalysisGroup(
-        DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
-        true
+    return JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        new JoinFilterPreAnalysisKey(
+            DEFAULT_JOIN_FILTER_REWRITE_CONFIG,
+            joinableClauses,
+            virtualColumns,
+            originalFilter
+        )
     );
-
-    group.computeJoinFilterPreAnalysisIfAbsent(
-        originalFilter,
-        joinableClauses,
-        virtualColumns
-    );
-
-    return group;
   }
 }

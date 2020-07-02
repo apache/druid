@@ -377,11 +377,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
   {
     return (queryPlus, responseContext) -> {
-      TimeseriesQuery timeseriesQuery = (TimeseriesQuery) queryPlus.getQuery();
-      if (timeseriesQuery.getDimensionsFilter() != null) {
-        timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
-        queryPlus = queryPlus.withQuery(timeseriesQuery);
-      }
       return runner.run(queryPlus, responseContext);
     };
   }

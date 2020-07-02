@@ -203,11 +203,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return new TopNQueryBuilder(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
-  public TopNQuery withDimFilter(DimFilter dimFilter)
-  {
-    return new TopNQueryBuilder(this).filters(dimFilter).build();
-  }
-
   @Override
   public String toString()
   {

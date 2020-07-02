@@ -37,7 +37,7 @@ import java.util.Set;
 
 /**
  */
-public class SpatialDimFilter implements DimFilter
+public class SpatialDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;
   private final Bound bound;

@@ -193,6 +193,7 @@
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
         <module>extensions-contrib/gce-extensions</module>
+        <module>extensions-contrib/aliyun-oss-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -1277,6 +1278,9 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+
+                        <!-- Exceptions -->
+                        <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>

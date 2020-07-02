@@ -45,6 +45,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
@@ -284,16 +285,28 @@ public class QueryResource implements QueryCountStatsProvider
             jsonMapper,
             RESPONSE_CTX_HEADER_LEN_LIMIT
         );
-        if (serializationResult.isReduced()) {
-          log.info(
-              "Response Context truncated for id [%s] . Full context is [%s].",
+
+        if (serializationResult.isTruncated()) {
+          final String logToPrint = StringUtils.format(
+              "Response Context truncated for id [%s]. Full context is [%s].",
               queryId,
               serializationResult.getFullResult()
           );
+          if (QueryContexts.shouldFailOnTruncatedResponseContext(query)) {
+            log.error(logToPrint);
+            throw new QueryInterruptedException(
+                new TruncatedResponseContextException(
+                    "Serialized response context exceeds the max size[%s]",
+                    RESPONSE_CTX_HEADER_LEN_LIMIT
+                )
+            );
+          } else {
+            log.warn(logToPrint);
+          }
         }
 
         return responseBuilder
-            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getTruncatedResult())
+            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult())
             .build();
       }
       catch (Exception e) {

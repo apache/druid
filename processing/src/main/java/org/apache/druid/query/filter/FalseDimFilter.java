@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Set;
 
-public class FalseDimFilter implements DimFilter
+public class FalseDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private static final FalseDimFilter INSTANCE = new FalseDimFilter();
   private static final byte[] CACHE_KEY = new CacheKeyBuilder(DimFilterUtils.FALSE_CACHE_ID).build();
