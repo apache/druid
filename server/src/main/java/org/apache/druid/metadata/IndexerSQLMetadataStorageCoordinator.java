@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -72,6 +73,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -80,13 +82,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  */
 public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
-  private static final int ANNOUNCE_HISTORICAL_SEGMENG_BATCH = 100;
+  private static final int MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE = 100;
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
@@ -941,10 +944,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Set<DataSegment> toInsertSegments = new HashSet<>();
     try {
       Set<String> existedSegments = segmentExistsBatch(handle, segments);
+      log.info("Found these segments already exist in DB: %s", existedSegments);
       for (DataSegment segment : segments) {
-        if (existedSegments.contains(segment.getId().toString())) {
-          log.info("Found [%s] in DB, not updating DB", segment.getId());
-        } else {
+        if (!existedSegments.contains(segment.getId().toString())) {
           toInsertSegments.add(segment);
         }
       }
@@ -952,7 +954,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       // Avoiding ON DUPLICATE KEY since it's not portable.
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-      final List<DataSegment> segmentList = new ArrayList<>(toInsertSegments);
+      final List<List<DataSegment>> partitionedSegments = Lists.partition(
+          new ArrayList<>(toInsertSegments),
+          MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
+      );
 
       PreparedBatch preparedBatch = handle.prepareBatch(
           StringUtils.format(
@@ -963,46 +968,37 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           )
       );
 
-      for (int i = 0; i < segmentList.size(); i++) {
-        DataSegment segment = segmentList.get(i);
-        preparedBatch.add()
-            .bind("id", segment.getId().toString())
-            .bind("dataSource", segment.getDataSource())
-            .bind("created_date", DateTimes.nowUtc().toString())
-            .bind("start", segment.getInterval().getStart().toString())
-            .bind("end", segment.getInterval().getEnd().toString())
-            .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-            .bind("version", segment.getVersion())
-            .bind("used", usedSegments.contains(segment))
-            .bind("payload", jsonMapper.writeValueAsBytes(segment));
-
-        if ((i + 1) % ANNOUNCE_HISTORICAL_SEGMENG_BATCH == 0 || i == segmentList.size() - 1) {
-          int[] affectedRows = preparedBatch.execute();
-          for (int j = 0; j < affectedRows.length; j++) {
-            DataSegment insertSegment = segmentList.get(i / ANNOUNCE_HISTORICAL_SEGMENG_BATCH * ANNOUNCE_HISTORICAL_SEGMENG_BATCH + j);
-            if (affectedRows[j] == 1) {
-              log.info(
-                  "Published segment [%s] to DB with used flag [%s], json[%s]",
-                  insertSegment.getId(),
-                  usedSegments.contains(insertSegment),
-                  jsonMapper.writeValueAsString(insertSegment)
-              );
-            } else {
-              throw new ISE(
-                  "Failed to publish segment[%s] to DB with used flag[%s], json[%s]",
-                  insertSegment.getId(),
-                  usedSegments.contains(insertSegment),
-                  jsonMapper.writeValueAsString(insertSegment)
-              );
-            }
-          }
+      for (List<DataSegment> partition : partitionedSegments) {
+        for (DataSegment segment : partition) {
+          preparedBatch.add()
+              .bind("id", segment.getId().toString())
+              .bind("dataSource", segment.getDataSource())
+              .bind("created_date", DateTimes.nowUtc().toString())
+              .bind("start", segment.getInterval().getStart().toString())
+              .bind("end", segment.getInterval().getEnd().toString())
+              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+              .bind("version", segment.getVersion())
+              .bind("used", usedSegments.contains(segment))
+              .bind("payload", jsonMapper.writeValueAsBytes(segment));
+        }
+        final int[] affectedRows = preparedBatch.execute();
+        final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+        if (succeeded) {
+          log.infoSegments(partition, "Published segments to DB");
+        } else {
+          final List<DataSegment> failedToPublish = IntStream.range(0, partition.size())
+              .filter(i -> affectedRows[i] != 1)
+              .mapToObj(partition::get)
+              .collect(Collectors.toList());
+          throw new ISE(
+              "Failed to publish segments to DB: %s",
+              SegmentUtils.commaSeparatedIdentifiers(failedToPublish)
+          );
         }
       }
     }
     catch (Exception e) {
-      for (DataSegment segment : segments) {
-        log.error(e, "Exception inserting segment [%s] with used flag [%s] into DB", segment.getId(), usedSegments.contains(segment));
-      }
+      log.errorSegments(segments, "Exception inserting segments");
       throw e;
     }
 
@@ -1013,7 +1009,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     Set<String> existedSegments = new HashSet<>();
 
-    List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), ANNOUNCE_HISTORICAL_SEGMENG_BATCH);
+    List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE);
     for (List<DataSegment> segmentList : segmentsLists) {
       String segmentIds = segmentList.stream()
           .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
