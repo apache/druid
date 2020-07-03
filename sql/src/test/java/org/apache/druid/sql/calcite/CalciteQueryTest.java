@@ -244,10 +244,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimensions(new DefaultDimensionSpec("dim2", "d0", ValueType.STRING))
                         .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(
-                            new DoubleSumAggregatorFactory("a0:sum", "m2"),
-                            new CountAggregatorFactory("a0:count")
-                                            )
+                        .setAggregatorSpecs(
+                            useDefault
+                            ? aggregators(
+                              new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                              new CountAggregatorFactory("a0:count")
+                            )
+                            : aggregators(
+                                new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0:count"),
+                                    not(selector("m2", null, null))
+                                )
+                            )
                         )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
@@ -313,10 +322,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimensions(new DefaultDimensionSpec("dim2", "d0", ValueType.STRING))
                         .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(
-                            new DoubleSumAggregatorFactory("a0:sum", "m2"),
-                            new CountAggregatorFactory("a0:count")
-                                            )
+                        .setAggregatorSpecs(
+                            useDefault
+                            ? aggregators(
+                                new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                                new CountAggregatorFactory("a0:count")
+                            )
+                            : aggregators(
+                                new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0:count"),
+                                    not(selector("m2", null, null))
+                                )
+                            )
                         )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
@@ -390,10 +408,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimensions(new DefaultDimensionSpec("dim2", "d0", ValueType.STRING))
                         .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(
-                            new DoubleSumAggregatorFactory("a0:sum", "m2"),
-                            new CountAggregatorFactory("a0:count")
-                                            )
+                        .setAggregatorSpecs(
+                            useDefault
+                            ? aggregators(
+                                new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                                new CountAggregatorFactory("a0:count")
+                            )
+                            : aggregators(
+                                new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0:count"),
+                                    not(selector("m2", null, null))
+                                )
+                            )
                         )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
