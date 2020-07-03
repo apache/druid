@@ -28,8 +28,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -62,7 +62,8 @@ public class CountSqlAggregator implements SqlAggregator
           final RexBuilder rexBuilder,
           final AggregateCall aggregateCall,
           final Project project
-  ) {
+  )
+  {
     final RexNode rexNode = Expressions.fromFieldAccess(
             rowSignature,
             project,

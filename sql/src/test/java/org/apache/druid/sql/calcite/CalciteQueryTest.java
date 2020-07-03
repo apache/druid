@@ -4341,7 +4341,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               new CountAggregatorFactory("a6"),
                               not(selector("dim2", null, null))
                           ),
-                          new DoubleSumAggregatorFactory("a7:sum","d1"),
+                          new DoubleSumAggregatorFactory("a7:sum", "d1"),
                           new CountAggregatorFactory("a7:count")
                       )
                       : aggregators(
@@ -4404,10 +4404,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         NullHandling.replaceWithDefault() ?
         ImmutableList.of(
-            new Object[]{6L, 6L, 5L, 1L, 6L, 8L, 3L, 6L, ((1+1.7)/6)}
+            new Object[]{6L, 6L, 5L, 1L, 6L, 8L, 3L, 6L, ((1 + 1.7) / 6)}
         ) :
         ImmutableList.of(
-            new Object[]{6L, 6L, 6L, 1L, 6L, 8L, 4L, 3L, ((1+1.7)/3)}
+            new Object[]{6L, 6L, 6L, 1L, 6L, 8L, 4L, 3L, ((1 + 1.7) / 3)}
         )
     );
   }
@@ -6422,17 +6422,28 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(
-                            new LongMaxAggregatorFactory("_a0", "a0"),
-                            new LongMinAggregatorFactory("_a1", "a0"),
-                            new LongSumAggregatorFactory("_a2:sum", "a0"),
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("_a2:count"),
-                                not(selector("a0", null, null))
-                            ),
-                            new LongMaxAggregatorFactory("_a3", "d0"),
-                            new CountAggregatorFactory("_a4")
-                        ))
+                        .setAggregatorSpecs(
+                            useDefault
+                            ? aggregators(
+                              new LongMaxAggregatorFactory("_a0", "a0"),
+                              new LongMinAggregatorFactory("_a1", "a0"),
+                              new LongSumAggregatorFactory("_a2:sum", "a0"),
+                              new CountAggregatorFactory("_a2:count"),
+                              new LongMaxAggregatorFactory("_a3", "d0"),
+                              new CountAggregatorFactory("_a4")
+                            )
+                            : aggregators(
+                                new LongMaxAggregatorFactory("_a0", "a0"),
+                                new LongMinAggregatorFactory("_a1", "a0"),
+                                new LongSumAggregatorFactory("_a2:sum", "a0"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("_a2:count"),
+                                    not(selector("a0", null, null))
+                                ),
+                                new LongMaxAggregatorFactory("_a3", "d0"),
+                                new CountAggregatorFactory("_a4")
+                            )
+                        )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
                                 new ArithmeticPostAggregator(
@@ -6510,13 +6521,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setAggregatorSpecs(aggregators(
-                            new LongSumAggregatorFactory("_a0:sum", "a0"),
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("_a0:count"),
-                                not(selector("a0", null, null))
+                        .setAggregatorSpecs(
+                            useDefault
+                            ? aggregators(
+                              new LongSumAggregatorFactory("_a0:sum", "a0"),
+                              new CountAggregatorFactory("_a0:count")
                             )
-                        ))
+                            : aggregators(
+                                new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("_a0:count"),
+                                    not(selector("a0", null, null))
+                                )
+                            )
+                        )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
                                 new ArithmeticPostAggregator(
@@ -11749,13 +11767,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dimension(new DefaultDimensionSpec("m1", "d0", ValueType.FLOAT))
                 .filters("dim2", "a")
                 .aggregators(
-                    new DoubleSumAggregatorFactory("a0:sum", "m2"),
-                    new FilteredAggregatorFactory(
-                        new CountAggregatorFactory("a0:count"),
-                        not(selector("m2", null, null))
-                    ),
-                    new DoubleSumAggregatorFactory("a1", "m1"),
-                    new DoubleSumAggregatorFactory("a2", "m2")
+                    useDefault
+                    ? aggregators(
+                      new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                      new CountAggregatorFactory("a0:count"),
+                      new DoubleSumAggregatorFactory("a1", "m1"),
+                      new DoubleSumAggregatorFactory("a2", "m2")
+                    )
+                    : aggregators(
+                      new DoubleSumAggregatorFactory("a0:sum", "m2"),
+                      new FilteredAggregatorFactory(
+                          new CountAggregatorFactory("a0:count"),
+                          not(selector("m2", null, null))
+                      ),
+                      new DoubleSumAggregatorFactory("a1", "m1"),
+                      new DoubleSumAggregatorFactory("a2", "m2")
+                    )
                 )
                 .postAggregators(
                     new ArithmeticPostAggregator(
