@@ -175,7 +175,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
       {
-        return CachingClusteredClient.this.run(queryPlus, responseContext, timeline -> timeline);
+        return CachingClusteredClient.this.run(queryPlus, responseContext, timeline -> timeline, false);
       }
     };
   }
@@ -187,10 +187,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private <T> Sequence<T> run(
       final QueryPlus<T> queryPlus,
       final ResponseContext responseContext,
-      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter
+      final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter,
+      final boolean specificSegments
   )
   {
-    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext).run(timelineConverter);
+    final ClusterQueryResult<T> result = new SpecificQueryRunnable<>(queryPlus, responseContext)
+        .run(timelineConverter, specificSegments);
     initializeNumRemainingResponsesInResponseContext(queryPlus.getQuery(), responseContext, result.numQueryServers);
     return result.sequence;
   }
@@ -231,7 +233,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
                 }
               }
               return timeline2;
-            }
+            },
+            true
         );
       }
     };
@@ -321,7 +324,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
      * @return a pair of a sequence merging results from remote query servers and the number of remote servers
      *         participating in query processing.
      */
-    ClusterQueryResult<T> run(final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter)
+    ClusterQueryResult<T> run(
+        final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter,
+        final boolean specificSegments
+    )
     {
       final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
           dataSourceAnalysis
@@ -335,7 +341,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
         computeUncoveredIntervals(timeline);
       }
 
-      final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline);
+      final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
       @Nullable
       final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
@@ -401,11 +407,16 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private Set<SegmentServerSelector> computeSegmentsToQuery(TimelineLookup<String, ServerSelector> timeline)
+    private Set<SegmentServerSelector> computeSegmentsToQuery(
+        TimelineLookup<String, ServerSelector> timeline,
+        boolean specificSegments
+    )
     {
+      final java.util.function.Function<Interval, List<TimelineObjectHolder<String, ServerSelector>>> lookupFn
+          = specificSegments ? timeline::lookupWithIncompletePartitions : timeline::lookup;
       final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
           query,
-          intervals.stream().flatMap(i -> timeline.lookup(i).stream()).collect(Collectors.toList())
+          intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList())
       );
 
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();

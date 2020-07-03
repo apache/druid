@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.CachingClusteredClient;
@@ -35,7 +36,9 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -74,7 +77,7 @@ public class RetryQueryRunnerTest
 {
   private static final Closer CLOSER = Closer.create();
   private static final String DATASOURCE = "datasource";
-  private static final GeneratorSchemaInfo SCHEMA_INFO = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
+  private static final GeneratorSchemaInfo BASE_SCHEMA_INFO = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
   private static final boolean USE_PARALLEL_MERGE_POOL_CONFIGURED = false;
 
   @Rule
@@ -148,7 +151,7 @@ public class RetryQueryRunnerTest
   public void testNoRetry()
   {
     prepareCluster(10);
-    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(1, false),
         query,
@@ -165,7 +168,7 @@ public class RetryQueryRunnerTest
   public void testRetryForMovedSegment()
   {
     prepareCluster(10);
-    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(1, true),
         query,
@@ -189,7 +192,7 @@ public class RetryQueryRunnerTest
   public void testRetryUntilWeGetFullResult()
   {
     prepareCluster(10);
-    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(100, false), // retry up to 100
         query,
@@ -209,7 +212,7 @@ public class RetryQueryRunnerTest
   public void testFailWithPartialResultsAfterRetry()
   {
     prepareCluster(10);
-    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(SCHEMA_INFO.getDataInterval());
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(1, false),
         query,
@@ -229,12 +232,26 @@ public class RetryQueryRunnerTest
 
   private void prepareCluster(int numServers)
   {
+    Preconditions.checkArgument(numServers < 25, "Cannot be larger than 24");
     for (int i = 0; i < numServers; i++) {
-      final DataSegment segment = newSegment(SCHEMA_INFO.getDataInterval(), i);
+      final int partitionId = i % 2;
+      final int intervalIndex = i / 2;
+      final Interval interval = Intervals.of("2000-01-01T%02d/PT1H", intervalIndex);
+      final DataSegment segment = newSegment(interval, partitionId, 2);
       addServer(
           SimpleServerView.createServer(i + 1),
           segment,
-          segmentGenerator.generate(segment, SCHEMA_INFO, Granularities.NONE, 10)
+          segmentGenerator.generate(
+              segment,
+              new GeneratorSchemaInfo(
+                  BASE_SCHEMA_INFO.getColumnSchemas(),
+                  BASE_SCHEMA_INFO.getAggs(),
+                  interval,
+                  BASE_SCHEMA_INFO.isWithRollup()
+              ),
+              Granularities.NONE,
+              10
+          )
       );
     }
   }
@@ -315,7 +332,7 @@ public class RetryQueryRunnerTest
     return Druids.newTimeseriesQueryBuilder()
                  .dataSource(DATASOURCE)
                  .intervals(ImmutableList.of(interval))
-                 .granularity(Granularities.DAY)
+                 .granularity(Granularities.HOUR)
                  .aggregators(new CountAggregatorFactory("rows"))
                  .context(
                      ImmutableMap.of(
@@ -338,20 +355,26 @@ public class RetryQueryRunnerTest
   {
     return IntStream
         .range(0, expectedNumResultRows)
-        .mapToObj(i -> new Result<>(DateTimes.of("2000-01-01"), new TimeseriesResultValue(ImmutableMap.of("rows", 10))))
+        .mapToObj(
+            i -> new Result<>(
+                DateTimes.of(StringUtils.format("2000-01-01T%02d", i / 2)),
+                new TimeseriesResultValue(ImmutableMap.of("rows", 10))
+            )
+        )
         .collect(Collectors.toList());
   }
 
   private static DataSegment newSegment(
       Interval interval,
-      int partitionId
+      int partitionId,
+      int numCorePartitions
   )
   {
     return DataSegment.builder()
                       .dataSource(DATASOURCE)
                       .interval(interval)
                       .version("1")
-                      .shardSpec(new NumberedShardSpec(partitionId, 0))
+                      .shardSpec(new NumberedShardSpec(partitionId, numCorePartitions))
                       .size(10)
                       .build();
   }
