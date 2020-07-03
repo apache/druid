@@ -6426,7 +6426,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new LongMaxAggregatorFactory("_a0", "a0"),
                             new LongMinAggregatorFactory("_a1", "a0"),
                             new LongSumAggregatorFactory("_a2:sum", "a0"),
-                            new CountAggregatorFactory("_a2:count"),
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("_a2:count"),
+                                not(selector("a0", null, null))
+                            ),
                             new LongMaxAggregatorFactory("_a3", "d0"),
                             new CountAggregatorFactory("_a4")
                         ))
@@ -6509,7 +6512,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(aggregators(
                             new LongSumAggregatorFactory("_a0:sum", "a0"),
-                            new CountAggregatorFactory("_a0:count")
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("_a0:count"),
+                                not(selector("a0", null, null))
+                            )
                         ))
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
@@ -11744,7 +11750,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .filters("dim2", "a")
                 .aggregators(
                     new DoubleSumAggregatorFactory("a0:sum", "m2"),
-                    new CountAggregatorFactory("a0:count"),
+                    new FilteredAggregatorFactory(
+                        new CountAggregatorFactory("a0:count"),
+                        not(selector("m2", null, null))
+                    ),
                     new DoubleSumAggregatorFactory("a1", "m1"),
                     new DoubleSumAggregatorFactory("a2", "m2")
                 )
