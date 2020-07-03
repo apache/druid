@@ -96,7 +96,7 @@ public class StringColumnAggregationTest
     }
 
     aggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        Collections.EMPTY_LIST,
+        Collections.emptyList(),
         new GroupByQueryConfig(),
         tempFolder
     );
@@ -231,7 +231,7 @@ public class StringColumnAggregationTest
                                   )
                                   .build();
 
-    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(Collections.EMPTY_LIST, tempFolder)
+    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(Collections.emptyList(), tempFolder)
                                         .runQueryOnSegmentsObjs(segments, query);
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
 

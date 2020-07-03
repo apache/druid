@@ -20,10 +20,12 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -32,7 +34,7 @@ import java.util.Set;
  * This class's most important method is {@link #makeJoinMatcher}. Its main user is
  * {@link HashJoinEngine#makeJoinCursor}.
  */
-public interface Joinable
+public interface Joinable extends ReferenceCountedObject
 {
   int CARDINALITY_UNKNOWN = -1;
 
@@ -88,9 +90,11 @@ public interface Joinable
    *                              returned than this limit, return an empty set.
    * @param allowNonKeyColumnSearch If true, allow searchs on non-key columns. If this is false,
    *                                a search on a non-key column should return an empty set.
-   * @return The set of correlated column values. If we cannot determine correlated values, return an empty set.
+   * @return The set of correlated column values. If we cannot determine correlated values, return absent.
+   *
+   * In case either the search or retrieval column names are not found, this will return absent.
    */
-  Set<String> getCorrelatedColumnValues(
+  Optional<Set<String>> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
       String retrievalColumnName,

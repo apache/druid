@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.List;
@@ -31,10 +32,28 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * ShardSpec for segments which overshadow others with their minorVersion.
+ * This shardSpec is used only for the segments created by overwriting tasks with segment lock enabled.
+ * When the segment lock is used, there is a concept of atomic update group which is a set of segments atomically
+ * becoming queryable together in Brokers. It is a similar concept to the core partition set (explained
+ * {@link NumberedShardSpec}), but different in a sense that there is only one core partition set per time chunk
+ * while there could be multiple atomic update groups in one time chunk.
+ *
+ * The atomic update group has the root partition range and the minor version to determine the visibility between
+ * atomic update groups; the group of the highest minor version in the same root partition range becomes queryable
+ * when they have the same major version ({@link DataSegment#getVersion()}).
+ *
+ * Note that this shardSpec is used only when you overwrite existing segments with segment lock enabled.
+ * If the task doesn't overwrite segments, it will use NumberedShardSpec instead even when segment lock is used.
+ * Similar to NumberedShardSpec, the size of the atomic update group is determined when the task publishes segments
+ * at the end of ingestion. As a result, {@link #atomicUpdateGroupSize} is set to
+ * {@link PartitionIds#UNKNOWN_ATOMIC_UPDATE_GROUP_SIZE} first, and updated when publishing segments
+ * in {@code SegmentPublisherHelper#annotateShardSpec}.
+ *
+ * @see AtomicUpdateGroup
  */
 public class NumberedOverwriteShardSpec implements OverwriteShardSpec
 {
+  public static final String TYPE = "numbered_overwrite";
   private final int partitionId;
 
   private final short startRootPartitionId;
@@ -169,7 +188,7 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
   }
 
   @Override
-  public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+  public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
   {
     return (long timestamp, InputRow row) -> shardSpecs.get(0);
   }
@@ -184,12 +203,6 @@ public class NumberedOverwriteShardSpec implements OverwriteShardSpec
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
     return true;
-  }
-
-  @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    return other == NumberedOverwriteShardSpec.class || other == NumberedShardSpec.class;
   }
 
   @Override

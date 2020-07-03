@@ -50,7 +50,9 @@ public class MainTest
         //new Object[]{new CliInternalHadoopIndexer()},
 
         new Object[]{new CliMiddleManager()},
-        new Object[]{new CliRouter()}
+        new Object[]{new CliRouter()},
+
+        new Object[]{new CliIndexer()}
     );
   }
 

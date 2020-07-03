@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -45,6 +46,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 @ExtensionPoint
@@ -136,6 +138,11 @@ public interface Query<T>
    */
   Query<T> withSubQueryId(String subQueryId);
 
+  default Query<T> withDefaultSubQueryId()
+  {
+    return withSubQueryId(UUID.randomUUID().toString());
+  }
+
   /**
    * Returns the subQueryId of this query. This is set by ClientQuerySegmentWalker (the entry point for the Broker's
    * query stack) on any subqueries that it issues. It is null for the main query.
@@ -152,6 +159,17 @@ public interface Query<T>
   default String getSqlQueryId()
   {
     return null;
+  }
+
+  /**
+   * Returns a most specific ID of this query; if it is a subquery, this will return its subquery ID.
+   * If it is a regular query without subqueries, this will return its query ID.
+   * This method should be called after the relevant ID is assigned using {@link #withId} or {@link #withSubQueryId}.
+   */
+  default String getMostSpecificId()
+  {
+    final String subqueryId = getSubQueryId();
+    return subqueryId == null ? Preconditions.checkNotNull(getId(), "queryId") : subqueryId;
   }
 
   Query<T> withDataSource(DataSource dataSource);

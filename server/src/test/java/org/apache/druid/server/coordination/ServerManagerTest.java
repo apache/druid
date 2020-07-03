@@ -57,7 +57,6 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
-import org.apache.druid.segment.AbstractSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -600,7 +599,7 @@ public class ServerManagerTest
     }
   }
 
-  private static class SegmentForTesting extends AbstractSegment
+  private static class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;

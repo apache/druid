@@ -168,7 +168,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       List<String> dimensions,
       List<String> metrics,
       ShardSpec shardSpec,
-      CompactionState lastCompactionState,
+      @Nullable CompactionState lastCompactionState,
       Integer binaryVersion,
       long size
   )

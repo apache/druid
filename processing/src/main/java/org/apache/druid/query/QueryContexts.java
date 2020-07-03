@@ -53,13 +53,14 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
+  public static final String SHOULD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_KEY = "shouldFailOnTruncatedResponseContext";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
-  public static final Vectorize DEFAULT_VECTORIZE = Vectorize.FALSE;
+  public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
@@ -70,6 +71,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS = false;
   public static final long DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE = 10000;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
+  public static final boolean DEFAULT_SHOULD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
@@ -342,6 +344,19 @@ public class QueryContexts
     final long defaultTimeout = parseLong(query, DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
     Preconditions.checkState(defaultTimeout >= 0, "Timeout must be a non negative value, but was [%s]", defaultTimeout);
     return defaultTimeout;
+  }
+
+  public static <T> Query<T> setFailOnTruncatedResponseContext(Query<T> query)
+  {
+    return query.withOverriddenContext(ImmutableMap.of(SHOULD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_KEY, true));
+  }
+
+  public static <T> boolean shouldFailOnTruncatedResponseContext(Query<T> query)
+  {
+    return query.getContextBoolean(
+        SHOULD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_KEY,
+        DEFAULT_SHOULD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT
+    );
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)

@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -64,5 +65,11 @@ public class IndexSpecTest
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getDimensionCompression());
     Assert.assertEquals(CompressionStrategy.LZ4, spec.getMetricCompression());
     Assert.assertEquals(CompressionFactory.LongEncodingStrategy.LONGS, spec.getLongEncoding());
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(IndexSpec.class).usingGetClass().verify();
   }
 }

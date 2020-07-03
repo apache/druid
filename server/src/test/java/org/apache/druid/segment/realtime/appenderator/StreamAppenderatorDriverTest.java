@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -98,6 +99,10 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private TestSegmentHandoffNotifierFactory segmentHandoffNotifierFactory;
   private StreamAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   @Before
   public void setUp()

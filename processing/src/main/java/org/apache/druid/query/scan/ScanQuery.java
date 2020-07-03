@@ -183,8 +183,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return maxSegmentPartitionsOrderedInMemory;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -292,11 +292,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public Query<ScanResultValue> withOverriddenContext(Map<String, Object> contextOverrides)
   {
     return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
-  }
-
-  public ScanQuery withDimFilter(DimFilter dimFilter)
-  {
-    return Druids.ScanQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
   @Override

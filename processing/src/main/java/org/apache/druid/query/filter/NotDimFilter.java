@@ -32,7 +32,7 @@ import java.util.Set;
 
 /**
  */
-public class NotDimFilter implements DimFilter
+public class NotDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
 
   private final DimFilter field;

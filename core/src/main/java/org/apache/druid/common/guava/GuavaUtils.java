@@ -22,13 +22,18 @@ package org.apache.druid.common.guava;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.primitives.Longs;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Future;
 
 /**
  */
 public class GuavaUtils
 {
+  private static final Logger log = new Logger(GuavaUtils.class);
 
   /**
    * To fix semantic difference of Longs.tryParse() from Long.parseLong (Longs.tryParse() returns null for '+' started
@@ -76,5 +81,39 @@ public class GuavaUtils
       return arg2;
     }
     return arg1;
+  }
+
+  /**
+   * Cancel futures manually, because sometime we can't cancel all futures in {@link com.google.common.util.concurrent.Futures.CombinedFuture}
+   * automatically. Especially when we call {@link  com.google.common.util.concurrent.Futures#allAsList(Iterable)} to create a batch of
+   * future.
+   * @param mayInterruptIfRunning {@code true} if the thread executing this
+   * task should be interrupted; otherwise, in-progress tasks are allowed
+   * to complete
+   * @param combinedFuture The combinedFuture that associated with futures
+   * @param futures The futures that we want to cancel
+   */
+  public static <F extends Future<?>> void cancelAll(
+      boolean mayInterruptIfRunning,
+      @Nullable Future<?> combinedFuture,
+      List<F> futures
+  )
+  {
+    final List<Future> allFuturesToCancel = new ArrayList<>();
+    allFuturesToCancel.add(combinedFuture);
+    allFuturesToCancel.addAll(futures);
+    if (allFuturesToCancel.isEmpty()) {
+      return;
+    }
+    allFuturesToCancel.forEach(f -> {
+      try {
+        if (f != null) {
+          f.cancel(mayInterruptIfRunning);
+        }
+      }
+      catch (Throwable t) {
+        log.warn(t, "Error while cancelling future.");
+      }
+    });
   }
 }

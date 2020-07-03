@@ -327,6 +327,13 @@ public class ForkingTaskRunner
                           command.add(nodeType);
                         }
 
+                        // If the task type is queryable, we need to load broadcast segments on the peon, used for
+                        // join queries
+                        if (task.supportsQueries()) {
+                          command.add("--loadBroadcastSegments");
+                          command.add("true");
+                        }
+
                         if (!taskFile.exists()) {
                           jsonMapper.writeValue(taskFile, task);
                         }

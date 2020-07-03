@@ -111,7 +111,8 @@
       "configuration/logging"
     ],
     "Operations": [
-      "operations/management-uis",
+      "operations/druid-console",
+      "operations/getting-started",
       "operations/basic-cluster-tuning",
       "operations/api-reference",
       "operations/high-availability",
@@ -131,10 +132,9 @@
         "type": "subcategory",
         "label": "Misc",
         "ids": [
+          "operations/management-uis",
           "operations/deep-storage-migration",
-          "operations/druid-console",
           "operations/export-metadata",
-          "operations/getting-started",
           "operations/metadata-migration",
           "operations/segment-optimization",
           "operations/use_sbt_to_build_fat_jar"
@@ -181,6 +181,7 @@
       "development/extensions-core/druid-basic-security",
       "development/extensions-core/druid-kerberos",
       "development/extensions-core/druid-lookups",
+      "development/extensions-core/druid-ranger-security",
       "development/extensions-core/google",
       "development/extensions-core/hdfs",
       "development/extensions-core/kafka-extraction-namespace",

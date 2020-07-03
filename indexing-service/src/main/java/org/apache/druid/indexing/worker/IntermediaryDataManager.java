@@ -70,7 +70,7 @@ import java.util.stream.IntStream;
  * and phase 2 tasks read those files via HTTP.
  *
  * The directory where segment files are placed is structured as
- * {@link StorageLocation#path}/supervisorTaskId/startTimeOfSegment/endTimeOfSegment/partitionIdOfSegment.
+ * {@link StorageLocation#path}/supervisorTaskId/startTimeOfSegment/endTimeOfSegment/bucketIdOfSegment.
  *
  * This class provides interfaces to store, find, and remove segment files.
  * It also has a self-cleanup mechanism to clean up stale segment files. It periodically checks the last access time
@@ -335,11 +335,11 @@ public class IntermediaryDataManager
   }
 
   @Nullable
-  public File findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int partitionId)
+  public File findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int bucketId)
   {
     TaskIdUtils.validateId("supervisorTaskId", supervisorTaskId);
     for (StorageLocation location : shuffleDataLocations) {
-      final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, partitionId));
+      final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, bucketId));
       if (partitionDir.exists()) {
         supervisorTaskCheckTimes.put(supervisorTaskId, getExpiryTimeFromNow());
         final File[] segmentFiles = partitionDir.listFiles();
@@ -384,23 +384,23 @@ public class IntermediaryDataManager
       String supervisorTaskId,
       String subTaskId,
       Interval interval,
-      int partitionId
+      int bucketId
   )
   {
-    return Paths.get(getPartitionDir(supervisorTaskId, interval, partitionId), subTaskId).toString();
+    return Paths.get(getPartitionDir(supervisorTaskId, interval, bucketId), subTaskId).toString();
   }
 
   private static String getPartitionDir(
       String supervisorTaskId,
       Interval interval,
-      int partitionId
+      int bucketId
   )
   {
     return Paths.get(
         supervisorTaskId,
         interval.getStart().toString(),
         interval.getEnd().toString(),
-        String.valueOf(partitionId)
+        String.valueOf(bucketId)
     ).toString();
   }
 }

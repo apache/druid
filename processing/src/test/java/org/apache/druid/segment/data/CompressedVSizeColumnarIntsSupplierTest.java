@@ -56,13 +56,8 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
   @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}")
   public static Iterable<Object[]> compressionStrategies()
   {
-    final Iterable<CompressionStrategy> compressionStrategies = Iterables.transform(
-        CompressionStrategyTest.compressionStrategies(),
-        (Object[] input) -> (CompressionStrategy) input[0]
-    );
-
     Set<List<Object>> combinations = Sets.cartesianProduct(
-        Sets.newHashSet(compressionStrategies),
+        Sets.newHashSet(CompressionStrategy.noNoneValues()),
         Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
     );
 

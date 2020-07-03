@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -44,15 +43,9 @@ public class BroadcastDistributionRuleSerdeTest
   public static List<Object[]> constructorFeeder()
   {
     return Lists.newArrayList(
-        new Object[]{new ForeverBroadcastDistributionRule(ImmutableList.of("large_source1", "large_source2"))},
-        new Object[]{new ForeverBroadcastDistributionRule(ImmutableList.of())},
-        new Object[]{new ForeverBroadcastDistributionRule(null)},
-        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), ImmutableList.of("large_source"))},
-        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), ImmutableList.of())},
-        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"), null)},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, ImmutableList.of("large_source"))},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, ImmutableList.of())},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null, null)}
+        new Object[]{new ForeverBroadcastDistributionRule()},
+        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"))},
+        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null)}
     );
   }
 

@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 
 /**
  */
-public class AndDimFilter implements DimFilter
+public class AndDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 

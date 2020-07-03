@@ -39,6 +39,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
@@ -337,6 +338,33 @@ public class QueryResourceTest
     );
     Assert.assertNotNull(response);
     Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+  }
+
+  @Test
+  public void testUnsupportedQueryThrowsException() throws IOException
+  {
+    String errorMessage = "This will be support in Druid 9999";
+    ByteArrayInputStream badQuery = EasyMock.createMock(ByteArrayInputStream.class);
+    EasyMock.expect(badQuery.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt())).andThrow(
+        new QueryUnsupportedException(errorMessage));
+    EasyMock.replay(badQuery);
+    EasyMock.replay(testServletRequest);
+    Response response = queryResource.doPost(
+        badQuery,
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
+    QueryUnsupportedException ex;
+    try {
+      ex = JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryUnsupportedException.class);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    Assert.assertEquals(errorMessage, ex.getMessage());
+    Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, ex.getErrorCode());
   }
 
   @Test

@@ -39,7 +39,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -150,16 +149,23 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // at index-persisting time to determine if we need a multi-value column or not. However, that means we
     // need to tweak the capabilities here in the StorageAdapter (a query-time construct), so at query time
     // they appear multi-valued.
+    //
+    // Note that this could be improved if we snapshot the capabilities at cursor creation time and feed those through
+    // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
+    // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
+    // be removed.
+    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), true);
+  }
 
-    final ColumnCapabilities capabilitiesFromIndex = index.getCapabilities(column);
-    final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(column);
-    if (dimensionDesc != null && dimensionDesc.getCapabilities().getType() == ValueType.STRING) {
-      final ColumnCapabilitiesImpl retVal = ColumnCapabilitiesImpl.copyOf(capabilitiesFromIndex);
-      retVal.setHasMultipleValues(true);
-      return retVal;
-    } else {
-      return capabilitiesFromIndex;
-    }
+  /**
+   * Sad workaround for {@link org.apache.druid.query.metadata.SegmentAnalyzer} to deal with the fact that the
+   * response from {@link #getColumnCapabilities} is not accurate for string columns, in that it reports all string
+   * string columns as having multiple values. This method returns the actual capabilities of the underlying
+   * {@link IncrementalIndex}at the time this method is called.
+   */
+  public ColumnCapabilities getSnapshotColumnCapabilities(String column)
+  {
+    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column));
   }
 
   @Override

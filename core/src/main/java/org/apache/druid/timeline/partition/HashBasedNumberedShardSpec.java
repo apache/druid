@@ -35,12 +35,19 @@ import org.apache.druid.data.input.Rows;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
-  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
-  private static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
+  static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
 
+  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
+
+  private final int bucketId;
+  /**
+   * Number of hash buckets
+   */
+  private final int numBuckets;
   private final ObjectMapper jsonMapper;
   @JsonIgnore
   private final List<String> partitionDimensions;
@@ -48,14 +55,33 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @JsonCreator
   public HashBasedNumberedShardSpec(
       @JsonProperty("partitionNum") int partitionNum,    // partitionId
-      @JsonProperty("partitions") int partitions,        // # of partitions
+      @JsonProperty("partitions") int partitions,        // core partition set size
+      @JsonProperty("bucketId") @Nullable Integer bucketId, // nullable for backward compatibility
+      @JsonProperty("numBuckets") @Nullable Integer numBuckets, // nullable for backward compatibility
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(partitionNum, partitions);
+    // Use partitionId as bucketId if it's missing.
+    this.bucketId = bucketId == null ? partitionNum : bucketId;
+    // If numBuckets is missing, assume that any hash bucket is not empty.
+    // Use the core partition set size as the number of buckets.
+    this.numBuckets = numBuckets == null ? partitions : numBuckets;
     this.jsonMapper = jsonMapper;
     this.partitionDimensions = partitionDimensions == null ? DEFAULT_PARTITION_DIMENSIONS : partitionDimensions;
+  }
+
+  @JsonProperty
+  public int getBucketId()
+  {
+    return bucketId;
+  }
+
+  @JsonProperty
+  public int getNumBuckets()
+  {
+    return numBuckets;
   }
 
   @JsonProperty("partitionDimensions")
@@ -65,20 +91,29 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
-  public boolean isCompatible(Class<? extends ShardSpec> other)
-  {
-    return other == HashBasedNumberedShardSpec.class;
-  }
-
-  @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    return (((long) hash(timestamp, inputRow)) - getPartitionNum()) % getPartitions() == 0;
+    return (((long) hash(timestamp, inputRow)) - bucketId) % numBuckets == 0;
   }
 
+  /**
+   * This method calculates the hash based on whether {@param partitionDimensions} is null or not.
+   * If yes, then both {@param timestamp} and dimension columns in {@param inputRow} are used {@link Rows#toGroupKey}
+   * Or else, columns in {@param partitionDimensions} are used
+   *
+   * @param timestamp should be bucketed with query granularity
+   * @param inputRow row from input data
+   *
+   * @return hash value
+   */
   protected int hash(long timestamp, InputRow inputRow)
   {
-    final List<Object> groupKey = getGroupKey(timestamp, inputRow);
+    return hash(jsonMapper, partitionDimensions, timestamp, inputRow);
+  }
+
+  public static int hash(ObjectMapper jsonMapper, List<String> partitionDimensions, long timestamp, InputRow inputRow)
+  {
+    final List<Object> groupKey = getGroupKey(partitionDimensions, timestamp, inputRow);
     try {
       return hash(jsonMapper, groupKey);
     }
@@ -88,7 +123,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @VisibleForTesting
-  List<Object> getGroupKey(final long timestamp, final InputRow inputRow)
+  static List<Object> getGroupKey(final List<String> partitionDimensions, final long timestamp, final InputRow inputRow)
   {
     if (partitionDimensions.isEmpty()) {
       return Rows.toGroupKey(timestamp, inputRow);
@@ -104,21 +139,57 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
+  public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
+  {
+    return createHashLookup(jsonMapper, partitionDimensions, shardSpecs, numBuckets);
+  }
+
+  static ShardSpecLookup createHashLookup(
+      ObjectMapper jsonMapper,
+      List<String> partitionDimensions,
+      List<? extends ShardSpec> shardSpecs,
+      int numBuckets
+  )
+  {
+    return (long timestamp, InputRow row) -> {
+      int index = Math.abs(hash(jsonMapper, partitionDimensions, timestamp, row) % numBuckets);
+      return shardSpecs.get(index);
+    };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    HashBasedNumberedShardSpec that = (HashBasedNumberedShardSpec) o;
+    return bucketId == that.bucketId &&
+           numBuckets == that.numBuckets &&
+           Objects.equals(partitionDimensions, that.partitionDimensions);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), bucketId, numBuckets, partitionDimensions);
+  }
+
+  @Override
   public String toString()
   {
     return "HashBasedNumberedShardSpec{" +
            "partitionNum=" + getPartitionNum() +
-           ", partitions=" + getPartitions() +
-           ", partitionDimensions=" + getPartitionDimensions() +
+           ", partitions=" + getNumCorePartitions() +
+           ", bucketId=" + bucketId +
+           ", numBuckets=" + numBuckets +
+           ", partitionDimensions=" + partitionDimensions +
            '}';
-  }
-
-  @Override
-  public ShardSpecLookup getLookup(final List<ShardSpec> shardSpecs)
-  {
-    return (long timestamp, InputRow row) -> {
-      int index = Math.abs(hash(timestamp, row) % getPartitions());
-      return shardSpecs.get(index);
-    };
   }
 }
