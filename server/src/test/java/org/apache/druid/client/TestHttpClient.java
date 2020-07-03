@@ -171,7 +171,7 @@ public class TestHttpClient implements HttpClient
     private QueryRunner getQueryRunner()
     {
       if (isSegmentDropped) {
-        return new ReportTimelineMissingSegmentQueryRunner(
+        return new ReportTimelineMissingSegmentQueryRunner<>(
             new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
         );
       } else {
