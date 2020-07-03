@@ -25,11 +25,12 @@ title: "Logging"
 
 Apache Druid processes will emit logs that are useful for debugging to the console. Druid processes also emit periodic metrics about their state. For more about metrics, see [Configuration](../configuration/index.md#enabling-metrics). Metric logs are printed to the console by default, and can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
 
-Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. Logging can be configured with a log4j2.xml file. Add the path to the directory containing the log4j2.xml file (e.g. the _common/ dir) to your classpath if you want to override default Druid log configuration. Note that this directory should be earlier in the classpath than the druid jars. The easiest way to do this is to prefix the classpath with the config dir.
+Druid uses [log4j2](http://logging.apache.org/log4j/2.x/) for logging. Its configuration file locates at conf/druid/{config}/_common/log4j2.xml.
 
-To enable java logging to go through log4j2, set the `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` server parameter.
+By default, Druid uses `RollingRandomAccessFile` for rollover daily, and keeps log files up to 7 days. 
+If that's not suitable in your case, you could modify the log4j2.xml to meet your need. 
 
-An example log4j2.xml ships with Druid under config/_common/log4j2.xml, and a sample file is also shown below:
+An example log4j2.xml ships with Druid under conf/druid/{config}/_common/log4j2.xml, and a sample file is also shown below:
 
 ```
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -52,6 +53,12 @@ An example log4j2.xml ships with Druid under config/_common/log4j2.xml, and a sa
   </Loggers>
 </Configuration>
 ```
+
+## How to change log directory
+By default, Druid outputs the logs to a directory `log` under the directory where you launch Druid.
+For example, if Druid is started from its `bin` directory, there will a subdirectory `log` generated under `bin` directory to hold the log files.
+If you want to change the log directory, set environment variable `DRUID_LOG_DIR` to the right directory before you start Druid.
+
 
 ## My logs are really chatty, can I set them to asynchronously write?
 
