@@ -4730,11 +4730,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + MIN(cnt) + MAX(cnt), COUNT(dim2) FROM druid.foo",
+        "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + MIN(cnt) + MAX(cnt), COUNT(dim2), COUNT(d1), AVG(d1) FROM druid.numfoo",
         ImmutableList.of(
 
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
+                  .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(
@@ -4753,7 +4753,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new FilteredAggregatorFactory(
                               new CountAggregatorFactory("a6"),
                               not(selector("dim2", null, null))
-                          )
+                          ),
+                          new DoubleSumAggregatorFactory("a7:sum","d1"),
+                          new CountAggregatorFactory("a7:count")
                       )
                       : aggregators(
                           new CountAggregatorFactory("a0"),
@@ -4766,13 +4768,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               not(selector("dim1", null, null))
                           ),
                           new LongSumAggregatorFactory("a3:sum", "cnt"),
-                          new CountAggregatorFactory("a3:count"),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a3:count"),
+                              not(selector("cnt", null, null))
+                          ),
                           new LongSumAggregatorFactory("a4", "cnt"),
                           new LongMinAggregatorFactory("a5", "cnt"),
                           new LongMaxAggregatorFactory("a6", "cnt"),
                           new FilteredAggregatorFactory(
                               new CountAggregatorFactory("a7"),
                               not(selector("dim2", null, null))
+                          ),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a8"),
+                              not(selector("d1", null, null))
+                          ),
+                          new DoubleSumAggregatorFactory("a9:sum", "d1"),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a9:count"),
+                              not(selector("d1", null, null))
                           )
                       )
                   )
@@ -4785,6 +4799,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                               new FieldAccessPostAggregator(null, useDefault ? "a2:count" : "a3:count")
                           )
                       ),
+                      new ArithmeticPostAggregator(
+                          useDefault ? "a7" : "a9",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, useDefault ? "a7:sum" : "a9:sum"),
+                              new FieldAccessPostAggregator(null, useDefault ? "a7:count" : "a9:count")
+                          )
+                      ),
                       expressionPostAgg(
                           "p0",
                           useDefault ? "((\"a3\" + \"a4\") + \"a5\")" : "((\"a4\" + \"a5\") + \"a6\")"
@@ -4795,10 +4817,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         NullHandling.replaceWithDefault() ?
         ImmutableList.of(
-            new Object[]{6L, 6L, 5L, 1L, 6L, 8L, 3L}
+            new Object[]{6L, 6L, 5L, 1L, 6L, 8L, 3L, 6L, ((1+1.7)/6)}
         ) :
         ImmutableList.of(
-            new Object[]{6L, 6L, 6L, 1L, 6L, 8L, 4L}
+            new Object[]{6L, 6L, 6L, 1L, 6L, 8L, 4L, 3L, ((1+1.7)/3)}
         )
     );
   }

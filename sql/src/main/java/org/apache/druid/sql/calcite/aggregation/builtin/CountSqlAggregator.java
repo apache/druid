@@ -81,6 +81,7 @@ public class CountSqlAggregator implements SqlAggregator
         // Don't expect this to happen.
         throw new ISE("Could not create not-null filter for rexNode[%s]", rexNode);
       }
+
       return new FilteredAggregatorFactory(new CountAggregatorFactory(countName), nonNullFilter);
     } else {
       return new CountAggregatorFactory(countName);
