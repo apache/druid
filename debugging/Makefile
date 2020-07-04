@@ -6,12 +6,10 @@ SRC_DIR = $(PWD)/..
 BINDIR = $(SRC_DIR)/../builds/druid/bin
 DATADIR = $(SRC_DIR)/../builds/druid/var/
 
-
-pwd:
-	echo "I am operating under $(PWD)"
-
 build:
-	$(SRC_DIR)/debugging/builddruid.sh
+	$(SRC_DIR)/debugging/build_druid.sh
+build_pi:
+	${SRC_DIR}/debugging/build_druid.sh -pi
 run:
 	$(SRC_DIR)/debugging/run.sh &
 cluster:

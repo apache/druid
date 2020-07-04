@@ -1,5 +1,10 @@
 #!/bin/bash
+set -e
 
-export GOOGLE_APPLICATION_CREDENTIALS=/Users/manishgill/Workspace/Personal/druid/incubator-druid/.gcp_credentials.json
+if [ ! -f "~/.druid_gcp_credentials.json" ]; then
+  echo "Please create ~/.druid_gcp_credentials.json"
+else
+  export GOOGLE_APPLICATION_CREDENTIALS=~/.druid_gcp_credentials.json
+  ../../builds/druid/bin/start-single-server-small
+fi
 
-../../builds/druid/bin/start-single-server-small
