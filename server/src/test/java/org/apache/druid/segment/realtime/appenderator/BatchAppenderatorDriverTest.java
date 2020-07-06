@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -74,6 +75,10 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   private AppenderatorTester appenderatorTester;
   private BatchAppenderatorDriver driver;
   private DataSegmentKiller dataSegmentKiller;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   @Before
   public void setup()

@@ -90,6 +90,8 @@ IANA
 IETF
 IP
 IPv4
+IS_BROADCAST
+IS_JOINABLE
 IS0
 ISO-8601
 ISO8601
@@ -264,6 +266,7 @@ inlined
 interruptible
 jackson-jq
 javadoc
+joinable
 kerberos
 keystore
 keytab
@@ -571,6 +574,14 @@ thriftJar
  - ../docs/development/extensions-contrib/time-min-max.md
 timeMax
 timeMin
+ - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Aliyun
+aliyun
+OSS
+AccessKey
+aliyun-oss
+oss
+url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold

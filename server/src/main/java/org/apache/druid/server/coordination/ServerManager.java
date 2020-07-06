@@ -39,7 +39,6 @@ import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.PerSegmentOptimizingQueryRunner;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -57,7 +56,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.Joinables;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -193,20 +191,12 @@ public class ServerManager implements QuerySegmentWalker
       return new NoopQueryRunner<>();
     }
 
-    final JoinFilterRewriteConfig joinFilterRewriteConfig = new JoinFilterRewriteConfig(
-        QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query)
-    );
-
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
         analysis.getPreJoinableClauses(),
         joinableFactory,
         cpuTimeAccumulator,
-        joinFilterRewriteConfig,
-        query
+        analysis.getBaseQuery().orElse(query)
     );
 
     FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
@@ -260,8 +250,15 @@ public class ServerManager implements QuerySegmentWalker
       final AtomicLong cpuTimeAccumulator
   )
   {
-    SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
-    SegmentId segmentId = segment.getId();
+    final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
+    final SegmentId segmentId = segment.getId();
+    final Interval segmentInterval = segment.getDataInterval();
+    // ReferenceCountingSegment can return null for ID or interval if it's already closed.
+    // Here, we check one more time if the segment is closed.
+    // If the segment is closed after this line, ReferenceCountingSegmentQueryRunner will handle and do the right thing.
+    if (segmentId == null || segmentInterval == null) {
+      return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
+    }
     String segmentIdString = segmentId.toString();
 
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
@@ -285,7 +282,7 @@ public class ServerManager implements QuerySegmentWalker
 
     BySegmentQueryRunner<T> bySegmentQueryRunner = new BySegmentQueryRunner<>(
         segmentId,
-        segment.getDataInterval().getStart(),
+        segmentInterval.getStart(),
         cachingQueryRunner
     );
 

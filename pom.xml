@@ -108,6 +108,7 @@
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
+        <mockito.version>3.2.4</mockito.version>
         <powermock.version>2.0.2</powermock.version>
         <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
@@ -192,6 +193,7 @@
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
         <module>extensions-contrib/gce-extensions</module>
+        <module>extensions-contrib/aliyun-oss-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -1041,6 +1043,7 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+<<<<<<< HEAD
                 <groupId>org.junit.vintage</groupId>
                 <artifactId>junit-vintage-engine</artifactId>
                 <version>5.7.0-M1</version>
@@ -1051,6 +1054,12 @@
                 <artifactId>junit-platform-launcher</artifactId>
                 <scope>test</scope>
                 <version>1.7.0-M1</version>
+=======
+              <groupId>org.mockito</groupId>
+              <artifactId>mockito-core</artifactId>
+              <version>${mockito.version}</version>
+              <scope>test</scope>
+>>>>>>> ddda2a4f18597257633b55536d8a54e1a3f61eb3
             </dependency>
             <dependency>
                 <groupId>org.powermock</groupId>
@@ -1269,6 +1278,10 @@
                 <version>0.8.5</version>
                 <configuration>
                     <excludes>
+                        <!-- Ignore initialization classes, these are tested by the integration tests. -->
+                        <exclude>org/apache/druid/cli/Cli*</exclude>
+                        <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
+                      
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
                         <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
@@ -1278,6 +1291,9 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+
+                        <!-- Exceptions -->
+                        <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>

@@ -73,10 +73,12 @@ function _build_distribution() {
   _log "Building druid distribution"
 
   (
+    # Add HEAD as an allowed HTTP method since this is how we check when the Druid service is ready.
     cd "$(_get_code_root)" \
     && mvn -Pdist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -q -T1C install \
     && cd distribution/target \
-    && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz"
+    && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
+    && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> apache-druid-$(_get_druid_version)/conf/druid/single-server/micro-quickstart/_common/common.runtime.properties
   )
 }
 

@@ -33,6 +33,7 @@ import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { MenuCheckbox } from '../../../components';
+import { getLink } from '../../../links';
 import { pluralIfNeeded } from '../../../utils';
 import {
   getUseApproximateCountDistinct,
@@ -43,7 +44,6 @@ import {
   setUseApproximateTopN,
   setUseCache,
 } from '../../../utils/query-context';
-import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
 
 export interface RunButtonProps {
   runeMode: boolean;
@@ -100,7 +100,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         <MenuItem
           icon={IconNames.HELP}
           text={runeMode ? 'Native query documentation' : 'DruidSQL documentation'}
-          href={runeMode ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
+          href={getLink(runeMode ? 'DOCS_RUNE' : 'DOCS_SQL')}
           target="_blank"
         />
         <MenuItem icon={IconNames.HISTORY} text="Query history" onClick={onHistory} />

@@ -25,7 +25,7 @@
   <groupId>org.apache.druid.extensions</groupId>
   <artifactId>druid-datasketches</artifactId>
   <name>druid-datasketches</name>
-  <description>Druid Aggregators based on datasketches lib https://datasketches.github.io/</description>
+  <description>Druid Aggregators based on datasketches lib https://datasketches.apache.org/</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
