@@ -319,7 +319,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-<<<<<<< HEAD
             <groupId>org.junit.vintage</groupId>
             <artifactId>junit-vintage-engine</artifactId>
             <version>5.7.0-M1</version>
@@ -332,13 +331,11 @@
             <version>1.7.0-M1</version>
         </dependency>
         <dependency>
-=======
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
->>>>>>> ddda2a4f18597257633b55536d8a54e1a3f61eb3
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
             <scope>test</scope>

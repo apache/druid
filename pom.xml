@@ -207,8 +207,8 @@
 
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
-          <id>sigar</id>
-          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+            <id>sigar</id>
+            <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
         </repository>
     </repositories>
 
@@ -235,11 +235,11 @@
                 <artifactId>commons-lang</artifactId>
                 <version>2.6</version>
             </dependency>
-           <dependency>
-               <groupId>commons-net</groupId>
-               <artifactId>commons-net</artifactId>
-               <version>3.6</version>
-           </dependency>
+            <dependency>
+                <groupId>commons-net</groupId>
+                <artifactId>commons-net</artifactId>
+                <version>3.6</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
@@ -339,14 +339,14 @@
                 </exclusions>
             </dependency>
             <dependency>
-              <!--
-                ~ TODO: This dependency transitively pulls in org.codehaus.jackson:jackson-mapper.asl.1.9.13 which has
-                ~ security vulnerability CVE-2017-7525. https://github.com/apache/druid/pull/8177 tracks
-                ~ upgrading to a newer curator version.
-              -->
-              <groupId>org.apache.curator</groupId>
-              <artifactId>curator-x-discovery</artifactId>
-              <version>${apache.curator.version}</version>
+                <!--
+                  ~ TODO: This dependency transitively pulls in org.codehaus.jackson:jackson-mapper.asl.1.9.13 which has
+                  ~ security vulnerability CVE-2017-7525. https://github.com/apache/druid/pull/8177 tracks
+                  ~ upgrading to a newer curator version.
+                -->
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-x-discovery</artifactId>
+                <version>${apache.curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -404,10 +404,10 @@
                 <version>${guice.version}</version>
             </dependency>
             <dependency>
-              <groupId>com.google.inject.extensions</groupId>
-              <artifactId>guice-assistedinject</artifactId>
-              <version>${guice.version}</version>
-              </dependency>
+                <groupId>com.google.inject.extensions</groupId>
+                <artifactId>guice-assistedinject</artifactId>
+                <version>${guice.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.google.errorprone</groupId>
                 <artifactId>error_prone_annotations</artifactId>
@@ -850,16 +850,16 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-mapreduce-client-core</artifactId>
-              <version>${hadoop.compile.version}</version>
-              <scope>provided</scope>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-              </exclusions>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-mapreduce-client-core</artifactId>
+                <version>${hadoop.compile.version}</version>
+                <scope>provided</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -897,7 +897,7 @@
                 <version>4.6</version>
             </dependency>
             <dependency>
-            <groupId>commons-beanutils</groupId>
+                <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
                 <!-- override the transitive dependency from com.opencsv:opensv:4.6 to version 1.9.3 to address CVE-2014-0114 -->
                 <version>1.9.4</version>
@@ -1043,7 +1043,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-<<<<<<< HEAD
                 <groupId>org.junit.vintage</groupId>
                 <artifactId>junit-vintage-engine</artifactId>
                 <version>5.7.0-M1</version>
@@ -1054,12 +1053,12 @@
                 <artifactId>junit-platform-launcher</artifactId>
                 <scope>test</scope>
                 <version>1.7.0-M1</version>
-=======
-              <groupId>org.mockito</groupId>
-              <artifactId>mockito-core</artifactId>
-              <version>${mockito.version}</version>
-              <scope>test</scope>
->>>>>>> ddda2a4f18597257633b55536d8a54e1a3f61eb3
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.powermock</groupId>
@@ -1144,11 +1143,11 @@
                     </exclusion>
                 </exclusions>
             </dependency>
-           <dependency>
-               <groupId>org.postgresql</groupId>
-               <artifactId>postgresql</artifactId>
-               <version>${postgresql.version}</version>
-           </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
 
             <!-- GCP -->
             <dependency>
@@ -1281,7 +1280,7 @@
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
                         <exclude>org/apache/druid/cli/Cli*</exclude>
                         <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
-                      
+
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
                         <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
@@ -1399,7 +1398,7 @@
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <excludes>
-                      <exclude>**/SomeAvroDatum.class</exclude>
+                        <exclude>**/SomeAvroDatum.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -1821,7 +1820,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>3.0.0-M5</version>
                         <executions>
                             <execution>
                                 <phase>test</phase>
@@ -1971,44 +1969,44 @@
                         </executions>
                     </plugin>
                     <plugin>
-                      <groupId>org.owasp</groupId>
-                      <artifactId>dependency-check-maven</artifactId>
-                      <executions>
-                          <execution>
-                              <phase>compile</phase>
-                              <goals>
-                                  <goal>check</goal>
-                              </goals>
-                          </execution>
-                      </executions>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
         </profile>
         <profile>
-          <id>website-docs</id>
-          <modules>
-            <module>website</module>
-          </modules>
+            <id>website-docs</id>
+            <modules>
+                <module>website</module>
+            </modules>
         </profile>
         <profile>
-          <id>skip-static-checks</id>
-          <properties>
-            <animal.sniffer.skip>true</animal.sniffer.skip>
-            <checkstyle.skip>true</checkstyle.skip>
-            <enforcer.skip>true</enforcer.skip>
-            <forbiddenapis.skip>true</forbiddenapis.skip>
-            <maven.javadoc.skip>true</maven.javadoc.skip>
-            <pmd.skip>true</pmd.skip>
-            <spotbugs.skip>true</spotbugs.skip>
-          </properties>
+            <id>skip-static-checks</id>
+            <properties>
+                <animal.sniffer.skip>true</animal.sniffer.skip>
+                <checkstyle.skip>true</checkstyle.skip>
+                <enforcer.skip>true</enforcer.skip>
+                <forbiddenapis.skip>true</forbiddenapis.skip>
+                <maven.javadoc.skip>true</maven.javadoc.skip>
+                <pmd.skip>true</pmd.skip>
+                <spotbugs.skip>true</spotbugs.skip>
+            </properties>
         </profile>
         <profile>
-          <id>skip-tests</id>
-          <properties>
-            <skipTests>true</skipTests>
-            <jacoco.skip>true</jacoco.skip>
-          </properties>
+            <id>skip-tests</id>
+            <properties>
+                <skipTests>true</skipTests>
+                <jacoco.skip>true</jacoco.skip>
+            </properties>
         </profile>
     </profiles>
 </project>
