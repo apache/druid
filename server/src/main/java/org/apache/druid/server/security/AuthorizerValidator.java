@@ -23,17 +23,20 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
 
-import java.util.function.Consumer;
-
 /**
- * A class that validates the name of an authorizer.
+ * Utility functions to validate the an authorizer.
  */
-public class AuthorizerNameValidator implements Consumer<String>
+public class AuthorizerValidator
 {
   private static final String AUTHORIZER_NAME = "authorizerName";
 
-  @Override
-  public void accept(String authorizerName)
+  /**
+   * Validates the provided authorizerName.
+   *
+   * @param authorizerName the name of the authorizer.
+   * @throws IllegalArgumentException on invalid authorizer names.
+   */
+  public void validateAuthorizerName(String authorizerName)
   {
     Preconditions.checkArgument(
         !Strings.isNullOrEmpty(authorizerName),

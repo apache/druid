@@ -25,7 +25,6 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
-import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
@@ -34,13 +33,11 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.AuthorizerNameValidator;
-import org.apache.druid.server.security.AuthorizerValidation;
+import org.apache.druid.server.security.AuthorizerValidator;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,12 +46,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Consumer;
 
 public class AuthorizerMapperModule implements DruidModule
 {
   private static final String AUTHORIZER_PROPERTIES_FORMAT_STRING = "druid.auth.authorizer.%s";
-  private static Logger log = new Logger(AuthorizerMapperModule.class);
 
   @Override
   public void configure(Binder binder)
@@ -62,9 +57,7 @@ public class AuthorizerMapperModule implements DruidModule
     binder.bind(AuthorizerMapper.class)
           .toProvider(new AuthorizerMapperProvider())
           .in(LazySingleton.class);
-    binder.bind(new TypeLiteral<Consumer<String>>() {})
-          .annotatedWith(AuthorizerValidation.class)
-          .to(AuthorizerNameValidator.class)
+    binder.bind(AuthorizerValidator.class)
           .in(LazySingleton.class);
     LifecycleModule.register(binder, AuthorizerMapper.class);
   }
@@ -104,7 +97,8 @@ public class AuthorizerMapperModule implements DruidModule
         AllowAllAuthorizer allowAllAuthorizer = new AllowAllAuthorizer();
         authorizerMap.put(AuthConfig.ALLOW_ALL_NAME, allowAllAuthorizer);
 
-        return new AuthorizerMapper(null) {
+        return new AuthorizerMapper(null)
+        {
           @Override
           public Authorizer getAuthorizer(String name)
           {

@@ -24,17 +24,17 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class AuthorizerNameValidatorTest
+public class AuthorizerValidatorTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  public AuthorizerNameValidator target;
+  public AuthorizerValidator target;
 
   @Before
   public void setUp()
   {
-    target = new AuthorizerNameValidator();
+    target = new AuthorizerValidator();
   }
 
   @Test
@@ -42,7 +42,7 @@ public class AuthorizerNameValidatorTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("authorizerName cannot be null or empty.");
-    target.accept("");
+    target.validateAuthorizerName("");
   }
 
   @Test
@@ -50,7 +50,7 @@ public class AuthorizerNameValidatorTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("authorizerName cannot be null or empty.");
-    target.accept(null);
+    target.validateAuthorizerName(null);
   }
 
   @Test
@@ -58,7 +58,7 @@ public class AuthorizerNameValidatorTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("authorizerName cannot contain 2 or more '.' characters.");
-    target.accept("tes..t");
+    target.validateAuthorizerName("tes..t");
   }
 
   @Test
@@ -66,12 +66,12 @@ public class AuthorizerNameValidatorTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("authorizerName cannot contain the '/' character.");
-    target.accept("tes/t");
+    target.validateAuthorizerName("tes/t");
   }
 
   @Test
   public void testAuthorizerNameWithAllowedCharactersIsValid()
   {
-    target.accept("t.e.$\\, Россия 한국\t 中国!?");
+    target.validateAuthorizerName("t.e.$\\, Россия 한국\t 中国!?");
   }
 }

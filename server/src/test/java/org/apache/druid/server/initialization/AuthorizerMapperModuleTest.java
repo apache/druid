@@ -21,18 +21,15 @@ package org.apache.druid.server.initialization;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.server.security.AuthorizerValidation;
+import org.apache.druid.server.security.AuthorizerValidator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
-import java.util.function.Consumer;
 
 public class AuthorizerMapperModuleTest
 {
@@ -55,11 +52,10 @@ public class AuthorizerMapperModuleTest
   @Test
   public void testAuthorizerNameValidatorIsInjectedAsSingleton()
   {
-    Consumer<String> nameValidator =
-        injector.getInstance(Key.get(new TypeLiteral<Consumer<String>>() {}, AuthorizerValidation.class));
-    Assert.assertNotNull(nameValidator);
-    Consumer<String> other =
-        injector.getInstance(Key.get(new TypeLiteral<Consumer<String>>() {}, AuthorizerValidation.class));
-    Assert.assertSame(nameValidator, other);
+    AuthorizerValidator authorizerValidator =
+        injector.getInstance(AuthorizerValidator.class);
+    AuthorizerValidator other =
+        injector.getInstance(AuthorizerValidator.class);
+    Assert.assertSame(authorizerValidator, other);
   }
 }
