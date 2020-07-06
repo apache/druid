@@ -17,22 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.server;
 
-import org.apache.druid.java.util.common.StringUtils;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
-/**
- * This exception is thrown when {@link org.apache.druid.query.context.ResponseContext} is truncated after serialization
- * in historicals or realtime tasks. The serialized response context can be truncated if its size is larger than
- * {@code QueryResource#RESPONSE_CTX_HEADER_LEN_LIMIT}.
- *
- * See {@link org.apache.druid.query.context.ResponseContext#serializeWith} and
- * {@code ResponseContextConfig#shouldFailOnTruncatedResponseContext}.
- */
-public class TruncatedResponseContextException extends RuntimeException
+public class ResponseContextConfig
 {
-  public TruncatedResponseContextException(String message, Object... arguments)
+  public static final String SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY = "shouldFailOnTruncatedResponseContext";
+
+  @Inject
+  @Named(SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY)
+  private boolean shouldFailOnTruncatedResponseContext;
+
+  public boolean shouldFailOnTruncatedResponseContext()
   {
-    super(StringUtils.nonStrictFormat(message, arguments));
+    return shouldFailOnTruncatedResponseContext;
   }
 }

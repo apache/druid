@@ -33,13 +33,13 @@ import com.google.inject.Inject;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
@@ -105,7 +105,9 @@ public class QueryResource implements QueryCountStatsProvider
   protected final AuthConfig authConfig;
   protected final AuthorizerMapper authorizerMapper;
 
-  private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final ResponseContextConfig responseContextConfig;
+  private final DruidNode selfNode;
+
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -118,7 +120,8 @@ public class QueryResource implements QueryCountStatsProvider
       QueryScheduler queryScheduler,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
-      GenericQueryMetricsFactory queryMetricsFactory
+      ResponseContextConfig responseContextConfig,
+      @Self DruidNode selfNode
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -129,7 +132,8 @@ public class QueryResource implements QueryCountStatsProvider
     this.queryScheduler = queryScheduler;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.queryMetricsFactory = queryMetricsFactory;
+    this.responseContextConfig = responseContextConfig;
+    this.selfNode = selfNode;
   }
 
   @DELETE
@@ -292,13 +296,14 @@ public class QueryResource implements QueryCountStatsProvider
               queryId,
               serializationResult.getFullResult()
           );
-          if (QueryContexts.shouldFailOnTruncatedResponseContext(query)) {
+          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
             log.error(logToPrint);
             throw new QueryInterruptedException(
                 new TruncatedResponseContextException(
                     "Serialized response context exceeds the max size[%s]",
                     RESPONSE_CTX_HEADER_LEN_LIMIT
-                )
+                ),
+                selfNode.getHostAndPortToUse()
             );
           } else {
             log.warn(logToPrint);

@@ -158,6 +158,15 @@ public class QueryResourceTest
 
 
   private static final ServiceEmitter NOOP_SERVICE_EMITTER = new NoopServiceEmitter();
+  private static final DruidNode DRUID_NODE = new DruidNode(
+      "broker",
+      "localhost",
+      true,
+      8082,
+      null,
+      true,
+      false
+  );
 
   private QueryResource queryResource;
   private QueryScheduler queryScheduler;
@@ -193,7 +202,8 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         null,
-        new DefaultGenericQueryMetricsFactory()
+        new ResponseContextConfig(),
+        DRUID_NODE
     );
   }
 
@@ -423,7 +433,8 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory()
+        new ResponseContextConfig(),
+        DRUID_NODE
     );
 
 
@@ -537,7 +548,8 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory()
+        new ResponseContextConfig(),
+        DRUID_NODE
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -659,7 +671,8 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new DefaultGenericQueryMetricsFactory()
+        new ResponseContextConfig(),
+        DRUID_NODE
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -916,7 +929,8 @@ public class QueryResourceTest
         scheduler,
         new AuthConfig(),
         null,
-        new DefaultGenericQueryMetricsFactory()
+        new ResponseContextConfig(),
+        DRUID_NODE
     );
   }
 

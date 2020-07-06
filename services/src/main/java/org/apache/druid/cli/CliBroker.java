@@ -55,6 +55,7 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -102,6 +103,9 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
           binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
+          binder.bindConstant()
+                .annotatedWith(Names.named(ResponseContextConfig.SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY))
+                .to(false);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);
