@@ -27,7 +27,7 @@ import com.google.common.base.Suppliers;
  * Base class for DimFilters that support optimization. This abstract class provides a default implementation of
  * toOptimizedFilter that relies on the existing optimize() and toFilter() methods. It uses a memoized supplier.
  */
-abstract class AbstractOptimizableDimFilter implements DimFilter
+public abstract class AbstractOptimizableDimFilter implements DimFilter
 {
   private final Supplier<Filter> cachedOptimizedFilter = Suppliers.memoize(
       () -> optimize().toFilter()
