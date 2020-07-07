@@ -343,19 +343,7 @@ public class ForkingTaskRunner
                           jsonMapper.writeValue(taskFile, task);
                         }
 
-                        final Set<String> maskedProperties = Sets.newHashSet(startupLoggingConfig.getMaskProperties());
-                        final Iterator<String> printableCommandIterator = command.stream().map(element -> {
-                          for (String masked : maskedProperties) {
-                            if (element.contains(masked)) {
-                              String[] splits = element.split("=", 2);
-                              if (splits.length == 2) {
-                                return StringUtils.format("%s=%s", splits[0], "<masked>");
-                              }
-                            }
-                          }
-                          return element;
-                        }).iterator();
-                        LOGGER.info("Running command: %s", Joiner.on(" ").join(printableCommandIterator));
+                        LOGGER.info("Running command: %s", getMaskedCommand(startupLoggingConfig.getMaskProperties(), command));
                         taskWorkItem.processHolder = new ProcessHolder(
                           new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
                           logFile,
@@ -642,6 +630,23 @@ public class ForkingTaskRunner
         taskInfo.processHolder.process.destroy();
       }
     }
+  }
+
+  String getMaskedCommand(List<String> maskedProperties, List<String> command)
+  {
+    final Set<String> maskedPropertiesSet = Sets.newHashSet(maskedProperties);
+    final Iterator<String> maskedIterator = command.stream().map(element -> {
+      String[] splits = element.split("=", 2);
+        if (splits.length == 2) {
+          for (String masked : maskedPropertiesSet) {
+            if (splits[0].contains(masked)) {
+              return StringUtils.format("%s=%s", splits[0], "<masked>");
+            }
+          }
+        }
+      return element;
+    }).iterator();
+    return Joiner.on(" ").join(maskedIterator);
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
