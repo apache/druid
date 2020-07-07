@@ -226,7 +226,7 @@ publish in an all-or-nothing manner:
 - Supervised "seekable-stream" ingestion methods like [Kafka](../development/extensions-core/kafka-ingestion.md) and
 [Kinesis](../development/extensions-core/kinesis-ingestion.md). With these methods, Druid commits stream offsets to its
 [metadata store](#metadata-storage) alongside segment metadata, in the same transaction. Note that ingestion of data
-that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data
+that has not yet been published can be rolled back if ingestion tasks fail. In this case, partially-ingested data is
 discarded, and Druid will resume ingestion from the last committed set of stream offsets. This ensures exactly-once
 publishing behavior.
 - [Hadoop-based batch ingestion](../ingestion/hadoop.html). Each task publishes all segment metadata in a single
