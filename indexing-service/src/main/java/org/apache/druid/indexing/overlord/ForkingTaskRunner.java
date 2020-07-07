@@ -637,13 +637,13 @@ public class ForkingTaskRunner
     final Set<String> maskedPropertiesSet = Sets.newHashSet(maskedProperties);
     final Iterator<String> maskedIterator = command.stream().map(element -> {
       String[] splits = element.split("=", 2);
-        if (splits.length == 2) {
-          for (String masked : maskedPropertiesSet) {
-            if (splits[0].contains(masked)) {
-              return StringUtils.format("%s=%s", splits[0], "<masked>");
-            }
+      if (splits.length == 2) {
+        for (String masked : maskedPropertiesSet) {
+          if (splits[0].contains(masked)) {
+            return StringUtils.format("%s=%s", splits[0], "<masked>");
           }
         }
+      }
       return element;
     }).iterator();
     return Joiner.on(" ").join(maskedIterator);
