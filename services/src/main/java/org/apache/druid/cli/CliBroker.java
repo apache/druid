@@ -106,6 +106,9 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant()
                 .annotatedWith(Names.named(ResponseContextConfig.SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY))
                 .to(false);
+          binder.bindConstant()
+                .annotatedWith(Names.named(ResponseContextConfig.MAX_RESPONSE_CONTEXT_HEADER_SIZE))
+                .to(ResponseContextConfig.DEFAULT_RESPONSE_CTX_HEADER_LEN_LIMIT);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);

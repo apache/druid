@@ -87,6 +87,9 @@ public class CliHistorical extends ServerRunnable
           binder.bindConstant()
                 .annotatedWith(Names.named(ResponseContextConfig.SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY))
                 .to(true);
+          binder.bindConstant()
+                .annotatedWith(Names.named(ResponseContextConfig.MAX_RESPONSE_CONTEXT_HEADER_SIZE))
+                .to(ResponseContextConfig.DEFAULT_RESPONSE_CTX_HEADER_LEN_LIMIT);
 
           // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
           LifecycleModule.register(binder, Server.class);

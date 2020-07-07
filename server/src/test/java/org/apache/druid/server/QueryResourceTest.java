@@ -36,12 +36,14 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -187,7 +189,12 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(new ResponseContextConfig());
+  }
+
+  private QueryResource createQueryResource(ResponseContextConfig responseContextConfig)
+  {
+    return new QueryResource(
         new QueryLifecycleFactory(
             WAREHOUSE,
             TEST_SEGMENT_WALKER,
@@ -202,11 +209,10 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         null,
-        new ResponseContextConfig(),
+        responseContextConfig,
         DRUID_NODE
     );
   }
-
 
   @After
   public void tearDown()
@@ -225,6 +231,75 @@ public class QueryResourceTest
         testServletRequest
     );
     Assert.assertNotNull(response);
+  }
+
+  @Test
+  public void testTruncatedResponseContextShouldFail() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+    final QueryResource queryResource = createQueryResource(
+        new ResponseContextConfig()
+        {
+          @Override
+          public boolean shouldFailOnTruncatedResponseContext()
+          {
+            return true;
+          }
+
+          @Override
+          public int getMaxResponseContextHeaderSize()
+          {
+            return 0;
+          }
+        }
+    );
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertEquals(1, queryResource.getInterruptedQueryCount());
+    Assert.assertNotNull(response);
+    Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatus());
+    final String expectedException = new QueryInterruptedException(
+        new TruncatedResponseContextException("Serialized response context exceeds the max size[0]"),
+        DRUID_NODE.getHostAndPortToUse()
+    ).toString();
+    Assert.assertEquals(
+        expectedException,
+        JSON_MAPPER.readValue((byte[]) response.getEntity(), QueryInterruptedException.class).toString()
+    );
+  }
+
+  @Test
+  public void testTruncatedResponseContextShouldSucceed() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+    final QueryResource queryResource = createQueryResource(
+        new ResponseContextConfig()
+        {
+          @Override
+          public boolean shouldFailOnTruncatedResponseContext()
+          {
+            return false;
+          }
+
+          @Override
+          public int getMaxResponseContextHeaderSize()
+          {
+            return 0;
+          }
+        }
+    );
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
   }
 
   @Test

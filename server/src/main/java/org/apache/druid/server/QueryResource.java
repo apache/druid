@@ -85,11 +85,6 @@ public class QueryResource implements QueryCountStatsProvider
   protected static final String APPLICATION_SMILE = "application/smile";
 
   /**
-   * The maximum length of {@link ResponseContext} serialized string that might be put into an HTTP response header
-   */
-  protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
-
-  /**
    * HTTP response header name containing {@link ResponseContext} serialized string
    */
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
@@ -287,7 +282,7 @@ public class QueryResource implements QueryCountStatsProvider
         //and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
             jsonMapper,
-            RESPONSE_CTX_HEADER_LEN_LIMIT
+            responseContextConfig.getMaxResponseContextHeaderSize()
         );
 
         if (serializationResult.isTruncated()) {
@@ -301,7 +296,7 @@ public class QueryResource implements QueryCountStatsProvider
             throw new QueryInterruptedException(
                 new TruncatedResponseContextException(
                     "Serialized response context exceeds the max size[%s]",
-                    RESPONSE_CTX_HEADER_LEN_LIMIT
+                    responseContextConfig.getMaxResponseContextHeaderSize()
                 ),
                 selfNode.getHostAndPortToUse()
             );
@@ -313,6 +308,11 @@ public class QueryResource implements QueryCountStatsProvider
         return responseBuilder
             .header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult())
             .build();
+      }
+      catch (QueryInterruptedException e) {
+        // make sure to close yielder if anything happened before starting to serialize the response.
+        yielder.close();
+        throw e;
       }
       catch (Exception e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
