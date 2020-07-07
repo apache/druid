@@ -132,7 +132,7 @@ public class CliIndexerServerModule implements Module
         node,
         makeAdjustedServerConfig(config),
         TLSServerConfig,
-        injector.getExistingBinding(Key.get(SslContextFactory.class)),
+        injector.getExistingBinding(Key.get(SslContextFactory.Server.class)),
         injector.getInstance(TLSCertificateChecker.class)
     );
   }

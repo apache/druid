@@ -19,8 +19,10 @@
 
 package org.apache.druid.guice.http;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
+import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -34,10 +36,12 @@ import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
 import org.apache.druid.server.security.Escalator;
 
+import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
 import java.util.Set;
 
 /**
+ *
  */
 public class HttpClientModule implements Module
 {
@@ -55,67 +59,31 @@ public class HttpClientModule implements Module
       ImmutableSet.of(EscalatedGlobal.class, EscalatedClient.class);
 
   private final String propertyPrefix;
-  private Annotation annotation = null;
-  private Class<? extends Annotation> annotationClazz = null;
-  private boolean isEscalated = false;
+  private final Class<? extends Annotation> annotationClazz;
+  private final boolean isEscalated;
 
-  public HttpClientModule(String propertyPrefix)
+  public HttpClientModule(String propertyPrefix, Class<? extends Annotation> annotationClazz)
   {
-    this.propertyPrefix = propertyPrefix;
-  }
+    this.propertyPrefix = Preconditions.checkNotNull(propertyPrefix, "propertyPrefix");
+    this.annotationClazz = Preconditions.checkNotNull(annotationClazz, "annotationClazz");
 
-  public HttpClientModule(String propertyPrefix, Class<? extends Annotation> annotation)
-  {
-    this.propertyPrefix = propertyPrefix;
-    this.annotationClazz = annotation;
-
-    isEscalated = ESCALATING_ANNOTATIONS.contains(annotationClazz);
-  }
-
-  public HttpClientModule(String propertyPrefix, Annotation annotation)
-  {
-    this.propertyPrefix = propertyPrefix;
-    this.annotation = annotation;
+    isEscalated = ESCALATING_ANNOTATIONS.contains(this.annotationClazz);
   }
 
   @Override
   public void configure(Binder binder)
   {
-    if (annotation != null) {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotation);
-      binder.bind(HttpClient.class)
-            .annotatedWith(annotation)
-            .toProvider(new HttpClientProvider(annotation, isEscalated))
-            .in(LazySingleton.class);
-    } else if (annotationClazz != null) {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
-      binder.bind(HttpClient.class)
-            .annotatedWith(annotationClazz)
-            .toProvider(new HttpClientProvider(annotationClazz, isEscalated))
-            .in(LazySingleton.class);
-    } else {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class);
-      binder.bind(HttpClient.class)
-            .toProvider(new HttpClientProvider(isEscalated))
-            .in(LazySingleton.class);
-    }
+    JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
+    binder.bind(HttpClient.class)
+          .annotatedWith(annotationClazz)
+          .toProvider(new HttpClientProvider(annotationClazz, isEscalated))
+          .in(LazySingleton.class);
   }
 
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
-    private boolean isEscalated;
+    private final boolean isEscalated;
     private Escalator escalator;
-
-    public HttpClientProvider(boolean isEscalated)
-    {
-      this.isEscalated = isEscalated;
-    }
-
-    public HttpClientProvider(Annotation annotation, boolean isEscalated)
-    {
-      super(annotation);
-      this.isEscalated = isEscalated;
-    }
 
     public HttpClientProvider(Class<? extends Annotation> annotationClazz, boolean isEscalated)
     {
@@ -144,8 +112,10 @@ public class HttpClientModule implements Module
           )
           .withUnusedConnectionTimeoutDuration(config.getUnusedConnectionTimeout());
 
-      if (getSslContextBinding() != null) {
-        builder.withSslContext(getSslContextBinding().getProvider().get());
+      final Binding<SSLContext> sslContextBinding = getSslContextBinding();
+
+      if (sslContextBinding != null) {
+        builder.withSslContext(sslContextBinding.getProvider().get());
       }
 
       HttpClient client = HttpClientInit.createClient(
