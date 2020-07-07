@@ -74,16 +74,20 @@ Docker compose yamls located in "docker" folder
 
 docker-compose.base.yml - Base file that defines all containers for integration test
 
-docker-compose.yml - Defines minimal Druid cluster that can be used for non cluster tests
+docker-compose.yml - Defines Druid cluster with default configuration that is use for running integration tests in Travis CI.
     
     docker-compose -f docker-compose.yml up
     // DRUID_INTEGRATION_TEST_GROUP - this variable is used in Druid docker container for "security" and "query" test group. Use next docker-compose if you want to run security/query tests.
     DRUID_INTEGRATION_TEST_GROUP=security docker-compose -f docker-compose.yml up
 
-docker-compose.override-env.yml - the same configuration as docker-compose.yml + override-env variable that needed to run cloud tests 
+docker-compose.override-env.yml - Defines Druid cluster with default configuration plus any additional and/or overriden configurations from override-env file.
 
     // OVERRIDE_ENV - variable that must contains path to Druid configuration file 
     OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
+    
+docker-compose.security.yml - Defines three additional Druid router services with permissive tls, no client auth tls, and custom check tls respectively. This is only needed for the "security" group integration test. 
+
+    docker-compose -f docker-compose.druid-hadoop.yml up 
     
 docker-compose.druid-hadoop.yml - for starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial
 
