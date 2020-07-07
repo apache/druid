@@ -1268,8 +1268,8 @@
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
                         <exclude>org/apache/druid/cli/Cli*</exclude>
                         <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
-                        <exclude>org/apache/druid/server/initialization/*Module</exclude>
-                        <exclude>org/apache/druid/server/initialization/jetty/*Module</exclude>
+                        <exclude>org/apache/druid/server/initialization/*Module*</exclude>
+                        <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
                         <exclude>org/apache/druid/guice/http/*</exclude>
 
                         <!-- Ignore generated code -->
