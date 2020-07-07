@@ -34,7 +34,7 @@ import java.util.Set;
  * This class is deprecated, use SelectorDimFilter instead: {@link SelectorDimFilter}
  */
 @Deprecated
-public class ExtractionDimFilter implements DimFilter
+public class ExtractionDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;
   private final String value;

@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.RE;
@@ -81,6 +82,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   private final int parallelism;
   private final long targetTimeNanos;
   private final Consumer<MergeCombineMetrics> metricsReporter;
+
   private final CancellationGizmo cancellationGizmo;
 
   public ParallelMergeCombiningSequence(
@@ -152,6 +154,12 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     return finalOutSequence.toYielder(initValue, accumulator);
   }
 
+  @VisibleForTesting
+  public CancellationGizmo getCancellationGizmo()
+  {
+    return cancellationGizmo;
+  }
+
   /**
    * Create an output {@link Sequence} that wraps the output {@link BlockingQueue} of a
    * {@link MergeCombinePartitioningAction}
@@ -166,6 +174,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<T, Iterator<T>>()
         {
+          private boolean shouldCancelOnCleanup = true;
           @Override
           public Iterator<T> make()
           {
@@ -201,6 +210,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                   }
 
                   if (currentBatch.isTerminalResult()) {
+                    shouldCancelOnCleanup = false;
                     return false;
                   }
                   return true;
@@ -228,7 +238,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           @Override
           public void cleanup(Iterator<T> iterFromMake)
           {
-            // nothing to cleanup
+            if (shouldCancelOnCleanup) {
+              cancellationGizmo.cancel(new RuntimeException("Already closed"));
+            }
           }
         }
     );

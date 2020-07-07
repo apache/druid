@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.benchmark.datagen;
+package org.apache.druid.segment.generator;
 
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
@@ -35,8 +35,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexIndexableAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.generator.DataGenerator;
-import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
