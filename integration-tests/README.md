@@ -105,9 +105,9 @@ mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=t
 2. Run druid cluster by docker-compose:
 
 ```
-- Basic Druid cluster (skip if running Druid cluster with override configs):
+- Basic Druid cluster (skip this if running Druid cluster with override configs):
 docker-compose -f integration-tests/docker/docker-compose.yml up
-- Druid cluster with override configs (skip if running Basic Druid cluster):
+- Druid cluster with override configs (skip this if running Basic Druid cluster):
 OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up
 - Druid hadoop (if needed):
 docker-compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up
