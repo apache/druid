@@ -517,15 +517,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
-        return new CacheKeyBuilder(GROUPBY_QUERY)
+        CacheKeyBuilder builder = new CacheKeyBuilder(GROUPBY_QUERY)
             .appendByte(CACHE_STRATEGY_VERSION)
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimFilter())
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheables(query.getDimensions())
-            .appendCacheable(query.getVirtualColumns())
-            .appendCacheable(query.getLimitSpec())
-            .build();
+            .appendCacheable(query.getVirtualColumns());
+        if (query.isApplyLimitPushDown()) {
+          builder.appendCacheable(query.getLimitSpec());
+        }
+        return builder.build();
       }
 
       @Override

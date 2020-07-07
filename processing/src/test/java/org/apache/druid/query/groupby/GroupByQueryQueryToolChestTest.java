@@ -178,20 +178,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
         .build();
 
-    final GroupByQuery queryNoLimit = GroupByQuery
-        .builder()
-        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
-        .setPostAggregatorSpecs(
-            ImmutableList.of(
-                new ExpressionPostAggregator("post", "alias - 'x'", null, TestExprMacroTable.INSTANCE)
-            )
-        )
-        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
-        .build();
-
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
         null
     ).getCacheStrategy(query1);
@@ -204,10 +190,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     Assert.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
-    ));
-    Assert.assertFalse(Arrays.equals(
-        strategy1.computeCacheKey(query1),
-        strategy2.computeCacheKey(queryNoLimit)
     ));
   }
 
@@ -946,6 +928,64 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     ResultRow fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
     Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
+  }
+
+  @Test
+  public void testQueryCacheKeyWithLimitSpec()
+  {
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                null,
+                100
+            )
+        )
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "true"))
+        .build();
+
+    final GroupByQuery query2 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+               null,
+                1000
+            )
+        )
+        .build();
+
+    final GroupByQuery queryNoLimit = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query1);
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query2);
+
+    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeCacheKey(query1),
+        strategy2.computeCacheKey(queryNoLimit)
+    ));
   }
 
   private static ResultRow makeRow(final GroupByQuery query, final String timestamp, final Object... vals)
