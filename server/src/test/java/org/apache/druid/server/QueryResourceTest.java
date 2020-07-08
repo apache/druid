@@ -189,7 +189,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
-    queryResource = createQueryResource(new ResponseContextConfig());
+    queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
   }
 
   private QueryResource createQueryResource(ResponseContextConfig responseContextConfig)
@@ -237,22 +237,7 @@ public class QueryResourceTest
   public void testTruncatedResponseContextShouldFail() throws IOException
   {
     expectPermissiveHappyPathAuth();
-    final QueryResource queryResource = createQueryResource(
-        new ResponseContextConfig()
-        {
-          @Override
-          public boolean shouldFailOnTruncatedResponseContext()
-          {
-            return true;
-          }
-
-          @Override
-          public int getMaxResponseContextHeaderSize()
-          {
-            return 0;
-          }
-        }
-    );
+    final QueryResource queryResource = createQueryResource(ResponseContextConfig.forTest(true, 0));
 
     Response response = queryResource.doPost(
         new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
@@ -276,22 +261,7 @@ public class QueryResourceTest
   public void testTruncatedResponseContextShouldSucceed() throws IOException
   {
     expectPermissiveHappyPathAuth();
-    final QueryResource queryResource = createQueryResource(
-        new ResponseContextConfig()
-        {
-          @Override
-          public boolean shouldFailOnTruncatedResponseContext()
-          {
-            return false;
-          }
-
-          @Override
-          public int getMaxResponseContextHeaderSize()
-          {
-            return 0;
-          }
-        }
-    );
+    final QueryResource queryResource = createQueryResource(ResponseContextConfig.forTest(false, 0));
 
     Response response = queryResource.doPost(
         new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
@@ -508,7 +478,7 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new ResponseContextConfig(),
+        ResponseContextConfig.newConfig(true),
         DRUID_NODE
     );
 
@@ -623,7 +593,7 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new ResponseContextConfig(),
+        ResponseContextConfig.newConfig(true),
         DRUID_NODE
     );
 
@@ -746,7 +716,7 @@ public class QueryResourceTest
         queryScheduler,
         new AuthConfig(),
         authMapper,
-        new ResponseContextConfig(),
+        ResponseContextConfig.newConfig(true),
         DRUID_NODE
     );
 
@@ -1004,7 +974,7 @@ public class QueryResourceTest
         scheduler,
         new AuthConfig(),
         null,
-        new ResponseContextConfig(),
+        ResponseContextConfig.newConfig(true),
         DRUID_NODE
     );
   }

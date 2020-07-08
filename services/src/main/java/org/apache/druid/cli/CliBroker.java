@@ -103,12 +103,7 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
           binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
-          binder.bindConstant()
-                .annotatedWith(Names.named(ResponseContextConfig.SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY))
-                .to(false);
-          binder.bindConstant()
-                .annotatedWith(Names.named(ResponseContextConfig.MAX_RESPONSE_CONTEXT_HEADER_SIZE))
-                .to(ResponseContextConfig.DEFAULT_RESPONSE_CTX_HEADER_LEN_LIMIT);
+          binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
           LifecycleModule.register(binder, BrokerServerView.class);

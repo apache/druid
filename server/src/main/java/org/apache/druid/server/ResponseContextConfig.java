@@ -19,27 +19,36 @@
 
 package org.apache.druid.server;
 
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import org.apache.druid.query.context.ResponseContext;
 
 public class ResponseContextConfig
 {
-  public static final String SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY = "shouldFailOnTruncatedResponseContext";
-  public static final String MAX_RESPONSE_CONTEXT_HEADER_SIZE = "maxResponseContextHeaderSize";
-
   /**
    * The maximum length of {@link ResponseContext} serialized string that might be put into an HTTP response header
    */
   public static final int DEFAULT_RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
-  @Inject
-  @Named(SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY)
-  private boolean shouldFailOnTruncatedResponseContext;
+  private final boolean shouldFailOnTruncatedResponseContext;
+  private final int maxResponseContextHeaderSize;
 
-  @Inject
-  @Named(MAX_RESPONSE_CONTEXT_HEADER_SIZE)
-  private int maxResponseContextHeaderSize;
+  public static ResponseContextConfig newConfig(boolean shouldFailOnTruncatedResponseContext)
+  {
+    return new ResponseContextConfig(shouldFailOnTruncatedResponseContext, DEFAULT_RESPONSE_CTX_HEADER_LEN_LIMIT);
+  }
+
+  public static ResponseContextConfig forTest(
+      boolean shouldFailOnTruncatedResponseContext,
+      int maxResponseContextHeaderSize
+  )
+  {
+    return new ResponseContextConfig(shouldFailOnTruncatedResponseContext, maxResponseContextHeaderSize);
+  }
+
+  private ResponseContextConfig(boolean shouldFailOnTruncatedResponseContext, int maxResponseContextHeaderSize)
+  {
+    this.shouldFailOnTruncatedResponseContext = shouldFailOnTruncatedResponseContext;
+    this.maxResponseContextHeaderSize = maxResponseContextHeaderSize;
+  }
 
   public boolean shouldFailOnTruncatedResponseContext()
   {

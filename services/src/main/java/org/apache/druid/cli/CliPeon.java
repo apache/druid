@@ -195,12 +195,7 @@ public class CliPeon extends GuiceRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-            binder.bindConstant()
-                  .annotatedWith(Names.named(ResponseContextConfig.SHOUD_FAIL_ON_TRUNCATED_RESPONSE_CONTEXT_PROPERTY))
-                  .to(true);
-            binder.bindConstant()
-                  .annotatedWith(Names.named(ResponseContextConfig.MAX_RESPONSE_CONTEXT_HEADER_SIZE))
-                  .to(ResponseContextConfig.DEFAULT_RESPONSE_CTX_HEADER_LEN_LIMIT);
+            binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
 
             JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
 
