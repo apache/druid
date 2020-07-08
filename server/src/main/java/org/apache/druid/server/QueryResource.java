@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryUnsupportedException;
@@ -309,7 +310,7 @@ public class QueryResource implements QueryCountStatsProvider
             .header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult())
             .build();
       }
-      catch (QueryInterruptedException e) {
+      catch (QueryException e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
         yielder.close();
         throw e;
