@@ -681,7 +681,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
                   curator.delete().guaranteed().forPath(event.getData().getPath());
                   countDownLatch.countDown();
                 } else {
-                  Assert.fail("The segment is assigned to the server more times than expected");
+                  Assert.fail("The segment path " + event.getData().getPath()
+                              + " is assigned to the server more times than expected. Expected only " + latchCount);
                 }
               }
           }
