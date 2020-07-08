@@ -15,11 +15,6 @@
 
 version: "2.2"
 services:
-  druid-zookeeper-kafka:
-    extends:
-      file: docker-compose.base.yml
-      service: druid-zookeeper-kafka
-
   druid-router-permissive-tls:
     extends:
       file: docker-compose.base.yml
@@ -73,10 +68,3 @@ services:
       - druid-middlemanager
       - druid-broker
       - druid-router
-
-networks:
-  druid-it-net:
-    name: druid-it-net
-    ipam:
-      config:
-        - subnet: 172.172.172.0/2

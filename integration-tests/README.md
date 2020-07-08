@@ -87,9 +87,10 @@ docker-compose.override-env.yml - Defines Druid cluster with default configurati
     // OVERRIDE_ENV - variable that must contains path to Druid configuration file 
     OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
     
-docker-compose.security.yml - Defines three additional Druid router services with permissive tls, no client auth tls, and custom check tls respectively. This is only needed for the "security" group integration test. 
+docker-compose.security.yml - Defines three additional Druid router services with permissive tls, no client auth tls, and custom check tls respectively. 
+This is meant to be use together with docker-compose.yml or docker-compose.override-env.yml and is only needed for the "security" group integration test. 
 
-    docker-compose -f docker-compose.security.yml up 
+    docker-compose -f docker-compose.yml -f docker-compose.security.yml up 
     
 docker-compose.druid-hadoop.yml - for starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial
 
