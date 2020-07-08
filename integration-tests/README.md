@@ -279,8 +279,8 @@ credentials/configs may need to be set in the same file as your Druid's Hadoop c
 If you are running ITHadoopIndexTest with your own Druid + Hadoop cluster, please follow the below steps:
 - Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
   located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
-- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
-  at /batch_index/tsv/
+- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/hadoop_tsv to your HDFS
+  at /batch_index/hadoop_tsv/
 If using the Docker-based Hadoop container, the steps above are automatically done by the integration tests.
 
 When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`, due to https://github.com/apache/druid/issues/9788.

@@ -50,6 +50,9 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
   public enum InputFormatDetails
   {
+    AVRO("avro_ocf", ".avro", "/avro"),
+    CSV("csv", ".csv", "/csv"),
+    TSV("tsv", ".tsv", "/tsv"),
     ORC("orc", ".orc", "/orc"),
     JSON("json", ".json", "/json"),
     PARQUET("parquet", ".parquet", "/parquet");
