@@ -258,6 +258,7 @@ hostname
 hostnames
 http
 https
+idempotency
 i.e.
 influxdb
 ingestionSpec
@@ -354,6 +355,7 @@ rsync
 runtime
 schemas
 searchable
+seekable-stream
 servlet
 simple-client-sslcontext
 sharded
@@ -370,6 +372,7 @@ subqueries
 subquery
 subsecond
 substring
+subtasks
 symlink
 tiering
 timeseries
