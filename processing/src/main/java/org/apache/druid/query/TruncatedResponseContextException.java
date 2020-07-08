@@ -25,9 +25,9 @@ import org.apache.druid.java.util.common.StringUtils;
  * This exception is thrown when {@link org.apache.druid.query.context.ResponseContext} is truncated after serialization
  * in historicals or realtime tasks. The serialized response context can be truncated if its size is larger than
  * {@code QueryResource#RESPONSE_CTX_HEADER_LEN_LIMIT}.
- * 
- * @see org.apache.druid.query.context.ResponseContext#serializeWith
- * @see QueryContexts#shouldFailOnTruncatedResponseContext
+ *
+ * See {@link org.apache.druid.query.context.ResponseContext#serializeWith} and
+ * {@code ResponseContextConfig#shouldFailOnTruncatedResponseContext}.
  */
 public class TruncatedResponseContextException extends RuntimeException
 {
