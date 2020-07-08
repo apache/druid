@@ -38,7 +38,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   @Override
   StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config)
   {
-    return new KafkaAdminClient(config.getKafkaHost(), config);
+    return new KafkaAdminClient(config);
   }
 
   @Override

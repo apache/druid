@@ -40,11 +40,11 @@ public class KafkaAdminClient implements StreamAdminClient
 {
   private AdminClient adminClient;
 
-  public KafkaAdminClient(String kafkaInternalHost, IntegrationTestingConfig config)
+  public KafkaAdminClient(IntegrationTestingConfig config)
   {
     Properties properties = new Properties();
     KafkaUtil.addPropertiesFromTestConfig(config, properties);
-    properties.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaInternalHost);
+    properties.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, config.getKafkaHost());
     adminClient = AdminClient.create(properties);
   }
 
