@@ -36,7 +36,7 @@ Support for Apache Ranger authorization consists of three elements:
 * providing the service definition for Druid to Apache Ranger
  
 ### Enabling the extension
-Ensure that you have a valid authentication chain and escalator set in your `common.runtime.properties`. For every authenticator your wish to use the authorizer for, set `druid.auth.authenticator.<authenticatorName>.authorizerName` to the name you will give the authorizer, e.g. `ranger`. 
+Ensure that you have a valid authenticator chain and escalator set in your `common.runtime.properties`. For every authenticator your wish to use the authorizer for, set `druid.auth.authenticator.<authenticatorName>.authorizerName` to the name you will give the authorizer, e.g. `ranger`. 
 
 Then add the following and amend to your needs (in case you need to use multiple authorizers):
 
