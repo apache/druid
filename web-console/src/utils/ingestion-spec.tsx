@@ -39,9 +39,14 @@ export const EMPTY_ARRAY: any[] = [];
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
+export interface TaskContext {
+  [key: string]: any;
+}
+
 export interface IngestionSpec {
   type: IngestionType;
   spec: IngestionSpecInner;
+  context?: TaskContext;
 }
 
 export interface IngestionSpecInner {
@@ -296,13 +301,14 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 }
 
 /**
- * Make sure that any extra junk in the spec other than 'type' and 'spec' is removed
+ * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
  * @param spec
  */
 export function cleanSpec(spec: IngestionSpec): IngestionSpec {
   return {
     type: spec.type,
     spec: spec.spec,
+    context: spec.context,
   };
 }
 

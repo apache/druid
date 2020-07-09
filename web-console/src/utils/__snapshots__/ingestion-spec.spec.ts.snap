@@ -2,6 +2,9 @@
 
 exports[`ingestion-spec upgrades 1`] = `
 Object {
+  "context": Object {
+    "forceTimeChunkLock": true,
+  },
   "spec": Object {
     "dataSchema": Object {
       "dataSource": "wikipedia",

@@ -89,6 +89,9 @@ describe('ingestion-spec', () => {
         ],
       },
     },
+    context: {
+      forceTimeChunkLock: true,
+    },
   };
 
   it('upgrades', () => {
@@ -112,11 +115,17 @@ describe('ingestion-spec', () => {
         spec: {
           dataSchema: {},
         },
+        context: {
+          forceTimeChunkLock: true,
+        },
       } as any),
     ).toEqual({
       type: 'index_parallel',
       spec: {
         dataSchema: {},
+      },
+      context: {
+        forceTimeChunkLock: true,
       },
     });
   });
