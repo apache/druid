@@ -38,6 +38,7 @@ import org.apache.druid.server.security.Escalator;
 
 import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
+import java.time.Duration;
 import java.util.Set;
 
 /**
@@ -105,12 +106,12 @@ public class HttpClientModule implements Module
       final HttpClientConfig.Builder builder = HttpClientConfig
           .builder()
           .withNumConnections(config.getNumConnections())
-          .withReadTimeout(config.getReadTimeout())
+          .withReadTimeout(Duration.ofMillis(config.getReadTimeout().getMillis()))
           .withWorkerCount(config.getNumMaxThreads())
           .withCompressionCodec(
               HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))
           )
-          .withUnusedConnectionTimeoutDuration(config.getUnusedConnectionTimeout());
+          .withUnusedConnectionTimeoutDuration(Duration.ofMillis(config.getUnusedConnectionTimeout().getMillis()));
 
       final Binding<SSLContext> sslContextBinding = getSslContextBinding();
 

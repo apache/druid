@@ -47,7 +47,6 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -57,6 +56,7 @@ import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -101,7 +101,7 @@ public abstract class IndexTaskClient implements AutoCloseable
       HttpClient httpClient,
       ObjectMapper objectMapper,
       TaskInfoProvider taskInfoProvider,
-      Duration httpTimeout,
+      org.joda.time.Duration httpTimeout,
       String callerId,
       int numThreads,
       long numRetries
@@ -110,7 +110,7 @@ public abstract class IndexTaskClient implements AutoCloseable
     this.httpClient = httpClient;
     this.objectMapper = objectMapper;
     this.taskInfoProvider = taskInfoProvider;
-    this.httpTimeout = httpTimeout;
+    this.httpTimeout = Duration.ofMillis(httpTimeout.getMillis());
     this.retryPolicyFactory = initializeRetryPolicyFactory(numRetries);
     this.executorService = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(
@@ -379,12 +379,12 @@ public abstract class IndexTaskClient implements AutoCloseable
                 headerId,
                 TASK_MISMATCH_RETRY_DELAY_SECONDS
             );
-            delay = Duration.standardSeconds(TASK_MISMATCH_RETRY_DELAY_SECONDS);
+            delay = Duration.ofSeconds(TASK_MISMATCH_RETRY_DELAY_SECONDS);
           } else {
-            delay = retryPolicy.getAndIncrementRetryDelay();
+            delay = Duration.ofMillis(retryPolicy.getAndIncrementRetryDelay().getMillis());
           }
         } else {
-          delay = retryPolicy.getAndIncrementRetryDelay();
+          delay = Duration.ofMillis(retryPolicy.getAndIncrementRetryDelay().getMillis());
         }
         final String urlForLog = request.getUrl().toString();
         if (!retry) {
@@ -397,12 +397,12 @@ public abstract class IndexTaskClient implements AutoCloseable
           throw e;
         } else {
           try {
-            final long sleepTime = delay.getMillis();
+            final long sleepTime = delay.toMillis();
             log.debug(
                 "Bad response HTTP [%s] from [%s]; will try again in [%s] (body/exception: [%s])",
                 (response != null ? response.getStatus().getCode() : "no response"),
                 urlForLog,
-                new Duration(sleepTime).toString(),
+                Duration.ofMillis(sleepTime).toString(),
                 (response != null ? response.getContent() : e.getMessage())
             );
             Thread.sleep(sleepTime);

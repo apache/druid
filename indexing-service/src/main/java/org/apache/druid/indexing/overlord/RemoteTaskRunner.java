@@ -84,13 +84,13 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -191,7 +191,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     this.jsonMapper = jsonMapper;
     this.config = config;
-    this.shutdownTimeout = config.getTaskShutdownLinkTimeout().toStandardDuration(); // Fail fast
+    this.shutdownTimeout = Duration.ofMillis(config.getTaskShutdownLinkTimeout().toStandardDuration().getMillis()); // Fail fast
     this.indexerZkConfig = indexerZkConfig;
     this.cf = cf;
     this.workerPathCache = pathChildrenCacheFactory.build().make(cf, indexerZkConfig.getAnnouncementsPath());

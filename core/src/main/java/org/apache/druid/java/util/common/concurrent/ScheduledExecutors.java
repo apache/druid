@@ -133,6 +133,11 @@ public class ScheduledExecutors
     scheduleAtFixedRate(exec, rate, rate, callable);
   }
 
+  public static void scheduleAtFixedRate(ScheduledExecutorService exec, java.time.Duration rate, Callable<Signal> callable)
+  {
+    scheduleAtFixedRate(exec, new Duration(rate.toMillis()), callable);
+  }
+
   public static void scheduleAtFixedRate(
       final ScheduledExecutorService exec,
       final Duration initialDelay,

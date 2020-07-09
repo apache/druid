@@ -17,35 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.http.client;
+package org.apache.druid.java.util.common.config;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.java.util.http.client.auth.Credentials;
-import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.skife.config.Coercer;
+import org.skife.config.Coercible;
 
 import java.time.Duration;
 
 /**
- */
-public class CredentialedHttpClient extends AbstractHttpClient
+*/
+public class JavaDurationCoercible implements Coercible<Duration>
 {
-
-  private final Credentials creds;
-  private final HttpClient delegate;
-
-  public CredentialedHttpClient(Credentials creds, HttpClient delegate)
-  {
-    this.creds = creds;
-    this.delegate = delegate;
-  }
-
   @Override
-  public <Intermediate, Final> ListenableFuture<Final> go(
-      Request request,
-      HttpResponseHandler<Intermediate, Final> handler,
-      Duration requestReadTimeout
-  )
+  public Coercer<Duration> accept(Class<?> clazz)
   {
-    return delegate.go(creds.addCredentials(request), handler, requestReadTimeout);
+    if (Duration.class != clazz) {
+      return null;
+    }
+
+    return new Coercer<Duration>()
+    {
+      @Override
+      public Duration coerce(String value)
+      {
+        return (value == null) ? Duration.ZERO : Duration.parse(value);
+      }
+    };
   }
 }

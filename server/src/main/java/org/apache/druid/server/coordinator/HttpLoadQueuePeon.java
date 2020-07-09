@@ -42,7 +42,6 @@ import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.joda.time.Duration;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
@@ -132,7 +131,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
           new URL(baseUrl),
           StringUtils.nonStrictFormat(
               "druid-internal/v1/segments/changeRequests?timeout=%d",
-              config.getHttpLoadQueuePeonHostTimeout().getMillis()
+              config.getHttpLoadQueuePeonHostTimeout().toMillis()
           )
       );
     }
@@ -190,7 +189,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
               .setContent(requestBodyWriter.writeValueAsBytes(newRequests)),
           responseHandler,
-          new Duration(config.getHttpLoadQueuePeonHostTimeout().getMillis() + 5000)
+          config.getHttpLoadQueuePeonHostTimeout().plusSeconds(5L)
       );
 
       Futures.addCallback(
@@ -324,7 +323,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
       ScheduledExecutors.scheduleAtFixedRate(
           processingExecutor,
-          new Duration(config.getHttpLoadQueuePeonRepeatDelay()),
+          config.getHttpLoadQueuePeonRepeatDelay(),
           () -> {
             if (!stopped) {
               doSegmentManagement();
@@ -511,7 +510,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       if (scheduleTime < 0) {
         scheduleTime = System.currentTimeMillis();
         return false;
-      } else if (System.currentTimeMillis() - scheduleTime > config.getLoadTimeoutDelay().getMillis()) {
+      } else if (System.currentTimeMillis() - scheduleTime > config.getLoadTimeoutDelay().toMillis()) {
         return true;
       } else {
         return false;

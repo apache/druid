@@ -21,7 +21,8 @@ package org.apache.druid.java.util.http.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.joda.time.Duration;
+
+import java.time.Duration;
 
 /**
  * Interface for Async HTTP client libraries.

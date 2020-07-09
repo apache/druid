@@ -20,11 +20,11 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.java.util.common.config.Config;
-import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 import org.skife.config.ConfigurationObjectFactory;
 
+import java.time.Duration;
 import java.util.Properties;
 
 /**
@@ -39,14 +39,14 @@ public class DruidCoordinatorConfigTest
     //with defaults
     DruidCoordinatorConfig config = factory.build(DruidCoordinatorConfig.class);
 
-    Assert.assertEquals(new Duration("PT300s"), config.getCoordinatorStartDelay());
-    Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
-    Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
-    Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
-    Assert.assertEquals(-1000, config.getCoordinatorKillDurationToRetain().getMillis());
+    Assert.assertEquals(Duration.parse("PT300s"), config.getCoordinatorStartDelay());
+    Assert.assertEquals(Duration.parse("PT60s"), config.getCoordinatorPeriod());
+    Assert.assertEquals(Duration.parse("PT1800s"), config.getCoordinatorIndexingPeriod());
+    Assert.assertEquals(86400000L, config.getCoordinatorKillPeriod().toMillis());
+    Assert.assertEquals(-1000L, config.getCoordinatorKillDurationToRetain().toMillis());
     Assert.assertEquals(0, config.getCoordinatorKillMaxSegments());
-    Assert.assertEquals(new Duration(15 * 60 * 1000), config.getLoadTimeoutDelay());
-    Assert.assertEquals(Duration.millis(50), config.getLoadQueuePeonRepeatDelay());
+    Assert.assertEquals(Duration.ofMinutes(15L), config.getLoadTimeoutDelay());
+    Assert.assertEquals(Duration.ofMillis(50L), config.getLoadQueuePeonRepeatDelay());
 
     //with non-defaults
     Properties props = new Properties();
@@ -64,13 +64,13 @@ public class DruidCoordinatorConfigTest
     factory = Config.createFactory(props);
     config = factory.build(DruidCoordinatorConfig.class);
 
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorStartDelay());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorPeriod());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorIndexingPeriod());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPeriod());
-    Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillDurationToRetain());
+    Assert.assertEquals(Duration.parse("PT1s"), config.getCoordinatorStartDelay());
+    Assert.assertEquals(Duration.parse("PT1s"), config.getCoordinatorPeriod());
+    Assert.assertEquals(Duration.parse("PT1s"), config.getCoordinatorIndexingPeriod());
+    Assert.assertEquals(Duration.parse("PT1s"), config.getCoordinatorKillPeriod());
+    Assert.assertEquals(Duration.parse("PT1s"), config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());
-    Assert.assertEquals(new Duration("PT1s"), config.getLoadTimeoutDelay());
-    Assert.assertEquals(Duration.millis(100), config.getLoadQueuePeonRepeatDelay());
+    Assert.assertEquals(Duration.parse("PT1s"), config.getLoadTimeoutDelay());
+    Assert.assertEquals(Duration.ofMillis(100L), config.getLoadQueuePeonRepeatDelay());
   }
 }

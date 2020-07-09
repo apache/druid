@@ -37,12 +37,12 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import java.io.InputStream;
 import java.net.URL;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -207,7 +207,7 @@ public class ChangeRequestHttpSyncer<T>
               .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           responseHandler,
-          Duration.millis(serverHttpTimeout)
+          Duration.ofMillis(serverHttpTimeout)
       );
 
       log.debug("Sent sync request to [%s]", logIdentity);

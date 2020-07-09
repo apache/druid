@@ -292,7 +292,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
               failAssign(segmentHolder, e);
             }
           },
-          config.getLoadTimeoutDelay().getMillis(),
+          config.getLoadTimeoutDelay().toMillis(),
           TimeUnit.MILLISECONDS
       );
     }

@@ -27,7 +27,6 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.joda.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -42,6 +41,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -153,7 +153,7 @@ public class JankyServersTest
   {
     final Lifecycle lifecycle = new Lifecycle();
     try {
-      final HttpClientConfig config = HttpClientConfig.builder().withReadTimeout(new Duration(100)).build();
+      final HttpClientConfig config = HttpClientConfig.builder().withReadTimeout(Duration.ofMillis(100L)).build();
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
       final ListenableFuture<StatusResponseHolder> future = client
           .go(
@@ -181,13 +181,13 @@ public class JankyServersTest
   {
     final Lifecycle lifecycle = new Lifecycle();
     try {
-      final HttpClientConfig config = HttpClientConfig.builder().withReadTimeout(new Duration(86400L * 365)).build();
+      final HttpClientConfig config = HttpClientConfig.builder().withReadTimeout(Duration.ofDays(365L)).build();
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
       final ListenableFuture<StatusResponseHolder> future = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", silentServerSocket.getLocalPort()))),
               StatusResponseHandler.getInstance(),
-              new Duration(100L)
+              Duration.ofMillis(100L)
           );
 
       Throwable e = null;
@@ -212,7 +212,7 @@ public class JankyServersTest
     try {
       final HttpClientConfig config = HttpClientConfig.builder()
                                                       .withSslContext(SSLContext.getDefault())
-                                                      .withSslHandshakeTimeout(new Duration(100))
+                                                      .withSslHandshakeTimeout(Duration.ofMillis(100L))
                                                       .build();
       final HttpClient client = HttpClientInit.createClient(config, lifecycle);
 

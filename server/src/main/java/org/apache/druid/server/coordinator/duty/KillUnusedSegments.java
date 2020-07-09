@@ -60,13 +60,13 @@ public class KillUnusedSegments implements CoordinatorDuty
       DruidCoordinatorConfig config
   )
   {
-    this.period = config.getCoordinatorKillPeriod().getMillis();
+    this.period = config.getCoordinatorKillPeriod().toMillis();
     Preconditions.checkArgument(
-        this.period > config.getCoordinatorIndexingPeriod().getMillis(),
+        this.period > config.getCoordinatorIndexingPeriod().toMillis(),
         "coordinator kill period must be greater than druid.coordinator.period.indexingPeriod"
     );
 
-    this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
+    this.retainDuration = config.getCoordinatorKillDurationToRetain().toMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "coordinator kill retainDuration must be >= 0");
 
     this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();

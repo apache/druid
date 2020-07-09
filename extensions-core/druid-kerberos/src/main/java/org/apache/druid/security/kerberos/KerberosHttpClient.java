@@ -31,11 +31,11 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.joda.time.Duration;
 
 import java.net.CookieManager;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

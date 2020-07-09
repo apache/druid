@@ -31,6 +31,7 @@ public class Config
   {
     ConfigurationObjectFactory configFactory = new ConfigurationObjectFactory(props);
     configFactory.addCoercible(new DurationCoercible());
+    configFactory.addCoercible(new JavaDurationCoercible());
     return configFactory;
   }
 }

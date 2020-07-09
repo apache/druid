@@ -39,11 +39,11 @@ import org.apache.druid.server.DruidNode;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -179,7 +179,7 @@ public class CommonCacheNotifier
         ListenableFuture<StatusResponseHolder> future = httpClient.go(
             req,
             new ResponseHandler(),
-            Duration.millis(itemConfig.getCacheNotificationTimeout())
+            Duration.ofMillis(itemConfig.getCacheNotificationTimeout())
         );
         futures.add(future);
       }

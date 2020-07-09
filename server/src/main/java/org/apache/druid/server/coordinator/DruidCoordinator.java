@@ -75,9 +75,10 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -571,8 +572,8 @@ public class DruidCoordinator
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
         ScheduledExecutors.scheduleWithFixedDelay(
             exec,
-            config.getCoordinatorStartDelay(),
-            dutiesRunnable.rhs,
+            org.joda.time.Duration.millis(config.getCoordinatorStartDelay().toMillis()),
+            org.joda.time.Duration.millis(dutiesRunnable.rhs.toMillis()),
             new Callable<ScheduledExecutors.Signal>()
             {
               private final DutiesRunnable theRunnable = dutiesRunnable.lhs;

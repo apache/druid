@@ -41,12 +41,12 @@ import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -96,7 +96,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             10,
-            Duration.millis(0)
+            Duration.ZERO
         )
     );
 
@@ -286,11 +286,11 @@ public class LoadQueuePeonTest extends CuratorTestBase
             null,
             null,
             null,
-            new Duration(1),
+            Duration.ofMillis(1L),
             null,
             null,
             10,
-            new Duration("PT1s")
+            Duration.ofSeconds(1L)
         )
     );
 

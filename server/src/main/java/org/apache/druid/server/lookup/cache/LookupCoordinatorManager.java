@@ -68,6 +68,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -800,7 +801,7 @@ public class LookupCoordinatorManager
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .setContent(smileMapper.writeValueAsBytes(lookupsUpdate)),
           makeResponseHandler(returnCode, reasonString),
-          lookupCoordinatorManagerConfig.getHostTimeout()
+          Duration.ofMillis(lookupCoordinatorManagerConfig.getHostTimeout().getMillis())
       ).get()) {
         if (httpStatusIsSuccess(returnCode.get())) {
           try {
@@ -851,7 +852,7 @@ public class LookupCoordinatorManager
           new Request(HttpMethod.GET, url)
               .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           makeResponseHandler(returnCode, reasonString),
-          lookupCoordinatorManagerConfig.getHostTimeout()
+          Duration.ofMillis(lookupCoordinatorManagerConfig.getHostTimeout().getMillis())
       ).get()) {
         if (returnCode.get() == HttpURLConnection.HTTP_OK) {
           try {

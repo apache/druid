@@ -26,11 +26,11 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -104,10 +104,10 @@ public class KillUnusedSegmentsTest
         new TestDruidCoordinatorConfig(
             null,
             null,
-            Duration.parse("PT76400S"),
-            new Duration(1),
-            Duration.parse("PT86400S"),
-            Duration.parse("PT86400S"),
+            Duration.ofSeconds(76400L),
+            Duration.ofMillis(1L),
+            Duration.ofSeconds(86400L),
+            Duration.ofSeconds(86400L),
             1000,
             Duration.ZERO
         )

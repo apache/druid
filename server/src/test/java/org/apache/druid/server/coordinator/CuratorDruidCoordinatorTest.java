@@ -59,7 +59,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,6 +66,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -164,14 +164,14 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     objectMapper = new DefaultObjectMapper();
     druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        new Duration(COORDINATOR_START_DELAY),
-        new Duration(COORDINATOR_PERIOD),
+        Duration.ofMillis(COORDINATOR_START_DELAY),
+        Duration.ofMillis(COORDINATOR_PERIOD),
         null,
         null,
-        new Duration(COORDINATOR_PERIOD),
+        Duration.ofMillis(COORDINATOR_PERIOD),
         null,
         10,
-        new Duration("PT0s")
+        Duration.ZERO
     );
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,

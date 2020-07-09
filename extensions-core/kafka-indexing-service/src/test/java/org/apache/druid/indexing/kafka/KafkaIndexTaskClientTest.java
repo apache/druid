@@ -48,7 +48,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,6 +59,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,7 +79,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   private static final int TEST_PORT = 1234;
   private static final int TEST_TLS_PORT = -1;
   private static final String TEST_DATASOURCE = "test-datasource";
-  private static final Duration TEST_HTTP_TIMEOUT = new Duration(5000);
+  private static final Duration TEST_HTTP_TIMEOUT = Duration.ofSeconds(5L);
   private static final long TEST_NUM_RETRIES = 0;
   private static final String URL_FORMATTER = "http://%s:%d/druid/worker/v1/chat/%s/%s";
 
@@ -1047,7 +1047,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
         long numRetries
     )
     {
-      super(httpClient, jsonMapper, taskInfoProvider, TEST_DATASOURCE, numThreads, TEST_HTTP_TIMEOUT, numRetries);
+      super(httpClient, jsonMapper, taskInfoProvider, TEST_DATASOURCE, numThreads, org.joda.time.Duration.millis(TEST_HTTP_TIMEOUT.toMillis()), numRetries);
     }
 
     @Override

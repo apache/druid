@@ -45,7 +45,6 @@ import org.apache.druid.testing.utils.ITTLSCertificateChecker;
 import org.apache.druid.tests.TestNGGroup;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.Duration;
 import org.testng.Assert;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -55,6 +54,7 @@ import javax.net.ssl.SSLException;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URL;
+import java.time.Duration;
 
 @Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -62,7 +62,7 @@ public class ITTLSTest
 {
   private static final Logger LOG = new Logger(ITTLSTest.class);
 
-  private static final Duration SSL_HANDSHAKE_TIMEOUT = new Duration(30 * 1000);
+  private static final Duration SSL_HANDSHAKE_TIMEOUT = Duration.ofSeconds(30);
 
   private static final int MAX_CONNECTION_EXCEPTION_RETRIES = 30;
 
@@ -348,12 +348,12 @@ public class ITTLSTest
     return HttpClientConfig
         .builder()
         .withNumConnections(httpClientConfig.getNumConnections())
-        .withReadTimeout(httpClientConfig.getReadTimeout())
+        .withReadTimeout(Duration.ofMillis(httpClientConfig.getReadTimeout().getMillis()))
         .withWorkerCount(httpClientConfig.getNumMaxThreads())
         .withCompressionCodec(
             HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(httpClientConfig.getCompressionCodec()))
         )
-        .withUnusedConnectionTimeoutDuration(httpClientConfig.getUnusedConnectionTimeout())
+        .withUnusedConnectionTimeoutDuration(Duration.ofMillis(httpClientConfig.getUnusedConnectionTimeout().getMillis()))
         .withSslHandshakeTimeout(SSL_HANDSHAKE_TIMEOUT)
         .withSslContext(sslContext);
   }

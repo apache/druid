@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.joda.time.Duration;
+import java.time.Duration;
 
 public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
 {

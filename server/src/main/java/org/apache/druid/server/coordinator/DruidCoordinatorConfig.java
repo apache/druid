@@ -19,9 +19,10 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
+
+import java.time.Duration;
 
 /**
  */
@@ -54,13 +55,13 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.load.timeout")
   public Duration getLoadTimeoutDelay()
   {
-    return new Duration(15 * 60 * 1000);
+    return Duration.ofMinutes(15L);
   }
 
   @Config("druid.coordinator.loadqueuepeon.repeatDelay")
   public Duration getLoadQueuePeonRepeatDelay()
   {
-    return Duration.millis(50);
+    return Duration.ofMillis(50L);
   }
 
   @Config("druid.coordinator.loadqueuepeon.type")
@@ -78,13 +79,13 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.loadqueuepeon.http.repeatDelay")
   public Duration getHttpLoadQueuePeonRepeatDelay()
   {
-    return Duration.millis(60000);
+    return Duration.ofSeconds(60L);
   }
 
   @Config("druid.coordinator.loadqueuepeon.http.hostTimeout")
   public Duration getHttpLoadQueuePeonHostTimeout()
   {
-    return Duration.millis(300000);
+    return Duration.ofMinutes(5L);
   }
 
   @Config("druid.coordinator.loadqueuepeon.http.batchSize")

@@ -122,12 +122,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;

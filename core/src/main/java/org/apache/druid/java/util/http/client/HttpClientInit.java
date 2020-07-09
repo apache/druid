@@ -35,7 +35,6 @@ import org.jboss.netty.logging.Slf4JLoggerFactory;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.ThreadNameDeterminer;
 import org.jboss.netty.util.Timer;
-import org.joda.time.Duration;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -47,6 +46,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
+import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -91,11 +91,11 @@ public class HttpClientInit
                       createBootstrap(lifecycle, timer, config.getBossPoolSize(), config.getWorkerPoolSize()),
                       config.getSslContext(),
                       timer,
-                      config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
+                      config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().toMillis()
                   ),
                   new ResourcePoolConfig(
                       config.getNumConnections(),
-                      config.getUnusedConnectionTimeoutDuration().getMillis()
+                      config.getUnusedConnectionTimeoutDuration().toMillis()
                   )
               ),
               config.getReadTimeout(),

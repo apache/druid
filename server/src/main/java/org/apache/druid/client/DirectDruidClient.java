@@ -62,13 +62,13 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Enumeration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -464,7 +464,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
            ),
           responseHandler,
-          Duration.millis(timeLeft)
+          Duration.ofMillis(timeLeft)
       );
 
       queryWatcher.registerQueryFuture(query, future);
@@ -546,7 +546,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             .setContent(objectMapper.writeValueAsBytes(query))
             .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
             StatusResponseHandler.getInstance(),
-            Duration.standardSeconds(1));
+            Duration.ofSeconds(1L));
 
         Runnable checkRunnable = () -> {
           try {

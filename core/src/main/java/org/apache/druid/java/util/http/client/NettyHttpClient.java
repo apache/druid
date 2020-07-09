@@ -52,9 +52,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.util.Timer;
-import org.joda.time.Duration;
 
 import java.net.URL;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -86,7 +86,7 @@ public class NettyHttpClient extends AbstractHttpClient
     this.compressionCodec = Preconditions.checkNotNull(compressionCodec);
     this.timer = timer;
 
-    if (defaultReadTimeout != null && defaultReadTimeout.getMillis() > 0) {
+    if (defaultReadTimeout != null && defaultReadTimeout.toMillis() > 0L) {
       Preconditions.checkNotNull(timer, "timer");
     }
   }
@@ -391,9 +391,9 @@ public class NettyHttpClient extends AbstractHttpClient
   {
     final long timeout;
     if (requestReadTimeout != null) {
-      timeout = requestReadTimeout.getMillis();
+      timeout = requestReadTimeout.toMillis();
     } else if (defaultReadTimeout != null) {
-      timeout = defaultReadTimeout.getMillis();
+      timeout = defaultReadTimeout.toMillis();
     } else {
       timeout = 0;
     }
