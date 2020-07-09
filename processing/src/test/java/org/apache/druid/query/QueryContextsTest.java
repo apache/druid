@@ -107,18 +107,4 @@ public class QueryContextsTest
 
     QueryContexts.withMaxScatterGatherBytes(query, 100);
   }
-
-  @Test
-  public void testSetFailOnTruncatedResponseContext()
-  {
-    final Query<?> query = new TestQuery(
-        new TableDataSource("test"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        false,
-        null
-    );
-    Assert.assertFalse(QueryContexts.shouldFailOnTruncatedResponseContext(query));
-    final Query<?> queryWithFlag = QueryContexts.setFailOnTruncatedResponseContext(query);
-    Assert.assertTrue(QueryContexts.shouldFailOnTruncatedResponseContext(queryWithFlag));
-  }
 }
