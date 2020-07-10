@@ -43,7 +43,7 @@ public class AmbariMetricsEmitterTest
   }
 
   @Test
-  public void testSerDeAmbariMetricsEmitterConfig() throws IOException
+  public void testSerDeAmbariMetricsEmitterConfig()
   {
     AmbariMetricsEmitterConfig config = new AmbariMetricsEmitterConfig(
         "hostname",
