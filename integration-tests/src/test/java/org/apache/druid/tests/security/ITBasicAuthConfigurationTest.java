@@ -54,6 +54,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -469,6 +471,52 @@ public class ITBasicAuthConfigurationTest
 
     LOG.info("Checking OPTIONS requests on services...");
     testOptionsRequests(adminClient);
+  }
+
+  @Test
+  public void testInvalidAuthNames()
+  {
+    String invalidName = "invalid\tname";
+    HttpClient adminClient = new CredentialedHttpClient(
+        new BasicCredentials("admin", "priest"),
+        httpClient
+    );
+
+    StatusResponseHolder responseHolder = HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authentication/listen/%s",
+            config.getCoordinatorUrl(),
+            invalidName
+        ),
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
+    );
+    Assert.assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, responseHolder.getStatus().getCode());
+
+    responseHolder = HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/listen/users/%s",
+            config.getCoordinatorUrl(),
+            invalidName
+        ),
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
+    );
+
+    Assert.assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, responseHolder.getStatus().getCode());
+    responseHolder = HttpUtil.makeRequest(
+        adminClient,
+        HttpMethod.POST,
+        StringUtils.format(
+            "%s/druid-ext/basic-security/authorization/listen/groupMappings/%s",
+            config.getCoordinatorUrl(),
+            invalidName
+        ),
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
+    );
+    Assert.assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, responseHolder.getStatus().getCode());
   }
 
   private void testOptionsRequests(HttpClient httpClient)
