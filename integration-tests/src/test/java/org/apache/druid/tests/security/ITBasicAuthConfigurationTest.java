@@ -291,8 +291,8 @@ public class ITBasicAuthConfigurationTest
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                     .collect(Collectors.toList())
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
     );
 
     // as user that can read auth_test and STATE
@@ -317,7 +317,8 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
         adminServerSegments.stream()
-                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains("auth_test"))
+                           .filter((serverSegmentEntry) -> ((String) serverSegmentEntry.get("segment_id")).contains(
+                               "auth_test"))
                            .collect(Collectors.toList())
     );
 
@@ -326,8 +327,8 @@ public class ITBasicAuthConfigurationTest
         datasourceWithStateUserClient,
         SYS_SCHEMA_TASKS_QUERY,
         adminTasks.stream()
-                     .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
-                     .collect(Collectors.toList())
+                  .filter((taskEntry) -> "auth_test".equals(taskEntry.get("datasource")))
+                  .collect(Collectors.toList())
     );
 
     // as user that can only read STATE
@@ -471,6 +472,26 @@ public class ITBasicAuthConfigurationTest
     testOptionsRequests(adminClient);
   }
 
+  @Test
+  public void testMaliciousUser()
+  {
+    String maliciousUsername = "<script>alert('hello')</script>";
+    HttpClient maliciousClient = new CredentialedHttpClient(
+        new BasicCredentials(maliciousUsername, "noPass"),
+        httpClient
+    );
+    StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
+        maliciousClient,
+        HttpMethod.GET,
+        config.getBrokerUrl() + "/status",
+        null,
+        HttpResponseStatus.UNAUTHORIZED
+    );
+    String responseContent = responseHolder.getContent();
+    Assert.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
+    Assert.assertFalse(responseContent.contains(maliciousUsername));
+  }
+
   private void testOptionsRequests(HttpClient httpClient)
   {
     HttpUtil.makeRequest(httpClient, HttpMethod.OPTIONS, config.getCoordinatorUrl() + "/status", null);
@@ -522,7 +543,7 @@ public class ITBasicAuthConfigurationTest
     catch (AvaticaSqlException ase) {
       Assert.assertEquals(
           ase.getErrorMessage(),
-          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed username[admin]."
+          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User metadata store authentication failed."
       );
       return;
     }
