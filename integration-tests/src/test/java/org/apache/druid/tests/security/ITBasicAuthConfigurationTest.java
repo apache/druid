@@ -71,23 +71,6 @@ public class ITBasicAuthConfigurationTest
 {
   private static final Logger LOG = new Logger(ITBasicAuthConfigurationTest.class);
 
-  private static final String AUTH_FAILED_CONTENT = "<html>\n"
-                                                    + "<head>\n"
-                                                    + "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"/>\n"
-                                                    + "<title>Error 401 User authentication failed.</title>\n"
-                                                    + "</head>\n"
-                                                    + "<body><h2>HTTP ERROR 401 Unauthorized</h2>\n"
-                                                    + "<table>\n"
-                                                    + "<tr><th>URI:</th><td>/unified-console.html</td></tr>\n"
-                                                    + "<tr><th>STATUS:</th><td>401</td></tr>\n"
-                                                    + "<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>\n"
-                                                    + "<tr><th>SERVLET:</th><td>org.eclipse.jetty.servlet.DefaultServlet-73ca34e7</td></tr>\n"
-                                                    + "</table>\n"
-                                                    + "<hr><a href=\"http://eclipse.org/jetty\">Powered by Jetty:// 9.4.30.v20200611</a><hr/>\n"
-                                                    + "\n"
-                                                    + "</body>\n"
-                                                    + "</html>\n";
-
   private static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
       new TypeReference<List<Map<String, Object>>>()
       {
@@ -492,8 +475,9 @@ public class ITBasicAuthConfigurationTest
   @Test
   public void testMaliciousUser()
   {
+    String maliciousUsername = "<script>alert('hello')</script>";
     HttpClient maliciousClient = new CredentialedHttpClient(
-        new BasicCredentials("<script>alert('hello')</script>", "noPass"),
+        new BasicCredentials(maliciousUsername, "noPass"),
         httpClient
     );
     StatusResponseHolder responseHolder = HttpUtil.makeRequestWithExpectedStatus(
@@ -503,7 +487,9 @@ public class ITBasicAuthConfigurationTest
         null,
         HttpResponseStatus.UNAUTHORIZED
     );
-    Assert.assertEquals(responseHolder.getContent(), AUTH_FAILED_CONTENT);
+    String responseContent = responseHolder.getContent();
+    Assert.assertTrue(responseContent.contains("<tr><th>MESSAGE:</th><td>Unauthorized</td></tr>"));
+    Assert.assertFalse(responseContent.contains(maliciousUsername));
   }
 
   private void testOptionsRequests(HttpClient httpClient)
