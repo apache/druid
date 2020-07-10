@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.19.0-SNAPSHOT</version>
+    <version>0.20.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -91,7 +91,7 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.12.v20180830</jetty.version>
+        <jetty.version>9.4.30.v20200611</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -193,6 +193,7 @@
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
         <module>extensions-contrib/gce-extensions</module>
+        <module>extensions-contrib/aliyun-oss-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -1267,7 +1268,10 @@
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
                         <exclude>org/apache/druid/cli/Cli*</exclude>
                         <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
-                      
+                        <exclude>org/apache/druid/server/initialization/*Module*</exclude>
+                        <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
+                        <exclude>org/apache/druid/guice/http/*</exclude>
+
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
                         <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
@@ -1277,6 +1281,9 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+
+                        <!-- Exceptions -->
+                        <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>

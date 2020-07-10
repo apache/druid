@@ -294,11 +294,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
-  public ScanQuery withDimFilter(DimFilter dimFilter)
-  {
-    return Druids.ScanQueryBuilder.copy(this).filters(dimFilter).build();
-  }
-
   @Override
   public boolean equals(final Object o)
   {

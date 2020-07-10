@@ -51,10 +51,6 @@ import java.util.stream.Collectors;
 /**
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
- * <p/>
- * Word of warning: Very large "segments" sets can cause oversized audit log entries, which is bad because it means
- * that the task cannot actually complete. Callers should avoid this by avoiding inserting too many segments in the
- * same action.
  */
 public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {

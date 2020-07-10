@@ -66,7 +66,9 @@ Integration tests can also be run with either Java 8 or Java 11 by adding -Djvm.
 can either be 8 or 11.
 
 Druid's configuration (using Docker) can be overrided by providing -Doverride.config.path=<PATH_TO_FILE>. 
-The file must contain one property per line, the key must start with `druid_` and the format should be snake case. 
+The file must contain one property per line, the key must start with `druid_` and the format should be snake case.
+Note that when bringing up docker containers through mvn and -Doverride.config.path is provided, additional
+Druid routers for security group integration test (permissive tls, no client auth tls, custom check tls) will not be started.   
 
 ## Docker compose
 
@@ -74,16 +76,21 @@ Docker compose yamls located in "docker" folder
 
 docker-compose.base.yml - Base file that defines all containers for integration test
 
-docker-compose.yml - Defines minimal Druid cluster that can be used for non cluster tests
+docker-compose.yml - Defines Druid cluster with default configuration that is used for running integration tests in Travis CI.
     
     docker-compose -f docker-compose.yml up
     // DRUID_INTEGRATION_TEST_GROUP - this variable is used in Druid docker container for "security" and "query" test group. Use next docker-compose if you want to run security/query tests.
     DRUID_INTEGRATION_TEST_GROUP=security docker-compose -f docker-compose.yml up
 
-docker-compose.override-env.yml - the same configuration as docker-compose.yml + override-env variable that needed to run cloud tests 
+docker-compose.override-env.yml - Defines Druid cluster with default configuration plus any additional and/or overriden configurations from override-env file.
 
     // OVERRIDE_ENV - variable that must contains path to Druid configuration file 
     OVERRIDE_ENV=./environment-configs/override-examples/s3 docker-compose -f docker-compose.override-env.yml up
+    
+docker-compose.security.yml - Defines three additional Druid router services with permissive tls, no client auth tls, and custom check tls respectively. 
+This is meant to be use together with docker-compose.yml or docker-compose.override-env.yml and is only needed for the "security" group integration test. 
+
+    docker-compose -f docker-compose.yml -f docker-compose.security.yml up 
     
 docker-compose.druid-hadoop.yml - for starting Apache Hadoop 2.8.5 cluster with the same setup as the Druid tutorial
 
@@ -99,12 +106,14 @@ mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=t
 2. Run druid cluster by docker-compose:
 
 ```
-- Basic Druid cluster:
+- Basic Druid cluster (skip this if running Druid cluster with override configs):
 docker-compose -f integration-tests/docker/docker-compose.yml up
-- Druid cluster with override env for cloud integration tests:
+- Druid cluster with override configs (skip this if running Basic Druid cluster):
 OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up
-- Druid hadoop:
+- Druid hadoop (if needed):
 docker-compose -f ${DOCKERDIR}/docker-compose.druid-hadoop.yml up
+- Druid routers for security group integration test (if needed):
+ docker-compose -f ${DOCKERDIR}/docker-compose.security.yml up
 ```
 
 3. Run maven command to execute tests with -Ddocker.build.skip=true -Ddocker.run.skip=true
@@ -270,8 +279,8 @@ credentials/configs may need to be set in the same file as your Druid's Hadoop c
 If you are running ITHadoopIndexTest with your own Druid + Hadoop cluster, please follow the below steps:
 - Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
   located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
-- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
-  at /batch_index/tsv/
+- Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/hadoop_tsv to your HDFS
+  at /batch_index/hadoop_tsv/
 If using the Docker-based Hadoop container, the steps above are automatically done by the integration tests.
 
 When running the Hadoop tests, you must set `-Dextra.datasource.name.suffix=''`, due to https://github.com/apache/druid/issues/9788.

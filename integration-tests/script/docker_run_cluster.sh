@@ -47,7 +47,14 @@ fi
 
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
-     docker-compose -f ${DOCKERDIR}/docker-compose.yml up -d
+     if [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]
+     then
+      # Start default Druid services and additional druid router (custom-check-tls, permissive-tls, no-client-auth-tls)
+      docker-compose -f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.security.yml up -d
+     else
+      # Start default Druid services
+      docker-compose -f ${DOCKERDIR}/docker-compose.yml up -d
+     fi
   else
     # run druid cluster with override config
     OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose -f ${DOCKERDIR}/docker-compose.override-env.yml up -d

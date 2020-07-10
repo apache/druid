@@ -42,8 +42,8 @@ import java.util.function.Function;
  * 1) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
  *    located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
  *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
- * 2) Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
- *    at /batch_index/tsv/
+ * 2) Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/hadoop_tsv to your HDFS
+ *    at /batch_index/hadoop_tsv/
  *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
  * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with HDFS configs set. See
  *    integration-tests/docker/environment-configs/override-examples/hdfs for env vars to provide.
