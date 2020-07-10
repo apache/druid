@@ -43,7 +43,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;
 
-public class JavaScriptDimFilter implements DimFilter
+public class JavaScriptDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;
   private final String function;

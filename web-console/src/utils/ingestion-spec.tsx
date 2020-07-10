@@ -778,7 +778,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           See the{' '}
-          <ExternalLink href="https://datasketches.github.io/docs/Theta/ThetaSize.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaSize.html">
             DataSketches site
           </ExternalLink>{' '}
           for details.
@@ -843,7 +843,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           Must be a power of 2 from 2 to 32768. See the{' '}
-          <ExternalLink href="https://datasketches.github.io/docs/Quantiles/QuantilesAccuracy.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy.html">
             Quantiles Accuracy
           </ExternalLink>{' '}
           for details.
