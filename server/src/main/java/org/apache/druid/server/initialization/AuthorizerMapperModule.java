@@ -35,9 +35,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.AuthorizerValidator;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,7 +57,7 @@ public class AuthorizerMapperModule implements DruidModule
     binder.bind(AuthorizerMapper.class)
           .toProvider(new AuthorizerMapperProvider())
           .in(LazySingleton.class);
-    binder.bind(AuthorizerValidator.class)
+    binder.bind(AuthValidator.class)
           .in(LazySingleton.class);
     LifecycleModule.register(binder, AuthorizerMapper.class);
   }

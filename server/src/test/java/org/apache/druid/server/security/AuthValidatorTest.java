@@ -24,17 +24,17 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class AuthorizerValidatorTest
+public class AuthValidatorTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  public AuthorizerValidator target;
+  public AuthValidator target;
 
   @Before
   public void setUp()
   {
-    target = new AuthorizerValidator();
+    target = new AuthValidator();
   }
 
   @Test
@@ -54,11 +54,11 @@ public class AuthorizerValidatorTest
   }
 
   @Test
-  public void testAuthorizerNameWithTwoDotsIsInvalid()
+  public void testAuthorizerNameStartsWithDotIsInValid()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("authorizerName cannot contain 2 or more '.' characters.");
-    target.validateAuthorizerName("tes..t");
+    expectedException.expectMessage("authorizerName cannot start with the '.' character.");
+    target.validateAuthorizerName(".test");
   }
 
   @Test
@@ -70,8 +70,30 @@ public class AuthorizerValidatorTest
   }
 
   @Test
+  public void testAuthorizerNameWithWhitespaceIsInvalid()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("authorizerName cannot contain whitespace character except space.");
+    target.validateAuthorizerName("tes\tt");
+  }
+
+  @Test
   public void testAuthorizerNameWithAllowedCharactersIsValid()
   {
-    target.validateAuthorizerName("t.e.$\\, Россия 한국\t 中国!?");
+    target.validateAuthorizerName("t.e.$\\, Россия 한국中国!?");
+  }
+
+  @Test
+  public void testAuthenticatorNameWithAllowedCharactersIsValid()
+  {
+    target.validateAuthenticatorName("t.e.$\\, Россия 한국中国!?");
+  }
+
+  @Test
+  public void testAuthenticatorNameWithWhitespaceIsInvalid()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("authenticatorName cannot contain whitespace character except space.");
+    target.validateAuthenticatorName("tes\tt");
   }
 }

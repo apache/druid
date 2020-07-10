@@ -45,8 +45,8 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFull;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserFullSimplifiedPermissions;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.AuthorizerValidator;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
@@ -84,7 +84,7 @@ public class CoordinatorBasicAuthorizerResourceTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   @Mock
-  private AuthorizerValidator authorizerValidator;
+  private AuthValidator authValidator;
   @Mock
   private HttpServletRequest req;
 
@@ -154,7 +154,7 @@ public class CoordinatorBasicAuthorizerResourceTest
             authorizerMapper,
             new ObjectMapper(new SmileFactory())
         ),
-        authorizerValidator
+        authValidator
     );
 
     storageUpdater.start();

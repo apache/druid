@@ -19,7 +19,7 @@
 
 package org.apache.druid.testing.utils;
 
-import org.apache.druid.indexer.TaskIdUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -53,7 +53,7 @@ public class KafkaEventWriter implements StreamEventWriter
     this.txnEnabled = txnEnabled;
     if (txnEnabled) {
       properties.setProperty("enable.idempotence", "true");
-      properties.setProperty("transactional.id", TaskIdUtils.getRandomId());
+      properties.setProperty("transactional.id", IdUtils.getRandomId());
     }
     this.producer = new KafkaProducer<>(
         properties,

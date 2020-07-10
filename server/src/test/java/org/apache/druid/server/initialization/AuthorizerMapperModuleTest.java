@@ -23,7 +23,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Scopes;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.server.security.AuthorizerValidator;
+import org.apache.druid.server.security.AuthValidator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,10 +52,10 @@ public class AuthorizerMapperModuleTest
   @Test
   public void testAuthorizerNameValidatorIsInjectedAsSingleton()
   {
-    AuthorizerValidator authorizerValidator =
-        injector.getInstance(AuthorizerValidator.class);
-    AuthorizerValidator other =
-        injector.getInstance(AuthorizerValidator.class);
-    Assert.assertSame(authorizerValidator, other);
+    AuthValidator authValidator =
+        injector.getInstance(AuthValidator.class);
+    AuthValidator other =
+        injector.getInstance(AuthValidator.class);
+    Assert.assertSame(authValidator, other);
   }
 }

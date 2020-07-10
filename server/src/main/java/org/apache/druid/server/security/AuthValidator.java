@@ -19,16 +19,15 @@
 
 package org.apache.druid.server.security;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.common.utils.IdUtils;
 
 /**
  * Utility functions to validate the an authorizer.
  */
-public class AuthorizerValidator
+public class AuthValidator
 {
   private static final String AUTHORIZER_NAME = "authorizerName";
+  private static final String AUTHENTICATOR_NAME = "authenticatorName";
 
   /**
    * Validates the provided authorizerName.
@@ -38,17 +37,17 @@ public class AuthorizerValidator
    */
   public void validateAuthorizerName(String authorizerName)
   {
-    Preconditions.checkArgument(
-        !Strings.isNullOrEmpty(authorizerName),
-        StringUtils.format(AUTHORIZER_NAME + " cannot be null or empty.")
-    );
-    Preconditions.checkArgument(
-        !authorizerName.contains(".."),
-        StringUtils.format(AUTHORIZER_NAME + " cannot contain 2 or more '.' characters.")
-    );
-    Preconditions.checkArgument(
-        !authorizerName.contains("/"),
-        StringUtils.format(AUTHORIZER_NAME + " cannot contain the '/' character.")
-    );
+    IdUtils.validateId(AUTHORIZER_NAME, authorizerName);
+  }
+
+  /**
+   * Validates the provided authenticatorName.
+   *
+   * @param authenticatorName the name of the authenticator.
+   * @throws IllegalArgumentException on invalid authenticator names.
+   */
+  public void validateAuthenticatorName(String authenticatorName)
+  {
+    IdUtils.validateId(AUTHENTICATOR_NAME, authenticatorName);
   }
 }
