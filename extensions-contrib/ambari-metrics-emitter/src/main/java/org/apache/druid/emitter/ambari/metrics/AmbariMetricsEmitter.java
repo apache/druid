@@ -31,6 +31,8 @@ import org.apache.hadoop.metrics2.sink.timeline.AbstractTimelineMetricsSink;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetrics;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -141,15 +143,46 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   }
 
   @Override
-  protected String getCollectorUri()
+  protected String getCollectorUri(String host)
   {
-    return collectorURI;
+    return constructTimelineMetricUri(getCollectorProtocol(), host, getCollectorPort());
+  }
+
+  @Override
+  protected String getCollectorProtocol()
+  {
+    return config.getProtocol();
+  }
+
+  @Override
+  protected String getCollectorPort()
+  {
+    return String.valueOf(config.getPort());
   }
 
   @Override
   protected int getTimeoutSeconds()
   {
     return (int) (DEFAULT_FLUSH_TIMEOUT_MILLIS / 1000);
+  }
+
+  @Override
+  protected String getZookeeperQuorum()
+  {
+    //Ignoring Zk Fallback.
+    return null;
+  }
+
+  @Override
+  protected Collection<String> getConfiguredCollectorHosts()
+  {
+    return Collections.singleton(config.getHostname());
+  }
+
+  @Override
+  protected String getHostname()
+  {
+    return config.getHostname();
   }
 
   private class ConsumerRunnable implements Runnable
