@@ -82,6 +82,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
+              <environmentVariables><PATH>${project.build.directory}/node:${env.PATH}</PATH></environmentVariables>
               <executable>script/build-to-docs</executable>
               <arguments>
                 <argument>${website.version}</argument>
@@ -97,6 +98,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
+              <environmentVariables><PATH>${project.build.directory}/node:${env.PATH}</PATH></environmentVariables>
               <executable>script/build-to-docs</executable>
               <arguments>
                 <argument>latest</argument>
