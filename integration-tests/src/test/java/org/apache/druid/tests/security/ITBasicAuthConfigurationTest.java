@@ -54,7 +54,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import javax.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -483,7 +482,7 @@ public class ITBasicAuthConfigurationTest
         httpClient
     );
 
-    StatusResponseHolder responseHolder = HttpUtil.makeRequest(
+    HttpUtil.makeRequestWithExpectedStatus(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -491,11 +490,11 @@ public class ITBasicAuthConfigurationTest
             config.getCoordinatorUrl(),
             invalidName
         ),
-        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR
     );
-    Assert.assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, responseHolder.getStatus().getCode());
 
-    responseHolder = HttpUtil.makeRequest(
+    HttpUtil.makeRequestWithExpectedStatus(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -503,11 +502,11 @@ public class ITBasicAuthConfigurationTest
             config.getCoordinatorUrl(),
             invalidName
         ),
-        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR
     );
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, responseHolder.getStatus());
 
-    responseHolder = HttpUtil.makeRequest(
+    HttpUtil.makeRequestWithExpectedStatus(
         adminClient,
         HttpMethod.POST,
         StringUtils.format(
@@ -515,9 +514,9 @@ public class ITBasicAuthConfigurationTest
             config.getCoordinatorUrl(),
             invalidName
         ),
-        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
+        "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR
     );
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, responseHolder.getStatus());
   }
 
   @Test
