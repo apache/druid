@@ -477,7 +477,7 @@ public class ITBasicAuthConfigurationTest
   @Test
   public void testInvalidAuthNames()
   {
-    String invalidName = "invalid\tname";
+    String invalidName = "invalid%2Fname";
     HttpClient adminClient = new CredentialedHttpClient(
         new BasicCredentials("admin", "priest"),
         httpClient
@@ -505,8 +505,8 @@ public class ITBasicAuthConfigurationTest
         ),
         "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
     );
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, responseHolder.getStatus());
 
-    Assert.assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, responseHolder.getStatus().getCode());
     responseHolder = HttpUtil.makeRequest(
         adminClient,
         HttpMethod.POST,
@@ -517,7 +517,7 @@ public class ITBasicAuthConfigurationTest
         ),
         "SERIALIZED_DATA".getBytes(StandardCharsets.UTF_8)
     );
-    Assert.assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, responseHolder.getStatus().getCode());
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR, responseHolder.getStatus());
   }
 
   @Test
