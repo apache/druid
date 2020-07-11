@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
@@ -138,7 +139,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
       final Sequence<Result<TimeseriesResultValue>> finalSequence;
 
-      if (query.getGranularity().equals(Granularities.ALL) && !query.isSkipEmptyBuckets()) {
+      if (query.getGranularity().equals(Granularities.ALL) &&
+          !query.isSkipEmptyBuckets() &&
+          !QueryContexts.isBySegment(query)) {
         //Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus we have only one record
         final List<Result<TimeseriesResultValue>> val = baseResults.toList();
         finalSequence = val.isEmpty() ? Sequences.simple(Collections.singletonList(

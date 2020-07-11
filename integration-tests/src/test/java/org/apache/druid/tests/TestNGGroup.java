@@ -48,6 +48,8 @@ public class TestNGGroup
    */
   public static final String QUERY = "query";
 
+  public static final String QUERY_RETRY = "query-retry";
+
   public static final String REALTIME_INDEX = "realtime-index";
 
   /**

@@ -19,7 +19,9 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -91,7 +93,7 @@ public class CliHistorical extends ServerRunnable
           binder.bind(ServerManager.class).in(LazySingleton.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
-          binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
+          bindQuerySegmentWalker(binder);
 
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
@@ -118,5 +120,14 @@ public class CliHistorical extends ServerRunnable
         },
         new LookupModule()
     );
+  }
+
+  /**
+   * This method is visible for testing query retry on missing segments. See {@link CliHistoricalForQueryRetryTest}.
+   */
+  @VisibleForTesting
+  void bindQuerySegmentWalker(Binder binder)
+  {
+    binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
   }
 }
