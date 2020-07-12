@@ -1,8 +1,8 @@
 {
   "name": "web-console",
-  "version": "0.17.0",
+  "version": "0.20.0",
   "description": "A web console for Apache Druid",
-  "author": "Imply Data Inc.",
+  "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -36,10 +36,11 @@
     "compile": "./script/build",
     "pretest": "./script/build",
     "jest": "jest --config jest.unit.config.js src",
+    "jest-e2e": "jest --config jest.e2e.config.js --detectOpenHandles e2e-tests",
     "test-base": "npm run tslint && npm run sasslint && npm run jest",
     "test": "npm run test-base -- --silent 2>&1",
     "test-ci": "npm run test-base -- --coverage",
-    "test-e2e": "jest --config jest.e2e.config.js --detectOpenHandles e2e-tests",
+    "test-e2e": "npm run test-base && npm run jest-e2e",
     "codecov": "codecov --disable=gcov -p ..",
     "coverage": "jest --coverage src",
     "update-snapshots": "jest -u",
