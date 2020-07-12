@@ -188,6 +188,7 @@
       "development/extensions-core/lookups-cached-global",
       "development/extensions-core/mysql",
       "development/extensions-core/orc",
+      "development/extensions-core/druid-pac4j",
       "development/extensions-core/parquet",
       "development/extensions-core/postgresql",
       "development/extensions-core/protobuf",
@@ -200,8 +201,6 @@
       "development/extensions-contrib/cloudfiles",
       "development/extensions-contrib/distinctcount",
       "development/extensions-contrib/graphite",
-      "querying/hll-old",
-      "querying/select-query",
       "development/extensions-contrib/influx",
       "development/extensions-contrib/influxdb-emitter",
       "development/extensions-contrib/kafka-emitter",
@@ -216,6 +215,9 @@
       "development/extensions-contrib/thrift",
       "development/extensions-contrib/time-min-max",
       "development/extensions-contrib/gce-extensions",
+      "development/extensions-contrib/aliyun-oss",
+      "querying/hll-old",
+      "querying/select-query",
       "ingestion/standalone-realtime"
     ]
   }

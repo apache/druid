@@ -89,6 +89,9 @@
       "development/experimental": {
         "title": "Experimental features"
       },
+      "development/extensions-contrib/aliyun-oss": {
+        "title": "Aliyun OSS"
+      },
       "development/extensions-contrib/ambari-metrics-emitter": {
         "title": "Ambari Metrics Emitter"
       },
