@@ -23,6 +23,6 @@ module.exports = Object.assign(common, {
     "<rootDir>e2e-tests/util/setup.ts"
   ],
   "testMatch": [
-    "**/e2e-tests/**/?(*.)+(spec).(ts|tsx)"
+    "**/?(*.)+(spec).(ts|tsx)"
   ],
 });

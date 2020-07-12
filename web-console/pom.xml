@@ -125,6 +125,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
+              <environmentVariables><PATH>${project.build.directory}/node:${env.PATH}</PATH></environmentVariables>
               <executable>script/build</executable>
             </configuration>
           </execution>
