@@ -188,7 +188,7 @@
       "development/extensions-core/lookups-cached-global",
       "development/extensions-core/mysql",
       "development/extensions-core/orc",
-      "development/extensions-core/driud-pac4j",
+      "development/extensions-core/druid-pac4j",
       "development/extensions-core/parquet",
       "development/extensions-core/postgresql",
       "development/extensions-core/protobuf",
