@@ -958,7 +958,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .setLimitSpec(
             new DefaultLimitSpec(
-               null,
+                null,
                 1000
             )
         )
@@ -986,6 +986,46 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         strategy1.computeCacheKey(query1),
         strategy2.computeCacheKey(queryNoLimit)
     ));
+  }
+
+  @Test
+  public void testQueryCacheKeyWithLimitSpecPushDownUsingContext()
+  {
+    final GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                null,
+                100
+            )
+        );
+    final GroupByQuery query1 = builder
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "true"))
+        .build();
+    final GroupByQuery query2 = builder
+        .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "false"))
+        .build();
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query1);
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+        null
+    ).getCacheStrategy(query2);
+
+    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assert.assertTrue(
+        Arrays.equals(
+            strategy1.computeResultLevelCacheKey(query1),
+            strategy2.computeResultLevelCacheKey(query2)
+        )
+    );
   }
 
   private static ResultRow makeRow(final GroupByQuery query, final String timestamp, final Object... vals)
