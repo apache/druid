@@ -885,6 +885,18 @@ Druid SQL supports setting connection parameters on the client. The parameters i
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
 [Query context](query-context.html) for details on the possible options.
 
+```java
+String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
+
+// Set any connection context parameters you need here.
+Properties connectionProperties = new Properties();
+connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
+connectionProperties.setProperty("useCache", "false");
+
+try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
+  // do some SQL stuff
+}
+```
 Note that to specify an unique identifier for SQL query, use `sqlQueryId` instead of `queryId`. Setting `queryId` for a SQL
 request has no effect, all native queries underlying SQL will use auto-generated queryId.
 
