@@ -321,6 +321,9 @@ https://github.com/apache/druid/releases/tag/druid-0.17.0-rc3
 The artifacts to be voted on are located here:
 https://dist.apache.org/repos/dist/dev/druid/0.17.0-rc3/
 
+A staged Maven repository is available for review at:
+https://repository.apache.org/content/repositories/orgapachedruid-1016/
+
 Staged druid.apache.org website documentation is available here:
 https://druid.staged.apache.org/docs/0.17.0/design/index.html
 
