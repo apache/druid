@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -89,7 +90,9 @@ public class ITBasicAuthConfigurationTest
       "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
 
   private static final String SYS_SCHEMA_SERVERS_QUERY =
-      "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
+      NullHandling.sqlCompatible()
+      ? "SELECT * FROM sys.servers WHERE tier IS NOT NULL"
+      : "SELECT * FROM sys.servers WHERE tier <> ''";
 
   private static final String SYS_SCHEMA_SERVER_SEGMENTS_QUERY =
       "SELECT * FROM sys.server_segments WHERE segment_id LIKE 'auth_test%'";

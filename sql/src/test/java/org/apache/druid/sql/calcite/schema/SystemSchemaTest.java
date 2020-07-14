@@ -947,28 +947,6 @@ public class SystemSchemaTest extends CalciteTestBase
     return server;
   }
 
-  private void verifyServerRow(
-      Object[] row,
-      String server,
-      String host,
-      int plaintextPort,
-      int tlsPort,
-      NodeRole nodeRole,
-      @Nullable String tier,
-      @Nullable Long currSize,
-      @Nullable Long maxSize
-  )
-  {
-    Assert.assertEquals(server, row[0].toString());
-    Assert.assertEquals(host, row[1]);
-    Assert.assertEquals((long) plaintextPort, row[2]);
-    Assert.assertEquals((long) tlsPort, row[3]);
-    Assert.assertEquals(nodeRole.getJsonName(), row[4]);
-    Assert.assertEquals(tier, row[5]);
-    Assert.assertEquals(currSize, row[6]);
-    Assert.assertEquals(maxSize, row[7]);
-  }
-
   private Object[] createExpectedRow(
       String server,
       String host,
@@ -985,7 +963,7 @@ public class SystemSchemaTest extends CalciteTestBase
         host,
         (long) plaintextPort,
         (long) tlsPort,
-        nodeRole.getJsonName(),
+        StringUtils.toLowerCase(nodeRole.toString()),
         tier,
         currSize,
         maxSize

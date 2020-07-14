@@ -26,6 +26,8 @@ import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
+import org.apache.druid.tests.common.NullHandlingUtils;
+import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -63,7 +65,10 @@ public class ITSystemTableQueryTest
   public void testSystemTableQueries()
   {
     try {
-      this.queryHelper.testQueriesFromFile(SYSTEM_QUERIES_RESOURCE, 2);
+      final String query = NullHandlingUtils.IS_NOT_NULL_TRANSFORM_FOR_SQL.apply(
+          AbstractIndexerTest.getResourceAsString(SYSTEM_QUERIES_RESOURCE)
+      );
+      this.queryHelper.testQueriesFromString(query, 2);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

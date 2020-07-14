@@ -222,7 +222,8 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
   void doIndexTestSqlTest(
       String dataSource,
       String indexTaskFilePath,
-      String queryFilePath
+      String queryFilePath,
+      Function<String, String> queryTransform
   ) throws IOException
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
@@ -233,8 +234,9 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     );
 
     submitTaskAndWait(taskSpec, fullDatasourceName, false, true);
+    final String query = queryTransform.apply(getResourceAsString(queryFilePath));
     try {
-      sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
+      sqlQueryHelper.testQueriesFromString(query, 2);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");

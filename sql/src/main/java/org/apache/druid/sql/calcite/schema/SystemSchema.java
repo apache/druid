@@ -56,6 +56,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.column.RowSignature;
@@ -529,7 +530,7 @@ public class SystemSchema extends AbstractSchema
           node.getHost(),
           (long) node.getPlaintextPort(),
           (long) node.getTlsPort(),
-          discoveryDruidNode.getNodeRole().getJsonName(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
           NullHandling.defaultStringValue(),
           NullHandling.defaultLongValue(),
           NullHandling.defaultLongValue()
@@ -563,7 +564,7 @@ public class SystemSchema extends AbstractSchema
           node.getHost(),
           (long) node.getPlaintextPort(),
           (long) node.getTlsPort(),
-          discoveryDruidNode.getNodeRole().getJsonName(),
+          StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
           druidServerToUse.getTier(),
           currentSize,
           druidServerToUse.getMaxSize()

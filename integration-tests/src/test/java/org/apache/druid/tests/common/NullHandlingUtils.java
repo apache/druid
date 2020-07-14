@@ -17,30 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.tests.common;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.SqlResourceTestClient;
 
-public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResults>
+import java.util.function.Function;
+
+public class NullHandlingUtils
 {
+  public static Function<String, String> IS_NOT_NULL_TRANSFORM_FOR_SQL = template -> StringUtils.replace(
+      template,
+      "%%IS_NOT_NULL%%",
+      NullHandling.sqlCompatible() ? "IS NOT NULL" : "<> ''"
+  );
 
-  @Inject
-  public SqlTestQueryHelper(
-      ObjectMapper jsonMapper,
-      SqlResourceTestClient sqlClient,
-      IntegrationTestingConfig config
-  )
+  private NullHandlingUtils()
   {
-    super(jsonMapper, sqlClient, config);
-  }
-
-  @Override
-  public String getQueryURL(String schemeAndHost)
-  {
-    return StringUtils.format("%s/druid/v2/sql", schemeAndHost);
   }
 }
