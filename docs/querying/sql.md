@@ -888,7 +888,7 @@ All other context parameters you provide will be attached to Druid queries and c
 ```java
 String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
 
-// Set any connection context parameters you need here.
+// Set any query context parameters you need here.
 Properties connectionProperties = new Properties();
 connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
 connectionProperties.setProperty("useCache", "false");
