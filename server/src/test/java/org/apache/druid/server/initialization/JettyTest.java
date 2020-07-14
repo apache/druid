@@ -511,13 +511,13 @@ public class JettyTest extends BaseJettyTest
   {
     // it can take a bit to close the connection, so maybe sleep for a while and hope it closes
     final int sleepTimeMills = 10;
-    final int totalSleeps = 10_000 / sleepTimeMills;
+    final int totalSleeps = 15_000 / sleepTimeMills;
     int count = 0;
     while (jsm.getActiveConnections() > 0 && count++ < totalSleeps) {
       Thread.sleep(sleepTimeMills);
     }
     if (jsm.getActiveConnections() > 0) {
-      throw new RuntimeException("Connections greater than 0");
+      throw new RuntimeException("Connections greater than 0. activeConnections=" + jsm.getActiveConnections() + " port=" + port);
     }
   }
 }
