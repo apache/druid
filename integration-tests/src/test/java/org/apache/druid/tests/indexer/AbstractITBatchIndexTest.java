@@ -127,29 +127,33 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion, waitForSegmentsToLoad);
     if (runTestQueries) {
+      doTestQuery(fullDatasourceName, queryFilePath, 2);
+    }
+  }
+
+  protected void doTestQuery(String fullDatasourceName, String queryFilePath, int timesToRun)
+  {
+    try {
+      String queryResponseTemplate;
       try {
-
-        String queryResponseTemplate;
-        try {
-          InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-          queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-        }
-        catch (IOException e) {
-          throw new ISE(e, "could not read query file: %s", queryFilePath);
-        }
-
-        queryResponseTemplate = StringUtils.replace(
-            queryResponseTemplate,
-            "%%DATASOURCE%%",
-            fullDatasourceName
-        );
-        queryHelper.testQueriesFromString(queryResponseTemplate, 2);
-
+        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
-      catch (Exception e) {
-        LOG.error(e, "Error while testing");
-        throw new RuntimeException(e);
+      catch (IOException e) {
+        throw new ISE(e, "could not read query file: %s", queryFilePath);
       }
+
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%DATASOURCE%%",
+          fullDatasourceName
+      );
+      queryHelper.testQueriesFromString(queryResponseTemplate, timesToRun);
+
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while testing");
+      throw new RuntimeException(e);
     }
   }
 
