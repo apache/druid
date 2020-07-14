@@ -159,7 +159,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         {onRun ? (
           <Tooltip content="Control + Enter" hoverOpenDelay={900}>
             <Button
-              className={runeMode ? 'rune-button' : ''}
+              className={runeMode ? 'rune-button' : undefined}
               disabled={loading}
               icon={IconNames.CARET_RIGHT}
               onClick={this.handleRun}
@@ -169,7 +169,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
           </Tooltip>
         ) : (
           <Button
-            className={runeMode ? 'rune-button' : ''}
+            className={runeMode ? 'rune-button' : undefined}
             icon={IconNames.CARET_RIGHT}
             text="Run"
             disabled
@@ -177,7 +177,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
           <Button
-            className={runeMode ? 'rune-button' : ''}
+            className={runeMode ? 'rune-button' : undefined}
             icon={IconNames.MORE}
             intent={onRun ? Intent.PRIMARY : undefined}
           />
