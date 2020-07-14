@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.indexer;
+package org.apache.druid.common.utils;
 
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class TaskIdUtilsTest
+public class IdUtilsTest
 {
   private static final String THINGO = "thingToValidate";
   public static final String VALID_ID_CHARS = "alpha123..*~!@#&%^&*()-+ Россия\\ 한국 中国!";
@@ -34,7 +34,7 @@ public class TaskIdUtilsTest
   @Test
   public void testValidIdName()
   {
-    TaskIdUtils.validateId(THINGO, VALID_ID_CHARS);
+    IdUtils.validateId(THINGO, VALID_ID_CHARS);
   }
 
   @Test
@@ -42,7 +42,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot be null or empty. Please provide a thingToValidate.");
-    TaskIdUtils.validateId(THINGO, null);
+    IdUtils.validateId(THINGO, null);
   }
 
   @Test
@@ -50,7 +50,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot be null or empty. Please provide a thingToValidate.");
-    TaskIdUtils.validateId(THINGO, "");
+    IdUtils.validateId(THINGO, "");
   }
 
   @Test
@@ -58,7 +58,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain the '/' character.");
-    TaskIdUtils.validateId(THINGO, "/paths/are/bad/since/we/make/files/from/stuff");
+    IdUtils.validateId(THINGO, "/paths/are/bad/since/we/make/files/from/stuff");
   }
 
   @Test
@@ -66,7 +66,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot start with the '.' character.");
-    TaskIdUtils.validateId(THINGO, "./nice/try");
+    IdUtils.validateId(THINGO, "./nice/try");
   }
 
   @Test
@@ -74,7 +74,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    TaskIdUtils.validateId(THINGO, "spaces\tare\tbetter\tthan\ttabs\twhich\tare\tillegal");
+    IdUtils.validateId(THINGO, "spaces\tare\tbetter\tthan\ttabs\twhich\tare\tillegal");
   }
 
   @Test
@@ -82,7 +82,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    TaskIdUtils.validateId(THINGO, "new\nline");
+    IdUtils.validateId(THINGO, "new\nline");
   }
 
   @Test
@@ -90,7 +90,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    TaskIdUtils.validateId(THINGO, "does\rexist\rby\ritself");
+    IdUtils.validateId(THINGO, "does\rexist\rby\ritself");
   }
 
   @Test
@@ -98,7 +98,7 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    TaskIdUtils.validateId(THINGO, "wtf\u000Bis line tabulation");
+    IdUtils.validateId(THINGO, "wtf\u000Bis line tabulation");
   }
 
   @Test
@@ -106,6 +106,6 @@ public class TaskIdUtilsTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    TaskIdUtils.validateId(THINGO, "form\u000cfeed?");
+    IdUtils.validateId(THINGO, "form\u000cfeed?");
   }
 }
