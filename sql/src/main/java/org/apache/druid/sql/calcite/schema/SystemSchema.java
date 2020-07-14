@@ -49,13 +49,13 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.segment.column.RowSignature;
@@ -121,10 +121,6 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
-
-  //defaults for SERVERS table
-  private static final long MAX_SERVER_SIZE = 0L;
-  private static final long CURRENT_SERVER_SIZE = 0L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -369,8 +365,10 @@ public class SystemSchema extends AbstractSchema
         DataContext root
     )
     {
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
+          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
+          "authenticationResult in dataContext"
+      );
 
       final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
@@ -387,8 +385,10 @@ public class SystemSchema extends AbstractSchema
         DataContext root
     )
     {
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
+          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
+          "authenticationResult in dataContext"
+      );
 
       Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment ->
           Collections.singletonList(
@@ -486,37 +486,91 @@ public class SystemSchema extends AbstractSchema
     public Enumerable<Object[]> scan(DataContext root)
     {
       final Iterator<DiscoveryDruidNode> druidServers = getDruidServers(druidNodeDiscoveryProvider);
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-
+      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
+          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
+          "authenticationResult in dataContext"
+      );
       checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
       final FluentIterable<Object[]> results = FluentIterable
           .from(() -> druidServers)
-          .transform((DiscoveryDruidNode val) -> {
-            boolean isDataNode = false;
-            final DruidNode node = val.getDruidNode();
-            long currHistoricalSize = 0;
-            if (val.getNodeRole().equals(NodeRole.HISTORICAL)) {
-              final DruidServer server = serverInventoryView.getInventoryValue(val.toDruidServer().getName());
-              currHistoricalSize = server.getCurrSize();
-              isDataNode = true;
+          .transform((DiscoveryDruidNode discoveryDruidNode) -> {
+            //noinspection ConstantConditions
+            final boolean isDiscoverableDataServer = discoveryDruidNode.isDiscoverableDataServer();
+
+            if (isDiscoverableDataServer) {
+              final DruidServer druidServer = serverInventoryView.getInventoryValue(
+                  discoveryDruidNode.getDruidNode().getHostAndPortToUse()
+              );
+              if (druidServer != null || discoveryDruidNode.getNodeRole().equals(NodeRole.HISTORICAL)) {
+                // Build a row for the data server if that server is in the server view, or the node type is historical.
+                // The historicals are usually supposed to be found in the server view. If some historicals are
+                // missing, it could mean that there are some problems in them to announce themselves. We just fill
+                // their status with nulls in this case.
+                return buildRowForDiscoverableDataServer(discoveryDruidNode, druidServer);
+              } else {
+                return buildRowForNonDataServer(discoveryDruidNode);
+              }
+            } else {
+              return buildRowForNonDataServer(discoveryDruidNode);
             }
-            return new Object[]{
-                node.getHostAndPortToUse(),
-                extractHost(node.getHost()),
-                (long) extractPort(node.getHostAndPort()),
-                (long) extractPort(node.getHostAndTlsPort()),
-                StringUtils.toLowerCase(toStringOrNull(val.getNodeRole())),
-                isDataNode ? val.toDruidServer().getTier() : null,
-                isDataNode ? currHistoricalSize : CURRENT_SERVER_SIZE,
-                isDataNode ? val.toDruidServer().getMaxSize() : MAX_SERVER_SIZE
-            };
           });
       return Linq4j.asEnumerable(results);
     }
 
-    private Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
+    /**
+     * Returns a row for all node types which don't serve data. The returned row contains only static information.
+     */
+    private static Object[] buildRowForNonDataServer(DiscoveryDruidNode discoveryDruidNode)
+    {
+      final DruidNode node = discoveryDruidNode.getDruidNode();
+      return new Object[]{
+          node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          discoveryDruidNode.getNodeRole().getJsonName(),
+          NullHandling.defaultStringValue(),
+          NullHandling.defaultLongValue(),
+          NullHandling.defaultLongValue()
+      };
+    }
+
+    /**
+     * Returns a row for discoverable data server. This method prefers the information from
+     * {@code serverFromInventoryView} if available which is the current state of the server. Otherwise, it
+     * will get the information from {@code discoveryDruidNode} which has only static configurations.
+     */
+    private static Object[] buildRowForDiscoverableDataServer(
+        DiscoveryDruidNode discoveryDruidNode,
+        @Nullable DruidServer serverFromInventoryView
+    )
+    {
+      final DruidNode node = discoveryDruidNode.getDruidNode();
+      final DruidServer druidServerToUse = serverFromInventoryView == null
+                                           ? discoveryDruidNode.toDruidServer()
+                                           : serverFromInventoryView;
+      // We cannot use the ternary operator since it automatically unboxes null which can cause NPE
+      @Nullable final Long currentSize;
+      if (serverFromInventoryView == null) {
+        // If server is missing in serverInventoryView, the currentSize should be null
+        currentSize = NullHandling.defaultLongValue();
+      } else {
+        currentSize = serverFromInventoryView.getCurrSize();
+      }
+      return new Object[]{
+          node.getHostAndPortToUse(),
+          node.getHost(),
+          (long) node.getPlaintextPort(),
+          (long) node.getTlsPort(),
+          discoveryDruidNode.getNodeRole().getJsonName(),
+          druidServerToUse.getTier(),
+          currentSize,
+          druidServerToUse.getMaxSize()
+      };
+    }
+
+    private static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
     {
       return Arrays.stream(NodeRole.values())
                    .flatMap(nodeRole -> druidNodeDiscoveryProvider.getForNodeRole(nodeRole).getAllNodes().stream())
@@ -554,9 +608,10 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-
+      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
+          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
+          "authenticationResult in dataContext"
+      );
       checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
       final List<Object[]> rows = new ArrayList<>();
@@ -709,8 +764,10 @@ public class SystemSchema extends AbstractSchema
         DataContext root
     )
     {
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
+          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
+          "authenticationResult in dataContext"
+      );
 
       Function<TaskStatusPlus, Iterable<ResourceAction>> raGenerator = task -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(task.getDataSource()));
@@ -873,8 +930,10 @@ public class SystemSchema extends AbstractSchema
         DataContext root
     )
     {
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
+          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
+          "authenticationResult in dataContext"
+      );
 
       Function<SupervisorStatus, Iterable<ResourceAction>> raGenerator = supervisor -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getSource()));
