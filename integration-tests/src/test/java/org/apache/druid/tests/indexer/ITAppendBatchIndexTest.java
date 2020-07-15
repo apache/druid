@@ -61,25 +61,34 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
   {
     return new Object[][]{
         // First index with dynamically-partitioned then append dynamically-partitioned
-        {ImmutableList.of(
+        {
+          ImmutableList.of(
             new DynamicPartitionsSpec(null, null),
             new DynamicPartitionsSpec(null, null)
-        )},
+          ),
+          ImmutableList.of(4, 8, 2)
+        },
         // First index with hash-partitioned then append dynamically-partitioned
-        {ImmutableList.of(
+        {
+          ImmutableList.of(
             new HashedPartitionsSpec(null, 3, ImmutableList.of("page", "user")),
             new DynamicPartitionsSpec(null, null)
-        )},
+          ),
+          ImmutableList.of(6, 10, 2)
+        },
         // First index with range-partitioned then append dynamically-partitioned
-        {ImmutableList.of(
+        {
+          ImmutableList.of(
             new SingleDimensionPartitionsSpec(1000, null, "page", false),
             new DynamicPartitionsSpec(null, null)
-        )}
+          ),
+          ImmutableList.of(2, 6, 2)
+        }
     };
   }
 
   @Test(dataProvider = "resources")
-  public void doIndexTest(List<PartitionsSpec> partitionsSpecList) throws Exception
+  public void doIndexTest(List<PartitionsSpec> partitionsSpecList, List<Integer> expectedSegmentCountList) throws Exception
   {
     final String indexDatasource = "wikipedia_index_test_" + UUID.randomUUID();
     try (
@@ -87,11 +96,11 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
     ) {
       // Submit initial ingestion task
       submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false);
-      verifySegmentsCountAndLoaded(indexDatasource, 2);
+      verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(0));
       doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION_RESOURCE, 2);
       // Submit append ingestion task
       submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true);
-      verifySegmentsCountAndLoaded(indexDatasource, 6);
+      verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(1));
       doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE, 2);
       // Submit compaction task
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(indexDatasource);
@@ -99,8 +108,8 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
       compactData(indexDatasource);
       // Verification post compaction
       checkCompactionIntervals(indexDatasource, intervalsBeforeCompaction);
-      verifySegmentsCountAndLoaded(indexDatasource, 2);
-      verifySegmentsCompacted(indexDatasource, 2);
+      verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(2));
+      verifySegmentsCompacted(indexDatasource, expectedSegmentCountList.get(2));
       doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE, 2);
     }
   }
@@ -195,11 +204,11 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
           LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
           return metadataSegmentCount == numExpectedSegments;
         },
-        "Compaction segment count check"
+        "Segment count check"
     );
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Load"
+        "Segment load check"
     );
   }
 
