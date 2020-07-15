@@ -50,7 +50,7 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
 {
   private static final Logger LOG = new Logger(ITAppendBatchIndexTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_local_input_source_index_task.json";
-  private static final String INDEX_QUERIES_INITIAL_INGESTION__RESOURCE = "/indexer/wikipedia_index_queries.json";
+  private static final String INDEX_QUERIES_INITIAL_INGESTION_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final String INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE = "/indexer/wikipedia_double_without_roll_up_index_queries.json";
   private static final String INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE = "/indexer/wikipedia_double_with_roll_up_index_queries.json";
 
@@ -88,7 +88,7 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
       // Submit initial ingestion task
       submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false);
       verifySegmentsCountAndLoaded(indexDatasource, 2);
-      doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION__RESOURCE, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION_RESOURCE, 2);
       // Submit append ingestion task
       submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true);
       verifySegmentsCountAndLoaded(indexDatasource, 6);
