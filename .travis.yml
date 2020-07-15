@@ -246,7 +246,7 @@ jobs:
       <<: *test_processing_module
       name: "(openjdk8) other modules test"
       env:
-        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console'
+        - MAVEN_PROJECTS='!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests'
 
     - <<: *test_other_modules
       name: "(openjdk11) other modules test"

@@ -68,17 +68,6 @@ services:
     depends_on:
       - druid-zookeeper-kafka
 
-  druid-historical-for-query-retry-test:
-    extends:
-      file: docker-compose.base.yml
-      service: druid-historical-for-query-retry-test
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    links:
-      - druid-zookeeper-kafka:druid-zookeeper-kafka
-    depends_on:
-      - druid-zookeeper-kafka
-
   druid-broker:
     extends:
       file: docker-compose.base.yml
@@ -106,6 +95,30 @@ services:
       - druid-zookeeper-kafka
       - druid-coordinator
       - druid-broker
+
+  druid-historical-for-query-retry-test:
+    image: druid/cluster
+    container_name: druid-historical-for-query-retry-test
+    networks:
+      druid-it-net:
+        ipv4_address: 172.172.172.13
+    ports:
+      - 8084:8083
+      - 8284:8283
+      - 5010:5007
+    privileged: true
+    volumes:
+      - ${HOME}/shared:/shared
+      - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
+    env_file:
+      - ./environment-configs/common
+      - ./environment-configs/historical-for-query-retry-test
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
+    links:
+      - druid-zookeeper-kafka:druid-zookeeper-kafka
+    depends_on:
+      - druid-zookeeper-kafka
 
 networks:
   druid-it-net:

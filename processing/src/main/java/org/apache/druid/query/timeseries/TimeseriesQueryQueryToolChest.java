@@ -139,10 +139,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
       final Sequence<Result<TimeseriesResultValue>> finalSequence;
 
+      // When granularity = ALL, there is no grouping key for this query.
+      // To be more sql-compliant, we should return something (e.g., 0 for count queries) even when
+      // the sequence is empty.
       if (query.getGranularity().equals(Granularities.ALL) &&
+          // Returns empty sequence if this query allows skipping empty buckets
           !query.isSkipEmptyBuckets() &&
+          // Returns empty sequence if bySegment is set because bySegment results are mostly used for
+          // caching in historicals or debugging where the exact results are preferred.
           !QueryContexts.isBySegment(query)) {
-        //Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus we have only one record
+        // Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus
+        // we have only one record.
         final List<Result<TimeseriesResultValue>> val = baseResults.toList();
         finalSequence = val.isEmpty() ? Sequences.simple(Collections.singletonList(
             getNullTimeseriesResultValue(query))) : Sequences.simple(val);

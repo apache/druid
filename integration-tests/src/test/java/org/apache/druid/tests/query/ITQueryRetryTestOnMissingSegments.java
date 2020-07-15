@@ -54,6 +54,8 @@ import java.util.Map;
  * test spawns two historicals, a normal historical and a historical modified for testing. The later historical
  * announces all segments assigned, but doesn't serve all of them. Instead, it can report missing segments for some
  * segments. See {@link ServerManagerForQueryRetryTest} for more details.
+ *
+ * To run this test properly, the test group must be specified as {@link TestNGGroup#QUERY_RETRY}.
  */
 @Test(groups = TestNGGroup.QUERY_RETRY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
