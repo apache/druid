@@ -17,29 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.testing.utils;
 
-import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.IntegrationTestingConfig;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
-/**
- * Common place to keep all kafka consumer configs
- */
-public class KafkaConsumerConfigs
+public class KafkaUtil
 {
+  private static final String TEST_PROPERTY_PREFIX = "kafka.test.property.";
 
-  public static Map<String, Object> getConsumerProperties()
+  public static void addPropertiesFromTestConfig(IntegrationTestingConfig config, Properties properties)
   {
-    final Map<String, Object> props = new HashMap<>();
-    props.put("metadata.max.age.ms", "10000");
-    props.put("group.id", StringUtils.format("kafka-supervisor-%s", IdUtils.getRandomId()));
-    props.put("auto.offset.reset", "none");
-    props.put("enable.auto.commit", "false");
-    props.put("isolation.level", "read_committed");
-    return props;
+    for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {
+      if (entry.getKey().startsWith(TEST_PROPERTY_PREFIX)) {
+        properties.setProperty(entry.getKey().substring(TEST_PROPERTY_PREFIX.length()), entry.getValue());
+      }
+    }
   }
-
 }
