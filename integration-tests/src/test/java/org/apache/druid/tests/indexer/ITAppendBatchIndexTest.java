@@ -50,24 +50,26 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
 {
   private static final Logger LOG = new Logger(ITAppendBatchIndexTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_local_input_source_index_task.json";
-  private static final String INDEX_QUERIES_PRE_APPEND_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static final String INDEX_QUERIES_POST_APPEND_RESOURCE = "/indexer/wikipedia_index_queries.json";
+  private static final String INDEX_QUERIES_INITIAL_INGESTION__RESOURCE = "/indexer/wikipedia_index_queries.json";
+  private static final String INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE = "/indexer/wikipedia_double_without_roll_up_index_queries.json";
+  private static final String INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE = "/indexer/wikipedia_double_with_roll_up_index_queries.json";
+
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
 
   @DataProvider(parallel = true)
   public static Object[][] resources()
   {
     return new Object[][]{
-//        // First index with dynamically-partitioned then append dynamically-partitioned
-//        {ImmutableList.of(
-//            new DynamicPartitionsSpec(null, null),
-//            new DynamicPartitionsSpec(null, null)
-//        )},
-//        // First index with hash-partitioned then append dynamically-partitioned
-//        {ImmutableList.of(
-//            new HashedPartitionsSpec(null, 3, ImmutableList.of("page", "user")),
-//            new DynamicPartitionsSpec(null, null)
-//        )},
+        // First index with dynamically-partitioned then append dynamically-partitioned
+        {ImmutableList.of(
+            new DynamicPartitionsSpec(null, null),
+            new DynamicPartitionsSpec(null, null)
+        )},
+        // First index with hash-partitioned then append dynamically-partitioned
+        {ImmutableList.of(
+            new HashedPartitionsSpec(null, 3, ImmutableList.of("page", "user")),
+            new DynamicPartitionsSpec(null, null)
+        )},
         // First index with range-partitioned then append dynamically-partitioned
         {ImmutableList.of(
             new SingleDimensionPartitionsSpec(1000, null, "page", false),
@@ -84,26 +86,29 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         final Closeable ignored1 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       // Submit initial ingestion task
-      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false, INDEX_QUERIES_PRE_APPEND_RESOURCE);
+      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(0), false);
+      verifySegmentsCountAndLoaded(indexDatasource, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_INITIAL_INGESTION__RESOURCE, 2);
       // Submit append ingestion task
-      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true, INDEX_QUERIES_POST_APPEND_RESOURCE);
+      submitIngestionTaskAndVerify(indexDatasource, partitionsSpecList.get(1), true);
+      verifySegmentsCountAndLoaded(indexDatasource, 6);
+      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE, 2);
       // Submit compaction task
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(indexDatasource);
       intervalsBeforeCompaction.sort(null);
       compactData(indexDatasource);
       // Verification post compaction
       checkCompactionIntervals(indexDatasource, intervalsBeforeCompaction);
-      verifySegmentsCount(indexDatasource, 10);
-      verifySegmentsCompacted(indexDatasource, 10, 1000);
-      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_RESOURCE, 2);
+      verifySegmentsCountAndLoaded(indexDatasource, 2);
+      verifySegmentsCompacted(indexDatasource, 2);
+      doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE, 2);
     }
   }
 
   private void submitIngestionTaskAndVerify(
       String indexDatasource,
       PartitionsSpec partitionsSpec,
-      boolean appendToExisting,
-      String indexQueriesResource
+      boolean appendToExisting
   ) throws Exception
   {
     InputFormatDetails inputFormatDetails = InputFormatDetails.JSON;
@@ -160,9 +165,9 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         indexDatasource,
         INDEX_TASK,
         sqlInputSourcePropsTransform,
-        indexQueriesResource,
+        null,
         false,
-        true,
+        false,
         true
     );
   }
@@ -182,7 +187,7 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
     );
   }
 
-  private void verifySegmentsCount(String fullDatasourceName, int numExpectedSegments)
+  private void verifySegmentsCountAndLoaded(String fullDatasourceName, int numExpectedSegments)
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
@@ -191,6 +196,10 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
           return metadataSegmentCount == numExpectedSegments;
         },
         "Compaction segment count check"
+    );
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        "Segment Load"
     );
   }
 
@@ -206,7 +215,7 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
     );
   }
 
-  private void verifySegmentsCompacted(String fullDatasourceName, int expectedCompactedSegmentCount, Integer expectedMaxRowsPerSegment)
+  private void verifySegmentsCompacted(String fullDatasourceName, int expectedCompactedSegmentCount)
   {
     List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
     List<DataSegment> foundCompactedSegments = new ArrayList<>();
@@ -219,8 +228,6 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
     for (DataSegment compactedSegment : foundCompactedSegments) {
       Assert.assertNotNull(compactedSegment.getLastCompactionState());
       Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
-      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getMaxRowsPerSegment(),
-                          expectedMaxRowsPerSegment);
       Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
                           SecondaryPartitionType.LINEAR
       );
