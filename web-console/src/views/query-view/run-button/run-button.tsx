@@ -45,6 +45,8 @@ import {
   setUseCache,
 } from '../../../utils/query-context';
 
+import './run-button.scss';
+
 export interface RunButtonProps {
   runeMode: boolean;
   queryContext: QueryContext;
@@ -151,25 +153,34 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
 
   render(): JSX.Element {
     const { runeMode, onRun, loading } = this.props;
-    const runButtonText = 'Run' + (runeMode ? 'e' : '');
 
     return (
       <ButtonGroup className="run-button">
         {onRun ? (
           <Tooltip content="Control + Enter" hoverOpenDelay={900}>
             <Button
+              className={runeMode ? 'rune-button' : undefined}
               disabled={loading}
               icon={IconNames.CARET_RIGHT}
               onClick={this.handleRun}
-              text={runButtonText}
+              text="Run"
               intent={Intent.PRIMARY}
             />
           </Tooltip>
         ) : (
-          <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
+          <Button
+            className={runeMode ? 'rune-button' : undefined}
+            icon={IconNames.CARET_RIGHT}
+            text="Run"
+            disabled
+          />
         )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
-          <Button icon={IconNames.MORE} intent={onRun ? Intent.PRIMARY : undefined} />
+          <Button
+            className={runeMode ? 'rune-button' : undefined}
+            icon={IconNames.MORE}
+            intent={onRun ? Intent.PRIMARY : undefined}
+          />
         </Popover>
       </ButtonGroup>
     );
