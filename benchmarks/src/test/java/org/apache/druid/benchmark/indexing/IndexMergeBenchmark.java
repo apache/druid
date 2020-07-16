@@ -21,9 +21,6 @@ package org.apache.druid.benchmark.indexing;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -35,11 +32,16 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -66,6 +68,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class IndexMergeBenchmark
 {
+
   @Param({"5"})
   private int numSegments;
 
@@ -78,9 +81,13 @@ public class IndexMergeBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
+  @Param({"OFF_HEAP", "TMP_FILE", "ON_HEAP"})
+  private SegmentWriteOutType factoryType;
+
+
   private static final Logger log = new Logger(IndexMergeBenchmark.class);
   private static final int RNG_SEED = 9999;
-  private static final IndexMergerV9 INDEX_MERGER_V9;
+
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER;
 
@@ -89,8 +96,9 @@ public class IndexMergeBenchmark
   }
 
   private List<QueryableIndex> indexesToMerge;
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
   private File tmpDir;
+  private IndexMergerV9 indexMergerV9;
 
   static {
     JSON_MAPPER = new DefaultObjectMapper();
@@ -99,31 +107,24 @@ public class IndexMergeBenchmark
     JSON_MAPPER.setInjectableValues(injectableValues);
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        new ColumnConfig()
-        {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
-        }
+        () -> 0
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
   }
 
   @Setup
   public void setup() throws IOException
   {
-    log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
+    log.info("SETUP CALLED AT " + System.currentTimeMillis());
+    indexMergerV9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, getSegmentWriteOutMediumFactory(factoryType));
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     indexesToMerge = new ArrayList<>();
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
     for (int i = 0; i < numSegments; i++) {
-      BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+      DataGenerator gen = new DataGenerator(
           schemaInfo.getColumnSchemas(),
           RNG_SEED + i,
           schemaInfo.getDataInterval(),
@@ -143,7 +144,7 @@ public class IndexMergeBenchmark
       tmpDir = FileUtils.createTempDir();
       log.info("Using temp dir: " + tmpDir.getAbsolutePath());
 
-      File indexFile = INDEX_MERGER_V9.persist(
+      File indexFile = indexMergerV9.persist(
           incIndex,
           tmpDir,
           new IndexSpec(),
@@ -153,26 +154,6 @@ public class IndexMergeBenchmark
       QueryableIndex qIndex = INDEX_IO.loadIndex(indexFile);
       indexesToMerge.add(qIndex);
     }
-  }
-
-  @TearDown
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(tmpDir);
-  }
-
-  private IncrementalIndex makeIncIndex()
-  {
-    return new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-            .withMetrics(schemaInfo.getAggsArray())
-            .withRollup(rollup)
-            .build()
-        )
-        .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
   }
 
   @Benchmark
@@ -186,7 +167,7 @@ public class IndexMergeBenchmark
     try {
       log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
 
-      File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(
+      File mergedFile = indexMergerV9.mergeQueryableIndex(
           indexesToMerge,
           rollup,
           schemaInfo.getAggsArray(),
@@ -199,8 +180,46 @@ public class IndexMergeBenchmark
     }
     finally {
       tmpFile.delete();
-
     }
+  }
 
+  @TearDown
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(tmpDir);
+  }
+
+  public enum SegmentWriteOutType
+  {
+    TMP_FILE,
+    OFF_HEAP,
+    ON_HEAP
+  }
+
+  private SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory(SegmentWriteOutType type)
+  {
+    switch (type) {
+      case TMP_FILE:
+        return TmpFileSegmentWriteOutMediumFactory.instance();
+      case OFF_HEAP:
+        return OffHeapMemorySegmentWriteOutMediumFactory.instance();
+      case ON_HEAP:
+        return OnHeapMemorySegmentWriteOutMediumFactory.instance();
+    }
+    throw new RuntimeException("Could not create SegmentWriteOutMediumFactory of type: " + type);
+  }
+
+  private IncrementalIndex makeIncIndex()
+  {
+    return new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMetrics(schemaInfo.getAggsArray())
+                .withRollup(rollup)
+                .build()
+        )
+        .setReportParseExceptions(false)
+        .setMaxRowCount(rowsPerSegment)
+        .buildOnheap();
   }
 }

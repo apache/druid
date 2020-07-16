@@ -89,6 +89,9 @@
       "development/experimental": {
         "title": "Experimental features"
       },
+      "development/extensions-contrib/aliyun-oss": {
+        "title": "Aliyun OSS"
+      },
       "development/extensions-contrib/ambari-metrics-emitter": {
         "title": "Ambari Metrics Emitter"
       },
@@ -100,6 +103,9 @@
       },
       "development/extensions-contrib/distinctcount": {
         "title": "DistinctCount Aggregator"
+      },
+      "development/extensions-contrib/gce-extensions": {
+        "title": "GCE Extensions"
       },
       "development/extensions-contrib/graphite": {
         "title": "Graphite Emitter"
@@ -331,7 +337,7 @@
         "title": "kubernetes"
       },
       "operations/management-uis": {
-        "title": "Management UIs"
+        "title": "Legacy Management UIs"
       },
       "operations/metadata-migration": {
         "title": "Metadata Migration"
@@ -421,7 +427,7 @@
         "sidebar_label": "Multitenancy"
       },
       "querying/post-aggregations": {
-        "title": "Postaggregations"
+        "title": "Post-aggregations"
       },
       "querying/query-context": {
         "title": "Query context",

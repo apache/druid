@@ -59,7 +59,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
     }
 
-    // This method is used for the DimExtractionTopNAlgorithm only.
+    // This method is used for the HeapBasedTopNAlgorithm only.
     // Unlike regular topN we cannot rely on ordering to optimize.
     // Optimization possibly requires a reverse lookup from value to ID, which is
     // not possible when applying an extraction function

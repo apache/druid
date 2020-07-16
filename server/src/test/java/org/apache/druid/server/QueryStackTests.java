@@ -25,9 +25,12 @@ import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -41,6 +44,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
@@ -61,7 +65,10 @@ import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.LookupJoinableFactory;
+import org.apache.druid.segment.join.MapJoinableFactoryTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -95,6 +102,7 @@ public class QueryStackTests
       final QuerySegmentWalker clusterWalker,
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactory joinableFactory,
       final ServerConfig serverConfig
   )
   {
@@ -110,6 +118,7 @@ public class QueryStackTests
             return conglomerate.findFactory(query).getToolchest();
           }
         },
+        joinableFactory,
         new RetryQueryRunnerConfig(),
         TestHelper.makeJsonMapper(),
         serverConfig,
@@ -169,10 +178,57 @@ public class QueryStackTests
     );
   }
 
+  public static DruidProcessingConfig getProcessingConfig(boolean useParallelMergePoolConfigured)
+  {
+    return new DruidProcessingConfig()
+    {
+      @Override
+      public String getFormatString()
+      {
+        return null;
+      }
+
+      @Override
+      public int intermediateComputeSizeBytes()
+      {
+        return COMPUTE_BUFFER_SIZE;
+      }
+
+      @Override
+      public int getNumThreads()
+      {
+        // Only use 1 thread for tests.
+        return 1;
+      }
+
+      @Override
+      public int getNumMergeBuffers()
+      {
+        // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
+        // Two buffers for the broker and one for the queryable.
+        return 3;
+      }
+
+      @Override
+      public boolean useParallelMergePoolConfigured()
+      {
+        return useParallelMergePoolConfigured;
+      }
+    };
+  }
+
   /**
    * Returns a new {@link QueryRunnerFactoryConglomerate}. Adds relevant closeables to the passed-in {@link Closer}.
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
+  {
+    return createQueryRunnerFactoryConglomerate(closer, true);
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final boolean useParallelMergePoolConfigured
+  )
   {
     final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
@@ -192,35 +248,7 @@ public class QueryStackTests
                 return GroupByStrategySelector.STRATEGY_V2;
               }
             },
-            new DruidProcessingConfig()
-            {
-              @Override
-              public String getFormatString()
-              {
-                return null;
-              }
-
-              @Override
-              public int intermediateComputeSizeBytes()
-              {
-                return COMPUTE_BUFFER_SIZE;
-              }
-
-              @Override
-              public int getNumThreads()
-              {
-                // Only use 1 thread for tests.
-                return 1;
-              }
-
-              @Override
-              public int getNumMergeBuffers()
-              {
-                // Need 3 buffers for CalciteQueryTest.testDoubleNestedGroupby.
-                // Two buffers for the broker and one for the queryable.
-                return 3;
-              }
-            }
+            getProcessingConfig(useParallelMergePoolConfigured)
         );
 
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory = factoryCloserPair.lhs;
@@ -271,4 +299,26 @@ public class QueryStackTests
     return conglomerate;
   }
 
+  public static JoinableFactory makeJoinableFactoryForLookup(
+      LookupExtractorFactoryContainerProvider lookupProvider
+  )
+  {
+    return makeJoinableFactoryFromDefault(lookupProvider, null);
+  }
+
+  public static JoinableFactory makeJoinableFactoryFromDefault(
+      @Nullable LookupExtractorFactoryContainerProvider lookupProvider,
+      @Nullable Map<Class<? extends DataSource>, JoinableFactory> custom
+  )
+  {
+    ImmutableMap.Builder<Class<? extends DataSource>, JoinableFactory> builder = ImmutableMap.builder();
+    builder.put(InlineDataSource.class, new InlineJoinableFactory());
+    if (lookupProvider != null) {
+      builder.put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider));
+    }
+    if (custom != null) {
+      builder.putAll(custom);
+    }
+    return MapJoinableFactoryTest.fromMap(builder.build());
+  }
 }

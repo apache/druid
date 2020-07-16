@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.Set;
 
-public class ExpressionDimFilter implements DimFilter
+public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String expression;
   private final Supplier<Expr> parsed;

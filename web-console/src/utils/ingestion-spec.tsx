@@ -21,7 +21,7 @@ import React from 'react';
 
 import { Field } from '../components/auto-form/auto-form';
 import { ExternalLink } from '../components/external-link/external-link';
-import { DRUID_DOCS_VERSION } from '../variables';
+import { getLink } from '../links';
 
 import {
   BASIC_TIME_FORMATS,
@@ -175,13 +175,13 @@ export function getIngestionDocLink(spec: IngestionSpec): string {
 
   switch (type) {
     case 'kafka':
-      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion.html`;
+      return `${getLink('DOCS')}/development/extensions-core/kafka-ingestion.html`;
 
     case 'kinesis':
-      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kinesis-ingestion.html`;
+      return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
 
     default:
-      return `https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/native-batch.html#firehoses`;
+      return `${getLink('DOCS')}/ingestion/native-batch.html#firehoses`;
   }
 }
 
@@ -230,6 +230,7 @@ export interface InputFormat {
   pattern?: string;
   function?: string;
   flattenSpec?: FlattenSpec;
+  keepNullColumns?: boolean;
 }
 
 export type DimensionMode = 'specific' | 'auto-detect';
@@ -310,15 +311,13 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'type',
     label: 'Input format',
     type: 'string',
-    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc'],
+    suggestions: ['json', 'csv', 'tsv', 'regex', 'parquet', 'orc', 'avro_ocf'],
     info: (
       <>
         <p>The parser used to parse the data.</p>
         <p>
           For more information see{' '}
-          <ExternalLink
-            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/data-formats.html`}
-          >
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
             the documentation
           </ExternalLink>
           .
@@ -383,7 +382,7 @@ const INPUT_FORMAT_FORM_FIELDS: Field<InputFormat>[] = [
     name: 'binaryAsString',
     type: 'boolean',
     defaultValue: false,
-    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc',
+    defined: (p: InputFormat) => p.type === 'parquet' || p.type === 'orc' || p.type === 'avro_ocf',
     info: (
       <>
         Specifies if the bytes parquet column which is not logically marked as a string or enum type
@@ -414,7 +413,12 @@ export function issueWithInputFormat(inputFormat: InputFormat | undefined): stri
 
 export function inputFormatCanFlatten(inputFormat: InputFormat): boolean {
   const inputFormatType = inputFormat.type;
-  return inputFormatType === 'json' || inputFormatType === 'parquet' || inputFormatType === 'orc';
+  return (
+    inputFormatType === 'json' ||
+    inputFormatType === 'parquet' ||
+    inputFormatType === 'orc' ||
+    inputFormatType === 'avro_ocf'
+  );
 }
 
 export interface TimestampSpec {
@@ -603,12 +607,7 @@ const FLATTEN_FIELD_FORM_FIELDS: Field<FlattenField>[] = [
     info: (
       <>
         Specify a flatten{' '}
-        <ExternalLink
-          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/flatten-json`}
-        >
-          expression
-        </ExternalLink>
-        .
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/flatten-json`}>expression</ExternalLink>.
       </>
     ),
   },
@@ -650,12 +649,7 @@ const TRANSFORM_FORM_FIELDS: Field<Transform>[] = [
     info: (
       <>
         A valid Druid{' '}
-        <ExternalLink
-          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/misc/math-expr.html`}
-        >
-          expression
-        </ExternalLink>
-        .
+        <ExternalLink href={`${getLink('DOCS')}/misc/math-expr.html`}>expression</ExternalLink>.
       </>
     ),
   },
@@ -784,7 +778,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           See the{' '}
-          <ExternalLink href="https://datasketches.github.io/docs/Theta/ThetaSize.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaSize.html">
             DataSketches site
           </ExternalLink>{' '}
           for details.
@@ -849,7 +843,7 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           Must be a power of 2 from 2 to 32768. See the{' '}
-          <ExternalLink href="https://datasketches.github.io/docs/Quantiles/QuantilesAccuracy.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy.html">
             Quantiles Accuracy
           </ExternalLink>{' '}
           for details.
@@ -925,7 +919,9 @@ const METRIC_SPEC_FORM_FIELDS: Field<MetricSpec>[] = [
         <p>
           Supported modes are <Code>ignore</Code>, <Code>overflow</Code>, and <Code>clip</Code>. See
           <ExternalLink
-            href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
+            href={`${getLink(
+              'DOCS',
+            )}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
           >
             outlier handling modes
           </ExternalLink>{' '}
@@ -1018,9 +1014,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink
-          href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html`}
-        >
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -1073,9 +1067,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -1087,12 +1079,19 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'File filter',
           type: 'string',
           required: true,
-          suggestions: ['*', '*.json', '*.json.gz', '*.csv', '*.tsv', '*.parquet', '*.orc'],
+          suggestions: [
+            '*',
+            '*.json',
+            '*.json.gz',
+            '*.csv',
+            '*.tsv',
+            '*.parquet',
+            '*.orc',
+            '*.avro',
+          ],
           info: (
             <>
-              <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/ingestion/firehose.html#localfirehose`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/firehose.html#localfirehose`}>
                 inputSource.filter
               </ExternalLink>
               <p>
@@ -1162,11 +1161,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <p>
               The{' '}
-              <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/querying/filters.html`}
-              >
-                filter
-              </ExternalLink>{' '}
+              <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filter</ExternalLink>{' '}
               to apply to the data as part of querying.
             </p>
           ),
@@ -1226,9 +1221,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink
-                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/s3.html`}
-                >
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3.html`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -1390,9 +1383,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink
-                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/azure.html`}
-                >
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure.html`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -1450,9 +1441,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink
-                  href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/google.html`}
-                >
+                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google.html`}>
                   Google Cloud Storage Objects
                 </ExternalLink>
                 .
@@ -1485,7 +1474,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                href={`${getLink(
+                  'DOCS',
+                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
               >
                 consumerProperties
               </ExternalLink>
@@ -1509,7 +1500,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               <ExternalLink
-                href={`https://druid.apache.org/docs/${DRUID_DOCS_VERSION}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
+                href={`${getLink(
+                  'DOCS',
+                )}/development/extensions-core/kafka-ingestion#kafkasupervisorioconfig`}
               >
                 consumerProperties
               </ExternalLink>
@@ -1560,9 +1553,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink
-                href={`http://docs.aws.amazon.com/general/${DRUID_DOCS_VERSION}/gr/rande.html#ak_region`}
-              >
+              <ExternalLink href={`https://docs.aws.amazon.com/general/latest/gr/ak.html`}>
                 here
               </ExternalLink>
               .
@@ -2420,7 +2411,7 @@ const TUNING_CONFIG_FORM_FIELDS: Field<TuningConfig>[] = [
     type: 'string',
     defaultValue: 'lz4',
     suggestions: ['lz4', 'lzf', 'uncompressed'],
-    info: <>Compression format for metric columns.</>,
+    info: <>Compression format for primitive type metric columns.</>,
   },
   {
     name: 'indexSpec.longEncoding',
@@ -2661,24 +2652,34 @@ function guessInputFormat(sampleData: string[]): InputFormat {
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
 
-    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
-      return inputFormatFromType('json');
-    }
+    // First check for magic byte sequences as they rarely yield false positives
 
-    if (sampleDatum.split('\t').length > 3) {
-      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
-    }
-
-    if (sampleDatum.split(',').length > 3) {
-      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
-    }
-
+    // Parquet 4 byte magic header: https://github.com/apache/parquet-format#file-format
     if (sampleDatum.startsWith('PAR1')) {
       return inputFormatFromType('parquet');
     }
-
+    // ORC 3 byte magic header: https://orc.apache.org/specification/ORCv1/
     if (sampleDatum.startsWith('ORC')) {
       return inputFormatFromType('orc');
+    }
+    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
+    if (sampleDatum.startsWith('Obj1')) {
+      return inputFormatFromType('avro_ocf');
+    }
+
+    // After checking for magic byte sequences perform heuristics to deduce string formats
+
+    // If the string starts and ends with curly braces assume JSON
+    if (sampleDatum.startsWith('{') && sampleDatum.endsWith('}')) {
+      return inputFormatFromType('json');
+    }
+    // Contains more than 3 tabs assume TSV
+    if (sampleDatum.split('\t').length > 3) {
+      return inputFormatFromType('tsv', !/\t\d+\t/.test(sampleDatum));
+    }
+    // Contains more than 3 commas assume CSV
+    if (sampleDatum.split(',').length > 3) {
+      return inputFormatFromType('csv', !/,\d+,/.test(sampleDatum));
     }
   }
 

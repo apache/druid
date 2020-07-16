@@ -345,7 +345,7 @@ public class PartialDimensionDistributionTaskTest
           .dataSchema(dataSchema)
           .inputSource(inlineInputSource)
           .dedupRowDimValueFilterSupplier(
-              () -> new PartialDimensionDistributionTask.DedupRowDimensionValueFilter(
+              () -> new PartialDimensionDistributionTask.DedupInputRowFilter(
                   dataSchema.getGranularitySpec().getQueryGranularity(),
                   smallBloomFilter,
                   manyFalsePositiveBloomFilter
@@ -414,8 +414,7 @@ public class PartialDimensionDistributionTaskTest
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS);
     private IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory =
         ParallelIndexTestingFactory.TASK_CLIENT_FACTORY;
-    private Supplier<PartialDimensionDistributionTask.DedupRowDimensionValueFilter> dedupRowDimValueFilterSupplier =
-        null;
+    private Supplier<PartialDimensionDistributionTask.DedupInputRowFilter> dedupRowDimValueFilterSupplier = null;
 
     @SuppressWarnings("SameParameterValue")
     PartialDimensionDistributionTaskBuilder id(String id)
@@ -451,7 +450,7 @@ public class PartialDimensionDistributionTaskTest
     }
 
     PartialDimensionDistributionTaskBuilder dedupRowDimValueFilterSupplier(
-        Supplier<PartialDimensionDistributionTask.DedupRowDimensionValueFilter> dedupRowDimValueFilterSupplier
+        Supplier<PartialDimensionDistributionTask.DedupInputRowFilter> dedupRowDimValueFilterSupplier
     )
     {
       this.dedupRowDimValueFilterSupplier = dedupRowDimValueFilterSupplier;
@@ -463,9 +462,9 @@ public class PartialDimensionDistributionTaskTest
       ParallelIndexIngestionSpec ingestionSpec =
           ParallelIndexTestingFactory.createIngestionSpec(inputSource, INPUT_FORMAT, tuningConfig, dataSchema);
 
-      Supplier<PartialDimensionDistributionTask.DedupRowDimensionValueFilter> supplier =
+      Supplier<PartialDimensionDistributionTask.DedupInputRowFilter> supplier =
           dedupRowDimValueFilterSupplier == null
-          ? () -> new PartialDimensionDistributionTask.DedupRowDimensionValueFilter(
+          ? () -> new PartialDimensionDistributionTask.DedupInputRowFilter(
               dataSchema.getGranularitySpec().getQueryGranularity()
           )
           : dedupRowDimValueFilterSupplier;

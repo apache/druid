@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerManager;
 import org.apache.druid.server.coordination.ServerType;
@@ -83,6 +84,7 @@ public class CliHistorical extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8283);
           binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
+          binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
 
           // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
           LifecycleModule.register(binder, Server.class);

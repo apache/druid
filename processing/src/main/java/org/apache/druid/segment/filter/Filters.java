@@ -45,10 +45,12 @@ import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
+import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -60,6 +62,7 @@ import java.util.stream.Collectors;
  */
 public class Filters
 {
+  private static final ColumnSelectorFactory ALL_NULL_COLUMN_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
   /**
    * Convert a list of DimFilters to a list of Filters.
@@ -83,7 +86,7 @@ public class Filters
   @Nullable
   public static Filter toFilter(@Nullable DimFilter dimFilter)
   {
-    return dimFilter == null ? null : dimFilter.toFilter();
+    return dimFilter == null ? null : dimFilter.toOptimizedFilter();
   }
 
   /**
@@ -411,7 +414,7 @@ public class Filters
     if (filter.supportsBitmapIndex(indexSelector)) {
       final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
       if (columnHolder != null) {
-        return !columnHolder.getCapabilities().hasMultipleValues();
+        return !columnHolder.getCapabilities().hasMultipleValues().isMaybeTrue();
       }
     }
     return false;
@@ -497,5 +500,56 @@ public class Filters
     }
 
     return new AndFilter(filterList);
+  }
+
+  /**
+   * Create a filter representing an OR relationship across a set of filters.
+   *
+   * @param filterSet Set of filters
+   *
+   * @return If filterSet has more than one element, return an OR filter composed of the filters from filterSet
+   * If filterSet has a single element, return that element alone
+   * If filterSet is empty, return null
+   */
+  @Nullable
+  public static Filter or(Set<Filter> filterSet)
+  {
+    if (filterSet.isEmpty()) {
+      return null;
+    }
+
+    if (filterSet.size() == 1) {
+      return filterSet.iterator().next();
+    }
+
+    return new OrFilter(filterSet);
+  }
+
+  /**
+   * @param filter the filter.
+   * @return The normalized or clauses for the provided filter.
+   */
+  public static Set<Filter> toNormalizedOrClauses(Filter filter)
+  {
+    Filter normalizedFilter = Filters.toCnf(filter);
+
+    // List of candidates for pushdown
+    // CNF normalization will generate either
+    // - an AND filter with multiple subfilters
+    // - or a single non-AND subfilter which cannot be split further
+    Set<Filter> normalizedOrClauses;
+    if (normalizedFilter instanceof AndFilter) {
+      normalizedOrClauses = ((AndFilter) normalizedFilter).getFilters();
+    } else {
+      normalizedOrClauses = Collections.singleton(normalizedFilter);
+    }
+    return normalizedOrClauses;
+  }
+
+
+  public static boolean filterMatchesNull(Filter filter)
+  {
+    ValueMatcher valueMatcher = filter.makeMatcher(ALL_NULL_COLUMN_SELECTOR_FACTORY);
+    return valueMatcher.matches();
   }
 }

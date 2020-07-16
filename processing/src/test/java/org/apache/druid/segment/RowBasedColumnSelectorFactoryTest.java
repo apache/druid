@@ -54,9 +54,8 @@ public class RowBasedColumnSelectorFactoryTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
   }
 
   @Test
@@ -69,9 +68,8 @@ public class RowBasedColumnSelectorFactoryTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertFalse(caps.isComplete());
   }
 
   @Test
@@ -84,9 +82,8 @@ public class RowBasedColumnSelectorFactoryTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
   }
 
   @Test
@@ -99,9 +96,8 @@ public class RowBasedColumnSelectorFactoryTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
   }
 
   @Test
@@ -114,9 +110,8 @@ public class RowBasedColumnSelectorFactoryTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.isComplete());
   }
 
   @Test
@@ -129,9 +124,8 @@ public class RowBasedColumnSelectorFactoryTest
     Assert.assertFalse(caps.isDictionaryEncoded());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(caps.hasMultipleValues());
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertFalse(caps.isComplete());
   }
 
   @Test

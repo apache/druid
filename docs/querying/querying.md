@@ -35,6 +35,13 @@ posted like this:
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
 ```
 
+> Replace `<queryable_host>:<port>` with the appropriate address and port for your system. For example, if running the quickstart configuration, replace `<queryable_host>:<port>` with localhost:8888. 
+
+You can also enter them directly in the Druid console's Query view. Simply pasting a native query into the console switches the editor into JSON mode.
+
+![Native query](../assets/native-queries-01.png "Native query")
+
+
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different
 [client libraries](/libraries.html) in other languages to query Druid.
 
@@ -44,7 +51,7 @@ The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
 curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/x-jackson-smile' -d @<query_json_file>
 ```
 
-Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.
+> If the Accept header is not provided, it defaults to the value of 'Content-Type' header.
 
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build
@@ -132,4 +139,5 @@ Possible codes for the *error* field include:
 |`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
 |`Unauthorized request.`|The query was denied due to security policy. Either the user was not recognized, or the user was recognized but does not have access to the requested resource.|
 |`Unsupported operation`|The query attempted to perform an unsupported operation. This may occur when using undocumented features or when using an incompletely implemented extension.|
+|`Truncated response context`|An intermediate response context for the query exceeded the built-in limit of 7KB.<br/><br/>The response context is an internal data structure that Druid servers use to share out-of-band information when sending query results to each other. It is serialized in an HTTP header with a maximum length of 7KB. This error occurs when an intermediate response context sent from a data server (like a Historical) to the Broker exceeds this limit.<br/><br/>The response context is used for a variety of purposes, but the one most likely to generate a large context is sharing details about segments that move during a query. That means this error can potentially indicate that a very large number of segments moved in between the time a Broker issued a query and the time it was processed on Historicals. This should rarely, if ever, occur during normal operation.|
 |`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|

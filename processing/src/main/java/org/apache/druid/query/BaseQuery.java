@@ -123,7 +123,7 @@ public abstract class BaseQuery<T> implements Query<T>
   {
     return DataSourceAnalysis.forDataSource(query.getDataSource())
                              .getBaseQuerySegmentSpec()
-                             .orElse(query.getQuerySegmentSpec());
+                             .orElseGet(query::getQuerySegmentSpec);
   }
 
   @Override
@@ -199,7 +199,7 @@ public abstract class BaseQuery<T> implements Query<T>
     return computeOverriddenContext(getContext(), overrides);
   }
 
-  protected static Map<String, Object> computeOverriddenContext(
+  public static Map<String, Object> computeOverriddenContext(
       final Map<String, Object> context,
       final Map<String, Object> overrides
   )
@@ -247,7 +247,7 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @Override
-  public Query withId(String id)
+  public Query<T> withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
   }

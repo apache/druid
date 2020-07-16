@@ -39,6 +39,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 
 public class ExpressionFilter implements Filter
@@ -114,7 +115,7 @@ public class ExpressionFilter implements Filter
       // multiple values. The lack of multiple values is important because expression filters treat multi-value
       // arrays as nulls, which doesn't permit index based filtering.
       final String column = Iterables.getOnlyElement(requiredBindings.get());
-      return selector.getBitmapIndex(column) != null && !selector.hasMultipleValues(column);
+      return selector.getBitmapIndex(column) != null && !selector.hasMultipleValues(column).isMaybeTrue();
     } else {
       // Multi-column expression.
       return false;
@@ -175,5 +176,42 @@ public class ExpressionFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return requiredBindings.get();
+  }
+
+  @Override
+  public boolean supportsRequiredColumnRewrite()
+  {
+    // We could support this, but need a good approach to rewriting the identifiers within an expression.
+    return false;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ExpressionFilter that = (ExpressionFilter) o;
+    return Objects.equals(expr, that.expr) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(expr, filterTuning);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ExpressionFilter{" +
+           "expr=" + expr +
+           ", requiredBindings=" + requiredBindings +
+           ", filterTuning=" + filterTuning +
+           '}';
   }
 }

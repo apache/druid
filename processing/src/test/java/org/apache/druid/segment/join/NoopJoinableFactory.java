@@ -33,6 +33,12 @@ public class NoopJoinableFactory implements JoinableFactory
   }
 
   @Override
+  public boolean isDirectlyJoinable(DataSource dataSource)
+  {
+    return false;
+  }
+
+  @Override
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
     return Optional.empty();

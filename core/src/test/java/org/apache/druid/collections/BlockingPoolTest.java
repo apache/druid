@@ -20,6 +20,7 @@
 package org.apache.druid.collections;
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.junit.After;
 import org.junit.Assert;
@@ -66,7 +67,7 @@ public class BlockingPoolTest
   {
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Pool was initialized with limit = 0, there are no objects to take.");
-    emptyPool.take(0);
+    emptyPool.takeBatch(1, 0);
   }
 
   @Test
@@ -80,7 +81,7 @@ public class BlockingPoolTest
   @Test(timeout = 60_000L)
   public void testTake()
   {
-    final ReferenceCountingResourceHolder<Integer> holder = pool.take(100);
+    final ReferenceCountingResourceHolder<Integer> holder = Iterables.getOnlyElement(pool.takeBatch(1, 100), null);
     Assert.assertNotNull(holder);
     Assert.assertEquals(9, pool.getPoolSize());
     holder.close();
@@ -91,7 +92,7 @@ public class BlockingPoolTest
   public void testTakeTimeout()
   {
     final List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 100L);
-    final ReferenceCountingResourceHolder<Integer> holder = pool.take(100);
+    final ReferenceCountingResourceHolder<Integer> holder = Iterables.getOnlyElement(pool.takeBatch(1, 100), null);
     Assert.assertNull(holder);
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
   }
@@ -147,7 +148,7 @@ public class BlockingPoolTest
         () -> {
           List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
           for (int i = 0; i < limit1; i++) {
-            result.add(pool.take(10));
+            result.add(Iterables.getOnlyElement(pool.takeBatch(1, 10), null));
           }
           return result;
         }
@@ -156,7 +157,7 @@ public class BlockingPoolTest
         () -> {
           List<ReferenceCountingResourceHolder<Integer>> result = new ArrayList<>();
           for (int i = 0; i < limit2; i++) {
-            result.add(pool.take(10));
+            result.add(Iterables.getOnlyElement(pool.takeBatch(1, 10), null));
           }
           return result;
         }
@@ -218,7 +219,7 @@ public class BlockingPoolTest
     final List<ReferenceCountingResourceHolder<Integer>> r1 = f1.get();
     final List<ReferenceCountingResourceHolder<Integer>> r2 = f2.get();
 
-    if (r1 != null) {
+    if (!r1.isEmpty()) {
       Assert.assertTrue(r2.isEmpty());
       Assert.assertEquals(pool.maxSize() - batch1, pool.getPoolSize());
       Assert.assertEquals(batch1, r1.size());

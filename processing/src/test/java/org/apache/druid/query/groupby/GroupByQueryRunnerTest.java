@@ -102,6 +102,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ExtractionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
+import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
@@ -404,7 +405,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
     final Closer closer = Closer.create();
-    closer.register(bufferPool);
+    closer.register(() -> {
+      // Verify that all objects have been returned to the pool.
+      Assert.assertEquals(bufferPool.poolSize(), bufferPool.objectsCreatedCount());
+      bufferPool.close();
+    });
     closer.register(mergeBufferPool);
     return Pair.of(new GroupByQueryRunnerFactory(strategySelector, toolChest), closer);
   }
@@ -9874,7 +9879,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
         .setLimitSpec(
             new DefaultLimitSpec(
-                Collections.EMPTY_LIST,
+                Collections.emptyList(),
                 6
             )
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
@@ -10433,6 +10438,35 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergingRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "type-conversion");
+  }
+
+  @Test
+  public void testGroupByNoMatchingPrefilter()
+  {
+    GroupByQuery query = makeQueryBuilder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec("quality", "quality")
+        )
+        .setDimFilter(new SelectorDimFilter("market", "spot", null, null))
+        .setAggregatorSpecs(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            new FilteredAggregatorFactory(
+                new LongSumAggregatorFactory("index", "index"),
+                new NotDimFilter(new SelectorDimFilter("longNumericNull", null, null))
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setLimit(1)
+        .build();
+
+    List<ResultRow> expectedResults = ImmutableList.of(
+        makeRow(query, "2011-04-01", "quality", "automotive", "rows", 1L, "index", 135L)
+    );
+
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
   private static ResultRow makeRow(final GroupByQuery query, final String timestamp, final Object... vals)

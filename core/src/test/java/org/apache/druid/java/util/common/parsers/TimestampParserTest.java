@@ -181,4 +181,48 @@ public class TimestampParserTest
                                    .getMillis()
     );
   }
+
+  @Test
+  public void testFormatsForNumberBasedTimestamp()
+  {
+    int yearMonthDate = 20200514;
+    DateTime expectedDt = DateTimes.of("2020-05-14T00:00:00.000Z");
+    Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("yyyyMMdd");
+    Assert.assertEquals("Timestamp of format yyyyMMdd not parsed correctly",
+                        expectedDt, parser.apply(yearMonthDate));
+
+    int year = 2020;
+    expectedDt = DateTimes.of("2020-01-01T00:00:00.000Z");
+    parser = TimestampParser.createObjectTimestampParser("yyyy");
+    Assert.assertEquals("Timestamp of format yyyy not parsed correctly",
+                        expectedDt, parser.apply(year));
+
+    int yearMonth = 202010;
+    expectedDt = DateTimes.of("2020-10-01T00:00:00.000Z");
+    parser = TimestampParser.createObjectTimestampParser("yyyyMM");
+    Assert.assertEquals("Timestamp of format yyyy not parsed correctly",
+                        expectedDt, parser.apply(yearMonth));
+
+    // Friday, May 15, 2020 8:20:40 PM GMT
+    long millis = 1589574040000l;
+    expectedDt = DateTimes.of("2020-05-15T20:20:40.000Z");
+
+    parser = TimestampParser.createObjectTimestampParser("millis");
+    Assert.assertEquals("Timestamp of format millis not parsed correctly",
+                        expectedDt, parser.apply(millis));
+    parser = TimestampParser.createObjectTimestampParser("auto");
+    Assert.assertEquals("Timestamp of format auto not parsed correctly",
+                        expectedDt, parser.apply(millis));
+
+    int posix = 1589574040;
+    parser = TimestampParser.createObjectTimestampParser("posix");
+    Assert.assertEquals("Timestamp of format posix not parsed correctly",
+                        expectedDt, parser.apply(posix));
+
+    long micro = 1589574040000000l;
+    parser = TimestampParser.createObjectTimestampParser("micro");
+    Assert.assertEquals("Timestamp of format micro not parsed correctly",
+                        expectedDt, parser.apply(micro));
+
+  }
 }

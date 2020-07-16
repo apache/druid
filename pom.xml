@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.19.0-SNAPSHOT</version>
+    <version>0.20.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -78,19 +78,20 @@
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>4.3.0</apache.curator.version>
         <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.2.2</apache.kafka.version>
+        <apache.kafka.version>2.5.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
-        <avatica.version>1.15.0</avatica.version>
+        <avatica.version>1.17.0</avatica.version>
         <avro.version>1.9.2</avro.version>
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>1.2.0-incubating</datasketches.version>
+        <datasketches.version>1.3.0-incubating</datasketches.version>
+        <datasketches.memory.version>1.2.0-incubating</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.12.v20180830</jetty.version>
+        <jetty.version>9.4.30.v20200611</jetty.version>
         <jersey.version>1.19.3</jersey.version>
         <jackson.version>2.10.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -102,19 +103,23 @@
         <netty4.version>4.1.48.Final</netty4.version>
         <node.version>v10.14.2</node.version>
         <npm.version>6.5.0</npm.version>
-        <postgresql.version>42.2.8</postgresql.version>
+        <postgresql.version>42.2.14</postgresql.version>
         <protobuf.version>3.11.0</protobuf.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.8.5</hadoop.compile.version>
+        <mockito.version>3.2.4</mockito.version>
         <powermock.version>2.0.2</powermock.version>
         <aws.sdk.version>1.11.199</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
+        <!-- Curator requires 3.4.x ZooKeeper clients to maintain compatibility with 3.4.x ZooKeeper servers,
+             If we upgrade to 3.5.x clients, curator requires 3.5.x servers, which would break backwards compatibility
+             see http://curator.apache.org/zk-compatibility.html -->
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.14</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.22.0</com.google.apis.client.version>
-
+        <com.google.apis.client.version>1.25.0</com.google.apis.client.version>
+        <com.google.apis.compute.version>v1-rev214-1.25.0</com.google.apis.compute.version>
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -187,6 +192,8 @@
         <module>extensions-contrib/moving-average-query</module>
         <module>extensions-contrib/tdigestsketch</module>
         <module>extensions-contrib/influxdb-emitter</module>
+        <module>extensions-contrib/gce-extensions</module>
+        <module>extensions-contrib/aliyun-oss-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -769,7 +776,7 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.6.0</version>
+                <version>1.7.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -1014,7 +1021,7 @@
             <dependency>
                 <groupId>org.apache.datasketches</groupId>
                 <artifactId>datasketches-memory</artifactId>
-                <version>${datasketches.version}</version>
+                <version>${datasketches.memory.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -1034,6 +1041,12 @@
                 <artifactId>junit</artifactId>
                 <version>4.12</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+              <groupId>org.mockito</groupId>
+              <artifactId>mockito-core</artifactId>
+              <version>${mockito.version}</version>
+              <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.powermock</groupId>
@@ -1192,11 +1205,18 @@
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>
             </dependency>
+            <!-- GCE -->
+            <dependency>
+                <groupId>com.google.apis</groupId>
+                <artifactId>google-api-services-compute</artifactId>
+                <version>${com.google.apis.compute.version}</version>
+                <scope>provided</scope>
+            </dependency>
 
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>6.8.7</version>
+                <version>6.14.3</version>
             </dependency>
             <dependency>
                 <groupId>org.hamcrest</groupId>
@@ -1242,9 +1262,16 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.4</version>
+                <version>0.8.5</version>
                 <configuration>
                     <excludes>
+                        <!-- Ignore initialization classes, these are tested by the integration tests. -->
+                        <exclude>org/apache/druid/cli/Cli*</exclude>
+                        <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
+                        <exclude>org/apache/druid/server/initialization/*Module*</exclude>
+                        <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
+                        <exclude>org/apache/druid/guice/http/*</exclude>
+
                         <!-- Ignore generated code -->
                         <exclude>org/apache/druid/math/expr/antlr/Expr*</exclude>  <!-- core -->
                         <exclude>org/apache/druid/**/generated/*Benchmark*</exclude>  <!-- benchmarks -->
@@ -1253,8 +1280,10 @@
                         <!-- Ignore non-production code -->
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
-                        <exclude>org/testng/DruidTestRunnerFactory*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+
+                        <!-- Exceptions -->
+                        <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>

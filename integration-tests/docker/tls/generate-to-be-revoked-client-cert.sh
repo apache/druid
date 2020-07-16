@@ -52,9 +52,9 @@ DNS.2 = localhost
 EOT
 
 # Generate a client certificate for this machine
-openssl genrsa -out revoked_client.key 1024 -sha256
+openssl genrsa -out revoked_client.key 1024
 openssl req -new -out revoked_client.csr -key revoked_client.key -reqexts req_ext -config revoked_csr.conf
-openssl x509 -req -days 3650 -in revoked_client.csr -CA root.pem -CAkey root.key -set_serial 0x11111113 -out revoked_client.pem -sha256 -extfile csr.conf -extensions req_ext
+openssl x509 -req -days 3650 -in revoked_client.csr -CA root.pem -CAkey root.key -set_serial 0x11111113 -out revoked_client.pem -sha256 -extfile revoked_csr.conf -extensions req_ext
 
 # Create a Java keystore containing the generated certificate
 openssl pkcs12 -export -in revoked_client.pem -inkey revoked_client.key -out revoked_client.p12 -name revoked_druid -CAfile root.pem -caname druid-it-root -password pass:druid123

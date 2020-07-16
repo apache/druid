@@ -128,6 +128,19 @@ public interface DimensionIndexer
   EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions);
 
   /**
+   * This method will be called while building an {@link IncrementalIndex} whenever a known dimension column (either
+   * through an explicit schema on the ingestion spec, or auto-discovered while processing rows) is absent in any row
+   * that is processed, to allow an indexer to account for any missing rows if necessary. Useful so that a string
+   * {@link DimensionSelector} built on top of an {@link IncrementalIndex} may accurately report
+   * {@link DimensionSelector#nameLookupPossibleInAdvance()} by allowing it to track if it has any implicit null valued
+   * rows.
+   *
+   * At index persist/merge time all missing columns for a row will be explicitly replaced with the value appropriate
+   * null or default value.
+   */
+  void setSparseIndexed();
+
+  /**
    * Gives the estimated size in bytes for the given key
    *
    * @param key dimension value array from a TimeAndDims key
@@ -240,6 +253,10 @@ public interface DimensionIndexer
    * and comparing the actual values until a difference is found.
    *
    * Refer to StringDimensionIndexer.compareUnsortedEncodedKeyComponents() for a reference implementation.
+   *
+   * The comparison rules used by this method should match the rules used by
+   * {@link DimensionHandler#getEncodedValueSelectorComparator()}, otherwise incorrect ordering/merging of rows
+   * can occur during ingestion, causing issues such as imperfect rollup.
    *
    * @param lhs dimension value array from a Row key
    * @param rhs dimension value array from a Row key

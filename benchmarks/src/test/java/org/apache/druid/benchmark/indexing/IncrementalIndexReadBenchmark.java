@@ -19,9 +19,6 @@
 
 package org.apache.druid.benchmark.indexing;
 
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -43,6 +40,9 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -91,7 +91,7 @@ public class IncrementalIndexReadBenchmark
 
   private IncrementalIndex incIndex;
 
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
 
   @Setup
   public void setup() throws IOException
@@ -100,9 +100,9 @@ public class IncrementalIndexReadBenchmark
 
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
-    BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+    DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval(),
@@ -198,7 +198,7 @@ public class IncrementalIndexReadBenchmark
   private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     return sa.makeCursors(
-        filter.toFilter(),
+        filter == null ? null : filter.toFilter(),
         schemaInfo.getDataInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,

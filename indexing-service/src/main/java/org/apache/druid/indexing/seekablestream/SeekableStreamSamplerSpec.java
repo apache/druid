@@ -98,7 +98,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           ioConfig.isUseEarliestSequenceNumber()
       );
       inputFormat = Preconditions.checkNotNull(
-          ioConfig.getInputFormat(null),
+          ioConfig.getInputFormat(),
           "[spec.ioConfig.inputFormat] is required"
       );
     }

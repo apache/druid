@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join.table;
 
-import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -28,8 +27,11 @@ import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 public class IndexedTableJoinable implements Joinable
@@ -81,7 +83,7 @@ public class IndexedTableJoinable implements Joinable
   }
 
   @Override
-  public Set<String> getCorrelatedColumnValues(
+  public Optional<Set<String>> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
       String retrievalColumnName,
@@ -93,7 +95,7 @@ public class IndexedTableJoinable implements Joinable
     int correlatedColumnPosition = table.rowSignature().indexOf(retrievalColumnName);
 
     if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
-      return ImmutableSet.of();
+      return Optional.empty();
     }
 
     Set<String> correlatedValues = new HashSet<>();
@@ -103,30 +105,39 @@ public class IndexedTableJoinable implements Joinable
       IntList rowIndex = index.find(searchColumnValue);
       for (int i = 0; i < rowIndex.size(); i++) {
         int rowNum = rowIndex.getInt(i);
-        correlatedValues.add(reader.read(rowNum).toString());
+        String correlatedDimVal = Objects.toString(reader.read(rowNum), null);
+        correlatedValues.add(correlatedDimVal);
 
         if (correlatedValues.size() > maxCorrelationSetSize) {
-          return ImmutableSet.of();
+          return Optional.empty();
         }
       }
-      return correlatedValues;
+      return Optional.of(correlatedValues);
     } else {
       if (!allowNonKeyColumnSearch) {
-        return ImmutableSet.of();
+        return Optional.empty();
       }
 
       IndexedTable.Reader dimNameReader = table.columnReader(filterColumnPosition);
       IndexedTable.Reader correlatedColumnReader = table.columnReader(correlatedColumnPosition);
       for (int i = 0; i < table.numRows(); i++) {
-        if (searchColumnValue.equals(dimNameReader.read(i).toString())) {
-          correlatedValues.add(correlatedColumnReader.read(i).toString());
-        }
-        if (correlatedValues.size() > maxCorrelationSetSize) {
-          return ImmutableSet.of();
+        String dimVal = Objects.toString(dimNameReader.read(i), null);
+        if (searchColumnValue.equals(dimVal)) {
+          String correlatedDimVal = Objects.toString(correlatedColumnReader.read(i), null);
+          correlatedValues.add(correlatedDimVal);
+          if (correlatedValues.size() > maxCorrelationSetSize) {
+            return Optional.empty();
+          }
         }
       }
 
-      return correlatedValues;
+      return Optional.of(correlatedValues);
     }
+  }
+
+  @Override
+  public Optional<Closeable> acquireReferences()
+  {
+    return table.acquireReferences();
   }
 }

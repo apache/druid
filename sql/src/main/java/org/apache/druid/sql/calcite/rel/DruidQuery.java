@@ -191,7 +191,7 @@ public class DruidQuery
           computeGrouping(
               partialQuery,
               plannerContext,
-              computeOutputRowSignature(sourceRowSignature, selectProjection, null, null),
+              computeOutputRowSignature(sourceRowSignature, null, null, null),
               virtualColumnRegistry,
               rexBuilder,
               finalizeAggregations
@@ -433,7 +433,13 @@ public class DruidQuery
     final Aggregate aggregate = partialQuery.getAggregate();
 
     // dimBitMapping maps from input field position to group set position (dimension number).
-    final int[] dimBitMapping = new int[rowSignature.size()];
+    final int[] dimBitMapping;
+    if (partialQuery.getSelectProject() != null) {
+      dimBitMapping = new int[partialQuery.getSelectProject().getRowType().getFieldCount()];
+    } else {
+      dimBitMapping = new int[rowSignature.size()];
+    }
+
     int i = 0;
     for (int dimBit : aggregate.getGroupSet()) {
       dimBitMapping[dimBit] = i++;
@@ -734,6 +740,9 @@ public class DruidQuery
     final Granularity queryGranularity;
     final boolean descending;
     int timeseriesLimit = 0;
+    final Map<String, Object> theContext = new HashMap<>();
+    theContext.put("skipEmptyBuckets", true);
+    theContext.putAll(plannerContext.getQueryContext());
     if (grouping.getDimensions().isEmpty()) {
       queryGranularity = Granularities.ALL;
       descending = false;
@@ -748,7 +757,10 @@ public class DruidQuery
         // Timeseries only applies if the single dimension is granular __time.
         return null;
       }
-
+      theContext.put(
+          TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD,
+          Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec().getOutputName()
+      );
       if (sorting != null) {
         // If there is sorting, set timeseriesLimit to given value if less than Integer.Max_VALUE
         if (sorting.isLimited()) {
@@ -782,9 +794,6 @@ public class DruidQuery
     if (sorting != null && sorting.getProjection() != null) {
       postAggregators.addAll(sorting.getProjection().getPostAggregators());
     }
-    final Map<String, Object> theContext = new HashMap<>();
-    theContext.put("skipEmptyBuckets", true);
-    theContext.putAll(plannerContext.getQueryContext());
 
     return new TimeseriesQuery(
         dataSource,

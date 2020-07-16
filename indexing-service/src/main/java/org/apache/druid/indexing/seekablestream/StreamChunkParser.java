@@ -19,12 +19,17 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -38,20 +43,42 @@ class StreamChunkParser
 {
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
+  @Nullable
   private final SettableByteEntityReader byteEntityReader;
 
-  StreamChunkParser(@Nullable InputRowParser<ByteBuffer> parser, SettableByteEntityReader byteEntityReader)
+  /**
+   * Either parser or inputFormat shouldn't be null.
+   */
+  StreamChunkParser(
+      @Nullable InputRowParser<ByteBuffer> parser,
+      @Nullable InputFormat inputFormat,
+      InputRowSchema inputRowSchema,
+      TransformSpec transformSpec,
+      File indexingTmpDir
+  )
   {
+    if (parser == null && inputFormat == null) {
+      throw new IAE("Either parser or inputFormat should be set");
+    }
     this.parser = parser;
-    this.byteEntityReader = byteEntityReader;
+    if (inputFormat != null) {
+      this.byteEntityReader = new SettableByteEntityReader(
+          inputFormat,
+          inputRowSchema,
+          transformSpec,
+          indexingTmpDir
+      );
+    } else {
+      this.byteEntityReader = null;
+    }
   }
 
   List<InputRow> parse(List<byte[]> streamChunk) throws IOException
   {
-    if (parser != null) {
-      return parseWithParser(parser, streamChunk);
-    } else {
+    if (byteEntityReader != null) {
       return parseWithInputFormat(byteEntityReader, streamChunk);
+    } else {
+      return parseWithParser(parser, streamChunk);
     }
   }
 

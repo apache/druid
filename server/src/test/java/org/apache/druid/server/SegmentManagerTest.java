@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.AbstractSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -52,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -90,7 +90,7 @@ public class SegmentManagerTest
     }
   };
 
-  private static class SegmentForTesting extends AbstractSegment
+  private static class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;
@@ -422,17 +422,19 @@ public class SegmentManagerTest
   @SuppressWarnings("RedundantThrows") // TODO remove when the bug in intelliJ is fixed.
   private void assertResult(List<DataSegment> expectedExistingSegments) throws SegmentLoadingException
   {
-    final Map<String, Long> expectedDataSourceSizes = expectedExistingSegments
-        .stream()
-        .collect(Collectors.toMap(DataSegment::getDataSource, DataSegment::getSize, Long::sum));
-    final Map<String, Long> expectedDataSourceCounts = expectedExistingSegments
-        .stream()
-        .collect(Collectors.toMap(DataSegment::getDataSource, segment -> 1L, Long::sum));
-    final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> expectedDataSources
-        = new HashMap<>();
+    final Map<String, Long> expectedDataSourceSizes =
+        expectedExistingSegments.stream()
+                                .collect(Collectors.toMap(DataSegment::getDataSource, DataSegment::getSize, Long::sum));
+    final Map<String, Long> expectedDataSourceCounts =
+        expectedExistingSegments.stream()
+                                .collect(Collectors.toMap(DataSegment::getDataSource, segment -> 1L, Long::sum));
+    final Set<String> expectedDataSourceNames = expectedExistingSegments.stream()
+                                                                        .map(DataSegment::getDataSource)
+                                                                        .collect(Collectors.toSet());
+    final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> expectedTimelines = new HashMap<>();
     for (DataSegment segment : expectedExistingSegments) {
       final VersionedIntervalTimeline<String, ReferenceCountingSegment> expectedTimeline =
-          expectedDataSources.computeIfAbsent(
+          expectedTimelines.computeIfAbsent(
               segment.getDataSource(),
               k -> new VersionedIntervalTimeline<>(Ordering.natural())
           );
@@ -445,11 +447,12 @@ public class SegmentManagerTest
       );
     }
 
+    Assert.assertEquals(expectedDataSourceNames, segmentManager.getDataSourceNames());
     Assert.assertEquals(expectedDataSourceCounts, segmentManager.getDataSourceCounts());
     Assert.assertEquals(expectedDataSourceSizes, segmentManager.getDataSourceSizes());
 
     final Map<String, DataSourceState> dataSources = segmentManager.getDataSources();
-    Assert.assertEquals(expectedDataSources.size(), dataSources.size());
+    Assert.assertEquals(expectedTimelines.size(), dataSources.size());
 
     dataSources.forEach(
         (sourceName, dataSourceState) -> {
@@ -459,7 +462,7 @@ public class SegmentManagerTest
               dataSourceState.getTotalSegmentSize()
           );
           Assert.assertEquals(
-              expectedDataSources.get(sourceName).getAllTimelineEntries(),
+              expectedTimelines.get(sourceName).getAllTimelineEntries(),
               dataSourceState.getTimeline().getAllTimelineEntries()
           );
         }
