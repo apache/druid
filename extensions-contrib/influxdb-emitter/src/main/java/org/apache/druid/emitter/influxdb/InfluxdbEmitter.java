@@ -233,9 +233,7 @@ public class InfluxdbEmitter implements Emitter
 
       try {
         in = new FileInputStream(new File(influxdbEmitterConfig.getTrustStorePath()));
-        KeyStore store = KeyStore.getInstance(influxdbEmitterConfig.getTrustStoreType() == null
-                                              ? KeyStore.getDefaultType()
-                                              : influxdbEmitterConfig.getTrustStoreType());
+        KeyStore store = KeyStore.getInstance(influxdbEmitterConfig.getTrustStoreType());
         store.load(in, influxdbEmitterConfig.getTrustStorePassword().toCharArray());
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         tmf.init(store);

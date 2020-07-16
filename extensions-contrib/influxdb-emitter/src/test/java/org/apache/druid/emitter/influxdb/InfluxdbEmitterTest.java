@@ -249,4 +249,46 @@ public class InfluxdbEmitterTest
     InfluxdbEmitter influxdbEmitter = new InfluxdbEmitter(config);
   }
 
+  @Test(expected = IllegalStateException.class)
+  public void testBuildInfluxdbClientWithHttpsProtocolAndNullTrustStorePath()
+  {
+    InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        "https",
+        null,
+        null,
+        "pass",
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    InfluxdbEmitter influxdbEmitter = new InfluxdbEmitter(config);
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testBuildInfluxdbClientWithHttpsProtocolAndNullTrustStorePassword()
+  {
+    InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        "https",
+        "path",
+        null,
+        null,
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    InfluxdbEmitter influxdbEmitter = new InfluxdbEmitter(config);
+  }
+
 }

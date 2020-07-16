@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.security.KeyStore;
 import java.util.Arrays;
 
 public class InfluxdbEmitterConfigTest
@@ -268,7 +269,7 @@ public class InfluxdbEmitterConfigTest
         null
     );
     String expectedProtocol = "http";
-    Assert.assertEquals(expectedProtocol, influxdbEmitterConfig.getProtocol());
+    Assert.assertEquals(expectedProtocol, influxdbEmitterConfigWithNullProtocol.getProtocol());
   }
 
   @Test
@@ -277,6 +278,28 @@ public class InfluxdbEmitterConfigTest
     EqualsVerifier.forClass(InfluxdbEmitterConfig.class).withNonnullFields(
         "hostname", "databaseName", "influxdbUserName", "influxdbPassword"
     ).usingGetClass().verify();
+  }
+
+  @Test
+  public void testConfigWithNullTrustStoreType()
+  {
+    InfluxdbEmitterConfig influxdbEmitterConfigWithNullTrustStoreType = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        null,
+        "path",
+        null,
+        "pass",
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    String expectedTrustStoreType = KeyStore.getDefaultType();
+    Assert.assertEquals(expectedTrustStoreType, influxdbEmitterConfigWithNullTrustStoreType.getTrustStoreType());
   }
 
 }

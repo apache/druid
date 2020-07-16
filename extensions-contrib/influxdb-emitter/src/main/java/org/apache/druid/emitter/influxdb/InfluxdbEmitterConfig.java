@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 
+import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -87,7 +88,7 @@ public class InfluxdbEmitterConfig
     this.port = port == null ? DEFAULT_PORT : port;
     this.protocol = protocol == null ? DEFAULT_PROTOCOL : protocol;
     this.trustStorePath = trustStorePath;
-    this.trustStoreType = trustStoreType;
+    this.trustStoreType = trustStoreType == null ? KeyStore.getDefaultType() : trustStoreType;
     this.trustStorePassword = trustStorePassword;
     this.databaseName = Preconditions.checkNotNull(databaseName, "databaseName can not be null");
     this.maxQueueSize = maxQueueSize == null ? DEFAULT_QUEUE_SIZE : maxQueueSize;
@@ -143,7 +144,7 @@ public class InfluxdbEmitterConfig
     if (getTrustStorePath() != null ? !getTrustStorePath().equals(that.getTrustStorePath()) : that.getTrustStorePath() != null) {
       return false;
     }
-    if (getTrustStoreType() != null ? !getTrustStoreType().equals(that.getTrustStoreType()) : that.getTrustStoreType() != null) {
+    if (!getTrustStoreType().equals(that.getTrustStoreType())) {
       return false;
     }
     if (getTrustStorePassword() != null ? !getTrustStorePassword().equals(that.getTrustStorePassword()) : that.getTrustStorePassword() != null) {
