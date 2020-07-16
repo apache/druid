@@ -31,6 +31,7 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.mozilla.javascript.Context;
 
+import java.util.Objects;
 import java.util.Set;
 
 public class JavaScriptFilter implements Filter
@@ -115,5 +116,26 @@ public class JavaScriptFilter implements Filter
   public Set<String> getRequiredColumns()
   {
     return ImmutableSet.of(dimension);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    JavaScriptFilter that = (JavaScriptFilter) o;
+    return Objects.equals(dimension, that.dimension) &&
+           Objects.equals(predicateFactory, that.predicateFactory) &&
+           Objects.equals(filterTuning, that.filterTuning);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dimension, predicateFactory, filterTuning);
   }
 }

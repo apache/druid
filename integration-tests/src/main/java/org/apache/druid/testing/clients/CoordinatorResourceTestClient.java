@@ -31,6 +31,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
@@ -190,6 +191,14 @@ public class CoordinatorResourceTestClient
     return status;
   }
 
+  /**
+   * Warning: This API reads segments from {@link SqlSegmentsMetadataManager} of the Coordinator which
+   * caches segments in memory and periodically updates them. Hence, there can be a race condition as
+   * this API implementation compares segments metadata from cache with segments in historicals.
+   * Particularly, when number of segment changes after the first initial load of the datasource.
+   * Workaround is to verify the number of segments matches expected from {@link #getSegments(String) getSegments}
+   * before calling this method (since, that would wait until the cache is updated with expected data)
+   */
   public boolean areSegmentsLoaded(String dataSource)
   {
     final Map<String, Integer> status = getLoadStatus();

@@ -52,6 +52,7 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
 
     // Otherwise this shouldn't have been called (due to isNull returning true).
     assert NullHandling.replaceWithDefault();
+    //noinspection ConstantConditions assert statement above guarantees this is non null.
     return NullHandling.defaultDoubleValue();
   }
 
@@ -70,6 +71,7 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
 
     // Otherwise this shouldn't have been called (due to isNull returning true).
     assert NullHandling.replaceWithDefault();
+    //noinspection ConstantConditions assert statement above guarantees this is non null.
     return NullHandling.defaultFloatValue();
   }
 
@@ -88,6 +90,7 @@ public class IndexedTableColumnValueSelector implements ColumnValueSelector<Obje
 
     // Otherwise this shouldn't have been called (due to isNull returning true).
     assert NullHandling.replaceWithDefault();
+    //noinspection ConstantConditions assert statement above guarantees this is non null.
     return NullHandling.defaultLongValue();
   }
 

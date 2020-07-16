@@ -42,7 +42,7 @@ public class TopNSequenceTest
   private static final Ordering<String> ASC = Ordering.natural();
   private static final Ordering<String> DESC = Ordering.natural().reverse();
 
-  private static final List<String> EMPTY = Collections.EMPTY_LIST;
+  private static final List<String> EMPTY = Collections.emptyList();
   private static final List<String> SINGLE = Collections.singletonList("a");
   private static final List<String> RAW_ASC = Lists.newArrayList(Splitter.fixedLength(1).split("abcdefghijk"));
   private static final List<String> RAW_DESC = Lists.newArrayList(Splitter.fixedLength(1).split("kjihgfedcba"));

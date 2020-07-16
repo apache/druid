@@ -655,7 +655,8 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                                             "p12",
                                             "a2:agg"
                                         ),
-                                        new double[]{0.2d, 0.6d}
+                                        new double[]{0.2d, 0.6d},
+                                        null
                                     ),
                                     new DoublesSketchToRankPostAggregator(
                                         "p15",

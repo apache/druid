@@ -116,11 +116,13 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
           } else if (rowValue instanceof Number) {
             // Double or some other non-int, non-long, non-float number.
             return getDoublePredicate().applyDouble((double) rowValue);
-          } else if (rowValue instanceof String || rowValue instanceof List) {
-            // String or list-of-something. Cast to list of strings and evaluate them as strings.
+          } else {
+            // Other types. Cast to list of strings and evaluate them as strings.
+            // Boolean values are handled here as well since it is not a known type in Druid.
             final List<String> rowValueStrings = Rows.objectToStrings(rowValue);
 
             if (rowValueStrings.isEmpty()) {
+              // Empty list is equivalent to null.
               return getStringPredicate().apply(null);
             }
 
@@ -131,9 +133,6 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
             }
 
             return false;
-          } else {
-            // Unfilterable type. Treat as null.
-            return getStringPredicate().apply(null);
           }
         }
 

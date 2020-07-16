@@ -55,7 +55,12 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
                     public Sequence<T> apply(DataSource singleSource)
                     {
                       return baseRunner.run(
-                          queryPlus.withQuery(query.withDataSource(singleSource)),
+                          queryPlus.withQuery(
+                              query.withDataSource(singleSource)
+                                   // assign the subqueryId. this will be used to validate that every query servers
+                                   // have responded per subquery in RetryQueryRunner
+                                   .withDefaultSubQueryId()
+                          ),
                           responseContext
                       );
                     }

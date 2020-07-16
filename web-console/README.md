@@ -40,11 +40,10 @@ A lot of the directory structure was created to preserve the existing console st
 
 As part of this repo:
 
-- `console.html` - Entry file for the overlord console
-- `lib/` - A place where some overrides to the react-table stylus files live, this is outside of the normal SCSS build system.
-- `old-console/` - Files for the overlord console
-- `public/` - The compiled destination of the file powering this console
 - `assets/` - The images (and other assets) used within the console
+- `e2e-tests/` - End-to-end tests for the console
+- `lib/` - A place where some overrides to the react-table stylus files live, this is outside of the normal SCSS build system.
+- `public/` - The compiled destination of the file powering this console
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory (together with `lib`) constitutes all the source code for this console
 
@@ -73,3 +72,36 @@ GET /druid/coordinator/v1/tiers
 ## Updating the list of license files
 
 From the web-console directory run `script/licenses`
+
+## Running End-to-End Tests
+
+From the web-console directory:
+
+1. Build druid distribution: `script/druid build`
+2. Start druid cluster: `script/druid start`
+3. Run end-to-end tests: `npm run test-e2e`
+4. Stop druid cluster: `script/druid stop`
+
+### Debugging
+
+#### Screenshots
+
+`e2e-tests/util/debug.ts:saveScreenshotIfError()` is used to save a screenshot of the web console
+when the test fails. For example, if `e2e-tests/tutotrial-batch.spec.ts` fails, it will create
+`load-data-from-local-disk-error-screenshot.png`.
+
+#### Disabling Headless Mode
+
+Disabling headless mode while running the tests can be helpful. One way of doing this is by using
+`e2e-tests/util/playwright:createBrowserDebug()`. For example, the test can be modified to change
+
+```
+import { createBrowserNormal as createBrowser } from './util/playwright'
+```
+
+to
+
+```
+import { createBrowserDebug as createBrowser } from './util/playwright'`
+```
+

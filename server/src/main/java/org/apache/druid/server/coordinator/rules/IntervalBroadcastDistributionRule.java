@@ -25,23 +25,19 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.List;
 import java.util.Objects;
 
 public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
 {
   static final String TYPE = "broadcastByInterval";
   private final Interval interval;
-  private final List<String> colocatedDataSources;
 
   @JsonCreator
   public IntervalBroadcastDistributionRule(
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
+      @JsonProperty("interval") Interval interval
   )
   {
     this.interval = interval;
-    this.colocatedDataSources = colocatedDataSources;
   }
 
   @Override
@@ -49,13 +45,6 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
   public String getType()
   {
     return TYPE;
-  }
-
-  @Override
-  @JsonProperty
-  public List<String> getColocatedDataSources()
-  {
-    return colocatedDataSources;
   }
 
   @Override
@@ -79,26 +68,19 @@ public class IntervalBroadcastDistributionRule extends BroadcastDistributionRule
   @Override
   public boolean equals(Object o)
   {
-    if (o == this) {
+    if (this == o) {
       return true;
     }
-
-    if (o == null || o.getClass() != getClass()) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     IntervalBroadcastDistributionRule that = (IntervalBroadcastDistributionRule) o;
-
-    if (!Objects.equals(interval, that.interval)) {
-      return false;
-    }
-
-    return Objects.equals(colocatedDataSources, that.colocatedDataSources);
+    return Objects.equals(getInterval(), that.getInterval());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(getType(), interval, colocatedDataSources);
+    return Objects.hash(getInterval());
   }
 }

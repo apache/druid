@@ -137,9 +137,19 @@ public class DruidServer implements Comparable<DruidServer>
     return metadata.getTier();
   }
 
-  public boolean segmentReplicatable()
+  public boolean isSegmentReplicationTarget()
   {
-    return metadata.segmentReplicatable();
+    return metadata.isSegmentReplicationTarget();
+  }
+
+  public boolean isSegmentBroadcastTarget()
+  {
+    return metadata.isSegmentBroadcastTarget();
+  }
+
+  public boolean isSegmentReplicationOrBroadcastTarget()
+  {
+    return metadata.isSegmentReplicationTarget() || metadata.isSegmentBroadcastTarget();
   }
 
   @JsonProperty

@@ -181,6 +181,7 @@ async function validateQuery(page: playwright.Page, datasourceName: string) {
     /* isNew */ 'false',
     /* isRobot */ 'false',
     /* isUnpatrolled */ 'false',
+    /* metroCode */ 'null',
     /* namespace */ 'Talk',
     /* page */ 'Talk:Oswald Tilghman',
     /* regionIsoCode */ 'null',

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.input.GeneratorInputSource;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
@@ -37,7 +38,8 @@ public class IndexingServiceInputSourceModule implements DruidModule
     return ImmutableList.<Module>of(
         new SimpleModule("IndexingServiceInputSourceModule")
             .registerSubtypes(
-                new NamedType(DruidInputSource.class, "druid")
+                new NamedType(DruidInputSource.class, "druid"),
+                new NamedType(GeneratorInputSource.class, "generator")
             )
     );
   }

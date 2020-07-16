@@ -342,8 +342,9 @@ public class CachingClusteredClientFunctionalityTest
       final ResponseContext responseContext
   )
   {
-    return client.getQueryRunnerForIntervals(query, query.getIntervals()).run(
-        QueryPlus.wrap(query),
+    final Query<T> theQuery = query.withId("queryId");
+    return client.getQueryRunnerForIntervals(theQuery, theQuery.getIntervals()).run(
+        QueryPlus.wrap(theQuery),
         responseContext
     );
   }

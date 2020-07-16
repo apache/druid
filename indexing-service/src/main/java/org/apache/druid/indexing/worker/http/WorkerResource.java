@@ -27,7 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.indexer.TaskIdUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.worker.Worker;
@@ -190,7 +190,7 @@ public class WorkerResource
       @QueryParam("offset") @DefaultValue("0") long offset
   )
   {
-    TaskIdUtils.validateId("taskId", taskId);
+    IdUtils.validateId("taskId", taskId);
     if (!(taskRunner instanceof TaskLogStreamer)) {
       return Response.status(501)
                      .entity(StringUtils.format(

@@ -472,13 +472,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
           {
             GroupByQuery groupByQuery = (GroupByQuery) queryPlus.getQuery();
-            if (groupByQuery.getDimFilter() != null) {
-              groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
-            }
-            final GroupByQuery delegateGroupByQuery = groupByQuery;
             final List<DimensionSpec> dimensionSpecs = new ArrayList<>();
-            final BitSet optimizedDimensions = extractionsToRewrite(delegateGroupByQuery);
-            final List<DimensionSpec> dimensions = delegateGroupByQuery.getDimensions();
+            final BitSet optimizedDimensions = extractionsToRewrite(groupByQuery);
+            final List<DimensionSpec> dimensions = groupByQuery.getDimensions();
             for (int i = 0; i < dimensions.size(); i++) {
               final DimensionSpec dimensionSpec = dimensions.get(i);
               if (optimizedDimensions.get(i)) {
@@ -491,7 +487,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             }
 
             return runner.run(
-                queryPlus.withQuery(delegateGroupByQuery.withDimensionSpecs(dimensionSpecs)),
+                queryPlus.withQuery(groupByQuery.withDimensionSpecs(dimensionSpecs)),
                 responseContext
             );
           }
@@ -517,14 +513,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       @Override
       public byte[] computeCacheKey(GroupByQuery query)
       {
-        return new CacheKeyBuilder(GROUPBY_QUERY)
+        CacheKeyBuilder builder = new CacheKeyBuilder(GROUPBY_QUERY)
             .appendByte(CACHE_STRATEGY_VERSION)
             .appendCacheable(query.getGranularity())
             .appendCacheable(query.getDimFilter())
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheables(query.getDimensions())
-            .appendCacheable(query.getVirtualColumns())
-            .build();
+            .appendCacheable(query.getVirtualColumns());
+        if (query.isApplyLimitPushDown()) {
+          builder.appendCacheable(query.getLimitSpec());
+        }
+        return builder.build();
       }
 
       @Override

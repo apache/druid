@@ -189,6 +189,12 @@ public class RealtimeIndexTaskTest
     Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
   }
 
+  @Test(timeout = 60_000L)
+  public void testSupportsQueries()
+  {
+    final RealtimeIndexTask task = makeRealtimeTask(null);
+    Assert.assertTrue(task.supportsQueries());
+  }
 
   @Test(timeout = 60_000L, expected = ExecutionException.class)
   public void testHandoffTimeout() throws Exception
@@ -975,7 +981,7 @@ public class RealtimeIndexTaskTest
         () -> conglomerate,
         Execs.directExecutor(), // queryExecutorService
         NoopJoinableFactory.INSTANCE,
-        EasyMock.createMock(MonitorScheduler.class),
+        () -> EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),

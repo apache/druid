@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @JsonTypeName("equalBuckets")
@@ -93,5 +94,27 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
         .appendString(fieldName)
         .appendInt(numBuckets)
         .build();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    EqualBucketsPostAggregator that = (EqualBucketsPostAggregator) o;
+    return numBuckets == that.numBuckets;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), numBuckets);
   }
 }

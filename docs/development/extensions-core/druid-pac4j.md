@@ -37,7 +37,7 @@ druid.auth.authenticator.pac4j.type=pac4j
 
 ### Properties
 |Property|Description|Default|required|
-|--------|---------------|-----------|-------|--------|
+|--------|---------------|-----------|-------|
 |`druid.auth.pac4j.cookiePassphrase`|passphrase for encrypting the cookies used to manage authentication session with browser. It can be provided as plaintext string or The [Password Provider](../../operations/password-provider.md).|none|Yes|
 |`druid.auth.pac4j.readTimeout`|Socket connect and read timeout duration used when communicating with authentication server|PT5S|No|
 |`druid.auth.pac4j.enableCustomSslContext`|Whether to use custom SSLContext setup via [simple-client-sslcontext](simple-client-sslcontext.md) extension which must be added to extensions list when this property is set to true.|false|No|

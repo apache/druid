@@ -53,7 +53,7 @@ The detailed behavior of the Parallel task is different depending on the [`parti
 See each `partitionsSpec` for more details.
 
 To use this task, the [`inputSource`](#input-sources) in the `ioConfig` should be _splittable_ and `maxNumConcurrentSubTasks` should be set to larger than 1 in the `tuningConfig`.
-Otherwise, this task runs sequentially; the `index_paralllel` task reads each input file one by one and creates segments by itself.
+Otherwise, this task runs sequentially; the `index_parallel` task reads each input file one by one and creates segments by itself.
 The supported splittable input formats for now are:
 
 - [`s3`](#s3-input-source) reads data from AWS S3 storage.
@@ -63,6 +63,7 @@ The supported splittable input formats for now are:
 - [`http`](#http-input-source) reads data from HTTP servers.
 - [`local`](#local-input-source) reads data from local storage.
 - [`druid`](#druid-input-source) reads data from a Druid datasource.
+- [`sql`](#sql-input-source) reads data from a RDBMS source.
 
 Some other cloud storage types are supported with the legacy [`firehose`](#firehoses-deprecated).
 The below `firehose` types are also splittable. Note that only text formats are supported
@@ -188,7 +189,7 @@ that range if there's some stray data with unexpected timestamps.
 |--------|-----------|-------|---------|
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. The current limitation is that you can append to any datasources regardless of their original partitioning scheme, but the appended segments should be partitioned using the `dynamic` partitionsSpec.|false|no|
 
 ### `tuningConfig`
 
@@ -301,7 +302,7 @@ and then by the hash value of `partitionDimensions` (secondary partition key) in
 The partitioned data is stored in local storage of 
 the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 - The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
-The Parallel task spawns a new set of worker tasks (type `partial_index_merge`) to merge the partitioned data
+The Parallel task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned data
 created in the previous phase. Here, the partitioned data is shuffled based on
 the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data
 falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges
@@ -692,7 +693,7 @@ that range if there's some stray data with unexpected timestamps.
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. The current limitation is that you can append to any datasources regardless of their original partitioning scheme, but the appended segments should be partitioned using the `dynamic` partitionsSpec.|false|no|
 
 ### `tuningConfig`
 
@@ -1006,7 +1007,7 @@ Sample specs:
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
-|type|This should be `google`.|None|yes|
+|type|This should be `azure`.|None|yes|
 |uris|JSON array of URIs where Azure Blob objects to be ingested are located. Should be in form "azure://\<container>/\<path-to-file\>"|None|`uris` or `prefixes` or `objects` must be set|
 |prefixes|JSON array of URI prefixes for the locations of Azure Blob objects to be ingested. Should be in the form "azure://\<container>/\<prefix\>". Empty objects starting with one of the given prefixes will be skipped.|None|`uris` or `prefixes` or `objects` must be set|
 |objects|JSON array of Azure Blob objects to be ingested.|None|`uris` or `prefixes` or `objects` must be set|
@@ -1106,9 +1107,9 @@ the [S3 input source](#s3-input-source) or the [Google Cloud Storage input sourc
 
 ### HTTP Input Source
 
-The HDFS input source is to support reading files directly
+The HTTP input source is to support reading files directly
 from remote sites via HTTP.
-The HDFS input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
+The HTTP input source is _splittable_ and can be used by the [Parallel task](#parallel-task),
 where each worker task of `index_parallel` will read only one file.
 
 Sample specs:
@@ -1309,6 +1310,60 @@ A spec that applies a filter and reads a subset of the original datasource's col
 
 This spec above will only return the `page`, `user` dimensions and `added` metric.
 Only rows where `page` = `Druid` will be returned.
+
+### SQL Input Source
+
+The SQL input source is used to read data directly from RDBMS.
+The SQL input source is _splittable_ and can be used by the [Parallel task](#parallel-task), where each worker task will read from one SQL query from the list of queries.
+Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
+Please refer to the Recommended practices section below before using this input source.
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "sql".|Yes|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support and this extension must be loaded into Druid. For database types `mysql` and `postgresql`, the `connectorConfig` support is provided by [mysql-metadata-storage](../development/extensions-core/mysql.md) and [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extensions respectively.|Yes|
+|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
+|sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
+
+An example SqlInputSource spec is shown below:
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "sql",
+        "database": {
+            "type": "mysql",
+            "connectorConfig": {
+                "connectURI": "jdbc:mysql://host:port/schema",
+                "user": "user",
+                "password": "password"
+            }
+        },
+        "sqls": ["SELECT * FROM table1 WHERE timestamp BETWEEN '2013-01-01 00:00:00' AND '2013-01-01 11:59:59'", "SELECT * FROM table2 WHERE timestamp BETWEEN '2013-01-01 00:00:00' AND '2013-01-01 11:59:59'"]
+      }
+    },
+...
+```
+
+The spec above will read all events from two separate SQLs for the interval `2013-01-01/2013-01-02`.
+Each of the SQL queries will be run in its own sub-task and thus for the above example, there would be two sub-tasks.
+
+**Recommended practices**
+
+Compared to the other native batch InputSources, SQL InputSource behaves differently in terms of reading the input data and so it would be helpful to consider the following points before using this InputSource in a production environment:
+
+* During indexing, each sub-task would execute one of the SQL queries and the results are stored locally on disk. The sub-tasks then proceed to read the data from these local input files and generate segments. Presently, there isn’t any restriction on the size of the generated files and this would require the MiddleManagers or Indexers to have sufficient disk capacity based on the volume of data being indexed.
+
+* Filtering the SQL queries based on the intervals specified in the `granularitySpec` can avoid unwanted data being retrieved and stored locally by the indexing sub-tasks. For example, if the `intervals` specified in the `granularitySpec` is `["2013-01-01/2013-01-02"]` and the SQL query is `SELECT * FROM table1`, `SqlInputSource` will read all the data for `table1` based on the query, even though only data between the intervals specified will be indexed into Druid.
+
+* Pagination may be used on the SQL queries to ensure that each query pulls a similar amount of data, thereby improving the efficiency of the sub-tasks.
+
+* Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
+
+
+###
 
 ## Firehoses (Deprecated)
 
@@ -1544,6 +1599,7 @@ This firehose will accept any type of parser, but will only utilize the list of 
 This Firehose can be used to ingest events residing in an RDBMS. The database connection information is provided as part of the ingestion spec.
 For each query, the results are fetched locally and indexed.
 If there are multiple queries from which data needs to be indexed, queries are prefetched in the background, up to `maxFetchCapacityBytes` bytes.
+This Firehose is _splittable_ and can be used by [native parallel index tasks](native-batch.md#parallel-task).
 This firehose will accept any type of parser, but will only utilize the list of dimensions and the timestamp specification. See the extension documentation for more detailed ingestion examples.
 
 Requires one of the following extensions:

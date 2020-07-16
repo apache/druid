@@ -75,7 +75,7 @@ public class ShuffleResource
       @PathParam("subTaskId") String subTaskId,
       @QueryParam("startTime") String startTime,
       @QueryParam("endTime") String endTime,
-      @QueryParam("partitionId") int partitionId
+      @QueryParam("bucketId") int bucketId
   )
   {
     final Interval interval = new Interval(DateTimes.of(startTime), DateTimes.of(endTime));
@@ -83,16 +83,16 @@ public class ShuffleResource
         supervisorTaskId,
         subTaskId,
         interval,
-        partitionId
+        bucketId
     );
 
     if (partitionFile == null) {
       final String errorMessage = StringUtils.format(
-          "Can't find the partition for supervisorTask[%s], subTask[%s], interval[%s], and partitionId[%s]",
+          "Can't find the partition for supervisorTask[%s], subTask[%s], interval[%s], and bucketId[%s]",
           supervisorTaskId,
           subTaskId,
           interval,
-          partitionId
+          bucketId
       );
       return Response.status(Status.NOT_FOUND).entity(errorMessage).build();
     } else {

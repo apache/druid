@@ -68,4 +68,10 @@ public class KafkaEmitterConfigTest
       Assert.fail();
     }
   }
+
+  @Test
+  public void testJacksonModules()
+  {
+    Assert.assertTrue(new KafkaEmitterModule().getJacksonModules().isEmpty());
+  }
 }

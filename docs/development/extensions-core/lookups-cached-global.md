@@ -208,12 +208,12 @@ The remapping values for each globally cached lookup can be specified by a JSON 
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
 |`pollPeriod`|Period between polling for updates|No|0 (only once)|
-|`uri`|URI for the file of interest|No|Use `uriPrefix`|
-|`uriPrefix`|A URI which specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
+|`uri`|URI for the file of interest, specified as a file, hdfs, or s3 path|No|Use `uriPrefix`|
+|`uriPrefix`|A URI that specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
 |`fileRegex`|Optional regex for matching the file name under `uriPrefix`. Only used if `uriPrefix` is used|No|`".*"`|
 |`namespaceParseSpec`|How to interpret the data at the URI|Yes||
 
-One of either `uri` xor `uriPrefix` must be specified.
+One of either `uri` or `uriPrefix` must be specified, as either a local file system (file://), HDFS (hdfs://), or S3 (s3://) location. HTTP location is not currently supported.
 
 The `pollPeriod` value specifies the period in ISO 8601 format between checks for replacement data for the lookup. If the source of the lookup is capable of providing a timestamp, the lookup will only be updated if it has changed since the prior tick of `pollPeriod`. A value of 0, an absent parameter, or `null` all mean populate once and do not attempt to look for new data later. Whenever an poll occurs, the updating system will look for a file with the most recent timestamp and assume that one with the most recent data set, replacing the local cache of the lookup data.
 

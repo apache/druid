@@ -31,6 +31,13 @@ import java.util.Optional;
 public interface JoinableFactory
 {
   /**
+   * Returns true if a {@link Joinable} **may** be created for a given {@link DataSource}, but is not a guarantee that
+   * {@link #build} will return a non-empty result. Successfully building a {@link Joinable} might require specific
+   * criteria of the {@link JoinConditionAnalysis}.
+   */
+  boolean isDirectlyJoinable(DataSource dataSource);
+
+  /**
    * Create a Joinable object. This may be an expensive operation involving loading data, creating a hash table, etc.
    *
    * @param dataSource the datasource to join on

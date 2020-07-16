@@ -287,7 +287,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`SQRT(expr)`|Square root.|
 |`TRUNCATE(expr[, digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
 |`TRUNC(expr[, digits])`|Synonym for `TRUNCATE`.|
-|`ROUND(expr[, digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points.|
+|`ROUND(expr[, digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If `expr` evaluates to either `NaN`, `expr` will be converted to 0. If `expr` is infinity, `expr` will be converted to the nearest finite double. |
 |`x + y`|Addition.|
 |`x - y`|Subtraction.|
 |`x * y`|Multiplication.|
@@ -322,7 +322,8 @@ String functions accept strings, and return a type appropriate to the function.
 |`LOWER(expr)`|Returns expr in all lowercase.|
 |`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
-|`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
+|`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
+|`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](#comparison-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
 |`STRPOS(haystack, needle)`|Returns the index of needle within haystack, with indexes starting from 1. If the needle is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
@@ -330,14 +331,14 @@ String functions accept strings, and return a type appropriate to the function.
 |`LEFT(expr, [length])`|Returns the leftmost length characters from expr.|
 |`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
 |<code>TRIM([BOTH &#124; LEADING &#124; TRAILING] [<chars> FROM] expr)</code>|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
-|`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>`).|
-|`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>`).|
-|`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>`).|
+|`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH <chars> FROM <expr>)`.|
+|`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING <chars> FROM <expr>)`.|
+|`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING <chars> FROM <expr>)`.|
 |`UPPER(expr)`|Returns expr in all uppercase.|
 |`REVERSE(expr)`|Reverses expr.|
 |`REPEAT(expr, [N])`|Repeats expr N times|
-|`LPAD(expr, length[, chars])`|Returns a string of "length" from "expr" left-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
-|`RPAD(expr, length[, chars])`|Returns a string of "length" from "expr" right-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
+|`LPAD(expr, length[, chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
+|`RPAD(expr, length[, chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 
 
 ### Time functions
@@ -528,13 +529,18 @@ the way you write the filter.
 subqueries generated by conditions on mismatched types, and implicit subqueries generated by conditions that use
 expressions to refer to the right-hand side.
 
-3. Read through the [Query execution](query-execution.md) page to understand how various types of native queries
+3. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into 
+Join's children). Druid only supports pushing predicates into the join if they originated from 
+above the join. Hence, the location of predicates and filters in your Druid SQL is very important. 
+Also, as a result of this, comma joins should be avoided.
+
+4. Read through the [Query execution](query-execution.md) page to understand how various types of native queries
 will be executed.
 
-4. Be careful when interpreting EXPLAIN PLAN output, and use request logging if in doubt. Request logs will show the
+5. Be careful when interpreting EXPLAIN PLAN output, and use request logging if in doubt. Request logs will show the
 exact native query that was run. See the [next section](#interpreting-explain-plan-output) for more details.
 
-5. If you encounter a query that could be planned better, feel free to
+6. If you encounter a query that could be planned better, feel free to
 [raise an issue on GitHub](https://github.com/apache/druid/issues/new/choose). A reproducible test case is always
 appreciated.
 
@@ -704,6 +710,8 @@ Druid does not support all SQL features. In particular, the following features a
 
 - JOIN between native datasources (table, lookup, subquery) and system tables.
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
+- JOIN conditions containing a constant value inside the condition.
+- JOIN conditions on a column which contains a multi-value dimension.
 - OVER clauses, and analytic functions such as `LAG` and `LEAD`.
 - OFFSET clauses.
 - DDL and DML.
@@ -729,7 +737,7 @@ be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM da
 ##### Request
       
 |Property|Description|Default|
-|--------|----|-----------|--------|
+|--------|----|-----------|
 |`query`|SQL query string.| none (required)|
 |`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
 |`header`|Whether or not to include a header. See [Responses] for details.|`false`|
@@ -913,11 +921,12 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 > `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
 
 #### SCHEMATA table
+`INFORMATION_SCHEMA.SCHEMATA` provides a list of all known schemas, which include `druid` for standard [Druid Table datasources](datasource.md#table), `lookup` for [Lookups](datasource.md#lookup), `sys` for the virtual [System metadata tables](#system-schema), and `INFORMATION_SCHEMA` for these virtual tables. Tables are allowed to have the same name across different schemas, so the schema may be included in an SQL statement to distinguish them, e.g. `lookup.table` vs `druid.table`.
 
 |Column|Notes|
 |------|-----|
-|CATALOG_NAME|Unused|
-|SCHEMA_NAME||
+|CATALOG_NAME|Always set as `druid`|
+|SCHEMA_NAME|`druid`, `lookup`, `sys`, or `INFORMATION_SCHEMA`|
 |SCHEMA_OWNER|Unused|
 |DEFAULT_CHARACTER_SET_CATALOG|Unused|
 |DEFAULT_CHARACTER_SET_SCHEMA|Unused|
@@ -925,23 +934,27 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |SQL_PATH|Unused|
 
 #### TABLES table
+`INFORMATION_SCHEMA.TABLES` provides a list of all known tables and schemas.
 
 |Column|Notes|
 |------|-----|
-|TABLE_CATALOG|Unused|
-|TABLE_SCHEMA||
-|TABLE_NAME||
+|TABLE_CATALOG|Always set as `druid`|
+|TABLE_SCHEMA|The 'schema' which the table falls under, see [SCHEMATA table for details](#schemata-table)|
+|TABLE_NAME|Table name. For the `druid` schema, this is the `dataSource`.|
 |TABLE_TYPE|"TABLE" or "SYSTEM_TABLE"|
+|IS_JOINABLE|If a table is directly joinable if on the right hand side of a `JOIN` statement, without performing a subquery, this value will be set to `YES`, otherwise `NO`. Lookups are always joinable because they are globally distributed among Druid query processing nodes, but Druid datasources are not, and will use a less efficient subquery join.|
+|IS_BROADCAST|If a table is 'broadcast' and distributed among all Druid query processing nodes, this value will be set to `YES`, such as lookups and Druid datasources which have a 'broadcast' load rule, else `NO`.|
 
 #### COLUMNS table
+`INFORMATION_SCHEMA.COLUMNS` provides a list of all known columns across all tables and schema.
 
 |Column|Notes|
 |------|-----|
-|TABLE_CATALOG|Unused|
-|TABLE_SCHEMA||
-|TABLE_NAME||
-|COLUMN_NAME||
-|ORDINAL_POSITION||
+|TABLE_CATALOG|Always set as `druid`|
+|TABLE_SCHEMA|The 'schema' which the table column falls under, see [SCHEMATA table for details](#schemata-table)|
+|TABLE_NAME|The 'table' which the column belongs to, see [TABLES table for details](#tables-table)|
+|COLUMN_NAME|The column name|
+|ORDINAL_POSITION|The order in which the column is stored in a table|
 |COLUMN_DEFAULT|Unused|
 |IS_NULLABLE||
 |DATA_TYPE||
@@ -981,7 +994,9 @@ Segments table provides details on all Druid segments, whether they are publishe
 |is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime). See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
 |is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is _only_ served by realtime tasks, and 0 if any historical process is serving this segment.|
 |is_overshadowed|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, is_overshadowed is always false for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet. See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
-|payload|STRING|JSON-serialized data segment payload|
+|shardSpec|STRING|The toString of specific `ShardSpec`|
+|dimensions|STRING|The dimensions of the segment|
+|metrics|STRING|The metrics of the segment|
 
 For example to retrieve all segments for datasource "wikipedia", use the query:
 

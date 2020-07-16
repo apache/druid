@@ -148,7 +148,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         null
     );
     Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
@@ -169,7 +169,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         new MaxSizeSplitHintSpec(1L) // set maxSplitSize to 1 so that each inputSplit has only one object
     );
 
@@ -191,7 +191,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
         new MaxSizeSplitHintSpec(CONTENT.length * 3L)
     );
 

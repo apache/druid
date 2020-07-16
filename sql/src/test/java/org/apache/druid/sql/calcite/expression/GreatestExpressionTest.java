@@ -213,6 +213,23 @@ public class GreatestExpressionTest extends ExpressionTestBase
   }
 
   @Test
+  public void testDecimalWithNullShouldReturnString()
+  {
+    testExpression(
+        Arrays.asList(
+            testHelper.makeLiteral(BigDecimal.valueOf(1.2)),
+            testHelper.getConstantNull(),
+            testHelper.makeLiteral(BigDecimal.valueOf(3.4))
+        ),
+        buildExpectedExpression(
+            1.2,
+            null,
+            3.4
+        ),
+        "3.4"
+    );
+  }
+  @Test
   public void testTimestamp()
   {
     testExpression(
