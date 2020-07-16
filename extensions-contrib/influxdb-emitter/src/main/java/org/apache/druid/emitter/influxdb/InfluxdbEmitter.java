@@ -241,7 +241,9 @@ public class InfluxdbEmitter implements Emitter
         sslContext.init(null, tmf.getTrustManagers(), null);
       }
       catch (Exception ex) {
-        log.error("Unable to load TrustStore");
+        String msg = "Unable to load TrustStore";
+        log.error(msg);
+        throw new IllegalStateException(msg);
       }
       finally {
         if (in != null) {

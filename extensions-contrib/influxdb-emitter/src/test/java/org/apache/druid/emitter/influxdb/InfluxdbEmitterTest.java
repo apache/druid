@@ -291,4 +291,25 @@ public class InfluxdbEmitterTest
     InfluxdbEmitter influxdbEmitter = new InfluxdbEmitter(config);
   }
 
+  @Test(expected = IllegalStateException.class)
+  public void testUnableToLoadTrustStore()
+  {
+    InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
+        "localhost",
+        8086,
+        "https",
+        "path",
+        null,
+        "pass",
+        "dbname",
+        10000,
+        15000,
+        30000,
+        "adam",
+        "password",
+        null
+    );
+    InfluxdbEmitter influxdbEmitter = new InfluxdbEmitter(config);
+  }
+
 }
