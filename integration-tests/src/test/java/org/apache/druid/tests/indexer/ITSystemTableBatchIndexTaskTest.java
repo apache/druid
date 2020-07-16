@@ -22,7 +22,6 @@ package org.apache.druid.tests.indexer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
-import org.apache.druid.tests.common.NullHandlingUtils;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -47,8 +46,7 @@ public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
       doIndexTestSqlTest(
           INDEX_DATASOURCE,
           INDEX_TASK,
-          SYSTEM_QUERIES_RESOURCE,
-          NullHandlingUtils.IS_NOT_NULL_TRANSFORM_FOR_SQL
+          SYSTEM_QUERIES_RESOURCE
       );
     }
   }

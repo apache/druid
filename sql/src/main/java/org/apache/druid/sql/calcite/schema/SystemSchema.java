@@ -49,7 +49,6 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -208,14 +207,8 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
-    final SegmentsTable segmentsTable = new SegmentsTable(
-        druidSchema,
-        metadataView,
-        jsonMapper,
-        authorizerMapper
-    );
     this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, segmentsTable,
+        SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, authorizerMapper),
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
         TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper),
@@ -235,20 +228,17 @@ public class SystemSchema extends AbstractSchema
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
     private final DruidSchema druidSchema;
-    private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
-        ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
     {
       this.druidSchema = druidSchemna;
       this.metadataView = metadataView;
-      this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -308,7 +298,7 @@ public class SystemSchema extends AbstractSchema
                 segment.getInterval().getEnd().toString(),
                 segment.getSize(),
                 segment.getVersion(),
-                Long.valueOf(segment.getShardSpec().getPartitionNum()),
+                (long) segment.getShardSpec().getPartitionNum(),
                 numReplicas,
                 numRows,
                 IS_PUBLISHED_TRUE, //is_published is true for published segments
@@ -456,6 +446,13 @@ public class SystemSchema extends AbstractSchema
    */
   static class ServersTable extends AbstractTable implements ScannableTable
   {
+    // This is used for maxSize and currentSize when they are unknown.
+    // The unknown size doesn't have to be 0, it's better to be null.
+    // However, this table is returning 0 for them for some reason and we keep the behavior for backwards compatibility.
+    // Maybe we can remove this and return nulls instead when we remove the bindable query path which is currently
+    // used to query system tables.
+    private static final long UNKNOWN_SIZE = 0L;
+
     private final AuthorizerMapper authorizerMapper;
     private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
     private final InventoryView serverInventoryView;
@@ -531,9 +528,9 @@ public class SystemSchema extends AbstractSchema
           (long) node.getPlaintextPort(),
           (long) node.getTlsPort(),
           StringUtils.toLowerCase(discoveryDruidNode.getNodeRole().toString()),
-          NullHandling.defaultStringValue(),
-          NullHandling.defaultLongValue(),
-          NullHandling.defaultLongValue()
+          null,
+          UNKNOWN_SIZE,
+          UNKNOWN_SIZE
       };
     }
 
@@ -551,11 +548,10 @@ public class SystemSchema extends AbstractSchema
       final DruidServer druidServerToUse = serverFromInventoryView == null
                                            ? discoveryDruidNode.toDruidServer()
                                            : serverFromInventoryView;
-      // We cannot use the ternary operator since it automatically unboxes null which can cause NPE
-      @Nullable final Long currentSize;
+      final long currentSize;
       if (serverFromInventoryView == null) {
-        // If server is missing in serverInventoryView, the currentSize should be null
-        currentSize = NullHandling.defaultLongValue();
+        // If server is missing in serverInventoryView, the currentSize should be unknown
+        currentSize = UNKNOWN_SIZE;
       } else {
         currentSize = serverFromInventoryView.getCurrSize();
       }
@@ -699,9 +695,10 @@ public class SystemSchema extends AbstractSchema
             public Object[] current()
             {
               final TaskStatusPlus task = it.next();
-              final String hostAndPort;
+              @Nullable final String host = task.getLocation().getHost();
+              @Nullable final String hostAndPort;
 
-              if (task.getLocation().getHost() == null) {
+              if (host == null) {
                 hostAndPort = null;
               } else {
                 final int port;
@@ -711,7 +708,7 @@ public class SystemSchema extends AbstractSchema
                   port = task.getLocation().getPort();
                 }
 
-                hostAndPort = HostAndPort.fromParts(task.getLocation().getHost(), port).toString();
+                hostAndPort = HostAndPort.fromParts(host, port).toString();
               }
               return new Object[]{
                   task.getId(),
@@ -724,7 +721,7 @@ public class SystemSchema extends AbstractSchema
                   toStringOrNull(task.getRunnerStatusCode()),
                   task.getDuration() == null ? 0L : task.getDuration(),
                   hostAndPort,
-                  task.getLocation().getHost(),
+                  host,
                   (long) task.getLocation().getPort(),
                   (long) task.getLocation().getTlsPort(),
                   task.getErrorMsg()
@@ -1019,25 +1016,6 @@ public class SystemSchema extends AbstractSchema
         it.close();
       }
     };
-  }
-
-  @Nullable
-  private static String extractHost(@Nullable final String hostAndPort)
-  {
-    if (hostAndPort == null) {
-      return null;
-    }
-
-    return HostAndPort.fromString(hostAndPort).getHostText();
-  }
-
-  private static int extractPort(@Nullable final String hostAndPort)
-  {
-    if (hostAndPort == null) {
-      return -1;
-    }
-
-    return HostAndPort.fromString(hostAndPort).getPortOrDefault(-1);
   }
 
   @Nullable

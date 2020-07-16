@@ -90,9 +90,7 @@ public class ITBasicAuthConfigurationTest
       "SELECT * FROM sys.segments WHERE datasource IN ('auth_test')";
 
   private static final String SYS_SCHEMA_SERVERS_QUERY =
-      NullHandling.sqlCompatible()
-      ? "SELECT * FROM sys.servers WHERE tier IS NOT NULL"
-      : "SELECT * FROM sys.servers WHERE tier <> ''";
+      "SELECT * FROM sys.servers WHERE tier IS NOT NULL";
 
   private static final String SYS_SCHEMA_SERVER_SEGMENTS_QUERY =
       "SELECT * FROM sys.server_segments WHERE segment_id LIKE 'auth_test%'";

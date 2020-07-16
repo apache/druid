@@ -41,7 +41,6 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -83,6 +82,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.schema.SystemSchema.SegmentsTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -515,11 +515,7 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable()
   {
-    final SystemSchema.SegmentsTable segmentsTable = EasyMock
-        .createMockBuilder(SystemSchema.SegmentsTable.class)
-        .withConstructor(druidSchema, metadataView, mapper, authMapper)
-        .createMock();
-    EasyMock.replay(segmentsTable);
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, authMapper);
     final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentWithOvershadowedStatus(publishedSegment1, true),
         new SegmentWithOvershadowedStatus(publishedSegment2, false),
@@ -815,15 +811,6 @@ public class SystemSchemaTest extends CalciteTestBase
       }
     };
 
-    final Long unknownCurrentSize, unknownMaxSize;
-    if (NullHandling.sqlCompatible()) {
-      unknownCurrentSize = null;
-      unknownMaxSize = null;
-    } else {
-      unknownCurrentSize = 0L;
-      unknownMaxSize = 0L;
-    }
-
     final List<Object[]> rows = serversTable.scan(dataContext).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
@@ -835,9 +822,9 @@ public class SystemSchemaTest extends CalciteTestBase
             8082,
             -1,
             NodeRole.BROKER,
-            NullHandling.sqlCompatible() ? null : "",
-            unknownCurrentSize,
-            unknownMaxSize
+            null,
+            0L,
+            0L
         )
     );
     expectedRows.add(
@@ -859,7 +846,7 @@ public class SystemSchemaTest extends CalciteTestBase
         createExpectedRow("indexerHost:8091", "indexerHost", 8091, -1, NodeRole.INDEXER, "tier", 0L, 1000L)
     );
     expectedRows.add(
-        createExpectedRow("lameHost:8083", "lameHost", 8083, -1, NodeRole.HISTORICAL, "tier", unknownCurrentSize, 1000L)
+        createExpectedRow("lameHost:8083", "lameHost", 8083, -1, NodeRole.HISTORICAL, "tier", 0L, 1000L)
     );
     expectedRows.add(createExpectedRow("localhost:8080", "localhost", 8080, -1, NodeRole.PEON, "tier", 0L, 1000L));
     expectedRows.add(
@@ -869,9 +856,9 @@ public class SystemSchemaTest extends CalciteTestBase
             8081,
             -1,
             NodeRole.COORDINATOR,
-            NullHandling.sqlCompatible() ? null : "",
-            unknownCurrentSize,
-            unknownMaxSize
+            null,
+            0L,
+            0L
         )
     );
     expectedRows.add(
@@ -881,9 +868,9 @@ public class SystemSchemaTest extends CalciteTestBase
             8082,
             -1,
             NodeRole.BROKER,
-            NullHandling.sqlCompatible() ? null : "",
-            unknownCurrentSize,
-            unknownMaxSize
+            null,
+            0L,
+            0L
         )
     );
     expectedRows.add(
@@ -896,9 +883,9 @@ public class SystemSchemaTest extends CalciteTestBase
             8090,
             -1,
             NodeRole.OVERLORD,
-            NullHandling.sqlCompatible() ? null : "",
-            unknownCurrentSize,
-            unknownMaxSize
+            null,
+            0L,
+            0L
         )
     );
     expectedRows.add(
@@ -908,9 +895,9 @@ public class SystemSchemaTest extends CalciteTestBase
             8888,
             -1,
             NodeRole.ROUTER,
-            NullHandling.sqlCompatible() ? null : "",
-            unknownCurrentSize,
-            unknownMaxSize
+            null,
+            0L,
+            0L
         )
     );
     expectedRows.add(
@@ -920,9 +907,9 @@ public class SystemSchemaTest extends CalciteTestBase
             8091,
             -1,
             NodeRole.MIDDLE_MANAGER,
-            NullHandling.sqlCompatible() ? null : "",
-            unknownCurrentSize,
-            unknownMaxSize
+            null,
+            0L,
+            0L
         )
     );
     expectedRows.add(createExpectedRow("peonHost:8080", "peonHost", 8080, -1, NodeRole.PEON, "tier", 0L, 1000L));
