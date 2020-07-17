@@ -22,6 +22,7 @@ package org.apache.druid.tests.indexer;
 import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
@@ -43,6 +44,7 @@ import org.testng.Assert;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -324,5 +326,58 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                     }
                   })
                   .count();
+  }
+
+  void verifySegmentsCountAndLoaded(String dataSource, int numExpectedSegments)
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(dataSource + config.getExtraDatasourceNameSuffix()),
+        "Segment load check"
+    );
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          int metadataSegmentCount = coordinator.getSegments(
+              dataSource + config.getExtraDatasourceNameSuffix()
+          ).size();
+          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
+          return metadataSegmentCount == numExpectedSegments;
+        },
+        "Segment count check"
+    );
+  }
+
+  void checkCompactionIntervals(String dataSource, List<String> expectedIntervals)
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          final List<String> actualIntervals = coordinator.getSegmentIntervals(
+              dataSource + config.getExtraDatasourceNameSuffix()
+          );
+          actualIntervals.sort(null);
+          return actualIntervals.equals(expectedIntervals);
+        },
+        "Compaction interval check"
+    );
+  }
+
+  void verifySegmentsCompacted(String dataSource, int expectedCompactedSegmentCount)
+  {
+    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(
+        dataSource + config.getExtraDatasourceNameSuffix()
+    );
+    List<DataSegment> foundCompactedSegments = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      if (segment.getLastCompactionState() != null) {
+        foundCompactedSegments.add(segment);
+      }
+    }
+    Assert.assertEquals(foundCompactedSegments.size(), expectedCompactedSegmentCount);
+    for (DataSegment compactedSegment : foundCompactedSegments) {
+      Assert.assertNotNull(compactedSegment.getLastCompactionState());
+      Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
+      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
+                          SecondaryPartitionType.LINEAR
+      );
+    }
   }
 }
