@@ -81,7 +81,7 @@
     },
     "tuningConfig": {
       "type": "index_parallel",
-      "maxNumConcurrentSubTasks": 3,
+      "maxNumConcurrentSubTasks": 10,
       "partitionsSpec": %%PARTITIONS_SPEC%%
     }
   }
