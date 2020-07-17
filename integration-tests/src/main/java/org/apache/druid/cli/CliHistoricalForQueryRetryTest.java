@@ -49,7 +49,7 @@ public class CliHistoricalForQueryRetryTest extends CliHistorical
   }
 
   @Override
-  void bindQuerySegmentWalker(Binder binder)
+  public void bindQuerySegmentWalker(Binder binder)
   {
     binder.bind(QuerySegmentWalker.class).to(ServerManagerForQueryRetryTest.class).in(LazySingleton.class);
   }

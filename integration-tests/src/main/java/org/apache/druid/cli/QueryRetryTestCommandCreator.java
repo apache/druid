@@ -19,18 +19,13 @@
 
 package org.apache.druid.cli;
 
-import io.airlift.airline.Cli;
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import io.airlift.airline.Cli.CliBuilder;
 
-/**
- * An extension point to create a custom Druid service. Druid can understand and execute custom commands
- * to run services loaded via Druid's extension system (see {@code Initialization#getFromExtensions}). See
- * the {@code Main} class for details of groups and commands.
- *
- * Implementations should be registered in the {@code META-INF/services/org.apache.druid.cli.CliCommandCreator} file.
- */
-@ExtensionPoint
-public interface CliCommandCreator
+public class QueryRetryTestCommandCreator implements CliCommandCreator
 {
-  void addCommands(Cli.CliBuilder builder);
+  @Override
+  public void addCommands(CliBuilder builder)
+  {
+    builder.withGroup("server").withCommands(CliHistoricalForQueryRetryTest.class);
+  }
 }

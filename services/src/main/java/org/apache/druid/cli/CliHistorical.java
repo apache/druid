@@ -126,7 +126,7 @@ public class CliHistorical extends ServerRunnable
    * This method is visible for testing query retry on missing segments. See {@link CliHistoricalForQueryRetryTest}.
    */
   @VisibleForTesting
-  void bindQuerySegmentWalker(Binder binder)
+  public void bindQuerySegmentWalker(Binder binder)
   {
     binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
   }
