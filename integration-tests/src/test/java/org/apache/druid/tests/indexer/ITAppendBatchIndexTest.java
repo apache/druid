@@ -33,7 +33,6 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.timeline.DataSegment;
 import org.testng.Assert;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
