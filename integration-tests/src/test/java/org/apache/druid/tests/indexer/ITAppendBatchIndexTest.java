@@ -56,7 +56,6 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
 
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
 
-  @DataProvider(parallel = true)
   public static Object[][] resources()
   {
     return new Object[][]{
