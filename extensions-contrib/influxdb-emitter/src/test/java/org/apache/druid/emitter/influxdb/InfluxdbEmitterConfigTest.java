@@ -276,7 +276,9 @@ public class InfluxdbEmitterConfigTest
   public void testConfigEquals()
   {
     EqualsVerifier.forClass(InfluxdbEmitterConfig.class).withNonnullFields(
-        "hostname", "databaseName", "influxdbUserName", "influxdbPassword"
+        "hostname", "port", "protocol", "trustStoreType", "databaseName",
+        "maxQueueSize", "flushPeriod", "flushDelay", "influxdbUserName",
+        "influxdbPassword", "dimensionWhitelist"
     ).usingGetClass().verify();
   }
 

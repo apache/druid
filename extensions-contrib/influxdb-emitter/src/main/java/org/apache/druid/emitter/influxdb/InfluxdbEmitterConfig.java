@@ -105,7 +105,7 @@ public class InfluxdbEmitterConfig
     if (this == o) {
       return true;
     }
-    if (!(o instanceof InfluxdbEmitterConfig)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
