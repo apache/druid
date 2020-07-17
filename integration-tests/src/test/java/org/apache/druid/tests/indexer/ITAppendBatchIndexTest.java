@@ -44,15 +44,21 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
-@Test(groups = {TestNGGroup.OTHER_INDEX})
+@Test(groups = {TestNGGroup.APPEND_INGESTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
 {
   private static final Logger LOG = new Logger(ITAppendBatchIndexTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_local_input_source_index_task.json";
+  // This query file is for the initial ingestion which is one complete dataset with roll up
   private static final String INDEX_QUERIES_INITIAL_INGESTION_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  private static final String INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE = "/indexer/wikipedia_double_without_roll_up_index_queries.json";
-  private static final String INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE = "/indexer/wikipedia_double_with_roll_up_index_queries.json";
+  // This query file is for the initial ingestion plus the append ingestion which are two complete dataset with roll
+  // up within each dataset (roll up within the initial ingestion and roll up within the append ingestion but not
+  // roll up across both dataset).
+  private static final String INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE = "/indexer/wikipedia_double_ingestion_non_perfect_rollup_index_queries.json";
+  // This query file is for the initial ingestion plus the append ingestion plus a compaction task after the two ingestions.
+  // This is two complete dataset with perfect roll up across both dataset.
+  private static final String INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE = "/indexer/wikipedia_double_ingestion_perfect_rollup_index_queries.json";
 
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
 
