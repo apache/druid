@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = TestNGGroup.INPUT_SOURCE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
 {
