@@ -25,7 +25,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
@@ -51,6 +50,9 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
   public enum InputFormatDetails
   {
+    AVRO("avro_ocf", ".avro", "/avro"),
+    CSV("csv", ".csv", "/csv"),
+    TSV("tsv", ".tsv", "/tsv"),
     ORC("orc", ".orc", "/orc"),
     JSON("json", ".json", "/json"),
     PARQUET("parquet", ".parquet", "/parquet");
@@ -312,7 +314,6 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                       return t.getType().equals(SinglePhaseSubTask.TYPE);
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
-                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);

@@ -29,8 +29,6 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.function.BinaryOperator;
 
-/**
- */
 public class CombiningSequence<T> implements Sequence<T>
 {
   public static <T> CombiningSequence<T> create(
@@ -76,9 +74,22 @@ public class CombiningSequence<T> implements Sequence<T>
         new CombiningYieldingAccumulator<>(ordering, mergeFn, accumulator);
 
     combiningAccumulator.setRetVal(initValue);
-    Yielder<T> baseYielder = baseSequence.toYielder(null, combiningAccumulator);
 
-    return makeYielder(baseYielder, combiningAccumulator, false);
+    final Yielder<T> baseYielder = baseSequence.toYielder(null, combiningAccumulator);
+
+    try {
+      return makeYielder(baseYielder, combiningAccumulator, false);
+    }
+    catch (Throwable t1) {
+      try {
+        baseYielder.close();
+      }
+      catch (Throwable t2) {
+        t1.addSuppressed(t2);
+      }
+
+      throw t1;
+    }
   }
 
   private <OutType> Yielder<OutType> makeYielder(

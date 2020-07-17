@@ -47,7 +47,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;
 
-public class BoundDimFilter implements DimFilter
+public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;
   @Nullable

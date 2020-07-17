@@ -29,8 +29,6 @@ import java.util.Map;
 
 /**
  * {@link ParallelIndexTaskRunner} for the phase to create range partitioned segments in multi-phase parallel indexing.
- *
- * @see PartialHashSegmentMergeParallelIndexTaskRunner
  */
 class PartialRangeSegmentGenerateParallelIndexTaskRunner
     extends InputSourceSplitParallelIndexTaskRunner<PartialRangeSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>

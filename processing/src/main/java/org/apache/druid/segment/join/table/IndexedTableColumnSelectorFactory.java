@@ -58,8 +58,9 @@ public class IndexedTableColumnSelectorFactory implements ColumnSelectorFactory
 
       capabilities.setDictionaryValuesSorted(false);
       capabilities.setDictionaryValuesUnique(false);
+      capabilities.setHasMultipleValues(false);
 
-      return capabilities.setIsComplete(true);
+      return capabilities;
     } else {
       return null;
     }

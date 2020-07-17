@@ -29,7 +29,7 @@ import java.util.Objects;
 
 /**
  * This class represents the intermediary data server where the partition of {@link #interval} and
- * {@link #getPartitionId()} is stored.
+ * {@link #getBucketId()} is stored.
  */
 abstract class PartitionLocation<T>
 {
@@ -93,13 +93,13 @@ abstract class PartitionLocation<T>
     return secondaryPartition;
   }
 
-  abstract int getPartitionId();
+  abstract int getBucketId();
 
   final URI toIntermediaryDataServerURI(String supervisorTaskId)
   {
     return URI.create(
         StringUtils.format(
-            "%s://%s:%d/druid/worker/v1/shuffle/task/%s/%s/partition?startTime=%s&endTime=%s&partitionId=%d",
+            "%s://%s:%d/druid/worker/v1/shuffle/task/%s/%s/partition?startTime=%s&endTime=%s&bucketId=%d",
             useHttps ? "https" : "http",
             host,
             port,
@@ -107,7 +107,7 @@ abstract class PartitionLocation<T>
             StringUtils.urlEncode(subTaskId),
             interval.getStart(),
             interval.getEnd(),
-            getPartitionId()
+            getBucketId()
         )
     );
   }

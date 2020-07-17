@@ -1295,7 +1295,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.15.0
+version: 1.17.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -1303,13 +1303,13 @@ libraries:
 notices:
   - avatica-core: |
       Apache Calcite Avatica
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
   - avatica-metrics: |
       Apache Calcite Avatica Metrics
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
   - avatica-server: |
       Apache Calcite Avatica Server
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
 ---
 
 name: Apache Curator
@@ -1661,7 +1661,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.12.v20180830
+version: 9.4.30.v20200611
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -3625,7 +3625,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.2.8
+version: 42.2.14
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3637,7 +3637,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.2.8
+version: 42.2.14
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3649,7 +3649,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.2.8
+version: 42.2.14
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:

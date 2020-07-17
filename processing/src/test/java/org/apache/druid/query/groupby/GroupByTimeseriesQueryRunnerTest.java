@@ -235,4 +235,18 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     // Skip this test because the timeseries test expects a day that doesn't have a filter match to be filled in,
     // but group by just doesn't return a value if the filter doesn't match.
   }
+
+  @Override
+  public void testTimeseriesWithTimestampResultFieldContextForArrayResponse()
+  {
+    // Skip this test because the timeseries test expects an extra column to be created (map from the timestamp_floor
+    // of the timestamp dimension) but group by doesn't do this.
+  }
+
+  @Override
+  public void testTimeseriesWithTimestampResultFieldContextForMapResponse()
+  {
+    // Skip this test because the timeseries test expects an extra column to be created (map from the timestamp_floor
+    // of the timestamp dimension) but group by doesn't do this.
+  }
 }

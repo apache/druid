@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.SupervisorTaskAccess
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwritePartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
@@ -44,12 +43,14 @@ import java.io.IOException;
 /**
  * Segment allocator which allocates new segments using the overlord per request.
  */
-public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
+public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorForBatch
 {
   private final ActionBasedSegmentAllocator internalAllocator;
+  private final LinearlyPartitionedSequenceNameFunction sequenceNameFunction;
 
   OverlordCoordinatingSegmentAllocator(
       final TaskToolbox toolbox,
+      final String taskId,
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
@@ -101,6 +102,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
           }
         }
     );
+    this.sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(taskId);
   }
 
   @Nullable
@@ -145,5 +147,11 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocator
           partitionsSpec.getClass().getName()
       );
     }
+  }
+
+  @Override
+  public SequenceNameFunction getSequenceNameFunction()
+  {
+    return sequenceNameFunction;
   }
 }

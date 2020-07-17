@@ -62,11 +62,10 @@ public class AuthenticatorMapperModule implements DruidModule
     LifecycleModule.register(binder, AuthenticatorMapper.class);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.EMPTY_LIST;
+    return Collections.emptyList();
   }
 
   private static class AuthenticatorMapperProvider implements Provider<AuthenticatorMapper>

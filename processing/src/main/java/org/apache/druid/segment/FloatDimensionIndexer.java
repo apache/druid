@@ -49,6 +49,12 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   }
 
   @Override
+  public void setSparseIndexed()
+  {
+    // no-op, float columns do not have a dictionary to track null values
+  }
+
+  @Override
   public long estimateEncodedKeyComponentSize(Float key)
   {
     return Float.BYTES;
