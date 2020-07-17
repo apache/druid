@@ -31,7 +31,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.lookup.LookupsState;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.lookup.cache.LookupExtractorFactoryMapContainer;
