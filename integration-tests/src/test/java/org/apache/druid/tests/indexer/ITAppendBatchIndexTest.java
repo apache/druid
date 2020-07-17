@@ -33,6 +33,7 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.timeline.DataSegment;
 import org.testng.Assert;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -55,6 +56,7 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
 
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
 
+  @DataProvider()
   public static Object[][] resources()
   {
     return new Object[][]{
