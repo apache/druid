@@ -175,9 +175,25 @@ public class CoordinatorResourceTestClient
 
   private Map<String, Integer> getLoadStatus(String dataSorce)
   {
+    String url = getLoadStatusURL(dataSorce);
     Map<String, Integer> status;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, getLoadStatusURL(dataSorce));
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, new URL(url)),
+          responseHandler
+      ).get();
+
+      if (response.getStatus().getCode() == HttpResponseStatus.NO_CONTENT.getCode()) {
+        return null;
+      }
+      if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+      }
 
       status = jsonMapper.readValue(
           response.getContent(), new TypeReference<Map<String, Integer>>()
@@ -191,18 +207,10 @@ public class CoordinatorResourceTestClient
     return status;
   }
 
-  /**
-   * Warning: This API reads segments from {@link SqlSegmentsMetadataManager} of the Coordinator which
-   * caches segments in memory and periodically updates them. Hence, there can be a race condition as
-   * this API implementation compares segments metadata from cache with segments in historicals.
-   * Particularly, when number of segment changes after the first initial load of the datasource.
-   * Workaround is to verify the number of segments matches expected from {@link #getSegments(String) getSegments}
-   * before calling this method (since, that would wait until the cache is updated with expected data)
-   */
   public boolean areSegmentsLoaded(String dataSource)
   {
     final Map<String, Integer> status = getLoadStatus(dataSource);
-    return (status.containsKey(dataSource) && status.get(dataSource) == 100.0);
+    return (status != null && status.containsKey(dataSource) && status.get(dataSource) == 100.0);
   }
 
   public void unloadSegmentsForDataSource(String dataSource)
