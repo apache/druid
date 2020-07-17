@@ -134,6 +134,8 @@ public class StorageLocation
       currSizeBytes += segmentSize;
       return segmentFileToAdd;
     } else {
+      log.error("No space is reserced or druid.segmentCache.locations is reached maxSize in location [%s], " +
+              "cant not handle the segmentId [%s] in this loaction", path, segmentId);
       return null;
     }
   }
