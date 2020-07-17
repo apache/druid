@@ -43,6 +43,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       capabilities.hasMultipleValues = other.hasMultipleValues();
       capabilities.dictionaryValuesSorted = other.areDictionaryValuesSorted();
       capabilities.dictionaryValuesUnique = other.areDictionaryValuesUnique();
+      capabilities.nullable = other.isNullable();
       capabilities.filterable = other.isFilterable();
     }
     return capabilities;
@@ -72,6 +73,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(unknownIsTrue);
     copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(unknownIsTrue);
     copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(unknownIsTrue);
+    copy.nullable = copy.nullable.coerceUnknownToBoolean(unknownIsTrue);
     return copy;
   }
 
@@ -106,6 +108,8 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private Capable dictionaryValuesUnique = Capable.UNKNOWN;
   @JsonIgnore
   private boolean filterable;
+  @JsonIgnore
+  private Capable nullable = Capable.UNKNOWN;
 
   @Override
   @JsonProperty
@@ -204,6 +208,18 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
+  public Capable isNullable()
+  {
+    return nullable;
+  }
+
+  public ColumnCapabilitiesImpl setIsNullable(boolean isNullable)
+  {
+    nullable = Capable.of(isNullable);
+    return this;
+  }
+
+  @Override
   public boolean isFilterable()
   {
     return type == ValueType.STRING ||
@@ -241,6 +257,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     this.hasMultipleValues = this.hasMultipleValues.or(other.hasMultipleValues());
     this.dictionaryValuesSorted = this.dictionaryValuesSorted.and(other.areDictionaryValuesSorted());
     this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
+    this.nullable = this.nullable.or(other.isNullable());
 
     return this;
   }

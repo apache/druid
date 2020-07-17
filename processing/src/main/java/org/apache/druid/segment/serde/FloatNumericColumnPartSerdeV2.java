@@ -149,13 +149,17 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
       );
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
+      final boolean isNullable;
       if (buffer.hasRemaining()) {
         bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
+        isNullable = bitmap.size() > 0;
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
+        isNullable = false;
       }
       builder.setType(ValueType.FLOAT)
              .setHasMultipleValues(false)
+             .setNullable(isNullable)
              .setNumericColumnSupplier(new FloatNumericColumnSupplier(column, bitmap));
     };
   }

@@ -34,6 +34,7 @@ public class ColumnBuilder
   private boolean hasMultipleValues = false;
   private boolean filterable = false;
   private boolean dictionaryEncoded = false;
+  private boolean nullable = false;
 
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
@@ -43,6 +44,7 @@ public class ColumnBuilder
   private Supplier<SpatialIndex> spatialIndex = null;
   @Nullable
   private SmooshedFileMapper fileMapper = null;
+
 
   public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
   {
@@ -105,6 +107,12 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setNullable(boolean nullable)
+  {
+    this.nullable = nullable;
+    return this;
+  }
+
   public ColumnHolder build()
   {
     Preconditions.checkState(type != null, "Type must be set.");
@@ -118,7 +126,8 @@ public class ColumnBuilder
             .setDictionaryValuesUnique(dictionaryEncoded)
             .setHasSpatialIndexes(spatialIndex != null)
             .setHasMultipleValues(hasMultipleValues)
-            .setFilterable(filterable),
+            .setFilterable(filterable)
+            .setIsNullable(nullable),
         columnSupplier,
         bitmapIndex,
         spatialIndex

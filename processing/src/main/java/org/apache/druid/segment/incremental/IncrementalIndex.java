@@ -685,6 +685,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         }
         dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
         // Set column capabilities as data is coming in
+        if (dimsKey == null) {
+          capabilities.setIsNullable(NullHandling.sqlCompatible());
+        }
         if (!capabilities.hasMultipleValues().isTrue() &&
             dimsKey != null &&
             handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
@@ -695,6 +698,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           // unless this is the first row we are processing, all newly discovered columns will be sparse
           if (maxIngestedEventTime != null) {
             indexer.setSparseIndexed();
+            capabilities.setIsNullable(NullHandling.sqlCompatible());
           }
           if (overflow == null) {
             overflow = new ArrayList<>();
@@ -719,6 +723,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       // process any dimensions with missing values in the row
       for (String missing : absentDimensions) {
         dimensionDescs.get(missing).getIndexer().setSparseIndexed();
+        ColumnCapabilitiesImpl capabilities = columnCapabilities.get(missing);
+        capabilities.setIsNullable(NullHandling.sqlCompatible());
       }
     }
 
