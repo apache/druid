@@ -30,6 +30,7 @@ import {
   IoConfig,
   isColumnTimestampSpec,
   isDruidSource,
+  isDruidSourceFromInputSource,
   MetricSpec,
   TimestampSpec,
   Transform,
@@ -202,7 +203,10 @@ function makeSamplerIoConfig(
     ioConfig = deepSet(ioConfig, 'useEarliestSequenceNumber', sampleStrategy === 'start');
   }
   // In order to prevent potential data loss null columns should be kept by the sampler and shown in the ingestion flow
-  ioConfig = deepSet(ioConfig, 'inputFormat.keepNullColumns', true);
+  const reingestMode = isDruidSourceFromInputSource(deepGet(ioConfig, 'inputSource'));
+  if (!reingestMode) {
+    ioConfig = deepSet(ioConfig, 'inputFormat.keepNullColumns', true);
+  }
   return ioConfig;
 }
 
