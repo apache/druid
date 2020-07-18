@@ -336,11 +336,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     );
     ITRetryUtil.retryUntilTrue(
         () -> {
-          int metadataSegmentCount = coordinator.getSegments(
+          int segmentCount = coordinator.getAvailableSegments(
               dataSource + config.getExtraDatasourceNameSuffix()
           ).size();
-          LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
-          return metadataSegmentCount == numExpectedSegments;
+          LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
+          return segmentCount == numExpectedSegments;
         },
         "Segment count check"
     );
