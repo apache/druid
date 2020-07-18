@@ -24,6 +24,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -39,6 +40,7 @@ public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
   private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_using_sqlinputsource_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
 
+  @DataProvider
   public static Object[][] resources()
   {
     return new Object[][]{
