@@ -129,11 +129,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion, waitForSegmentsToLoad);
     if (runTestQueries) {
-      doTestQuery(fullDatasourceName, queryFilePath, 2);
+      doTestQuery(dataSource, queryFilePath, 2);
     }
   }
 
-  protected void doTestQuery(String fullDatasourceName, String queryFilePath, int timesToRun)
+  protected void doTestQuery(String dataSource, String queryFilePath, int timesToRun)
   {
     try {
       String queryResponseTemplate;
@@ -148,7 +148,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           "%%DATASOURCE%%",
-          fullDatasourceName
+          dataSource + config.getExtraDatasourceNameSuffix()
       );
       queryHelper.testQueriesFromString(queryResponseTemplate, timesToRun);
 
