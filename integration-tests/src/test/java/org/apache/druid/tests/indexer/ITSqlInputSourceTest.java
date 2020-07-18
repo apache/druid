@@ -40,7 +40,6 @@ public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
   private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_using_sqlinputsource_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
 
-  @DataProvider(parallel = true)
   public static Object[][] resources()
   {
     return new Object[][]{
