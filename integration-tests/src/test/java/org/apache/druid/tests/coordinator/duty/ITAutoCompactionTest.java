@@ -87,15 +87,15 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
-      //...compacted into 1 new segment for 1 day. 1 day compacted and 1 day skipped/remains uncompacted. (5 total)
-      forceTriggerAutoCompaction(5);
+      //...compacted into 1 new segment for 1 day. 1 day compacted and 1 day skipped/remains uncompacted. (3 total)
+      forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
 
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
-      //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (6 total)
-      forceTriggerAutoCompaction(6);
+      //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (2 total)
+      forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
@@ -119,8 +119,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       submitCompactionConfig(1, SKIP_OFFSET_FROM_LATEST);
 
       // Instead of merging segments, the updated config will split segments!
-      //...compacted into 10 new segments across 2 days. 5 new segments each day (14 total)
-      forceTriggerAutoCompaction(14);
+      //...compacted into 10 new segments across 2 days. 5 new segments each day (10 total)
+      forceTriggerAutoCompaction(10);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(10, 1);
 
@@ -162,11 +162,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      // Skips first day. Should only compact one out of two days.
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
-
       // Set compactionTaskSlotRatio to 0 to prevent any compaction
       updateCompactionTaskSlot(0, 100);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
       // ...should remains unchanged (4 total)
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -183,15 +181,15 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       // Update compaction slots to be 1
       updateCompactionTaskSlot(1, 1);
-      // One day compacted (1 new segment) and one day remains uncompacted. (5 total)
-      forceTriggerAutoCompaction(5);
+      // One day compacted (1 new segment) and one day remains uncompacted. (3 total)
+      forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
       Assert.assertEquals(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize"), "14312");
       // Run compaction again to compact the remaining day
-      // Remaining day compacted (1 new segment). Now both days compacted (6 total)
-      forceTriggerAutoCompaction(6);
+      // Remaining day compacted (1 new segment). Now both days compacted (2 total)
+      forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
@@ -283,11 +281,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     compactionResource.forceTriggerAutoCompaction();
     waitForAllTasksToCompleteForDataSource(fullDatasourceName);
-    verifySegmentsCount(numExpectedSegmentsAfterCompaction);
     ITRetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Compaction"
     );
+    verifySegmentsCount(numExpectedSegmentsAfterCompaction);
   }
 
   private void verifySegmentsCount(int numExpectedSegments)

@@ -105,11 +105,8 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(1));
       doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_PRE_COMPACT_RESOURCE, 2);
       // Submit compaction task
-      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(indexDatasource);
-      intervalsBeforeCompaction.sort(null);
-      compactData(indexDatasource);
+      compactData(indexDatasource, COMPACTION_TASK);
       // Verification post compaction
-      checkCompactionIntervals(indexDatasource, intervalsBeforeCompaction);
       verifySegmentsCountAndLoaded(indexDatasource, expectedSegmentCountList.get(2));
       verifySegmentsCompacted(indexDatasource, expectedSegmentCountList.get(2));
       doTestQuery(indexDatasource, INDEX_QUERIES_POST_APPEND_POST_COMPACT_RESOURCE, 2);
@@ -180,21 +177,6 @@ public class ITAppendBatchIndexTest extends AbstractITBatchIndexTest
         false,
         false,
         true
-    );
-  }
-
-  private void compactData(String fullDatasourceName) throws Exception
-  {
-    final String template = getResourceAsString(COMPACTION_TASK);
-    String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
-
-    final String taskID = indexer.submitTask(taskSpec);
-    LOG.info("TaskID for compaction task %s", taskID);
-    indexer.waitUntilTaskCompletes(taskID);
-
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
-        "Segment Compaction"
     );
   }
 }

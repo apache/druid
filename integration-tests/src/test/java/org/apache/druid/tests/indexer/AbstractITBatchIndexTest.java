@@ -346,15 +346,29 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     );
   }
 
-  void checkCompactionIntervals(String dataSource, List<String> expectedIntervals)
+  void compactData(String dataSource, String compactionTask) throws Exception
   {
+    final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
+    final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+    intervalsBeforeCompaction.sort(null);
+    final String template = getResourceAsString(compactionTask);
+    String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
+
+    final String taskID = indexer.submitTask(taskSpec);
+    LOG.info("TaskID for compaction task %s", taskID);
+    indexer.waitUntilTaskCompletes(taskID);
+
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        "Segment Compaction"
+    );
     ITRetryUtil.retryUntilTrue(
         () -> {
           final List<String> actualIntervals = coordinator.getSegmentIntervals(
               dataSource + config.getExtraDatasourceNameSuffix()
           );
           actualIntervals.sort(null);
-          return actualIntervals.equals(expectedIntervals);
+          return actualIntervals.equals(intervalsBeforeCompaction);
         },
         "Compaction interval check"
     );
