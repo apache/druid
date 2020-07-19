@@ -95,8 +95,8 @@ setupData()
   fi
 
 
-  # The SqlInputSource tests in the "batch-index" test group require data to be setup in MySQL before running the tests.
-  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "batch-index" ] ; then
+  # The SqlInputSource tests in the "input-source" test group require data to be setup in MySQL before running the tests.
+  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "input-source" ] ; then
     # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
     find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
         && echo "CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid \
