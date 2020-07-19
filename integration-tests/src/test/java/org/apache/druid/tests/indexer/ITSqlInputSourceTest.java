@@ -47,9 +47,9 @@ public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
         // Multiple query. No filter
         {ImmutableList.of("SELECT * FROM wikipedia_index_data1", "SELECT * FROM wikipedia_index_data2", "SELECT * FROM wikipedia_index_data3")},
         // Multiple query. Filter on timestamp column
-        {ImmutableList.of("SELECT * FROM wikipedia_index_data1 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-08-31 11:59:59'",
-                          "SELECT * FROM wikipedia_index_data2 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-01 11:59:59'",
-                          "SELECT * FROM wikipedia_index_data3 WHERE timestamp BETWEEN '2013-09-01 00:00:00' AND '2013-09-01 11:59:59'")},
+        {ImmutableList.of("SELECT * FROM wikipedia_index_data1 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-02 00:00:00'",
+                          "SELECT * FROM wikipedia_index_data2 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-02 00:00:00'",
+                          "SELECT * FROM wikipedia_index_data3 WHERE timestamp BETWEEN '2013-09-01 00:00:00' AND '2013-09-02 00:00:00'")},
         // Multiple query. Filter on data column
         {ImmutableList.of("SELECT * FROM wikipedia_index_data1 WHERE added > 0",
                           "SELECT * FROM wikipedia_index_data2 WHERE added > 0",
@@ -57,7 +57,7 @@ public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
         // Single query. No filter
         {ImmutableList.of("SELECT * FROM wikipedia_index_data_all")},
         // Single query. Filter on timestamp column
-        {ImmutableList.of("SELECT * FROM wikipedia_index_data_all WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-01 11:59:59'")},
+        {ImmutableList.of("SELECT * FROM wikipedia_index_data_all WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-02 00:00:00'")},
         // Single query. Filter on data column
         {ImmutableList.of("SELECT * FROM wikipedia_index_data_all WHERE added > 0")},
     };
