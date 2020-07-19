@@ -171,7 +171,7 @@ public class DruidClusterAdminClient
     ITRetryUtil.retryUntilTrue(
         () -> {
           try {
-            String url = StringUtils.format("%s/config", config.getCoordinatorUrl());
+            String url = StringUtils.format("%s/druid/coordinator/v1/config", config.getCoordinatorUrl());
             StatusResponseHolder response = httpClient.go(
                 new Request(HttpMethod.POST, new URL(url)).setContent(
                     "application/json",
