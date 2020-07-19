@@ -99,7 +99,7 @@ setupData()
   if [ "$DRUID_INTEGRATION_TEST_GROUP" = "input-source" ] ; then
     # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
     find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
-        && echo "CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid \
+        && echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid \
         && cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid \
         && /etc/init.d/mysql stop
   fi
