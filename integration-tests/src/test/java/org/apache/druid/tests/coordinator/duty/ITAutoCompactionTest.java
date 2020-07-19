@@ -155,7 +155,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   public void testAutoCompactionDutyCanUpdateTaskSlots() throws Exception
   {
     // Set compactionTaskSlotRatio to 0 to prevent any compaction
-    updateCompactionTaskSlot(0, 100);
+    updateCompactionTaskSlot(0, 0);
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
@@ -165,14 +165,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
-      // ...should remains unchanged (4 total)
-      forceTriggerAutoCompaction(4);
-      verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(0, null);
-      checkCompactionIntervals(intervalsBeforeCompaction);
-
-      // Set maxCompactionTaskSlots to 0 to prevent any compaction
-      updateCompactionTaskSlot(0.1, 0);
       // ...should remains unchanged (4 total)
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
