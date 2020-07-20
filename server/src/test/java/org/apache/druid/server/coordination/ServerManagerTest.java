@@ -54,6 +54,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
@@ -87,7 +88,9 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -109,6 +112,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class ServerManagerTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private ServerManager serverManager;
   private MyQueryRunnerFactory factory;
   private CountDownLatch queryWaitLatch;
@@ -531,6 +537,8 @@ public class ServerManagerTest
   {
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final List<SegmentDescriptor> descriptors = Collections.singletonList(new SegmentDescriptor(interval, "1", 0));
+    expectedException.expect(QueryUnsupportedException.class);
+    expectedException.expectMessage("Unknown query type");
     serverManager.getQueryRunnerForSegments(
         new BaseQuery<Object>(
             new TableDataSource("test"),
