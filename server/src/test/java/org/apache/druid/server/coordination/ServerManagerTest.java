@@ -41,7 +41,9 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ConcatQueryRunner;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NoopQueryRunner;
@@ -54,13 +56,17 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Key;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -88,8 +94,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -156,7 +164,11 @@ public class ServerManagerTest
           @Override
           public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
           {
-            return (QueryRunnerFactory) factory;
+            if (query instanceof SearchQuery) {
+              return (QueryRunnerFactory) factory;
+            } else {
+              return null;
+            }
           }
         },
         new NoopServiceEmitter(),
@@ -512,6 +524,59 @@ public class ServerManagerTest
     Assert.assertTrue(results.isEmpty());
     Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
     Assert.assertEquals(closedSegments, responseContext.get(Key.MISSING_SEGMENTS));
+  }
+
+  @Test
+  public void testGetQueryRunnerForSegmentsForUnknownQueryThrowingException()
+  {
+    final Interval interval = Intervals.of("P1d/2011-04-01");
+    final List<SegmentDescriptor> descriptors = Collections.singletonList(new SegmentDescriptor(interval, "1", 0));
+    serverManager.getQueryRunnerForSegments(
+        new BaseQuery<Object>(
+            new TableDataSource("test"),
+            new MultipleSpecificSegmentSpec(descriptors),
+            false,
+            new HashMap<>()
+        )
+        {
+          @Override
+          public boolean hasFilters()
+          {
+            return false;
+          }
+
+          @Override
+          public DimFilter getFilter()
+          {
+            return null;
+          }
+
+          @Override
+          public String getType()
+          {
+            return null;
+          }
+
+          @Override
+          public Query<Object> withOverriddenContext(Map<String, Object> contextOverride)
+          {
+            return null;
+          }
+
+          @Override
+          public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
+          {
+            return null;
+          }
+
+          @Override
+          public Query<Object> withDataSource(DataSource dataSource)
+          {
+            return null;
+          }
+        },
+        descriptors
+    );
   }
 
   private void waitForTestVerificationAndCleanup(Future future)
