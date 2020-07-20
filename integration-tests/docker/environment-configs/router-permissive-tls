@@ -19,7 +19,6 @@
 
 DRUID_SERVICE=router
 DRUID_LOG_PATH=/shared/logs/router-permissive-tls.log
-DRUID_MAIN=org.apache.druid.cli.Main
 
 # JAVA OPTS
 SERVICE_DRUID_JAVA_OPTS=-server -Xmx128m -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5001
