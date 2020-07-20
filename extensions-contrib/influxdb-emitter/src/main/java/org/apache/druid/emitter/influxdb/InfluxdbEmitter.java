@@ -222,7 +222,7 @@ public class InfluxdbEmitter implements Emitter
   private HttpClient buildInfluxdbClient()
   {
     if ("https".equals(influxdbEmitterConfig.getProtocol())) {
-      SSLContext sslContext = null;
+      SSLContext sslContext;
       if (influxdbEmitterConfig.getTrustStorePath() == null || influxdbEmitterConfig.getTrustStorePassword() == null) {
         String msg = "Can't load TrustStore. Truststore path or password is not set.";
         log.error(msg);
