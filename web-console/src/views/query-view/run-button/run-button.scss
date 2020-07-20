@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-module.exports = {
-  "preset": "ts-jest",
-  "testEnvironment": "jsdom",
-};
+.run-button {
+  .rune-button {
+    background-color: #2ca89e !important;
+  }
+}

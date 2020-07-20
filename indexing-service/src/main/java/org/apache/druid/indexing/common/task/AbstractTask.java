@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexer.TaskIdUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
@@ -92,7 +92,7 @@ public abstract class AbstractTask implements Task
     }
 
     final List<Object> objects = new ArrayList<>();
-    final String suffix = TaskIdUtils.getRandomId();
+    final String suffix = IdUtils.getRandomId();
     objects.add(typeName);
     objects.add(dataSource);
     objects.add(suffix);
