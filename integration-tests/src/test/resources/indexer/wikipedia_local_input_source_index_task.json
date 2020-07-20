@@ -71,15 +71,17 @@
         "filter" : "%%INPUT_SOURCE_FILTER%%",
         "baseDir": "%%INPUT_SOURCE_BASE_DIR%%"
       },
+      "appendToExisting": %%APPEND_TO_EXISTING%%,
       "inputFormat": %%INPUT_FORMAT%%
     },
     "tuningConfig": {
       "type": "index_parallel",
-      "maxNumConcurrentSubTasks": 10,
+      "maxNumConcurrentSubTasks": 4,
       "splitHintSpec": {
         "type": "maxSize",
         "maxSplitSize": 1
       },
+      "forceGuaranteedRollup": %%FORCE_GUARANTEED_ROLLUP%%,
       "partitionsSpec": %%PARTITIONS_SPEC%%
     }
   }

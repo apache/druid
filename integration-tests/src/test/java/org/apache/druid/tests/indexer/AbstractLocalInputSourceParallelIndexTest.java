@@ -70,6 +70,16 @@ public abstract class AbstractLocalInputSourceParallelIndexTest extends Abstract
               "%%INPUT_FORMAT%%",
               jsonMapper.writeValueAsString(inputFormatMap)
           );
+          spec = StringUtils.replace(
+              spec,
+              "%%APPEND_TO_EXISTING%%",
+              jsonMapper.writeValueAsString(false)
+          );
+          spec = StringUtils.replace(
+              spec,
+              "%%FORCE_GUARANTEED_ROLLUP%%",
+              jsonMapper.writeValueAsString(false)
+          );
           return spec;
         }
         catch (Exception e) {
