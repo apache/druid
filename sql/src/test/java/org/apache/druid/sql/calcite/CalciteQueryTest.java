@@ -204,7 +204,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQueryOnTimeseries() throws Exception
+  public void testGroupByWithPostAggregatorReferencingTimeFloorColumnOnTimeseries() throws Exception
   {
     cannotVectorize();
 

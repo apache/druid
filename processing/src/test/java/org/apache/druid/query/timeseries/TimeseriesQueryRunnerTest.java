@@ -47,6 +47,7 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -2809,6 +2810,53 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 
     final List list = finalRunner.run(QueryPlus.wrap(query)).toList();
     Assert.assertEquals(10, list.size());
+  }
+
+  @Test
+  public void testTimeseriesWithPostAggregatorReferencingTimestampResultField()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.DAY_GRAN)
+                                  .filters(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
+                                  .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+                                  .postAggregators(
+                                      new FieldAccessPostAggregator("timestampInPostAgg", "myTimestamp")
+                                  )
+                                  .descending(descending)
+                                  .context(
+                                      makeContext(
+                                          ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, "myTimestamp")
+                                      )
+                                  )
+                                  .build();
+
+    final DateTime aprilFirst = DateTimes.of("2011-04-01");
+    final DateTime aprilSecond = DateTimes.of("2011-04-02");
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            aprilFirst,
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "myTimestamp", aprilFirst.getMillis(),
+                    "timestampInPostAgg", aprilFirst.getMillis()
+                )
+            )
+        ),
+        new Result<>(
+            aprilSecond,
+            new TimeseriesResultValue(
+                ImmutableMap.of(
+                    "myTimestamp", aprilSecond.getMillis(),
+                    "timestampInPostAgg", aprilSecond.getMillis()
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    assertExpectedResults(expectedResults, results);
   }
 
   private Map<String, Object> makeContext()
