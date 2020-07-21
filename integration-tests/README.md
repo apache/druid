@@ -374,7 +374,11 @@ By default, test methods in a test class will be run in sequential order one at 
 class can be set to run in parallel (multiple test methods of each class running at the same time) by excluding
 the given class/package from the "AllSerializedTests" test tag section and including it in the "AllParallelizedTests" 
 test tag section in integration-tests/src/test/resources/testng.xml. TestNG uses two parameters, i.e.,
-`thread-count` and `data-provider-thread-count`, for parallel test execution, which are set to 2 for Druid integration tests.
+`thread-count` and `data-provider-thread-count`, for parallel test execution, which are both set to 2 for Druid integration tests.
+For test using parallel execution with data provider, you will also need to set `@DataProvider(parallel = true)`
+on your data provider method in your test class. Note that for test using parallel execution with data provider, the test
+class does not need to be in the "AllParallelizedTests" test tag section and if it is in the "AllParallelizedTests" 
+test tag section it will actually be run with `thread-count` times `data-provider-thread-count` threads.
 You may want to modify those values for faster execution.
 See https://testng.org/doc/documentation-main.html#parallel-running and https://testng.org/doc/documentation-main.html#parameters-dataproviders for details.
 Please be mindful when adding tests to the "AllParallelizedTests" test tag that the tests can run in parallel with
