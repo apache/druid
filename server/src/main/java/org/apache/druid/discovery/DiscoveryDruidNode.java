@@ -21,7 +21,6 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.DruidNode;
 
 import java.util.HashMap;
@@ -82,29 +81,6 @@ public class DiscoveryDruidNode
   public DruidNode getDruidNode()
   {
     return druidNode;
-  }
-
-  public boolean isDiscoverableDataServer()
-  {
-    final DruidService druidService = services.get(DataNodeService.DISCOVERY_SERVICE_KEY);
-    if (druidService == null) {
-      return false;
-    }
-    final DataNodeService dataNodeService = (DataNodeService) druidService;
-    return dataNodeService.isDiscoverable();
-  }
-
-  public DruidServer toDruidServer()
-  {
-    return new DruidServer(
-        getDruidNode().getHostAndPortToUse(),
-        getDruidNode().getHostAndPort(),
-        getDruidNode().getHostAndTlsPort(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getMaxSize(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getType(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getTier(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority()
-    );
   }
 
   @Override

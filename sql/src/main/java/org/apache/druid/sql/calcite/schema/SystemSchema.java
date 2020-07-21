@@ -49,12 +49,15 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.http.client.Request;
@@ -494,7 +497,7 @@ public class SystemSchema extends AbstractSchema
           .from(() -> druidServers)
           .transform((DiscoveryDruidNode discoveryDruidNode) -> {
             //noinspection ConstantConditions
-            final boolean isDiscoverableDataServer = discoveryDruidNode.isDiscoverableDataServer();
+            final boolean isDiscoverableDataServer = isDiscoverableDataServer(discoveryDruidNode);
 
             if (isDiscoverableDataServer) {
               final DruidServer druidServer = serverInventoryView.getInventoryValue(
@@ -546,7 +549,7 @@ public class SystemSchema extends AbstractSchema
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
       final DruidServer druidServerToUse = serverFromInventoryView == null
-                                           ? discoveryDruidNode.toDruidServer()
+                                           ? toDruidServer(discoveryDruidNode)
                                            : serverFromInventoryView;
       final long currentSize;
       if (serverFromInventoryView == null) {
@@ -565,6 +568,37 @@ public class SystemSchema extends AbstractSchema
           currentSize,
           druidServerToUse.getMaxSize()
       };
+    }
+
+    private static boolean isDiscoverableDataServer(DiscoveryDruidNode druidNode)
+    {
+      final DruidService druidService = druidNode.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY);
+      if (druidService == null) {
+        return false;
+      }
+      final DataNodeService dataNodeService = (DataNodeService) druidService;
+      return dataNodeService.isDiscoverable();
+    }
+
+    private static DruidServer toDruidServer(DiscoveryDruidNode discoveryDruidNode)
+    {
+      if (isDiscoverableDataServer(discoveryDruidNode)) {
+        final DruidNode druidNode = discoveryDruidNode.getDruidNode();
+        final DataNodeService dataNodeService = (DataNodeService) discoveryDruidNode
+            .getServices()
+            .get(DataNodeService.DISCOVERY_SERVICE_KEY);
+        return new DruidServer(
+            druidNode.getHostAndPortToUse(),
+            druidNode.getHostAndPort(),
+            druidNode.getHostAndTlsPort(),
+            dataNodeService.getMaxSize(),
+            dataNodeService.getType(),
+            dataNodeService.getTier(),
+            dataNodeService.getPriority()
+        );
+      } else {
+        throw new ISE("[%s] is not a discoverable data server", discoveryDruidNode);
+      }
     }
 
     private static Iterator<DiscoveryDruidNode> getDruidServers(DruidNodeDiscoveryProvider druidNodeDiscoveryProvider)
