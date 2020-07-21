@@ -1620,7 +1620,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
-                                  .context(ImmutableMap.of("skipEmptyBuckets", "true"))
                                   .descending(descending)
                                   .context(makeContext(ImmutableMap.of("skipEmptyBuckets", "true")))
                                   .build();
@@ -2490,9 +2489,14 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   )
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(ImmutableMap.of(
-                                      TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME
-                                  ))
+                                  .context(
+                                      makeContext(
+                                          ImmutableMap.of(
+                                              TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
+                                              "skipEmptyBuckets", true
+                                          )
+                                      )
+                                  )
                                   .build();
 
     Assert.assertEquals(TIMESTAMP_RESULT_FIELD_NAME, query.getTimestampResultField());
@@ -2519,6 +2523,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     final String[] expectedIndex = descending ?
                                    QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES_DESC :
                                    QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES;
+    final String[] expectedIndexToUse = Arrays.stream(expectedIndex)
+                                              .filter(eachIndex -> !"0.0".equals(eachIndex))
+                                              .toArray(String[]::new);
 
     final Long expectedLast = descending ?
                                   QueryRunnerTestHelper.EARLIEST.getMillis() :
@@ -2546,7 +2553,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 
       if (QueryRunnerTestHelper.SKIPPED_DAY.getMillis() != current) {
         Assert.assertEquals(
-            Doubles.tryParse(expectedIndex[count]).doubleValue(),
+            Doubles.tryParse(expectedIndexToUse[count]).doubleValue(),
             (Double) result[3],
             (Double) result[3] * 1e-6
         );
@@ -2556,7 +2563,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             0.02
         );
         Assert.assertEquals(
-            new Double(expectedIndex[count]) + 13L + 1L,
+            new Double(expectedIndexToUse[count]) + 13L + 1L,
             (Double) result[5],
             (Double) result[5] * 1e-6
         );
@@ -2573,7 +2580,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
               0.02
           );
           Assert.assertEquals(
-              new Double(expectedIndex[count]) + 1L,
+              new Double(expectedIndexToUse[count]) + 1L,
               (Double) result[5],
               (Double) result[5] * 1e-6
           );
@@ -2613,9 +2620,14 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   )
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(ImmutableMap.of(
-                                      TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME
-                                  ))
+                                  .context(
+                                      makeContext(
+                                          ImmutableMap.of(
+                                              TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
+                                              "skipEmptyBuckets", true
+                                          )
+                                      )
+                                  )
                                   .build();
 
     Assert.assertEquals(TIMESTAMP_RESULT_FIELD_NAME, query.getTimestampResultField());
@@ -2625,6 +2637,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     final String[] expectedIndex = descending ?
                                    QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES_DESC :
                                    QueryRunnerTestHelper.EXPECTED_FULL_ON_INDEX_VALUES;
+    final String[] expectedIndexToUse = Arrays.stream(expectedIndex)
+                                              .filter(eachIndex -> !"0.0".equals(eachIndex))
+                                              .toArray(String[]::new);
 
     final DateTime expectedLast = descending ?
                                   QueryRunnerTestHelper.EARLIEST :
@@ -2656,13 +2671,13 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       if (!QueryRunnerTestHelper.SKIPPED_DAY.equals(current)) {
         Assert.assertEquals(
             result.toString(),
-            Doubles.tryParse(expectedIndex[count]).doubleValue(),
+            Doubles.tryParse(expectedIndexToUse[count]).doubleValue(),
             value.getDoubleMetric("index").doubleValue(),
             value.getDoubleMetric("index").doubleValue() * 1e-6
         );
         Assert.assertEquals(
             result.toString(),
-            new Double(expectedIndex[count]) +
+            new Double(expectedIndexToUse[count]) +
             13L + 1L,
             value.getDoubleMetric("addRowsIndexConstant"),
             value.getDoubleMetric("addRowsIndexConstant") * 1e-6
@@ -2682,7 +2697,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
           );
           Assert.assertEquals(
               result.toString(),
-              new Double(expectedIndex[count]) + 1L,
+              new Double(expectedIndexToUse[count]) + 1L,
               value.getDoubleMetric("addRowsIndexConstant"),
               value.getDoubleMetric("addRowsIndexConstant") * 1e-6
           );
