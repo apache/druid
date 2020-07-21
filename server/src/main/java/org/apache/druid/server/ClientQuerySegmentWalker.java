@@ -183,6 +183,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           newQuery
       );
     } else if (canRunQueryUsingClusterWalker(newQuery)) {
+      // Note: clusterClient.getQueryRunnerForIntervals() can return an empty sequence if there is no segment
+      // to query, but this is not correct when there's a right or full outer join going on.
+      // See https://github.com/apache/druid/issues/9229 for details.
       return new QuerySwappingQueryRunner<>(
           decorateClusterRunner(newQuery, clusterClient.getQueryRunnerForIntervals(newQuery, intervals)),
           query,
