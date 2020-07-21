@@ -51,6 +51,7 @@ exports.SQL_EXPRESSION_PARTS = [
   'END',
   'ELSE',
   'WHEN',
+  'THEN',
   'CASE',
   'OR',
   'AND',
