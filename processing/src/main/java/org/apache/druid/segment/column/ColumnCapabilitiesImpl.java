@@ -22,6 +22,7 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -77,19 +78,31 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return copy;
   }
 
+  /**
+   * Creates a {@link ColumnCapabilitiesImpl} where all {@link ColumnCapabilities.Capable} that default to unknown
+   * instead are coerced to true or false
+   */
+  public static ColumnCapabilitiesImpl createDefault(boolean unknownIsTrue)
+  {
+    return ColumnCapabilitiesImpl.snapshot(new ColumnCapabilitiesImpl(), unknownIsTrue);
+  }
 
   /**
    * Create a no frills, simple column with {@link ValueType} set and everything else false
    */
   public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(ValueType valueType)
   {
-    return new ColumnCapabilitiesImpl().setType(valueType)
-                                       .setHasMultipleValues(false)
-                                       .setHasBitmapIndexes(false)
-                                       .setDictionaryEncoded(false)
-                                       .setDictionaryValuesSorted(false)
-                                       .setDictionaryValuesUnique(false)
-                                       .setHasSpatialIndexes(false);
+    ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
+                                                                 .setHasMultipleValues(false)
+                                                                 .setHasBitmapIndexes(false)
+                                                                 .setDictionaryEncoded(false)
+                                                                 .setDictionaryValuesSorted(false)
+                                                                 .setDictionaryValuesUnique(false)
+                                                                 .setHasSpatialIndexes(false);
+    if (NullHandling.replaceWithDefault()) {
+      builder.setIsNullable(false);
+    }
+    return builder;
   }
 
   @Nullable
@@ -216,6 +229,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setIsNullable(boolean isNullable)
   {
     nullable = Capable.of(isNullable);
+    return this;
+  }
+
+  public ColumnCapabilitiesImpl setIsNullable(Capable isNullable)
+  {
+    nullable = isNullable;
     return this;
   }
 

@@ -37,6 +37,7 @@ public class ColumnCapabilitiesImplTest
                                                 .setHasMultipleValues(true)
                                                 .setHasSpatialIndexes(true)
                                                 .setType(ValueType.COMPLEX)
+                                                .setIsNullable(true)
                                                 .setFilterable(true));
 
     Assert.assertFalse(json.contains("filterable"));
@@ -49,6 +50,8 @@ public class ColumnCapabilitiesImplTest
     Assert.assertTrue(cc.hasSpatialIndexes());
     Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
+    // isNullable and isFilterable are computed, these should not be set
+    Assert.assertFalse(cc.isNullable().isTrue());
     Assert.assertFalse(cc.isFilterable());
   }
 
@@ -62,6 +65,7 @@ public class ColumnCapabilitiesImplTest
                   + "  \"hasSpatialIndexes\":true,\n"
                   + "  \"hasMultipleValues\":true,\n"
                   + "  \"hasBitmapIndexes\":true,\n"
+                  + "  \"isNullable\":true,\n"
                   + "  \"filterable\":true\n"
                   + "}";
 
@@ -74,6 +78,8 @@ public class ColumnCapabilitiesImplTest
     Assert.assertTrue(cc.hasSpatialIndexes());
     Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
+    // isNullable and isFilterable are computed, these should not be set
+    Assert.assertFalse(cc.isNullable().isTrue());
     Assert.assertFalse(cc.isFilterable());
   }
 }

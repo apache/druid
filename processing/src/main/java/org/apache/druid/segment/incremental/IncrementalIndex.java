@@ -1150,6 +1150,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       } else {
         // in an ideal world complex type reports its actual column capabilities...
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX);
+        capabilities.setIsNullable(ColumnCapabilities.Capable.UNKNOWN);
         this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
       }
     }
