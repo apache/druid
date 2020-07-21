@@ -17,14 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.tests.parallelized;
+package org.apache.druid.tests.indexer;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.tests.TestNGGroup;
-import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -34,23 +33,23 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = TestNGGroup.INPUT_SOURCE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
 {
-  private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String INDEX_TASK = "/indexer/wikipedia_parallel_index_using_sqlinputsource_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
 
-  @DataProvider(parallel = true)
+  @DataProvider
   public static Object[][] resources()
   {
     return new Object[][]{
         // Multiple query. No filter
         {ImmutableList.of("SELECT * FROM wikipedia_index_data1", "SELECT * FROM wikipedia_index_data2", "SELECT * FROM wikipedia_index_data3")},
         // Multiple query. Filter on timestamp column
-        {ImmutableList.of("SELECT * FROM wikipedia_index_data1 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-08-31 11:59:59'",
-                          "SELECT * FROM wikipedia_index_data2 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-01 11:59:59'",
-                          "SELECT * FROM wikipedia_index_data3 WHERE timestamp BETWEEN '2013-09-01 00:00:00' AND '2013-09-01 11:59:59'")},
+        {ImmutableList.of("SELECT * FROM wikipedia_index_data1 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-02 00:00:00'",
+                          "SELECT * FROM wikipedia_index_data2 WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-02 00:00:00'",
+                          "SELECT * FROM wikipedia_index_data3 WHERE timestamp BETWEEN '2013-09-01 00:00:00' AND '2013-09-02 00:00:00'")},
         // Multiple query. Filter on data column
         {ImmutableList.of("SELECT * FROM wikipedia_index_data1 WHERE added > 0",
                           "SELECT * FROM wikipedia_index_data2 WHERE added > 0",
@@ -58,7 +57,7 @@ public class ITSqlInputSourceTest extends AbstractITBatchIndexTest
         // Single query. No filter
         {ImmutableList.of("SELECT * FROM wikipedia_index_data_all")},
         // Single query. Filter on timestamp column
-        {ImmutableList.of("SELECT * FROM wikipedia_index_data_all WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-01 11:59:59'")},
+        {ImmutableList.of("SELECT * FROM wikipedia_index_data_all WHERE timestamp BETWEEN '2013-08-31 00:00:00' AND '2013-09-02 00:00:00'")},
         // Single query. Filter on data column
         {ImmutableList.of("SELECT * FROM wikipedia_index_data_all WHERE added > 0")},
     };
