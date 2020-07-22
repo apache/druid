@@ -59,13 +59,13 @@ To make it clear, the base of units are defined as below
 | K | Kilo Decimal Byte | 1000 |
 | M | Mega Decimal Byte | 1000_000 |
 | G | Giga Decimal Byte | 1000_000_000 |
-| T | Tera Decimal Byte | 1000_000_000_1000 |
-| P | Peta Decimal Byte | 1000_000_000_1000_1000 |
+| T | Tera Decimal Byte | 1000_000_000_000 |
+| P | Peta Decimal Byte | 1000_000_000_000_000 |
 | KiB | Kilo Binary Byte | 1024 |
 | MiB  | Mega Binary Byte | 1024 * 1024 |
 | GiB | Giga Binary Byte | 1024 * 1024 * 1024 |
 | TiB  | Tera Binary Byte | 1024 * 1024 * 1024 * 1024 |
-| PiB  | Peta Binary Byte | 1024 * 1024 * 1024 * 1024 |
+| PiB  | Peta Binary Byte | 1024 * 1024 * 1024 * 1024 * 1024 |
 
 Unit is case-insensitive. `k`, `kib`, `KiB`, `kiB` are all acceptable.
 
