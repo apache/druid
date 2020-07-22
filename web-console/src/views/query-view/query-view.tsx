@@ -297,9 +297,17 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   }
 
   prettyPrintJson(): void {
-    this.setState(prevState => ({
-      queryString: JSON.stringify(Hjson.parse(prevState.queryString), null, 2),
-    }));
+    this.setState(prevState => {
+      let parsed: any;
+      try {
+        parsed = Hjson.parse(prevState.queryString);
+      } catch {
+        return null;
+      }
+      return {
+        queryString: JSON.stringify(parsed, null, 2),
+      };
+    });
   }
 
   handleDownload = (filename: string, format: string) => {
