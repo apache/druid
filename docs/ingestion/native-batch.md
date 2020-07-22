@@ -261,7 +261,7 @@ The three `partitionsSpec` types have different characteristics.
 The recommended use case for each partitionsSpec is:
 - If your data has a uniformly distributed column which is frequently used in your queries,
 consider using `single_dim` partitionsSpec to maximize the performance of most of your queries.
-- If your data doesn't a uniformly distributed column, but is expected to have a [high rollup ratio](./index.md#maximizing-rollup-ratio)
+- If your data doesn't have a uniformly distributed column, but is expected to have a [high rollup ratio](./index.md#maximizing-rollup-ratio)
 when you roll up with some dimensions, consider using `hashed` partitionsSpec.
 It could reduce the size of datasource and query latency by improving data locality.
 - If the above two scenarios are not the case or you don't need to roll up your datasource,
