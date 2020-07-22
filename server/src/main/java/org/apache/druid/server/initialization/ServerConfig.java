@@ -21,6 +21,8 @@ package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.Bytes;
+import org.apache.druid.java.util.common.BytesRange;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
@@ -67,7 +69,7 @@ public class ServerConfig
     this.enableRequestLimit = enableRequestLimit;
     this.maxIdleTime = maxIdleTime;
     this.defaultQueryTimeout = defaultQueryTimeout;
-    this.maxScatterGatherBytes = maxScatterGatherBytes;
+    this.maxScatterGatherBytes = Bytes.valueOf(maxScatterGatherBytes);
     this.maxSubqueryRows = maxSubqueryRows;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
@@ -104,8 +106,9 @@ public class ServerConfig
   private long defaultQueryTimeout = TimeUnit.MINUTES.toMillis(5);
 
   @JsonProperty
-  @Min(1)
-  private long maxScatterGatherBytes = Long.MAX_VALUE;
+  @NotNull
+  @BytesRange(min = 1)
+  private Bytes maxScatterGatherBytes = Bytes.valueOf(Long.MAX_VALUE);
 
   @JsonProperty
   @Min(1)
@@ -169,7 +172,7 @@ public class ServerConfig
 
   public long getMaxScatterGatherBytes()
   {
-    return maxScatterGatherBytes;
+    return maxScatterGatherBytes.getValue();
   }
 
   public int getMaxSubqueryRows()
@@ -232,7 +235,7 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes == that.maxScatterGatherBytes &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
