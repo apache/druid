@@ -21,7 +21,6 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.DruidNode;
 
 import java.util.HashMap;
@@ -39,8 +38,12 @@ public class DiscoveryDruidNode
   private final DruidNode druidNode;
   private final NodeRole nodeRole;
 
-  // Other metadata associated with the node e.g.
-  // if its a historical node then lookup information, segment loading capacity etc.
+  /**
+   * Other metadata associated with the node e.g.
+   * if it's a historical node then lookup information, segment loading capacity etc.
+   *
+   * @see DruidNodeDiscoveryProvider#SERVICE_TO_NODE_TYPES
+   */
   private final Map<String, DruidService> services = new HashMap<>();
 
   @JsonCreator
@@ -78,19 +81,6 @@ public class DiscoveryDruidNode
   public DruidNode getDruidNode()
   {
     return druidNode;
-  }
-
-  public DruidServer toDruidServer()
-  {
-    return new DruidServer(
-        getDruidNode().getHostAndPortToUse(),
-        getDruidNode().getHostAndPort(),
-        getDruidNode().getHostAndTlsPort(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getMaxSize(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getType(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getTier(),
-        ((DataNodeService) getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY)).getPriority()
-    );
   }
 
   @Override
