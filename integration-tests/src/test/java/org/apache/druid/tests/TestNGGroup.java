@@ -29,6 +29,8 @@ public class TestNGGroup
 
   public static final String INPUT_FORMAT = "input-format";
 
+  public static final String INPUT_SOURCE = "input-source";
+
   public static final String KAFKA_INDEX = "kafka-index";
 
   public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
