@@ -214,10 +214,14 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
         return true;
       } else {
         final List<SegmentDescriptor> missingSegments = getMissingSegments(queryPlus, context);
+        final int maxNumRetries = QueryContexts.getNumRetriesOnMissingSegments(
+            queryPlus.getQuery(),
+            config.getNumTries()
+        );
         if (missingSegments.isEmpty()) {
           return false;
-        } else if (retryCount >= config.getNumTries()) {
-          if (!config.isReturnPartialResults()) {
+        } else if (retryCount >= maxNumRetries) {
+          if (!QueryContexts.allowReturnPartialResults(queryPlus.getQuery(), config.isReturnPartialResults())) {
             throw new SegmentMissingException("No results found for segments[%s]", missingSegments);
           } else {
             return false;

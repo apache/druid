@@ -204,35 +204,20 @@ public class ServerManager implements QuerySegmentWalker
         analysis.getBaseQuery().orElse(query)
     );
 
-    FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
+    final FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)
         .transformCat(
-            descriptor -> {
-              final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
-                  descriptor.getInterval(),
-                  descriptor.getVersion()
-              );
-
-              if (entry == null) {
-                return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
-              }
-
-              final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(descriptor.getPartitionNumber());
-              if (chunk == null) {
-                return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
-              }
-
-              final ReferenceCountingSegment segment = chunk.getObject();
-              return Collections.singletonList(
-                  buildAndDecorateQueryRunner(
-                      factory,
-                      toolChest,
-                      segmentMapFn.apply(segment),
-                      descriptor,
-                      cpuTimeAccumulator
-                  )
-              );
-            }
+            descriptor -> Collections.singletonList(
+                buildQueryRunnerForSegment(
+                    query,
+                    descriptor,
+                    factory,
+                    toolChest,
+                    timeline,
+                    segmentMapFn,
+                    cpuTimeAccumulator
+                )
+            )
         );
 
     return CPUTimeMetricQueryRunner.safeBuild(
@@ -244,6 +229,40 @@ public class ServerManager implements QuerySegmentWalker
         emitter,
         cpuTimeAccumulator,
         true
+    );
+  }
+
+  <T> QueryRunner<T> buildQueryRunnerForSegment(
+      final Query<T> query,
+      final SegmentDescriptor descriptor,
+      final QueryRunnerFactory<T, Query<T>> factory,
+      final QueryToolChest<T, Query<T>> toolChest,
+      final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
+      final Function<SegmentReference, SegmentReference> segmentMapFn,
+      final AtomicLong cpuTimeAccumulator
+  )
+  {
+    final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+        descriptor.getInterval(),
+        descriptor.getVersion()
+    );
+
+    if (entry == null) {
+      return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
+    }
+
+    final PartitionChunk<ReferenceCountingSegment> chunk = entry.getChunk(descriptor.getPartitionNumber());
+    if (chunk == null) {
+      return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
+    }
+
+    final ReferenceCountingSegment segment = chunk.getObject();
+    return buildAndDecorateQueryRunner(
+        factory,
+        toolChest,
+        segmentMapFn.apply(segment),
+        descriptor,
+        cpuTimeAccumulator
     );
   }
 
