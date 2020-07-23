@@ -41,12 +41,12 @@ import redis.clients.jedis.JedisPoolConfig;
 import java.util.Map;
 import java.util.UUID;
 
-public class RedisCacheTest
+public class RedisSingleNodeCacheTest
 {
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
-  private RedisCache cache;
+  private RedisSingleNodeCache cache;
   private final RedisCacheConfig cacheConfig = new RedisCacheConfig()
   {
     @Override
@@ -56,9 +56,9 @@ public class RedisCacheTest
     }
 
     @Override
-    public long getExpiration()
+    public Time getExpiration()
     {
-      return 3600000;
+      return new Time("PT1H");
     }
   };
 
@@ -82,7 +82,7 @@ public class RedisCacheTest
       }
     });
 
-    cache = RedisCache.create(pool, cacheConfig);
+    cache = new RedisSingleNodeCache(pool, cacheConfig);
   }
 
   @Test
@@ -105,7 +105,7 @@ public class RedisCacheTest
     lifecycle.start();
     try {
       Cache cache = injector.getInstance(Cache.class);
-      Assert.assertEquals(RedisCache.class, cache.getClass());
+      Assert.assertEquals(RedisSingleNodeCache.class, cache.getClass());
     }
     finally {
       lifecycle.stop();
@@ -206,7 +206,7 @@ class RedisCacheProviderWithConfig extends RedisCacheProvider
   @Override
   public Cache get()
   {
-    return RedisCache.create(config);
+    return RedisCacheFactory.create(config);
   }
 }
 

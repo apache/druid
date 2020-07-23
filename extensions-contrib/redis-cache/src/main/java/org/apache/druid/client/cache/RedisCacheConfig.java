@@ -21,17 +21,25 @@ package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+
 public class RedisCacheConfig
 {
   @JsonProperty
   private String host;
 
   @JsonProperty
+  @Min(0)
+  @Max(65535)
   private int port;
+
+  @JsonProperty
+  private String cluster;
 
   // milliseconds, default to one day
   @JsonProperty
-  private long expiration = 24 * 3600 * 1000;
+  private Time expiration = new Time("P1D");
 
   // milliseconds, the type is 'int' because current Jedis only accept 'int' for timeout
   @JsonProperty
@@ -49,6 +57,10 @@ public class RedisCacheConfig
   @JsonProperty
   private int minIdleConnections = 0;
 
+  // cluster
+  @JsonProperty
+  private int maxRedirection = 5;
+
   public String getHost()
   {
     return host;
@@ -59,7 +71,9 @@ public class RedisCacheConfig
     return port;
   }
 
-  public long getExpiration()
+  public String getCluster() { return cluster; }
+
+  public Time getExpiration()
   {
     return expiration;
   }
@@ -83,4 +97,6 @@ public class RedisCacheConfig
   {
     return minIdleConnections;
   }
+
+  public int getMaxRedirection() { return maxRedirection; }
 }

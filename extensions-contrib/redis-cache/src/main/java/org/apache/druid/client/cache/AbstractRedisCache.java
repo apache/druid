@@ -19,15 +19,11 @@
 
 package org.apache.druid.client.cache;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.exceptions.JedisException;
 
 import java.util.HashMap;
@@ -35,12 +31,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class RedisCache implements Cache
+abstract public class AbstractRedisCache implements Cache
 {
-  private static final Logger log = new Logger(RedisCache.class);
-
-  private JedisPool pool;
-  private RedisCacheConfig config;
+  private static final Logger log = new Logger(AbstractRedisCache.class);
 
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
@@ -51,30 +44,19 @@ public class RedisCache implements Cache
   // both get、put and getBulk will increase request count by 1
   private final AtomicLong totalRequestCount = new AtomicLong(0);
 
-  private RedisCache(JedisPool pool, RedisCacheConfig config)
-  {
-    this.pool = pool;
-    this.config = config;
-  }
+  private Time expiration;
 
-  public static RedisCache create(final RedisCacheConfig config)
+  protected AbstractRedisCache(RedisCacheConfig config)
   {
-    JedisPoolConfig poolConfig = new JedisPoolConfig();
-    poolConfig.setMaxTotal(config.getMaxTotalConnections());
-    poolConfig.setMaxIdle(config.getMaxIdleConnections());
-    poolConfig.setMinIdle(config.getMinIdleConnections());
-
-    JedisPool pool = new JedisPool(poolConfig, config.getHost(), config.getPort(), config.getTimeout());
-    return new RedisCache(pool, config);
+    this.expiration = config.getExpiration();
   }
 
   @Override
   public byte[] get(NamedKey key)
   {
     totalRequestCount.incrementAndGet();
-
-    try (Jedis jedis = pool.getResource()) {
-      byte[] bytes = jedis.get(key.toByteArray());
+    try {
+      byte[] bytes = getFromRedis(key.toByteArray());
       if (bytes == null) {
         missCount.incrementAndGet();
         return null;
@@ -98,11 +80,9 @@ public class RedisCache implements Cache
   public void put(NamedKey key, byte[] value)
   {
     totalRequestCount.incrementAndGet();
-
-    try (Jedis jedis = pool.getResource()) {
-      jedis.psetex(key.toByteArray(), config.getExpiration(), value);
-    }
-    catch (JedisException e) {
+    try {
+      this.putToRedis(key.toByteArray(), value, this.expiration);
+    } catch (JedisException e) {
       errorCount.incrementAndGet();
       log.warn(e, "Exception pushing item to cache");
     }
@@ -112,15 +92,13 @@ public class RedisCache implements Cache
   public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys)
   {
     totalRequestCount.incrementAndGet();
-
     Map<NamedKey, byte[]> results = new HashMap<>();
 
-    try (Jedis jedis = pool.getResource()) {
+    try {
       List<NamedKey> namedKeys = Lists.newArrayList(keys);
       List<byte[]> byteKeys = Lists.transform(namedKeys, NamedKey::toByteArray);
 
-      List<byte[]> byteValues = jedis.mget(byteKeys.toArray(new byte[0][]));
-
+      List<byte[]> byteValues = this.mgetFromRedis(byteKeys.toArray(new byte[0][]));
       for (int i = 0; i < byteValues.size(); ++i) {
         if (byteValues.get(i) != null) {
           results.put(namedKeys.get(i), byteValues.get(i));
@@ -129,8 +107,7 @@ public class RedisCache implements Cache
 
       hitCount.addAndGet(results.size());
       missCount.addAndGet(namedKeys.size() - results.size());
-    }
-    catch (JedisException e) {
+    } catch (JedisException e) {
       if (e.getMessage().contains("Read timed out")) {
         timeoutCount.incrementAndGet();
       } else {
@@ -152,7 +129,7 @@ public class RedisCache implements Cache
   @LifecycleStop
   public void close()
   {
-    pool.close();
+    cleanup();
   }
 
   @Override
@@ -189,9 +166,8 @@ public class RedisCache implements Cache
     }
   }
 
-  @VisibleForTesting
-  static RedisCache create(final JedisPool pool, final RedisCacheConfig config)
-  {
-    return new RedisCache(pool, config);
-  }
+  abstract protected byte[] getFromRedis(byte[] key);
+  abstract protected void putToRedis(byte[] key, byte[] value, Time expiration);
+  abstract protected List<byte[]> mgetFromRedis(byte[]... keys);
+  abstract protected void cleanup();
 }
