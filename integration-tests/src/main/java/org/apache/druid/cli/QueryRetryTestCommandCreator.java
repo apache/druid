@@ -17,23 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.testing.utils;
+package org.apache.druid.cli;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.Query;
+import io.airlift.airline.Cli.CliBuilder;
 
-import java.util.List;
-import java.util.Map;
-
-public class QueryWithResults extends AbstractQueryWithResults<Query>
+public class QueryRetryTestCommandCreator implements CliCommandCreator
 {
-  @JsonCreator
-  public QueryWithResults(
-      @JsonProperty("query") Query query,
-      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
-  )
+  @Override
+  public void addCommands(CliBuilder builder)
   {
-    super(query, expectedResults);
+    builder.withGroup("server").withCommands(CliHistoricalForQueryRetryTest.class);
   }
 }
