@@ -187,7 +187,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / 1000 + 1) + "k";
+      String max = (Long.MAX_VALUE / 1000 + 1) + "k";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }
@@ -195,7 +195,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / 1000_000 + 1) + "m";
+      String max = (Long.MAX_VALUE / 1000_000 + 1) + "m";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }
@@ -203,7 +203,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / 1000_000_000L + 1) + "g";
+      String max = (Long.MAX_VALUE / 1000_000_000L + 1) + "g";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }
@@ -211,7 +211,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / 1000_000_000_000L + 1) + "t";
+      String max = (Long.MAX_VALUE / 1000_000_000_000L + 1) + "t";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }
@@ -219,7 +219,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / 1024 + 1) + "kb";
+      String max = (Long.MAX_VALUE / 1024 + 1) + "kb";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }
@@ -227,7 +227,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / (1024 * 1024) + 1) + "mb";
+      String max = (Long.MAX_VALUE / (1024 * 1024) + 1) + "mb";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }
@@ -235,7 +235,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / (1024L * 1024 * 1024) + 1) + "gb";
+      String max = (Long.MAX_VALUE / (1024L * 1024 * 1024) + 1) + "gb";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }
@@ -243,7 +243,7 @@ public class BytesTest
     }
 
     try {
-      String max = String.valueOf(Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024) + 1) + "tb";
+      String max = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024) + 1) + "tb";
       Bytes.parse(max, 0);
       Assert.assertFalse("IAE should be thrown", true);
     }

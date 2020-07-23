@@ -50,7 +50,7 @@ druid.segmentCache.locations=[{"path":"/segment-cache","maxSize":"1g"}]
 ````
 
 ### Supported Units
-In the world of computer, a unit like `K` is ambigious. It means 1000 or 1024 in different contexts, for more information please see [Here](https://en.wikipedia.org/wiki/Binary_prefix).
+In the world of computer, a unit like `K` is ambiguous. It means 1000 or 1024 in different contexts, for more information please see [Here](https://en.wikipedia.org/wiki/Binary_prefix).
 
 To make it clear, the base of units are defined as below
 
@@ -69,7 +69,7 @@ To make it clear, the base of units are defined as below
 
 Unit is case-insensitive. `k`, `kib`, `KiB`, `kiB` are all acceptable.
 
-Here're two examples
+Here are two examples
 
 ````
 druid.cache.sizeInBytes=1g #1 * 1000_000_000 bytes

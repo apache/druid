@@ -1555,6 +1555,8 @@ dsql
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
+KiB
+GiB
 00.000Z
 100ms
 10ms
@@ -1771,3 +1773,17 @@ CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
 bin.tar.gz
+ - ../docs/configuration/byte-unit.md
+3G
+1000_000
+1000_000_000
+1000_000_000_000
+1000_000_000_000_000
+Giga
+Tera
+Peta
+KiB
+MiB
+GiB
+TiB
+PiB

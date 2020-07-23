@@ -181,16 +181,15 @@ public class Bytes implements Serializable
     }
 
     try {
-      long value = 0;
       if (base > 1 && index >= 0) {
-        value = Long.parseLong(number.substring(0, index + 1)) * base;
+        long value = Long.parseLong(number.substring(0, index + 1)) * base;
         if (value < base) {
           throw new IAE("number [%s] overflow", number);
         }
+        return value;
       } else {
-        value = Long.parseLong(number);
+        return Long.parseLong(number);
       }
-      return value;
     }
     catch (NumberFormatException e) {
       throw new IAE("invalid format of number[%s]", number);
