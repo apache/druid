@@ -849,7 +849,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
       final ResultSet resultSet = statement.executeQuery(query)
   ) {
     while (resultSet.next()) {
-      // Do something
+      // process result set
     }
   }
 }
@@ -894,9 +894,10 @@ connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
 connectionProperties.setProperty("useCache", "false");
 
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
-  // do some SQL stuff
+  // create and execute statements, process result sets, etc
 }
 ```
+
 Note that to specify an unique identifier for SQL query, use `sqlQueryId` instead of `queryId`. Setting `queryId` for a SQL
 request has no effect, all native queries underlying SQL will use auto-generated queryId.
 
