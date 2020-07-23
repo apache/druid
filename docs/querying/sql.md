@@ -829,9 +829,7 @@ delivered due to an error.
 
 ### JDBC
 
-You can make Druid SQL queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). Once
-you've downloaded the Avatica client jar, add it to your classpath and use the connect string
-`jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
+You can make Druid SQL queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
 
 Example code:
 
