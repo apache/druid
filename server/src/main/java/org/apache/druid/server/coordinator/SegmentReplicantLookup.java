@@ -59,7 +59,10 @@ public class SegmentReplicantLookup
           if (numReplicants == null) {
             numReplicants = 0;
           }
-          loadingSegments.put(segment.getId(), server.getTier(), numReplicants + 1);
+          // Timed out segments need to be replicated in another server for faster availability
+          if (!serverHolder.getPeon().getTimedOutSegments().contains(segment)) {
+            loadingSegments.put(segment.getId(), server.getTier(), numReplicants + 1);
+          }
         }
       }
     }
