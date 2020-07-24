@@ -4752,6 +4752,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSimpleLongAggregations() throws Exception
+  {
+    testQuery(
+        "SELECT  MIN(l1), MIN(cnt) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(aggregators(
+                                new LongMinAggregatorFactory("a0", "l1"),
+                                new LongMinAggregatorFactory("a1", "cnt")
+                            ))
+                .context(TIMESERIES_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0L, 1L}
+        )
+    );
+  }
+
+
+  @Test
   public void testSimpleAggregations() throws Exception
   {
     // Cannot vectorize due to "longMax" aggregator.
