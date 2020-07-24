@@ -21,10 +21,6 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.QueryContexts.Vectorize;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,16 +40,19 @@ public class QueryConfig
   private Map<String, Object> configs = new HashMap<>();
 
   @JsonAnyGetter
-  public Map<String, Object> getConfigs() {
+  public Map<String, Object> getConfigs()
+  {
     return configs;
   }
 
-  public void setConfigs(Map<String, Object> configs) {
+  public void setConfigs(Map<String, Object> configs)
+  {
     this.configs = configs;
   }
 
   @JsonAnySetter
-  public void setConfig(final String name, final Object value) {
+  public void setConfig(final String name, final Object value)
+  {
     this.configs.put(name, value);
   }
 }
