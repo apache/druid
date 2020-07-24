@@ -40,7 +40,7 @@ public class QueryConfigTest
                         + "\"vectorSize\" : 1"
                         + "}";
     final QueryConfig config = mapper.readValue(json, QueryConfig.class);
-    Assert.assertEquals(Vectorize.FORCE, Vectorize.valueOf(config.getConfigs().get("vectorize").toString()));
+    Assert.assertEquals(Vectorize.FORCE, Vectorize.fromString(config.getConfigs().get("vectorize").toString()));
     Assert.assertEquals(1, Numbers.parseInt(config.getConfigs().get("vectorSize")));
   }
 
@@ -48,7 +48,7 @@ public class QueryConfigTest
   public void testDefault()
   {
     final QueryConfig config = new QueryConfig();
-    Assert.assertEquals(0, config.getConfigs().size());
     Assert.assertNotNull(config.getConfigs());
+    Assert.assertEquals(0, config.getConfigs().size());
   }
 }
