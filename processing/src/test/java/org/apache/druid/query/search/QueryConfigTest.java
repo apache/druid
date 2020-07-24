@@ -20,6 +20,7 @@
 package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts.Vectorize;
@@ -50,5 +51,18 @@ public class QueryConfigTest
     final QueryConfig config = new QueryConfig();
     Assert.assertNotNull(config.getConfigs());
     Assert.assertEquals(0, config.getConfigs().size());
+  }
+
+  @Test
+  public void testSetAndGet()
+  {
+    final QueryConfig config = new QueryConfig();
+    String key = "key1";
+    String value = "value1";
+    config.setConfigs(ImmutableMap.of(key, value));
+    Assert.assertNotNull(config.getConfigs());
+    Assert.assertEquals(1, config.getConfigs().size());
+    Assert.assertTrue(config.getConfigs().containsKey(key));
+    Assert.assertEquals(value, config.getConfigs().get(key));
   }
 }

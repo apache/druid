@@ -187,7 +187,7 @@ public class QueryContexts
 
   public static <T> Vectorize getVectorize(Query<T> query)
   {
-    return parseEnum(query, VECTORIZE_KEY, Vectorize.class, QueryContexts.DEFAULT_VECTORIZE);
+    return getVectorize(query, QueryContexts.DEFAULT_VECTORIZE);
   }
 
   public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
@@ -197,7 +197,7 @@ public class QueryContexts
 
   public static <T> int getVectorSize(Query<T> query)
   {
-    return parseInt(query, VECTOR_SIZE_KEY, QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
+    return getVectorSize(query, QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
   }
 
   public static <T> int getVectorSize(Query<T> query, int defaultSize)

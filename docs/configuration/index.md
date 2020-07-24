@@ -1770,8 +1770,8 @@ If there is an L1 miss and L2 hit, it will also populate L1.
 This section describes configurations that control behavior of Druid's query types, applicable to Broker, Historical, and MiddleManager processes.
 
 Any [Query Context General Parameter](../querying/query-context.html#general-parameters) default value 
-(Hardcoded value in code) can be overriden by setting runtime property in the format of `druid.query.{property_key}`. 
-Note that the runtime property value can be overriden if value for the same key is explicitly specify in the query contexts.
+can be overridden by setting runtime property in the format of `druid.query.{property_key}`. 
+Note that the runtime property value can be overridden if value for the same key is explicitly specify in the query contexts.
 
 ### Query vectorization config
 
