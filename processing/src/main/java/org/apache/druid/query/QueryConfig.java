@@ -28,12 +28,22 @@ import java.util.Map;
 /**
  * A user configuration holder for all query types.
  * Any query-specific configurations should go to their own configuration.
- *
  * @see org.apache.druid.query.groupby.GroupByQueryConfig
  * @see org.apache.druid.query.search.SearchQueryConfig
  * @see org.apache.druid.query.topn.TopNQueryConfig
  * @see org.apache.druid.query.metadata.SegmentMetadataQueryConfig
  * @see org.apache.druid.query.scan.ScanQueryConfig
+ *
+ * This class config map is populated by any runtime property prefixed with druid.query
+ * Note that config values should not be directly retrieved from this class but instead should
+ * be read through {@link QueryContexts}. This class contains configs from runtime property which is then merged with
+ * configs passed in query context. The result of the merge is subsequently stored in the query context.
+ * The order of precedence in mergeing of the configs is as follow:
+ * Hard codeded default values (from {@link QueryContexts} can be override by
+ * runtime property values (store in this class) which can then be override by
+ * query context parameter {@link Query#getContext()}
+ *
+
  */
 public class QueryConfig
 {

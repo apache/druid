@@ -175,7 +175,12 @@ public class QueryLifecycle
       queryId = UUID.randomUUID().toString();
     }
 
-    Map<String, Object> mergedUserAndConfigContext = BaseQuery.computeOverriddenContext(queryConfig.getConfigs(), baseQuery.getContext());
+    Map<String, Object> mergedUserAndConfigContext;
+    if (baseQuery.getContext() != null) {
+      mergedUserAndConfigContext = BaseQuery.computeOverriddenContext(queryConfig.getConfigs(), baseQuery.getContext());
+    } else {
+      mergedUserAndConfigContext = queryConfig.getConfigs();
+    }
 
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext).withId(queryId);
     this.toolChest = warehouse.getToolChest(baseQuery);

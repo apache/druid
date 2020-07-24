@@ -32,6 +32,9 @@ the following ways:
 HTTP POST API, or as properties to the JDBC connection.
 - For [native queries](querying.md), context parameters are provided as a JSON object named `context`.
 
+Note that setting query context will override both the default value and the runtime properties value in the format of
+`druid.query.{property_key}` (if set). 
+
 These parameters apply to all query types.
 
 |property         |default                                 | description          |
