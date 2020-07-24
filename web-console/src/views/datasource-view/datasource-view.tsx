@@ -20,6 +20,7 @@ import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/co
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
+import { SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -41,7 +42,6 @@ import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
   countBy,
-  escapeSqlIdentifier,
   formatBytes,
   formatNumber,
   getDruidErrorMessage,
@@ -598,7 +598,7 @@ GROUP BY 1`;
       {
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
-        onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
+        onAction: () => goToQuery(SqlQuery.create(SqlRef.table(datasource)).toString()),
       },
       {
         icon: IconNames.GANTT_CHART,

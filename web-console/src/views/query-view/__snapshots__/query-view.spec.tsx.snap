@@ -8,7 +8,7 @@ exports[`sql view matches snapshot 1`] = `
     columnMetadataLoading={true}
     defaultSchema="druid"
     getParsedQuery={[Function]}
-    onQueryStringChange={[Function]}
+    onQueryChange={[Function]}
   />
   <t
     customClassName=""
@@ -90,7 +90,7 @@ exports[`sql view matches snapshot with query 1`] = `
     columnMetadataLoading={true}
     defaultSchema="druid"
     getParsedQuery={[Function]}
-    onQueryStringChange={[Function]}
+    onQueryChange={[Function]}
   />
   <t
     customClassName=""

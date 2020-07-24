@@ -17,7 +17,7 @@
  */
 
 import { render } from '@testing-library/react';
-import { parseSqlQuery } from 'druid-query-toolkit';
+import { SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { NumberMenuItems } from './number-menu-items';
@@ -29,7 +29,7 @@ describe('number menu', () => {
         schema="schema"
         table="table"
         columnName={'added'}
-        parsedQuery={parseSqlQuery(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );
@@ -44,7 +44,7 @@ describe('number menu', () => {
         schema="schema"
         table="table"
         columnName={'added'}
-        parsedQuery={parseSqlQuery(`SELECT added, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={SqlQuery.parse(`SELECT added, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );

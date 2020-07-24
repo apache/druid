@@ -18,29 +18,44 @@
 
 import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  SqlAliasRef,
-  SqlFunction,
-  SqlInterval,
-  SqlLiteral,
-  SqlMulti,
-  SqlQuery,
-  SqlRef,
-  SqlTimestamp,
-} from 'druid-query-toolkit';
+import { SqlExpression, SqlFunction, SqlLiteral, SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 
-import { getCurrentColumns } from '../../column-tree';
+import { prettyPrintSql } from '../../../../../utils';
 
-function dateToTimestamp(date: Date): SqlTimestamp {
-  return SqlTimestamp.sqlTimestampFactory(
-    date
-      .toISOString()
-      .split('.')[0]
-      .split('T')
-      .join(' '),
-  );
+const LATEST_HOUR: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' HOUR`,
+);
+const LATEST_DAY: SqlExpression = SqlExpression.parse(`? >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+const LATEST_WEEK: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' WEEK`,
+);
+const LATEST_MONTH: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' MONTH`,
+);
+const LATEST_YEAR: SqlExpression = SqlExpression.parse(
+  `? >= CURRENT_TIMESTAMP - INTERVAL '1' YEAR`,
+);
+
+const BETWEEN: SqlExpression = SqlExpression.parse(`(? <= ? AND ? < ?)`);
+
+// ------------------------------------
+
+function fillWithColumn(b: SqlExpression, columnName: string): SqlExpression {
+  return b.fillPlaceholders([SqlRef.column(columnName)]) as SqlExpression;
 }
+
+function fillWithColumnStartEnd(columnName: string, start: Date, end: Date): SqlExpression {
+  const ref = SqlRef.column(columnName);
+  return BETWEEN.fillPlaceholders([
+    SqlLiteral.create(start),
+    ref,
+    ref,
+    SqlLiteral.create(end),
+  ]) as SqlExpression;
+}
+
+// ------------------------------------
 
 function floorHour(dt: Date): Date {
   dt = new Date(dt.valueOf());
@@ -97,205 +112,67 @@ export interface TimeMenuItemsProps {
   schema: string;
   columnName: string;
   parsedQuery: SqlQuery;
-  onQueryChange: (queryString: SqlQuery, run?: boolean) => void;
+  onQueryChange: (query: SqlQuery, run?: boolean) => void;
 }
 
 export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuItemsProps) {
   function renderFilterMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    const now = new Date();
 
+    function filterMenuItem(label: string, clause: SqlExpression) {
+      return (
+        <MenuItem
+          text={label}
+          onClick={() => {
+            onQueryChange(parsedQuery.removeColumnFromWhere(columnName).addToWhere(clause), true);
+          }}
+        />
+      );
+    }
+
+    const now = new Date();
+    const hourStart = floorHour(now);
+    const dayStart = floorDay(now);
+    const monthStart = floorMonth(now);
+    const yearStart = floorYear(now);
     return (
       <MenuItem icon={IconNames.FILTER} text={`Filter`}>
-        <MenuItem
-          text={`Latest hour`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  columnName,
-                  '>=',
-                  SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromString('CURRENT_TIMESTAMP'),
-                    SqlInterval.sqlIntervalFactory('HOUR', 1),
-                  ]),
-                ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest day`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  columnName,
-                  '>=',
-                  SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromString('CURRENT_TIMESTAMP'),
-                    SqlInterval.sqlIntervalFactory('Day', 1),
-                  ]),
-                ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest week`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  columnName,
-                  '>=',
-                  SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromString('CURRENT_TIMESTAMP'),
-                    SqlInterval.sqlIntervalFactory('Day', 7),
-                  ]),
-                ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest month`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  columnName,
-                  '>=',
-                  SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromString('CURRENT_TIMESTAMP'),
-                    SqlInterval.sqlIntervalFactory('MONTH', 1),
-                  ]),
-                ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Latest year`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  columnName,
-                  '>=',
-                  SqlMulti.sqlMultiFactory('-', [
-                    SqlRef.fromString('CURRENT_TIMESTAMP'),
-                    SqlInterval.sqlIntervalFactory('YEAR', 1),
-                  ]),
-                ),
-              true,
-            );
-          }}
-        />
+        {filterMenuItem(`Latest hour`, fillWithColumn(LATEST_HOUR, columnName))}
+        {filterMenuItem(`Latest day`, fillWithColumn(LATEST_DAY, columnName))}
+        {filterMenuItem(`Latest week`, fillWithColumn(LATEST_WEEK, columnName))}
+        {filterMenuItem(`Latest month`, fillWithColumn(LATEST_MONTH, columnName))}
+        {filterMenuItem(`Latest year`, fillWithColumn(LATEST_YEAR, columnName))}
         <MenuDivider />
-        <MenuItem
-          text={`Current hour`}
-          onClick={() => {
-            const hourStart = floorHour(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  SqlRef.fromStringWithDoubleQuotes(columnName),
-                  '>=',
-                  dateToTimestamp(hourStart),
-                )
-                .addWhereFilter(
-                  SqlRef.fromStringWithDoubleQuotes(columnName),
-                  '<',
-                  dateToTimestamp(nextHour(hourStart)),
-                ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Current day`}
-          onClick={() => {
-            const dayStart = floorDay(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  SqlRef.fromStringWithDoubleQuotes(columnName),
-                  '>=',
-                  dateToTimestamp(dayStart),
-                )
-                .addWhereFilter(
-                  SqlRef.fromStringWithDoubleQuotes(columnName),
-                  '<',
-                  dateToTimestamp(nextDay(dayStart)),
-                ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Current month`}
-          onClick={() => {
-            const monthStart = floorMonth(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  SqlRef.fromStringWithDoubleQuotes(columnName),
-                  '>=',
-                  dateToTimestamp(monthStart),
-                )
-                .addWhereFilter(
-                  SqlRef.fromStringWithDoubleQuotes(columnName),
-                  '<',
-                  dateToTimestamp(nextMonth(monthStart)),
-                ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`Current year`}
-          onClick={() => {
-            const yearStart = floorYear(now);
-            onQueryChange(
-              parsedQuery
-                .removeFilter(columnName)
-                .addWhereFilter(
-                  SqlRef.fromStringWithDoubleQuotes(columnName),
-                  '<=',
-                  dateToTimestamp(yearStart),
-                )
-                .addWhereFilter(
-                  dateToTimestamp(yearStart),
-                  '<',
-                  dateToTimestamp(nextYear(yearStart)),
-                ),
-              true,
-            );
-          }}
-        />
+        {filterMenuItem(
+          `Current hour`,
+          fillWithColumnStartEnd(columnName, hourStart, nextHour(hourStart)),
+        )}
+        {filterMenuItem(
+          `Current day`,
+          fillWithColumnStartEnd(columnName, dayStart, nextDay(dayStart)),
+        )}
+        {filterMenuItem(
+          `Current month`,
+          fillWithColumnStartEnd(columnName, monthStart, nextMonth(monthStart)),
+        )}
+        {filterMenuItem(
+          `Current year`,
+          fillWithColumnStartEnd(columnName, yearStart, nextYear(yearStart)),
+        )}
       </MenuItem>
     );
   }
 
   function renderRemoveFilter(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.getCurrentFilters().includes(columnName)) return;
+    if (!parsedQuery.getEffectiveWhereExpression().containsColumn(columnName)) return;
 
     return (
       <MenuItem
         icon={IconNames.FILTER_REMOVE}
         text={`Remove filter`}
         onClick={() => {
-          onQueryChange(parsedQuery.removeFilter(columnName), true);
+          onQueryChange(parsedQuery.removeColumnFromWhere(columnName), true);
         }}
       />
     );
@@ -303,13 +180,15 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
 
   function renderRemoveGroupBy(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.hasGroupByColumn(columnName)) return;
+    const selectIndex = parsedQuery.getSelectIndexForColumn(columnName);
+    if (!parsedQuery.isGroupedSelectIndex(selectIndex)) return;
+
     return (
       <MenuItem
         icon={IconNames.UNGROUP_OBJECTS}
         text={'Remove group by'}
         onClick={() => {
-          onQueryChange(parsedQuery.removeFromGroupBy(columnName), true);
+          onQueryChange(parsedQuery.removeSelectIndex(selectIndex), true);
         }}
       />
     );
@@ -317,164 +196,80 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
 
   function renderGroupByMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.groupByExpression) return;
+    if (!parsedQuery.hasGroupBy()) return;
+    const ref = SqlRef.column(columnName);
+
+    function groupByMenuItem(ex: SqlExpression, alias: string) {
+      return (
+        <MenuItem
+          text={prettyPrintSql(ex)}
+          onClick={() => {
+            onQueryChange(parsedQuery.addToGroupBy(ex.as(alias)), true);
+          }}
+        />
+      );
+    }
 
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text={`Group by`}>
-        <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'PT1H') AS "${columnName}_time_floor"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addToGroupBy(
-                SqlAliasRef.sqlAliasFactory(
-                  SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
-                    SqlRef.fromString(columnName),
-                    SqlLiteral.fromInput('PT1h'),
-                  ]),
-                  `${columnName}_time_floor`,
-                ),
-              ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P1D') AS "${columnName}_time_floor"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addToGroupBy(
-                SqlAliasRef.sqlAliasFactory(
-                  SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
-                    SqlRef.fromString(columnName),
-                    SqlLiteral.fromInput('P1D'),
-                  ]),
-                  `${columnName}_time_floor`,
-                ),
-              ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`TIME_FLOOR("${columnName}", 'P7D') AS "${columnName}_time_floor"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addToGroupBy(
-                SqlAliasRef.sqlAliasFactory(
-                  SqlFunction.sqlFunctionFactory('TIME_FLOOR', [
-                    SqlRef.fromString(columnName),
-                    SqlLiteral.fromInput('P7D'),
-                  ]),
-                  `${columnName}_time_floor`,
-                ),
-              ),
-              true,
-            );
-          }}
-        />
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('PT1H')]),
+          `${columnName}_by_hour`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('P1D')]),
+          `${columnName}_by_day`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('P1M')]),
+          `${columnName}_by_month`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_FLOOR', [ref, SqlLiteral.create('P1Y')]),
+          `${columnName}_by_year`,
+        )}
+        <MenuDivider />
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('HOUR')]),
+          `hour_of_${columnName}`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('DAY')]),
+          `day_of_${columnName}`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('MONTH')]),
+          `month_of_${columnName}`,
+        )}
+        {groupByMenuItem(
+          SqlFunction.simple('TIME_EXTRACT', [ref, SqlLiteral.create('YEAR')]),
+          `year_of_${columnName}`,
+        )}
       </MenuItem>
     );
   }
 
   function renderAggregateMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.groupByExpression) return;
+    if (!parsedQuery.hasGroupBy()) return;
+    const ref = SqlRef.column(columnName);
+
+    function aggregateMenuItem(ex: SqlExpression, alias: string) {
+      return (
+        <MenuItem
+          text={prettyPrintSql(ex)}
+          onClick={() => {
+            onQueryChange(parsedQuery.addSelectExpression(ex.as(alias)), true);
+          }}
+        />
+      );
+    }
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text={`Aggregate`}>
-        <MenuItem
-          text={`MAX("${columnName}") AS "max_${columnName}"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addAggregateColumn(
-                [SqlRef.fromStringWithDoubleQuotes(columnName)],
-                'MAX',
-                `max_${columnName}`,
-              ),
-              true,
-            );
-          }}
-        />
-        <MenuItem
-          text={`MIN("${columnName}") AS "min_${columnName}"`}
-          onClick={() => {
-            onQueryChange(
-              parsedQuery.addAggregateColumn(
-                [SqlRef.fromStringWithDoubleQuotes(columnName)],
-                'MIN',
-                `min_${columnName}`,
-              ),
-              true,
-            );
-          }}
-        />
+        {aggregateMenuItem(SqlFunction.simple('MAX', [ref]), `max_${columnName}`)}
+        {aggregateMenuItem(SqlFunction.simple('MIN', [ref]), `min_${columnName}`)}
       </MenuItem>
-    );
-  }
-
-  function renderJoinMenu(): JSX.Element | undefined {
-    const { schema, table, columnName, parsedQuery, onQueryChange } = props;
-    if (schema !== 'lookup' || !parsedQuery) return;
-
-    const { originalTableColumn, lookupColumn } = getCurrentColumns(parsedQuery, table);
-
-    return (
-      <>
-        <MenuItem
-          icon={IconNames.JOIN_TABLE}
-          text={parsedQuery.joinTable ? `Replace join` : `Join`}
-        >
-          <MenuItem
-            icon={IconNames.LEFT_JOIN}
-            text={`Left join`}
-            onClick={() => {
-              onQueryChange(
-                parsedQuery.addJoin(
-                  'LEFT',
-                  SqlRef.fromString(table, schema).upgrade(),
-                  SqlMulti.sqlMultiFactory('=', [
-                    SqlRef.fromString(columnName, table, 'lookup'),
-                    SqlRef.fromString(
-                      lookupColumn === columnName ? originalTableColumn : 'XXX',
-                      parsedQuery.getTableName(),
-                    ),
-                  ]),
-                ),
-                false,
-              );
-            }}
-          />
-          <MenuItem
-            icon={IconNames.INNER_JOIN}
-            text={`Inner join`}
-            onClick={() => {
-              onQueryChange(
-                parsedQuery.addJoin(
-                  'INNER',
-                  SqlRef.fromString(table, schema).upgrade(),
-                  SqlMulti.sqlMultiFactory('=', [
-                    SqlRef.fromString(columnName, table, 'lookup'),
-                    SqlRef.fromString(
-                      lookupColumn === columnName ? originalTableColumn : 'XXX',
-                      parsedQuery.getTableName(),
-                    ),
-                  ]),
-                ),
-                false,
-              );
-            }}
-          />
-        </MenuItem>
-        {parsedQuery.onExpression &&
-          parsedQuery.onExpression instanceof SqlMulti &&
-          parsedQuery.onExpression.containsColumn(columnName) && (
-            <MenuItem
-              icon={IconNames.EXCHANGE}
-              text={`Remove join`}
-              onClick={() => onQueryChange(parsedQuery.removeJoin())}
-            />
-          )}
-      </>
     );
   }
 
@@ -485,7 +280,6 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
       {renderGroupByMenu()}
       {renderRemoveGroupBy()}
       {renderAggregateMenu()}
-      {renderJoinMenu()}
     </>
   );
 });

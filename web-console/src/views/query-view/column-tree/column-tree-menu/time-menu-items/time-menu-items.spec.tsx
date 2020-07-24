@@ -17,7 +17,7 @@
  */
 
 import { render } from '@testing-library/react';
-import { parseSqlQuery } from 'druid-query-toolkit';
+import { SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { TimeMenuItems } from './time-menu-items';
@@ -29,7 +29,7 @@ describe('time menu', () => {
         table={'table'}
         schema={'schema'}
         columnName={'__time'}
-        parsedQuery={parseSqlQuery(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );
@@ -44,7 +44,7 @@ describe('time menu', () => {
         table={'table'}
         schema={'schema'}
         columnName={'__time'}
-        parsedQuery={parseSqlQuery(`SELECT __time, count(*) as cnt FROM wikipedia GROUP BY 1`)}
+        parsedQuery={SqlQuery.parse(`SELECT __time, count(*) as cnt FROM wikipedia GROUP BY 1`)}
         onQueryChange={() => {}}
       />
     );
