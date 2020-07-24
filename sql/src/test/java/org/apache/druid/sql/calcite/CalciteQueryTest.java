@@ -4336,7 +4336,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupByWithGroupByEmpty() throws Exception
   {
     testQuery(
-        "SELECT COUNT(*), SUM(cnt) FROM druid.foo GROUP BY ()",
+        "SELECT COUNT(*), SUM(cnt), MIN(cnt) FROM druid.foo GROUP BY ()",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -4344,12 +4344,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(
                       new CountAggregatorFactory("a0"),
-                      new LongSumAggregatorFactory("a1", "cnt")
+                      new LongSumAggregatorFactory("a1", "cnt"),
+                      new LongMinAggregatorFactory("a2", "cnt")
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(new Object[]{6L, 6L})
+        ImmutableList.of(new Object[]{6L, 6L, 1L})
     );
   }
 
