@@ -629,9 +629,7 @@ Druid SQL uses four different native query types.
 period)`, have no other grouping expressions, no HAVING or LIMIT clauses, no nesting, and either no ORDER BY, or an
 ORDER BY that orders by same expression as present in GROUP BY. It also uses Timeseries for "grand total" queries that
 have aggregation functions but no GROUP BY. This query type takes advantage of the fact that Druid segments are sorted
-by time. The SQL planner can inject `timestampResultField` in the query context when there is a grouping key. This
-context value is used in several places to reference the "timestamp" field after the aggregation such as when Druid converts
-the output format for SQL queries or computes post aggregations.
+by time.
 
 - [TopN](topnquery.html) is used by default for queries that group by a single expression, do have ORDER BY and LIMIT
 clauses, do not have HAVING clauses, and are not nested. However, the TopN query type will deliver approximate ranking
