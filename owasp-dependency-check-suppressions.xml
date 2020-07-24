@@ -191,6 +191,13 @@
      <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
   </suppress>
   <suppress>
+    <notes><![CDATA[
+    Druid is not a native app, so the vulnerability flagged is a false positive.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.google\.oauth-client/google\-oauth\-client@.*$</packageUrl>
+    <cve>CVE-2020-7692</cve>
+  </suppress>
+  <suppress>
     <!--
       ~ TODO: Fix when Apache Ranger 2.1 is released
       -->
