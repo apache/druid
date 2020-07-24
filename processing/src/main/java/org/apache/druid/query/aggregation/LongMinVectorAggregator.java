@@ -26,55 +26,57 @@ import java.nio.ByteBuffer;
 
 public class LongMinVectorAggregator implements VectorAggregator
 {
-    private final VectorValueSelector selector;
+  private final VectorValueSelector selector;
 
-    public LongMinVectorAggregator(final VectorValueSelector selector)
-    {
-        this.selector = selector;
+  public LongMinVectorAggregator(final VectorValueSelector selector)
+  {
+    this.selector = selector;
+  }
+
+  @Override
+  public void init(final ByteBuffer buf, final int position)
+  {
+    buf.putLong(position, Long.MAX_VALUE);
+  }
+
+  @Override
+  public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
+  {
+    final long[] vector = selector.getLongVector();
+    long min = Long.MAX_VALUE;
+    for (int i = startRow; i < endRow; i++) {
+      min = Math.min(min, vector[i]);
     }
 
-    @Override
-    public void init(final ByteBuffer buf, final int position)
-    {
-        buf.putLong(position, Long.MAX_VALUE);
-    }
+    buf.putLong(position, min);
 
-    @Override
-    public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
-    {
-        final long[] vector = selector.getLongVector();
-        long min = Long.MAX_VALUE;
-        for (int i = startRow; i < endRow; i++) {
-            min = Math.min(min, vector[i]);
-        }
-        buf.putLong(position, min);
-    }
+  }
 
-    @Override
-    public void aggregate(
-            final ByteBuffer buf,
-            final int numRows,
-            final int[] positions,
-            @Nullable final int[] rows,
-            final int positionOffset
-    )
-    {
-        final long[] vector = selector.getLongVector();
-        for (int i = 0; i < numRows; i++) {
-            final int position = positions[i] + positionOffset;
-            buf.putLong(position, Math.min(buf.getLong(position), vector[rows != null ? rows[i] : i]));
-        }
+  @Override
+  public void aggregate(
+      final ByteBuffer buf,
+      final int numRows,
+      final int[] positions,
+      @Nullable final int[] rows,
+      final int positionOffset
+  )
+  {
+    final long[] vector = selector.getLongVector();
+    for (int i = 0; i < numRows; i++) {
+      final int position = positions[i] + positionOffset;
+      buf.putLong(position, Math.min(buf.getLong(position), vector[rows != null ? rows[i] : i]));
     }
+  }
 
-    @Override
-    public Object get(final ByteBuffer buf, final int position)
-    {
-        return buf.getLong(position);
-    }
+  @Override
+  public Object get(final ByteBuffer buf, final int position)
+  {
+    return buf.getLong(position);
+  }
 
-    @Override
-    public void close()
-    {
-        // Nothing to close.
-    }
+  @Override
+  public void close()
+  {
+    // Nothing to close.
+  }
 }
