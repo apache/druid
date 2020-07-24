@@ -20,16 +20,9 @@
 package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.Query;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.query.QueryConfig;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryContexts.Vectorize;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.TestQuery;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,34 +40,15 @@ public class QueryConfigTest
                         + "\"vectorSize\" : 1"
                         + "}";
     final QueryConfig config = mapper.readValue(json, QueryConfig.class);
-    Assert.assertEquals(Vectorize.FORCE, config.getVectorize());
-    Assert.assertEquals(1, config.getVectorSize());
+    Assert.assertEquals(Vectorize.FORCE, Vectorize.valueOf(config.getConfigs().get("vectorize").toString()));
+    Assert.assertEquals(1, Numbers.parseInt(config.getConfigs().get("vectorSize")));
   }
 
   @Test
   public void testDefault()
   {
     final QueryConfig config = new QueryConfig();
-    Assert.assertEquals(QueryContexts.DEFAULT_VECTORIZE, config.getVectorize());
-    Assert.assertEquals(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE, config.getVectorSize());
-  }
-
-  @Test
-  public void testOverrides()
-  {
-    final Query<?> query = new TestQuery(
-        new TableDataSource("datasource"),
-        new MultipleIntervalSegmentSpec(ImmutableList.of()),
-        false,
-        ImmutableMap.of(
-            QueryContexts.VECTORIZE_KEY,
-            "true",
-            QueryContexts.VECTOR_SIZE_KEY,
-            QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE * 2
-        )
-    );
-    final QueryConfig config = new QueryConfig().withOverrides(query);
-    Assert.assertEquals(Vectorize.TRUE, config.getVectorize());
-    Assert.assertEquals(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE * 2, config.getVectorSize());
+    Assert.assertEquals(0, config.getConfigs().size());
+    Assert.assertNotNull(config.getConfigs());
   }
 }

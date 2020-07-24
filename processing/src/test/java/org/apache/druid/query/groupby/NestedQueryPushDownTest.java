@@ -49,7 +49,6 @@ import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -312,9 +311,6 @@ public class NestedQueryPushDownTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final Supplier<QueryConfig> queryConfigSupplier = Suppliers.ofInstance(
-        new QueryConfig()
-    );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
         new GroupByStrategyV1(
@@ -326,7 +322,6 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            queryConfigSupplier,
             bufferPool,
             mergePool,
             new ObjectMapper(new SmileFactory()),
@@ -345,7 +340,6 @@ public class NestedQueryPushDownTest
         new GroupByStrategyV2(
             druidProcessingConfig,
             configSupplier,
-            queryConfigSupplier,
             bufferPool,
             mergePool2,
             new ObjectMapper(new SmileFactory()),

@@ -19,9 +19,15 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A user configuration holder for all query types.
@@ -35,27 +41,19 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
  */
 public class QueryConfig
 {
-  @JsonProperty
-  private Vectorize vectorize = QueryContexts.DEFAULT_VECTORIZE;
+  private Map<String, Object> configs = new HashMap<>();
 
-  @JsonProperty
-  private int vectorSize = QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE;
-
-  public Vectorize getVectorize()
-  {
-    return vectorize;
+  @JsonAnyGetter
+  public Map<String, Object> getConfigs() {
+    return configs;
   }
 
-  public int getVectorSize()
-  {
-    return vectorSize;
+  public void setConfigs(Map<String, Object> configs) {
+    this.configs = configs;
   }
 
-  public QueryConfig withOverrides(final Query<?> query)
-  {
-    final QueryConfig newConfig = new QueryConfig();
-    newConfig.vectorize = QueryContexts.getVectorize(query, vectorize);
-    newConfig.vectorSize = QueryContexts.getVectorSize(query, vectorSize);
-    return newConfig;
+  @JsonAnySetter
+  public void setConfig(final String name, final Object value) {
+    this.configs.put(name, value);
   }
 }

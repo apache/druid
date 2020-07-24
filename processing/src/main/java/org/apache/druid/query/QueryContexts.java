@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -184,9 +185,19 @@ public class QueryContexts
     return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
   }
 
+  public static <T> Vectorize getVectorize(Query<T> query)
+  {
+    return parseEnum(query, VECTORIZE_KEY, Vectorize.class, QueryContexts.DEFAULT_VECTORIZE);
+  }
+
   public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
     return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
+  }
+
+  public static <T> int getVectorSize(Query<T> query)
+  {
+    return parseInt(query, VECTOR_SIZE_KEY, QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
   }
 
   public static <T> int getVectorSize(Query<T> query, int defaultSize)

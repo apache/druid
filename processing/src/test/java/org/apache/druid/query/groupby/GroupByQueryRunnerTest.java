@@ -53,7 +53,6 @@ import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
@@ -396,7 +395,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         new GroupByStrategyV2(
             processingConfig,
             configSupplier,
-            Suppliers.ofInstance(new QueryConfig()),
             bufferPool,
             mergeBufferPool,
             mapper,
