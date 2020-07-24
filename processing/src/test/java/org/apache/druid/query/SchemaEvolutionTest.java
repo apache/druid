@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -162,7 +163,7 @@ public class SchemaEvolutionTest
                          .rows(inputRowsWithDimensions(ImmutableList.of("c1")))
                          .buildMMappedIndex();
 
-    // Index2: c1 is a long, c2 is a string, "uniques" is uniques on c2
+    // Index2: c1 is a long, c2 is a string, "uniques" is uniques on c2, "longmin" is min on c1
     index2 = IndexBuilder.create()
                          .tmpDir(temporaryFolder.newFolder())
                          .schema(
@@ -170,7 +171,8 @@ public class SchemaEvolutionTest
                                  .withMetrics(
                                      new CountAggregatorFactory("cnt"),
                                      new LongSumAggregatorFactory("c1", "c1"),
-                                     new HyperUniquesAggregatorFactory("uniques", "c2")
+                                     new HyperUniquesAggregatorFactory("uniques", "c2"),
+                                     new LongMinAggregatorFactory("longmin", "c1")
                                  )
                                  .withRollup(false)
                                  .build()
@@ -347,6 +349,7 @@ public class SchemaEvolutionTest
                 new LongSumAggregatorFactory("a", "c1"),
                 new DoubleSumAggregatorFactory("b", "c1"),
                 new FloatSumAggregatorFactory("d", "c1"),
+                new LongMinAggregatorFactory("e", "c1"),
                 new CountAggregatorFactory("c")
             )
         )
@@ -355,19 +358,19 @@ public class SchemaEvolutionTest
 
     // Only string(1) -- which we can filter but not aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 
-    // Only long(2) -- which we can filter and aggregate
+     // Only long(2) -- which we can filter and aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.0, "c", 2L, "d", 19.0f)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.0, "c", 2L, "d", 19.0f, "e", 9L)),
         runQuery(query, factory, ImmutableList.of(index2))
     );
 
     // Only float(3) -- which we can't filter, but can aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
         runQuery(query, factory, ImmutableList.of(index3))
     );
 
@@ -379,9 +382,11 @@ public class SchemaEvolutionTest
             "b",
             NullHandling.defaultDoubleValue(),
             "c",
-            0L,
+            NullHandling.defaultLongValue(),
             "d",
-            NullHandling.defaultFloatValue()
+            NullHandling.defaultFloatValue(),
+            "e",
+            Long.MAX_VALUE
         )),
         runQuery(query, factory, ImmutableList.of(index4))
     );
@@ -392,7 +397,8 @@ public class SchemaEvolutionTest
             "a", 57L,
             "b", 57.2,
             "c", 6L,
-            "d", 57.20000076293945
+            "d", 57.20000076293945,
+            "e", 9L
         )),
         runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))
     );
