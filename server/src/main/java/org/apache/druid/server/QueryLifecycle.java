@@ -34,8 +34,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.OverrideDefaultQueryContext;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
@@ -184,7 +184,7 @@ public class QueryLifecycle
 
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext).withId(queryId);
     this.toolChest = warehouse.getToolChest(baseQuery);
-  }
+  }w
 
   /**
    * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
