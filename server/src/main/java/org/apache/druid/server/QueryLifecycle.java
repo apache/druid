@@ -184,7 +184,7 @@ public class QueryLifecycle
 
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext).withId(queryId);
     this.toolChest = warehouse.getToolChest(baseQuery);
-  }w
+  }
 
   /**
    * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
