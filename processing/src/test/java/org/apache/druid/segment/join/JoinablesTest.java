@@ -22,14 +22,19 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.TestQuery;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.planning.PreJoinableClause;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -37,6 +42,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -44,6 +50,13 @@ import java.util.function.Function;
 
 public class JoinablesTest
 {
+  private static final JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
+      QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE
+  );
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -99,12 +112,7 @@ public class JoinablesTest
         ImmutableList.of(),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        null
     );
 
     Assert.assertSame(Function.identity(), segmentMapFn);
@@ -128,12 +136,7 @@ public class JoinablesTest
         ImmutableList.of(clause),
         NoopJoinableFactory.INSTANCE,
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        null
     );
   }
 
@@ -155,22 +158,33 @@ public class JoinablesTest
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = Joinables.createSegmentMapFn(
         ImmutableList.of(clause),
-        (dataSource, condition) -> {
-          if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {
-            return Optional.of(
-                LookupJoinable.wrap(new MapLookupExtractor(ImmutableMap.of("k", "v"), false))
-            );
-          } else {
-            return Optional.empty();
+        new JoinableFactory()
+        {
+          @Override
+          public boolean isDirectlyJoinable(DataSource dataSource)
+          {
+            return dataSource.equals(lookupDataSource);
+          }
+
+          @Override
+          public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
+          {
+            if (dataSource.equals(lookupDataSource) && condition.equals(conditionAnalysis)) {
+              return Optional.of(
+                  LookupJoinable.wrap(new MapLookupExtractor(ImmutableMap.of("k", "v"), false))
+              );
+            } else {
+              return Optional.empty();
+            }
           }
         },
         new AtomicLong(),
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_PUSH_DOWN,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS,
-        QueryContexts.DEFAULT_ENABLE_JOIN_FILTER_REWRITE_MAX_SIZE,
-        null,
-        VirtualColumns.EMPTY
+        new TestQuery(
+            new TableDataSource("test"),
+            new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
+            false,
+            new HashMap()
+        )
     );
 
     Assert.assertNotSame(Function.identity(), segmentMapFn);

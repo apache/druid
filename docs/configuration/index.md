@@ -222,7 +222,7 @@ values for the above mentioned configs among others provided by Java implementat
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
 |`druid.auth.authenticatorChain`|JSON List of Strings|List of Authenticator type names|["allowAll"]|no|
-|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`.|"noop"|no|
+|`druid.escalator.type`|String|Type of the Escalator that should be used for internal Druid communications. This Escalator must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticatorChain`.|"noop"|no|
 |`druid.auth.authorizers`|JSON List of Strings|List of Authorizer type names |["allowAll"]|no|
 |`druid.auth.unsecuredPaths`| List of Strings|List of paths for which security checks will not be performed. All requests to these paths will be allowed.|[]|no|
 |`druid.auth.allowUnauthenticatedHttpOptions`|Boolean|If true, skip authentication checks for HTTP OPTIONS requests. This is needed for certain use cases, such as supporting CORS pre-flight requests. Note that disabling authentication checks for OPTIONS requests will allow unauthenticated users to determine what Druid endpoints are valid (by checking if the OPTIONS request returns a 200 instead of 404), so enabling this option may reveal information about server configuration, including information about what extensions are loaded (if those extensions add endpoints).|false|no|
@@ -1312,6 +1312,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
 |`druid.server.http.enableForwardedRequestCustomizer`|If enabled, adds Jetty ForwardedRequestCustomizer which reads X-Forwarded-* request headers to manipulate servlet request object when Druid is used behind a proxy.|false|
+|`druid.server.http.allowedHttpMethods`|List of HTTP methods that should be allowed in addition to the ones required by Druid APIs. Druid APIs require GET, PUT, POST, and DELETE, which are always allowed. This option is not useful unless you have installed an extension that needs these additional HTTP methods or that adds functionality related to CORS. None of Druid's bundled extensions require these methods.|[]|
 
 #### Indexer Processing Resources
 
@@ -1369,7 +1370,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.maxSize`|The maximum number of bytes-worth of segments that the process wants assigned to it. This is not a limit that Historical processes actually enforces, just a value published to the Coordinator process so it can plan accordingly.|0|
+|`druid.server.maxSize`|The maximum number of bytes-worth of segments that the process wants assigned to it. The Coordinator process will attempt to assign segments to a Historical process only if this property is greater than the total size of segments served by it. Since this property defines the upper limit on the total segment size that can be assigned to a Historical, it can be set to the sum of all `maxSize` values specified within `druid.segmentCache.locations` property.|0|
 |`druid.server.tier`| A string to name the distribution tier that the storage process belongs to. Many of the [rules Coordinator processes use](../operations/rule-configuration.md) to manage segments can be keyed on tiers. |  `_default_tier` |
 |`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which processes are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
 
@@ -1383,7 +1384,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.segmentCache.dropSegmentDelayMillis`|How long a process delays before completely dropping segment.|30000 (30 seconds)|
 |`druid.segmentCache.infoDir`|Historical processes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
 |`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
-|`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from deep storage. Note that the work of loading segments involves downloading segments from deep storage, decompressing them and loading them to a memory mapped location. So the work is not all I/O Bound. Depending on CPU and network load, one could possibly increase this config to a higher value.|Number of cores|
+|`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from deep storage. Note that the work of loading segments involves downloading segments from deep storage, decompressing them and loading them to a memory mapped location. So the work is not all I/O Bound. Depending on CPU and network load, one could possibly increase this config to a higher value.|max(1,Number of cores / 6)|
 |`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently during historical startup.|`druid.segmentCache.numLoadingThreads`|
 |`druid.segmentCache.lazyLoadOnStart`|Whether or not to load segment columns metadata lazily during historical startup. When set to true, Historical startup time will be dramatically improved by deferring segment loading until the first time that segment takes part in a query, which will incur this cost instead. One catch is that if historical crashes while in the process of downloading and creating segment files, it is possible to end up with a corrupted segment on disk, this requires manual intervention to delete corrupted files. When the flag is set to true, historical startup would complete successfully and queries using this segment would fail at runtime.|false|
 |`druid.coordinator.loadqueuepeon.curator.numCallbackThreads`|Number of threads for executing callback actions associated with loading or dropping of segments. One might want to increase this number when noticing clusters are lagging behind w.r.t. balancing segments across historical nodes.|2|
@@ -1484,7 +1485,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |--------|---------------|-----------|-------|
 |`druid.broker.balancer.type`|`random`, `connectionCount`|Determines how the broker balances connections to Historical processes. `random` choose randomly, `connectionCount` picks the process with the fewest number of active connections to|`random`|
 |`druid.broker.select.tier`|`highestPriority`, `lowestPriority`, `custom`|If segments are cross-replicated across tiers in a cluster, you can tell the broker to prefer to select segments in a tier with a certain priority.|`highestPriority`|
-|`druid.broker.select.tier.custom.priorities`|`An array of integer priorities.`|Select servers in tiers with a custom priority list.|None|
+|`druid.broker.select.tier.custom.priorities`|`An array of integer priorities.` E.g., `[-1, 0, 1, 2]`|Select servers in tiers with a custom priority list.|The config only has effect if `druid.broker.select.tier` is set to `custom`. If `druid.broker.select.tier` is set to `custom` but this config is not specified, the effect is the same as `druid.broker.select.tier` set to `highestPriority`. Any of the integers in this config can be ignored if there's no corresponding tiers with such priorities. Tiers with priorities explicitly specified in this config always have higher priority than those not and those not specified fall back to use `highestPriority` strategy among themselves.|
 
 ##### Query prioritization and laning
 
@@ -1774,7 +1775,7 @@ The following configurations are to set the default behavior for query vectoriza
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.vectorize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorize` in the query contexts.|`false`|
+|`druid.query.vectorize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorize` in the query contexts.|`true`|
 |`druid.query.vectorSize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
 
 ### TopN query config

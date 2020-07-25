@@ -165,7 +165,7 @@ public class TopNTypeInterfaceBenchmark
       queryAggs.add(new DoubleMinAggregatorFactory("minFloatZipf", "minFloatZipf"));
       queryAggs.add(new HyperUniquesAggregatorFactory("hyperUniquesMet", "hyper"));
 
-      // Use an IdentityExtractionFn to force usage of DimExtractionTopNAlgorithm
+      // Use an IdentityExtractionFn to force usage of HeapBasedTopNAlgorithm
       TopNQueryBuilder queryBuilderString = new TopNQueryBuilder()
           .dataSource("blah")
           .granularity(Granularities.ALL)
@@ -174,7 +174,7 @@ public class TopNTypeInterfaceBenchmark
           .intervals(intervalSpec)
           .aggregators(queryAggs);
 
-      // DimExtractionTopNAlgorithm is always used for numeric columns
+      // HeapBasedTopNAlgorithm is always used for numeric columns
       TopNQueryBuilder queryBuilderLong = new TopNQueryBuilder()
           .dataSource("blah")
           .granularity(Granularities.ALL)

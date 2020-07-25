@@ -425,14 +425,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     return (queryPlus, responseContext) -> {
       TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
-      if (topNQuery.getDimensionsFilter() != null) {
-        topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
-      }
-      final TopNQuery delegateTopNQuery = topNQuery;
-      if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
-        final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
+      if (TopNQueryEngine.canApplyExtractionInPost(topNQuery)) {
+        final DimensionSpec dimensionSpec = topNQuery.getDimensionSpec();
         QueryPlus<Result<TopNResultValue>> delegateQueryPlus = queryPlus.withQuery(
-            delegateTopNQuery.withDimensionSpec(
+            topNQuery.withDimensionSpec(
                 new DefaultDimensionSpec(
                     dimensionSpec.getDimension(),
                     dimensionSpec.getOutputName()
@@ -441,7 +437,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         );
         return runner.run(delegateQueryPlus, responseContext);
       } else {
-        return runner.run(queryPlus.withQuery(delegateTopNQuery), responseContext);
+        return runner.run(queryPlus.withQuery(topNQuery), responseContext);
       }
     };
   }

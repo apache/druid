@@ -51,7 +51,8 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
-import org.apache.druid.segment.join.filter.JoinableClauses;
+import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -141,15 +142,22 @@ public class JoinAndLookupBenchmark
             )
         )
     );
-    JoinFilterPreAnalysis preAnalysisLookupStringKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClausesLookupStringKey),
-        VirtualColumns.EMPTY,
-        null,
-        false,
-        false,
-        false,
-        0
-    );
+
+    JoinFilterPreAnalysis preAnalysisLookupStringKey =
+        JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+            new JoinFilterPreAnalysisKey(
+                new JoinFilterRewriteConfig(
+                    false,
+                    false,
+                    false,
+                    0
+                ),
+                joinableClausesLookupStringKey,
+                VirtualColumns.EMPTY,
+                null
+            )
+        );
+
     hashJoinLookupStringKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClausesLookupStringKey,
@@ -168,15 +176,22 @@ public class JoinAndLookupBenchmark
             )
         )
     );
-    JoinFilterPreAnalysis preAnalysisLookupLongKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClausesLookupLongKey),
-        VirtualColumns.EMPTY,
-        null,
-        false,
-        false,
-        false,
-        0
-    );
+
+    JoinFilterPreAnalysis preAnalysisLookupLongKey =
+        JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+            new JoinFilterPreAnalysisKey(
+                new JoinFilterRewriteConfig(
+                    false,
+                    false,
+                    false,
+                    0
+                ),
+                joinableClausesLookupLongKey,
+                VirtualColumns.EMPTY,
+                null
+            )
+        );
+
     hashJoinLookupLongKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClausesLookupLongKey,
@@ -195,22 +210,29 @@ public class JoinAndLookupBenchmark
             )
         )
     );
-    JoinFilterPreAnalysis preAnalysisIndexedTableStringKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClausesIndexedTableStringKey),
-        VirtualColumns.EMPTY,
-        null,
-        false,
-        false,
-        false,
-        0
-    );
+
+    JoinFilterPreAnalysis preAnalysisIndexedStringKey =
+        JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+            new JoinFilterPreAnalysisKey(
+                new JoinFilterRewriteConfig(
+                    false,
+                    false,
+                    false,
+                    0
+                ),
+                joinableClausesLookupLongKey,
+                VirtualColumns.EMPTY,
+                null
+            )
+        );
+
     hashJoinIndexedTableStringKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
         joinableClausesIndexedTableStringKey,
-        preAnalysisIndexedTableStringKey
+        preAnalysisIndexedStringKey
     );
 
-    List<JoinableClause> joinableClausesIndexedTableLonggKey = ImmutableList.of(
+    List<JoinableClause> joinableClausesIndexedTableLongKey = ImmutableList.of(
         new JoinableClause(
             prefix,
             new IndexedTableJoinable(JoinTestHelper.createCountriesIndexedTable()),
@@ -222,19 +244,26 @@ public class JoinAndLookupBenchmark
             )
         )
     );
-    JoinFilterPreAnalysis preAnalysisIndexedTableLongKey = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        JoinableClauses.fromList(joinableClausesIndexedTableLonggKey),
-        VirtualColumns.EMPTY,
-        null,
-        false,
-        false,
-        false,
-        0
-    );
+
+    JoinFilterPreAnalysis preAnalysisIndexedLongKey =
+        JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+            new JoinFilterPreAnalysisKey(
+                new JoinFilterRewriteConfig(
+                    false,
+                    false,
+                    false,
+                    0
+                ),
+                joinableClausesIndexedTableLongKey,
+                VirtualColumns.EMPTY,
+                null
+            )
+        );
+
     hashJoinIndexedTableLongKeySegment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(baseSegment),
-        joinableClausesIndexedTableLonggKey,
-        preAnalysisIndexedTableLongKey
+        joinableClausesIndexedTableLongKey,
+        preAnalysisIndexedLongKey
     );
 
     final Map<String, String> countryCodeToNameMap = JoinTestHelper.createCountryIsoCodeToNameLookup().getMap();

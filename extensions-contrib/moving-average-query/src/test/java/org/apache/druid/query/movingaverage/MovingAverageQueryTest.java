@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -64,6 +65,7 @@ import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -377,6 +379,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         baseClient,
         null /* local client; unused in this test, so pass in null */,
         warehouse,
+        new MapJoinableFactory(ImmutableMap.of()),
         retryConfig,
         jsonMapper,
         serverConfig,

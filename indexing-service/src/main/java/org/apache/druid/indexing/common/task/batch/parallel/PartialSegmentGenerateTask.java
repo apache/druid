@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
@@ -28,11 +27,10 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.CachingSegmentAllocator;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.InputSourceProcessor;
-import org.apache.druid.indexing.common.task.NonLinearlyPartitionedSequenceNameFunction;
+import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -108,10 +106,6 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         ingestionSchema.getDataSchema().getParser()
     );
 
-    final File tmpDir = toolbox.getIndexingTmpDir();
-    // Firehose temporary directory is automatically removed when this IndexTask completes.
-    FileUtils.forceMkdir(tmpDir);
-
     final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
         new ClientBasedTaskInfoProvider(indexingServiceClient),
         getId(),
@@ -120,7 +114,12 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
 
-    final List<DataSegment> segments = generateSegments(toolbox, taskClient, inputSource, tmpDir);
+    final List<DataSegment> segments = generateSegments(
+        toolbox,
+        taskClient,
+        inputSource,
+        toolbox.getIndexingTmpDir()
+    );
     taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments));
 
     return TaskStatus.success(getId());
@@ -129,7 +128,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   /**
    * @return {@link SegmentAllocator} suitable for the desired segment partitioning strategy.
    */
-  abstract CachingSegmentAllocator createSegmentAllocator(
+  abstract SegmentAllocatorForBatch createSegmentAllocator(
       TaskToolbox toolbox,
       ParallelIndexSupervisorTaskClient taskClient
   ) throws IOException;
@@ -158,24 +157,19 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
     final RowIngestionMeters buildSegmentsMeters = new DropwizardRowIngestionMeters();
 
-    if (toolbox.getMonitorScheduler() != null) {
-      toolbox.getMonitorScheduler().addMonitor(
-          new RealtimeMetricsMonitor(
-              Collections.singletonList(fireDepartmentForMetrics),
-              Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
-          )
-      );
-    }
+    toolbox.addMonitor(
+        new RealtimeMetricsMonitor(
+            Collections.singletonList(fireDepartmentForMetrics),
+            Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
+        )
+    );
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
 
-    final CachingSegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient);
-    final SequenceNameFunction sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
-        getId(),
-        segmentAllocator.getShardSpecs()
-    );
+    final SegmentAllocatorForBatch segmentAllocator = createSegmentAllocator(toolbox, taskClient);
+    final SequenceNameFunction sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
 
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),

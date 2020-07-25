@@ -110,7 +110,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     final boolean isIOException = ex.getCause() instanceof IOException;
     final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
-    return isIOException || isTimeout;
+    final boolean isInternalError = ex.getStatusCode() == 500 || ex.getStatusCode() == 503;
+    return isIOException || isTimeout || isInternalError;
   }
 
   /**
@@ -808,6 +809,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                     + "the number of shards to increase throughput."
                 );
                 return true;
+              }
+              if (throwable instanceof AmazonServiceException) {
+                AmazonServiceException ase = (AmazonServiceException) throwable;
+                return isServiceExceptionRecoverable(ase);
               }
               return false;
             },

@@ -189,7 +189,7 @@ that range if there's some stray data with unexpected timestamps.
 |--------|-----------|-------|---------|
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. The current limitation is that you can append to any datasources regardless of their original partitioning scheme, but the appended segments should be partitioned using the `dynamic` partitionsSpec.|false|no|
 
 ### `tuningConfig`
 
@@ -261,7 +261,7 @@ The three `partitionsSpec` types have different characteristics.
 The recommended use case for each partitionsSpec is:
 - If your data has a uniformly distributed column which is frequently used in your queries,
 consider using `single_dim` partitionsSpec to maximize the performance of most of your queries.
-- If your data doesn't a uniformly distributed column, but is expected to have a [high rollup ratio](./index.md#maximizing-rollup-ratio)
+- If your data doesn't have a uniformly distributed column, but is expected to have a [high rollup ratio](./index.md#maximizing-rollup-ratio)
 when you roll up with some dimensions, consider using `hashed` partitionsSpec.
 It could reduce the size of datasource and query latency by improving data locality.
 - If the above two scenarios are not the case or you don't need to roll up your datasource,
@@ -302,7 +302,7 @@ and then by the hash value of `partitionDimensions` (secondary partition key) in
 The partitioned data is stored in local storage of 
 the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 - The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
-The Parallel task spawns a new set of worker tasks (type `partial_index_merge`) to merge the partitioned data
+The Parallel task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned data
 created in the previous phase. Here, the partitioned data is shuffled based on
 the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data
 falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges
@@ -693,7 +693,7 @@ that range if there's some stray data with unexpected timestamps.
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
 |inputFormat|[`inputFormat`](./data-formats.md#input-format) to specify how to parse input data.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. The current limitation is that you can append to any datasources regardless of their original partitioning scheme, but the appended segments should be partitioned using the `dynamic` partitionsSpec.|false|no|
 
 ### `tuningConfig`
 
@@ -1342,6 +1342,7 @@ An example SqlInputSource spec is shown below:
             }
         },
         "sqls": ["SELECT * FROM table1 WHERE timestamp BETWEEN '2013-01-01 00:00:00' AND '2013-01-01 11:59:59'", "SELECT * FROM table2 WHERE timestamp BETWEEN '2013-01-01 00:00:00' AND '2013-01-01 11:59:59'"]
+      }
     },
 ...
 ```

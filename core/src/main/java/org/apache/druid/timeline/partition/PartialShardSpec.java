@@ -25,11 +25,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import javax.annotation.Nullable;
-
 /**
- * Class to contain all information of a {@link ShardSpec} except for the partition ID.
- * This class is mainly used by the indexing tasks to allocate new segments using the Overlord.
+ * This interface is used in the segment allocation protocol when it is coordinated by the Overlord; when appending
+ * segments to an existing datasource (either streaming ingestion or batch append) or any case when segment
+ * lock is used. The implementations of this interface contain all information of the corresponding {@link ShardSpec}
+ * except the partition ID.
+ * The ingestion tasks send all information required for allocating a new segment using this interface and the Overlord
+ * determines the partition ID to create a new segment.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
@@ -41,21 +43,31 @@ import javax.annotation.Nullable;
 public interface PartialShardSpec
 {
   /**
-   * Creates a new ShardSpec based on {@code specOfPreviousMaxPartitionId}. If it's null, it assumes that this is the
-   * first call for the time chunk where the new segment is created.
-   * Note that {@code specOfPreviousMaxPartitionId} can also be null for {@link OverwriteShardSpec} if all segments
-   * in the timeChunk are first-generation segments.
+   * Creates a new ShardSpec with given partitionId and numCorePartitions.
+   *
+   * @param objectMapper      jsonMapper used only for {@link HashBasedNumberedShardSpec}
+   * @param partitionId       partitionId of the shardSpec. must be carefully chosen to be unique in a time chunk
+   * @param numCorePartitions the core partition set size. Should be set properly to determine if this segment belongs
+   *                          to the core partitions.
    */
-  ShardSpec complete(ObjectMapper objectMapper, @Nullable ShardSpec specOfPreviousMaxPartitionId);
-
-  /**
-   * Creates a new shardSpec having the given partitionId.
-   */
-  ShardSpec complete(ObjectMapper objectMapper, int partitionId);
+  ShardSpec complete(ObjectMapper objectMapper, int partitionId, int numCorePartitions);
 
   /**
    * Returns the class of the shardSpec created by this factory.
    */
   @JsonIgnore
   Class<? extends ShardSpec> getShardSpecClass();
+
+  /**
+   * Returns true if this partialShardSpec needs a partitionId of a non-root generation.
+   * Any partialShardSpec to overwrite a subset of segments in a time chunk such as
+   * {@link NumberedOverwritePartialShardSpec} should return true.
+   *
+   *
+   * @see PartitionIds
+   */
+  default boolean useNonRootGenerationPartitionSpace()
+  {
+    return false;
+  }
 }

@@ -287,7 +287,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`SQRT(expr)`|Square root.|
 |`TRUNCATE(expr[, digits])`|Truncate expr to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
 |`TRUNC(expr[, digits])`|Synonym for `TRUNCATE`.|
-|`ROUND(expr[, digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points.|
+|`ROUND(expr[, digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If `expr` evaluates to either `NaN`, `expr` will be converted to 0. If `expr` is infinity, `expr` will be converted to the nearest finite double. |
 |`x + y`|Addition.|
 |`x - y`|Subtraction.|
 |`x * y`|Multiplication.|
@@ -337,8 +337,8 @@ String functions accept strings, and return a type appropriate to the function.
 |`UPPER(expr)`|Returns expr in all uppercase.|
 |`REVERSE(expr)`|Reverses expr.|
 |`REPEAT(expr, [N])`|Repeats expr N times|
-|`LPAD(expr, length[, chars])`|Returns a string of "length" from "expr" left-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
-|`RPAD(expr, length[, chars])`|Returns a string of "length" from "expr" right-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
+|`LPAD(expr, length[, chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
+|`RPAD(expr, length[, chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 
 
 ### Time functions
@@ -829,9 +829,7 @@ delivered due to an error.
 
 ### JDBC
 
-You can make Druid SQL queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). Once
-you've downloaded the Avatica client jar, add it to your classpath and use the connect string
-`jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
+You can make Druid SQL queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
 
 Example code:
 
@@ -849,7 +847,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
       final ResultSet resultSet = statement.executeQuery(query)
   ) {
     while (resultSet.next()) {
-      // Do something
+      // process result set
     }
   }
 }
@@ -884,6 +882,19 @@ final ResultSet resultSet = statement.executeQuery();
 Druid SQL supports setting connection parameters on the client. The parameters in the table below affect SQL planning.
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
 [Query context](query-context.html) for details on the possible options.
+
+```java
+String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
+
+// Set any query context parameters you need here.
+Properties connectionProperties = new Properties();
+connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
+connectionProperties.setProperty("useCache", "false");
+
+try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
+  // create and execute statements, process result sets, etc
+}
+```
 
 Note that to specify an unique identifier for SQL query, use `sqlQueryId` instead of `queryId`. Setting `queryId` for a SQL
 request has no effect, all native queries underlying SQL will use auto-generated queryId.
@@ -921,11 +932,12 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 > `APPROX_QUANTILE_DS`. Only standard SQL functions can be used.
 
 #### SCHEMATA table
+`INFORMATION_SCHEMA.SCHEMATA` provides a list of all known schemas, which include `druid` for standard [Druid Table datasources](datasource.md#table), `lookup` for [Lookups](datasource.md#lookup), `sys` for the virtual [System metadata tables](#system-schema), and `INFORMATION_SCHEMA` for these virtual tables. Tables are allowed to have the same name across different schemas, so the schema may be included in an SQL statement to distinguish them, e.g. `lookup.table` vs `druid.table`.
 
 |Column|Notes|
 |------|-----|
-|CATALOG_NAME|Unused|
-|SCHEMA_NAME||
+|CATALOG_NAME|Always set as `druid`|
+|SCHEMA_NAME|`druid`, `lookup`, `sys`, or `INFORMATION_SCHEMA`|
 |SCHEMA_OWNER|Unused|
 |DEFAULT_CHARACTER_SET_CATALOG|Unused|
 |DEFAULT_CHARACTER_SET_SCHEMA|Unused|
@@ -933,23 +945,27 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |SQL_PATH|Unused|
 
 #### TABLES table
+`INFORMATION_SCHEMA.TABLES` provides a list of all known tables and schemas.
 
 |Column|Notes|
 |------|-----|
-|TABLE_CATALOG|Always set as 'druid'|
-|TABLE_SCHEMA||
-|TABLE_NAME||
+|TABLE_CATALOG|Always set as `druid`|
+|TABLE_SCHEMA|The 'schema' which the table falls under, see [SCHEMATA table for details](#schemata-table)|
+|TABLE_NAME|Table name. For the `druid` schema, this is the `dataSource`.|
 |TABLE_TYPE|"TABLE" or "SYSTEM_TABLE"|
+|IS_JOINABLE|If a table is directly joinable if on the right hand side of a `JOIN` statement, without performing a subquery, this value will be set to `YES`, otherwise `NO`. Lookups are always joinable because they are globally distributed among Druid query processing nodes, but Druid datasources are not, and will use a less efficient subquery join.|
+|IS_BROADCAST|If a table is 'broadcast' and distributed among all Druid query processing nodes, this value will be set to `YES`, such as lookups and Druid datasources which have a 'broadcast' load rule, else `NO`.|
 
 #### COLUMNS table
+`INFORMATION_SCHEMA.COLUMNS` provides a list of all known columns across all tables and schema.
 
 |Column|Notes|
 |------|-----|
-|TABLE_CATALOG|Always set as 'druid'|
-|TABLE_SCHEMA||
-|TABLE_NAME||
-|COLUMN_NAME||
-|ORDINAL_POSITION||
+|TABLE_CATALOG|Always set as `druid`|
+|TABLE_SCHEMA|The 'schema' which the table column falls under, see [SCHEMATA table for details](#schemata-table)|
+|TABLE_NAME|The 'table' which the column belongs to, see [TABLES table for details](#tables-table)|
+|COLUMN_NAME|The column name|
+|ORDINAL_POSITION|The order in which the column is stored in a table|
 |COLUMN_DEFAULT|Unused|
 |IS_NULLABLE||
 |DATA_TYPE||
@@ -989,7 +1005,9 @@ Segments table provides details on all Druid segments, whether they are publishe
 |is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime). See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
 |is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is _only_ served by realtime tasks, and 0 if any historical process is serving this segment.|
 |is_overshadowed|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is published and is _fully_ overshadowed by some other published segments. Currently, is_overshadowed is always false for unpublished segments, although this may change in the future. You can filter for segments that "should be published" by filtering for `is_published = 1 AND is_overshadowed = 0`. Segments can briefly be both published and overshadowed if they were recently replaced, but have not been unpublished yet. See the [Architecture page](../design/architecture.md#segment-lifecycle) for more details.|
-|payload|STRING|JSON-serialized data segment payload|
+|shardSpec|STRING|The toString of specific `ShardSpec`|
+|dimensions|STRING|The dimensions of the segment|
+|metrics|STRING|The metrics of the segment|
 
 For example to retrieve all segments for datasource "wikipedia", use the query:
 

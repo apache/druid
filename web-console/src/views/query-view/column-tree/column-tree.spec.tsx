@@ -17,7 +17,7 @@
  */
 
 import { render } from '@testing-library/react';
-import { parseSqlQuery } from 'druid-query-toolkit';
+import { SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { ColumnMetadata } from '../../../utils/column-metadata';
@@ -29,7 +29,7 @@ describe('column tree', () => {
     const columnTree = (
       <ColumnTree
         getParsedQuery={() => {
-          return parseSqlQuery(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`);
+          return SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`);
         }}
         defaultSchema="druid"
         defaultTable="wikipedia"
@@ -62,7 +62,7 @@ describe('column tree', () => {
             },
           ] as ColumnMetadata[]
         }
-        onQueryStringChange={() => {}}
+        onQueryChange={() => {}}
       />
     );
 

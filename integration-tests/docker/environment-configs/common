@@ -50,6 +50,8 @@ druid_escalator_internalClientUsername=druid_system
 druid_escalator_type=basic
 druid_lookup_numLookupLoadingThreads=1
 druid_server_http_numThreads=20
+# Allow OPTIONS method for ITBasicAuthConfigurationTest.testSystemSchemaAccess
+druid_server_http_allowedHttpMethods=["OPTIONS"]
 druid_server_https_certAlias=druid
 druid_server_https_keyManagerPassword=druid123
 druid_server_https_keyStorePassword=druid123

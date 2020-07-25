@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -70,9 +71,9 @@ public class SuppressedAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean canVectorize()
+  public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return delegate.canVectorize();
+    return delegate.canVectorize(columnInspector);
   }
 
   @Override

@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.query.Query;
@@ -63,7 +62,6 @@ import java.util.Map;
     // for backward compatibility
     @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class),
     @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
-    @Type(name = PartialHashSegmentMergeTask.TYPE, value = PartialHashSegmentMergeTask.class),
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),

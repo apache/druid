@@ -96,11 +96,11 @@ Returns the percentage of segments actually loaded in the cluster versus segment
 
  * `/druid/coordinator/v1/loadstatus?simple`
 
-Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include replication.
+Returns the number of segments left to load until segments that should be loaded in the cluster are available for queries. This does not include segment replication counts.
 
 * `/druid/coordinator/v1/loadstatus?full`
 
-Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes replication.
+Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available. This includes segment replication counts.
 
 * `/druid/coordinator/v1/loadqueue`
 
@@ -113,6 +113,45 @@ Returns the number of segments to load and drop, as well as the total segment lo
 * `/druid/coordinator/v1/loadqueue?full`
 
 Returns the serialized JSON of segments to load and drop for each Historical process.
+
+
+#### Segment Loading by Datasource
+
+Note that all _interval_ query parameters are ISO 8601 strings (e.g., 2016-06-27/2016-06-28).
+Also note that these APIs only guarantees that the segments are available at the time of the call. 
+Segments can still become missing because of historical process failures or any other reasons afterward.
+
+##### GET
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?forceMetadataRefresh={boolean}&interval={myInterval}`
+
+Returns the percentage of segments actually loaded in the cluster versus segments that should be loaded in the cluster for the given 
+datasource over the given interval (or last 2 weeks if interval is not given). `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store 
+(Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
+of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content`
+
+ * `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?simple&forceMetadataRefresh={boolean}&interval={myInterval}`
+
+Returns the number of segments left to load until segments that should be loaded in the cluster are available for the given datasource 
+over the given interval (or last 2 weeks if interval is not given). This does not include segment replication counts. `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store 
+(Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
+of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content` 
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?full&forceMetadataRefresh={boolean}&interval={myInterval}`
+
+Returns the number of segments left to load in each tier until segments that should be loaded in the cluster are all available for the given datasource 
+over the given interval (or last 2 weeks if interval is not given). This includes segment replication counts. `forceMetadataRefresh` is required to be set. 
+Setting `forceMetadataRefresh` to true will force the coordinator to poll latest segment metadata from the metadata store 
+(Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
+of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
+Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
+If no used segments are found for the given inputs, this API returns `204 No Content`
 
 #### Metadata store information
 

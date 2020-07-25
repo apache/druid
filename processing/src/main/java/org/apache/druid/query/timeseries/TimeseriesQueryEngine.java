@@ -102,7 +102,7 @@ public class TimeseriesQueryEngine
 
     final boolean doVectorize = queryConfigToUse.getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
-        && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
+        && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(adapter))
     );
 
     final Sequence<Result<TimeseriesResultValue>> result;

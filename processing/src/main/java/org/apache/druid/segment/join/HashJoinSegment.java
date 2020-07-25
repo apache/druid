@@ -50,7 +50,7 @@ public class HashJoinSegment implements SegmentReference
    * @param baseSegment           The left-hand side base segment
    * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
    *                              duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param joinFilterPreAnalysis Pre-analysis computed by {@link org.apache.druid.segment.join.filter.JoinFilterAnalyzer#computeJoinFilterPreAnalysis}
+   * @param joinFilterPreAnalysis Pre-analysis for the query we expect to run on this segment
    */
   public HashJoinSegment(
       SegmentReference baseSegment,

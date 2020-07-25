@@ -40,7 +40,6 @@ import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -174,12 +173,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         analysis.getPreJoinableClauses(),
         joinableFactory,
         cpuTimeAccumulator,
-        QueryContexts.getEnableJoinFilterPushDown(query),
-        QueryContexts.getEnableJoinFilterRewrite(query),
-        QueryContexts.getEnableJoinFilterRewriteValueColumnFilters(query),
-        QueryContexts.getJoinFilterRewriteMaxSize(query),
-        query.getFilter() == null ? null : query.getFilter().toFilter(),
-        query.getVirtualColumns()
+        analysis.getBaseQuery().orElse(query)
     );
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(

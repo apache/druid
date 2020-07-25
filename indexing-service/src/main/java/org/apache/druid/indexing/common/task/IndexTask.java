@@ -97,7 +97,6 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
-import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -109,7 +108,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CircularBuffer;
-import org.codehaus.plexus.util.FileUtils;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -490,8 +488,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
 
       final File tmpDir = toolbox.getIndexingTmpDir();
-      // Temporary directory is automatically removed when this IndexTask completes.
-      FileUtils.forceMkdir(tmpDir);
 
       ingestionState = IngestionState.DETERMINE_PARTITIONS;
 
@@ -877,35 +873,33 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final long pushTimeout = tuningConfig.getPushTimeout();
 
-    final SegmentAllocator segmentAllocator;
+    final SegmentAllocatorForBatch segmentAllocator;
     final SequenceNameFunction sequenceNameFunction;
     switch (partitionsSpec.getType()) {
       case HASH:
       case RANGE:
-        final CachingSegmentAllocator localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
+        final SegmentAllocatorForBatch localSegmentAllocator = SegmentAllocators.forNonLinearPartitioning(
             toolbox,
             getDataSource(),
             getId(),
-            dataSchema.getGranularitySpec().getQueryGranularity(),
+            dataSchema.getGranularitySpec(),
             null,
             (CompletePartitionAnalysis) partitionAnalysis
         );
-        sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(
-            getId(),
-            localSegmentAllocator.getShardSpecs()
-        );
+        sequenceNameFunction = localSegmentAllocator.getSequenceNameFunction();
         segmentAllocator = localSegmentAllocator;
         break;
       case LINEAR:
         segmentAllocator = SegmentAllocators.forLinearPartitioning(
             toolbox,
+            getId(),
             null,
             dataSchema,
             getTaskLockHelper(),
             ingestionSchema.getIOConfig().isAppendToExisting(),
             partitionAnalysis.getPartitionsSpec()
         );
-        sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(getId());
+        sequenceNameFunction = segmentAllocator.getSequenceNameFunction();
         break;
       default:
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
@@ -1199,7 +1193,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
 
     @Nullable
-    private static PartitionsSpec getDefaultPartitionsSpec(
+    private static PartitionsSpec getPartitionsSpec(
         boolean forceGuaranteedRollup,
         @Nullable PartitionsSpec partitionsSpec,
         @Nullable Integer maxRowsPerSegment,
@@ -1227,11 +1221,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         if (forceGuaranteedRollup) {
           if (!partitionsSpec.isForceGuaranteedRollupCompatibleType()) {
-            throw new ISE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
+            throw new IAE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
           }
         } else {
           if (!(partitionsSpec instanceof DynamicPartitionsSpec)) {
-            throw new ISE("DynamicPartitionsSpec must be used for best-effort rollup");
+            throw new IAE("DynamicPartitionsSpec must be used for best-effort rollup");
           }
         }
         return partitionsSpec;
@@ -1266,7 +1260,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this(
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
-          getDefaultPartitionsSpec(
+          getPartitionsSpec(
               forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
               partitionsSpec,
               maxRowsPerSegment == null ? targetPartitionSize : maxRowsPerSegment,

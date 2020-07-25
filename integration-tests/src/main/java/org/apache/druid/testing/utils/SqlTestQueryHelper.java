@@ -39,15 +39,6 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
   }
 
   @Override
-  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
-  {
-    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
-  }
-
-  @Override
   public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2/sql", schemeAndHost);

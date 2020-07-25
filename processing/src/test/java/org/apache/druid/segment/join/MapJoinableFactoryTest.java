@@ -65,6 +65,8 @@ public class MapJoinableFactoryTest
     target = new MapJoinableFactory(
         ImmutableMap.of(NoopDataSource.class, noopJoinableFactory));
   }
+
+
   @Test
   public void testBuildDataSourceNotRegisteredShouldReturnAbsent()
   {
@@ -88,5 +90,19 @@ public class MapJoinableFactoryTest
     EasyMock.replay(noopJoinableFactory);
     Optional<Joinable> joinable = target.build(noopDataSource, condition);
     Assert.assertEquals(mockJoinable, joinable.get());
+  }
+
+  @Test
+  public void testIsDirectShouldBeFalseForNotRegistered()
+  {
+    Assert.assertFalse(target.isDirectlyJoinable(inlineDataSource));
+  }
+
+  @Test
+  public void testIsDirectlyJoinableShouldBeTrueForRegisteredThatIsJoinable()
+  {
+    EasyMock.expect(noopJoinableFactory.isDirectlyJoinable(noopDataSource)).andReturn(true).anyTimes();
+    EasyMock.replay(noopJoinableFactory);
+    Assert.assertTrue(target.isDirectlyJoinable(noopDataSource));
   }
 }

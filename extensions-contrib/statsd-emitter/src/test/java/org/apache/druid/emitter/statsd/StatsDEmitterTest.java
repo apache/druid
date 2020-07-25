@@ -236,4 +236,10 @@ public class StatsDEmitterTest
     Assert.assertEquals(expectedEvent.getTitle(), actualEvent.getTitle());
     Assert.assertEquals(expectedEvent.getText(), actualEvent.getText());
   }
+
+  @Test
+  public void testJacksonModules()
+  {
+    Assert.assertTrue(new StatsDEmitterModule().getJacksonModules().isEmpty());
+  }
 }

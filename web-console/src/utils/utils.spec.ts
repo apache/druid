@@ -20,7 +20,7 @@ import { getDruidErrorMessage, parseHtmlError, parseQueryPlan } from './druid-qu
 import {
   getColumnTypeFromHeaderAndRows,
   getDimensionSpecs,
-  getMetricSecs,
+  getMetricSpecs,
   guessTypeFromSample,
   updateSchemaWithSample,
 } from './druid-type';
@@ -207,7 +207,7 @@ describe('druid-type.ts', () => {
   });
 
   it('spec-utils getMetricSecs', () => {
-    expect(getMetricSecs({ header: ['header'], rows: [] })).toMatchInlineSnapshot(`
+    expect(getMetricSpecs({ header: ['header'], rows: [] })).toMatchInlineSnapshot(`
       Array [
         Object {
           "name": "count",

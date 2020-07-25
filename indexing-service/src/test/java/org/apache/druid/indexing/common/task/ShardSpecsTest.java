@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
@@ -28,7 +29,8 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -50,11 +52,11 @@ public class ShardSpecsTest extends IngestionTestBase
   @Test
   public void testShardSpecSelectionWithNullPartitionDimension()
   {
-    ShardSpec spec1 = new HashBasedNumberedShardSpec(0, 2, null, jsonMapper);
-    ShardSpec spec2 = new HashBasedNumberedShardSpec(1, 2, null, jsonMapper);
+    HashBucketShardSpec spec1 = new HashBucketShardSpec(0, 2, null, jsonMapper);
+    HashBucketShardSpec spec2 = new HashBucketShardSpec(1, 2, null, jsonMapper);
 
-    Map<Interval, List<ShardSpec>> shardSpecMap = new HashMap<>();
-    shardSpecMap.put(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), Lists.newArrayList(spec1, spec2));
+    Map<Interval, List<BucketNumberedShardSpec<?>>> shardSpecMap = new HashMap<>();
+    shardSpecMap.put(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), ImmutableList.of(spec1, spec2));
 
     ShardSpecs shardSpecs = new ShardSpecs(shardSpecMap, Granularities.HOUR);
     String visitorId = "visitorId";

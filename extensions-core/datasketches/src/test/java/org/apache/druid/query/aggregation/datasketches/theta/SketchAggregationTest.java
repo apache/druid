@@ -35,8 +35,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -491,6 +493,25 @@ public class SketchAggregationTest
         SketchHolder.class
     );
     Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
+  }
+
+  @Test
+  public void testUpdateUnionWithNullInList()
+  {
+    List<String> value = new ArrayList<>();
+    value.add("foo");
+    value.add(null);
+    value.add("bar");
+    List[] columnValues = new List[]{value};
+    final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
+    final Aggregator agg = new SketchAggregator(selector, 4096);
+    agg.aggregate();
+    Assert.assertFalse(agg.isNull());
+    Assert.assertNotNull(agg.get());
+    Assert.assertTrue(agg.get() instanceof SketchHolder);
+    Assert.assertEquals(2, ((SketchHolder) agg.get()).getEstimate(), 0);
+    Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
+    Assert.assertEquals(2, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

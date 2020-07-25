@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
@@ -33,12 +34,12 @@ import java.util.Objects;
  * partition key). The {@link ShardSpec} is later used by {@link PartialGenericSegmentMergeTask} to merge the partial
  * segments.
  */
-public class GenericPartitionStat extends PartitionStat<ShardSpec>
+public class GenericPartitionStat extends PartitionStat<BucketNumberedShardSpec>
 {
   private static final String PROP_SHARD_SPEC = "shardSpec";
 
   // Secondary partition key
-  private final ShardSpec shardSpec;
+  private final BucketNumberedShardSpec shardSpec;
 
   @JsonCreator
   public GenericPartitionStat(
@@ -46,7 +47,7 @@ public class GenericPartitionStat extends PartitionStat<ShardSpec>
       @JsonProperty("taskExecutorPort") int taskExecutorPort,
       @JsonProperty("useHttps") boolean useHttps,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty(PROP_SHARD_SPEC) ShardSpec shardSpec,
+      @JsonProperty(PROP_SHARD_SPEC) BucketNumberedShardSpec shardSpec,
       @JsonProperty("numRows") @Nullable Integer numRows,
       @JsonProperty("sizeBytes") @Nullable Long sizeBytes
   )
@@ -56,14 +57,14 @@ public class GenericPartitionStat extends PartitionStat<ShardSpec>
   }
 
   @Override
-  public int getPartitionId()
+  public int getBucketId()
   {
-    return shardSpec.getPartitionNum();
+    return shardSpec.getBucketId();
   }
 
   @JsonProperty(PROP_SHARD_SPEC)
   @Override
-  ShardSpec getSecondaryPartition()
+  BucketNumberedShardSpec getSecondaryPartition()
   {
     return shardSpec;
   }
