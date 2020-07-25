@@ -22,7 +22,7 @@ package org.apache.druid.query.search;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Numbers;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.OverrideDefaultQueryContext;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class QueryConfigTest
+public class OverrideDefaultQueryContextTest
 {
   @Test
   public void testSerde() throws IOException
@@ -40,7 +40,7 @@ public class QueryConfigTest
                         + "\"vectorize\" : \"force\","
                         + "\"vectorSize\" : 1"
                         + "}";
-    final QueryConfig config = mapper.readValue(json, QueryConfig.class);
+    final OverrideDefaultQueryContext config = mapper.readValue(json, OverrideDefaultQueryContext.class);
     Assert.assertEquals(Vectorize.FORCE, Vectorize.fromString(config.getConfigs().get("vectorize").toString()));
     Assert.assertEquals(1, Numbers.parseInt(config.getConfigs().get("vectorSize")));
   }
@@ -48,7 +48,7 @@ public class QueryConfigTest
   @Test
   public void testDefault()
   {
-    final QueryConfig config = new QueryConfig();
+    final OverrideDefaultQueryContext config = new OverrideDefaultQueryContext();
     Assert.assertNotNull(config.getConfigs());
     Assert.assertEquals(0, config.getConfigs().size());
   }
@@ -56,7 +56,7 @@ public class QueryConfigTest
   @Test
   public void testSetAndGet()
   {
-    final QueryConfig config = new QueryConfig();
+    final OverrideDefaultQueryContext config = new OverrideDefaultQueryContext();
     String key = "key1";
     String value = "value1";
     config.setConfigs(ImmutableMap.of(key, value));

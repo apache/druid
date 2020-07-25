@@ -37,7 +37,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.OverrideDefaultQueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -205,7 +205,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new QueryConfig())
+            Suppliers.ofInstance(new OverrideDefaultQueryContext())
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -239,7 +239,7 @@ public class QueryResourceTest
   @Test
   public void testGoodQueryWithQueryConfigOverrideDefault() throws IOException
   {
-    QueryConfig overrideConfig = new QueryConfig();
+    OverrideDefaultQueryContext overrideConfig = new OverrideDefaultQueryContext();
     String overrideConfigKey = "priority";
     String overrideConfigValue = "678";
     overrideConfig.setConfig(overrideConfigKey, overrideConfigValue);
@@ -292,7 +292,7 @@ public class QueryResourceTest
   @Test
   public void testGoodQueryWithQueryConfigDoesNotOverrideQueryContext() throws IOException
   {
-    QueryConfig overrideConfig = new QueryConfig();
+    OverrideDefaultQueryContext overrideConfig = new OverrideDefaultQueryContext();
     String overrideConfigKey = "priority";
     String overrideConfigValue = "678";
     overrideConfig.setConfig(overrideConfigKey, overrideConfigValue);
@@ -582,7 +582,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             authMapper,
-            Suppliers.ofInstance(new QueryConfig())
+            Suppliers.ofInstance(new OverrideDefaultQueryContext())
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -698,7 +698,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             authMapper,
-            Suppliers.ofInstance(new QueryConfig())
+            Suppliers.ofInstance(new OverrideDefaultQueryContext())
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -822,7 +822,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             authMapper,
-            Suppliers.ofInstance(new QueryConfig())
+            Suppliers.ofInstance(new OverrideDefaultQueryContext())
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -1081,7 +1081,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new QueryConfig())
+            Suppliers.ofInstance(new OverrideDefaultQueryContext())
         ),
         JSON_MAPPER,
         JSON_MAPPER,

@@ -1769,18 +1769,11 @@ If there is an L1 miss and L2 hit, it will also populate L1.
 
 This section describes configurations that control behavior of Druid's query types, applicable to Broker, Historical, and MiddleManager processes.
 
+### Overriding default query context values
+
 Any [Query Context General Parameter](../querying/query-context.html#general-parameters) default value 
-can be overridden by setting runtime property in the format of `druid.query.{property_key}`. 
+can be overridden by setting runtime property in the format of `druid.query.override.default.context.{query_context_key}`. 
 Note that the runtime property value can be overridden if value for the same key is explicitly specify in the query contexts.
-
-### Query vectorization config
-
-The following configurations are to set the default behavior for query vectorization.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.vectorize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorize` in the query contexts.|`true`|
-|`druid.query.vectorSize`|See [Vectorization parameters](../querying/query-context.html#vectorization-parameters) for details. This value can be overridden by `vectorSize` in the query contexts.|`512`|
 
 ### TopN query config
 

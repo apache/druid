@@ -35,7 +35,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.OverrideDefaultQueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
@@ -79,7 +79,7 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final QueryConfig queryConfig;
+  private final OverrideDefaultQueryContext overrideDefaultQueryContext;
   private final long startMs;
   private final long startNs;
 
@@ -95,7 +95,7 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
-      final QueryConfig queryConfig,
+      final OverrideDefaultQueryContext overrideDefaultQueryContext,
       final long startMs,
       final long startNs
   )
@@ -106,7 +106,7 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.queryConfig = queryConfig;
+    this.overrideDefaultQueryContext = overrideDefaultQueryContext;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -177,9 +177,9 @@ public class QueryLifecycle
 
     Map<String, Object> mergedUserAndConfigContext;
     if (baseQuery.getContext() != null) {
-      mergedUserAndConfigContext = BaseQuery.computeOverriddenContext(queryConfig.getConfigs(), baseQuery.getContext());
+      mergedUserAndConfigContext = BaseQuery.computeOverriddenContext(overrideDefaultQueryContext.getConfigs(), baseQuery.getContext());
     } else {
-      mergedUserAndConfigContext = queryConfig.getConfigs();
+      mergedUserAndConfigContext = overrideDefaultQueryContext.getConfigs();
     }
 
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext).withId(queryId);

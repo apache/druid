@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.OverrideDefaultQueryContext;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.log.RequestLogger;
@@ -40,7 +40,7 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final QueryConfig queryConfig;
+  private final OverrideDefaultQueryContext overrideDefaultQueryContext;
 
   @Inject
   public QueryLifecycleFactory(
@@ -51,7 +51,7 @@ public class QueryLifecycleFactory
       final RequestLogger requestLogger,
       final AuthConfig authConfig,
       final AuthorizerMapper authorizerMapper,
-      final Supplier<QueryConfig> queryConfigSupplier
+      final Supplier<OverrideDefaultQueryContext> queryConfigSupplier
   )
   {
     this.warehouse = warehouse;
@@ -60,7 +60,7 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.queryConfig = queryConfigSupplier.get();
+    this.overrideDefaultQueryContext = queryConfigSupplier.get();
   }
 
   public QueryLifecycle factorize()
@@ -72,7 +72,7 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         authorizerMapper,
-        queryConfig,
+        overrideDefaultQueryContext,
         System.currentTimeMillis(),
         System.nanoTime()
     );

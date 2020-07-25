@@ -34,7 +34,7 @@ import java.util.Map;
  * @see org.apache.druid.query.metadata.SegmentMetadataQueryConfig
  * @see org.apache.druid.query.scan.ScanQueryConfig
  *
- * This class config map is populated by any runtime property prefixed with druid.query
+ * This class config map is populated by any runtime property prefixed with druid.query.override.default.context
  * Note that config values should not be directly retrieved from this class but instead should
  * be read through {@link QueryContexts}. This class contains configs from runtime property which is then merged with
  * configs passed in query context. The result of the merge is subsequently stored in the query context.
@@ -45,7 +45,7 @@ import java.util.Map;
  *
 
  */
-public class QueryConfig
+public class OverrideDefaultQueryContext
 {
   private Map<String, Object> configs = new HashMap<>();
 
