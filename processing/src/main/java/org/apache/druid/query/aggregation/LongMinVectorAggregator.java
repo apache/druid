@@ -43,13 +43,13 @@ public class LongMinVectorAggregator implements VectorAggregator
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
     final long[] vector = selector.getLongVector();
-    long min = Long.MAX_VALUE;
+
+    long min = buf.getLong(position);
     for (int i = startRow; i < endRow; i++) {
       min = Math.min(min, vector[i]);
     }
 
     buf.putLong(position, min);
-
   }
 
   @Override
@@ -62,6 +62,7 @@ public class LongMinVectorAggregator implements VectorAggregator
   )
   {
     final long[] vector = selector.getLongVector();
+
     for (int i = 0; i < numRows; i++) {
       final int position = positions[i] + positionOffset;
       buf.putLong(position, Math.min(buf.getLong(position), vector[rows != null ? rows[i] : i]));
