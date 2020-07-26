@@ -29,6 +29,7 @@ import com.google.inject.Module;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
@@ -40,6 +41,8 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -107,7 +110,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
   }
 
   @Test
-  public void testSimple() throws Exception
+  public void testSimpleWithStringFullResponseHandler() throws Exception
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(
@@ -131,6 +134,35 @@ public class DruidLeaderClientTest extends BaseJettyTest
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
     request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
+  }
+
+  @Test
+  public void testSimpleWithInputStreamFullResponseHandler() throws Exception
+  {
+    DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(
+        ImmutableList.of(discoveryDruidNode)
+    );
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(druidNodeDiscovery);
+
+    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+
+    DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        httpClient,
+        druidNodeDiscoveryProvider,
+        NodeRole.PEON,
+        "/simple/leader",
+        EasyMock.createNiceMock(ServerDiscoverySelector.class)
+    );
+    druidLeaderClient.start();
+
+    Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
+    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
+
+    InputStreamFullResponseHandler responseHandler = new InputStreamFullResponseHandler();
+    Assert.assertEquals("hello", IOUtils.toString(druidLeaderClient.go(request, responseHandler).getContent(), StandardCharsets.UTF_8));
   }
 
   @Test
