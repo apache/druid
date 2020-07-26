@@ -972,29 +972,29 @@ public class SystemSchema extends AbstractSchema
     );
   }
 
-  private static <T> JsonParserIterator<T> getThingsFromLeaderNode(
+  public static <T> JsonParserIterator<T> getThingsFromLeaderNode(
       String query,
       TypeReference<T> typeRef,
-      DruidLeaderClient indexingServiceClient,
+      DruidLeaderClient leaderClient,
       ObjectMapper jsonMapper
   )
   {
     Request request;
     InputStreamFullResponseHolder responseHolder;
     try {
-      request = indexingServiceClient.makeRequest(
+      request = leaderClient.makeRequest(
           HttpMethod.GET,
           query
       );
 
-      responseHolder = indexingServiceClient.go(
+      responseHolder = leaderClient.go(
           request,
           new InputStreamFullResponseHandler()
       );
 
       if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
-            "Failed to talk to overlord leader at [%s]. Error code[%d], description[%s].",
+            "Failed to talk to leader node at [%s]. Error code[%d], description[%s].",
             query,
             responseHolder.getStatus().getCode(),
             responseHolder.getStatus().getReasonPhrase()
