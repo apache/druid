@@ -186,6 +186,35 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 59.021022 * 1e-6);
   }
 
+  // GroupBy handles timestamps differently when granularity is ALL
+  @Override
+  @Test
+  public void testFullOnTimeseriesLongMin()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(Granularities.ALL)
+                                  .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+                                  .aggregators(
+                                      QueryRunnerTestHelper.INDEX_LONG_MIN
+                                  )
+                                  .descending(descending)
+                                  .build();
+
+    DateTime expectedEarliest = DateTimes.of("1970-01-01");
+    DateTime expectedLast = DateTimes.of("2011-04-15");
+
+
+    Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
+    Result<TimeseriesResultValue> result = results.iterator().next();
+
+    Assert.assertEquals(expectedEarliest, result.getTimestamp());
+    Assert.assertFalse(
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
+        result.getTimestamp().isAfter(expectedLast)
+    );
+    Assert.assertEquals(59L, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC));
+  }
 
   @Override
   public void testEmptyTimeseries()
