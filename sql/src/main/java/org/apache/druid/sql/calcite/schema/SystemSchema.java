@@ -820,43 +820,12 @@ public class SystemSchema extends AbstractSchema
       ObjectMapper jsonMapper
   )
   {
-    Request request;
-    InputStreamFullResponseHolder responseHolder;
-    try {
-      String query = "/druid/indexer/v1/tasks";
-
-      request = indexingServiceClient.makeRequest(
-          HttpMethod.GET,
-          query
-      );
-
-      responseHolder = indexingServiceClient.go(
-          request,
-          new InputStreamFullResponseHandler()
-      );
-
-      if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        throw new RE(
-            "Failed to talk to overlord leader at [%s]. Error code[%d], description[%s].",
-            query,
-            responseHolder.getStatus().getCode(),
-            responseHolder.getStatus().getReasonPhrase()
-        );
-      }
-    }
-    catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
-    {
-    });
-    return new JsonParserIterator<>(
-        typeRef,
-        Futures.immediateFuture(responseHolder.getContent()),
-        request.getUrl().toString(),
-        null,
-        request.getUrl().getHost(),
+    return getThingsFromLeaderNode(
+        "/druid/indexer/v1/tasks",
+        new TypeReference<TaskStatusPlus>()
+        {
+        },
+        indexingServiceClient,
         jsonMapper
     );
   }
@@ -993,10 +962,26 @@ public class SystemSchema extends AbstractSchema
       ObjectMapper jsonMapper
   )
   {
+    return getThingsFromLeaderNode(
+        "/druid/indexer/v1/supervisor?system",
+        new TypeReference<SupervisorStatus>()
+        {
+        },
+        indexingServiceClient,
+        jsonMapper
+    );
+  }
+
+  private static <T> JsonParserIterator<T> getThingsFromLeaderNode(
+      String query,
+      TypeReference<T> typeRef,
+      DruidLeaderClient indexingServiceClient,
+      ObjectMapper jsonMapper
+  )
+  {
     Request request;
     InputStreamFullResponseHolder responseHolder;
     try {
-      String query = "/druid/indexer/v1/supervisor?system";
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
           query
@@ -1020,11 +1005,9 @@ public class SystemSchema extends AbstractSchema
       throw new RuntimeException(e);
     }
 
-    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<SupervisorStatus>()
-    {
-    });
+    final JavaType javaType = jsonMapper.getTypeFactory().constructType(typeRef);
     return new JsonParserIterator<>(
-        typeRef,
+        javaType,
         Futures.immediateFuture(responseHolder.getContent()),
         request.getUrl().toString(),
         null,
