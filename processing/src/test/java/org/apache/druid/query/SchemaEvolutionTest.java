@@ -382,11 +382,11 @@ public class SchemaEvolutionTest
             "b",
             NullHandling.defaultDoubleValue(),
             "c",
-            NullHandling.defaultLongValue(),
+            0L,
             "d",
             NullHandling.defaultFloatValue(),
             "e",
-            Long.MAX_VALUE
+            NullHandling.sqlCompatible() ? null : Long.MAX_VALUE
         )),
         runQuery(query, factory, ImmutableList.of(index4))
     );

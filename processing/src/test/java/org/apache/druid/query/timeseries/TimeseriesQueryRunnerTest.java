@@ -625,7 +625,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                     QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT_METRIC,
                     NullHandling.sqlCompatible() ? null : 1.0,
                     QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC,
-                    Long.MAX_VALUE
+                    NullHandling.sqlCompatible() ? null : Long.MAX_VALUE
                 )
             )
         )
