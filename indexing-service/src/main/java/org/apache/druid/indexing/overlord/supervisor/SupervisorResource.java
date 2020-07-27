@@ -150,7 +150,8 @@ public class SupervisorResource
                   if (theState.isPresent()) {
                     theBuilder.withState(theState.get().getBasicState().toString())
                               .withDetailedState(theState.get().toString())
-                              .withHealthy(theState.get().isHealthy());
+                              .withHealthy(theState.get().isHealthy())
+                              .withSuspended(theState.get().getBasicState().equals(BasicState.SUSPENDED));
                   }
                   if (includeFull) {
                     Optional<SupervisorSpec> theSpec = manager.getSupervisorSpec(x);
