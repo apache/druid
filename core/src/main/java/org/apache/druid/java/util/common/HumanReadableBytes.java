@@ -146,7 +146,7 @@ public class HumanReadableBytes implements Serializable
   {
     String number = StringUtils.toLowerCase(rawNumber);
     if (number.charAt(0) == '-') {
-      throw new IAE("Invalid format of number: %s. Negative value is not allowed.");
+      throw new IAE("Invalid format of number: %s. Negative value is not allowed.", rawNumber);
     }
 
     int lastDigitIndex = number.length() - 1;
