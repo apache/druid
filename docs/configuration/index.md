@@ -1771,9 +1771,21 @@ This section describes configurations that control behavior of Druid's query typ
 
 ### Overriding default query context values
 
-Any [Query Context General Parameter](../querying/query-context.html#general-parameters) default value 
-can be overridden by setting runtime property in the format of `druid.query.override.default.context.{query_context_key}`. 
-Note that the runtime property value can be overridden if value for the same key is explicitly specify in the query contexts.
+Any [Query Context General Parameter](../querying/query-context.html#general-parameters) default value can be 
+overridden by setting runtime property in the format of `druid.query.override.default.context.{query_context_key}`. 
+`druid.query.override.default.context.{query_context_key}` runtime property prefix applies to all current and future 
+query context keys, the same as how query context parameter passed with the query works. Note that the runtime property 
+value can be overridden if value for the same key is explicitly specify in the query contexts.
+
+The precedence chain for query context values is as follows: 
+
+hard-coded default value in Druid code <- runtime property not prefixed with `druid.query.override.default.context` 
+<- runtime property prefixed with `druid.query.override.default.context` <- context parameter in the query
+
+Note that not all query context key has a runtime property not prefixed with `druid.query.override.default.context` that can 
+override the hard-coded default value. For example, `maxQueuedBytes` has `druid.broker.http.maxQueuedBytes` 
+but `joinFilterRewriteMaxSize` does not. Hence, the only way of overriding `joinFilterRewriteMaxSize` hard-coded default 
+value is with runtime property `druid.query.override.default.context.joinFilterRewriteMaxSize`. 
 
 ### TopN query config
 

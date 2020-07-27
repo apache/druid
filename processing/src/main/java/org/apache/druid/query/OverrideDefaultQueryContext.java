@@ -38,10 +38,8 @@ import java.util.Map;
  * Note that config values should not be directly retrieved from this class but instead should
  * be read through {@link QueryContexts}. This class contains configs from runtime property which is then merged with
  * configs passed in query context. The result of the merge is subsequently stored in the query context.
- * The order of precedence in mergeing of the configs is as follow:
- * Hard codeded default values (from {@link QueryContexts} can be override by
- * runtime property values (store in this class) which can then be override by
- * query context parameter {@link Query#getContext()}
+ * The order of precedence in merging of the configs is as follow:
+ * runtime property values (store in this class) override by query context parameter passed in with the query
  *
 
  */
