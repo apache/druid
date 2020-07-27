@@ -265,7 +265,7 @@ public class HumanReadableBytesTest
   public void testExtraLargeNumber()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    String extraLarge = String.valueOf(Long.MAX_VALUE) + "1";
+    String extraLarge = Long.MAX_VALUE + "1";
     HumanReadableBytes.parse(extraLarge);
   }
 
