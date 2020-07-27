@@ -21,8 +21,8 @@ package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.Bytes;
-import org.apache.druid.java.util.common.BytesRange;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
@@ -69,7 +69,7 @@ public class ServerConfig
     this.enableRequestLimit = enableRequestLimit;
     this.maxIdleTime = maxIdleTime;
     this.defaultQueryTimeout = defaultQueryTimeout;
-    this.maxScatterGatherBytes = Bytes.valueOf(maxScatterGatherBytes);
+    this.maxScatterGatherBytes = HumanReadableBytes.valueOf(maxScatterGatherBytes);
     this.maxSubqueryRows = maxSubqueryRows;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
@@ -107,8 +107,8 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  @BytesRange(min = 1)
-  private Bytes maxScatterGatherBytes = Bytes.valueOf(Long.MAX_VALUE);
+  @HumanReadableBytesRange(min = 1)
+  private HumanReadableBytes maxScatterGatherBytes = HumanReadableBytes.valueOf(Long.MAX_VALUE);
 
   @JsonProperty
   @Min(1)
@@ -172,7 +172,7 @@ public class ServerConfig
 
   public long getMaxScatterGatherBytes()
   {
-    return maxScatterGatherBytes.getValue();
+    return maxScatterGatherBytes.getBytes();
   }
 
   public int getMaxSubqueryRows()

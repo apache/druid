@@ -23,26 +23,26 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.io.Serializable;
 
-@JsonSerialize(using = BytesSerializer.class)
-public class Bytes implements Serializable
+@JsonSerialize(using = HumanReadableBytesSerializer.class)
+public class HumanReadableBytes implements Serializable
 {
-  public static final Bytes ZERO = new Bytes(0L);
+  public static final HumanReadableBytes ZERO = new HumanReadableBytes(0L);
 
-  private long value;
+  private long bytes;
 
-  public Bytes(String value)
+  public HumanReadableBytes(String bytes)
   {
-    this.value = Bytes.parse(value);
+    this.bytes = HumanReadableBytes.parse(bytes);
   }
 
-  public Bytes(long value)
+  public HumanReadableBytes(long bytes)
   {
-    this.value = value;
+    this.bytes = bytes;
   }
 
-  public long getValue()
+  public long getBytes()
   {
-    return value;
+    return bytes;
   }
 
   @Override
@@ -51,8 +51,8 @@ public class Bytes implements Serializable
     if (thatObj == null) {
       return false;
     }
-    if (thatObj instanceof Bytes) {
-      return value == ((Bytes) thatObj).value;
+    if (thatObj instanceof HumanReadableBytes) {
+      return bytes == ((HumanReadableBytes) thatObj).bytes;
     } else {
       return false;
     }
@@ -61,23 +61,23 @@ public class Bytes implements Serializable
   @Override
   public int hashCode()
   {
-    return Long.hashCode(value);
+    return Long.hashCode(bytes);
   }
 
   @Override
   public String toString()
   {
-    return String.valueOf(value);
+    return String.valueOf(bytes);
   }
 
-  public static Bytes valueOf(int bytes)
+  public static HumanReadableBytes valueOf(int bytes)
   {
-    return new Bytes(bytes);
+    return new HumanReadableBytes(bytes);
   }
 
-  public static Bytes valueOf(long bytes)
+  public static HumanReadableBytes valueOf(long bytes)
   {
-    return new Bytes(bytes);
+    return new HumanReadableBytes(bytes);
   }
 
   public static long parse(String number)

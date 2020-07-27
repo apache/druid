@@ -21,8 +21,8 @@ package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.curator.CuratorUtils;
-import org.apache.druid.java.util.common.Bytes;
-import org.apache.druid.java.util.common.BytesRange;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Max;
@@ -44,8 +44,8 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
   private Period taskCleanupTimeout = new Period("PT15M");
 
   @JsonProperty
-  @BytesRange(min = 10 * 1024, max = Integer.MAX_VALUE)
-  private Bytes maxZnodeBytes = Bytes.valueOf(CuratorUtils.DEFAULT_MAX_ZNODE_BYTES);
+  @HumanReadableBytesRange(min = 10 * 1024, max = Integer.MAX_VALUE)
+  private HumanReadableBytes maxZnodeBytes = HumanReadableBytes.valueOf(CuratorUtils.DEFAULT_MAX_ZNODE_BYTES);
 
   @JsonProperty
   private Period taskShutdownLinkTimeout = new Period("PT1M");
@@ -83,7 +83,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 
   public int getMaxZnodeBytes()
   {
-    return (int) maxZnodeBytes.getValue();
+    return (int) maxZnodeBytes.getBytes();
   }
 
   public Period getTaskShutdownLinkTimeout()
@@ -170,7 +170,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     int result = taskAssignmentTimeout.hashCode();
     result = 31 * result + taskCleanupTimeout.hashCode();
     result = 31 * result + getMinWorkerVersion().hashCode();
-    result = 31 * result + (int) maxZnodeBytes.getValue();
+    result = 31 * result + (int) maxZnodeBytes.getBytes();
     result = 31 * result + taskShutdownLinkTimeout.hashCode();
     result = 31 * result + pendingTasksRunnerNumThreads;
     result = 31 * result + maxRetriesBeforeBlacklist;

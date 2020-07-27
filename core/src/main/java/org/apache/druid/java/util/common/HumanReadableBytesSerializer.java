@@ -25,19 +25,20 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 
-public class BytesSerializer extends JsonSerializer<Bytes>
+public class HumanReadableBytesSerializer extends JsonSerializer<HumanReadableBytes>
 {
   @Override
-  public void serialize(Bytes value,
-                        JsonGenerator jgen,
-                        SerializerProvider provider) throws IOException
+  public void serialize(
+      HumanReadableBytes value,
+      JsonGenerator jgen,
+      SerializerProvider provider) throws IOException
   {
-    jgen.writeNumber(value.getValue());
+    jgen.writeNumber(value.getBytes());
   }
 
   @Override
-  public Class<Bytes> handledType()
+  public Class<HumanReadableBytes> handledType()
   {
-    return Bytes.class;
+    return HumanReadableBytes.class;
   }
 }

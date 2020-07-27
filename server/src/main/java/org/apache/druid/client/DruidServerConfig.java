@@ -21,8 +21,8 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.Bytes;
-import org.apache.druid.java.util.common.BytesRange;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableBytesRange;
 
 import javax.validation.constraints.NotNull;
 import java.util.Set;
@@ -32,8 +32,8 @@ import java.util.Set;
 public class DruidServerConfig
 {
   @JsonProperty
-  @BytesRange(min = 0)
-  private Bytes maxSize = Bytes.ZERO;
+  @HumanReadableBytesRange(min = 0)
+  private HumanReadableBytes maxSize = HumanReadableBytes.ZERO;
 
   @JsonProperty
   private String tier = DruidServer.DEFAULT_TIER;
@@ -47,7 +47,7 @@ public class DruidServerConfig
 
   public long getMaxSize()
   {
-    return maxSize.getValue();
+    return maxSize.getBytes();
   }
 
   public String getTier()

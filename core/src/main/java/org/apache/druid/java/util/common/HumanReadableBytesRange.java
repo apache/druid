@@ -35,8 +35,8 @@ import java.lang.annotation.Target;
 })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Constraint(validatedBy = BytesRange.DateRangeValidator.class)
-public @interface BytesRange
+@Constraint(validatedBy = HumanReadableBytesRange.DateRangeValidator.class)
+public @interface HumanReadableBytesRange
 {
 
   long min() default 0;
@@ -52,12 +52,12 @@ public @interface BytesRange
   //ConstraintValidator requires
   Class<? extends Payload>[] payload() default {};
 
-  class DateRangeValidator implements ConstraintValidator<BytesRange, Object>
+  class DateRangeValidator implements ConstraintValidator<HumanReadableBytesRange, Object>
   {
-    private BytesRange range;
+    private HumanReadableBytesRange range;
 
     @Override
-    public void initialize(BytesRange range)
+    public void initialize(HumanReadableBytesRange range)
     {
       this.range = range;
     }
@@ -68,8 +68,8 @@ public @interface BytesRange
       if (value == null) {
         return true;
       }
-      if (value instanceof Bytes) {
-        long lvalue = ((Bytes) value).getValue();
+      if (value instanceof HumanReadableBytes) {
+        long lvalue = ((HumanReadableBytes) value).getBytes();
         return lvalue >= range.min() &&
                lvalue <= range.max();
       }
