@@ -41,6 +41,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   private final Integer fetchDelayMillis;
 
   private final String awsAssumedRoleArn;
+  private final String awsStsEndpoint;
   private final String awsExternalId;
   private final boolean deaggregate;
 
@@ -69,6 +70,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
+      @JsonProperty("awsStsEndpoint") String awsStsEndpoint,
       @JsonProperty("awsExternalId") String awsExternalId,
       @JsonProperty("deaggregate") boolean deaggregate
   )
@@ -95,6 +97,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : DEFAULT_RECORDS_PER_FETCH;
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
+    this.awsStsEndpoint = awsStsEndpoint;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
   }
@@ -112,6 +115,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       Integer recordsPerFetch,
       Integer fetchDelayMillis,
       String awsAssumedRoleArn,
+      String awsStsEndpoint,
       String awsExternalId,
       boolean deaggregate
   )
@@ -132,6 +136,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         recordsPerFetch,
         fetchDelayMillis,
         awsAssumedRoleArn,
+        awsStsEndpoint,
         awsExternalId,
         deaggregate
     );
@@ -146,7 +151,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     if (newStartSequenceNumbers == null) {
       Preconditions.checkNotNull(
           oldStartSequenceNumbers,
-          "Either startSequenceNumbers or startPartitions shoulnd't be null"
+          "Either startSequenceNumbers or startPartitions shouldn't be null"
       );
 
       return new SeekableStreamStartSequenceNumbers<>(
@@ -221,6 +226,12 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   }
 
   @JsonProperty
+  public String getAwsStsEndpoint()
+  {
+    return awsStsEndpoint;
+  }
+
+  @JsonProperty
   public String getAwsExternalId()
   {
     return awsExternalId;
@@ -246,6 +257,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
+           ", awsStsEndpoint='" + awsStsEndpoint + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
            '}';

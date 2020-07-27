@@ -109,6 +109,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
             ioConfig.getEndpoint(),
             awsCredentialsConfig,
             ioConfig.getAwsAssumedRoleArn(),
+            ioConfig.getAwsStsEndpoint(),
             ioConfig.getAwsExternalId()
         ),
         ioConfig.getRecordsPerFetch(),

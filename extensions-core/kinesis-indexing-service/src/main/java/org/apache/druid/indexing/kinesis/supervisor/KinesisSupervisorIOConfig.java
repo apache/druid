@@ -47,6 +47,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final Integer fetchDelayMillis;
 
   private final String awsAssumedRoleArn;
+  private final String awsStsEndpoint;
   private final String awsExternalId;
   private final boolean deaggregate;
 
@@ -69,6 +70,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
+      @JsonProperty("awsStsEndpoint") String awsStsEndpoint,
       @JsonProperty("awsExternalId") String awsExternalId,
       @JsonProperty("deaggregate") boolean deaggregate
   )
@@ -97,6 +99,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
                             ? fetchDelayMillis
                             : KinesisIndexTaskIOConfig.DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
+    this.awsStsEndpoint = awsStsEndpoint;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
   }
@@ -123,6 +126,12 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public String getAwsAssumedRoleArn()
   {
     return awsAssumedRoleArn;
+  }
+
+  @JsonProperty
+  public String getAwsStsEndpoint()
+  {
+    return awsStsEndpoint;
   }
 
   @JsonProperty
@@ -156,6 +165,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
+           ", awsStsEndpoint='" + awsStsEndpoint + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
            '}';

@@ -61,6 +61,7 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
             ioConfig.getEndpoint(),
             awsCredentialsConfig,
             ioConfig.getAwsAssumedRoleArn(),
+            ioConfig.getAwsStsEndpoint(),
             ioConfig.getAwsExternalId()
         ),
         ioConfig.getRecordsPerFetch(),

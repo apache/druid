@@ -1568,6 +1568,43 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: <>The AWS assumed role to use for additional permissions.</>,
         },
         {
+          name: 'awsStsEndpoint',
+          type: 'string',
+          defaultValue: null,
+          suggestions: [
+            'sts.us-east-2.amazonaws.com',
+            'sts.us-east-1.amazonaws.com',
+            'sts.us-west-1.amazonaws.com',
+            'sts.us-west-2.amazonaws.com',
+            'sts.af-south-1.amazonaws.com',
+            'sts.ap-east-1.amazonaws.com',
+            'sts.ap-south-1.amazonaws.com',
+            'sts.ap-northeast-2.amazonaws.com',
+            'sts.ap-southeast-1.amazonaws.com',
+            'sts.ap-southeast-2.amazonaws.com',
+            'sts.ap-northeast-1.amazonaws.com	',
+            'sts.ca-central-1.amazonaws.com',
+            'sts.eu-central-1.amazonaws.com',
+            'sts.eu-west-1.amazonaws.com',
+            'sts.eu-west-2.amazonaws.com',
+            'sts.eu-south-1.amazonaws.com',
+            'sts.eu-west-3.amazonaws.com',
+            'sts.eu-north-1.amazonaws.com',
+            'sts.me-south-1.amazonaws.com',
+            'sts.sa-east-1.amazonaws.com',
+          ],
+          info: (
+            <>
+              The Amazon STS regional endpoint to use when assuming the awsAssumedRoleArn. You can
+              find a list of endpoints{' '}
+              <ExternalLink href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html#id_credentials_region-endpoints">
+                here
+              </ExternalLink>
+              .
+            </>
+          ),
+        },
+        {
           name: 'awsExternalId',
           label: 'AWS external ID',
           type: 'string',

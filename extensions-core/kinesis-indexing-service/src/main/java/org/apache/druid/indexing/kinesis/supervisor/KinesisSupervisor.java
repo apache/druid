@@ -144,6 +144,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
         ioConfig.getAwsAssumedRoleArn(),
+        ioConfig.getAwsStsEndpoint(),
         ioConfig.getAwsExternalId(),
         ioConfig.isDeaggregate()
     );
@@ -196,6 +197,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
             ioConfig.getEndpoint(),
             awsCredentialsConfig,
             ioConfig.getAwsAssumedRoleArn(),
+            ioConfig.getAwsStsEndpoint(),
             ioConfig.getAwsExternalId()
         ),
         ioConfig.getRecordsPerFetch(),

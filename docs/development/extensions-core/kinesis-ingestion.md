@@ -139,6 +139,7 @@ A sample supervisor spec is shown below:
 |`recordsPerFetch`|Integer|The number of records to request per GetRecords call to Kinesis. See 'Determining Fetch Settings' below.|no (default == 2000)|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent GetRecords calls to Kinesis. See 'Determining Fetch Settings' below.|no (default == 1000)|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
+|`awsStsEndpoint`|String|The STS endpoint to use to assume a role. Using a regional STS endpoint is recommended by AWS.|no (default === sts.amazonaws.com)|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
 

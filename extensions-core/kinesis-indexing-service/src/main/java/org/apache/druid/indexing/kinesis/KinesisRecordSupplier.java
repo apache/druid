@@ -507,6 +507,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       String endpoint,
       AWSCredentialsConfig awsCredentialsConfig,
       String awsAssumedRoleArn,
+      String awsStsEndpoint,
       String awsExternalId
   )
   {
@@ -515,13 +516,23 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     );
 
     if (awsAssumedRoleArn != null) {
-      log.info("Assuming role [%s] with externalId [%s]", awsAssumedRoleArn, awsExternalId);
+      log.info("Assuming role [%s] with externalId [%s] and stsEndpoint [%s]", awsAssumedRoleArn, awsExternalId, awsStsEndpoint);
 
+      AWSSecurityTokenServiceClientBuilder stsBuilder = AWSSecurityTokenServiceClientBuilder
+          .standard()
+          .withCredentials(awsCredentialsProvider);
+
+      if (awsStsEndpoint != null) {
+        stsBuilder = stsBuilder
+          .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+              awsStsEndpoint,
+              AwsHostNameUtils.parseRegion(awsStsEndpoint, null)
+          ));
+      }
+                                                  
       STSAssumeRoleSessionCredentialsProvider.Builder builder = new STSAssumeRoleSessionCredentialsProvider
           .Builder(awsAssumedRoleArn, StringUtils.format("druid-kinesis-%s", UUID.randomUUID().toString()))
-          .withStsClient(AWSSecurityTokenServiceClientBuilder.standard()
-                                                             .withCredentials(awsCredentialsProvider)
-                                                             .build());
+          .withStsClient(stsBuilder.build());
 
       if (awsExternalId != null) {
         builder.withExternalId(awsExternalId);
