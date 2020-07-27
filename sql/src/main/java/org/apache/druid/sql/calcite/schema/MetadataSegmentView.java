@@ -20,11 +20,9 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -34,26 +32,17 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
-import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
