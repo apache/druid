@@ -1,6 +1,6 @@
 ---
-id: byte-unit
-title: "Byte Configuration Reference"
+id: human-readable-byte
+title: "Human-readable Byte Configuration Reference"
 ---
 
 <!--

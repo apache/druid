@@ -1774,7 +1774,7 @@ CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
 bin.tar.gz
- - ../docs/configuration/byte-unit.md
+ - ../docs/configuration/human-readable-byte.md
 3G
 1000_000
 1000_000_000
