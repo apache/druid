@@ -412,7 +412,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.addTimeColumn();
     if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
@@ -460,6 +459,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       final TimeseriesResultValue holder = result.getValue();
       final Map<String, Object> values = new HashMap<>(holder.getBaseObject());
       if (calculatePostAggs) {
+        // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
+        // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
+        // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
+        // This should be done before computing post aggregators since they can reference "timestampResultField".
+        if (StringUtils.isNotEmpty(query.getTimestampResultField()) && result.getTimestamp() != null) {
+          final DateTime timestamp = result.getTimestamp();
+          values.put(query.getTimestampResultField(), timestamp.getMillis());
+        }
         if (!query.getPostAggregatorSpecs().isEmpty()) {
           // put non finalized aggregators for calculating dependent post Aggregators
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
@@ -468,13 +475,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
             values.put(postAgg.getName(), postAgg.compute(values));
           }
-        }
-        // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
-        // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
-        // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
-        if (StringUtils.isNotEmpty(query.getTimestampResultField()) && result.getTimestamp() != null) {
-          final DateTime timestamp = result.getTimestamp();
-          values.put(query.getTimestampResultField(), timestamp.getMillis());
         }
       }
       for (AggregatorFactory agg : query.getAggregatorSpecs()) {
