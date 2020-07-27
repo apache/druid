@@ -22,7 +22,6 @@ package org.apache.druid.java.util.common;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import java.io.Serializable;
-import java.util.Locale;
 
 @JsonSerialize(using = BytesSerializer.class)
 public class Bytes implements Serializable
@@ -84,13 +83,12 @@ public class Bytes implements Serializable
   public static long parse(String number)
   {
     if (number == null) {
-      throw new IAE("number is null");
+      throw new IAE("Invalid format of number: number is null");
     }
 
-    number = number.trim().toLowerCase(Locale.getDefault());
-    int len = number.length();
-    if (len == 0) {
-      throw new IAE("number is empty");
+    number = number.trim();
+    if (number.length() == 0) {
+      throw new IAE("Invalid format of number: Number is empty");
     }
 
     return parseInner(number);
@@ -128,71 +126,76 @@ public class Bytes implements Serializable
       return nullValue;
     }
 
-    number = number.trim().toLowerCase(Locale.getDefault());
+    number = number.trim();
     if (number.length() == 0) {
       return nullValue;
     }
     return parseInner(number);
   }
 
-  private static long parseInner(String number)
+  private static long parseInner(String rawNumber)
   {
-    int index = number.length() - 1;
-    boolean isBinary = false;
-    char unit = number.charAt(index--);
+    String number = StringUtils.toLowerCase(rawNumber);
+    if (number.charAt(0) == '-') {
+      throw new IAE("Invalid format of number: %s. Negative value is not allowed.");
+    }
+
+    int lastDigitIndex = number.length() - 1;
+    boolean isBinaryByte = false;
+    char unit = number.charAt(lastDigitIndex--);
     if (unit == 'b') {
-      if (index < 2) {
-        throw new IAE("invalid format of number[%s]", number);
+      //unit ends with 'b' must be format of KiB/MiB/GiB/TiB/PiB, so at least 3 extra characters are required
+      if (lastDigitIndex < 2) {
+        throw new IAE("Invalid format of number: %s", rawNumber);
       }
-      if (number.charAt(index--) != 'i') {
-        throw new IAE("invalid format of number[%s]", number);
+      if (number.charAt(lastDigitIndex--) != 'i') {
+        throw new IAE("Invalid format of number: %s", rawNumber);
       }
 
-      unit = number.charAt(index--);
-      isBinary = true;
+      unit = number.charAt(lastDigitIndex--);
+      isBinaryByte = true;
     }
+
     long base = 1;
     switch (unit) {
       case 'k':
-        base = isBinary ? 1024 : 1_000;
+        base = isBinaryByte ? 1024 : 1_000;
         break;
 
       case 'm':
-        base = isBinary ? 1024 * 1024 : 1_000_000;
+        base = isBinaryByte ? 1024 * 1024 : 1_000_000;
         break;
 
       case 'g':
-        base = isBinary ? 1024 * 1024 * 1024 : 1_000_000_000;
+        base = isBinaryByte ? 1024 * 1024 * 1024 : 1_000_000_000;
         break;
 
       case 't':
-        base = isBinary ? 1024 * 1024 * 1024 * 1024L : 1_000_000_000_000L;
+        base = isBinaryByte ? 1024 * 1024 * 1024 * 1024L : 1_000_000_000_000L;
         break;
 
       case 'p':
-        base = isBinary ? 1024L * 1024 * 1024 * 1024 * 1024 : 1_000_000_000_000_000L;
+        base = isBinaryByte ? 1024L * 1024 * 1024 * 1024 * 1024 : 1_000_000_000_000_000L;
         break;
 
       default:
+        lastDigitIndex++;
         if (!Character.isDigit(unit)) {
-          throw new IAE("invalid character in number[%s]", number);
+          throw new IAE("Invalid format of number: %s", rawNumber);
         }
         break;
     }
 
     try {
-      if (base > 1 && index >= 0) {
-        long value = Long.parseLong(number.substring(0, index + 1)) * base;
-        if (value < base) {
-          throw new IAE("number [%s] overflow", number);
-        }
-        return value;
-      } else {
-        return Long.parseLong(number);
+      long value = Long.parseLong(number.substring(0, lastDigitIndex + 1)) * base;
+      if (base > 1 && value < base) {
+        //for base == 1, overflow has been checked in parseLong
+        throw new IAE("Number overflow: %s", rawNumber);
       }
+      return value;
     }
     catch (NumberFormatException e) {
-      throw new IAE("invalid format of number[%s]", number);
+      throw new IAE("Invalid format of number: %s", rawNumber);
     }
   }
 }

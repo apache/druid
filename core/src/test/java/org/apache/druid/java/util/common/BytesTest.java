@@ -21,8 +21,12 @@ package org.apache.druid.java.util.common;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
@@ -34,86 +38,90 @@ import java.util.Set;
 
 public class BytesTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testNumberString()
   {
-    Assert.assertEquals(1, Bytes.parse("1", 0L));
-    Assert.assertEquals(10000000, Bytes.parse("10000000", 0));
+    Assert.assertEquals(0, Bytes.parse("0"));
+    Assert.assertEquals(1, Bytes.parse("1"));
+    Assert.assertEquals(10000000, Bytes.parse("10000000"));
   }
 
   @Test
   public void testWithWhiteSpace()
   {
-    Assert.assertEquals(12345, Bytes.parse(" 12345 ", 0));
-    Assert.assertEquals(12345, Bytes.parse("\t12345\t", 0));
+    Assert.assertEquals(12345, Bytes.parse(" 12345 "));
+    Assert.assertEquals(12345, Bytes.parse("\t12345\t"));
   }
 
   @Test
   public void testK()
   {
-    Assert.assertEquals(1000, Bytes.parse("1k", 0));
-    Assert.assertEquals(1000, Bytes.parse("1K", 0));
+    Assert.assertEquals(1000, Bytes.parse("1k"));
+    Assert.assertEquals(1000, Bytes.parse("1K"));
   }
 
   @Test
   public void testM()
   {
-    Assert.assertEquals(1000_000, Bytes.parse("1m", 0));
-    Assert.assertEquals(1000_000, Bytes.parse("1M", 0));
+    Assert.assertEquals(1000_000, Bytes.parse("1m"));
+    Assert.assertEquals(1000_000, Bytes.parse("1M"));
   }
 
   @Test
   public void testG()
   {
-    Assert.assertEquals(1000_000_000, Bytes.parse("1g", 0));
-    Assert.assertEquals(1000_000_000, Bytes.parse("1G", 0));
+    Assert.assertEquals(1000_000_000, Bytes.parse("1g"));
+    Assert.assertEquals(1000_000_000, Bytes.parse("1G"));
   }
 
   @Test
   public void testT()
   {
-    Assert.assertEquals(1000_000_000_000L, Bytes.parse("1t", 0));
-    Assert.assertEquals(1000_000_000_000L, Bytes.parse("1T", 0));
+    Assert.assertEquals(1000_000_000_000L, Bytes.parse("1t"));
+    Assert.assertEquals(1000_000_000_000L, Bytes.parse("1T"));
   }
 
   @Test
   public void testKiB()
   {
-    Assert.assertEquals(1024, Bytes.parse("1kib", 0));
-    Assert.assertEquals(9 * 1024, Bytes.parse("9KiB", 0));
-    Assert.assertEquals(9 * 1024, Bytes.parse("9Kib", 0));
+    Assert.assertEquals(1024, Bytes.parse("1kib"));
+    Assert.assertEquals(9 * 1024, Bytes.parse("9KiB"));
+    Assert.assertEquals(9 * 1024, Bytes.parse("9Kib"));
   }
 
   @Test
-  public void testMb()
+  public void testMiB()
   {
-    Assert.assertEquals(1024 * 1024, Bytes.parse("1mib", 0));
-    Assert.assertEquals(9 * 1024 * 1024, Bytes.parse("9MiB", 0));
-    Assert.assertEquals(9 * 1024 * 1024, Bytes.parse("9Mib", 0));
+    Assert.assertEquals(1024 * 1024, Bytes.parse("1mib"));
+    Assert.assertEquals(9 * 1024 * 1024, Bytes.parse("9MiB"));
+    Assert.assertEquals(9 * 1024 * 1024, Bytes.parse("9Mib"));
   }
 
   @Test
   public void testGiB()
   {
-    Assert.assertEquals(1024 * 1024 * 1024, Bytes.parse("1gib", 0));
-    Assert.assertEquals(1024 * 1024 * 1024, Bytes.parse("1GiB", 0));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024, Bytes.parse("9Gib", 0));
+    Assert.assertEquals(1024 * 1024 * 1024, Bytes.parse("1gib"));
+    Assert.assertEquals(1024 * 1024 * 1024, Bytes.parse("1GiB"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024, Bytes.parse("9Gib"));
   }
 
   @Test
   public void testTiB()
   {
-    Assert.assertEquals(1024 * 1024 * 1024 * 1024L, Bytes.parse("1tib", 0));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, Bytes.parse("9TiB", 0));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, Bytes.parse("9Tib", 0));
+    Assert.assertEquals(1024L * 1024 * 1024 * 1024, Bytes.parse("1tib"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, Bytes.parse("9TiB"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, Bytes.parse("9Tib"));
   }
 
   @Test
   public void testPiB()
   {
-    Assert.assertEquals(1024L * 1024 * 1024 * 1024 * 1024, Bytes.parse("1pib", 0));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, Bytes.parse("9PiB", 0));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, Bytes.parse("9Pib", 0));
+    Assert.assertEquals(1024L * 1024 * 1024 * 1024 * 1024, Bytes.parse("1pib"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, Bytes.parse("9PiB"));
+    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, Bytes.parse("9Pib"));
   }
 
   @Test
@@ -124,131 +132,228 @@ public class BytesTest
     Assert.assertEquals(-789, Bytes.parse("\t", -789));
   }
 
-  @Test
-  public void testException()
+  static class ExceptionMatcher implements Matcher
   {
-    try {
-      Bytes.parse("b", 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-      Assert.assertTrue(true);
+    static ExceptionMatcher INVALIDFORMAT = new ExceptionMatcher("Invalid format of number");
+    static ExceptionMatcher OVERFLOW = new ExceptionMatcher("Number overflow");
+
+    private String prefix;
+
+    public ExceptionMatcher(String prefix)
+    {
+      this.prefix = prefix;
     }
 
-    try {
-      Bytes.parse("1 b", 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-      Assert.assertTrue(true);
+    @Override
+    public boolean matches(Object item)
+    {
+      if (!(item instanceof IAE)) {
+        return false;
+      }
+
+      return ((IAE) item).getMessage().startsWith(prefix);
     }
 
-    try {
-      Bytes.parse("tb", 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-      Assert.assertTrue(true);
+    @Override
+    public void describeMismatch(Object item, Description mismatchDescription)
+    {
     }
 
-    try {
-      Bytes.parse("1 mb", 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-      Assert.assertTrue(true);
+    @Override
+    public void _dont_implement_Matcher___instead_extend_BaseMatcher_()
+    {
     }
 
-    try {
-      Bytes.parse("gb", 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-      Assert.assertTrue(true);
-    }
-
-    try {
-      Bytes.parse("tb", 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-      Assert.assertTrue(true);
+    @Override
+    public void describeTo(Description description)
+    {
     }
   }
 
   @Test
-  public void testOverflow()
+  public void testNull()
   {
-    try {
-      Bytes.parse("123456789123456789123", 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse(null);
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / 1000 + 1) + "k";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testEmpty()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("");
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / 1000_000 + 1) + "m";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testWhitespace()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("   ");
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / 1000_000_000L + 1) + "g";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testNegative()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("-1");
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / 1000_000_000_000L + 1) + "t";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testInvalidFormat1()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("b");
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / 1024 + 1) + "kb";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testInvalidFormat2()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("B");
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / (1024 * 1024) + 1) + "mb";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testInvalidFormat3()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("1 b");
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / (1024L * 1024 * 1024) + 1) + "gb";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testInvalidFormat4()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("1b");
+  }
 
-    try {
-      String max = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024) + 1) + "tb";
-      Bytes.parse(max, 0);
-      Assert.assertFalse("IAE should be thrown", true);
-    }
-    catch (IAE e) {
-    }
+  @Test
+  public void testInvalidFormat5()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("tib");
+  }
+
+  @Test
+  public void testInvalidFormat6()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("1 mib");
+  }
+
+  @Test
+  public void testInvalidFormat7()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("gib");
+  }
+
+  @Test
+  public void testInvalidFormat8()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("tib");
+  }
+
+  @Test
+  public void testInvalidFormat9()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse(" pib");
+  }
+
+  @Test
+  public void testInvalidFormat10()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    Bytes.parse("c");
+  }
+
+  @Test
+  public void testExtraLargeNumber()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    String extraLarge = String.valueOf(Long.MAX_VALUE) + "1";
+    Bytes.parse(extraLarge);
+  }
+
+  @Test
+  public void testOverflowK()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / 1000 + 1) + "k";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowM()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / 1000_000 + 1) + "m";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowG()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / 1000_000_000L + 1) + "g";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowT()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / 1000_000_000_000L + 1) + "t";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowP()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / 1_000_000_000_000_000L + 1) + "p";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowKiB()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / 1024 + 1) + "KiB";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowMiB()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / (1024 * 1024) + 1) + "MiB";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowGiB()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024) + 1) + "GiB";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowTiB()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024) + 1) + "TiB";
+    Bytes.parse(overflow);
+  }
+
+  @Test
+  public void testOverflowPiB()
+  {
+    expectedException.expect(ExceptionMatcher.OVERFLOW);
+    String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024 * 1024) + 1) + "PiB";
+    Bytes.parse(overflow);
   }
 
   @Test
@@ -261,30 +366,30 @@ public class BytesTest
     Assert.assertEquals(bytes, deserialized);
   }
 
-  public static class BytesRangeTest
+  static class TestBytesRange
   {
     @BytesRange(min = 0, max = 5)
     Bytes bytes;
 
-    public BytesRangeTest(Bytes bytes)
+    public TestBytesRange(Bytes bytes)
     {
       this.bytes = bytes;
     }
   }
 
   @Test
-  public void testValidator()
+  public void testBytesRange()
   {
-    long errorCount = validate(new BytesRangeTest(Bytes.valueOf(-1)));
+    long errorCount = validate(new TestBytesRange(Bytes.valueOf(-1)));
     Assert.assertEquals(1, errorCount);
 
-    errorCount = validate(new BytesRangeTest(Bytes.valueOf(0)));
+    errorCount = validate(new TestBytesRange(Bytes.valueOf(0)));
     Assert.assertEquals(0, errorCount);
 
-    errorCount = validate(new BytesRangeTest(Bytes.valueOf(5)));
+    errorCount = validate(new TestBytesRange(Bytes.valueOf(5)));
     Assert.assertEquals(0, errorCount);
 
-    errorCount = validate(new BytesRangeTest(Bytes.valueOf(6)));
+    errorCount = validate(new TestBytesRange(Bytes.valueOf(6)));
     Assert.assertEquals(1, errorCount);
   }
 
