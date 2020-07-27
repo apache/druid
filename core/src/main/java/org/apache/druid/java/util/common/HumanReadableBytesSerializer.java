@@ -25,6 +25,19 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
 
+/**
+ *
+ * This serializer provides the basic support of JSON serialization of {@link HumanReadableBytes}
+ * to demonstrate serialization and deserialization work
+ *
+ * Given
+ * <p>
+ *   HumanReadableBytes bytes = new HumanReadableBytes("1K");
+ * </p>
+ * will be serialized as 1000 instead of the raw input of 1K
+ *
+ *
+ */
 public class HumanReadableBytesSerializer extends JsonSerializer<HumanReadableBytes>
 {
   @Override

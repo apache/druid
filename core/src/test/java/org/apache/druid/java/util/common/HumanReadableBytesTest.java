@@ -199,21 +199,21 @@ public class HumanReadableBytesTest
   }
 
   @Test
-  public void testInvalidFormat1()
+  public void testInvalidFormatOneChar()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse("b");
   }
 
   @Test
-  public void testInvalidFormat2()
+  public void testInvalidFormatOneChar2()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse("B");
   }
 
   @Test
-  public void testInvalidFormat3()
+  public void testInvalidFormatExtraSpace()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse("1 b");
@@ -227,42 +227,35 @@ public class HumanReadableBytesTest
   }
 
   @Test
-  public void testInvalidFormat5()
-  {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("tib");
-  }
-
-  @Test
-  public void testInvalidFormat6()
+  public void testInvalidFormatMiBExtraSpace()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse("1 mib");
   }
 
   @Test
-  public void testInvalidFormat7()
-  {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("gib");
-  }
-
-  @Test
-  public void testInvalidFormat8()
+  public void testInvalidFormatTiB()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse("tib");
   }
 
   @Test
-  public void testInvalidFormat9()
+  public void testInvalidFormatGiB()
+  {
+    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
+    HumanReadableBytes.parse("gib");
+  }
+
+  @Test
+  public void testInvalidFormatPiB()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse(" pib");
   }
 
   @Test
-  public void testInvalidFormat10()
+  public void testInvalidCharacter()
   {
     expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
     HumanReadableBytes.parse("c");

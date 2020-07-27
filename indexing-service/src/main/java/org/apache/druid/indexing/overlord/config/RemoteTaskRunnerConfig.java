@@ -83,7 +83,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 
   public int getMaxZnodeBytes()
   {
-    return (int) maxZnodeBytes.getBytes();
+    return maxZnodeBytes.getBytesInInt();
   }
 
   public Period getTaskShutdownLinkTimeout()
@@ -170,7 +170,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
     int result = taskAssignmentTimeout.hashCode();
     result = 31 * result + taskCleanupTimeout.hashCode();
     result = 31 * result + getMinWorkerVersion().hashCode();
-    result = 31 * result + (int) maxZnodeBytes.getBytes();
+    result = 31 * result + maxZnodeBytes.getBytesInInt();
     result = 31 * result + taskShutdownLinkTimeout.hashCode();
     result = 31 * result + pendingTasksRunnerNumThreads;
     result = 31 * result + maxRetriesBeforeBlacklist;

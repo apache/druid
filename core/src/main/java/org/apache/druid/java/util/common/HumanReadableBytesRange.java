@@ -29,18 +29,35 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({
-    ElementType.FIELD,
-    ElementType.PARAMETER
-})
+/**
+ * This annotation is an extension of java validation framework to ensure the validity of value of {@link HumanReadableBytes}.
+ *
+ * To use it, put it on a field of type of {@link HumanReadableBytes}.
+ * For example,
+ *
+ * <code>
+ *   class Size {
+ *     @HumanReadableBytesRange( min = 5, max = 1024 )
+ *     private HumanReadableBytes size;
+ *   }
+ * </code>
+ *
+ *
+ */
+@Target({ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.CONSTRUCTOR, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Constraint(validatedBy = HumanReadableBytesRange.DateRangeValidator.class)
+@Constraint(validatedBy = HumanReadableBytesRange.HumanReadableBytesRangeValidator.class)
 public @interface HumanReadableBytesRange
 {
-
+  /**
+   * lower bound of {@link HumanReadableBytes}. Inclusive
+   */
   long min() default 0;
 
+  /**
+   * upper bound of {@link HumanReadableBytes}. Inclusive
+   */
   long max() default Long.MAX_VALUE;
 
   //ConstraintValidator requires
@@ -52,7 +69,7 @@ public @interface HumanReadableBytesRange
   //ConstraintValidator requires
   Class<? extends Payload>[] payload() default {};
 
-  class DateRangeValidator implements ConstraintValidator<HumanReadableBytesRange, Object>
+  class HumanReadableBytesRangeValidator implements ConstraintValidator<HumanReadableBytesRange, Object>
   {
     private HumanReadableBytesRange range;
 
@@ -69,9 +86,9 @@ public @interface HumanReadableBytesRange
         return true;
       }
       if (value instanceof HumanReadableBytes) {
-        long lvalue = ((HumanReadableBytes) value).getBytes();
-        return lvalue >= range.min() &&
-               lvalue <= range.max();
+        long bytes = ((HumanReadableBytes) value).getBytes();
+        return bytes >= range.min() &&
+               bytes <= range.max();
       }
       return true;
     }

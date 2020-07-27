@@ -41,19 +41,14 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
   @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
-  public String bufferSizeConfigured()
+  public HumanReadableBytes intermediateComputeSizeBytesConfigured()
   {
-    return "-1";
-  }
-
-  public int intermediateComputeSizeBytesConfigured()
-  {
-    return (int) HumanReadableBytes.parse(bufferSizeConfigured(), DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
+    return HumanReadableBytes.valueOf(DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
   }
 
   public int intermediateComputeSizeBytes()
   {
-    int sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
+    int sizeBytesConfigured = intermediateComputeSizeBytesConfigured().getBytesInInt();
     if (sizeBytesConfigured != DEFAULT_PROCESSING_BUFFER_SIZE_BYTES) {
       return sizeBytesConfigured;
     } else if (computedBufferSizeBytes.get() != null) {

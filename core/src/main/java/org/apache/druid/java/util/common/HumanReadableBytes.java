@@ -45,6 +45,15 @@ public class HumanReadableBytes implements Serializable
     return bytes;
   }
 
+  public int getBytesInInt()
+  {
+    if (bytes > Integer.MAX_VALUE) {
+      throw new ISE("Number overflow");
+    }
+
+    return (int) bytes;
+  }
+
   @Override
   public boolean equals(Object thatObj)
   {
