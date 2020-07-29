@@ -55,7 +55,7 @@ interface ConsoleConfig {
   exampleManifestsUrl?: string;
 
   // The query context to set if the user does not have one saved in local storage, defaults to {}
-  defaultQueryContext?: Record<string, any>;
+  defaultQueryConfig?: Record<string, any>;
 
   // Extra context properties that will be added to all query requests
   mandatoryQueryContext?: Record<string, any>;
@@ -86,7 +86,7 @@ if (consoleConfig.linkOverrides) {
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
     exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
-    defaultQueryContext: consoleConfig.defaultQueryContext,
+    defaultQueryConfig: consoleConfig.defaultQueryConfig,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
   }) as any,
   container,

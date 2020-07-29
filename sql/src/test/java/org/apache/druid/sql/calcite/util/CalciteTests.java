@@ -62,7 +62,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.OverrideDefaultQueryContext;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -708,7 +708,7 @@ public class CalciteTests
         new NoopRequestLogger(),
         new AuthConfig(),
         TEST_AUTHORIZER_MAPPER,
-        Suppliers.ofInstance(new OverrideDefaultQueryContext())
+        Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
     );
   }
 

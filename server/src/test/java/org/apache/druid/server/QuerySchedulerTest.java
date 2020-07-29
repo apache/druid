@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -696,7 +697,7 @@ public class QuerySchedulerTest
         ImmutableList.of(
             binder -> {
               binder.bind(ServerConfig.class).toInstance(new ServerConfig());
-              JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
+              JsonConfigProvider.bind(binder, "druid.query.default", DefaultQueryConfig.class, Global.class);
             }
         )
     );

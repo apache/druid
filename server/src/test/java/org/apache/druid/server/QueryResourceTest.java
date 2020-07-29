@@ -35,8 +35,8 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
-import org.apache.druid.query.OverrideDefaultQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
@@ -205,7 +205,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new OverrideDefaultQueryContext())
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -239,10 +239,9 @@ public class QueryResourceTest
   @Test
   public void testGoodQueryWithQueryConfigOverrideDefault() throws IOException
   {
-    OverrideDefaultQueryContext overrideConfig = new OverrideDefaultQueryContext();
     String overrideConfigKey = "priority";
     String overrideConfigValue = "678";
-    overrideConfig.setConfig(overrideConfigKey, overrideConfigValue);
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
             WAREHOUSE,
@@ -292,10 +291,9 @@ public class QueryResourceTest
   @Test
   public void testGoodQueryWithQueryConfigDoesNotOverrideQueryContext() throws IOException
   {
-    OverrideDefaultQueryContext overrideConfig = new OverrideDefaultQueryContext();
     String overrideConfigKey = "priority";
     String overrideConfigValue = "678";
-    overrideConfig.setConfig(overrideConfigKey, overrideConfigValue);
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
             WAREHOUSE,
@@ -582,7 +580,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             authMapper,
-            Suppliers.ofInstance(new OverrideDefaultQueryContext())
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -698,7 +696,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             authMapper,
-            Suppliers.ofInstance(new OverrideDefaultQueryContext())
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -822,7 +820,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             authMapper,
-            Suppliers.ofInstance(new OverrideDefaultQueryContext())
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -1081,7 +1079,7 @@ public class QueryResourceTest
             testRequestLogger,
             new AuthConfig(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            Suppliers.ofInstance(new OverrideDefaultQueryContext())
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,

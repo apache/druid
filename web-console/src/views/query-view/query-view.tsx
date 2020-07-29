@@ -78,7 +78,7 @@ interface QueryWithContext {
 
 export interface QueryViewProps {
   initQuery: string | undefined;
-  defaultQueryContext?: Record<string, any>;
+  defaultQueryConfig?: Record<string, any>;
   mandatoryQueryContext?: Record<string, any>;
 }
 
@@ -180,7 +180,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const parsedQuery = queryString ? parser(queryString) : undefined;
 
     const queryContext =
-      localStorageGetJson(LocalStorageKeys.QUERY_CONTEXT) || props.defaultQueryContext || {};
+      localStorageGetJson(LocalStorageKeys.QUERY_CONTEXT) || props.defaultQueryConfig || {};
 
     const possibleQueryHistory = localStorageGetJson(LocalStorageKeys.QUERY_HISTORY);
     const queryHistory = Array.isArray(possibleQueryHistory) ? possibleQueryHistory : [];
