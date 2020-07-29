@@ -20,6 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.ISE;
 import org.joda.time.Period;
 import redis.clients.jedis.Protocol;
 
@@ -48,15 +49,29 @@ public class RedisCacheConfig
     }
   }
 
+  /**
+   * Support for long-format and Period style format
+   */
   public static class DurationConfig
   {
     private long milliseconds;
 
     public DurationConfig(String time)
     {
-      this.milliseconds = Period.parse(time).toStandardDuration().getMillis();
+      try {
+        // before 0.19.0, only long-format is support,
+        // try to parse it as long
+        this.milliseconds = Long.parseLong(time);
+      }
+      catch (NumberFormatException e) {
+        // try to parse it as a Period string
+        this.milliseconds = Period.parse(time).toStandardDuration().getMillis();
+      }
     }
 
+    /**
+     * Support for inner call and testcases
+     */
     public DurationConfig(long milliseconds)
     {
       this.milliseconds = milliseconds;
@@ -67,15 +82,29 @@ public class RedisCacheConfig
       return milliseconds;
     }
 
+    public int getMillisecondsAsInt()
+    {
+      if (milliseconds > Integer.MAX_VALUE) {
+        throw new ISE("Milliseconds %d is out of range of int", milliseconds);
+      }
+      return (int) milliseconds;
+    }
+
     public long getSeconds()
     {
       return milliseconds / 1000;
     }
   }
 
+  /**
+   * host of a standalone mode redis
+   */
   @JsonProperty
   private String host;
 
+  /**
+   * port of a standalone mode redis
+   */
   @JsonProperty
   @Min(0)
   @Max(65535)
@@ -84,11 +113,8 @@ public class RedisCacheConfig
   @JsonProperty
   private DurationConfig expiration = new DurationConfig("P1D");
 
-  /**
-   * milliseconds, the type is 'int' because current Jedis only accept 'int' for timeout
-   */
   @JsonProperty
-  private int timeout = 2000;
+  private DurationConfig timeout = new DurationConfig("PT2S");
 
   /**
    * max connections of redis connection pool
@@ -112,8 +138,10 @@ public class RedisCacheConfig
   private String password;
 
   @JsonProperty
+  @Min(0)
   private int database = Protocol.DEFAULT_DATABASE;
 
+  @JsonProperty
   private RedisClusterConfig cluster;
 
   public String getHost()
@@ -131,7 +159,7 @@ public class RedisCacheConfig
     return expiration;
   }
 
-  public int getTimeout()
+  public DurationConfig getTimeout()
   {
     return timeout;
   }

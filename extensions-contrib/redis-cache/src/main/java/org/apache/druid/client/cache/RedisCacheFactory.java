@@ -22,6 +22,7 @@ package org.apache.druid.client.cache;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.IAE;
 import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
@@ -36,15 +37,15 @@ public class RedisCacheFactory
     if (config.getCluster() != null && StringUtils.isNotEmpty(config.getCluster().getNodes())) {
 
       Set<HostAndPort> nodes = Arrays.stream(config.getCluster().getNodes().split(","))
-                                     .map(host -> host.trim())
-                                     .filter(host -> StringUtils.isNotBlank(host))
+                                     .map(String::trim)
+                                     .filter(StringUtils::isNotBlank)
                                      .map(host -> {
                                        int index = host.indexOf(':');
                                        if (index <= 0 || index == host.length()) {
                                          throw new IAE("Invalid redis cluster configuration: %s", host);
                                        }
 
-                                       int port = -1;
+                                       int port;
                                        try {
                                          port = Integer.parseInt(host.substring(index + 1));
                                        }
@@ -58,7 +59,31 @@ public class RedisCacheFactory
                                        return new HostAndPort(host.substring(0, index), port);
                                      }).collect(Collectors.toSet());
 
-      return new RedisClusterCache(nodes, config);
+      JedisPoolConfig poolConfig = new JedisPoolConfig();
+      poolConfig.setMaxTotal(config.getMaxTotalConnections());
+      poolConfig.setMaxIdle(config.getMaxIdleConnections());
+      poolConfig.setMinIdle(config.getMinIdleConnections());
+
+      JedisCluster cluster;
+      if (org.apache.commons.lang3.StringUtils.isNotBlank(config.getPassword())) {
+        cluster = new JedisCluster(
+            nodes,
+            config.getTimeout().getMillisecondsAsInt(),
+            config.getTimeout().getMillisecondsAsInt(),
+            config.getCluster().getMaxRedirection(),
+            config.getPassword(),
+            poolConfig
+        );
+      } else {
+        cluster = new JedisCluster(
+            nodes,
+            config.getTimeout().getMillisecondsAsInt(),
+            config.getCluster().getMaxRedirection(),
+            poolConfig
+        );
+      }
+
+      return new RedisClusterCache(cluster, config);
 
     } else {
 
@@ -71,12 +96,12 @@ public class RedisCacheFactory
       poolConfig.setMaxIdle(config.getMaxIdleConnections());
       poolConfig.setMinIdle(config.getMinIdleConnections());
 
-      return new RedisSingleNodeCache(
+      return new RedisStandaloneCache(
           new JedisPool(
               poolConfig,
               config.getHost(),
               config.getPort(),
-              config.getTimeout(),
+              config.getTimeout().getMillisecondsAsInt(),
               config.getPassword(),
               config.getDatabase(),
               null

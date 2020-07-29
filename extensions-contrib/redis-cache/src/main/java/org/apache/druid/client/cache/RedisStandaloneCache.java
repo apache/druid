@@ -24,11 +24,11 @@ import redis.clients.jedis.JedisPool;
 
 import java.util.List;
 
-public class RedisSingleNodeCache extends AbstractRedisCache
+public class RedisStandaloneCache extends AbstractRedisCache
 {
   private JedisPool pool;
 
-  RedisSingleNodeCache(JedisPool pool, RedisCacheConfig config)
+  RedisStandaloneCache(JedisPool pool, RedisCacheConfig config)
   {
     super(config);
 

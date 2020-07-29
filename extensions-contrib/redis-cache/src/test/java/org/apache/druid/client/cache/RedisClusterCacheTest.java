@@ -21,11 +21,90 @@ package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fiftyonred.mock_jedis.MockJedisCluster;
+import com.fiftyonred.mock_jedis.MockJedisPool;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+import org.apache.commons.compress.utils.Sets;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisPoolConfig;
+
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class RedisClusterCacheTest
 {
+  private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
+  private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
+
+  private final RedisCacheConfig cacheConfig = new RedisCacheConfig()
+  {
+    @Override
+    public DurationConfig getTimeout()
+    {
+      return new DurationConfig(2000);
+    }
+
+    @Override
+    public DurationConfig getExpiration()
+    {
+      return new DurationConfig("PT1H");
+    }
+  };
+
+  private RedisClusterCache cache;
+
+  @Before
+  public void setUp()
+  {
+    JedisPoolConfig poolConfig = new JedisPoolConfig();
+    poolConfig.setMaxTotal(cacheConfig.getMaxTotalConnections());
+    poolConfig.setMaxIdle(cacheConfig.getMaxIdleConnections());
+    poolConfig.setMinIdle(cacheConfig.getMinIdleConnections());
+
+    MockJedisPool pool = new MockJedisPool(poolConfig, "localhost");
+    // orginal MockJedis do not support 'milliseconds' in long type,
+    // for test we override to support it
+    cache = new RedisClusterCache(new MockJedisCluster(Sets.newHashSet(new HostAndPort("localhost", 6379)))
+    {
+      Map<String, byte[]> cacheStorage = new HashMap<>();
+
+      @Override
+      public String setex(final byte[] key, final int seconds, final byte[] value)
+      {
+        cacheStorage.put(Base64.getEncoder().encodeToString(key), value);
+        return null;
+      }
+
+      public byte[] get(final byte[] key)
+      {
+        return cacheStorage.get(Base64.getEncoder().encodeToString(key));
+      }
+
+      @Override
+      public List<byte[]> mget(final byte[]... keys)
+      {
+        List<byte[]> ret = new ArrayList<>();
+        for (byte[] key : keys) {
+          String k = Base64.getEncoder().encodeToString(key);
+          byte[] value = cacheStorage.get(k);
+          if (value != null) {
+            ret.add(value);
+          }
+        }
+        return ret;
+      }
+    }, cacheConfig);
+  }
+
+
   @Test
   public void testConfig() throws JsonProcessingException
   {
@@ -38,10 +117,32 @@ public class RedisClusterCacheTest
   }
 
   @Test
-  public void test()
+  public void testCache()
   {
-    RedisCacheConfig config = new RedisCacheConfig();
+    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
-    //cluster
+    Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
+    Cache.NamedKey key2 = new Cache.NamedKey("the", HO);
+    Cache.NamedKey key3 = new Cache.NamedKey("a", HI);
+
+    //test put and get
+    cache.put(key1, new byte[]{1, 2, 3, 4});
+    cache.put(key2, new byte[]{2, 3, 4, 5});
+    cache.put(key3, new byte[]{3, 4, 5, 6});
+    Assert.assertEquals(0x01020304, Ints.fromByteArray(cache.get(key1)));
+    Assert.assertEquals(0x02030405, Ints.fromByteArray(cache.get(key2)));
+    Assert.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
+
+    //test multi get
+    Map<Cache.NamedKey, byte[]> result = cache.getBulk(
+        Lists.newArrayList(
+            key1,
+            key2,
+            key3
+        )
+    );
+    Assert.assertEquals(0x01020304, Ints.fromByteArray(result.get(key1)));
+    Assert.assertEquals(0x02030405, Ints.fromByteArray(result.get(key2)));
+    Assert.assertEquals(0x03040506, Ints.fromByteArray(result.get(key3)));
   }
 }

@@ -19,41 +19,19 @@
 
 package org.apache.druid.client.cache;
 
-import org.apache.commons.lang3.StringUtils;
-import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
-import redis.clients.jedis.JedisPoolConfig;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 public class RedisClusterCache extends AbstractRedisCache
 {
   private JedisCluster cluster;
 
-  RedisClusterCache(Set<HostAndPort> nodes, RedisCacheConfig config)
+  RedisClusterCache(JedisCluster cluster, RedisCacheConfig config)
   {
     super(config);
-
-    JedisPoolConfig poolConfig = new JedisPoolConfig();
-    poolConfig.setMaxTotal(config.getMaxTotalConnections());
-    poolConfig.setMaxIdle(config.getMaxIdleConnections());
-    poolConfig.setMinIdle(config.getMinIdleConnections());
-
-    if (StringUtils.isNotBlank(config.getPassword())) {
-      this.cluster = new JedisCluster(nodes,
-                                      config.getTimeout(),
-                                      config.getTimeout(),
-                                      config.getCluster().getMaxRedirection(),
-                                      config.getPassword(),
-                                      poolConfig);
-    } else {
-      this.cluster = new JedisCluster(nodes,
-                                      config.getTimeout(),
-                                      config.getCluster().getMaxRedirection(),
-                                      poolConfig);
-    }
+    this.cluster = cluster;
   }
 
   @Override
