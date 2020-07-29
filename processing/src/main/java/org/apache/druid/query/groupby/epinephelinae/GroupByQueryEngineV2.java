@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
@@ -114,8 +114,7 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       @Nullable final StorageAdapter storageAdapter,
       final NonBlockingPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig querySpecificConfig,
-      final QueryConfig queryConfig
+      final GroupByQueryConfig querySpecificConfig
   )
   {
     if (storageAdapter == null) {
@@ -143,7 +142,7 @@ public class GroupByQueryEngineV2
       final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
       final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
-      final boolean doVectorize = queryConfig.getVectorize().shouldVectorize(
+      final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
           VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
       );
 
@@ -157,8 +156,7 @@ public class GroupByQueryEngineV2
             fudgeTimestamp,
             filter,
             interval,
-            querySpecificConfig,
-            queryConfig
+            querySpecificConfig
         );
       } else {
         result = processNonVectorized(

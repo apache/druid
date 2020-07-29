@@ -32,6 +32,9 @@ the following ways:
 HTTP POST API, or as properties to the JDBC connection.
 - For [native queries](querying.md), context parameters are provided as a JSON object named `context`.
 
+Note that setting query context will override both the default value and the runtime properties value in the format of
+`druid.query.default.context.{property_key}` (if set). 
+
 These parameters apply to all query types.
 
 |property         |default                                 | description          |
@@ -100,5 +103,5 @@ vectorization. These query types will ignore the "vectorize" parameter even if i
 
 |property|default| description|
 |--------|-------|------------|
-|vectorize|`true`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.vectorize` if it's set.|
-|vectorSize|`512`|Sets the row batching size for a particular query. This will override `druid.query.vectorSize` if it's set.|
+|vectorize|`true`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.default.context.vectorize` if it's set.|
+|vectorSize|`512`|Sets the row batching size for a particular query. This will override `druid.query.default.context.vectorSize` if it's set.|
