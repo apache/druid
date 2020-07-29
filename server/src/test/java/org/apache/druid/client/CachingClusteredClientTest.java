@@ -1564,7 +1564,8 @@ public class CachingClusteredClientTest
                                                         .context(CONTEXT)
                                                         .intervals("2011-01-05/2011-01-10")
                                                         .aggregators(RENAMED_AGGS)
-                                                        .postAggregators(RENAMED_POST_AGGS);
+                                                        .postAggregators(RENAMED_POST_AGGS)
+                                                        .randomQueryId();
 
     TimeseriesQuery query = builder.build();
 
