@@ -32,6 +32,7 @@ import java.util.Set;
  * A {@link JoinableFactory} that delegates to the appropriate factory based on the type of the datasource.
  *
  * Datasources can register a factory via a DruidBinder. Any number of factories can be bound to a datasource, the
+ * 'first' that matches will be returned to the caller, or none if no matches.
  */
 public class MapJoinableFactory implements JoinableFactory
 {

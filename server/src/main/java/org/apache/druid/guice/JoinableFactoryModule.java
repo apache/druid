@@ -61,7 +61,6 @@ public class JoinableFactoryModule implements Module
     MapBinder<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoryMappingBinder =
         DruidBinders.joinableMappingBinder(binder);
 
-    //
     Multibinder<JoinableFactory> joinableFactoryMultibinder = DruidBinders.joinableFactoryMultiBinder(binder);
 
     FACTORY_MAPPINGS.forEach((ds, factory) -> {
