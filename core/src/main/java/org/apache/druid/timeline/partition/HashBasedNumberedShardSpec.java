@@ -107,7 +107,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @Override
   public boolean isInChunk(long timestamp, InputRow inputRow)
   {
-    return Math.abs(hash(timestamp, inputRow) % numBuckets) == bucketId % numBuckets;
+    return getBucketIndex(hash(timestamp, inputRow), numBuckets) == bucketId % numBuckets;
   }
 
   /**
@@ -126,7 +126,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
         o -> Collections.singletonList(partitionDimensionsValues.get(o))
     );
     try {
-      return Math.abs(hash(jsonMapper, groupKey) % numBuckets) == bucketId % numBuckets;
+      return getBucketIndex(hash(jsonMapper, groupKey), numBuckets) == bucketId % numBuckets;
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);
@@ -189,7 +189,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   )
   {
     return (long timestamp, InputRow row) -> {
-      int index = Math.abs(hash(jsonMapper, partitionDimensions, timestamp, row) % numBuckets);
+      int index = getBucketIndex(hash(jsonMapper, partitionDimensions, timestamp, row), numBuckets);
       return shardSpecs.get(index);
     };
   }
@@ -234,8 +234,9 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
     // If no partitionDimensions are specified during ingestion, hash is based on all dimensions plus the truncated
-    // input timestamp according to QueryGranularity instead of just partitionDimensions. Since we don't store the
-    // timestamp after ingestion, bypass this case
+    // input timestamp according to QueryGranularity instead of just partitionDimensions. Since we don't store in shard
+    // specs the truncated timestamps of the events that fall into the shard after ingestion, there's no way to recover
+    // the hash during ingestion, bypass this case
     if (partitionDimensions.isEmpty()) {
       return true;
     }
@@ -295,5 +296,10 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     }
 
     return false;
+  }
+
+  private static int getBucketIndex(int hash, int numBuckets)
+  {
+    return Math.abs(hash % numBuckets);
   }
 }
