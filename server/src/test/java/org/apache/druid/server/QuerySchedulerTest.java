@@ -696,7 +696,8 @@ public class QuerySchedulerTest
         ImmutableList.of(
             binder -> {
               binder.bind(ServerConfig.class).toInstance(new ServerConfig());
-              JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);	            }
+              JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
+            }
         )
     );
     ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
