@@ -20,12 +20,59 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Period;
+import redis.clients.jedis.Protocol;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
 public class RedisCacheConfig
 {
+  public static class RedisClusterConfig
+  {
+    @JsonProperty
+    private String nodes;
+
+    // cluster
+    @JsonProperty
+    private int maxRedirection = 5;
+
+    public String getNodes()
+    {
+      return nodes;
+    }
+
+    public int getMaxRedirection()
+    {
+      return maxRedirection;
+    }
+  }
+
+  public static class DurationConfig
+  {
+    private long milliseconds;
+
+    public DurationConfig(String time)
+    {
+      this.milliseconds = Period.parse(time).toStandardDuration().getMillis();
+    }
+
+    public DurationConfig(long milliseconds)
+    {
+      this.milliseconds = milliseconds;
+    }
+
+    public long getMilliseconds()
+    {
+      return milliseconds;
+    }
+
+    public long getSeconds()
+    {
+      return milliseconds / 1000;
+    }
+  }
+
   @JsonProperty
   private String host;
 
@@ -35,31 +82,39 @@ public class RedisCacheConfig
   private int port;
 
   @JsonProperty
-  private String cluster;
+  private DurationConfig expiration = new DurationConfig("P1D");
 
-  // milliseconds, default to one day
-  @JsonProperty
-  private Time expiration = new Time("P1D");
-
-  // milliseconds, the type is 'int' because current Jedis only accept 'int' for timeout
+  /**
+   * milliseconds, the type is 'int' because current Jedis only accept 'int' for timeout
+   */
   @JsonProperty
   private int timeout = 2000;
 
-  // max connections of redis connection pool
+  /**
+   * max connections of redis connection pool
+   */
   @JsonProperty
   private int maxTotalConnections = 8;
 
-  // max idle connections of redis connection pool
+  /**
+   * max idle connections of redis connection pool
+   */
   @JsonProperty
   private int maxIdleConnections = 8;
 
-  // min idle connections of redis connection pool
+  /**
+   * min idle connections of redis connection pool
+   */
   @JsonProperty
   private int minIdleConnections = 0;
 
-  // cluster
   @JsonProperty
-  private int maxRedirection = 5;
+  private String password;
+
+  @JsonProperty
+  private int database = Protocol.DEFAULT_DATABASE;
+
+  private RedisClusterConfig cluster;
 
   public String getHost()
   {
@@ -71,9 +126,7 @@ public class RedisCacheConfig
     return port;
   }
 
-  public String getCluster() { return cluster; }
-
-  public Time getExpiration()
+  public DurationConfig getExpiration()
   {
     return expiration;
   }
@@ -98,5 +151,18 @@ public class RedisCacheConfig
     return minIdleConnections;
   }
 
-  public int getMaxRedirection() { return maxRedirection; }
+  public RedisClusterConfig getCluster()
+  {
+    return cluster;
+  }
+
+  public String getPassword()
+  {
+    return password;
+  }
+
+  public int getDatabase()
+  {
+    return database;
+  }
 }

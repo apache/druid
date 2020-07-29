@@ -56,9 +56,9 @@ public class RedisSingleNodeCacheTest
     }
 
     @Override
-    public Time getExpiration()
+    public DurationConfig getExpiration()
     {
-      return new Time("PT1H");
+      return new DurationConfig("PT1H");
     }
   };
 

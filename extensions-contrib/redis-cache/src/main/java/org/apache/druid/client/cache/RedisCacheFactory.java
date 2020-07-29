@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.client.cache;
 
 import org.apache.commons.lang.StringUtils;
@@ -10,23 +29,19 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Author: frank.chen021@outlook.com
- * Date: 2020/7/22 4:18 下午
- */
 public class RedisCacheFactory
 {
   public static Cache create(final RedisCacheConfig config)
   {
-    if (StringUtils.isNotEmpty(config.getCluster())) {
+    if (config.getCluster() != null && StringUtils.isNotEmpty(config.getCluster().getNodes())) {
 
-      Set<HostAndPort> nodes = Arrays.stream(config.getCluster().split(","))
+      Set<HostAndPort> nodes = Arrays.stream(config.getCluster().getNodes().split(","))
                                      .map(host -> host.trim())
                                      .filter(host -> StringUtils.isNotBlank(host))
                                      .map(host -> {
                                        int index = host.indexOf(':');
-                                       if (index <= 0 || index == host.length() ) {
-                                         throw new IAE("invalid redis cluster configuration: %s", host);
+                                       if (index <= 0 || index == host.length()) {
+                                         throw new IAE("Invalid redis cluster configuration: %s", host);
                                        }
 
                                        int port = -1;
@@ -34,10 +49,10 @@ public class RedisCacheFactory
                                          port = Integer.parseInt(host.substring(index + 1));
                                        }
                                        catch (NumberFormatException e) {
-                                         throw new IAE("invalid redis cluster configuration: invalid port %s", host);
+                                         throw new IAE("Invalid redis cluster configuration: invalid port %s", host);
                                        }
                                        if (port <= 0 || port > 65535) {
-                                         throw new IAE("invalid redis cluster configuration: invalid port %s", host);
+                                         throw new IAE("Invalid redis cluster configuration: invalid port %s", host);
                                        }
 
                                        return new HostAndPort(host.substring(0, index), port);
@@ -47,8 +62,8 @@ public class RedisCacheFactory
 
     } else {
 
-      if ( StringUtils.isEmpty(config.getHost()) ) {
-        throw new IAE("invalid redis configuration. no redis server or cluster configured.");
+      if (StringUtils.isBlank(config.getHost())) {
+        throw new IAE("Invalid redis configuration. no redis server or cluster configured.");
       }
 
       JedisPoolConfig poolConfig = new JedisPoolConfig();
@@ -56,11 +71,18 @@ public class RedisCacheFactory
       poolConfig.setMaxIdle(config.getMaxIdleConnections());
       poolConfig.setMinIdle(config.getMinIdleConnections());
 
-      return new RedisSingleNodeCache(new JedisPool(poolConfig,
-                                                    config.getHost(),
-                                                    config.getPort(),
-                                                    config.getTimeout()),
-                                      config);
+      return new RedisSingleNodeCache(
+          new JedisPool(
+              poolConfig,
+              config.getHost(),
+              config.getPort(),
+              config.getTimeout(),
+              config.getPassword(),
+              config.getDatabase(),
+              null
+          ),
+          config
+      );
     }
   }
 }

@@ -46,7 +46,7 @@ public class RedisSingleNodeCache extends AbstractRedisCache
   }
 
   @Override
-  protected void putToRedis(byte[] key, byte[] value, Time expiration)
+  protected void putToRedis(byte[] key, byte[] value, RedisCacheConfig.DurationConfig expiration)
   {
     try (Jedis jedis = pool.getResource()) {
       jedis.psetex(key, expiration.getMilliseconds(), value);

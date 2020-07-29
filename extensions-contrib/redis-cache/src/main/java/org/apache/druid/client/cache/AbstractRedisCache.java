@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-abstract public class AbstractRedisCache implements Cache
+public abstract class AbstractRedisCache implements Cache
 {
   private static final Logger log = new Logger(AbstractRedisCache.class);
 
@@ -44,7 +44,7 @@ abstract public class AbstractRedisCache implements Cache
   // both get、put and getBulk will increase request count by 1
   private final AtomicLong totalRequestCount = new AtomicLong(0);
 
-  private Time expiration;
+  private RedisCacheConfig.DurationConfig expiration;
 
   protected AbstractRedisCache(RedisCacheConfig config)
   {
@@ -82,7 +82,8 @@ abstract public class AbstractRedisCache implements Cache
     totalRequestCount.incrementAndGet();
     try {
       this.putToRedis(key.toByteArray(), value, this.expiration);
-    } catch (JedisException e) {
+    }
+    catch (JedisException e) {
       errorCount.incrementAndGet();
       log.warn(e, "Exception pushing item to cache");
     }
@@ -107,7 +108,8 @@ abstract public class AbstractRedisCache implements Cache
 
       hitCount.addAndGet(results.size());
       missCount.addAndGet(namedKeys.size() - results.size());
-    } catch (JedisException e) {
+    }
+    catch (JedisException e) {
       if (e.getMessage().contains("Read timed out")) {
         timeoutCount.incrementAndGet();
       } else {
@@ -166,8 +168,11 @@ abstract public class AbstractRedisCache implements Cache
     }
   }
 
-  abstract protected byte[] getFromRedis(byte[] key);
-  abstract protected void putToRedis(byte[] key, byte[] value, Time expiration);
-  abstract protected List<byte[]> mgetFromRedis(byte[]... keys);
-  abstract protected void cleanup();
+  protected abstract byte[] getFromRedis(byte[] key);
+
+  protected abstract void putToRedis(byte[] key, byte[] value, RedisCacheConfig.DurationConfig expiration);
+
+  protected abstract List<byte[]> mgetFromRedis(byte[]... keys);
+
+  protected abstract void cleanup();
 }
