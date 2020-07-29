@@ -52,6 +52,22 @@ public class DefaultQueryConfigTest
     Assert.assertEquals("true", defaultQueryConfig.getContext().get("vectorize"));
   }
 
+  @Test
+  public void testSerdeEmptyContextMap()
+  {
+    final Injector injector = createInjector();
+    final String propertyPrefix = "druid.query.default";
+    final JsonConfigProvider<DefaultQueryConfig> provider = JsonConfigProvider.of(
+        propertyPrefix,
+        DefaultQueryConfig.class
+    );
+    final Properties properties = new Properties();
+    provider.inject(properties, injector.getInstance(JsonConfigurator.class));
+    final DefaultQueryConfig defaultQueryConfig = provider.get().get();
+    Assert.assertNotNull(defaultQueryConfig.getContext());
+    Assert.assertEquals(0, defaultQueryConfig.getContext().size());
+  }
+
   private Injector createInjector()
   {
     Injector injector = GuiceInjectors.makeStartupInjectorWithModules(

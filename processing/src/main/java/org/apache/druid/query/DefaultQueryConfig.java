@@ -21,7 +21,9 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
+import javax.annotation.Nonnull;
 import java.util.Map;
 
 /**
@@ -46,6 +48,7 @@ public class DefaultQueryConfig
   @JsonProperty
   private final Map<String, Object> context;
 
+  @Nonnull
   public Map<String, Object> getContext()
   {
     return context;
@@ -54,6 +57,10 @@ public class DefaultQueryConfig
   @JsonCreator
   public DefaultQueryConfig(@JsonProperty("context") Map<String, Object> context)
   {
-    this.context = context;
+    if (context == null) {
+      this.context = ImmutableMap.of();
+    } else {
+      this.context = context;
+    }
   }
 }
