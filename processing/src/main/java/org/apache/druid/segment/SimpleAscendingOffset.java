@@ -53,7 +53,7 @@ public class SimpleAscendingOffset extends Offset
     return currentOffset < rowCount;
   }
 
-  void setCurrentOffset(int currentOffset)
+  public void setCurrentOffset(int currentOffset)
   {
     this.currentOffset = currentOffset;
   }

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -379,7 +380,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         baseClient,
         null /* local client; unused in this test, so pass in null */,
         warehouse,
-        new MapJoinableFactory(ImmutableMap.of()),
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         retryConfig,
         jsonMapper,
         serverConfig,

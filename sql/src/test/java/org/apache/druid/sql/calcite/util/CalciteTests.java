@@ -727,10 +727,8 @@ public class CalciteTests
   {
     return QueryStackTests.makeJoinableFactoryFromDefault(
         INJECTOR.getInstance(LookupExtractorFactoryContainerProvider.class),
-        ImmutableMap.of(
-            GlobalTableDataSource.class,
-            CUSTOM_ROW_TABLE_JOINABLE
-        )
+        ImmutableSet.of(CUSTOM_ROW_TABLE_JOINABLE),
+        ImmutableMap.of(CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)
     );
   }
 

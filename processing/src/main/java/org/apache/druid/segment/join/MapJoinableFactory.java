@@ -19,49 +19,58 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
 import org.apache.druid.query.DataSource;
 
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * A {@link JoinableFactory} that delegates to the appropriate factory based on the type of the datasource.
  *
- * Datasources can register a factory via a DruidBinder
+ * Datasources can register a factory via a DruidBinder. Any number of factories can be bound to a datasource, the
  */
 public class MapJoinableFactory implements JoinableFactory
 {
-  private final Map<Class<? extends DataSource>, JoinableFactory> joinableFactories;
+  private final SetMultimap<Class<? extends DataSource>, JoinableFactory> joinableFactories;
 
   @Inject
-  public MapJoinableFactory(Map<Class<? extends DataSource>, JoinableFactory> joinableFactories)
+  public MapJoinableFactory(
+      Set<JoinableFactory> factories,
+      Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> factoryToDataSource
+  )
   {
-    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
-    // Class doesn't override Object.equals().
-    this.joinableFactories = new IdentityHashMap<>(joinableFactories);
+    this.joinableFactories = HashMultimap.create();
+    factories.forEach(joinableFactory -> {
+      joinableFactories.put(factoryToDataSource.get(joinableFactory.getClass()), joinableFactory);
+    });
   }
 
   @Override
   public boolean isDirectlyJoinable(DataSource dataSource)
   {
-    JoinableFactory factory = joinableFactories.get(dataSource.getClass());
-    if (factory == null) {
-      return false;
-    } else {
-      return factory.isDirectlyJoinable(dataSource);
+    Set<JoinableFactory> factories = joinableFactories.get(dataSource.getClass());
+    for (JoinableFactory factory : factories) {
+      if (factory.isDirectlyJoinable(dataSource)) {
+        return true;
+      }
     }
+    return false;
   }
 
   @Override
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
-    JoinableFactory factory = joinableFactories.get(dataSource.getClass());
-    if (factory == null) {
-      return Optional.empty();
-    } else {
-      return factory.build(dataSource, condition);
+    Set<JoinableFactory> factories = joinableFactories.get(dataSource.getClass());
+    for (JoinableFactory factory : factories) {
+      Optional<Joinable> maybeJoinable = factory.build(dataSource, condition);
+      if (maybeJoinable.isPresent()) {
+        return maybeJoinable;
+      }
     }
+    return Optional.empty();
   }
 }
