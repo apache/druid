@@ -21,14 +21,12 @@ package org.apache.druid.java.util.common;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import java.io.Serializable;
-
 @JsonSerialize(using = HumanReadableBytesSerializer.class)
-public class HumanReadableBytes implements Serializable
+public class HumanReadableBytes
 {
   public static final HumanReadableBytes ZERO = new HumanReadableBytes(0L);
 
-  private long bytes;
+  private final long bytes;
 
   public HumanReadableBytes(String bytes)
   {

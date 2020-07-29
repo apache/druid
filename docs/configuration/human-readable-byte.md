@@ -46,8 +46,10 @@ Here comes another way, a number with a unit suffix.
 Given the total size of disks is 1T, the configuration can be
 
 ````
-druid.segmentCache.locations=[{"path":"/segment-cache","maxSize":"1g"}]
+druid.segmentCache.locations=[{"path":"/segment-cache","maxSize":"1t"}]
 ````
+
+Note: in above example, both `1t` and `1T` are acceptable since it's case insensitive.
 
 ### Supported Units
 In the world of computer, a unit like `K` is ambiguous. It means 1000 or 1024 in different contexts, for more information please see [Here](https://en.wikipedia.org/wiki/Binary_prefix).
