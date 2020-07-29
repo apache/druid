@@ -41,7 +41,7 @@ import './console-application.scss';
 
 export interface ConsoleApplicationProps {
   exampleManifestsUrl?: string;
-  defaultQueryConfig?: Record<string, any>;
+  defaultQueryContext?: Record<string, any>;
   mandatoryQueryContext?: Record<string, any>;
 }
 
@@ -204,13 +204,13 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private wrappedQueryView = () => {
-    const { defaultQueryConfig, mandatoryQueryContext } = this.props;
+    const { defaultQueryContext, mandatoryQueryContext } = this.props;
 
     return this.wrapInViewContainer(
       'query',
       <QueryView
         initQuery={this.initQuery}
-        defaultQueryConfig={defaultQueryConfig}
+        defaultQueryContext={defaultQueryContext}
         mandatoryQueryContext={mandatoryQueryContext}
       />,
     );
