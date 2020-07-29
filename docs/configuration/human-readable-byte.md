@@ -33,21 +33,22 @@ These properties can be configured through 2 ways:
 
 Given the cache size is 3G, there's a configuration as below
 
-````
-druid.cache.sizeInBytes=3000000000 #3 * 1000_000_000
-````
+```properties
+# 3G bytes = 3_000_000_000 bytes
+druid.cache.sizeInBytes=3000000000 
+```
 
 
 ## A number with a unit suffix
 
-Sometimes value in bytes could be very large in Druid, it's counterintuitive to set value of these properties as above.
+Sometimes value in byte could be very large in Druid, it's counterintuitive to set value of these properties as above.
 Here comes another way, a number with a unit suffix.
 
-Given the total size of disks is 1T, the configuration can be
+Given the size of disk is 1T, the configuration can be
 
-````
+```properties
 druid.segmentCache.locations=[{"path":"/segment-cache","maxSize":"1t"}]
-````
+```
 
 Note: in above example, both `1t` and `1T` are acceptable since it's case insensitive.
 
@@ -59,10 +60,10 @@ To make it clear, the base of units are defined as below
 | Unit | Description | Base |
 |---|---|---|
 | K | Kilo Decimal Byte | 1000 |
-| M | Mega Decimal Byte | 1000_000 |
-| G | Giga Decimal Byte | 1000_000_000 |
-| T | Tera Decimal Byte | 1000_000_000_000 |
-| P | Peta Decimal Byte | 1000_000_000_000_000 |
+| M | Mega Decimal Byte | 1_000_000 |
+| G | Giga Decimal Byte | 1_000_000_000 |
+| T | Tera Decimal Byte | 1_000_000_000_000 |
+| P | Peta Decimal Byte | 1_000_000_000_000_000 |
 | KiB | Kilo Binary Byte | 1024 |
 | MiB  | Mega Binary Byte | 1024 * 1024 |
 | GiB | Giga Binary Byte | 1024 * 1024 * 1024 |
@@ -73,13 +74,15 @@ Unit is case-insensitive. `k`, `kib`, `KiB`, `kiB` are all acceptable.
 
 Here are two examples
 
-````
-druid.cache.sizeInBytes=1g #1 * 1000_000_000 bytes
-````
+```properties
+# 1G bytes = 1_000_000_000 bytes
+druid.cache.sizeInBytes=1g 
+```
 
-````
-druid.cache.sizeInBytes=256MiB #256 * 1024 * 1024 bytes
-````
+```properties
+# 256MiB bytes = 256 * 1024 * 1024 bytes
+druid.cache.sizeInBytes=256MiB 
+```
 
 
  

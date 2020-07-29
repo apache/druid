@@ -95,7 +95,7 @@ public class HumanReadableBytes
 
     number = number.trim();
     if (number.length() == 0) {
-      throw new IAE("Invalid format of number: Number is empty");
+      throw new IAE("Invalid format of number: number is blank");
     }
 
     return parseInner(number);
@@ -178,7 +178,7 @@ public class HumanReadableBytes
         break;
 
       case 't':
-        base = isBinaryByte ? 1024 * 1024 * 1024 * 1024L : 1_000_000_000_000L;
+        base = isBinaryByte ? 1024L * 1024 * 1024 * 1024 : 1_000_000_000_000L;
         break;
 
       case 'p':
@@ -186,10 +186,13 @@ public class HumanReadableBytes
         break;
 
       default:
-        lastDigitIndex++;
         if (!Character.isDigit(unit)) {
           throw new IAE("Invalid format of number: %s", rawNumber);
         }
+
+        //lastDigitIndex here holds the index which is prior to current digit
+        //move backward so that it's at the right place
+        lastDigitIndex++;
         break;
     }
 
