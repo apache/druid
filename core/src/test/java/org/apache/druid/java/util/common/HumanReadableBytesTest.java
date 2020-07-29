@@ -134,7 +134,7 @@ public class HumanReadableBytesTest
 
   static class ExceptionMatcher implements Matcher
   {
-    static ExceptionMatcher INVALIDFORMAT = new ExceptionMatcher("Invalid format of number");
+    static ExceptionMatcher INVALIDFORMAT = new ExceptionMatcher("Invalid format");
     static ExceptionMatcher OVERFLOW = new ExceptionMatcher("Number overflow");
 
     private String prefix;

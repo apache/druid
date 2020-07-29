@@ -202,7 +202,7 @@ public class HumanReadableBytes
       return value;
     }
     catch (NumberFormatException e) {
-      throw new IAE("Invalid format of number: %s", rawNumber);
+      throw new IAE("Invalid format or out of range of long: %s", rawNumber);
     }
   }
 }
