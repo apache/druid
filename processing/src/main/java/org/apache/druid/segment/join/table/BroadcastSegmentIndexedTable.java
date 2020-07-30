@@ -44,7 +44,6 @@ import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -229,7 +228,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // the segment will close itself when it is dropped, no need to do it here
   }

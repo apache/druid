@@ -26,7 +26,8 @@ import java.util.Optional;
 /**
  * Utility for creating {@link Joinable} objects.
  *
- * @see org.apache.druid.guice.DruidBinders#joinableFactoryBinder to register factories
+ * @see org.apache.druid.guice.DruidBinders#joinableFactoryMultiBinder to register factories
+ * @see org.apache.druid.guice.DruidBinders#joinableMappingBinder to register factory types with datasource types
  */
 public interface JoinableFactory
 {
