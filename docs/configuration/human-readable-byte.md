@@ -23,15 +23,15 @@ title: "Human-readable Byte Configuration Reference"
   -->
 
 
-This page documents all configuration properties related to bytes.
+This page documents configuration properties related to bytes.
 
 These properties can be configured through 2 ways: 
-1. a simple number in byte
+1. a simple number in bytes
 2. a number with a unit suffix
 
-## A number in byte
+## A number in bytes
 
-Given the cache size is 3G, there's a configuration as below
+Given that cache size is 3G, there's a configuration as below
 
 ```properties
 # 3G bytes = 3_000_000_000 bytes
@@ -41,25 +41,24 @@ druid.cache.sizeInBytes=3000000000
 
 ## A number with a unit suffix
 
-Sometimes value in byte could be very large in Druid, it's counterintuitive to set value of these properties as above.
-Here comes another way, a number with a unit suffix.
+When you have to put a large number for some configuration as above, it is easy to make a mistake such as extra or missing 0s. Druid supports a better way, a number with a unit suffix.
 
-Given the size of disk is 1T, the configuration can be
+Given a disk of 1T, the configuration can be
 
 ```properties
 druid.segmentCache.locations=[{"path":"/segment-cache","maxSize":"1t"}]
 ```
 
-Note: in above example, both `1t` and `1T` are acceptable since it's case insensitive.
+Note: in above example, both `1t` and `1T` are acceptable since it's case-insensitive.
 
 ### Supported Units
 In the world of computer, a unit like `K` is ambiguous. It means 1000 or 1024 in different contexts, for more information please see [Here](https://en.wikipedia.org/wiki/Binary_prefix).
 
-To make it clear, the base of units are defined as below
+To make it clear, the base of units are defined in Druid as below
 
 | Unit | Description | Base |
 |---|---|---|
-| K | Kilo Decimal Byte | 1000 |
+| K | Kilo Decimal Byte | 1_000 |
 | M | Mega Decimal Byte | 1_000_000 |
 | G | Giga Decimal Byte | 1_000_000_000 |
 | T | Tera Decimal Byte | 1_000_000_000_000 |
