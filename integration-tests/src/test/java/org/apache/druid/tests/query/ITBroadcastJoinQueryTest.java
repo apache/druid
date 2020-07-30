@@ -35,7 +35,6 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
-import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -66,30 +65,25 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   @Inject
   IntegrationTestingConfig config;
 
-  private String joinDatasource;
-
-  @BeforeSuite
-  public void setFullDatasourceName()
-  {
-    joinDatasource = BROADCAST_JOIN_DATASOURCE + config.getExtraDatasourceNameSuffix();
-  }
-
   @Test
   public void testBroadcastJoin() throws Exception
   {
     final Closer closer = Closer.create();
     try {
-      closer.register(unloader(joinDatasource));
+      closer.register(unloader(BROADCAST_JOIN_DATASOURCE));
 
       // prepare for broadcast
-      coordinatorClient.postLoadRules(joinDatasource, ImmutableList.of(new ForeverBroadcastDistributionRule()));
+      coordinatorClient.postLoadRules(
+          BROADCAST_JOIN_DATASOURCE,
+          ImmutableList.of(new ForeverBroadcastDistributionRule())
+      );
 
       // load the data
-      String taskJson = replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_TASK), joinDatasource);
+      String taskJson = replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_TASK), BROADCAST_JOIN_DATASOURCE);
       String taskId = indexer.submitTask(taskJson);
 
       ITRetryUtil.retryUntilTrue(
-          () -> coordinatorClient.areSegmentsLoaded(joinDatasource), "broadcast segment load"
+          () -> coordinatorClient.areSegmentsLoaded(BROADCAST_JOIN_DATASOURCE), "broadcast segment load"
       );
 
       // query metadata until druid schema is refreshed and datasource is available joinable
@@ -98,7 +92,10 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
             try {
               queryHelper.testQueriesFromString(
                   queryHelper.getQueryURL(config.getRouterUrl()),
-                  replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_RESOURCE), joinDatasource),
+                  replaceJoinTemplate(
+                      getResourceAsString(BROADCAST_JOIN_METADATA_QUERIES_RESOURCE),
+                      BROADCAST_JOIN_DATASOURCE
+                  ),
                   1
               );
               return true;
@@ -113,7 +110,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
       // now do some queries
       queryHelper.testQueriesFromString(
           queryHelper.getQueryURL(config.getRouterUrl()),
-          replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), joinDatasource),
+          replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE),
           1
       );
     }
