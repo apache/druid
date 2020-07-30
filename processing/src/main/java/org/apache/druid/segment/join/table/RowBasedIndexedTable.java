@@ -127,29 +127,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   @Override
   public Index columnIndex(int column)
   {
-    final Map<Object, IntList> indexMap = index.get(column);
-
-    if (indexMap == null) {
-      throw new IAE("Column[%d] is not a key column", column);
-    }
-
-    final ValueType columnType =
-        rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
-
-    return key -> {
-      final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, columnType, false);
-
-      if (convertedKey != null) {
-        final IntList found = indexMap.get(convertedKey);
-        if (found != null) {
-          return found;
-        } else {
-          return IntLists.EMPTY_LIST;
-        }
-      } else {
-        return IntLists.EMPTY_LIST;
-      }
-    };
+    return getKeyColumnIndex(column, index, rowSignature);
   }
 
   @Override
@@ -181,5 +159,32 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   public void close()
   {
     // nothing to close
+  }
+
+  static Index getKeyColumnIndex(int column, List<Map<Object, IntList>> keyColumnsIndex, RowSignature rowSignature)
+  {
+    final Map<Object, IntList> indexMap = keyColumnsIndex.get(column);
+
+    if (indexMap == null) {
+      throw new IAE("Column[%d] is not a key column", column);
+    }
+
+    final ValueType columnType =
+        rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
+
+    return key -> {
+      final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, columnType, false);
+
+      if (convertedKey != null) {
+        final IntList found = indexMap.get(convertedKey);
+        if (found != null) {
+          return found;
+        } else {
+          return IntLists.EMPTY_LIST;
+        }
+      } else {
+        return IntLists.EMPTY_LIST;
+      }
+    };
   }
 }

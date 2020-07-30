@@ -21,7 +21,6 @@ package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -124,7 +123,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
               final Map<Object, IntList> keyColumnValueIndex = keyColumnsIndex.get(columnPosition);
 
               final Object value = selectors.get(keyColumnSelectorIndex).getObject();
-              final ValueType keyType = rowSignature.getColumnType(keyColumnNames.get(keyColumnSelectorIndex))
+              final ValueType keyType = rowSignature.getColumnType(keyColumnName)
                                                     .orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
               // is this actually necessary or is value already cool? (RowBasedIndexedTable cargo cult represent)
               final Object key = DimensionHandlerUtils.convertObjectToType(value, keyType);
@@ -180,29 +179,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   @Override
   public Index columnIndex(int column)
   {
-    final Map<Object, IntList> indexMap = keyColumnsIndex.get(column);
-
-    if (indexMap == null) {
-      throw new IAE("Column[%d] is not a key column", column);
-    }
-
-    final ValueType columnType =
-        rowSignature.getColumnType(column).orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
-
-    return key -> {
-      final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, columnType, false);
-
-      if (convertedKey != null) {
-        final IntList found = indexMap.get(convertedKey);
-        if (found != null) {
-          return found;
-        } else {
-          return IntLists.EMPTY_LIST;
-        }
-      } else {
-        return IntLists.EMPTY_LIST;
-      }
-    };
+    return RowBasedIndexedTable.getKeyColumnIndex(column, keyColumnsIndex, rowSignature);
   }
 
   @Override
