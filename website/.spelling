@@ -1775,8 +1775,10 @@ CVE-2019-12399
 CVE-2018-17196
 bin.tar.gz
  - ../docs/configuration/human-readable-byte.md
+0s
 1T
 3G
+1_000
 1_000_000
 1_000_000_000
 1_000_000_000_000
