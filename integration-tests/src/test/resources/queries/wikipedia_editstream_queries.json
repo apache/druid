@@ -1398,33 +1398,35 @@
         },
         "expectedResults": [
             {
-                "id": "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-                "intervals": ["2012-12-29T00:00:00.000Z/2013-01-10T08:00:00.000Z"],
-                "columns": {
-                    "country_name": {
-                        "type": "STRING",
-                        "hasMultipleValues": false,
-                        "size": 0,
-                        "cardinality": 208,
+                "id":"wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
+                "intervals":["2012-12-29T00:00:00.000Z/2013-01-10T08:00:00.000Z"],
+                "columns":{
+                    "country_name":{
+                        "type":"STRING",
+                        "hasMultipleValues":false,
+                        "size":0,
+                        "cardinality":208,
                         "minValue":"",
                         "maxValue":"mmx._unknown",
-                        "errorMessage": null
+                        "errorMessage":null,
+                        "nullable":false
                     },
-                    "language": {
-                        "type": "STRING",
-                        "hasMultipleValues": false,
-                        "size": 0,
-                        "cardinality": 36,
+                    "language":{
+                        "type":"STRING",
+                        "hasMultipleValues":false,
+                        "size":0,
+                        "cardinality":36,
                         "minValue":"ar",
                         "maxValue":"zh",
-                        "errorMessage": null
+                        "errorMessage":null,
+                        "nullable":false
                     }
                 },
-                "size": 0,
-                "numRows": 4462111,
-                "aggregators": null,
-                "timestampSpec": null,
-                "queryGranularity": null,
+                "size":0,
+                "numRows":4462111,
+                "aggregators":null,
+                "timestampSpec":null,
+                "queryGranularity":null,
                 "rollup":null
             }
         ]
