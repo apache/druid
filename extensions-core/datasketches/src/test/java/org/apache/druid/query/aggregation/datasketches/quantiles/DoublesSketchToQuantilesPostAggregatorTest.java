@@ -19,18 +19,82 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class DoublesSketchToQuantilesPostAggregatorTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    final PostAggregator there = new DoublesSketchToQuantilesPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[] {0, 0.5, 1}
+    );
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    DoublesSketchToQuantilesPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        DoublesSketchToQuantilesPostAggregator.class
+    );
+
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+  }
+
+  @Test
+  public void testToString()
+  {
+    final PostAggregator postAgg = new DoublesSketchToQuantilesPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[] {0, 0.5, 1}
+    );
+
+    Assert.assertEquals(
+        "DoublesSketchToQuantilesPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, fractions=[0.0, 0.5, 1.0]}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testComparator()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Comparing arrays of quantiles is not supported");
+    final PostAggregator postAgg = new DoublesSketchToQuantilesPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[] {0, 0.5, 1}
+    );
+    postAgg.getComparator();
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(DoublesSketchToQuantilesPostAggregator.class)
+                  .withNonnullFields("name", "field", "fractions")
+                  .usingGetClass()
+                  .verify();
+  }
+
   @Test
   public void emptySketch()
   {

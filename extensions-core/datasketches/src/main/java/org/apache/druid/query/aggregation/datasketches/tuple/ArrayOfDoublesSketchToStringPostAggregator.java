@@ -67,5 +67,4 @@ public class ArrayOfDoublesSketchToStringPostAggregator extends ArrayOfDoublesSk
         .appendCacheable(getField())
         .build();
   }
-
 }

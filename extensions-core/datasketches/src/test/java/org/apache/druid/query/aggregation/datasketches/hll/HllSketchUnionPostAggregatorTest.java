@@ -17,36 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.tuple;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
-public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregatorTest
+import java.util.Arrays;
+
+public class HllSketchUnionPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    final PostAggregator there = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
-        null
+    final PostAggregator there = new HllSketchUnionPostAggregator(
+        "post",
+        Arrays.asList(
+            new FieldAccessPostAggregator("field1", "sketch"),
+            new FieldAccessPostAggregator("field2", "sketch")
+        ),
+        1024,
+        TgtHllType.HLL_8.name()
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator andBackAgain = mapper.readValue(
+    HllSketchUnionPostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class
+        HllSketchUnionPostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);
@@ -56,37 +57,27 @@ public class ArrayOfDoublesSketchToEstimateAndBoundsPostAggregatorTest
   @Test
   public void testToString()
   {
-    PostAggregator postAgg = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
+    final PostAggregator postAgg = new HllSketchUnionPostAggregator(
+        "post",
+        Arrays.asList(
+            new FieldAccessPostAggregator("field1", "sketch"),
+            new FieldAccessPostAggregator("field2", "sketch")
+        ),
+        null,
         null
     );
 
     Assert.assertEquals(
-        "ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}, numStdDevs=1}",
+        "HllSketchUnionPostAggregator{name='post', fields=[FieldAccessPostAggregator{name='field1', fieldName='sketch'}, FieldAccessPostAggregator{name='field2', fieldName='sketch'}], lgK=12, tgtHllType=HLL_4}",
         postAgg.toString()
     );
   }
 
   @Test
-  public void testComparator()
-  {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of estimates and error bounds is not supported");
-    final PostAggregator postAgg = new ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0),
-        null
-    );
-    postAgg.getComparator();
-  }
-
-  @Test
   public void testEqualsAndHashCode()
   {
-    EqualsVerifier.forClass(ArrayOfDoublesSketchToEstimateAndBoundsPostAggregator.class)
-                  .withNonnullFields("name", "field")
-                  .withIgnoredFields("dependentFields")
+    EqualsVerifier.forClass(HllSketchUnionPostAggregator.class)
+                  .withNonnullFields("name", "fields")
                   .usingGetClass()
                   .verify();
   }
