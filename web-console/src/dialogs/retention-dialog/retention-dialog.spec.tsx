@@ -26,7 +26,15 @@ describe('retention dialog', () => {
     const retentionDialog = (
       <RetentionDialog
         datasource={'test'}
-        rules={[null]}
+        rules={[
+          {
+            period: 'P1000Y',
+            includeFuture: true,
+            tieredReplicants: { _default_tier: 2 },
+            type: 'loadByPeriod',
+          },
+        ]}
+        defaultRules={[{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }]}
         tiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']}
         onEditDefaults={() => {}}
         onCancel={() => {}}

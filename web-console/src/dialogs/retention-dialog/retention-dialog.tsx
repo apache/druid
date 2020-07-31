@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, FormGroup } from '@blueprintjs/core';
+import { Button, Divider, FormGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
@@ -25,6 +25,7 @@ import { SnitchDialog } from '..';
 import { ExternalLink, RuleEditor } from '../../components';
 import { getLink } from '../../links';
 import { QueryManager } from '../../utils';
+import { Rule, RuleUtil } from '../../utils/load-rule';
 
 import './retention-dialog.scss';
 
@@ -40,23 +41,24 @@ export function reorderArray<T>(items: T[], oldIndex: number, newIndex: number):
 
 export interface RetentionDialogProps {
   datasource: string;
-  rules: any[];
+  rules: Rule[];
+  defaultRules: Rule[];
   tiers: string[];
   onEditDefaults: () => void;
   onCancel: () => void;
-  onSave: (datasource: string, newRules: any[], comment: string) => void;
+  onSave: (datasource: string, newRules: Rule[], comment: string) => void;
 }
 
 export interface RetentionDialogState {
-  currentRules: any[];
-  historyRecords: any[];
+  currentRules: Rule[];
+  historyRecords: any[] | undefined;
 }
 
 export class RetentionDialog extends React.PureComponent<
   RetentionDialogProps,
   RetentionDialogState
 > {
-  private historyQueryManager: QueryManager<string, any>;
+  private historyQueryManager: QueryManager<string, any[]>;
 
   constructor(props: RetentionDialogProps) {
     super(props);
@@ -91,7 +93,7 @@ export class RetentionDialog extends React.PureComponent<
     onSave(datasource, currentRules, comment);
   };
 
-  private changeRule = (newRule: any, index: number) => {
+  private changeRule = (newRule: Rule, index: number) => {
     const { currentRules } = this.state;
 
     const newRules = (currentRules || []).map((r, i) => {
@@ -125,7 +127,7 @@ export class RetentionDialog extends React.PureComponent<
     });
   }
 
-  renderRule = (rule: any, index: number) => {
+  renderRule = (rule: Rule, index: number) => {
     const { tiers } = this.props;
     const { currentRules } = this.state;
 
@@ -139,6 +141,14 @@ export class RetentionDialog extends React.PureComponent<
         moveUp={index > 0 ? () => this.moveRule(index, -1) : null}
         moveDown={index < (currentRules || []).length - 1 ? () => this.moveRule(index, 2) : null}
       />
+    );
+  };
+
+  renderDefaultRule = (rule: Rule, index: number) => {
+    return (
+      <Button disabled key={index}>
+        {RuleUtil.ruleToString(rule)}
+      </Button>
     );
   };
 
@@ -165,7 +175,7 @@ export class RetentionDialog extends React.PureComponent<
   };
 
   render(): JSX.Element {
-    const { datasource, onCancel, onEditDefaults } = this.props;
+    const { datasource, onCancel, onEditDefaults, defaultRules } = this.props;
     const { currentRules, historyRecords } = this.state;
 
     return (
@@ -188,17 +198,32 @@ export class RetentionDialog extends React.PureComponent<
           </ExternalLink>
           .
         </p>
-        <FormGroup>{(currentRules || []).map(this.renderRule)}</FormGroup>
-        <FormGroup className="right">
-          <Button icon={IconNames.PLUS} onClick={this.addRule}>
-            New rule
-          </Button>
+        <FormGroup>
+          {currentRules.length ? (
+            currentRules.map(this.renderRule)
+          ) : datasource !== '_default' ? (
+            <p className="no-rules-message">
+              This datasource currently has no rules, it will use the cluster defaults.
+            </p>
+          ) : (
+            undefined
+          )}
+          <div>
+            <Button icon={IconNames.PLUS} onClick={this.addRule}>
+              New rule
+            </Button>
+          </div>
         </FormGroup>
-        {!currentRules.length && datasource !== '_default' && (
-          <p>
-            This datasource currently has no rules, it will use the cluster defaults (
-            <a onClick={onEditDefaults}>edit cluster defaults</a>)
-          </p>
+        {datasource !== '_default' && (
+          <>
+            <Divider />
+            <FormGroup>
+              <p>
+                Cluster defaults (<a onClick={onEditDefaults}>edit</a>):
+              </p>
+              {defaultRules.map(this.renderDefaultRule)}
+            </FormGroup>
+          </>
         )}
       </SnitchDialog>
     );
