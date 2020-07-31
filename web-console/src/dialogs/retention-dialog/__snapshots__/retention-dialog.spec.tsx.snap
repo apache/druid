@@ -23,7 +23,7 @@ exports[`retention dialog matches snapshot 1`] = `
           <h4
             class="bp3-heading"
           >
-            Edit retention rules: test
+            Edit retention rules: test-datasource
           </h4>
           <button
             aria-label="Close"
@@ -404,44 +404,14 @@ exports[`retention dialog matches snapshot 1`] = `
                                   _default_tier
                                 </option>
                                 <option
-                                  value="a"
+                                  value="tier1"
                                 >
-                                  a
+                                  tier1
                                 </option>
                                 <option
-                                  value="b"
+                                  value="tier2"
                                 >
-                                  b
-                                </option>
-                                <option
-                                  value="c"
-                                >
-                                  c
-                                </option>
-                                <option
-                                  value="d"
-                                >
-                                  d
-                                </option>
-                                <option
-                                  value="e"
-                                >
-                                  e
-                                </option>
-                                <option
-                                  value="f"
-                                >
-                                  f
-                                </option>
-                                <option
-                                  value="g"
-                                >
-                                  g
-                                </option>
-                                <option
-                                  value="h"
-                                >
-                                  h
+                                  tier2
                                 </option>
                               </select>
                               <span
