@@ -49,7 +49,7 @@ public class SketchSetPostAggregatorTest
   public void testConstructorNumFields()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Illegal number of fields[0], must be >= 1");
+    expectedException.expectMessage("Illegal number of fields[0], must be > 1");
     new SketchSetPostAggregator(
         "summary",
         "UNION",
