@@ -20,16 +20,19 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.Sets;
+import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
+
 
 /**
  */
@@ -40,6 +43,8 @@ public class MonitorScheduler
   private final ServiceEmitter emitter;
   private final Set<Monitor> monitors;
   private final Object lock = new Object();
+  private final Duration syncPeriod = Duration.ofSeconds(1L);
+  private final CronScheduler scheduler;
 
   private volatile boolean started = false;
 
@@ -54,6 +59,7 @@ public class MonitorScheduler
     this.exec = exec;
     this.emitter = emitter;
     this.monitors = Sets.newHashSet(monitors);
+    this.scheduler = CronScheduler.create(syncPeriod);
   }
 
   @LifecycleStart
@@ -113,7 +119,7 @@ public class MonitorScheduler
     synchronized (lock) {
       monitor.start();
       ScheduledExecutors.scheduleAtFixedRate(
-          exec,
+          scheduler,
           config.getEmitterPeriod(),
           new Callable<ScheduledExecutors.Signal>()
           {

@@ -19,10 +19,12 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
+import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Duration;
 
+import java.time.Instant;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -164,6 +166,45 @@ public class ScheduledExecutors
         },
         initialDelay.getMillis(),
         TimeUnit.MILLISECONDS
+    );
+  }
+
+  public static void scheduleAtFixedRate(CronScheduler exec, Duration rate, Callable<Signal> callable)
+  {
+    scheduleAtFixedRate(exec, rate, rate, callable);
+  }
+
+  public static void scheduleAtFixedRate(
+      final CronScheduler exec,
+      final Duration initialDelay,
+      final Duration rate,
+      final Callable<Signal> callable
+  )
+  {
+    log.debug("Scheduling periodically: %s with period %s", callable, rate);
+    Instant delayInstance = Instant.now().plusMillis(initialDelay.getMillis());
+    exec.scheduleAt(delayInstance,
+        new Runnable()
+        {
+          private volatile Signal prevSignal = null;
+
+          @Override
+          public void run()
+          {
+            if (prevSignal == null || prevSignal == Signal.REPEAT) {
+              Instant periodInstance = Instant.now().plusMillis(rate.getMillis());
+              exec.scheduleAt(periodInstance, this);
+            }
+
+            try {
+              log.trace("Running %s (period %s)", callable, rate);
+              prevSignal = callable.call();
+            }
+            catch (Throwable e) {
+              log.error(e, "Uncaught exception.");
+            }
+          }
+        }
     );
   }
 
