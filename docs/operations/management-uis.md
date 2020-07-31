@@ -1,6 +1,6 @@
 ---
 id: management-uis
-title: "Management UIs"
+title: "Legacy Management UIs"
 ---
 
 <!--
@@ -23,28 +23,13 @@ title: "Management UIs"
   -->
 
 
-## Druid console
+## Legacy consoles
 
 Druid provides a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
-The Druid Console is hosted by the [Router](../design/router.md) process. We recommend running the Router process on your [Query server](../design/processes.md).
-
-In addition, the following cluster settings must be enabled:
-
-- the Router's [management proxy](../design/router.html#enabling-the-management-proxy) must be enabled.
-- the Broker processes in the cluster must have [Druid SQL](../querying/sql.md) enabled.
-
-After enabling Druid SQL on the Brokers and deploying a Router with the management proxy enabled, the Druid console can be accessed at:
-
-```
-http://<ROUTER_IP>:<ROUTER_PORT>
-```
+For more information on the Druid Console, have a look at the [Druid Console overview](./druid-console.md)
 
 The Druid Console contains all of the functionality provided by the older consoles described below, which are still available if needed. The legacy consoles may be replaced by the Druid Console in the future.
-
-For more information on the features of the Druid Console have a look at the [Druid Console overview](./druid-console.md)
-
-## Legacy consoles
 
 These older consoles provide a subset of the functionality of the Druid Console. We recommend using the Druid Console if possible.
 

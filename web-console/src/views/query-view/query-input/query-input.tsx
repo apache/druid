@@ -17,7 +17,7 @@
  */
 
 import { IResizeEntry, ResizeSensor } from '@blueprintjs/core';
-import ace from 'brace';
+import ace, { Editor } from 'brace';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -29,7 +29,7 @@ import {
   SQL_KEYWORDS,
 } from '../../../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../../../lib/sql-docs';
-import { uniq } from '../../../utils';
+import { RowColumn, uniq } from '../../../utils';
 import { ColumnMetadata } from '../../../utils/column-metadata';
 
 import './query-input.scss';
@@ -56,6 +56,8 @@ export interface QueryInputState {
 }
 
 export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputState> {
+  private aceEditor: Editor | undefined;
+
   static replaceDefaultAutoCompleter(): void {
     if (!langTools) return;
 
@@ -209,6 +211,13 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     onQueryStringChange(value);
   };
 
+  public goToRowColumn(rowColumn: RowColumn) {
+    const { aceEditor } = this;
+    if (!aceEditor) return;
+    aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
+    aceEditor.focus(); // Grab the focus also
+  }
+
   render(): JSX.Element {
     const { queryString, runeMode } = this.props;
     const { editorHeight } = this.state;
@@ -240,6 +249,9 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
               }}
               style={{}}
               placeholder="SELECT * FROM ..."
+              onLoad={(editor: any) => {
+                this.aceEditor = editor;
+              }}
             />
           </div>
         </ResizeSensor>

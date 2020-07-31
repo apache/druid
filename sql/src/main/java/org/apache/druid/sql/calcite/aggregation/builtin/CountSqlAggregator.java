@@ -28,7 +28,9 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
@@ -50,6 +52,41 @@ public class CountSqlAggregator implements SqlAggregator
   public SqlAggFunction calciteFunction()
   {
     return SqlStdOperatorTable.COUNT;
+  }
+
+  static AggregatorFactory createCountAggregatorFactory(
+          final String countName,
+          final PlannerContext plannerContext,
+          final RowSignature rowSignature,
+          final VirtualColumnRegistry virtualColumnRegistry,
+          final RexBuilder rexBuilder,
+          final AggregateCall aggregateCall,
+          final Project project
+  )
+  {
+    final RexNode rexNode = Expressions.fromFieldAccess(
+            rowSignature,
+            project,
+            Iterables.getOnlyElement(aggregateCall.getArgList())
+    );
+
+    if (rexNode.getType().isNullable()) {
+      final DimFilter nonNullFilter = Expressions.toFilter(
+              plannerContext,
+              rowSignature,
+              virtualColumnRegistry,
+              rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ImmutableList.of(rexNode))
+      );
+
+      if (nonNullFilter == null) {
+        // Don't expect this to happen.
+        throw new ISE("Could not create not-null filter for rexNode[%s]", rexNode);
+      }
+
+      return new FilteredAggregatorFactory(new CountAggregatorFactory(countName), nonNullFilter);
+    } else {
+      return new CountAggregatorFactory(countName);
+    }
   }
 
   @Nullable
@@ -96,32 +133,16 @@ public class CountSqlAggregator implements SqlAggregator
       }
     } else {
       // Not COUNT(*), not distinct
-
       // COUNT(x) should count all non-null values of x.
-      final RexNode rexNode = Expressions.fromFieldAccess(
-          rowSignature,
-          project,
-          Iterables.getOnlyElement(aggregateCall.getArgList())
-      );
-
-      if (rexNode.getType().isNullable()) {
-        final DimFilter nonNullFilter = Expressions.toFilter(
+      return Aggregation.create(createCountAggregatorFactory(
+            name,
             plannerContext,
             rowSignature,
             virtualColumnRegistry,
-            rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ImmutableList.of(rexNode))
-        );
-
-        if (nonNullFilter == null) {
-          // Don't expect this to happen.
-          throw new ISE("Could not create not-null filter for rexNode[%s]", rexNode);
-        }
-
-        return Aggregation.create(new CountAggregatorFactory(name))
-                          .filter(rowSignature, virtualColumnRegistry, nonNullFilter);
-      } else {
-        return Aggregation.create(new CountAggregatorFactory(name));
-      }
+            rexBuilder,
+            aggregateCall,
+            project
+      ));
     }
   }
 }

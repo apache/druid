@@ -229,6 +229,8 @@ public class IndexTaskTest extends IngestionTestBase
         appenderatorsManager
     );
 
+    Assert.assertFalse(indexTask.supportsQueries());
+
     final List<DataSegment> segments = runTask(indexTask).rhs;
 
     Assert.assertEquals(2, segments.size());
@@ -237,13 +239,13 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
     Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) segments.get(0).getShardSpec()).getPartitions());
+    Assert.assertEquals(2, segments.get(0).getShardSpec().getNumCorePartitions());
 
     Assert.assertEquals("test", segments.get(1).getDataSource());
     Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
     Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
     Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, ((NumberedShardSpec) segments.get(1).getShardSpec()).getPartitions());
+    Assert.assertEquals(2, segments.get(1).getShardSpec().getNumCorePartitions());
   }
 
   @Test
@@ -1561,8 +1563,8 @@ public class IndexTaskTest extends IngestionTestBase
 
       Assert.assertTrue(
           StringUtils.format("Actual dimensions: %s", dimensions),
-          dimensions.equals(Sets.newHashSet("dim", "column_3")) ||
-          dimensions.equals(Sets.newHashSet("column_2", "column_3"))
+          dimensions.equals(Sets.newHashSet("column_2")) ||
+          dimensions.equals(Sets.newHashSet("dim", "column_2", "column_3"))
       );
 
       Assert.assertEquals(Collections.singletonList("val"), segment.getMetrics());

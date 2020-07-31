@@ -41,7 +41,7 @@ import java.util.Objects;
  * The column number is optional (the default is 1).
  * The parameter k is optional (the default is defined in the sketch library).
  * The result is a quantiles sketch.
- * See <a href=https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html>Quantiles Sketch Overview</a>
+ * See <a href=https://datasketches.apache.org/docs/Quantiles/QuantilesOverview.html>Quantiles Sketch Overview</a>
  */
 public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOfDoublesSketchUnaryPostAggregator
 {

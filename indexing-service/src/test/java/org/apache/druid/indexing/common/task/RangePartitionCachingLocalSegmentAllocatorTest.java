@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
@@ -30,10 +31,13 @@ import org.apache.druid.indexing.common.task.batch.partition.RangePartitionAnaly
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
-import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.apache.druid.timeline.partition.RangeBucketShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -81,7 +85,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
       INTERVAL_NORMAL, NORMAL_PARTITIONS
   );
 
-  private CachingSegmentAllocator target;
+  private SegmentAllocator target;
   private SequenceNameFunction sequenceNameFunction;
 
   @Rule
@@ -104,10 +108,11 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
         toolbox,
         DATASOURCE,
         TASKID,
+        new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, ImmutableList.of()),
         new SupervisorTaskAccessWithNullClient(SUPERVISOR_TASKID),
         partitionAnalysis
     );
-    sequenceNameFunction = new NonLinearlyPartitionedSequenceNameFunction(TASKID, target.getShardSpecs());
+    sequenceNameFunction = ((CachingLocalSegmentAllocator) target).getSequenceNameFunction();
   }
 
   @Test
@@ -161,37 +166,37 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   }
 
   @SuppressWarnings("SameParameterValue")
-  private void testAllocate(InputRow row, Interval interval, int partitionNum)
+  private void testAllocate(InputRow row, Interval interval, int bucketId)
   {
-    String partitionEnd = getPartitionEnd(interval, partitionNum);
-    testAllocate(row, interval, partitionNum, partitionEnd);
+    String partitionEnd = getPartitionEnd(interval, bucketId);
+    testAllocate(row, interval, bucketId, partitionEnd);
   }
 
   @Nullable
-  private static String getPartitionEnd(Interval interval, int partitionNum)
+  private static String getPartitionEnd(Interval interval, int bucketId)
   {
     PartitionBoundaries partitions = INTERVAL_TO_PARTITONS.get(interval);
-    boolean isLastPartition = (partitionNum + 1) == partitions.size();
-    return isLastPartition ? null : partitions.get(partitionNum + 1);
+    boolean isLastPartition = (bucketId + 1) == partitions.size();
+    return isLastPartition ? null : partitions.get(bucketId + 1);
   }
 
-  private void testAllocate(InputRow row, Interval interval, int partitionNum, @Nullable String partitionEnd)
+  private void testAllocate(InputRow row, Interval interval, int bucketId, @Nullable String partitionEnd)
   {
-    String partitionStart = getPartitionStart(interval, partitionNum);
-    testAllocate(row, interval, partitionNum, partitionStart, partitionEnd);
+    String partitionStart = getPartitionStart(interval, bucketId);
+    testAllocate(row, interval, bucketId, partitionStart, partitionEnd);
   }
 
   @Nullable
-  private static String getPartitionStart(Interval interval, int partitionNum)
+  private static String getPartitionStart(Interval interval, int bucketId)
   {
-    boolean isFirstPartition = partitionNum == 0;
-    return isFirstPartition ? null : INTERVAL_TO_PARTITONS.get(interval).get(partitionNum);
+    boolean isFirstPartition = bucketId == 0;
+    return isFirstPartition ? null : INTERVAL_TO_PARTITONS.get(interval).get(bucketId);
   }
 
   private void testAllocate(
       InputRow row,
       Interval interval,
-      int partitionNum,
+      int bucketId,
       @Nullable String partitionStart,
       @Nullable String partitionEnd
   )
@@ -200,12 +205,12 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     SegmentIdWithShardSpec segmentIdWithShardSpec = allocate(row, sequenceName);
 
     Assert.assertEquals(
-        SegmentId.of(DATASOURCE, interval, INTERVAL_TO_VERSION.get(interval), partitionNum),
+        SegmentId.of(DATASOURCE, interval, INTERVAL_TO_VERSION.get(interval), bucketId),
         segmentIdWithShardSpec.asSegmentId()
     );
-    SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segmentIdWithShardSpec.getShardSpec();
+    RangeBucketShardSpec shardSpec = (RangeBucketShardSpec) segmentIdWithShardSpec.getShardSpec();
     Assert.assertEquals(PARTITION_DIMENSION, shardSpec.getDimension());
-    Assert.assertEquals(partitionNum, shardSpec.getPartitionNum());
+    Assert.assertEquals(bucketId, shardSpec.getBucketId());
     Assert.assertEquals(partitionStart, shardSpec.getStart());
     Assert.assertEquals(partitionEnd, shardSpec.getEnd());
   }

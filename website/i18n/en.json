@@ -89,6 +89,9 @@
       "development/experimental": {
         "title": "Experimental features"
       },
+      "development/extensions-contrib/aliyun-oss": {
+        "title": "Aliyun OSS"
+      },
       "development/extensions-contrib/ambari-metrics-emitter": {
         "title": "Ambari Metrics Emitter"
       },
@@ -334,7 +337,7 @@
         "title": "kubernetes"
       },
       "operations/management-uis": {
-        "title": "Management UIs"
+        "title": "Legacy Management UIs"
       },
       "operations/metadata-migration": {
         "title": "Metadata Migration"

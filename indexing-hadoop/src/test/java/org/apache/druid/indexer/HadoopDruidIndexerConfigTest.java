@@ -63,7 +63,7 @@ public class HadoopDruidIndexerConfigTest
     final int partitionCount = 10;
     for (int i = 0; i < partitionCount; i++) {
       shardSpecs.add(new HadoopyShardSpec(
-          new HashBasedNumberedShardSpec(i, partitionCount, null, new DefaultObjectMapper()),
+          new HashBasedNumberedShardSpec(i, partitionCount, i, partitionCount, null, new DefaultObjectMapper()),
           i
       ));
     }

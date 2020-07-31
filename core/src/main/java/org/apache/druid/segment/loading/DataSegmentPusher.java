@@ -20,9 +20,11 @@
 package org.apache.druid.segment.loading;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 
 import java.io.File;
 import java.io.IOException;
@@ -105,6 +107,13 @@ public interface DataSegmentPusher
   // on segment deletion if segment being deleted was the only segment
   static String getDefaultStorageDir(DataSegment segment, boolean useUniquePath)
   {
+    // Sanity check for shardSpec type.
+    // BucketNumberedShardSpec should never be used in segment push.
+    Preconditions.checkArgument(
+        !(segment.getShardSpec() instanceof BucketNumberedShardSpec),
+        "Illegal shardSpec type[%s]",
+        segment.getShardSpec()
+    );
     return JOINER.join(
         segment.getDataSource(),
         StringUtils.format("%s_%s", segment.getInterval().getStart(), segment.getInterval().getEnd()),

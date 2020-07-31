@@ -22,10 +22,10 @@ package org.apache.druid.tests.indexer;
 import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialDimensionDistributionTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialGenericSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
-import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentMergeTask;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialRangeSegmentGenerateTask;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.ISE;
@@ -44,6 +44,7 @@ import org.testng.Assert;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -51,6 +52,9 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
   public enum InputFormatDetails
   {
+    AVRO("avro_ocf", ".avro", "/avro"),
+    CSV("csv", ".csv", "/csv"),
+    TSV("tsv", ".tsv", "/tsv"),
     ORC("orc", ".orc", "/orc"),
     JSON("json", ".json", "/json"),
     PARQUET("parquet", ".parquet", "/parquet");
@@ -125,29 +129,33 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
 
     submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion, waitForSegmentsToLoad);
     if (runTestQueries) {
+      doTestQuery(dataSource, queryFilePath, 2);
+    }
+  }
+
+  protected void doTestQuery(String dataSource, String queryFilePath, int timesToRun)
+  {
+    try {
+      String queryResponseTemplate;
       try {
-
-        String queryResponseTemplate;
-        try {
-          InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
-          queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
-        }
-        catch (IOException e) {
-          throw new ISE(e, "could not read query file: %s", queryFilePath);
-        }
-
-        queryResponseTemplate = StringUtils.replace(
-            queryResponseTemplate,
-            "%%DATASOURCE%%",
-            fullDatasourceName
-        );
-        queryHelper.testQueriesFromString(queryResponseTemplate, 2);
-
+        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(queryFilePath);
+        queryResponseTemplate = IOUtils.toString(is, StandardCharsets.UTF_8);
       }
-      catch (Exception e) {
-        LOG.error(e, "Error while testing");
-        throw new RuntimeException(e);
+      catch (IOException e) {
+        throw new ISE(e, "could not read query file: %s", queryFilePath);
       }
+
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%DATASOURCE%%",
+          dataSource + config.getExtraDatasourceNameSuffix()
+      );
+      queryHelper.testQueriesFromString(queryResponseTemplate, timesToRun);
+
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while testing");
+      throw new RuntimeException(e);
     }
   }
 
@@ -312,12 +320,78 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                       return t.getType().equals(SinglePhaseSubTask.TYPE);
                     } else {
                       return t.getType().equalsIgnoreCase(PartialHashSegmentGenerateTask.TYPE)
-                             || t.getType().equalsIgnoreCase(PartialHashSegmentMergeTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialDimensionDistributionTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialRangeSegmentGenerateTask.TYPE)
                              || t.getType().equalsIgnoreCase(PartialGenericSegmentMergeTask.TYPE);
                     }
                   })
                   .count();
+  }
+
+  void verifySegmentsCountAndLoaded(String dataSource, int numExpectedSegments)
+  {
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(dataSource + config.getExtraDatasourceNameSuffix()),
+        "Segment load check"
+    );
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          int segmentCount = coordinator.getAvailableSegments(
+              dataSource + config.getExtraDatasourceNameSuffix()
+          ).size();
+          LOG.info("Current segment count: %d, expected: %d", segmentCount, numExpectedSegments);
+          return segmentCount == numExpectedSegments;
+        },
+        "Segment count check"
+    );
+  }
+
+  void compactData(String dataSource, String compactionTask) throws Exception
+  {
+    final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
+    final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+    intervalsBeforeCompaction.sort(null);
+    final String template = getResourceAsString(compactionTask);
+    String taskSpec = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
+
+    final String taskID = indexer.submitTask(taskSpec);
+    LOG.info("TaskID for compaction task %s", taskID);
+    indexer.waitUntilTaskCompletes(taskID);
+
+    ITRetryUtil.retryUntilTrue(
+        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        "Segment Compaction"
+    );
+    ITRetryUtil.retryUntilTrue(
+        () -> {
+          final List<String> actualIntervals = coordinator.getSegmentIntervals(
+              dataSource + config.getExtraDatasourceNameSuffix()
+          );
+          actualIntervals.sort(null);
+          return actualIntervals.equals(intervalsBeforeCompaction);
+        },
+        "Compaction interval check"
+    );
+  }
+
+  void verifySegmentsCompacted(String dataSource, int expectedCompactedSegmentCount)
+  {
+    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(
+        dataSource + config.getExtraDatasourceNameSuffix()
+    );
+    List<DataSegment> foundCompactedSegments = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      if (segment.getLastCompactionState() != null) {
+        foundCompactedSegments.add(segment);
+      }
+    }
+    Assert.assertEquals(foundCompactedSegments.size(), expectedCompactedSegmentCount);
+    for (DataSegment compactedSegment : foundCompactedSegments) {
+      Assert.assertNotNull(compactedSegment.getLastCompactionState());
+      Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
+      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
+                          SecondaryPartitionType.LINEAR
+      );
+    }
   }
 }

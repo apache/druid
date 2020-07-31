@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.ProvisionException;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.LegacyDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -47,7 +47,7 @@ public class FilteredRequestLoggerTest
   public final ExpectedException expectedException = ExpectedException.none();
   private final DefaultObjectMapper mapper = new DefaultObjectMapper();
   private final SegmentMetadataQuery testSegmentMetadataQuery = new SegmentMetadataQuery(
-      new LegacyDataSource("foo"),
+      new TableDataSource("foo"),
       null,
       null,
       null,

@@ -665,7 +665,7 @@ public class TaskLifecycleTest
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         Execs.directExecutor(), // query executor service
         NoopJoinableFactory.INSTANCE,
-        monitorScheduler, // monitor scheduler
+        () -> monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(null, new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,

@@ -26,10 +26,13 @@ import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.plan.hep.HepProgram;
+import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.rules.AggregateCaseToFilterRule;
 import org.apache.calcite.rel.rules.AggregateExpandDistinctAggregatesRule;
 import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
@@ -85,6 +88,16 @@ public class Rules
   public static final int DRUID_CONVENTION_RULES = 0;
   public static final int BINDABLE_CONVENTION_RULES = 1;
 
+  // Due to Calcite bug (CALCITE-3845), ReduceExpressionsRule can considered expression which is the same as the
+  // previous input expression as reduced. Basically, the expression is actually not reduced but is still considered as
+  // reduced. Hence, this resulted in an infinite loop of Calcite trying to reducing the same expression over and over.
+  // Calcite 1.23.0 fixes this issue by not consider expression as reduced if this case happens. However, while
+  // we are still using Calcite 1.21.0, a workaround is to limit the number of pattern matches to avoid infinite loop.
+  private static final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
+  private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
+      System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
+  );
+
   // Rules from RelOptUtil's registerBaseRules, minus:
   //
   // 1) AggregateExpandDistinctAggregatesRule (it'll be added back later if approximate count distinct is disabled)
@@ -123,14 +136,17 @@ public class Rules
           ProjectTableScanRule.INTERPRETER
       );
 
-  // Rules from RelOptUtil's registerReductionRules.
+  // Rules from RelOptUtil's registerReductionRules, minus:
+  //
+  // 1) ReduceExpressionsRule.JOIN_INSTANCE
+  //    Removed by https://github.com/apache/druid/pull/9941 due to issue in https://github.com/apache/druid/issues/9942
+  //    TODO: Re-enable when https://github.com/apache/druid/issues/9942 is fixed
   private static final List<RelOptRule> REDUCTION_RULES =
       ImmutableList.of(
           ReduceExpressionsRule.PROJECT_INSTANCE,
           ReduceExpressionsRule.FILTER_INSTANCE,
           ReduceExpressionsRule.CALC_INSTANCE,
           ReduceExpressionsRule.WINDOW_INSTANCE,
-          ReduceExpressionsRule.JOIN_INSTANCE,
           ValuesReduceRule.FILTER_INSTANCE,
           ValuesReduceRule.PROJECT_FILTER_INSTANCE,
           ValuesReduceRule.PROJECT_INSTANCE,
@@ -166,6 +182,9 @@ public class Rules
   // 2) SemiJoinRule.PROJECT and SemiJoinRule.JOIN (we don't need to detect semi-joins, because they are handled
   //    fine as-is by DruidJoinRule).
   // 3) JoinCommuteRule (we don't support reordering joins yet).
+  // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
+  //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
+  //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
   private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
@@ -185,18 +204,33 @@ public class Rules
 
   public static List<Program> programs(final PlannerContext plannerContext, final QueryMaker queryMaker)
   {
+
+
     // Program that pre-processes the tree before letting the full-on VolcanoPlanner loose.
     final Program preProgram =
         Programs.sequence(
             Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
             DecorrelateAndTrimFieldsProgram.INSTANCE,
-            Programs.hep(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE)
+            buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT)
         );
 
     return ImmutableList.of(
         Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext, queryMaker))),
         Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
     );
+  }
+
+  private static Program buildHepProgram(Iterable<? extends RelOptRule> rules,
+                                         boolean noDag,
+                                         RelMetadataProvider metadataProvider,
+                                         int matchLimit)
+  {
+    final HepProgramBuilder builder = HepProgram.builder();
+    builder.addMatchLimit(matchLimit);
+    for (RelOptRule rule : rules) {
+      builder.addRuleInstance(rule);
+    }
+    return Programs.of(builder.build(), noDag, metadataProvider);
   }
 
   private static List<RelOptRule> druidConventionRuleSet(

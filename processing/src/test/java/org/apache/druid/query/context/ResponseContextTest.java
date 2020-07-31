@@ -23,7 +23,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.context.ResponseContext.Key;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 public class ResponseContextTest
@@ -133,6 +136,18 @@ public class ResponseContextTest
         ((List) ctx.get(ResponseContext.Key.UNCOVERED_INTERVALS)).toArray()
     );
 
+    final String queryId = "queryId";
+    final String queryId2 = "queryId2";
+    ctx.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    ctx.add(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new NonnullPair<>(queryId, 3));
+    ctx.add(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new NonnullPair<>(queryId2, 4));
+    ctx.add(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new NonnullPair<>(queryId, -1));
+    ctx.add(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new NonnullPair<>(queryId, -2));
+    Assert.assertEquals(
+        ImmutableMap.of(queryId, 0, queryId2, 4),
+        ctx.get(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS)
+    );
+
     final SegmentDescriptor sd01 = new SegmentDescriptor(interval01, "01", 0);
     ctx.add(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(sd01));
     Assert.assertArrayEquals(
@@ -214,14 +229,14 @@ public class ResponseContextTest
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
     Assert.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of("ETag", "string-value")),
-        ctx1.serializeWith(mapper, Integer.MAX_VALUE).getTruncatedResult()
+        ctx1.serializeWith(mapper, Integer.MAX_VALUE).getResult()
     );
 
     final ResponseContext ctx2 = ResponseContext.createEmpty();
     ctx2.add(ResponseContext.Key.NUM_SCANNED_ROWS, 100);
     Assert.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of("count", 100)),
-        ctx2.serializeWith(mapper, Integer.MAX_VALUE).getTruncatedResult()
+        ctx2.serializeWith(mapper, Integer.MAX_VALUE).getResult()
     );
   }
 
@@ -234,7 +249,7 @@ public class ResponseContextTest
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(fullString, res1.getTruncatedResult());
+    Assert.assertEquals(fullString, res1.getResult());
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     ctxCopy.merge(ctx);
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 30);
@@ -242,7 +257,7 @@ public class ResponseContextTest
     ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
     Assert.assertEquals(
         ctxCopy.getDelegate(),
-        ResponseContext.deserialize(res2.getTruncatedResult(), objectMapper).getDelegate()
+        ResponseContext.deserialize(res2.getResult(), objectMapper).getDelegate()
     );
   }
 
@@ -262,7 +277,7 @@ public class ResponseContextTest
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final String fullString = objectMapper.writeValueAsString(ctx.getDelegate());
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(fullString, res1.getTruncatedResult());
+    Assert.assertEquals(fullString, res1.getResult());
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     ctxCopy.merge(ctx);
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, 70);
@@ -271,7 +286,7 @@ public class ResponseContextTest
     ctxCopy.put(ResponseContext.Key.TRUNCATED, true);
     Assert.assertEquals(
         ctxCopy.getDelegate(),
-        ResponseContext.deserialize(res2.getTruncatedResult(), objectMapper).getDelegate()
+        ResponseContext.deserialize(res2.getResult(), objectMapper).getDelegate()
     );
   }
 

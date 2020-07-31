@@ -309,10 +309,6 @@ export function downloadFile(text: string, type: string, filename: string): void
   FileSaver.saveAs(blob, filename);
 }
 
-export function escapeSqlIdentifier(identifier: string): string {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
 export function copyAndAlert(copyString: string, alertMessage: string): void {
   copy(copyString, { format: 'text/plain' });
   AppToaster.show({

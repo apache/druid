@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 
 /**
  */
-public class OrDimFilter implements DimFilter
+public class OrDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 

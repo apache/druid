@@ -154,8 +154,7 @@ public class ExpressionSelectors
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING
                  && capabilities.isDictionaryEncoded()
-                 && capabilities.isComplete()
-                 && !capabilities.hasMultipleValues()
+                 && !capabilities.hasMultipleValues().isMaybeTrue()
                  && exprDetails.getArrayBindings().isEmpty()) {
         // Optimization for expressions that hit one scalar string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
@@ -227,7 +226,7 @@ public class ExpressionSelectors
       if (capabilities != null
           && capabilities.getType() == ValueType.STRING
           && capabilities.isDictionaryEncoded()
-          && capabilities.isComplete()
+          && !capabilities.hasMultipleValues().isUnknown()
           && !exprDetails.hasInputArrays()
           && !exprDetails.isOutputArray()
       ) {
@@ -356,7 +355,7 @@ public class ExpressionSelectors
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
-      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues();
+      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
@@ -597,11 +596,11 @@ public class ExpressionSelectors
     for (String column : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
       if (capabilities != null) {
-        if (capabilities.hasMultipleValues()) {
+        if (capabilities.hasMultipleValues().isTrue()) {
           actualArrays.add(column);
         } else if (
-            !capabilities.isComplete() &&
             capabilities.getType().equals(ValueType.STRING) &&
+            capabilities.hasMultipleValues().isMaybeTrue() &&
             !exprDetails.getArrayBindings().contains(column)
         ) {
           unknownIfArrays.add(column);

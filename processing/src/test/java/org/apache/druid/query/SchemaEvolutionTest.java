@@ -21,7 +21,10 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -35,6 +38,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -55,6 +59,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -64,11 +69,17 @@ import java.util.Map;
 /**
  * Tests designed to exercise changing column types, adding columns, removing columns, etc.
  */
+@RunWith(JUnitParamsRunner.class)
 public class SchemaEvolutionTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final String TIMESTAMP_COLUMN = "t";
   private static final double THIRTY_ONE_POINT_ONE = 31.1d;
+
+  public Object[] doVectorize()
+  {
+    return Lists.newArrayList(true, false).toArray();
+  }
 
   public static List<Result<TimeseriesResultValue>> timeseriesResult(final Map<String, ?> map)
   {
@@ -137,6 +148,8 @@ public class SchemaEvolutionTest
   @Before
   public void setUp() throws IOException
   {
+    NullHandling.initializeForTests();
+
     // Index1: c1 is a string, c2 nonexistent, "uniques" nonexistent
     index1 = IndexBuilder.create()
                          .tmpDir(temporaryFolder.newFolder())
@@ -209,7 +222,8 @@ public class SchemaEvolutionTest
   }
 
   @Test
-  public void testHyperUniqueEvolutionTimeseries()
+  @Parameters(method = "doVectorize")
+  public void testHyperUniqueEvolutionTimeseries(boolean doVectorize)
   {
     final TimeseriesQueryRunnerFactory factory = QueryRunnerTestHelper.newTimeseriesQueryRunnerFactory();
 
@@ -222,11 +236,12 @@ public class SchemaEvolutionTest
                 new HyperUniquesAggregatorFactory("uniques", "uniques")
             )
         )
+        .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
 
     // index1 has no "uniques" column
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("uniques", 0)),
+        timeseriesResult(ImmutableMap.of("uniques", 0d)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 
@@ -238,7 +253,8 @@ public class SchemaEvolutionTest
   }
 
   @Test
-  public void testNumericEvolutionTimeseriesAggregation()
+  @Parameters(method = "doVectorize")
+  public void testNumericEvolutionTimeseriesAggregation(boolean doVectorize)
   {
     final TimeseriesQueryRunnerFactory factory = QueryRunnerTestHelper.newTimeseriesQueryRunnerFactory();
 
@@ -256,6 +272,7 @@ public class SchemaEvolutionTest
                 new DoubleSumAggregatorFactory("d", null, "c1 * 1", TestExprMacroTable.INSTANCE)
             )
         )
+        .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
 
     // Only string(1)
@@ -313,7 +330,8 @@ public class SchemaEvolutionTest
   }
 
   @Test
-  public void testNumericEvolutionFiltering()
+  @Parameters(method = "doVectorize")
+  public void testNumericEvolutionFiltering(boolean doVectorize)
   {
     final TimeseriesQueryRunnerFactory factory = QueryRunnerTestHelper.newTimeseriesQueryRunnerFactory();
 
@@ -328,26 +346,28 @@ public class SchemaEvolutionTest
             ImmutableList.of(
                 new LongSumAggregatorFactory("a", "c1"),
                 new DoubleSumAggregatorFactory("b", "c1"),
+                new FloatSumAggregatorFactory("d", "c1"),
                 new CountAggregatorFactory("c")
             )
         )
+        .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
 
     // Only string(1) -- which we can filter but not aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f)),
         runQuery(query, factory, ImmutableList.of(index1))
     );
 
     // Only long(2) -- which we can filter and aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.0, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.0, "c", 2L, "d", 19.0f)),
         runQuery(query, factory, ImmutableList.of(index2))
     );
 
     // Only float(3) -- which we can't filter, but can aggregate
     Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L)),
+        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f)),
         runQuery(query, factory, ImmutableList.of(index3))
     );
 
@@ -359,7 +379,9 @@ public class SchemaEvolutionTest
             "b",
             NullHandling.defaultDoubleValue(),
             "c",
-            0L
+            0L,
+            "d",
+            NullHandling.defaultFloatValue()
         )),
         runQuery(query, factory, ImmutableList.of(index4))
     );
@@ -369,7 +391,8 @@ public class SchemaEvolutionTest
         timeseriesResult(ImmutableMap.of(
             "a", 57L,
             "b", 57.2,
-            "c", 6L
+            "c", 6L,
+            "d", 57.20000076293945
         )),
         runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))
     );

@@ -58,23 +58,27 @@ function _download_zookeeper() {
   local dest="$1"
   local zk_version
   zk_version="$(_get_zookeeper_version)"
+  #zk_tar=apache-zookeeper-${zk_version}-bin # for zk 3.5.x
+  zk_tar=zookeeper-${zk_version} # for zk 3.4.x
 
   _log "Downloading zookeeper"
-  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/zookeeper-${zk_version}.tar.gz" \
+  curl -s "https://archive.apache.org/dist/zookeeper/zookeeper-${zk_version}/$zk_tar.tar.gz" \
     | tar xz \
   && rm -rf "$dest" \
-  && mv "zookeeper-${zk_version}" "$dest" \
-  && rm -f "zookeeper-${zk_version}"
+  && mv "$zk_tar" "$dest" \
+  && rm -f "$zk_tar"
 }
 
 function _build_distribution() {
   _log "Building druid distribution"
 
   (
+    # Add HEAD as an allowed HTTP method since this is how we check when the Druid service is ready.
     cd "$(_get_code_root)" \
     && mvn -Pdist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -q -T1C install \
     && cd distribution/target \
-    && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz"
+    && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
+    && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> apache-druid-$(_get_druid_version)/conf/druid/single-server/micro-quickstart/_common/common.runtime.properties
   )
 }
 

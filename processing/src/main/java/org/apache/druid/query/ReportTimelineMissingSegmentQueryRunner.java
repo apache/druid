@@ -19,27 +19,37 @@
 
 package org.apache.druid.query;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
 
-import java.util.Collections;
+import java.util.List;
 
 /**
  */
 public class ReportTimelineMissingSegmentQueryRunner<T> implements QueryRunner<T>
 {
-  private final SegmentDescriptor descriptor;
+  private static final Logger LOG = new Logger(ReportTimelineMissingSegmentQueryRunner.class);
+
+  private final List<SegmentDescriptor> descriptors;
 
   public ReportTimelineMissingSegmentQueryRunner(SegmentDescriptor descriptor)
   {
-    this.descriptor = descriptor;
+    this(ImmutableList.of(descriptor));
+  }
+
+  public ReportTimelineMissingSegmentQueryRunner(List<SegmentDescriptor> descriptors)
+  {
+    this.descriptors = descriptors;
   }
 
   @Override
   public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    responseContext.add(ResponseContext.Key.MISSING_SEGMENTS, Collections.singletonList(descriptor));
+    LOG.debug("Reporting a missing segments[%s] for query[%s]", descriptors, queryPlus.getQuery().getId());
+    responseContext.add(ResponseContext.Key.MISSING_SEGMENTS, descriptors);
     return Sequences.empty();
   }
 }
