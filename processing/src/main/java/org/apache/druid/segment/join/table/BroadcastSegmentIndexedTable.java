@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join.table;
 
+import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.IAE;
@@ -29,7 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -67,9 +68,17 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   {
     this.keyColumns = keyColumns;
     this.version = version;
-    this.segment = theSegment;
-    this.adapter = (QueryableIndexStorageAdapter) segment.asStorageAdapter();
-    this.queryableIndex = segment.asQueryableIndex();
+    this.segment = Preconditions.checkNotNull(theSegment, "Segment must not be null");
+    this.adapter = Preconditions.checkNotNull(
+        (QueryableIndexStorageAdapter) segment.asStorageAdapter(),
+        "Segment[%s] must have a QueryableIndexStorageAdapter",
+        segment.getId()
+    );
+    this.queryableIndex = Preconditions.checkNotNull(
+        segment.asQueryableIndex(),
+        "Segment[%s] must have a QueryableIndexSegment",
+        segment.getId()
+    );
 
     RowSignature.Builder sigBuilder = RowSignature.builder();
     sigBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ValueType.LONG);
@@ -106,6 +115,9 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     final Sequence<Integer> sequence = Sequences.map(
         cursors,
         cursor -> {
+          if (cursor == null) {
+            return 0;
+          }
           int rowNumber = 0;
           ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -113,7 +125,13 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
           // indexes, but, an optimization for another day
           final List<BaseObjectColumnValueSelector> selectors = keyColumnNames
               .stream()
-              .map(columnSelectorFactory::makeColumnValueSelector)
+              .map(columnName -> {
+                // multi-value dimensions are not currently supported
+                if (adapter.getColumnCapabilities(columnName).hasMultipleValues().isMaybeTrue()) {
+                  return NilColumnValueSelector.instance();
+                }
+                return columnSelectorFactory.makeColumnValueSelector(columnName);
+              })
               .collect(Collectors.toList());
 
           while (!cursor.isDone()) {
@@ -121,13 +139,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
               final String keyColumnName = keyColumnNames.get(keyColumnSelectorIndex);
               final int columnPosition = rowSignature.indexOf(keyColumnName);
               final Map<Object, IntList> keyColumnValueIndex = keyColumnsIndex.get(columnPosition);
-
-              final Object value = selectors.get(keyColumnSelectorIndex).getObject();
-              final ValueType keyType = rowSignature.getColumnType(keyColumnName)
-                                                    .orElse(IndexedTableJoinMatcher.DEFAULT_KEY_TYPE);
-              // is this actually necessary or is value already cool? (RowBasedIndexedTable cargo cult represent)
-              final Object key = DimensionHandlerUtils.convertObjectToType(value, keyType);
-
+              final Object key = selectors.get(keyColumnSelectorIndex).getObject();
               if (key != null) {
                 final IntList array = keyColumnValueIndex.computeIfAbsent(key, k -> new IntArrayList());
                 array.add(rowNumber);
@@ -136,9 +148,9 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
 
             if (rowNumber % 100_000 == 0) {
               if (rowNumber == 0) {
-                LOG.info("Indexed first row for table %s", theSegment.getId());
+                LOG.debug("Indexed first row for table %s", theSegment.getId());
               } else {
-                LOG.info("Indexed row %s for table %s", rowNumber, theSegment.getId());
+                LOG.debug("Indexed row %s for table %s", rowNumber, theSegment.getId());
               }
             }
             rowNumber++;
@@ -186,12 +198,12 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   public Reader columnReader(int column)
   {
     if (column < 0 || rowSignature.getColumnName(0) == null) {
-      throw new IAE("Column[%d] is not a valid column", column);
+      throw new IAE("Column[%d] is not a valid column for segment[%s]", column, segment.getId());
     }
     final SimpleAscendingOffset offset = new SimpleAscendingOffset(adapter.getNumRows());
-    final BaseObjectColumnValueSelector selector = queryableIndex.getColumnHolder(rowSignature.getColumnName(column))
-                                                                 .getColumn()
-                                                                 .makeColumnValueSelector(offset);
+    final BaseObjectColumnValueSelector<?> selector = queryableIndex.getColumnHolder(rowSignature.getColumnName(column))
+                                                                    .getColumn()
+                                                                    .makeColumnValueSelector(offset);
     return new Reader()
     {
       @Nullable

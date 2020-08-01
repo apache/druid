@@ -19,10 +19,9 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -30,7 +29,7 @@ import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.server.SegmentManager;
 
-import java.util.List;
+import java.util.Iterator;
 import java.util.Optional;
 
 public class BroadcastTableJoinableFactory implements JoinableFactory
@@ -59,20 +58,20 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
     GlobalTableDataSource broadcastDatasource = (GlobalTableDataSource) dataSource;
     if (condition.canHashJoin()) {
       DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(broadcastDatasource);
-      return segmentManager.getTimeline(analysis).map(timeline -> {
-        List<ReferenceCountingIndexedTable> tableList = segmentManager.getIndexedTables(
-            analysis,
-            condition
-        );
-        Preconditions.checkArgument(
-            tableList.size() == 1,
-            StringUtils.format(
-                "Currently only single segment datasources are supported for broadcast joins, dataSource[%s] has multiple segments. Reingest the data so that it is entirely contained within a single segment to use in JOIN queries.",
-                Iterables.getOnlyElement(dataSource.getTableNames())
-            )
-        );
-
-        return new IndexedTableJoinable(Iterables.getOnlyElement(tableList));
+      return segmentManager.getIndexedTables(analysis).map(tables -> {
+        Iterator<ReferenceCountingIndexedTable> tableIterator = tables.iterator();
+        if (!tableIterator.hasNext()) {
+          return null;
+        }
+        try {
+          return new IndexedTableJoinable(Iterators.getOnlyElement(tableIterator));
+        }
+        catch (IllegalArgumentException iae) {
+          throw new ISE(
+              "Currently only single segment datasources are supported for broadcast joins, dataSource[%s] has multiple segments. Reingest the data so that it is entirely contained within a single segment to use in JOIN queries.",
+              broadcastDatasource.getName()
+          );
+        }
       });
     }
     return Optional.empty();

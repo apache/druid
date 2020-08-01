@@ -20,7 +20,6 @@
 package org.apache.druid.server;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -31,7 +30,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentLoader;
@@ -44,13 +42,12 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -176,24 +173,24 @@ public class SegmentManager
     return Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTimeline);
   }
 
-  public List<ReferenceCountingIndexedTable> getIndexedTables(
-      DataSourceAnalysis analysis,
-      JoinConditionAnalysis joinCondition
-  )
+  /**
+   * Returns the collection of {@link IndexedTable} for the entire timeline (since join conditions do not currently
+   * consider the queries intervals), if the timeline exists for each of its segments that are joinable.
+   */
+  public Optional<Stream<ReferenceCountingIndexedTable>> getIndexedTables(DataSourceAnalysis analysis)
   {
     return getTimeline(analysis).map(timeline -> {
       // join doesn't currently consider intervals, so just consider all segments
-      final Collection<ReferenceCountingSegment> segments =
+      final Stream<ReferenceCountingSegment> segments =
           timeline.lookup(Intervals.ETERNITY)
                   .stream()
-                  .flatMap(x -> StreamSupport.stream(x.getObject().payloads().spliterator(), false))
-                  .collect(Collectors.toList());
+                  .flatMap(x -> StreamSupport.stream(x.getObject().payloads().spliterator(), false));
       final TableDataSource tableDataSource = getTableDataSource(analysis);
       ConcurrentHashMap<SegmentId, ReferenceCountingIndexedTable> tables =
           Optional.ofNullable(dataSources.get(tableDataSource.getName())).map(DataSourceState::getTablesLookup)
                   .orElseThrow(() -> new ISE("Datasource %s does not have IndexedTables", tableDataSource.getName()));
-      return segments.stream().map(segment -> tables.get(segment.getId())).collect(Collectors.toList());
-    }).orElseGet(() -> ImmutableList.of());
+      return segments.map(segment -> tables.get(segment.getId())).filter(Objects::nonNull);
+    });
   }
 
   public boolean hasIndexedTables(String dataSourceName)

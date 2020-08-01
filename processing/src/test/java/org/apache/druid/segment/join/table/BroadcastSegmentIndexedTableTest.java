@@ -166,8 +166,8 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   @Test
   public void testMultiValueStringKeyColumn()
   {
-    final Object[] vals = new Object[] {ImmutableList.of("a", "preferred")};
-    checkIndexAndReader(MULTI_VALUE_COLUMN, vals);
+    final Object[] nonMatchingVals = new Object[] {ImmutableList.of("a", "preferred")};
+    checkIndexAndReader(MULTI_VALUE_COLUMN, new Object[0], nonMatchingVals);
   }
 
   @Test
@@ -231,6 +231,11 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
 
   private void checkIndexAndReader(String columnName, Object[] vals)
   {
+    checkIndexAndReader(columnName, vals, new Object[0]);
+  }
+
+  private void checkIndexAndReader(String columnName, Object[] vals, Object[] nonmatchingVals)
+  {
     final int columnIndex = columnNames.indexOf(columnName);
     final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
     final IndexedTable.Index valueIndex = broadcastTable.columnIndex(columnIndex);
@@ -245,6 +250,10 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
           Assert.assertEquals(val, reader.read(valIndex.getInt(i)));
         }
       }
+    }
+    for (Object val : nonmatchingVals) {
+      final IntList valIndex = valueIndex.find(val);
+      Assert.assertEquals(0, valIndex.size());
     }
   }
 

@@ -29,6 +29,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -275,7 +276,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     Assert.assertTrue(segmentManager.loadSegment(createSegment(data2, interval2, version2), false));
 
 
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(ISE.class);
     expectedException.expectMessage(
         StringUtils.format(
             "Currently only single segment datasources are supported for broadcast joins, dataSource[%s] has multiple segments. Reingest the data so that it is entirely contained within a single segment to use in JOIN queries.",

@@ -22,6 +22,7 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.DataSource;
 
 import java.util.Map;
@@ -66,12 +67,16 @@ public class MapJoinableFactory implements JoinableFactory
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
     Set<JoinableFactory> factories = joinableFactories.get(dataSource.getClass());
+    Optional<Joinable> maybeJoinable = Optional.empty();
     for (JoinableFactory factory : factories) {
-      Optional<Joinable> maybeJoinable = factory.build(dataSource, condition);
-      if (maybeJoinable.isPresent()) {
-        return maybeJoinable;
+      Optional<Joinable> candidate = factory.build(dataSource, condition);
+      if (candidate.isPresent()) {
+        if (maybeJoinable.isPresent()) {
+          throw new ISE("Multiple joinable factories are valid for table[%s]", dataSource);
+        }
+        maybeJoinable = candidate;
       }
     }
-    return Optional.empty();
+    return maybeJoinable;
   }
 }
