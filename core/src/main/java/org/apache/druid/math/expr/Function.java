@@ -461,6 +461,96 @@ public interface Function
     }
   }
 
+  class BitwiseAnd extends BivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseAnd";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x & y);
+    }
+  }
+
+  class BitwiseComplement extends UnivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseComplement";
+    }
+
+    @Override
+    protected ExprEval eval(long param)
+    {
+      return ExprEval.of(~param);
+    }
+  }
+
+  class BitwiseOr extends BivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseOr";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x | y);
+    }
+  }
+
+  class BitwiseShiftLeft extends BivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseShiftLeft";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x << y);
+    }
+  }
+
+  class BitwiseShiftRight extends BivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseShiftRight";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x >> y);
+    }
+  }
+
+  class BitwiseXor extends BivariateMathFunction
+  {
+    @Override
+    public String name()
+    {
+      return "bitwiseXor";
+    }
+
+    @Override
+    protected ExprEval eval(long x, long y)
+    {
+      return ExprEval.of(x ^ y);
+    }
+  }
+
   class Cbrt extends UnivariateMathFunction
   {
     @Override

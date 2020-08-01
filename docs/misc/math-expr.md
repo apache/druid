@@ -117,6 +117,12 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |acos|acos(x) would return the arc cosine of x|
 |asin|asin(x) would return the arc sine of x|
 |atan|atan(x) would return the arc tangent of x|
+|bitwiseAnd|bitwiseAnd(x,y) would return the result of x & y|
+|bitwiseComplement|bitwiseComplement(x) would return the result of ~x|
+|bitwiseOr|bitwiseOr(x,y) would return the result of x [PIPE] y |
+|bitwiseShiftLeft|bitwiseShiftLeft(x,y) would return the result of x << y|
+|bitwiseShiftRight|bitwiseShiftRight(x,y) would return the result of x >> y|
+|bitwiseXor|bitwiseXor(x,y) would return the result of x ^ y|
 |atan2|atan2(y, x) would return the angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta)|
 |cbrt|cbrt(x) would return the cube root of x|
 |ceil|ceil(x) would return the smallest (closest to negative infinity) double value that is greater than or equal to x and is equal to a mathematical integer|
