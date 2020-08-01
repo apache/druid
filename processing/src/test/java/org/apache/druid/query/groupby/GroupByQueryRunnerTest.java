@@ -4126,7 +4126,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-01-25/2011-01-28")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new DoubleSumAggregatorFactory("index", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new DoubleSumAggregatorFactory("index", "index"), QueryRunnerTestHelper.INDEX_LONG_MIN)
         .setGranularity(Granularities.ALL)
         .setHavingSpec(new GreaterThanHavingSpec("index", 310L))
         .setLimitSpec(
@@ -4139,11 +4139,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery fullQuery = builder.build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(fullQuery, "2011-01-25", "alias", "business", "rows", 3L, "index", 312.38165283203125),
-        makeRow(fullQuery, "2011-01-25", "alias", "news", "rows", 3L, "index", 312.7834167480469),
-        makeRow(fullQuery, "2011-01-25", "alias", "technology", "rows", 3L, "index", 324.6412353515625),
-        makeRow(fullQuery, "2011-01-25", "alias", "travel", "rows", 3L, "index", 393.36322021484375),
-        makeRow(fullQuery, "2011-01-25", "alias", "health", "rows", 3L, "index", 511.2996826171875)
+        makeRow(fullQuery, "2011-01-25", "alias", "business", "rows", 3L, "index", 312.38165283203125, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 101L),
+        makeRow(fullQuery, "2011-01-25", "alias", "news", "rows", 3L, "index", 312.7834167480469, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 102L),
+        makeRow(fullQuery, "2011-01-25", "alias", "technology", "rows", 3L, "index", 324.6412353515625, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 102L),
+        makeRow(fullQuery, "2011-01-25", "alias", "travel", "rows", 3L, "index", 393.36322021484375, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 122L),
+        makeRow(fullQuery, "2011-01-25", "alias", "health", "rows", 3L, "index", 511.2996826171875, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 159L)
     );
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery);
@@ -4264,16 +4264,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setInterval("2011-04-02/2011-04-04")
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new LongSumAggregatorFactory("idx", "index"), QueryRunnerTestHelper.INDEX_LONG_MIN)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setHavingSpec(havingSpec);
 
     final GroupByQuery fullQuery = builder.build();
 
     List<ResultRow> expectedResults = Arrays.asList(
-        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
-        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
-        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L)
+        makeRow(fullQuery, "2011-04-01", "alias", "business", "rows", 2L, "idx", 217L, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 105L),
+        makeRow(fullQuery, "2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 107L),
+        makeRow(fullQuery, "2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L, QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC, 122L)
     );
 
     TestHelper.assertExpectedObjects(

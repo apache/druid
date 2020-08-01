@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e. g. min,
+ * AggregatorFactory is a strategy (in the terms of Design Patterns) that represents column aggregation, e.g. min,
  * max, sum of metric columns, or cardinality of dimension columns (see {@link
  * org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory}).
  * Implementations of {@link AggregatorFactory} which need to Support Nullable Aggregations are encouraged
@@ -46,7 +46,7 @@ import java.util.Map;
  * for them e.g. doubleSum aggregator tries to parse the string value as double and assumes it to be zero if parsing
  * fails.
  * If it is a multi value column then each individual value should be taken into account for aggregation e.g. if a row
- * had value ["1","1","1"] , doubleSum aggregation would take each of them and sum them to 3.
+ * had value ["1","1","1"], doubleSum aggregation would take each of them and sum them to 3.
  */
 @ExtensionPoint
 public abstract class AggregatorFactory implements Cacheable
