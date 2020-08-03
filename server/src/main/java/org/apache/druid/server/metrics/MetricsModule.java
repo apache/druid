@@ -101,14 +101,16 @@ public class MetricsModule implements Module
       log.info(
           "Loaded %d monitors: %s",
           monitors.size(),
-          monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", ")));
+          monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", "))
+      );
     }
 
     return new MonitorScheduler(
         config.get(),
         CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("MonitorScheduler-%s").build(),
         emitter,
-        monitors);
+        monitors
+    );
   }
 
   @Provides
