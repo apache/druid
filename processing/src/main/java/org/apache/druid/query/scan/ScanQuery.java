@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
@@ -110,7 +111,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final VirtualColumns virtualColumns;
   private final ResultFormat resultFormat;
   private final int batchSize;
-  @JsonProperty("limit")
+  private final long scanRowsOffset;
   private final long scanRowsLimit;
   private final DimFilter dimFilter;
   private final List<String> columns;
@@ -126,6 +127,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("resultFormat") ResultFormat resultFormat,
       @JsonProperty("batchSize") int batchSize,
+      @JsonProperty("offset") long scanRowsOffset,
       @JsonProperty("limit") long scanRowsLimit,
       @JsonProperty("order") Order order,
       @JsonProperty("filter") DimFilter dimFilter,
@@ -141,6 +143,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     Preconditions.checkArgument(
         this.batchSize > 0,
         "batchSize must be greater than 0"
+    );
+    this.scanRowsOffset = scanRowsOffset;
+    Preconditions.checkArgument(
+        this.scanRowsOffset >= 0,
+        "offset must be greater than or equal to 0"
     );
     this.scanRowsLimit = (scanRowsLimit == 0) ? Long.MAX_VALUE : scanRowsLimit;
     Preconditions.checkArgument(
@@ -202,10 +209,36 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return batchSize;
   }
 
-  @JsonProperty
+  /**
+   * Offset for this query; behaves like SQL "OFFSET". Zero means no offset. Negative values are invalid.
+   */
+  @JsonProperty("offset")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public long getScanRowsOffset()
+  {
+    return scanRowsOffset;
+  }
+
+  /**
+   * Offset for this query; behaves like SQL "OFFSET". Will always be positive. {@link Long#MAX_VALUE} is used in
+   * situations where the user wants an effectively unlimited resultset.
+   */
+  @JsonProperty("limit")
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = ScanRowsJsonIncludeFilter.class)
   public long getScanRowsLimit()
   {
     return scanRowsLimit;
+  }
+
+  /**
+   * Returns whether this query is limited or not. Because {@link Long#MAX_VALUE} is used to signify unlimitedness,
+   * this is equivalent to {@code getScanRowsLimit() != Long.Max_VALUE}.
+   *
+   * @see #getScanRowsLimit()
+   */
+  public boolean isLimited()
+  {
+    return scanRowsLimit != Long.MAX_VALUE;
   }
 
   @JsonProperty
@@ -271,6 +304,16 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
   }
 
+  public ScanQuery withOffset(final long newOffset)
+  {
+    return Druids.ScanQueryBuilder.copy(this).offset(newOffset).build();
+  }
+
+  public ScanQuery withLimit(final long newLimit)
+  {
+    return Druids.ScanQueryBuilder.copy(this).limit(newLimit).build();
+  }
+
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)
   {
     return Druids.ScanQueryBuilder.copy(this).legacy(legacy != null ? legacy : scanQueryConfig.isLegacy()).build();
@@ -295,7 +338,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -308,6 +351,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
     final ScanQuery scanQuery = (ScanQuery) o;
     return batchSize == scanQuery.batchSize &&
+           scanRowsOffset == scanQuery.scanRowsOffset &&
            scanRowsLimit == scanQuery.scanRowsLimit &&
            Objects.equals(legacy, scanQuery.legacy) &&
            Objects.equals(virtualColumns, scanQuery.virtualColumns) &&
@@ -319,8 +363,17 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), virtualColumns, resultFormat, batchSize,
-                        scanRowsLimit, dimFilter, columns, legacy);
+    return Objects.hash(
+        super.hashCode(),
+        virtualColumns,
+        resultFormat,
+        batchSize,
+        scanRowsOffset,
+        scanRowsLimit,
+        dimFilter,
+        columns,
+        legacy
+    );
   }
 
   @Override
@@ -332,10 +385,32 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", virtualColumns=" + getVirtualColumns() +
            ", resultFormat='" + resultFormat + '\'' +
            ", batchSize=" + batchSize +
-           ", scanRowsLimit=" + scanRowsLimit +
+           ", offset=" + scanRowsOffset +
+           ", limit=" + scanRowsLimit +
            ", dimFilter=" + dimFilter +
            ", columns=" + columns +
            ", legacy=" + legacy +
            '}';
+  }
+
+  /**
+   * {@link JsonInclude} filter for {@link #getScanRowsLimit()}.
+   */
+  @SuppressWarnings("EqualsAndHashcode") // JsonInclude API works by "creative" use of equals
+  static class ScanRowsJsonIncludeFilter
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      if (obj == null) {
+        return false;
+      }
+
+      if (obj.getClass() == this.getClass()) {
+        return true;
+      }
+
+      return obj instanceof Long && (long) obj == Long.MAX_VALUE;
+    }
   }
 }
