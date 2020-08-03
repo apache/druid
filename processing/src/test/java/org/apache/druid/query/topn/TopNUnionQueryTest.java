@@ -123,6 +123,7 @@ public class TopNUnionQueryTest extends InitializedNullHandlingTest
         )
         .build();
 
+    //
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
@@ -130,12 +131,12 @@ public class TopNUnionQueryTest extends InitializedNullHandlingTest
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
-                        .put("rows", 744L)
-                        .put("index", 862719.3151855469D)
-                        .put("addRowsIndexConstant", 863464.3151855469D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 864209.3151855469D)
+                        .put("rows", 186L)
+                        .put("index", 215679.82879638672D)
+                        .put("addRowsIndexConstant", 215866.82879638672D)
+                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 216053.82817599995D)
                         .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                        .put("maxIndex", 1743.9217529296875D)
+                        .put("maxIndex", 1743.92175D)
                         .put("minIndex", 792.3260498046875D)
                         .put(
                             QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,
@@ -144,10 +145,10 @@ public class TopNUnionQueryTest extends InitializedNullHandlingTest
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
-                        .put("rows", 744L)
-                        .put("index", 768184.4240722656D)
-                        .put("addRowsIndexConstant", 768929.4240722656D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 769674.4240722656D)
+                        .put("rows", 186L)
+                        .put("index", 192046.1060180664D)
+                        .put("addRowsIndexConstant", 192233.1060180664D)
+                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 192420.10593600012D)
                         .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
                         .put("maxIndex", 1870.06103515625D)
                         .put("minIndex", 545.9906005859375D)
@@ -158,10 +159,10 @@ public class TopNUnionQueryTest extends InitializedNullHandlingTest
                         .build(),
                     ImmutableMap.<String, Object>builder()
                         .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
-                        .put("rows", 3348L)
-                        .put("index", 382426.28929138184D)
-                        .put("addRowsIndexConstant", 385775.28929138184D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 389124.28929138184D)
+                        .put("rows", 837L)
+                        .put("index", 95606.57232284546D)
+                        .put("addRowsIndexConstant", 96444.57232284546D)
+                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 97282.57239499995D)
                         .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
                         .put(
                             QueryRunnerTestHelper.HYPER_UNIQUE_FINALIZING_POST_AGG_METRIC,

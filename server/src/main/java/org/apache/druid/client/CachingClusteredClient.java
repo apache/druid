@@ -53,6 +53,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.MultiTableDataSource;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -64,6 +65,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Key;
@@ -86,6 +88,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -97,13 +100,14 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
  * This is the class on the Broker that is responsible for making native Druid queries to a cluster of data servers.
- *
+ * <p>
  * The main user of this class is {@link org.apache.druid.server.ClientQuerySegmentWalker}. In tests, its behavior
  * is partially mimicked by TestClusterQuerySegmentWalker.
  */
@@ -316,32 +320,84 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     /**
      * Builds a query distribution and merge plan.
-     *
+     * <p>
      * This method returns an empty sequence if the query datasource is unknown or there is matching result-level cache.
      * Otherwise, it creates a sequence merging sequences from the regular broker cache and remote servers. If parallel
      * merge is enabled, it can merge and *combine* the underlying sequences in parallel.
      *
      * @return a pair of a sequence merging results from remote query servers and the number of remote servers
-     *         participating in query processing.
+     * participating in query processing.
      */
     ClusterQueryResult<T> run(
         final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter,
         final boolean specificSegments
     )
     {
-      final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
-          dataSourceAnalysis
-      );
-      if (!maybeTimeline.isPresent()) {
-        return new ClusterQueryResult<>(Sequences.empty(), 0);
+      final List<TimelineObjectHolder<String, ServerSelector>> serversLookup;
+
+      //Handles MultiTableDataSource based queries. Within core Druid, only UnionDataSource falls under this category.
+      if (query.getDataSource() instanceof MultiTableDataSource) {
+        Map<String, TimelineLookup<String, ServerSelector>> timelineMap = new HashMap<>();
+        final BiFunction<Interval, TimelineLookup<String, ServerSelector>, List<TimelineObjectHolder<String, ServerSelector>>> biLookupFn
+            = (interval, timeline) -> {
+              if (specificSegments) {
+                return timeline.lookupWithIncompletePartitions(interval);
+              } else {
+                return timeline.lookup(interval);
+              }
+            };
+
+        for (TableDataSource ds : ((MultiTableDataSource) query.getDataSource()).getDataSources()) {
+          TimelineLookup<String, ServerSelector> timeline = fetchTimelineForDataSource(
+              timelineConverter,
+              DataSourceAnalysis.forDataSource(ds)
+          );
+          if (timeline != null) {
+            timelineMap.put(ds.getName(), timelineConverter.apply(timeline));
+          }
+        }
+        if (uncoveredIntervalsLimit > 0) {
+          computeUncoveredIntervals(timelineMap.values());
+        }
+        if (timelineMap.isEmpty()) {
+          return new ClusterQueryResult<>(Sequences.empty(), 0);
+        }
+        List<List<TimelineObjectHolder<String, ServerSelector>>> multiDataSourceServerLookup = ((MultiTableDataSource) query
+            .getDataSource()).retrieveSegmentsForIntervals(
+            intervals,
+            timelineMap,
+            biLookupFn
+        );
+
+        serversLookup = multiDataSourceServerLookup.stream()
+                                                   .flatMap(segmentsPerDataSource -> toolChest.filterSegments(
+                                                       query,
+                                                       segmentsPerDataSource
+                                                   ).stream())
+                                                   .collect(Collectors.toList());
+
+      } else {
+        TimelineLookup<String, ServerSelector> timeline = fetchTimelineForDataSource(
+            timelineConverter,
+            dataSourceAnalysis
+        );
+        if (timeline == null) {
+          return new ClusterQueryResult<>(Sequences.empty(), 0);
+        }
+        if (uncoveredIntervalsLimit > 0) {
+          computeUncoveredIntervals(Collections.singletonList(timeline));
+        }
+        final java.util.function.Function<Interval, List<TimelineObjectHolder<String, ServerSelector>>> lookupFn
+            = specificSegments ? timeline::lookupWithIncompletePartitions : timeline::lookup;
+        serversLookup = toolChest.filterSegments(
+            query,
+            intervals.stream()
+                     .flatMap(i -> lookupFn.apply(i).stream())
+                     .collect(Collectors.toList())
+        );
       }
 
-      final TimelineLookup<String, ServerSelector> timeline = timelineConverter.apply(maybeTimeline.get());
-      if (uncoveredIntervalsLimit > 0) {
-        computeUncoveredIntervals(timeline);
-      }
-
-      final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
+      final Set<SegmentServerSelector> segmentServers = filterSegmentsToQuery(serversLookup);
       @Nullable
       final byte[] queryCacheKey = computeQueryCacheKey();
       if (query.getContext().get(QueryResource.HEADER_IF_NONE_MATCH) != null) {
@@ -369,6 +425,22 @@ public class CachingClusteredClient implements QuerySegmentWalker
       });
 
       return new ClusterQueryResult<>(scheduler.run(query, mergedResultSequence), segmentsByServer.size());
+    }
+
+    @Nullable
+    private TimelineLookup<String, ServerSelector> fetchTimelineForDataSource(
+        final UnaryOperator<TimelineLookup<String, ServerSelector>> timelineConverter,
+        DataSourceAnalysis analysis
+    )
+    {
+      Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
+          analysis
+      );
+      if (!maybeTimeline.isPresent()) {
+        return null;
+      }
+
+      return timelineConverter.apply(maybeTimeline.get());
     }
 
     private Sequence<T> merge(List<Sequence<T>> sequencesByInterval)
@@ -407,18 +479,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
     }
 
-    private Set<SegmentServerSelector> computeSegmentsToQuery(
-        TimelineLookup<String, ServerSelector> timeline,
-        boolean specificSegments
+    private Set<SegmentServerSelector> filterSegmentsToQuery(
+        List<TimelineObjectHolder<String, ServerSelector>> serversLookup
     )
     {
-      final java.util.function.Function<Interval, List<TimelineObjectHolder<String, ServerSelector>>> lookupFn
-          = specificSegments ? timeline::lookupWithIncompletePartitions : timeline::lookup;
-      final List<TimelineObjectHolder<String, ServerSelector>> serversLookup = toolChest.filterSegments(
-          query,
-          intervals.stream().flatMap(i -> lookupFn.apply(i).stream()).collect(Collectors.toList())
-      );
-
       final Set<SegmentServerSelector> segments = new LinkedHashSet<>();
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache = new HashMap<>();
       // Filter unneeded chunks based on partition dimension
@@ -442,33 +506,35 @@ public class CachingClusteredClient implements QuerySegmentWalker
       return segments;
     }
 
-    private void computeUncoveredIntervals(TimelineLookup<String, ServerSelector> timeline)
+    private void computeUncoveredIntervals(Collection<TimelineLookup<String, ServerSelector>> timeline)
     {
       final List<Interval> uncoveredIntervals = new ArrayList<>(uncoveredIntervalsLimit);
       boolean uncoveredIntervalsOverflowed = false;
 
       for (Interval interval : intervals) {
-        Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
-        long startMillis = interval.getStartMillis();
-        long endMillis = interval.getEndMillis();
-        for (TimelineObjectHolder<String, ServerSelector> holder : lookup) {
-          Interval holderInterval = holder.getInterval();
-          long intervalStart = holderInterval.getStartMillis();
-          if (!uncoveredIntervalsOverflowed && startMillis != intervalStart) {
+        for (TimelineLookup timelineLookup : timeline) {
+          Iterable<TimelineObjectHolder<String, ServerSelector>> timelineObjectHolders = timelineLookup.lookup(interval);
+          long startMillis = interval.getStartMillis();
+          long endMillis = interval.getEndMillis();
+          for (TimelineObjectHolder<String, ServerSelector> holder : timelineObjectHolders) {
+            Interval holderInterval = holder.getInterval();
+            long intervalStart = holderInterval.getStartMillis();
+            if (!uncoveredIntervalsOverflowed && startMillis != intervalStart) {
+              if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
+                uncoveredIntervals.add(Intervals.utc(startMillis, intervalStart));
+              } else {
+                uncoveredIntervalsOverflowed = true;
+              }
+            }
+            startMillis = holderInterval.getEndMillis();
+          }
+
+          if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
             if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
-              uncoveredIntervals.add(Intervals.utc(startMillis, intervalStart));
+              uncoveredIntervals.add(Intervals.utc(startMillis, endMillis));
             } else {
               uncoveredIntervalsOverflowed = true;
             }
-          }
-          startMillis = holderInterval.getEndMillis();
-        }
-
-        if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
-          if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
-            uncoveredIntervals.add(Intervals.utc(startMillis, endMillis));
-          } else {
-            uncoveredIntervalsOverflowed = true;
           }
         }
       }

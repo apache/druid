@@ -77,6 +77,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -3038,6 +3040,37 @@ public class CachingClusteredClientTest
         ),
         runner.run(QueryPlus.wrap(query2), context),
         "renamed aggregators test"
+    );
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testTimeseriesForMultiTableDataSources()
+  {
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(
+                                                            new UnionDataSource(
+                                                                ImmutableList.of(
+                                                                    new TableDataSource(DATA_SOURCE),
+                                                                    new TableDataSource(DATA_SOURCE)
+                                                                )
+                                                            )
+                                                        )
+                                                        .intervals(SEG_SPEC)
+                                                        .filters(DIM_FILTER)
+                                                        .granularity(GRANULARITY)
+                                                        .aggregators(AGGS)
+                                                        .postAggregators(POST_AGGS)
+                                                        .context(CONTEXT);
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
+    testQueryCaching(
+        runner,
+        1,
+        false,
+        builder.randomQueryId().build(),
+        Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
     );
   }
 

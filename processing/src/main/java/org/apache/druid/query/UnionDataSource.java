@@ -26,12 +26,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.timeline.Overshadowable;
+import org.apache.druid.timeline.TimelineLookup;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-public class UnionDataSource implements DataSource
+public class UnionDataSource implements MultiTableDataSource
 {
   @JsonProperty
   private final List<TableDataSource> dataSources;
@@ -51,6 +58,7 @@ public class UnionDataSource implements DataSource
                       .collect(Collectors.toSet());
   }
 
+  @Override
   @JsonProperty
   public List<TableDataSource> getDataSources()
   {
@@ -77,6 +85,27 @@ public class UnionDataSource implements DataSource
     return new UnionDataSource(
         children.stream().map(dataSource -> (TableDataSource) dataSource).collect(Collectors.toList())
     );
+  }
+
+  @Override
+  public <ObjectType extends Overshadowable<ObjectType>> List<List<TimelineObjectHolder<String, ObjectType>>> retrieveSegmentsForIntervals(
+      List<Interval> intervals,
+      Map<String, TimelineLookup<String, ObjectType>> timelineMap,
+      BiFunction<Interval, TimelineLookup<String, ObjectType>, List<TimelineObjectHolder<String, ObjectType>>> biLookupFn
+  )
+  {
+    List<List<TimelineObjectHolder<String, ObjectType>>> segmentsList = new ArrayList<>();
+    for (String datasource : timelineMap.keySet()) {
+      List<TimelineObjectHolder<String, ObjectType>> dataSourceSegments = intervals.stream()
+                                                                                   .flatMap(itvl -> biLookupFn.apply(
+                                                                                       itvl,
+                                                                                       timelineMap.get(datasource))
+                                                                                                              .stream())
+                                                                                   .collect(Collectors.toList());
+      segmentsList.add(dataSourceSegments);
+    }
+    return segmentsList;
+
   }
 
   @Override

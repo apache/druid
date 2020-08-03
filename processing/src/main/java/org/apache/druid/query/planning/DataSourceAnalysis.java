@@ -24,10 +24,10 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.MultiTableDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Analysis of a datasource for purposes of deciding how to execute a particular query.
@@ -189,6 +190,19 @@ public class DataSourceAnalysis
   }
 
   /**
+   * Returns the names of all table datasources associated with this datasource, only if the base datasource is a table
+   * or a union of tables like {@link MultiTableDataSource}
+   */
+  public Set<String> getBaseTableDataSourceNames()
+  {
+    if (baseDataSource instanceof MultiTableDataSource || (baseDataSource instanceof TableDataSource)) {
+      return baseDataSource.getTableNames();
+    } else {
+      return Collections.emptySet();
+    }
+  }
+
+  /**
    * Returns the bottommost (i.e. innermost) {@link Query} from a possible stack of outer queries at the root of
    * the datasource tree. This is the query that will be applied to the base datasource plus any joinables that might
    * be present.
@@ -252,7 +266,7 @@ public class DataSourceAnalysis
     // check is redundant. But in the future, we will likely want to support unions of things other than tables,
     // so check anyway for future-proofing.
     return isConcreteBased() && (baseDataSource instanceof TableDataSource
-                                 || (baseDataSource instanceof UnionDataSource &&
+                                 || (baseDataSource instanceof MultiTableDataSource &&
                                      baseDataSource.getChildren()
                                                    .stream()
                                                    .allMatch(ds -> ds instanceof TableDataSource)));

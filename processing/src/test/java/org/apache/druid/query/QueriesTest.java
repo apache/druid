@@ -311,7 +311,39 @@ public class QueriesTest
   }
 
   @Test
-  public void testWithSpecificSegmentsOnUnionIsAnError()
+  public void testWithSpecificSegmentsOnUnion()
+  {
+    final ImmutableList<SegmentDescriptor> descriptors = ImmutableList.of(
+        new SegmentDescriptor(Intervals.of("2000/3000"), "0", 0),
+        new SegmentDescriptor(Intervals.of("2000/3000"), "0", 1)
+    );
+
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(new UnionDataSource(ImmutableList.of(new TableDataSource("foo"), new TableDataSource("bar"))))
+              .intervals(
+                  new MultipleSpecificSegmentSpec(
+                      ImmutableList.of(
+                          new SegmentDescriptor(Intervals.of("2000/3000"), "0", 0),
+                          new SegmentDescriptor(Intervals.of("2000/3000"), "0", 1)
+                      )
+                  )
+              )
+              .granularity(Granularities.ALL)
+              .build(),
+        Queries.withSpecificSegments(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(new UnionDataSource(ImmutableList.of(new TableDataSource("foo"), new TableDataSource("bar"))))
+                  .intervals("2000/3000")
+                  .granularity(Granularities.ALL)
+                  .build(),
+            descriptors
+        )
+    );
+  }
+
+  @Test
+  public void testWithSpecificSegmentsOnLookupsIsAnError()
   {
     final ImmutableList<SegmentDescriptor> descriptors = ImmutableList.of(
         new SegmentDescriptor(Intervals.of("2000/3000"), "0", 0),

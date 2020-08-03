@@ -430,7 +430,7 @@ public class QueryRunnerTestHelper
     BySegmentQueryRunner<T> bySegmentQueryRunner =
         new BySegmentQueryRunner<>(SEGMENT_ID, adapter.getDataInterval().getStart(), factory.createRunner(adapter));
     final QueryRunner<T> runner = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
-        .create(new UnionQueryRunner<>(bySegmentQueryRunner))
+        .create((bySegmentQueryRunner))
         .mergeResults()
         .applyPostMergeDecoration();
 

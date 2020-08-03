@@ -21,6 +21,7 @@ package org.apache.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -32,7 +33,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.query.UnionQueryRunner;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.TestHelper;
@@ -48,6 +48,10 @@ public class TimeSeriesUnionQueryRunnerTest
 {
   private final QueryRunner runner;
   private final boolean descending;
+
+  static {
+    NullHandling.initializeForTests();
+  }
 
   public TimeSeriesUnionQueryRunnerTest(QueryRunner runner, boolean descending)
   {
@@ -103,13 +107,13 @@ public class TimeSeriesUnionQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                ImmutableMap.of("rows", 52L, "idx", 26476L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.of("rows", 52L, "idx", 23308L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+                ImmutableMap.of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
@@ -161,32 +165,30 @@ public class TimeSeriesUnionQueryRunnerTest
         ),
         new Result<>(
             DateTimes.of("2011-04-02"),
-            new TimeseriesResultValue(ImmutableMap.of("rows", 7L, "idx", 8L))
+            new TimeseriesResultValue(ImmutableMap.of("rows", 7L, "idx", 7L))
         ),
         new Result<>(
             DateTimes.of("2011-04-04"),
-            new TimeseriesResultValue(ImmutableMap.of("rows", 9L, "idx", 10L))
+            new TimeseriesResultValue(ImmutableMap.of("rows", 9L, "idx", 7L))
         )
     );
 
     QueryRunner mergingrunner = toolChest.mergeResults(
-        new UnionQueryRunner<>(
-            new QueryRunner<Result<TimeseriesResultValue>>()
-            {
-              @Override
-              public Sequence<Result<TimeseriesResultValue>> run(
-                  QueryPlus<Result<TimeseriesResultValue>> queryPlus,
-                  ResponseContext responseContext
-              )
-              {
-                if (queryPlus.getQuery().getDataSource().equals(new TableDataSource("ds1"))) {
-                  return Sequences.simple(descending ? Lists.reverse(ds1) : ds1);
-                } else {
-                  return Sequences.simple(descending ? Lists.reverse(ds2) : ds2);
-                }
-              }
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              QueryPlus<Result<TimeseriesResultValue>> queryPlus,
+              ResponseContext responseContext
+          )
+          {
+            if (queryPlus.getQuery().getDataSource().equals(new TableDataSource("ds1"))) {
+              return Sequences.simple(descending ? Lists.reverse(ds1) : ds1);
+            } else {
+              return Sequences.simple(descending ? Lists.reverse(ds2) : ds2);
             }
-        )
+          }
+        }
     );
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
@@ -199,19 +201,13 @@ public class TimeSeriesUnionQueryRunnerTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                ImmutableMap.of("rows", 8L, "idx", 10L)
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-04-03"),
-            new TimeseriesResultValue(
-                ImmutableMap.of("rows", 3L, "idx", 4L)
+                ImmutableMap.of("rows", 7L, "idx", 7L)
             )
         ),
         new Result<>(
             DateTimes.of("2011-04-04"),
             new TimeseriesResultValue(
-                ImmutableMap.of("rows", 9L, "idx", 10L)
+                ImmutableMap.of("rows", 9L, "idx", 7L)
             )
         )
     );

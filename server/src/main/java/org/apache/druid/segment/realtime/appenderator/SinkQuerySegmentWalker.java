@@ -149,7 +149,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
     final Optional<TableDataSource> baseTableDataSource = analysis.getBaseTableDataSource();
 
-    if (!baseTableDataSource.isPresent() || !dataSource.equals(baseTableDataSource.get().getName())) {
+    if (!analysis.getBaseTableDataSourceNames().contains(dataSource)) {
       // Report error, since we somehow got a query for a datasource we can't handle.
       throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
     }

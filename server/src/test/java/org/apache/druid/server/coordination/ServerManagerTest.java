@@ -58,6 +58,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
@@ -208,7 +209,7 @@ public class ServerManagerTest
   {
     Future future = assertQueryable(
         Granularities.DAY,
-        "test",
+        new TableDataSource("test"),
         Intervals.of("P1d/2011-04-01"),
         ImmutableList.of(
             new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01"))
@@ -219,7 +220,7 @@ public class ServerManagerTest
 
     future = assertQueryable(
         Granularities.DAY,
-        "test", Intervals.of("P2d/2011-04-02"),
+        new TableDataSource("test"), Intervals.of("P2d/2011-04-02"),
         ImmutableList.of(
             new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-01")),
             new Pair<String, Interval>("2", Intervals.of("P1d/2011-04-02"))
@@ -231,22 +232,22 @@ public class ServerManagerTest
   @Test
   public void testDelete1()
   {
-    final String dataSouce = "test";
+    final DataSource dataSource = new TableDataSource("test");
     final Interval interval = Intervals.of("2011-04-01/2011-04-02");
 
     Future future = assertQueryable(
         Granularities.DAY,
-        dataSouce, interval,
+        dataSource, interval,
         ImmutableList.of(
             new Pair<String, Interval>("2", interval)
         )
     );
     waitForTestVerificationAndCleanup(future);
 
-    dropQueryable(dataSouce, "2", interval);
+    dropQueryable("test", "2", interval);
     future = assertQueryable(
         Granularities.DAY,
-        dataSouce, interval,
+        dataSource, interval,
         ImmutableList.of(
             new Pair<String, Interval>("1", interval)
         )
@@ -261,7 +262,7 @@ public class ServerManagerTest
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", Intervals.of("2011-04-04/2011-04-06"),
+        new TableDataSource("test"), Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
@@ -273,7 +274,7 @@ public class ServerManagerTest
 
     future = assertQueryable(
         Granularities.HOUR,
-        "test", Intervals.of("2011-04-04/2011-04-04T06"),
+        new TableDataSource("test"), Intervals.of("2011-04-04/2011-04-04T06"),
         ImmutableList.of(
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
@@ -286,7 +287,7 @@ public class ServerManagerTest
 
     future = assertQueryable(
         Granularities.HOUR,
-        "test", Intervals.of("2011-04-04/2011-04-04T03"),
+        new TableDataSource("test"), Intervals.of("2011-04-04/2011-04-04T03"),
         ImmutableList.of(
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T00/2011-04-04T01")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T01/2011-04-04T02")),
@@ -297,7 +298,7 @@ public class ServerManagerTest
 
     future = assertQueryable(
         Granularities.HOUR,
-        "test", Intervals.of("2011-04-04T04/2011-04-04T06"),
+        new TableDataSource("test"), Intervals.of("2011-04-04T04/2011-04-04T06"),
         ImmutableList.of(
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T04/2011-04-04T05")),
             new Pair<String, Interval>("2", Intervals.of("2011-04-04T05/2011-04-04T06"))
@@ -313,7 +314,7 @@ public class ServerManagerTest
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", Intervals.of("2011-04-04/2011-04-06"),
+        new TableDataSource("test"), Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
@@ -352,7 +353,7 @@ public class ServerManagerTest
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", Intervals.of("2011-04-04/2011-04-06"),
+        new TableDataSource("test"), Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
@@ -395,7 +396,7 @@ public class ServerManagerTest
 
     Future future = assertQueryable(
         Granularities.DAY,
-        "test", Intervals.of("2011-04-04/2011-04-06"),
+        new TableDataSource("test"), Intervals.of("2011-04-04/2011-04-06"),
         ImmutableList.of(
             new Pair<String, Interval>("3", Intervals.of("2011-04-04/2011-04-05"))
         )
@@ -437,7 +438,7 @@ public class ServerManagerTest
   {
     final Interval interval = Intervals.of("0000-01-01/P1D");
     final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForIntervals(
-        searchQuery("unknown_datasource", interval, Granularities.ALL),
+        searchQuery(new TableDataSource("unknown_datasource"), interval, Granularities.ALL),
         Collections.singletonList(interval)
     );
     Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
@@ -447,7 +448,7 @@ public class ServerManagerTest
   public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegments()
   {
     final Interval interval = Intervals.of("0000-01-01/P1D");
-    final SearchQuery query = searchQuery("unknown_datasource", interval, Granularities.ALL);
+    final SearchQuery query = searchQuery(new TableDataSource("unknown_datasource"), interval, Granularities.ALL);
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "unknown_version", 0)
     );
@@ -466,7 +467,7 @@ public class ServerManagerTest
   public void testGetQueryRunnerForSegmentsWhenTimelineEntryIsMissingReportingMissingSegments()
   {
     final Interval interval = Intervals.of("P1d/2011-04-01");
-    final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
+    final SearchQuery query = searchQuery(new TableDataSource("test"), interval, Granularities.ALL);
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "unknown_version", 0)
     );
@@ -486,7 +487,7 @@ public class ServerManagerTest
   {
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final int unknownPartitionId = 1000;
-    final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
+    final SearchQuery query = searchQuery(new TableDataSource("test"), interval, Granularities.ALL);
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "1", unknownPartitionId)
     );
@@ -505,7 +506,7 @@ public class ServerManagerTest
   public void testGetQueryRunnerForSegmentsWhenSegmentIsClosedReportingMissingSegments()
   {
     final Interval interval = Intervals.of("P1d/2011-04-01");
-    final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
+    final SearchQuery query = searchQuery(new TableDataSource("test"), interval, Granularities.ALL);
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
         .getTimeline(DataSourceAnalysis.forDataSource(query.getDataSource()));
     Assert.assertTrue(maybeTimeline.isPresent());
@@ -587,6 +588,30 @@ public class ServerManagerTest
     );
   }
 
+  @Test
+  public void testGetQueryRunnerForSegmentsForUnionQueries()
+  {
+    Future future = assertQueryable(
+        Granularities.DAY,
+        new UnionDataSource(ImmutableList.of(new TableDataSource("test"), new TableDataSource("test2"))),
+        Intervals.of("P1d/2011-04-01"),
+        ImmutableList.of(
+            new Pair<>("1", Intervals.of("P1d/2011-04-01")), new Pair<>("1", Intervals.of("P1d/2011-04-01")))
+    );
+    waitForTestVerificationAndCleanup(future);
+
+    future = assertQueryable(
+        Granularities.DAY,
+        new UnionDataSource(ImmutableList.of(new TableDataSource("test"), new TableDataSource("test2"))),
+        Intervals.of("P1d/2011-04-04"),
+        ImmutableList.of(
+            new Pair<String, Interval>("1", Intervals.of("P1d/2011-04-04"))
+        )
+    );
+    waitForTestVerificationAndCleanup(future);
+  }
+
+
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
@@ -601,7 +626,7 @@ public class ServerManagerTest
     }
   }
 
-  private SearchQuery searchQuery(String datasource, Interval interval, Granularity granularity)
+  private SearchQuery searchQuery(DataSource datasource, Interval interval, Granularity granularity)
   {
     return Druids.newSearchQueryBuilder()
                  .dataSource(datasource)
@@ -614,7 +639,7 @@ public class ServerManagerTest
 
   private Future assertQueryable(
       Granularity granularity,
-      String dataSource,
+      DataSource dataSource,
       Interval interval,
       List<Pair<String, Interval>> expected
   )

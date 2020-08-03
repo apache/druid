@@ -67,7 +67,7 @@ public class FluentQueryRunnerBuilder<T>
 
     public FluentQueryRunner applyPreMergeDecoration()
     {
-      return from(new UnionQueryRunner<>(toolChest.preMergeQueryDecoration(baseRunner)));
+      return from((toolChest.preMergeQueryDecoration(baseRunner)));
     }
 
     public FluentQueryRunner emitCPUTimeMetric(ServiceEmitter emitter)

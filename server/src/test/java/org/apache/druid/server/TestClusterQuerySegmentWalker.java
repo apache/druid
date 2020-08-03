@@ -39,7 +39,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
@@ -65,11 +64,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Mimics the behavior of {@link org.apache.druid.client.CachingClusteredClient} when it queries data servers (like
  * Historicals, which use {@link org.apache.druid.server.coordination.ServerManager}). Used by {@link QueryStackTests}.
- *
  * This class's logic is like a mashup of those two classes. With the right abstractions, it may be possible to get rid
  * of this class and replace it with the production classes.
  */
@@ -107,11 +106,15 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         throw new ISE("Cannot handle datasource: %s", queryPlus.getQuery().getDataSource());
       }
 
-      final String dataSourceName = ((TableDataSource) analysis.getBaseDataSource()).getName();
+      final Set<String> dataSourceNames = analysis.getBaseTableDataSourceNames();
 
       FunctionalIterable<SegmentDescriptor> segmentDescriptors = FunctionalIterable
           .create(intervals)
-          .transformCat(interval -> getSegmentsForTable(dataSourceName, interval))
+          .transformCat(interval -> FunctionalIterable.create(dataSourceNames)
+                                                      .transformCat(dataSource -> getSegmentsForTable(
+                                                          dataSource,
+                                                          interval
+                                                      )))
           .transform(WindowedSegment::getDescriptor);
 
       return getQueryRunnerForSegments(queryPlus.getQuery(), segmentDescriptors).run(queryPlus, responseContext);
@@ -132,7 +135,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle datasource: %s", query.getDataSource());
     }
 
-    final String dataSourceName = ((TableDataSource) analysis.getBaseDataSource()).getName();
+    final Set<String> dataSourceNames = analysis.getBaseTableDataSourceNames();
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
@@ -149,11 +152,13 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         analysis.getBaseQuery().orElse(query)
     );
 
+
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
-                    makeTableRunner(toolChest, factory, getSegmentsForTable(dataSourceName, specs), segmentMapFn)
+                    makeTableRunner(toolChest, factory, dataSourceNames.stream().flatMap(dataSource -> getSegmentsForTable(dataSource, specs).stream()).collect(
+                        Collectors.toList()), segmentMapFn)
                 )
             )
         ),
@@ -258,13 +263,17 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       return Collections.emptyList();
     } else {
       final List<WindowedSegment> retVal = new ArrayList<>();
+      final Set<SegmentDescriptor> processedSegments = new HashSet<>();
 
       for (SegmentDescriptor spec : specs) {
-        final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
-            spec.getInterval(),
-            spec.getVersion()
-        );
-        retVal.add(new WindowedSegment(entry.getChunk(spec.getPartitionNumber()).getObject(), spec.getInterval()));
+        if (!processedSegments.contains(spec)) {
+          final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
+              spec.getInterval(),
+              spec.getVersion()
+          );
+          retVal.add(new WindowedSegment(entry.getChunk(spec.getPartitionNumber()).getObject(), spec.getInterval()));
+          processedSegments.add(spec);
+        }
       }
 
       return retVal;

@@ -43,7 +43,9 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -97,12 +99,12 @@ public class ServerManagerForQueryRetryTest extends ServerManager
   }
 
   @Override
-  <T> QueryRunner<T> buildQueryRunnerForSegment(
+  <T> List<QueryRunner<T>> buildQueryRunnersForSegment(
       Query<T> query,
       SegmentDescriptor descriptor,
       QueryRunnerFactory<T, Query<T>> factory,
       QueryToolChest<T, Query<T>> toolChest,
-      VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
+      List<VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       Function<SegmentReference, SegmentReference> segmentMapFn,
       AtomicLong cpuTimeAccumulator
   )
@@ -125,15 +127,15 @@ public class ServerManagerForQueryRetryTest extends ServerManager
 
       if (isIgnoreSegment.isTrue()) {
         LOG.info("Pretending I don't have segment[%s]", descriptor);
-        return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
+        return Collections.singletonList(new ReportTimelineMissingSegmentQueryRunner<>(descriptor));
       }
     }
-    return super.buildQueryRunnerForSegment(
+    return super.buildQueryRunnersForSegment(
         query,
         descriptor,
         factory,
         toolChest,
-        timeline,
+        timelines,
         segmentMapFn,
         cpuTimeAccumulator
     );

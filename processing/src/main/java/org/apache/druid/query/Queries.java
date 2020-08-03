@@ -160,7 +160,7 @@ public class Queries
     // Verify preconditions and invariants, just in case.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
 
-    if (!analysis.getBaseTableDataSource().isPresent()) {
+    if (analysis.getBaseTableDataSourceNames().isEmpty()) {
       throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
     }
 
