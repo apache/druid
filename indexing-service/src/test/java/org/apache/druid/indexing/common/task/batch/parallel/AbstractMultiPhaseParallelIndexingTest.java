@@ -269,6 +269,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                 null,
                 0,
                 0,
+                0,
                 null,
                 null,
                 columns,
