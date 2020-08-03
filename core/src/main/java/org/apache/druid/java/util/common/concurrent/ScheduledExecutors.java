@@ -174,6 +174,11 @@ public class ScheduledExecutors
     scheduleAtFixedRate(exec, rate, rate, callable);
   }
 
+  /**
+   * Run callable once every period, after the given initial delay. Uses
+   * {@link CronScheduler} for task scheduling. Exceptions are caught and logged
+   * as errors.
+   */
   public static void scheduleAtFixedRate(
       final CronScheduler exec,
       final Duration initialDelay,

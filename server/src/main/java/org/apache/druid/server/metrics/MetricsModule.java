@@ -27,11 +27,11 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
+import io.timeandspace.cronscheduler.CronScheduler;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.JvmCpuMonitor;
@@ -42,6 +42,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -100,16 +101,14 @@ public class MetricsModule implements Module
       log.info(
           "Loaded %d monitors: %s",
           monitors.size(),
-          monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", "))
-      );
+          monitors.stream().map(monitor -> monitor.getClass().getName()).collect(Collectors.joining(", ")));
     }
 
     return new MonitorScheduler(
         config.get(),
-        Execs.scheduledSingleThreaded("MonitorScheduler-%s"),
+        CronScheduler.newBuilder(Duration.ofSeconds(1L)).setThreadName("MonitorScheduler-%s").build(),
         emitter,
-        monitors
-    );
+        monitors);
   }
 
   @Provides
