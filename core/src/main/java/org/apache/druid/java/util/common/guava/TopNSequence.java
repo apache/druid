@@ -17,12 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby.orderby;
+package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Ordering;
 import org.apache.druid.collections.StableLimitingSorter;
-import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.Sequence;
 
 import java.util.Collections;
 import java.util.Iterator;

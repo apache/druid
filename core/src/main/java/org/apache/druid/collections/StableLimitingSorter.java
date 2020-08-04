@@ -33,7 +33,8 @@ import java.util.Objects;
  *
  * Not thread-safe.
  *
- * Note: this class doesn't have its own unit tests. It is tested along with "TopNSequence" in "TopNSequenceTest".
+ * Note: this class doesn't have its own unit tests. It is tested along with
+ * {@link org.apache.druid.java.util.common.guava.TopNSequence} in "TopNSequenceTest".
  */
 public class StableLimitingSorter<T>
 {

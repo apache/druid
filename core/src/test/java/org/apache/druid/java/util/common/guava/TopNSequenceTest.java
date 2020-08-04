@@ -17,14 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby.orderby;
+package org.apache.druid.java.util.common.guava;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
