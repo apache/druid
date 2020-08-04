@@ -479,12 +479,11 @@ public class DefaultLimitSpec implements LimitSpec
 
     public Builder orderBy(final String... columns)
     {
-      this.columns = ImmutableList.copyOf(
+      return orderBy(
           Arrays.stream(columns)
                 .map(s -> new OrderByColumnSpec(s, OrderByColumnSpec.Direction.ASCENDING))
-                .collect(Collectors.toList())
+                .toArray(OrderByColumnSpec[]::new)
       );
-      return this;
     }
 
     public Builder orderBy(final OrderByColumnSpec... columns)
