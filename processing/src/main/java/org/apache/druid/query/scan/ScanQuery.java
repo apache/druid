@@ -224,7 +224,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
    * situations where the user wants an effectively unlimited resultset.
    */
   @JsonProperty("limit")
-  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = ScanRowsJsonIncludeFilter.class)
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = ScanRowsLimitJsonIncludeFilter.class)
   public long getScanRowsLimit()
   {
     return scanRowsLimit;
@@ -396,8 +396,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   /**
    * {@link JsonInclude} filter for {@link #getScanRowsLimit()}.
    */
-  @SuppressWarnings("EqualsAndHashcode") // JsonInclude API works by "creative" use of equals
-  static class ScanRowsJsonIncludeFilter
+  @SuppressWarnings({"EqualsAndHashcode", "lgtm[java/inconsistent-equals-and-hashcode]"}) // JsonInclude API works by "creative" use of equals
+  static class ScanRowsLimitJsonIncludeFilter
   {
     @Override
     public boolean equals(Object obj)
