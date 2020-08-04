@@ -486,6 +486,7 @@ public class DefaultLimitSpec implements LimitSpec
       );
     }
 
+
     public Builder orderBy(final OrderByColumnSpec... columns)
     {
       this.columns = ImmutableList.copyOf(Arrays.asList(columns));
@@ -516,7 +517,7 @@ public class DefaultLimitSpec implements LimitSpec
    * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
    * exclusions (see spotbugs-exclude.xml).
    */
-  @SuppressWarnings({"EqualsAndHashcode", "lgtm[java/inconsistent-equals-and-hashcode]"})
+  @SuppressWarnings({"EqualsAndHashcode", "lgtm[inconsistent-equals-and-hashcode]"})
   static class LimitJsonIncludeFilter
   {
     @Override
