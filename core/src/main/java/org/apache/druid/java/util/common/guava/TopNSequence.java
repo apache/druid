@@ -19,17 +19,22 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import com.google.common.collect.Ordering;
 import org.apache.druid.collections.StableLimitingSorter;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 
+/**
+ * Simultaneously sorts and limits its input.
+ *
+ * The sort is stable, meaning that equal elements (as determined by the comparator) will not be reordered.
+ */
 public class TopNSequence<T> extends BaseSequence<T, Iterator<T>>
 {
   public TopNSequence(
       final Sequence<T> input,
-      final Ordering<T> ordering,
+      final Comparator<T> ordering,
       final int limit
   )
   {

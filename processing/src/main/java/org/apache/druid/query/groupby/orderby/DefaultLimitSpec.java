@@ -233,6 +233,8 @@ public class DefaultLimitSpec implements LimitSpec
           query.getContextSortByDimsFirst()
       );
 
+      // Both branches use a stable sort; important so consistent results are returned from query to query if the
+      // underlying data isn't changing. (Useful for query reproducibility and offset-based pagination.)
       if (isLimited()) {
         sortAndLimitFn = results -> new TopNSequence<>(results, ordering, limit + offset);
       } else {
