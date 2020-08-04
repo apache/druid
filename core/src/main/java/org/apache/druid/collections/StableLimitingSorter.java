@@ -19,6 +19,7 @@
 
 package org.apache.druid.collections;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 
@@ -90,7 +91,8 @@ public class StableLimitingSorter<T>
     };
   }
 
-  private static class NumberedElement<T>
+  @VisibleForTesting
+  static class NumberedElement<T>
   {
     private final T element;
     private final long number;
