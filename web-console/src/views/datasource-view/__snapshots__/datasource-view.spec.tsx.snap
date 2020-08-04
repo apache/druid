@@ -21,6 +21,15 @@ exports[`data source view matches snapshot 1`] = `
         shouldDismissPopover={true}
         text="View SQL query for table"
       />
+      <Blueprint3.MenuItem
+        disabled={false}
+        icon="edit"
+        multiline={false}
+        onClick={[Function]}
+        popoverProps={Object {}}
+        shouldDismissPopover={true}
+        text="Edit default retention rules"
+      />
     </Memo(MoreButton)>
     <Blueprint3.Switch
       checked={false}
