@@ -83,8 +83,6 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   private IntIterator currentIterator;
   private int currentRow;
   private final SimpleSettableOffset joinableOffset;
-  private final Closer closer;
-  private final boolean descending;
 
   IndexedTableJoinMatcher(
       final IndexedTable table,
@@ -96,13 +94,11 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   )
   {
     this.table = table;
-    this.descending = descending;
     if (descending) {
       this.joinableOffset = new SimpleDescendingOffset(table.numRows());
     } else {
       this.joinableOffset = new SimpleAscendingOffset(table.numRows());
     }
-    this.closer = closer;
     reset();
 
     if (condition.isAlwaysTrue()) {

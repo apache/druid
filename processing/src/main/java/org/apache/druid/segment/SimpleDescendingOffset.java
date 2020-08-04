@@ -80,7 +80,7 @@ public class SimpleDescendingOffset extends SimpleSettableOffset
   @Override
   public void setCurrentOffset(int currentOffset)
   {
-    currentOffset = currentOffset;
+    this.currentOffset = currentOffset;
   }
 
   @Override
