@@ -32,9 +32,12 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -42,6 +45,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
@@ -95,7 +99,6 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   @Before
   public void setup() throws IOException, SegmentLoadingException
   {
-    NullHandling.initializeForTests();
     final ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerModule(new SegmentizerModule());
     final IndexIO indexIO = new IndexIO(mapper, () -> 0);
@@ -236,48 +239,93 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
 
   private void checkIndexAndReader(String columnName, Object[] vals, Object[] nonmatchingVals)
   {
-    final int columnIndex = columnNames.indexOf(columnName);
-    final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
-    final IndexedTable.Index valueIndex = broadcastTable.columnIndex(columnIndex);
-    // lets try a few values out
-    for (Object val : vals) {
-      final IntList valIndex = valueIndex.find(val);
-      if (val == null) {
-        Assert.assertEquals(0, valIndex.size());
-      } else {
-        Assert.assertTrue(valIndex.size() > 0);
-        for (int i = 0; i < valIndex.size(); i++) {
-          Assert.assertEquals(val, reader.read(valIndex.getInt(i)));
+    checkColumnSelectorFactory(columnName);
+    final Closer closer = Closer.create();
+    try {
+      final int columnIndex = columnNames.indexOf(columnName);
+      final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
+      closer.register(reader);
+      final IndexedTable.Index valueIndex = broadcastTable.columnIndex(columnIndex);
+
+      // lets try a few values out
+      for (Object val : vals) {
+        final IntList valIndex = valueIndex.find(val);
+        if (val == null) {
+          Assert.assertEquals(0, valIndex.size());
+        } else {
+          Assert.assertTrue(valIndex.size() > 0);
+          for (int i = 0; i < valIndex.size(); i++) {
+            Assert.assertEquals(val, reader.read(valIndex.getInt(i)));
+          }
         }
       }
+      for (Object val : nonmatchingVals) {
+        final IntList valIndex = valueIndex.find(val);
+        Assert.assertEquals(0, valIndex.size());
+      }
     }
-    for (Object val : nonmatchingVals) {
-      final IntList valIndex = valueIndex.find(val);
-      Assert.assertEquals(0, valIndex.size());
+    finally {
+      CloseQuietly.close(closer);
     }
   }
 
   private void checkNonIndexedReader(String columnName)
   {
-    final int columnIndex = columnNames.indexOf(columnName);
-    final int numRows = backingSegment.asStorageAdapter().getNumRows();
-    final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
-    final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
-    final BaseObjectColumnValueSelector<?> selector = backingSegment.asQueryableIndex()
-                                                                 .getColumnHolder(columnName)
-                                                                 .getColumn()
-                                                                 .makeColumnValueSelector(offset);
-    // compare with selector make sure reader can read correct values
-    for (int row = 0; row < numRows; row++) {
-      offset.setCurrentOffset(row);
-      Assert.assertEquals(selector.getObject(), reader.read(row));
-    }
-    // make sure it doesn't have an index since it isn't a key column
+    checkColumnSelectorFactory(columnName);
+    final Closer closer = Closer.create();
     try {
-      Assert.assertEquals(null, broadcastTable.columnIndex(columnIndex));
+      final int columnIndex = columnNames.indexOf(columnName);
+      final int numRows = backingSegment.asStorageAdapter().getNumRows();
+      final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
+      closer.register(reader);
+      final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
+      final BaseColumn theColumn = backingSegment.asQueryableIndex()
+                                                 .getColumnHolder(columnName)
+                                                 .getColumn();
+      closer.register(theColumn);
+      final BaseObjectColumnValueSelector<?> selector = theColumn.makeColumnValueSelector(offset);
+      // compare with selector make sure reader can read correct values
+      for (int row = 0; row < numRows; row++) {
+        offset.setCurrentOffset(row);
+        Assert.assertEquals(selector.getObject(), reader.read(row));
+      }
+      // make sure it doesn't have an index since it isn't a key column
+      try {
+        Assert.assertEquals(null, broadcastTable.columnIndex(columnIndex));
+      }
+      catch (IAE iae) {
+        Assert.assertEquals(StringUtils.format("Column[%d] is not a key column", columnIndex), iae.getMessage());
+      }
     }
-    catch (IAE iae) {
-      Assert.assertEquals(StringUtils.format("Column[%d] is not a key column", columnIndex), iae.getMessage());
+    finally {
+      CloseQuietly.close(closer);
+    }
+  }
+
+  private void checkColumnSelectorFactory(String columnName)
+  {
+    final Closer closer = Closer.create();
+    try {
+      final int numRows = backingSegment.asStorageAdapter().getNumRows();
+
+      final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
+      final BaseColumn theColumn = backingSegment.asQueryableIndex()
+                                                 .getColumnHolder(columnName)
+                                                 .getColumn();
+      closer.register(theColumn);
+      final BaseObjectColumnValueSelector<?> selector = theColumn.makeColumnValueSelector(offset);
+
+      ColumnSelectorFactory tableFactory = broadcastTable.makeColumnSelectorFactory(offset, false, closer);
+      final BaseObjectColumnValueSelector<?> tableSelector = tableFactory.makeColumnValueSelector(columnName);
+
+      // compare with base segment selector to make sure tables selector can read correct values
+      for (int row = 0; row < numRows; row++) {
+        offset.setCurrentOffset(row);
+        Assert.assertEquals(selector.getObject(), tableSelector.getObject());
+      }
+    }
+    finally {
+      CloseQuietly.close(closer);
     }
   }
 }

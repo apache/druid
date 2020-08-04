@@ -26,24 +26,29 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -201,9 +206,9 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
       throw new IAE("Column[%d] is not a valid column for segment[%s]", column, segment.getId());
     }
     final SimpleAscendingOffset offset = new SimpleAscendingOffset(adapter.getNumRows());
-    final BaseObjectColumnValueSelector<?> selector = queryableIndex.getColumnHolder(rowSignature.getColumnName(column))
-                                                                    .getColumn()
-                                                                    .makeColumnValueSelector(offset);
+    final BaseColumn baseColumn = queryableIndex.getColumnHolder(rowSignature.getColumnName(column)).getColumn();
+    final BaseObjectColumnValueSelector<?> selector = baseColumn.makeColumnValueSelector(offset);
+
     return new Reader()
     {
       @Nullable
@@ -213,7 +218,27 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         offset.setCurrentOffset(row);
         return selector.getObject();
       }
+
+      @Override
+      public void close() throws IOException
+      {
+        baseColumn.close();
+      }
     };
+  }
+
+  @Nullable
+  @Override
+  public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
+  {
+    return new QueryableIndexColumnSelectorFactory(
+        queryableIndex,
+        VirtualColumns.EMPTY,
+        descending,
+        closer,
+        offset,
+        new HashMap<>()
+    );
   }
 
   @Override
