@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.orderby;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -26,76 +27,126 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
 
-@RunWith(Parameterized.class)
+@RunWith(Enclosed.class)
 public class TopNSequenceTest
 {
-  private static final Ordering<String> ASC = Ordering.natural();
-  private static final Ordering<String> DESC = Ordering.natural().reverse();
-
   private static final List<String> EMPTY = Collections.emptyList();
   private static final List<String> SINGLE = Collections.singletonList("a");
   private static final List<String> RAW_ASC = Lists.newArrayList(Splitter.fixedLength(1).split("abcdefghijk"));
   private static final List<String> RAW_DESC = Lists.newArrayList(Splitter.fixedLength(1).split("kjihgfedcba"));
 
-  private Ordering<String> ordering;
-  private List<String> rawInput;
-  private int limit;
-
-  @Parameterized.Parameters
-  public static Collection<Object[]> makeTestData()
+  @RunWith(Parameterized.class)
+  public static class TopNSequenceAscDescTest
   {
-    Object[][] data = new Object[][]{
-        {ASC, RAW_ASC, RAW_ASC.size() - 2},
-        {ASC, RAW_ASC, RAW_ASC.size()},
-        {ASC, RAW_ASC, RAW_ASC.size() + 2},
-        {ASC, RAW_ASC, 0},
-        {ASC, SINGLE, 0},
-        {ASC, SINGLE, 1},
-        {ASC, SINGLE, 2},
-        {ASC, SINGLE, 3},
-        {ASC, EMPTY, 0},
-        {ASC, EMPTY, 1},
-        {DESC, RAW_DESC, RAW_DESC.size() - 2},
-        {DESC, RAW_DESC, RAW_DESC.size()},
-        {DESC, RAW_DESC, RAW_DESC.size() + 2},
-        {DESC, RAW_DESC, 0},
-        {DESC, RAW_DESC, 0},
-        {DESC, SINGLE, 1},
-        {DESC, SINGLE, 2},
-        {DESC, SINGLE, 3},
-        {DESC, EMPTY, 0},
-        {DESC, EMPTY, 1}
-    };
+    private static final Ordering<String> ASC = Ordering.natural();
+    private static final Ordering<String> DESC = Ordering.natural().reverse();
 
-    return Arrays.asList(data);
+    private Ordering<String> ordering;
+    private List<String> rawInput;
+    private int limit;
+
+    @Parameterized.Parameters(name = "comparator={0}, rawInput={1}, limit={2}")
+    public static Collection<Object[]> makeTestData()
+    {
+      Object[][] data = new Object[][]{
+          {ASC, RAW_ASC, RAW_ASC.size() - 2},
+          {ASC, RAW_ASC, RAW_ASC.size()},
+          {ASC, RAW_ASC, RAW_ASC.size() + 2},
+          {ASC, RAW_ASC, 0},
+          {ASC, SINGLE, 0},
+          {ASC, SINGLE, 1},
+          {ASC, SINGLE, 2},
+          {ASC, SINGLE, 3},
+          {ASC, EMPTY, 0},
+          {ASC, EMPTY, 1},
+          {DESC, RAW_DESC, RAW_DESC.size() - 2},
+          {DESC, RAW_DESC, RAW_DESC.size()},
+          {DESC, RAW_DESC, RAW_DESC.size() + 2},
+          {DESC, RAW_DESC, 0},
+          {DESC, RAW_DESC, 0},
+          {DESC, SINGLE, 1},
+          {DESC, SINGLE, 2},
+          {DESC, SINGLE, 3},
+          {DESC, EMPTY, 0},
+          {DESC, EMPTY, 1}
+      };
+
+      return Arrays.asList(data);
+    }
+
+    public TopNSequenceAscDescTest(Ordering<String> ordering, List<String> rawInput, int limit)
+    {
+      this.ordering = ordering;
+      this.rawInput = rawInput;
+      this.limit = limit;
+    }
+
+    @Test
+    public void testOrderByWithLimit()
+    {
+      List<String> expected = rawInput.subList(0, Math.min(limit, rawInput.size()));
+      List<String> inputs = Lists.newArrayList(rawInput);
+      Collections.shuffle(inputs, new Random(2));
+
+      Sequence<String> result = new TopNSequence<>(Sequences.simple(inputs), ordering, limit);
+
+      Assert.assertEquals(expected, result.toList());
+    }
   }
 
-  public TopNSequenceTest(Ordering<String> ordering, List<String> rawInput, int limit)
+  /**
+   * This class has test cases using a comparator that sometimes returns zero for unequal things.
+   */
+  @RunWith(Parameterized.class)
+  public static class TopNSequenceEvenOddTest
   {
-    this.ordering = ordering;
-    this.rawInput = rawInput;
-    this.limit = limit;
-  }
+    // 'a', 'c', 'e', ... all come before 'b', 'd', 'f', ...
+    private static final Ordering<String> EVENODD = Ordering.from(Comparator.comparing(s -> 1 - s.charAt(0) % 2));
 
-  @Test
-  public void testOrderByWithLimit()
-  {
-    List<String> expected = rawInput.subList(0, Math.min(limit, rawInput.size()));
-    List<String> inputs = Lists.newArrayList(rawInput);
-    Collections.shuffle(inputs, new Random(2));
+    private String expected;
+    private List<String> rawInput;
 
-    Sequence<String> result = new TopNSequence<String>(Sequences.simple(inputs), ordering, limit);
+    @Parameterized.Parameters(name = "rawInput={1}")
+    public static Collection<Object[]> makeTestData()
+    {
+      Object[][] data = new Object[][]{
+          {"acegikbdfhj", RAW_ASC},
+          {"kigecajhfdb", RAW_DESC}
+      };
 
-    Assert.assertEquals(expected, result.toList());
+      return Arrays.asList(data);
+    }
+
+    public TopNSequenceEvenOddTest(String expected, List<String> rawInput)
+    {
+      this.expected = expected;
+      this.rawInput = rawInput;
+    }
+
+    @Test
+    public void testStability()
+    {
+      // Verify that the output of the sequence is stable relative to the input.
+      for (int limit = 0; limit < expected.length() + 1; limit++) {
+        final TopNSequence<String> sequence = new TopNSequence<>(Sequences.simple(rawInput), EVENODD, limit);
+        Assert.assertEquals(
+            "limit = " + limit,
+            expected.substring(0, Math.min(limit, expected.length())),
+            Joiner.on("").join(sequence.toList())
+        );
+      }
+    }
   }
 }

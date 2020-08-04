@@ -116,8 +116,8 @@ public class DefaultLimitSpec implements LimitSpec
     this.offset = (offset == null) ? 0 : offset;
     this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
 
-    Preconditions.checkArgument(this.offset >= 0, "offset[%d] must be >= 0", this.offset);
-    Preconditions.checkArgument(this.limit > 0, "limit[%d] must be > 0", this.limit);
+    Preconditions.checkArgument(this.offset >= 0, "offset[%s] must be >= 0", this.offset);
+    Preconditions.checkArgument(this.limit > 0, "limit[%s] must be > 0", this.limit);
   }
 
   /**
