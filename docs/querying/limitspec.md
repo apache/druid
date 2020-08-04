@@ -35,10 +35,22 @@ The default limit spec takes a limit and the list of columns to do an orderBy op
 ```json
 {
     "type"    : "default",
-    "limit"   : <integer_value>,
-    "columns" : [list of OrderByColumnSpec],
+    "limit"   : <optional integer>,
+    "offset"  : <optional integer>,
+    "columns" : [<optional list of OrderByColumnSpec>],
 }
 ```
+
+The "limit" parameter is the maximum number of rows to return.
+
+The "offset" parameter tells Druid to skip this many rows when returning results. If both "limit" and "offset" are
+provided, then "offset" will be applied first, followed by "limit". For example, a spec with limit 100 and offset 10
+will return 100 rows starting from row number 10. Skipped rows will still need to be generated internally and then
+discarded, meaning that raising offsets to high values can cause queries to use additional resources.
+
+Together, "limit" and "offset" can be used to implement pagination. However, note that if the underlying datasource is
+modified in between page fetches in ways that affect overall query results, then the different pages will not
+necessarily align with each other.
 
 #### OrderByColumnSpec
 
