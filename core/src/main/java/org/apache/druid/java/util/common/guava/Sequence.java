@@ -101,11 +101,7 @@ public interface Sequence<T>
   {
     Preconditions.checkArgument(limit >= 0, "limit >= 0");
 
-    if (limit >= 1) {
-      return new LimitedSequence<>(this, limit);
-    } else {
-      return this;
-    }
+    return new LimitedSequence<>(this, limit);
   }
 
   default <R> Sequence<R> flatMap(Function<? super T, ? extends Sequence<? extends R>> mapper)
