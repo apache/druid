@@ -147,7 +147,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    final Optional<TableDataSource> baseTableDataSource = analysis.getBaseTableDataSource();
 
     if (!analysis.getBaseTableDataSourceNames().contains(dataSource)) {
       // Report error, since we somehow got a query for a datasource we can't handle.
