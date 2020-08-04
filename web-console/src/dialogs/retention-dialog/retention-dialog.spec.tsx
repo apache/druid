@@ -25,9 +25,17 @@ describe('retention dialog', () => {
   it('matches snapshot', () => {
     const retentionDialog = (
       <RetentionDialog
-        datasource={'test'}
-        rules={[null]}
-        tiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']}
+        datasource={'test-datasource'}
+        rules={[
+          {
+            period: 'P1000Y',
+            includeFuture: true,
+            tieredReplicants: { _default_tier: 2 },
+            type: 'loadByPeriod',
+          },
+        ]}
+        defaultRules={[{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }]}
+        tiers={['tier1', 'tier2']}
         onEditDefaults={() => {}}
         onCancel={() => {}}
         onSave={() => {}}
