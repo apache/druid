@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -233,7 +234,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               retryPolicyFactory,
               dataSource,
               interval,
-              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
+              splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
           )
       );
     } else {
@@ -253,7 +254,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               retryPolicyFactory,
               dataSource,
               interval,
-              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
+              splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
           )
       );
     } else {
@@ -295,7 +296,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     final SplitHintSpec convertedSplitHintSpec;
     if (splitHintSpec instanceof SegmentsSplitHintSpec) {
       convertedSplitHintSpec = new MaxSizeSplitHintSpec(
-          ((SegmentsSplitHintSpec) splitHintSpec).getMaxInputSegmentBytesPerTask()
+          new HumanReadableBytes(((SegmentsSplitHintSpec) splitHintSpec).getMaxInputSegmentBytesPerTask()),
+          null
       );
     } else {
       convertedSplitHintSpec = splitHintSpec;

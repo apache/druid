@@ -73,6 +73,12 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
     this.maxNumFiles = maxNumFiles == null ? DEFAULT_MAX_NUM_FILES : maxNumFiles;
   }
 
+  @VisibleForTesting
+  public MaxSizeSplitHintSpec(long maxSplitSize, @Nullable Integer maxNumFiles)
+  {
+    this(new HumanReadableBytes(maxSplitSize), maxNumFiles);
+  }
+
   @JsonProperty
   public HumanReadableBytes getMaxSplitSize()
   {
