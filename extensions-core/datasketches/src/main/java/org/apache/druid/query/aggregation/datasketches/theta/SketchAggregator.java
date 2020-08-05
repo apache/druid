@@ -81,6 +81,18 @@ public class SketchAggregator implements Aggregator
   }
 
   @Override
+  public int getCardinalRows()
+  {
+    return (int) ((SketchHolder) get()).getEstimate();
+  }
+
+  @Override
+  public boolean requiredAdjustSize()
+  {
+    return true;
+  }
+
+  @Override
   public float getFloat()
   {
     throw new UnsupportedOperationException("Not implemented");

@@ -75,6 +75,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -254,11 +255,13 @@ public class AppenderatorImpl implements Appenderator
     final long bytesInMemoryBeforeAdd = sink.getBytesInMemory();
     final long bytesInMemoryAfterAdd;
     final IncrementalIndexAddResult addResult;
+    final long nextRedundantBytes;
 
     try {
       addResult = sink.add(row, !allowIncrementalPersists);
       sinkRowsInMemoryAfterAdd = addResult.getRowCount();
       bytesInMemoryAfterAdd = addResult.getBytesInMemory();
+      nextRedundantBytes = addResult.getNextRedundantBytes();
     }
     catch (IndexSizeExceededException e) {
       // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
@@ -301,11 +304,12 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory()
       ));
     }
-    if (bytesCurrentlyInMemory.get() >= maxBytesTuningConfig) {
+    if (bytesCurrentlyInMemory.get() + nextRedundantBytes >= maxBytesTuningConfig) {
       persist = true;
       persistReasons.add(StringUtils.format(
-          "bytesCurrentlyInMemory[%d] is greater than maxBytesInMemory[%d]",
+          "bytesCurrentlyInMemory[%d] + nextRedundantBytes[%s] is greater than maxBytesInMemory[%d]",
           bytesCurrentlyInMemory.get(),
+          nextRedundantBytes,
           maxBytesTuningConfig
       ));
     }
@@ -332,6 +336,7 @@ public class AppenderatorImpl implements Appenderator
         );
       } else {
         isPersistRequired = true;
+        sink.stopAdjust();
       }
     }
     return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired, addResult.getParseException());
