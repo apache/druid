@@ -1566,7 +1566,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setContext(OUTER_LIMIT_CONTEXT)
                 .build()
         ),
-        ImmutableList.of(new Object[]{"", "a", 1L}, new Object[]{"def", "abc", 1L})
+        ImmutableList.of(
+            new Object[]{"", "a", 1L},
+            new Object[]{"1", "a", 1L}
+        )
     );
   }
 
