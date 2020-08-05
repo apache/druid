@@ -132,7 +132,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") @Nullable HavingSpec havingSpec,
-      @JsonProperty("limitSpec") LimitSpec limitSpec,
+      @JsonProperty("limitSpec") @Nullable LimitSpec limitSpec,
       @JsonProperty("subtotalsSpec") @Nullable List<List<String>> subtotalsSpec,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -183,7 +183,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       final @Nullable List<AggregatorFactory> aggregatorSpecs,
       final @Nullable List<PostAggregator> postAggregatorSpecs,
       final @Nullable HavingSpec havingSpec,
-      final LimitSpec limitSpec,
+      final @Nullable LimitSpec limitSpec,
       final @Nullable List<List<String>> subtotalsSpec,
       final @Nullable Function<Sequence<ResultRow>, Sequence<ResultRow>> postProcessingFn,
       final Map<String, Object> context
@@ -483,10 +483,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     final boolean forceLimitPushDown = validateAndGetForceLimitPushDown();
 
     if (limitSpec instanceof DefaultLimitSpec) {
-      DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) limitSpec;
+      DefaultLimitSpec limitSpecWithoutOffset = ((DefaultLimitSpec) limitSpec).withOffsetToLimit();
 
       // If only applying an orderby without a limit, don't try to push down
-      if (!defaultLimitSpec.isLimited()) {
+      if (!limitSpecWithoutOffset.isLimited()) {
         return false;
       }
 
@@ -1153,7 +1153,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         if (orderByColumnSpecs.isEmpty() && limit == Integer.MAX_VALUE) {
           theLimitSpec = NoopLimitSpec.instance();
         } else {
-          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
+          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, 0, limit);
         }
       } else {
         theLimitSpec = limitSpec;
