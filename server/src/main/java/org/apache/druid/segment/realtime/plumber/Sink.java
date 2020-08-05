@@ -43,6 +43,7 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -185,6 +186,16 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   public FireHydrant getCurrHydrant()
   {
     return currHydrant;
+  }
+
+  public void stopAdjust()
+  {
+    synchronized (hydrantLock) {
+      IncrementalIndex index = currHydrant.getIndex();
+      if (index != null) {
+        index.stopAdjust();
+      }
+    }
   }
 
   public IncrementalIndexAddResult add(InputRow row, boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException

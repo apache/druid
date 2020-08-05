@@ -249,6 +249,16 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
+   * The size of the occupancy of a particular aggregate type
+   * (dynamic capacity enlargement is based on the number of aggregates) evaluates the tuning strategy,
+   * with the default null value indicating that no tuning is required
+   * @return
+   */
+  public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy() {
+    return null;
+  }
+
+  /**
    * Return a potentially optimized form of this AggregatorFactory for per-segment queries.
    */
   public AggregatorFactory optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)

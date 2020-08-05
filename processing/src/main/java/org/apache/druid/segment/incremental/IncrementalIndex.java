@@ -79,6 +79,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -256,6 +257,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
+  protected final int[] rowNeedAdjustAggIndex;
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -299,11 +301,20 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     this.metricDescs = Maps.newLinkedHashMap();
+    int tempAggCount = 0;
+    int index = 0;
+    int[] tempAggIndex = new int[metrics.length];
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
       columnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
+      if (metric.getMaxIntermediateSizeAdjustStrategy() != null) {
+        tempAggIndex[tempAggCount++] = index;
+      }
+      index++;
     }
+    rowNeedAdjustAggIndex = new int[tempAggCount];
+    System.arraycopy(tempAggIndex, 0, rowNeedAdjustAggIndex, 0, tempAggCount);
 
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
     this.dimensionDescs = Maps.newLinkedHashMap();
@@ -544,6 +555,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private final int rowCount;
     private final long bytesInMemory;
     private final List<String> parseExceptionMessages;
+    private final long nextRedundantBytes;
 
     public AddToFactsResult(
         int rowCount,
@@ -551,9 +563,20 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         List<String> parseExceptionMessages
     )
     {
+      this(rowCount, bytesInMemory, parseExceptionMessages, 0);
+    }
+
+    public AddToFactsResult(
+        int rowCount,
+        long bytesInMemory,
+        List<String> parseExceptionMessages,
+        long nextRedundantBytes
+    )
+    {
       this.rowCount = rowCount;
       this.bytesInMemory = bytesInMemory;
       this.parseExceptionMessages = parseExceptionMessages;
+      this.nextRedundantBytes = nextRedundantBytes;
     }
 
     int getRowCount()
@@ -570,10 +593,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       return parseExceptionMessages;
     }
+
+    public long getNextRedundantBytes()
+    {
+      return nextRedundantBytes;
+    }
   }
 
   @Override
   public void close()
+  {
+  }
+
+  public void stopAdjust()
   {
   }
 
@@ -630,7 +662,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new IncrementalIndexAddResult(
         addToFactsResult.getRowCount(),
         addToFactsResult.getBytesInMemory(),
-        parseException
+        parseException,
+        addToFactsResult.getNextRedundantBytes()
     );
   }
 
