@@ -41,8 +41,6 @@ public class RedisStandaloneCache extends AbstractRedisCache
     try (Jedis jedis = pool.getResource()) {
       return jedis.get(key);
     }
-    finally {
-    }
   }
 
   @Override
@@ -51,8 +49,6 @@ public class RedisStandaloneCache extends AbstractRedisCache
     try (Jedis jedis = pool.getResource()) {
       jedis.psetex(key, expiration.getMilliseconds(), value);
     }
-    finally {
-    }
   }
 
   @Override
@@ -60,8 +56,6 @@ public class RedisStandaloneCache extends AbstractRedisCache
   {
     try (Jedis jedis = pool.getResource()) {
       return jedis.mget(keys);
-    }
-    finally {
     }
   }
 

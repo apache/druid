@@ -34,7 +34,7 @@ public class RedisCacheFactory
 {
   public static Cache create(final RedisCacheConfig config)
   {
-    if (config.getCluster() != null && StringUtils.isNotEmpty(config.getCluster().getNodes())) {
+    if (config.getCluster() != null && StringUtils.isNotBlank(config.getCluster().getNodes())) {
 
       Set<HostAndPort> nodes = Arrays.stream(config.getCluster().getNodes().split(","))
                                      .map(String::trim)
@@ -65,7 +65,7 @@ public class RedisCacheFactory
       poolConfig.setMinIdle(config.getMinIdleConnections());
 
       JedisCluster cluster;
-      if (org.apache.commons.lang3.StringUtils.isNotBlank(config.getPassword())) {
+      if (StringUtils.isNotBlank(config.getPassword())) {
         cluster = new JedisCluster(
             nodes,
             config.getTimeout().getMillisecondsAsInt(),
