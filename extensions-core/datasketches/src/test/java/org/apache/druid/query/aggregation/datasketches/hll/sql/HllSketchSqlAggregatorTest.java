@@ -388,10 +388,20 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                  )
                                  .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                                  .setGranularity(Granularities.ALL)
-                                 .setAggregatorSpecs(Arrays.asList(
-                                     new LongSumAggregatorFactory("_a0:sum", "a0"),
-                                     new CountAggregatorFactory("_a0:count")
-                                 ))
+                                 .setAggregatorSpecs(
+                                     NullHandling.replaceWithDefault()
+                                     ? Arrays.asList(
+                                       new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                       new CountAggregatorFactory("_a0:count")
+                                     )
+                                     : Arrays.asList(
+                                         new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                         new FilteredAggregatorFactory(
+                                             new CountAggregatorFactory("_a0:count"),
+                                             BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("a0", null, null))
+                                         )
+                                     )
+                                 )
                                  .setPostAggregatorSpecs(
                                      ImmutableList.of(
                                          new ArithmeticPostAggregator(

@@ -91,6 +91,15 @@ public class SketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(PostAggregatorIds.THETA_SKETCH_TO_STRING)
+        .appendString(name)
+        .appendCacheable(field)
+        .build();
+  }
+
+  @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{" +
@@ -100,22 +109,17 @@ public class SketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof SketchToStringPostAggregator)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final SketchToStringPostAggregator that = (SketchToStringPostAggregator) o;
-
-    if (!name.equals(that.name)) {
-      return false;
-    }
-
-    return field.equals(that.field);
+    SketchToStringPostAggregator that = (SketchToStringPostAggregator) o;
+    return name.equals(that.name) &&
+           field.equals(that.field);
   }
 
   @Override
@@ -123,14 +127,4 @@ public class SketchToStringPostAggregator implements PostAggregator
   {
     return Objects.hash(name, field);
   }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new CacheKeyBuilder(PostAggregatorIds.THETA_SKETCH_TO_STRING)
-        .appendString(name)
-        .appendCacheable(field)
-        .build();
-  }
-
 }

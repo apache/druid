@@ -76,7 +76,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class InDimFilter implements DimFilter, Filter
+public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
   // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
   // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet

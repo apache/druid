@@ -20,6 +20,7 @@
 package org.apache.druid.testing.utils;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreatePartitionsResult;
@@ -39,11 +40,12 @@ public class KafkaAdminClient implements StreamAdminClient
 {
   private AdminClient adminClient;
 
-  public KafkaAdminClient(String kafkaInternalHost)
+  public KafkaAdminClient(IntegrationTestingConfig config)
   {
-    Properties config = new Properties();
-    config.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaInternalHost);
-    adminClient = AdminClient.create(config);
+    Properties properties = new Properties();
+    KafkaUtil.addPropertiesFromTestConfig(config, properties);
+    properties.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, config.getKafkaHost());
+    adminClient = AdminClient.create(properties);
   }
 
   @Override

@@ -41,7 +41,7 @@ import java.util.Set;
 /**
  *
  */
-public class SelectorDimFilter implements DimFilter
+public class SelectorDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;
 

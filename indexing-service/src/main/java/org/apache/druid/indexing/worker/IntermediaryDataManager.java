@@ -26,8 +26,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatus;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -337,7 +337,7 @@ public class IntermediaryDataManager
   @Nullable
   public File findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int bucketId)
   {
-    TaskIdUtils.validateId("supervisorTaskId", supervisorTaskId);
+    IdUtils.validateId("supervisorTaskId", supervisorTaskId);
     for (StorageLocation location : shuffleDataLocations) {
       final File partitionDir = new File(location.getPath(), getPartitionDir(supervisorTaskId, interval, bucketId));
       if (partitionDir.exists()) {
@@ -366,7 +366,7 @@ public class IntermediaryDataManager
 
   public void deletePartitions(String supervisorTaskId) throws IOException
   {
-    TaskIdUtils.validateId("supervisorTaskId", supervisorTaskId);
+    IdUtils.validateId("supervisorTaskId", supervisorTaskId);
     for (StorageLocation location : shuffleDataLocations) {
       final File supervisorTaskPath = new File(location.getPath(), supervisorTaskId);
       if (supervisorTaskPath.exists()) {
