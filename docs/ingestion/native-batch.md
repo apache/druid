@@ -233,6 +233,7 @@ The size-based split hint spec is respected by all splittable input sources exce
 |--------|-----------|-------|---------|
 |type|This should always be `maxSize`.|none|yes|
 |maxSplitSize|Maximum number of bytes of input files to process in a single task. If a single file is larger than this number, it will be processed by itself in a single task (Files are never split across tasks yet).|500MB|no|
+|maxNumFiles|Maximum number of input files to process in a single task. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (`jute.maxbuffer`) and the max packet size in MySQL (`max_allowed_packet`). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.|5000|no|
 
 #### Segments Split Hint Spec
 

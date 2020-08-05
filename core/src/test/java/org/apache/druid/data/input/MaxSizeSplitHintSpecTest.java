@@ -19,9 +19,11 @@
 
 package org.apache.druid.data.input;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,23 +38,43 @@ public class MaxSizeSplitHintSpecTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final MaxSizeSplitHintSpec original = new MaxSizeSplitHintSpec(1024L);
+    final MaxSizeSplitHintSpec original = new MaxSizeSplitHintSpec(new HumanReadableBytes(1024L), 20_000);
     final byte[] bytes = mapper.writeValueAsBytes(original);
     final MaxSizeSplitHintSpec fromJson = (MaxSizeSplitHintSpec) mapper.readValue(bytes, SplitHintSpec.class);
     Assert.assertEquals(original, fromJson);
   }
 
   @Test
-  public void testCreateWithNullReturningDefaultMaxSplitSize()
+  public void testReadFromJson() throws JsonProcessingException
   {
-    Assert.assertEquals(MaxSizeSplitHintSpec.DEFAULT_MAX_SPLIT_SIZE, new MaxSizeSplitHintSpec(null).getMaxSplitSize());
+    final ObjectMapper mapper = new ObjectMapper();
+    final String json = "{"
+                        + "  \"type\":\"maxSize\","
+                        + "  \"maxSplitSize\":1024,"
+                        + "  \"maxNumFiles\":20000"
+                        + "}\n";
+    final MaxSizeSplitHintSpec fromJson = (MaxSizeSplitHintSpec) mapper.readValue(json, SplitHintSpec.class);
+    Assert.assertEquals(new MaxSizeSplitHintSpec(new HumanReadableBytes(1024L), 20_000), fromJson);
+  }
+
+  @Test
+  public void testDefaults()
+  {
+    Assert.assertEquals(
+        MaxSizeSplitHintSpec.DEFAULT_MAX_SPLIT_SIZE,
+        new MaxSizeSplitHintSpec(null, null).getMaxSplitSize()
+    );
+    Assert.assertEquals(
+        MaxSizeSplitHintSpec.DEFAULT_MAX_NUM_FILES,
+        new MaxSizeSplitHintSpec(null, null).getMaxNumFiles()
+    );
   }
 
   @Test
   public void testSplitSmallInputsGroupingIntoLargerSplits()
   {
     final int eachInputSize = 3;
-    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(10L);
+    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(new HumanReadableBytes(10L), 10_000);
     final Function<Integer, InputFileAttribute> inputAttributeExtractor = InputFileAttribute::new;
     final List<List<Integer>> splits = Lists.newArrayList(
         splitHintSpec.split(IntStream.generate(() -> eachInputSize).limit(10).iterator(), inputAttributeExtractor)
@@ -68,7 +90,7 @@ public class MaxSizeSplitHintSpecTest
   public void testSplitLargeInputsReturningSplitsOfSingleInput()
   {
     final int eachInputSize = 15;
-    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(10L);
+    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(new HumanReadableBytes(10L), 10_000);
     final Function<Integer, InputFileAttribute> inputAttributeExtractor = InputFileAttribute::new;
     final List<List<Integer>> splits = Lists.newArrayList(
         splitHintSpec.split(IntStream.generate(() -> eachInputSize).limit(10).iterator(), inputAttributeExtractor)
@@ -80,10 +102,26 @@ public class MaxSizeSplitHintSpecTest
   }
 
   @Test
+  public void testSplitSmallInputsWithMaxNumFilesEachSplitShouldHaveLessFilesAssigned()
+  {
+    final int eachInputSize = 3;
+    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(new HumanReadableBytes("500M"), 3);
+    final Function<Integer, InputFileAttribute> inputAttributeExtractor = InputFileAttribute::new;
+    final List<List<Integer>> splits = Lists.newArrayList(
+        splitHintSpec.split(IntStream.generate(() -> eachInputSize).limit(10).iterator(), inputAttributeExtractor)
+    );
+    Assert.assertEquals(4, splits.size());
+    Assert.assertEquals(3, splits.get(0).size());
+    Assert.assertEquals(3, splits.get(1).size());
+    Assert.assertEquals(3, splits.get(2).size());
+    Assert.assertEquals(1, splits.get(3).size());
+  }
+
+  @Test
   public void testSplitSkippingEmptyInputs()
   {
     final int nonEmptyInputSize = 3;
-    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(10L);
+    final MaxSizeSplitHintSpec splitHintSpec = new MaxSizeSplitHintSpec(new HumanReadableBytes(10L), null);
     final Function<Integer, InputFileAttribute> inputAttributeExtractor = InputFileAttribute::new;
     final IntStream dataStream = IntStream.concat(
         IntStream.concat(
@@ -105,6 +143,10 @@ public class MaxSizeSplitHintSpecTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(MaxSizeSplitHintSpec.class).withNonnullFields("maxSplitSize").usingGetClass().verify();
+    EqualsVerifier.forClass(MaxSizeSplitHintSpec.class)
+                  .withNonnullFields("maxSplitSize")
+                  .withNonnullFields("maxNumFiles")
+                  .usingGetClass()
+                  .verify();
   }
 }
