@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -79,6 +80,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -256,6 +258,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
+  protected final int[] rowNeedAsyncAdjustAggIndex;
+  protected final int[] rowNeedSyncAdjustAggIndex;
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -299,11 +303,32 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics, concurrentEventAdd);
 
     this.metricDescs = Maps.newLinkedHashMap();
+    int syncCount = 0;
+    int asyncCount = 0;
+    int index = -1;
+    int[] syncIndex = new int[metrics.length];
+    int[] asyncIndex = new int[metrics.length];
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
       columnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
+
+      index++;
+      final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric.getMaxIntermediateSizeAdjustStrategy();
+      if (maxIntermediateSizeAdjustStrategy == null) {
+        continue;
+      }
+      if (maxIntermediateSizeAdjustStrategy.isSyncAjust()) {
+        syncIndex[syncCount++] = index;
+      } else {
+        asyncIndex[asyncCount++] = index;
+      }
     }
+    rowNeedSyncAdjustAggIndex = new int[syncCount];
+    System.arraycopy(syncIndex, 0, rowNeedSyncAdjustAggIndex, 0, syncCount);
+
+    rowNeedAsyncAdjustAggIndex = new int[asyncCount];
+    System.arraycopy(asyncIndex, 0, rowNeedAsyncAdjustAggIndex, 0, asyncCount);
 
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
     this.dimensionDescs = Maps.newLinkedHashMap();
@@ -339,6 +364,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+  }
+
+  public int[] getRowNeedAsyncAdjustAggIndex()
+  {
+    return rowNeedAsyncAdjustAggIndex;
+  }
+
+  public int[] getRowNeedSyncAdjustAggIndex()
+  {
+    return rowNeedSyncAdjustAggIndex;
   }
 
   public static class Builder
@@ -544,16 +579,26 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private final int rowCount;
     private final long bytesInMemory;
     private final List<String> parseExceptionMessages;
+    private final long nextRedundantBytes;
 
     public AddToFactsResult(
         int rowCount,
         long bytesInMemory,
-        List<String> parseExceptionMessages
-    )
+        List<String> parseExceptionMessages)
+    {
+      this(rowCount, bytesInMemory, parseExceptionMessages, 0);
+    }
+
+    public AddToFactsResult(
+        int rowCount,
+        long bytesInMemory,
+        List<String> parseExceptionMessages,
+        long nextRedundantBytes)
     {
       this.rowCount = rowCount;
       this.bytesInMemory = bytesInMemory;
       this.parseExceptionMessages = parseExceptionMessages;
+      this.nextRedundantBytes = nextRedundantBytes;
     }
 
     int getRowCount()
@@ -570,10 +615,19 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       return parseExceptionMessages;
     }
+
+    public long getNextRedundantBytes()
+    {
+      return nextRedundantBytes;
+    }
   }
 
   @Override
   public void close()
+  {
+  }
+
+  public void stopAdjust()
   {
   }
 
@@ -630,7 +684,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return new IncrementalIndexAddResult(
         addToFactsResult.getRowCount(),
         addToFactsResult.getBytesInMemory(),
-        parseException
+        parseException,
+        addToFactsResult.getNextRedundantBytes()
     );
   }
 

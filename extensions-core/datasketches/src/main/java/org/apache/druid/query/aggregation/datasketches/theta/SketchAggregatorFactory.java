@@ -30,12 +30,14 @@ import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -49,6 +51,8 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   protected final String fieldName;
   protected final int size;
   private final byte cacheId;
+  @Nullable
+  private final ThetaSketchSizeAdjustStrategy strategy;
 
   public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId)
   {
@@ -59,6 +63,18 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     Util.checkIfPowerOf2(this.size, "size");
 
     this.cacheId = cacheId;
+    String adjustBytesInMemoryFlag = System.getProperty("adjustBytesInMemoryFlag");
+    if (adjustBytesInMemoryFlag == null || "true".equalsIgnoreCase(adjustBytesInMemoryFlag)) {
+      strategy = new ThetaSketchSizeAdjustStrategy(this.size);
+    } else {
+      strategy = null;
+    }
+  }
+
+  @Override
+  public MaxIntermediateSizeAdjustStrategy getMaxIntermediateSizeAdjustStrategy()
+  {
+    return strategy;
   }
 
   @SuppressWarnings("unchecked")
@@ -172,20 +188,20 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + Integer.BYTES + fieldNameBytes.length)
-                     .put(cacheId)
-                     .putInt(size)
-                     .put(fieldNameBytes)
-                     .array();
+        .put(cacheId)
+        .putInt(size)
+        .put(fieldNameBytes)
+        .array();
   }
 
   @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{"
-           + "fieldName='" + fieldName + '\''
-           + ", name='" + name + '\''
-           + ", size=" + size
-           + '}';
+        + "fieldName='" + fieldName + '\''
+        + ", name='" + name + '\''
+        + ", size=" + size
+        + '}';
   }
 
 

@@ -156,6 +156,35 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     return constructors;
   }
 
+  @Test
+  public void testAddIfAdjustAndNotStrategyAgg() throws IndexSizeExceededException
+  {
+    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "true");
+    IncrementalIndex index = closerRule.closeLater(indexCreator.createIndex());
+    IncrementalIndexAddResult addResult = index.add(
+        new MapBasedInputRow(
+            System.currentTimeMillis() - 1,
+            Lists.newArrayList("billy", "joe"),
+            ImmutableMap.of("billy", "A", "joe", "B")
+        )
+    );
+    Assert.assertEquals(0, addResult.getNextRedundantBytes());
+
+    final int[] rowNeedAsyncAdjustAggIndex = index.rowNeedAsyncAdjustAggIndex;
+    Assert.assertEquals(true, rowNeedAsyncAdjustAggIndex != null && rowNeedAsyncAdjustAggIndex.length == 0);
+
+    final int[] rowNeedSyncAdjustAggIndex = index.rowNeedSyncAdjustAggIndex;
+    Assert.assertEquals(true, rowNeedSyncAdjustAggIndex != null && rowNeedSyncAdjustAggIndex.length == 0);
+
+    addResult = new IncrementalIndexAddResult(1, 2, addResult.getParseException());
+    Assert.assertEquals(true, addResult.getNextRedundantBytes() == 0 && addResult
+        .getRowCount() == 1 && addResult.getBytesInMemory() == 2);
+
+    addResult = new IncrementalIndexAddResult(1, 2, null, "test");
+    Assert.assertEquals(true, addResult.getNextRedundantBytes() == 0 && addResult
+        .getRowCount() == 1 && addResult.getBytesInMemory() == 2);
+  }
+
   @Test(expected = ISE.class)
   public void testDuplicateDimensions() throws IndexSizeExceededException
   {
