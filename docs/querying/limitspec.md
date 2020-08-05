@@ -45,8 +45,9 @@ The "limit" parameter is the maximum number of rows to return.
 
 The "offset" parameter tells Druid to skip this many rows when returning results. If both "limit" and "offset" are
 provided, then "offset" will be applied first, followed by "limit". For example, a spec with limit 100 and offset 10
-will return 100 rows starting from row number 10. Skipped rows will still need to be generated internally and then
-discarded, meaning that raising offsets to high values can cause queries to use additional resources.
+will return 100 rows starting from row number 10. Internally, the query is executed by extending the limit by the offset
+and then discarding a number of rows equal to the offset. This means that raising the offset will increase resource
+usage by an amount similar to increasing the limit.
 
 Together, "limit" and "offset" can be used to implement pagination. However, note that if the underlying datasource is
 modified in between page fetches in ways that affect overall query results, then the different pages will not
