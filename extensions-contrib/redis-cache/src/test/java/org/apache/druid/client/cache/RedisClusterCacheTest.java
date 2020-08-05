@@ -83,6 +83,7 @@ public class RedisClusterCacheTest
         return null;
       }
 
+      @Override
       public byte[] get(final byte[] key)
       {
         return cacheStorage.get(Base64.getEncoder().encodeToString(key));

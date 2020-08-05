@@ -75,11 +75,11 @@ To use a standalone redis, following properties must be set.
 |`druid.cache.port`|Redis server port|None|yes|
 |`druid.cache.database`|Redis database index|0|no|
 
-Note: if both `druid.cache.cluster.nodes` and `druid.cache.host` are provided, cluster mode is prefered.
+Note: if both `druid.cache.cluster.nodes` and `druid.cache.host` are provided, cluster mode is preferred.
 
 ### Shared Properties
 
-Except for the properties above, there're some extra properties which can be customized to meet different needs.
+Except for the properties above, there are some extra properties which can be customized to meet different needs.
 
 | Properties |Description|Default|Required|
 |--------------------|-----------|-------|--------|
