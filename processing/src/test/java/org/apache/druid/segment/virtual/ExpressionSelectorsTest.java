@@ -261,7 +261,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         Granularities.NONE,
         VirtualColumns.EMPTY,
         DimensionsSpec.EMPTY,
-        new AggregatorFactory[]{ new CountAggregatorFactory("count")},
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
         true
     );
 
@@ -303,7 +303,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           null
       );
       int rowCount = 0;
-      while(!cursor.isDone()) {
+      while (!cursor.isDone()) {
         Object x = xExprSelector.getObject();
         Object y = yExprSelector.getObject();
         List<String> expectedFoo = Collections.singletonList("foofoo");
