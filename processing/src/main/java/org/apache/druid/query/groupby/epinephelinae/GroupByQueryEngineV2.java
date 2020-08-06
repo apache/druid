@@ -621,6 +621,9 @@ public class GroupByQueryEngineV2
       }
 
       if (canDoLimitPushdown) {
+        // Sanity check; must not have "offset" at this point.
+        Preconditions.checkState(!limitSpec.isOffset(), "Cannot push down offsets");
+
         LimitedBufferHashGrouper<ByteBuffer> limitGrouper = new LimitedBufferHashGrouper<>(
             Suppliers.ofInstance(buffer),
             keySerde,
