@@ -235,17 +235,19 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   private final DimensionDictionary dimLookup;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
+  private final boolean hasSpatialIndexes;
   private volatile boolean hasMultipleValues = false;
   private volatile boolean isSparse = false;
 
   @Nullable
   private SortedDimensionDictionary sortedLookup;
 
-  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
+  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes, boolean hasSpatialIndexes)
   {
     this.dimLookup = new DimensionDictionary();
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
+    this.hasSpatialIndexes = hasSpatialIndexes;
   }
 
   @Override
@@ -474,7 +476,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   {
     ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                                                      .setHasBitmapIndexes(hasBitmapIndexes)
-                                                                     .setHasSpatialIndexes(false)
+                                                                     .setHasSpatialIndexes(hasSpatialIndexes)
                                                                      .setDictionaryEncoded(dictionaryEncodesAllValues())
                                                                      .setDictionaryValuesUnique(true)
                                                                      .setDictionaryValuesSorted(false);

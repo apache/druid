@@ -250,7 +250,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final Map<String, DimensionDesc> dimensionDescs;
   private final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
-  private final Map<String, ColumnCapabilitiesImpl> timeAndSpaceAndMetricsColumnCapabilities;
+  private final Map<String, ColumnCapabilitiesImpl> timeAndMetricsColumnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
 
@@ -288,7 +288,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
 
-    this.timeAndSpaceAndMetricsColumnCapabilities = new HashMap<>();
+    this.timeAndMetricsColumnCapabilities = new HashMap<>();
     this.metadata = new Metadata(
         null,
         getCombiningAggregators(metrics),
@@ -303,7 +303,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
-      timeAndSpaceAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
+      timeAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
     }
 
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
@@ -317,22 +317,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
 
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
-        // spatial indexed dimensions do not directly have a dimension indexer to provide column capabilities, so add
-        // capabilites to static map
         capabilities.setHasSpatialIndexes(true);
-        timeAndSpaceAndMetricsColumnCapabilities.put(dimName, capabilities);
-      } else {
-        DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
-            dimName,
-            capabilities,
-            dimSchema.getMultiValueHandling()
-        );
-        addNewDimension(dimName, handler);
       }
+      DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
+          dimName,
+          capabilities,
+          dimSchema.getMultiValueHandling()
+      );
+      addNewDimension(dimName, handler);
     }
 
     //__time capabilities
-    timeAndSpaceAndMetricsColumnCapabilities.put(
+    timeAndMetricsColumnCapabilities.put(
         ColumnHolder.TIME_COLUMN_NAME,
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG)
     );
@@ -595,7 +591,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   public Map<String, ColumnCapabilitiesImpl> getColumnCapabilities()
   {
     ImmutableMap.Builder<String, ColumnCapabilitiesImpl> builder =
-        ImmutableMap.<String, ColumnCapabilitiesImpl>builder().putAll(timeAndSpaceAndMetricsColumnCapabilities);
+        ImmutableMap.<String, ColumnCapabilitiesImpl>builder().putAll(timeAndMetricsColumnCapabilities);
 
     dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
     return builder.build();
@@ -999,7 +995,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (dimensionDescs.containsKey(column)) {
       return dimensionDescs.get(column).getCapabilities();
     }
-    return timeAndSpaceAndMetricsColumnCapabilities.get(column);
+    return timeAndMetricsColumnCapabilities.get(column);
   }
 
   public Metadata getMetadata()
