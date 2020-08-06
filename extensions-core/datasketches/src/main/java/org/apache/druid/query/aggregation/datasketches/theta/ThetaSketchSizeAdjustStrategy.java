@@ -48,7 +48,9 @@ public class ThetaSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStra
         adjustBytes[i - 1] = deltaBytes;
       }
     }
-    adjustBytes[list.size() - 1] = SetOperation.getMaxUnionBytes(this.size) - adjustBytes[list.size() - 1];
+    if (list.size() > 0) {
+      adjustBytes[list.size() - 1] = SetOperation.getMaxUnionBytes(this.size) - adjustBytes[list.size() - 1];
+    }
   }
 
   @Override
@@ -73,10 +75,10 @@ public class ThetaSketchSizeAdjustStrategy extends MaxIntermediateSizeAdjustStra
   public String toString()
   {
     return "ThetaSketchSizeAdjustStrategy{" +
-           "size=" + size +
-           ", rollupNums=" + Arrays.toString(rollupNums) +
-           ", adjustBytes=" + Arrays.toString(adjustBytes) +
-           ", initAggAppendBytes=" + initAggAppendBytes +
-           '}';
+        "size=" + size +
+        ", rollupNums=" + Arrays.toString(rollupNums) +
+        ", adjustBytes=" + Arrays.toString(adjustBytes) +
+        ", initAggAppendBytes=" + initAggAppendBytes +
+        '}';
   }
 }

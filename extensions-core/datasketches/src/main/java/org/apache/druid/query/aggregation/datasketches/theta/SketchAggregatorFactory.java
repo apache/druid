@@ -65,7 +65,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     this.cacheId = cacheId;
     String adjustBytesInMemoryFlag = System.getProperty("adjustBytesInMemoryFlag");
     if (adjustBytesInMemoryFlag == null || "true".equalsIgnoreCase(adjustBytesInMemoryFlag)) {
-      strategy = new ThetaSketchSizeAdjustStrategy(size);
+      strategy = new ThetaSketchSizeAdjustStrategy(this.size);
     } else {
       strategy = null;
     }
@@ -188,20 +188,20 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
     return ByteBuffer.allocate(1 + Integer.BYTES + fieldNameBytes.length)
-                     .put(cacheId)
-                     .putInt(size)
-                     .put(fieldNameBytes)
-                     .array();
+        .put(cacheId)
+        .putInt(size)
+        .put(fieldNameBytes)
+        .array();
   }
 
   @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{"
-           + "fieldName='" + fieldName + '\''
-           + ", name='" + name + '\''
-           + ", size=" + size
-           + '}';
+        + "fieldName='" + fieldName + '\''
+        + ", name='" + name + '\''
+        + ", size=" + size
+        + '}';
   }
 
 

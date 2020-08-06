@@ -22,7 +22,8 @@ import static org.apache.druid.query.aggregation.datasketches.theta.ThetaSketchS
 import static org.apache.druid.segment.incremental.OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG;
 
 @BenchmarkOptions(benchmarkRounds = REPEAT_TIMES, callgc = false, warmupRounds = WARM_UP_ROUNDS)
-public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandlingTest {
+public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandlingTest
+{
   public static final int WARM_UP_ROUNDS = 2;
   public static final int REPEAT_TIMES = 20;
   private static final int MAX_ROWS = 20_0000;
@@ -32,7 +33,8 @@ public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandl
   private Random random = ThreadLocalRandom.current();
 
   @Before
-  public void setUp() {
+  public void setUp()
+  {
     SketchModule.registerSerde();
     // dim cardinal
     dimCardinalNum = 2000;
@@ -54,7 +56,8 @@ public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandl
 
 
   @Test
-  public void testAdjustThetaSketchNotAdjust() {
+  public void testAdjustThetaSketchNotAdjust()
+  {
     try {
       System.setProperty(ADJUST_BYTES_INMEMORY_FLAG, "false");
       for (int j = 0; j < MAX_ROWS; ++j) {
@@ -69,13 +72,15 @@ public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandl
         ));
       }
       index.stopAdjust();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
   @Test
-  public void testAdjustThetaSketchAdjust() {
+  public void testAdjustThetaSketchAdjust()
+  {
     try {
       System.setProperty(ADJUST_BYTES_INMEMORY_FLAG, "true");
       for (int j = 0; j < MAX_ROWS; ++j) {
@@ -90,7 +95,8 @@ public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandl
         ));
       }
       index.stopAdjust();
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
   }

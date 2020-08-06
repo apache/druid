@@ -560,8 +560,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public AddToFactsResult(
         int rowCount,
         long bytesInMemory,
-        List<String> parseExceptionMessages
-    )
+        List<String> parseExceptionMessages)
+    {
+      this(rowCount, bytesInMemory, parseExceptionMessages, 0);
+    }
+
+    public AddToFactsResult(
+        int rowCount,
+        long bytesInMemory,
+        List<String> parseExceptionMessages,
+        long nextRedundantBytes)
     {
       this(rowCount, bytesInMemory, parseExceptionMessages, 0);
     }

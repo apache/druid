@@ -74,7 +74,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   protected final int adjustBytesInMemoryPeriod; // adjust period millis
   private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
   private final List<Integer> indexAdjustRecorder = Collections.synchronizedList(new ArrayList<>());
-  private volatile int totalAdjustCount = 0;
   private volatile long redundantBytesBefore = 0;
   private volatile long nextRedundantBytes = 0;
   @Nullable
@@ -105,14 +104,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     if (canAdjust()) {
       startAsyncAdjust();
     }
-    log.info(
-        "adjustBytesInMemoryFlag:[%s],adjustBytesInMemoryPeriod[%s],rowNeedAdjustAggIndex:%s,"
-        + "maxBytesPerRowForAggregators[%s]",
-        adjustBytesInMemoryFlag,
-        adjustBytesInMemoryPeriod,
+    log.info("adjustBytesInMemoryFlag:[%s],adjustBytesInMemoryPeriod[%s],rowNeedAdjustAggIndex:%s," +
+            "maxBytesPerRowForAggregators[%s]",
+        adjustBytesInMemoryFlag, adjustBytesInMemoryPeriod,
         Arrays.toString(rowNeedAdjustAggIndex),
-        maxBytesPerRowForAggregators
-    );
+        maxBytesPerRowForAggregators);
   }
 
   private boolean canAdjust()
@@ -132,8 +128,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
             try {
               final int indexSize = asyncAdjustBytes();
               log.trace("Adjust period[%s],indexSize[%s],cost:%s",
-                        adjustBytesInMemoryPeriod, indexSize, System.currentTimeMillis() - startT
-              );
+                  adjustBytesInMemoryPeriod, indexSize, System.currentTimeMillis() - startT);
             }
             catch (RuntimeException e) {
               log.error(e, "Uncaught method[asyncAdjustBytes] exception:");
@@ -163,13 +158,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                 final AggregatorFactory[] metrics = getMetrics();
                 final Aggregator[] aggs = concurrentGet(index);
                 if (aggs == null) {
-                  log.debug(
-                      "Aggregators maybe concurrent changed,index:[%s],indexAdjustRecorder.size[%s],aggregators.size[%s],metrics:%s",
-                      index,
-                      indexAdjustRecorder.size(),
-                      aggregators.size(),
-                      Arrays.toString(metrics)
-                  );
+                  log.debug("Aggregators maybe concurrent changed,index:[%s],indexAdjustRecorder.size[%s],aggregators.size[%s],metrics:%s", index, indexAdjustRecorder.size(), aggregators.size(), Arrays.toString(metrics));
                   continue;
                 }
                 final MaxIntermediateSizeAdjustStrategy strategy = metrics[aRowNeedAdjustAggIndex].getMaxIntermediateSizeAdjustStrategy();
@@ -189,9 +178,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                   }
                   if (curAggCardinalRows == adjustRollupNums[i]) { // need adjust: appending bytes[adjustAppendSizes]
                     redundantBytesAfter += adjustAppendSizes[i];
-                    // log.debug(
-                    //         "Current bytes[%s] need add adjustAppendSizes[%s],because curAggCardinalRows reached adjustRollupNums[%s]",
-                    //         getBytesInMemory().get(), adjustAppendSizes[i], adjustRollupNums[i]);
+                    log.trace(
+                            "Current bytes[%s] need add adjustAppendSizes[%s],because curAggCardinalRows reached adjustRollupNums[%s]",
+                            getBytesInMemory().get(), adjustAppendSizes[i], adjustRollupNums[i]);
                     break;
                   }
                 }
@@ -199,7 +188,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
             }
             synchronized (scheduler) {
-              totalAdjustCount++;
               redundantBytesBefore = redundantBytesAfter;
               nextRedundantBytes = Math.max(nextRedundantBytes, redundantBytesBefore);
             }
@@ -217,18 +205,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     indexAdjustRecorder.add(index);
   }
 
-  public String getAdjustInfo()
-  {
-    String sb = ("totalAdjustCount:" + totalAdjustCount) +
-                ",indexAdjustRecorder:" + indexAdjustRecorder.size() +
-                ",bytesInMemory:" + getBytesInMemory().get() +
-                ",nextRedundantBytes:" + nextRedundantBytes;
-    return sb;
-  }
-
   public long getAdjustBytesInMemoryPeriod()
   {
     return adjustBytesInMemoryPeriod;
+  }
+
+  public int[] getRowNeedAdjustAggIndex()
+  {
+    return rowNeedAdjustAggIndex;
   }
 
   @Override
