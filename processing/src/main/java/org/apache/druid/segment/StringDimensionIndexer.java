@@ -48,6 +48,7 @@ import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRow;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     public DimensionDictionary()
     {
       this.lock = new ReentrantReadWriteLock();
-      valueToId.defaultReturnValue(-1);
+      valueToId.defaultReturnValue(ABSENT_VALUE_ID);
     }
 
     public int getId(@Nullable String value)
@@ -466,11 +467,21 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     final ExtractionFn extractionFn = spec.getExtractionFn();
 
     final int dimIndex = desc.getIndex();
+
+    // maxId is used in concert with getLastRowIndex() in IncrementalIndex to ensure that callers do not encounter
+    // rows that contain IDs over the initially-reported cardinality. The main idea is that IncrementalIndex establishes
+    // a watermark at the time a cursor is created, and doesn't allow the cursor to walk past that watermark.
+    //
+    // Additionally, this selector explicitly blocks knowledge of IDs past maxId that may occur from other causes
+    // (for example: nulls getting generated for empty arrays, or calls to lookupId).
     final int maxId = getCardinality();
 
     class IndexerDimensionSelector implements DimensionSelector, IdLookup
     {
       private final ArrayBasedIndexedInts indexedInts = new ArrayBasedIndexedInts();
+
+      @Nullable
+      @MonotonicNonNull
       private int[] nullIdIntArray;
 
       @Override
@@ -495,14 +506,15 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
             rowSize = 0;
           } else {
             final int nullId = getEncodedValue(null, false);
-            if (nullId > -1) {
+            if (nullId >= 0 && nullId < maxId) {
+              // null was added to the dictionary before this selector was created; return its ID.
               if (nullIdIntArray == null) {
                 nullIdIntArray = new int[]{nullId};
               }
               row = nullIdIntArray;
               rowSize = 1;
             } else {
-              // doesn't contain nullId, then empty array is used
+              // null doesn't exist in the dictionary; return an empty array.
               // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
               row = IntArrays.EMPTY_ARRAY;
               rowSize = 0;
@@ -621,6 +633,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       public String lookupName(int id)
       {
         if (id >= maxId) {
+          // Sanity check; IDs beyond maxId should not be known to callers. (See comment above.)
           throw new ISE("id[%d] >= maxId[%d]", id, maxId);
         }
         final String strValue = getActualValue(id, false);
@@ -650,7 +663,16 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
               "cannot perform lookup when applying an extraction function"
           );
         }
-        return getEncodedValue(name, false);
+
+        final int id = getEncodedValue(name, false);
+
+        if (id < maxId) {
+          return id;
+        } else {
+          // Can happen if a value was added to our dimLookup after this selector was created. Act like it
+          // doesn't exist.
+          return ABSENT_VALUE_ID;
+        }
       }
 
       @SuppressWarnings("deprecation")
