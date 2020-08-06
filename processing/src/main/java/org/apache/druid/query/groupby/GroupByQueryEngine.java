@@ -33,7 +33,6 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.FunctionalIterator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -50,11 +49,11 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,6 +65,7 @@ import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
 /**
+ *
  */
 public class GroupByQueryEngine
 {
@@ -131,21 +131,14 @@ public class GroupByQueryEngine
                           @Override
                           public void cleanup(RowIterator iterFromMake)
                           {
-                            CloseQuietly.close(iterFromMake);
+                            CloseableUtils.closeAndWrapExceptions(iterFromMake);
                           }
                         }
                     );
                   }
                 }
             ),
-            new Closeable()
-            {
-              @Override
-              public void close()
-              {
-                CloseQuietly.close(bufferHolder);
-              }
-            }
+            bufferHolder
         )
     );
   }

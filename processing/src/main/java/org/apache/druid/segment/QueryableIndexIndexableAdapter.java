@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
@@ -39,6 +38,7 @@ import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableLongColumnValueSelector;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ *
  */
 public class QueryableIndexIndexableAdapter implements IndexableAdapter
 {
@@ -280,7 +281,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     @Override
     public void close()
     {
-      CloseQuietly.close(closer);
+      CloseableUtils.closeAndWrapExceptions(closer);
     }
 
     @Override

@@ -24,13 +24,13 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -134,7 +134,11 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedColumnarIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order, SmooshedFileMapper mapper)
+  public static CompressedColumnarIntsSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      SmooshedFileMapper mapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
@@ -292,7 +296,9 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
 
     int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
-    /** buffer's position must be 0 */
+    /**
+     * buffer's position must be 0
+     */
     IntBuffer buffer;
 
     @Override
@@ -317,7 +323,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
 
     protected void loadBuffer(int bufferNum)
     {
-      CloseQuietly.close(holder);
+      CloseableUtils.closeAndWrapExceptions(holder);
       holder = singleThreadedIntBuffers.get(bufferNum);
       // asIntBuffer() makes the buffer's position = 0
       buffer = holder.get().asIntBuffer();

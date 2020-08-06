@@ -43,7 +43,6 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -67,6 +66,7 @@ import org.apache.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import org.apache.druid.segment.realtime.plumber.VersioningPolicy;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -302,7 +302,11 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+          final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(
+              TaskLockType.EXCLUSIVE,
+              interval,
+              lockTimeoutMs
+          );
           final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(action),
               "Cannot acquire a lock for interval[%s]",
@@ -471,7 +475,7 @@ public class RealtimeIndexTask extends AbstractTask
         }
         finally {
           if (firehose != null) {
-            CloseQuietly.close(firehose);
+            CloseableUtils.closeAndSuppressExceptions(firehose, e -> log.warn("Failed to close Firehose"));
           }
           toolbox.removeMonitor(metricsMonitor);
         }

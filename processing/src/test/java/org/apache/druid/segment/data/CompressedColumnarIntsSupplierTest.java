@@ -22,9 +22,9 @@ package org.apache.druid.segment.data;
 import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,7 +58,7 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
   public void setUp()
   {
     closer = Closer.create();
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
     columnarInts = null;
     supplier = null;
     vals = null;
@@ -68,12 +68,12 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
   public void tearDown() throws Exception
   {
     closer.close();
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
   }
 
   private void setupSimple(final int chunkSize)
   {
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
 
     vals = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16};
 
@@ -97,7 +97,7 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
 
   private void makeWithSerde(final int chunkSize) throws IOException
   {
-    CloseQuietly.close(columnarInts);
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedColumnarIntsSupplier theSupplier = CompressedColumnarIntsSupplier.fromIntBuffer(
@@ -271,7 +271,7 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
       stopLatch.await();
     }
     finally {
-      CloseQuietly.close(columnarInts2);
+      CloseableUtils.closeAndWrapExceptions(columnarInts2);
     }
 
     if (failureHappened.get()) {

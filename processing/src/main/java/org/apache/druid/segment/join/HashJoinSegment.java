@@ -20,13 +20,13 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -122,15 +122,14 @@ public class HashJoinSegment implements SegmentReference
         }).orElse(true);
       }
       if (acquireFailed) {
-        CloseQuietly.close(closer);
+        CloseableUtils.closeAndWrapExceptions(closer);
         return Optional.empty();
       } else {
         return Optional.of(closer);
       }
     }
     catch (Exception ex) {
-      CloseQuietly.close(closer);
-      return Optional.empty();
+      throw CloseableUtils.closeInCatch(new RuntimeException(ex), closer);
     }
   }
 }

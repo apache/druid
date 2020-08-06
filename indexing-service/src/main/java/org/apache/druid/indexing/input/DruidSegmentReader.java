@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -48,6 +47,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
@@ -137,6 +137,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
    * Map<String, Object> intermediate rows, selecting the dimensions and metrics of this segment reader.
    *
    * @param cursor A cursor
+   *
    * @return A sequence of intermediate rows
    */
   private Sequence<Map<String, Object>> cursorToSequence(
@@ -152,8 +153,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
    * @param sequence    A sequence of intermediate rows generated from a sequence of
    *                    cursors in {@link #intermediateRowIterator()}
    * @param segmentFile The underlying segment file containing the row data
+   *
    * @return A CloseableIterator from a sequence of intermediate rows, closing the underlying segment file
-   *         when the iterator is closed.
+   * when the iterator is closed.
    */
   @VisibleForTesting
   static CloseableIterator<Map<String, Object>> makeCloseableIteratorFromSequenceAndSegmentFile(
@@ -182,10 +184,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       @Override
       public void close() throws IOException
       {
-        Closer closer = Closer.create();
-        closer.register(rowYielder);
-        closer.register(segmentFile);
-        closer.close();
+        CloseableUtils.closeAll(rowYielder, segmentFile);
       }
     };
   }

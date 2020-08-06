@@ -156,7 +156,7 @@ public class HybridCache implements Cache
   @LifecycleStop
   public void close() throws IOException
   {
-    CloseableUtils.closeBoth(level1, level2);
+    CloseableUtils.closeAll(level1, level2);
   }
 
   @Override

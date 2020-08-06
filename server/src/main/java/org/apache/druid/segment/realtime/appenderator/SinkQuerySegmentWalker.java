@@ -30,7 +30,6 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -64,6 +63,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -250,8 +250,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       return new Pair<>(segmentAndCloseable.lhs.getDataInterval(), runner);
                     }
                     catch (RuntimeException e) {
-                      CloseQuietly.close(segmentAndCloseable.rhs);
-                      throw e;
+                      throw CloseableUtils.closeInCatch(e, segmentAndCloseable.rhs);
                     }
                   }
               )

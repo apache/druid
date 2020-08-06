@@ -21,7 +21,6 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -40,12 +39,14 @@ import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelecto
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.BitSet;
 
 /**
+ *
  */
 public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
 {
@@ -490,13 +491,6 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   @Override
   public void close() throws IOException
   {
-    CloseQuietly.close(cachedLookups);
-
-    if (column != null) {
-      column.close();
-    }
-    if (multiValueColumn != null) {
-      multiValueColumn.close();
-    }
+    CloseableUtils.closeAll(cachedLookups, column, multiValueColumn);
   }
 }

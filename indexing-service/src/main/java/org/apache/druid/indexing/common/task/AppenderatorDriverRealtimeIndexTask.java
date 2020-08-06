@@ -91,6 +91,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CircularBuffer;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -440,9 +441,9 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         chatHandlerProvider.get().unregister(getId());
       }
 
-      CloseQuietly.close(firehose);
+      CloseableUtils.closeAndSuppressExceptions(firehose, e -> log.warn("Failed to close Firehose"));
       appenderator.close();
-      CloseQuietly.close(driver);
+      CloseableUtils.closeAndSuppressExceptions(driver, e -> log.warn("Failed to close AppenderatorDriver"));
 
       toolbox.removeMonitor(metricsMonitor);
 

@@ -25,13 +25,13 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.utils.ByteUtils;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -433,7 +433,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
     protected void loadBuffer(int bufferNum)
     {
-      CloseQuietly.close(holder);
+      CloseableUtils.closeAndWrapExceptions(holder);
       holder = singleThreadedBuffers.get(bufferNum);
       ByteBuffer bb = holder.get();
       ByteOrder byteOrder = bb.order();

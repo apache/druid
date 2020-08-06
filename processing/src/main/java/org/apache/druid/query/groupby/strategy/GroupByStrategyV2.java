@@ -34,7 +34,6 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.collect.Utils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -68,6 +67,7 @@ import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -330,8 +330,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       );
     }
     catch (Exception ex) {
-      CloseQuietly.close(resultSupplier);
-      throw ex;
+      throw CloseableUtils.closeInCatch(new RuntimeException(ex), resultSupplier);
     }
   }
 
@@ -479,8 +478,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       );
     }
     catch (Exception ex) {
-      CloseQuietly.close(resultSupplierOne);
-      throw ex;
+      throw CloseableUtils.closeInCatch(new RuntimeException(ex), resultSupplierOne);
     }
   }
 
@@ -500,7 +498,9 @@ public class GroupByStrategyV2 implements GroupByStrategy
               new LazySequence<>(
                   () -> Sequences.withBaggage(
                       memoizedSupplier.get().results(dimsToInclude),
-                      closeOnSequenceRead ? () -> CloseQuietly.close(memoizedSupplier.get()) : () -> {}
+                      closeOnSequenceRead
+                      ? () -> CloseableUtils.closeAndWrapExceptions(memoizedSupplier.get())
+                      : () -> {}
                   )
               ),
           subtotalQuery,
@@ -508,8 +508,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
       );
     }
     catch (Exception ex) {
-      CloseQuietly.close(baseResultsSupplier.get());
-      throw ex;
+      throw CloseableUtils.closeInCatch(new RuntimeException(ex), baseResultsSupplier.get());
     }
   }
 

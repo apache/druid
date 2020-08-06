@@ -21,7 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -83,7 +83,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
           @Override
           protected void loadBuffer(int bufferNum)
           {
-            CloseQuietly.close(holder);
+            CloseableUtils.closeAndWrapExceptions(holder);
             holder = singleThreadedLongBuffers.get(bufferNum);
             buffer = holder.get();
             // asLongBuffer() makes the longBuffer's position = 0
@@ -190,7 +190,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 
     protected void loadBuffer(int bufferNum)
     {
-      CloseQuietly.close(holder);
+      CloseableUtils.closeAndWrapExceptions(holder);
       holder = singleThreadedLongBuffers.get(bufferNum);
       buffer = holder.get();
       currBufferNum = bufferNum;

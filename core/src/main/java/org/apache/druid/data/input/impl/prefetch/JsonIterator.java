@@ -25,9 +25,8 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -80,7 +79,7 @@ public class JsonIterator<T> implements CloseableIterator<T>
       return false;
     }
     if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-      CloseQuietly.close(jp);
+      CloseableUtils.closeAndWrapExceptions(jp);
       return false;
     }
     return true;
@@ -131,11 +130,6 @@ public class JsonIterator<T> implements CloseableIterator<T>
   @Override
   public void close() throws IOException
   {
-    Closer closer = Closer.create();
-    if (jp != null) {
-      closer.register(jp);
-    }
-    closer.register(resourceCloser);
-    closer.close();
+    CloseableUtils.closeAll(jp, resourceCloser);
   }
 }
