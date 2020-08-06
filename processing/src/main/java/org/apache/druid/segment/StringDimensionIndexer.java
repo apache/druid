@@ -405,6 +405,9 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
    */
   public boolean dictionaryEncodesAllValues()
   {
+    // name lookup is possible in advance if we process a value for every row (setSparseIndexed was not called on this
+    // column) or we've encountered an actual null value and it is present in our dictionary. otherwise the dictionary
+    // will be missing null values
     return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
   }
 
