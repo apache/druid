@@ -52,6 +52,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ExpressionSelectorsTest extends InitializedNullHandlingTest
@@ -305,8 +306,10 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       while(!cursor.isDone()) {
         Object x = xExprSelector.getObject();
         Object y = yExprSelector.getObject();
-        List<String> expectedFoo = ImmutableList.of("foofoo");
-        List<String> expectedNull = NullHandling.replaceWithDefault() ? ImmutableList.of("foo") : null;
+        List<String> expectedFoo = Collections.singletonList("foofoo");
+        List<String> expectedNull = NullHandling.replaceWithDefault()
+                                    ? Collections.singletonList("foo")
+                                    : Collections.singletonList(null);
         if (rowCount == 0) {
           Assert.assertEquals(expectedFoo, x);
           Assert.assertEquals(expectedNull, y);
