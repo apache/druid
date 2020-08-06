@@ -25,6 +25,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -37,6 +39,10 @@ import java.util.Objects;
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
   public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
+
+  private final ColumnCapabilitiesImpl capabilities =
+      ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+
 
   @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
@@ -88,6 +94,12 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   public int getCardinality()
   {
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+  }
+
+  @Override
+  public ColumnCapabilitiesImpl getColumnCapabilities()
+  {
+    return capabilities;
   }
 
   @Override

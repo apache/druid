@@ -249,7 +249,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private final Map<String, DimensionDesc> dimensionDescs;
   private final List<DimensionDesc> dimensionDescsList;
-  private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
+  // dimension capabilities are provided by the indexers
+  private final Map<String, ColumnCapabilitiesImpl> timeAndSpaceAndMetricsColumnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
 
@@ -287,7 +288,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
 
-    this.columnCapabilities = new HashMap<>();
+    this.timeAndSpaceAndMetricsColumnCapabilities = new HashMap<>();
     this.metadata = new Metadata(
         null,
         getCombiningAggregators(metrics),
@@ -302,7 +303,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
-      columnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
+      timeAndSpaceAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
     }
 
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
@@ -312,24 +313,26 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ValueType type = TYPE_MAP.get(dimSchema.getValueType());
       String dimName = dimSchema.getName();
-      ColumnCapabilitiesImpl capabilities = makeCapabilitiesFromValueType(type);
+      ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type);
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
 
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
+        // spatial indexed dimensions do not directly have a dimension indexer to provide column capabilities, so add
+        // capabilites to static map
         capabilities.setHasSpatialIndexes(true);
+        timeAndSpaceAndMetricsColumnCapabilities.put(dimName, capabilities);
       } else {
         DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(
             dimName,
             capabilities,
             dimSchema.getMultiValueHandling()
         );
-        addNewDimension(dimName, capabilities, handler);
+        addNewDimension(dimName, handler);
       }
-      columnCapabilities.put(dimName, capabilities);
     }
 
     //__time capabilities
-    columnCapabilities.put(
+    timeAndSpaceAndMetricsColumnCapabilities.put(
         ColumnHolder.TIME_COLUMN_NAME,
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG)
     );
@@ -591,7 +594,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   public Map<String, ColumnCapabilitiesImpl> getColumnCapabilities()
   {
-    return columnCapabilities;
+    ImmutableMap.Builder<String, ColumnCapabilitiesImpl> builder =
+        ImmutableMap.<String, ColumnCapabilitiesImpl>builder().putAll(timeAndSpaceAndMetricsColumnCapabilities);
+
+    dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
+    return builder.build();
   }
 
   /**
@@ -658,23 +665,22 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           continue;
         }
         boolean wasNewDim = false;
-        ColumnCapabilitiesImpl capabilities;
         DimensionDesc desc = dimensionDescs.get(dimension);
         if (desc != null) {
-          capabilities = desc.getCapabilities();
           absentDimensions.remove(dimension);
         } else {
           wasNewDim = true;
-          capabilities = columnCapabilities.get(dimension);
-          if (capabilities == null) {
-            // For schemaless type discovery, assume everything is a String for now, can change later.
-            capabilities = makeCapabilitiesFromValueType(ValueType.STRING);
-            columnCapabilities.put(dimension, capabilities);
-          }
-          DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimension, capabilities, null);
-          desc = addNewDimension(dimension, capabilities, handler);
+          desc = addNewDimension(
+              dimension,
+              DimensionHandlerUtils.getHandlerFromCapabilities(
+                  dimension,
+                  // for schemaless type discovery, everything is a String. this should probably try to autodetect
+                  // based on the value to use a better handler
+                  makeDefaultCapabilitiesFromValueType(ValueType.STRING),
+                  null
+              )
+          );
         }
-        DimensionHandler handler = desc.getHandler();
         DimensionIndexer indexer = desc.getIndexer();
         Object dimsKey = null;
         try {
@@ -684,13 +690,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           parseExceptionMessages.add(pe.getMessage());
         }
         dimsKeySize += indexer.estimateEncodedKeyComponentSize(dimsKey);
-        // Set column capabilities as data is coming in
-        if (!capabilities.hasMultipleValues().isTrue() &&
-            dimsKey != null &&
-            handler.getLengthOfEncodedKeyComponent(dimsKey) > 1) {
-          capabilities.setHasMultipleValues(true);
-        }
-
         if (wasNewDim) {
           // unless this is the first row we are processing, all newly discovered columns will be sparse
           if (maxIngestedEventTime != null) {
@@ -928,7 +927,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  private ColumnCapabilitiesImpl makeCapabilitiesFromValueType(ValueType type)
+  private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type)
   {
     if (type == ValueType.STRING) {
       // we start out as not having multiple values, but this might change as we encounter them
@@ -959,18 +958,17 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       for (String dim : oldDimensionOrder) {
         if (dimensionDescs.get(dim) == null) {
           ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
-          columnCapabilities.put(dim, capabilities);
           DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
-          addNewDimension(dim, capabilities, handler);
+          addNewDimension(dim, handler);
         }
       }
     }
   }
 
   @GuardedBy("dimensionDescs")
-  private DimensionDesc addNewDimension(String dim, ColumnCapabilitiesImpl capabilities, DimensionHandler handler)
+  private DimensionDesc addNewDimension(String dim, DimensionHandler handler)
   {
-    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, capabilities, handler);
+    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, handler);
     dimensionDescs.put(dim, desc);
     dimensionDescsList.add(desc);
     return desc;
@@ -998,7 +996,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   @Nullable
   public ColumnCapabilities getCapabilities(String column)
   {
-    return columnCapabilities.get(column);
+    if (dimensionDescs.containsKey(column)) {
+      return dimensionDescs.get(column).getCapabilities();
+    }
+    return timeAndSpaceAndMetricsColumnCapabilities.get(column);
   }
 
   public Metadata getMetadata()
@@ -1080,15 +1081,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   {
     private final int index;
     private final String name;
-    private final ColumnCapabilitiesImpl capabilities;
     private final DimensionHandler handler;
     private final DimensionIndexer indexer;
 
-    public DimensionDesc(int index, String name, ColumnCapabilitiesImpl capabilities, DimensionHandler handler)
+    public DimensionDesc(int index, String name, DimensionHandler handler)
     {
       this.index = index;
       this.name = name;
-      this.capabilities = capabilities;
       this.handler = handler;
       this.indexer = handler.makeIndexer();
     }
@@ -1105,7 +1104,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     public ColumnCapabilitiesImpl getCapabilities()
     {
-      return capabilities;
+      return indexer.getColumnCapabilities();
     }
 
     public DimensionHandler getHandler()

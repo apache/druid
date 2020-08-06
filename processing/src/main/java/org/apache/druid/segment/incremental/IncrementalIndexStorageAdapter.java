@@ -35,12 +35,10 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.StringDimensionIndexer;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.BooleanValueMatcher;
@@ -156,14 +154,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
-    ColumnCapabilitiesImpl snapshot = ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), true);
-    if (snapshot != null && snapshot.isDictionaryEncoded() && snapshot.getType().equals(ValueType.STRING)) {
-      // only consider the column dictionary encoded if all dictionary entries have a value
-      snapshot.setDictionaryEncoded(
-          ((StringDimensionIndexer) index.getDimension(column).getIndexer()).dictionaryEncodesAllValues()
-      );
-    }
-    return snapshot;
+    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), true);
   }
 
   /**

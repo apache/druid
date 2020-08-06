@@ -40,6 +40,8 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedInts;
@@ -405,9 +407,9 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
    */
   public boolean dictionaryEncodesAllValues()
   {
-    // name lookup is possible in advance if we process a value for every row (setSparseIndexed was not called on this
-    // column) or we've encountered an actual null value and it is present in our dictionary. otherwise the dictionary
-    // will be missing null values
+    // name lookup is possible in advance if we explicitly process a value for every row, or if we've encountered an
+    // actual null value and it is present in our dictionary. otherwise the dictionary will be missing ids for implicit
+    // null values
     return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
   }
 
@@ -465,6 +467,25 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   public int getUnsortedEncodedKeyComponentHashCode(int[] key)
   {
     return Arrays.hashCode(key);
+  }
+
+  @Override
+  public ColumnCapabilitiesImpl getColumnCapabilities()
+  {
+    ColumnCapabilitiesImpl capabilites =  new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                                                      .setHasBitmapIndexes(hasBitmapIndexes)
+                                                                      .setHasSpatialIndexes(false)
+                                                                      .setDictionaryEncoded(dictionaryEncodesAllValues())
+                                                                      .setDictionaryValuesUnique(true)
+                                                                      .setDictionaryValuesSorted(false);
+    // strings are only single valued, until they are not...
+    // only explicitly set multiple values if they are certain, otherwise this indexer might process a multi-valued
+    // row in the future in the period between obtaining capabilities and actually processing the rows with a selector
+    // leaving as unknown allows the caller to decide
+    if (hasMultipleValues) {
+      capabilites.setHasMultipleValues(true);
+    }
+    return capabilites;
   }
 
   @Override
@@ -704,6 +725,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   {
     return makeDimensionSelector(DefaultDimensionSpec.of(desc.getName()), currEntry, desc);
   }
+
 
   @Nullable
   @Override
