@@ -386,7 +386,7 @@ public class InFilterTest extends BaseFilterTest
     EqualsVerifier.forClass(InDimFilter.class)
                   .usingGetClass()
                   .withNonnullFields("dimension", "values")
-                  .withIgnoredFields("cacheKeySupplier", "predicateFactory")
+                  .withIgnoredFields("cacheKeySupplier", "predicateFactory", "cachedOptimizedFilter")
                   .verify();
   }
 
