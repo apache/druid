@@ -74,7 +74,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     private String minValue = null;
     @Nullable
     private String maxValue = null;
-    private int idForNull = ABSENT_VALUE_ID;
+    private volatile int idForNull = ABSENT_VALUE_ID;
 
     private final Object2IntMap<String> valueToId = new Object2IntOpenHashMap<>();
 
@@ -400,6 +400,14 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     return dimLookup.size();
   }
 
+  /**
+   * returns true if all values are encoded in {@link #dimLookup}
+   */
+  public boolean dictionaryEncodesAllValues()
+  {
+    return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
+  }
+
   @Override
   public int compareUnsortedEncodedKeyComponents(int[] lhs, int[] rhs)
   {
@@ -630,9 +638,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
-        // name lookup is possible in advance if we got a value for every row (setSparseIndexed was not called on this
-        // column) or we've encountered an actual null value and it is present in our dictionary
-        return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
+        return dictionaryEncodesAllValues();
       }
 
       @Nullable
