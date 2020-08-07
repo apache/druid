@@ -1543,13 +1543,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithForceLimitPushDown() throws Exception
   {
-    final List<Object[]> expected;
-    if (NullHandling.replaceWithDefault()) {
-      expected = ImmutableList.of(new Object[]{"", "a", 1L});
-    } else {
-      expected = ImmutableList.of(new Object[]{null, "a", 1L});
-    }
-
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true);
 
@@ -1575,7 +1568,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setContext(context)
                 .build()
         ),
-        expected
+        ImmutableList.of(new Object[]{"", "a", 1L})
     );
   }
 
