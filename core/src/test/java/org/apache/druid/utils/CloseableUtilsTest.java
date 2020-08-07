@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import javax.annotation.Nullable;
@@ -147,7 +148,7 @@ public class CloseableUtilsTest
   }
 
   @Test
-  public void test_closeInCatch_improper() throws Exception
+  public void test_closeInCatch_improper()
   {
     Exception e = null;
     try {
@@ -168,7 +169,7 @@ public class CloseableUtilsTest
   }
 
   @Test
-  public void test_closeInCatch_quiet() throws Exception
+  public void test_closeInCatch_quiet()
   {
     Exception e = null;
     try {
@@ -194,7 +195,7 @@ public class CloseableUtilsTest
     Exception e = null;
     try {
       //noinspection ThrowableNotThrown
-      CloseableUtils.closeInCatch(new RuntimeException("this one was caught"), ioExceptionCloseable);
+      CloseableUtils.closeInCatch(new IOException("this one was caught"), ioExceptionCloseable);
     }
     catch (Exception e1) {
       e = e1;
@@ -203,7 +204,7 @@ public class CloseableUtilsTest
     Assert.assertTrue(ioExceptionCloseable.isClosed());
 
     // First exception
-    Assert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
+    Assert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
     Assert.assertThat(
         e,
         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
@@ -221,6 +222,107 @@ public class CloseableUtilsTest
     try {
       //noinspection ThrowableNotThrown
       CloseableUtils.closeInCatch(new RuntimeException("this one was caught"), runtimeExceptionCloseable);
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    Assert.assertTrue(runtimeExceptionCloseable.isClosed());
+
+    // First exception
+    Assert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
+    Assert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
+    );
+
+    // Second exception
+    Assert.assertEquals(1, e.getSuppressed().length);
+    Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
+  }
+
+  @Test
+  public void test_closeAndWrapInCatch_improper()
+  {
+    Exception e = null;
+    try {
+      //noinspection ThrowableNotThrown
+      CloseableUtils.closeAndWrapInCatch(null, quietCloseable);
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    Assert.assertTrue(quietCloseable.isClosed());
+
+    Assert.assertThat(e, CoreMatchers.instanceOf(IllegalStateException.class));
+    Assert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Must be called with non-null caught exception"))
+    );
+  }
+
+  @Test
+  public void test_closeAndWrapInCatch_quiet()
+  {
+    Exception e = null;
+    try {
+      //noinspection ThrowableNotThrown
+      CloseableUtils.closeAndWrapInCatch(new RuntimeException("this one was caught"), quietCloseable);
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    Assert.assertTrue(quietCloseable.isClosed());
+
+    Assert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
+    Assert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
+    );
+  }
+
+  @Test
+  public void test_closeAndWrapInCatch_ioException()
+  {
+    Exception e = null;
+    try {
+      //noinspection ThrowableNotThrown
+      CloseableUtils.closeAndWrapInCatch(new IOException("this one was caught"), ioExceptionCloseable);
+    }
+    catch (Exception e1) {
+      e = e1;
+    }
+
+    Assert.assertTrue(ioExceptionCloseable.isClosed());
+
+    // First exception
+    Assert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
+    Assert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("java.io.IOException: this one was caught"))
+    );
+    Assert.assertThat(e, ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IOException.class)));
+    Assert.assertThat(
+        e,
+        ThrowableCauseMatcher.hasCause(
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
+        )
+    );
+
+    // Second exception
+    Assert.assertEquals(1, e.getCause().getSuppressed().length);
+    Assert.assertThat(e.getCause().getSuppressed()[0], CoreMatchers.instanceOf(IOException.class));
+  }
+
+  @Test
+  public void test_closeAndWrapInCatch_runtimeException()
+  {
+    Exception e = null;
+    try {
+      //noinspection ThrowableNotThrown
+      CloseableUtils.closeAndWrapInCatch(new RuntimeException("this one was caught"), runtimeExceptionCloseable);
     }
     catch (Exception e1) {
       e = e1;

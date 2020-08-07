@@ -329,8 +329,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
           finalResultSupplier
       );
     }
-    catch (Exception ex) {
-      throw CloseableUtils.closeInCatch(new RuntimeException(ex), resultSupplier);
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, resultSupplier);
     }
   }
 
@@ -477,8 +477,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
           resultSupplierOne //this will close resources allocated by resultSupplierOne after sequence read
       );
     }
-    catch (Exception ex) {
-      throw CloseableUtils.closeInCatch(new RuntimeException(ex), resultSupplierOne);
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, resultSupplierOne);
     }
   }
 
@@ -507,8 +507,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
           null
       );
     }
-    catch (Exception ex) {
-      throw CloseableUtils.closeInCatch(new RuntimeException(ex), baseResultsSupplier.get());
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, baseResultsSupplier.get());
     }
   }
 

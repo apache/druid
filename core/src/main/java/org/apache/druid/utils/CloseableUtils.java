@@ -94,6 +94,27 @@ public final class CloseableUtils
   }
 
   /**
+   * Like {@link #closeInCatch} but wraps {@param caught} in a {@link RuntimeException} if it is a checked exception.
+   */
+  public static <E extends Throwable> RuntimeException closeAndWrapInCatch(
+      final E caught,
+      @Nullable final Closeable closeable
+  )
+  {
+    try {
+      throw closeInCatch(caught, closeable);
+    }
+    catch (RuntimeException | Error e) {
+      // Unchecked exception.
+      throw e;
+    }
+    catch (Throwable e) {
+      // Checked exception; must wrap.
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
    * Like {@link Closeable#close()} but wraps IOExceptions in RuntimeExceptions.
    */
   public static void closeAndWrapExceptions(@Nullable final Closeable closeable)

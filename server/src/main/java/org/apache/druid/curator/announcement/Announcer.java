@@ -418,8 +418,8 @@ public class Announcer
     try {
       cache.start();
     }
-    catch (Exception e) {
-      throw CloseableUtils.closeInCatch(new RuntimeException(e), cache);
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, cache);
     }
   }
 

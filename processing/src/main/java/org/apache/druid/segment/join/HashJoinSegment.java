@@ -128,8 +128,8 @@ public class HashJoinSegment implements SegmentReference
         return Optional.of(closer);
       }
     }
-    catch (Exception ex) {
-      throw CloseableUtils.closeInCatch(new RuntimeException(ex), closer);
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, closer);
     }
   }
 }

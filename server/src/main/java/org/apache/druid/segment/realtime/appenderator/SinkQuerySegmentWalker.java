@@ -249,8 +249,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       );
                       return new Pair<>(segmentAndCloseable.lhs.getDataInterval(), runner);
                     }
-                    catch (RuntimeException e) {
-                      throw CloseableUtils.closeInCatch(e, segmentAndCloseable.rhs);
+                    catch (Throwable e) {
+                      throw CloseableUtils.closeAndWrapInCatch(e, segmentAndCloseable.rhs);
                     }
                   }
               )
