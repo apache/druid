@@ -22,7 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -237,7 +237,7 @@ public interface DimensionIndexer
       IncrementalIndex.DimensionDesc desc
   );
 
-  ColumnCapabilitiesImpl getColumnCapabilities();
+  ColumnCapabilities getColumnCapabilities();
   /**
    * Compares the row values for this DimensionIndexer's dimension from a Row key.
    *

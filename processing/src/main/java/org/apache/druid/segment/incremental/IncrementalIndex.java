@@ -250,7 +250,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final Map<String, DimensionDesc> dimensionDescs;
   private final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
-  private final Map<String, ColumnCapabilitiesImpl> timeAndMetricsColumnCapabilities;
+  private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
   private final AtomicInteger numEntries = new AtomicInteger();
   private final AtomicLong bytesInMemory = new AtomicLong();
 
@@ -588,10 +588,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return row;
   }
 
-  public Map<String, ColumnCapabilitiesImpl> getColumnCapabilities()
+  public Map<String, ColumnCapabilities> getColumnCapabilities()
   {
-    ImmutableMap.Builder<String, ColumnCapabilitiesImpl> builder =
-        ImmutableMap.<String, ColumnCapabilitiesImpl>builder().putAll(timeAndMetricsColumnCapabilities);
+    ImmutableMap.Builder<String, ColumnCapabilities> builder =
+        ImmutableMap.<String, ColumnCapabilities>builder().putAll(timeAndMetricsColumnCapabilities);
 
     dimensionDescs.forEach((dimension, desc) -> builder.put(dimension, desc.getCapabilities()));
     return builder.build();
@@ -1099,7 +1099,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return name;
     }
 
-    public ColumnCapabilitiesImpl getCapabilities()
+    public ColumnCapabilities getCapabilities()
     {
       return indexer.getColumnCapabilities();
     }
@@ -1120,7 +1120,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     private final int index;
     private final String name;
     private final String type;
-    private final ColumnCapabilitiesImpl capabilities;
+    private final ColumnCapabilities capabilities;
 
     public MetricDesc(int index, AggregatorFactory factory)
     {
@@ -1159,7 +1159,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       return type;
     }
 
-    public ColumnCapabilitiesImpl getCapabilities()
+    public ColumnCapabilities getCapabilities()
     {
       return capabilities;
     }

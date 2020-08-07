@@ -89,7 +89,7 @@ public class IndexMergerV9 implements IndexMerger
   private static final Logger log = new Logger(IndexMergerV9.class);
 
   // merge logic for the state capabilities will be in after incremental index is persisted
-  private static final ColumnCapabilities.CoercionLogic DIMENSION_CAPABILITY_MERGE_LOGIC =
+  public static final ColumnCapabilities.CoercionLogic DIMENSION_CAPABILITY_MERGE_LOGIC =
       new ColumnCapabilities.CoercionLogic()
       {
         @Override
@@ -108,6 +108,34 @@ public class IndexMergerV9 implements IndexMerger
         public boolean dictionaryValuesUnique()
         {
           return true;
+        }
+
+        @Override
+        public boolean multipleValues()
+        {
+          return false;
+        }
+      };
+
+  public static final ColumnCapabilities.CoercionLogic METRIC_CAPABILITY_MERGE_LOGIC =
+      new ColumnCapabilities.CoercionLogic()
+      {
+        @Override
+        public boolean dictionaryEncoded()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean dictionaryValuesSorted()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean dictionaryValuesUnique()
+        {
+          return false;
         }
 
         @Override
@@ -759,7 +787,7 @@ public class IndexMergerV9 implements IndexMerger
       for (String metric : adapter.getMetricNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(metric);
         capabilitiesMap.compute(metric, (m, existingCapabilities) ->
-            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, ColumnCapabilitiesImpl.ALL_FALSE)
+            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, METRIC_CAPABILITY_MERGE_LOGIC)
         );
         metricsValueTypes.put(metric, capabilities.getType());
         metricTypeNames.put(metric, adapter.getMetricType(metric));

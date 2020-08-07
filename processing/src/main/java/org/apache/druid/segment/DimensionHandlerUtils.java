@@ -79,7 +79,7 @@ public final class DimensionHandlerUtils
     multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
 
     if (capabilities.getType() == ValueType.STRING) {
-      if (!capabilities.isDictionaryEncoded().isMaybeTrue()) {
+      if (capabilities.isDictionaryEncoded().isFalse()) {
         throw new IAE("String column must have dictionary encoding.");
       }
       return new StringDimensionHandler(dimensionName, multiValueHandling, capabilities.hasBitmapIndexes(), capabilities.hasSpatialIndexes());

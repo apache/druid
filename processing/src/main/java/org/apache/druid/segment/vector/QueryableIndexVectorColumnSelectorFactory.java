@@ -83,9 +83,9 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
         spec -> {
           final ColumnHolder holder = index.getColumnHolder(spec.getDimension());
           if (holder == null
-              || !holder.getCapabilities().isDictionaryEncoded().isTrue()
+              || holder.getCapabilities().isDictionaryEncoded().isFalse()
               || holder.getCapabilities().getType() != ValueType.STRING
-              || !holder.getCapabilities().hasMultipleValues().isMaybeTrue()) {
+              || holder.getCapabilities().hasMultipleValues().isFalse()) {
             throw new ISE(
                 "Column[%s] is not a multi-value string column, do not ask for a multi-value selector",
                 spec.getDimension()

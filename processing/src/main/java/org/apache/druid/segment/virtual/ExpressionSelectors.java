@@ -154,7 +154,7 @@ public class ExpressionSelectors
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING
                  && capabilities.isDictionaryEncoded().isTrue()
-                 && !capabilities.hasMultipleValues().isMaybeTrue()
+                 && capabilities.hasMultipleValues().isFalse()
                  && exprDetails.getArrayBindings().isEmpty()) {
         // Optimization for expressions that hit one scalar string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(

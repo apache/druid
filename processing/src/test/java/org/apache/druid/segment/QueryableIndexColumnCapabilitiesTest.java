@@ -159,7 +159,9 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
     // coercing any 'UNKNOWN' values to false
     Assert.assertFalse(
-        ColumnCapabilitiesImpl.snapshot(caps, ColumnCapabilitiesImpl.ALL_FALSE).hasMultipleValues().isMaybeTrue()
+        ColumnCapabilitiesImpl.snapshot(caps, IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC)
+                              .hasMultipleValues()
+                              .isMaybeTrue()
     );
     Assert.assertFalse(caps.hasSpatialIndexes());
 
@@ -201,7 +203,6 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m4"), ValueType.COMPLEX);
     assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m4").getCapabilities(), ValueType.COMPLEX);
   }
-
 
   private void assertNonStringColumnCapabilities(ColumnCapabilities caps, ValueType valueType)
   {

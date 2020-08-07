@@ -40,6 +40,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
@@ -407,7 +408,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   /**
    * returns true if all values are encoded in {@link #dimLookup}
    */
-  public boolean dictionaryEncodesAllValues()
+  private boolean dictionaryEncodesAllValues()
   {
     // name lookup is possible in advance if we explicitly process a value for every row, or if we've encountered an
     // actual null value and it is present in our dictionary. otherwise the dictionary will be missing ids for implicit
@@ -472,7 +473,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   }
 
   @Override
-  public ColumnCapabilitiesImpl getColumnCapabilities()
+  public ColumnCapabilities getColumnCapabilities()
   {
     ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                                                      .setHasBitmapIndexes(hasBitmapIndexes)
@@ -481,13 +482,14 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
                                                                      .setDictionaryValuesSorted(false);
 
     // strings are only single valued, until they are not...
-    // only explicitly set multiple values if they are certain, otherwise this indexer might process a multi-valued
-    // row in the future in the period between obtaining capabilities and actually processing the rows with a selector
-    // leaving as unknown allows the caller to decide
+    // We only explicitly set multiple values if we are certain that there are multiple values.
+    // Otherwise, this indexer might process a multi-valued row in the period between obtaining the
+    // capabilities, and actually processing the rows with a selector.
+    // Leaving as unknown allows the caller to decide how to handle this
     if (hasMultipleValues) {
       capabilites.setHasMultipleValues(true);
     }
-    // likewise only set dictionaryEncoded if explicitly if true
+    // likewise only set dictionaryEncoded if explicitly if true for the same reason
     final boolean allValuesEncoded = dictionaryEncodesAllValues();
     if (allValuesEncoded) {
       capabilites.setDictionaryEncoded(true);

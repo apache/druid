@@ -32,8 +32,6 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
-  public static final CoercionLogic ALL_FALSE = new AllCoercionLogic(false);
-
   public static ColumnCapabilitiesImpl copyOf(@Nullable final ColumnCapabilities other)
   {
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
