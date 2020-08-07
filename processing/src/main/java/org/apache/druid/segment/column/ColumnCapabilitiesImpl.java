@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 
@@ -31,13 +32,15 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
+  public static final CoercionLogic ALL_TRUE = new AllCoercionLogic(true);
+  public static final CoercionLogic ALL_FALSE = new AllCoercionLogic(false);
+
   public static ColumnCapabilitiesImpl copyOf(@Nullable final ColumnCapabilities other)
   {
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     if (other != null) {
       capabilities.type = other.getType();
       capabilities.dictionaryEncoded = other.isDictionaryEncoded();
-      capabilities.runLengthEncoded = other.isRunLengthEncoded();
       capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
       capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
       capabilities.hasMultipleValues = other.hasMultipleValues();
@@ -49,30 +52,59 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   /**
-   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
-   * {@link Capable#FALSE}, in order to present a snapshot of the state of the this column
+   * Copy a {@link ColumnCapabilities} and coerce all {@link ColumnCapabilities.Capable#UNKNOWN} to
+   * {@link ColumnCapabilities.Capable#TRUE} or {@link ColumnCapabilities.Capable#FALSE} as specified by
+   * {@link ColumnCapabilities.CoercionLogic}
    */
   @Nullable
-  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities)
-  {
-    return snapshot(capabilities, false);
-  }
-
-  /**
-   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
-   * {@link Capable#FALSE} or {@link Capable#TRUE}, in order to present a snapshot of the state of the this column
-   */
-  @Nullable
-  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities, boolean unknownIsTrue)
+  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities, CoercionLogic coerce)
   {
     if (capabilities == null) {
       return null;
     }
     ColumnCapabilitiesImpl copy = copyOf(capabilities);
-    copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(unknownIsTrue);
-    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(unknownIsTrue);
-    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(unknownIsTrue);
+    copy.dictionaryEncoded = copy.dictionaryEncoded.coerceUnknownToBoolean(coerce.dictionaryEncoded());
+    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(coerce.dictionaryValuesSorted());
+    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(coerce.dictionaryValuesUnique());
+    copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(coerce.multipleValues());
     return copy;
+  }
+
+  /**
+   * Snapshots a pair of capabilities and then merges them
+   */
+  @Nullable
+  public static ColumnCapabilitiesImpl merge(
+      @Nullable final ColumnCapabilities capabilities,
+      @Nullable final ColumnCapabilities other,
+      CoercionLogic coercionLogic
+  )
+  {
+    ColumnCapabilitiesImpl merged = snapshot(capabilities, coercionLogic);
+    ColumnCapabilitiesImpl otherSnapshot = snapshot(other, coercionLogic);
+    if (merged == null) {
+      return otherSnapshot;
+    } else if (otherSnapshot == null) {
+      return merged;
+    }
+
+    if (merged.type == null) {
+      merged.type = other.getType();
+    }
+
+    if (!merged.type.equals(otherSnapshot.getType())) {
+      throw new ISE("Cannot merge columns of type[%s] and [%s]", merged.type, otherSnapshot.getType());
+    }
+
+    merged.dictionaryEncoded = merged.dictionaryEncoded.or(otherSnapshot.isDictionaryEncoded());
+    merged.hasMultipleValues = merged.hasMultipleValues.or(otherSnapshot.hasMultipleValues());
+    merged.dictionaryValuesSorted = merged.dictionaryValuesSorted.and(otherSnapshot.areDictionaryValuesSorted());
+    merged.dictionaryValuesUnique = merged.dictionaryValuesUnique.and(otherSnapshot.areDictionaryValuesUnique());
+    merged.hasInvertedIndexes |= otherSnapshot.hasBitmapIndexes();
+    merged.hasSpatialIndexes |= otherSnapshot.hasSpatialIndexes();
+    merged.filterable &= otherSnapshot.isFilterable();
+
+    return merged;
   }
 
 
@@ -93,10 +125,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @Nullable
   private ValueType type = null;
 
-  private boolean dictionaryEncoded = false;
-  private boolean runLengthEncoded = false;
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
+  private Capable dictionaryEncoded = Capable.UNKNOWN;
   private Capable hasMultipleValues = Capable.UNKNOWN;
 
   // These capabilities are computed at query time and not persisted in the segment files.
@@ -121,15 +152,16 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
-  @JsonProperty
-  public boolean isDictionaryEncoded()
+  @JsonProperty("dictionaryEncoded")
+  public Capable isDictionaryEncoded()
   {
     return dictionaryEncoded;
   }
 
+  @JsonSetter("dictionaryEncoded")
   public ColumnCapabilitiesImpl setDictionaryEncoded(boolean dictionaryEncoded)
   {
-    this.dictionaryEncoded = dictionaryEncoded;
+    this.dictionaryEncoded = Capable.of(dictionaryEncoded);
     return this;
   }
 
@@ -155,13 +187,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   {
     this.dictionaryValuesUnique = Capable.of(dictionaryValuesUnique);
     return this;
-  }
-
-  @Override
-  @JsonProperty
-  public boolean isRunLengthEncoded()
-  {
-    return runLengthEncoded;
   }
 
   @Override
@@ -216,32 +241,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)
   {
     this.filterable = filterable;
-    return this;
-  }
-
-  public ColumnCapabilities merge(@Nullable ColumnCapabilities other)
-  {
-    if (other == null) {
-      return this;
-    }
-
-    if (type == null) {
-      type = other.getType();
-    }
-
-    if (!type.equals(other.getType())) {
-      throw new ISE("Cannot merge columns of type[%s] and [%s]", type, other.getType());
-    }
-
-    this.dictionaryEncoded |= other.isDictionaryEncoded();
-    this.runLengthEncoded |= other.isRunLengthEncoded();
-    this.hasInvertedIndexes |= other.hasBitmapIndexes();
-    this.hasSpatialIndexes |= other.hasSpatialIndexes();
-    this.filterable &= other.isFilterable();
-    this.hasMultipleValues = this.hasMultipleValues.or(other.hasMultipleValues());
-    this.dictionaryValuesSorted = this.dictionaryValuesSorted.and(other.areDictionaryValuesSorted());
-    this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
-
     return this;
   }
 }

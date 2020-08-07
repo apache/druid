@@ -154,7 +154,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), true);
+    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), ColumnCapabilitiesImpl.ALL_TRUE);
   }
 
   /**
@@ -165,7 +165,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
    */
   public ColumnCapabilities getSnapshotColumnCapabilities(String column)
   {
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column));
+    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), ColumnCapabilitiesImpl.ALL_FALSE);
   }
 
   @Override

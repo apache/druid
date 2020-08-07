@@ -30,13 +30,12 @@ import javax.annotation.Nullable;
 public interface ColumnCapabilities
 {
   ValueType getType();
-  boolean isDictionaryEncoded();
+  Capable isDictionaryEncoded();
   Capable areDictionaryValuesSorted();
   Capable areDictionaryValuesUnique();
-  boolean isRunLengthEncoded();
+  Capable hasMultipleValues();
   boolean hasBitmapIndexes();
   boolean hasSpatialIndexes();
-  Capable hasMultipleValues();
   boolean isFilterable();
 
   enum Capable
@@ -103,6 +102,48 @@ public interface ColumnCapabilities
     public String toString()
     {
       return StringUtils.toLowerCase(super.toString());
+    }
+  }
+
+  interface CoercionLogic
+  {
+    boolean dictionaryEncoded();
+    boolean dictionaryValuesSorted();
+    boolean dictionaryValuesUnique();
+    boolean multipleValues();
+  }
+
+  class AllCoercionLogic implements CoercionLogic
+  {
+    private final boolean coerceTo;
+
+    public AllCoercionLogic(boolean coerceTo)
+    {
+      this.coerceTo = coerceTo;
+    }
+
+    @Override
+    public boolean dictionaryEncoded()
+    {
+      return coerceTo;
+    }
+
+    @Override
+    public boolean dictionaryValuesSorted()
+    {
+      return coerceTo;
+    }
+
+    @Override
+    public boolean dictionaryValuesUnique()
+    {
+      return coerceTo;
+    }
+
+    @Override
+    public boolean multipleValues()
+    {
+      return coerceTo;
     }
   }
 }

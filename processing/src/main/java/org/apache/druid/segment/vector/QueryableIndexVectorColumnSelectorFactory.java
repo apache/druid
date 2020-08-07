@@ -83,7 +83,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
         spec -> {
           final ColumnHolder holder = index.getColumnHolder(spec.getDimension());
           if (holder == null
-              || !holder.getCapabilities().isDictionaryEncoded()
+              || !holder.getCapabilities().isDictionaryEncoded().isTrue()
               || holder.getCapabilities().getType() != ValueType.STRING
               || !holder.getCapabilities().hasMultipleValues().isMaybeTrue()) {
             throw new ISE(
@@ -119,7 +119,7 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
         spec -> {
           final ColumnHolder holder = index.getColumnHolder(spec.getDimension());
           if (holder == null
-              || !holder.getCapabilities().isDictionaryEncoded()
+              || !holder.getCapabilities().isDictionaryEncoded().isTrue()
               || holder.getCapabilities().getType() != ValueType.STRING) {
             // Asking for a single-value dimension selector on a non-string column gets you a bunch of nulls.
             return NilVectorSelector.create(offset);

@@ -954,6 +954,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       for (String dim : oldDimensionOrder) {
         if (dimensionDescs.get(dim) == null) {
           ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
+          capabilities.setDictionaryEncoded(capabilities.getType().equals(ValueType.STRING));
           DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
           addNewDimension(dim, handler);
         }

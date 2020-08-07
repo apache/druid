@@ -79,7 +79,7 @@ public final class DimensionHandlerUtils
     multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
 
     if (capabilities.getType() == ValueType.STRING) {
-      if (!capabilities.isDictionaryEncoded()) {
+      if (!capabilities.isDictionaryEncoded().isMaybeTrue()) {
         throw new IAE("String column must have dictionary encoding.");
       }
       return new StringDimensionHandler(dimensionName, multiValueHandling, capabilities.hasBitmapIndexes(), capabilities.hasSpatialIndexes());
@@ -226,11 +226,11 @@ public final class DimensionHandlerUtils
       capabilities = ColumnCapabilitiesImpl.copyOf(capabilities)
                                            .setType(ValueType.STRING)
                                            .setDictionaryValuesUnique(
-                                               capabilities.isDictionaryEncoded() &&
+                                               capabilities.isDictionaryEncoded().isTrue() &&
                                                fn.getExtractionType() == ExtractionFn.ExtractionType.ONE_TO_ONE
                                            )
                                            .setDictionaryValuesSorted(
-                                               capabilities.isDictionaryEncoded() && fn.preservesOrdering()
+                                               capabilities.isDictionaryEncoded().isTrue() && fn.preservesOrdering()
                                            );
     }
 

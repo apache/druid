@@ -88,6 +88,35 @@ public class IndexMergerV9 implements IndexMerger
 {
   private static final Logger log = new Logger(IndexMergerV9.class);
 
+  // merge logic for the state capabilities will be in after incremental index is persisted
+  private static final ColumnCapabilities.CoercionLogic DIMENSION_CAPABILITY_MERGE_LOGIC =
+      new ColumnCapabilities.CoercionLogic()
+      {
+        @Override
+        public boolean dictionaryEncoded()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesSorted()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesUnique()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean multipleValues()
+        {
+          return false;
+        }
+      };
+
   private final ObjectMapper mapper;
   private final IndexIO indexIO;
   private final SegmentWriteOutMediumFactory defaultSegmentWriteOutMediumFactory;
@@ -724,14 +753,14 @@ public class IndexMergerV9 implements IndexMerger
       for (String dimension : adapter.getDimensionNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
         capabilitiesMap.compute(dimension, (d, existingCapabilities) ->
-            ColumnCapabilitiesImpl.snapshot(capabilities)
-                                  .merge(ColumnCapabilitiesImpl.snapshot(existingCapabilities)));
+            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, DIMENSION_CAPABILITY_MERGE_LOGIC)
+        );
       }
       for (String metric : adapter.getMetricNames()) {
         ColumnCapabilities capabilities = adapter.getCapabilities(metric);
         capabilitiesMap.compute(metric, (m, existingCapabilities) ->
-            ColumnCapabilitiesImpl.snapshot(capabilities)
-                                  .merge(ColumnCapabilitiesImpl.snapshot(existingCapabilities)));
+            ColumnCapabilitiesImpl.merge(capabilities, existingCapabilities, ColumnCapabilitiesImpl.ALL_FALSE)
+        );
         metricsValueTypes.put(metric, capabilities.getType());
         metricTypeNames.put(metric, adapter.getMetricType(metric));
       }
