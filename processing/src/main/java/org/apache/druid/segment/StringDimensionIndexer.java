@@ -477,15 +477,20 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
                                                                      .setHasBitmapIndexes(hasBitmapIndexes)
                                                                      .setHasSpatialIndexes(hasSpatialIndexes)
-                                                                     .setDictionaryEncoded(dictionaryEncodesAllValues())
                                                                      .setDictionaryValuesUnique(true)
                                                                      .setDictionaryValuesSorted(false);
+
     // strings are only single valued, until they are not...
     // only explicitly set multiple values if they are certain, otherwise this indexer might process a multi-valued
     // row in the future in the period between obtaining capabilities and actually processing the rows with a selector
     // leaving as unknown allows the caller to decide
     if (hasMultipleValues) {
       capabilites.setHasMultipleValues(true);
+    }
+    // likewise only set dictionaryEncoded if explicitly if true
+    final boolean allValuesEncoded = dictionaryEncodesAllValues();
+    if (allValuesEncoded) {
+      capabilites.setDictionaryEncoded(true);
     }
     return capabilites;
   }
