@@ -481,15 +481,21 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
                                                                      .setDictionaryValuesUnique(true)
                                                                      .setDictionaryValuesSorted(false);
 
-    // strings are only single valued, until they are not...
-    // We only explicitly set multiple values if we are certain that there are multiple values.
-    // Otherwise, this indexer might process a multi-valued row in the period between obtaining the
-    // capabilities, and actually processing the rows with a selector.
-    // Leaving as unknown allows the caller to decide how to handle this
+    // Strings are opportunistically multi-valued, but the capabilities are initialized as 'unknown', since a
+    // multi-valued row might be processed at any point during ingestion.
+    // We only explicitly set multiple values if we are certain that there are multiple values, otherwise, a race
+    // condition might occur where this indexer might process a multi-valued row in the period between obtaining the
+    // capabilities, and actually processing the rows with a selector. Leaving as unknown allows the caller to decide
+    // how to handle this.
     if (hasMultipleValues) {
       capabilites.setHasMultipleValues(true);
     }
-    // likewise only set dictionaryEncoded if explicitly if true for the same reason
+    // Likewise, only set dictionaryEncoded if explicitly if true for a similar reason as multi-valued handling. The
+    // dictionary is populated as rows are processed, but there might be implicit default values not accounted for in
+    // the dictionary yet. We can be certain that the dictionary has an entry for every value if either of
+    //    a) we have already processed an explitic default (null) valued row for this column
+    //    b) the processing was not 'sparse', meaning that this indexer has processed an explict value for every row
+    // is true.
     final boolean allValuesEncoded = dictionaryEncodesAllValues();
     if (allValuesEncoded) {
       capabilites.setDictionaryEncoded(true);

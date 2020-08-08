@@ -255,6 +255,12 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   @Test
   public void testIncrementIndexStringSelector() throws IndexSizeExceededException
   {
+    // This test covers a regression caused by ColumnCapabilites.isDictionaryEncoded not matching the value of
+    // DimensionSelector.nameLookupPossibleInAdvance in the indexers of an IncrementalIndex, which resulted in an
+    // exception trying to make an optimized string expression selector that was not appropriate to use for the
+    // underlying dimension selector.
+    // This occurred during schemaless ingestion with spare dimension values and no explicit null rows, so the
+    // conditions are replicated by this test.
     IncrementalIndexSchema schema = new IncrementalIndexSchema(
         0,
         new TimestampSpec("time", "millis", DateTimes.nowUtc()),
