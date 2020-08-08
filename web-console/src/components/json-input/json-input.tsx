@@ -24,7 +24,9 @@ import AceEditor from 'react-ace';
 import './json-input.scss';
 
 function parseHjson(str: string) {
-  return str === '' ? null : Hjson.parse(str);
+  // Throwing on empty input is more consistent with how JSON.parse works
+  if (str.trim() === '') throw new Error('empty hjson');
+  return Hjson.parse(str);
 }
 
 function stringifyJson(item: any): string {
