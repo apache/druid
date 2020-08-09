@@ -168,7 +168,6 @@ libraries:
   - com.amazonaws: aws-java-sdk-ec2
   - com.amazonaws: aws-java-sdk-kms
   - com.amazonaws: aws-java-sdk-s3
-  - com.amazonaws: aws-java-sdk-sts
   - com.amazonaws: jmespath-java
 notice: |
   AWS SDK for Java
