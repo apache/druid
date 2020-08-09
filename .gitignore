@@ -14,6 +14,8 @@ target
 .vscode
 *.log
 *.DS_Store
+package-lock.json
+node_modules
 _site
 dependency-reduced-pom.xml
 LICENSE.BINARY
