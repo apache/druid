@@ -49,6 +49,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
@@ -4356,9 +4357,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // This query should actually return [0, null] rather than an empty result set, but it doesn't.
     // This test just "documents" the current behavior.
 
-    // Cannot vectorize due to "longMax" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar'",
         ImmutableList.of(
@@ -4403,9 +4401,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithFilterMatchingNothingWithGroupByLiteral() throws Exception
   {
-    // Cannot vectorize due to "longMax" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE dim1 = 'foobar' GROUP BY 'dummy'",
         ImmutableList.of(
@@ -4801,7 +4796,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSimpleLongAggregations() throws Exception
   {
     testQuery(
-        "SELECT  MIN(l1), MIN(cnt) FROM druid.numfoo",
+        "SELECT  MIN(l1), MIN(cnt), MAX(l1) FROM druid.numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE3)
@@ -4809,13 +4804,60 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .granularity(Granularities.ALL)
                 .aggregators(aggregators(
                                 new LongMinAggregatorFactory("a0", "l1"),
-                                new LongMinAggregatorFactory("a1", "cnt")
+                                new LongMinAggregatorFactory("a1", "cnt"),
+                                new LongMaxAggregatorFactory("a2", "l1")
                             ))
                 .context(TIMESERIES_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{0L, 1L}
+            new Object[]{0L, 1L, 325323L}
+        )
+    );
+  }
+
+  @Test
+  public void testSimpleDoubleAggregations() throws Exception
+  {
+    testQuery(
+        "SELECT  MIN(d1), MAX(d1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new DoubleMinAggregatorFactory("a0", "d1"),
+                      new DoubleMaxAggregatorFactory("a1", "d1")
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0, 1.7}
+        )
+    );
+  }
+
+  @Test
+  public void testSimpleFloatAggregations() throws Exception
+  {
+    testQuery(
+        "SELECT  MIN(m1), MAX(m1) FROM druid.numfoo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new FloatMinAggregatorFactory("a0", "m1"),
+                      new FloatMaxAggregatorFactory("a1", "m1")
+                  ))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0f, 6.0f}
         )
     );
   }
@@ -4824,9 +4866,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSimpleAggregations() throws Exception
   {
-    // Cannot vectorize due to "longMax" aggregator.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + MIN(cnt) + MAX(cnt), COUNT(dim2), COUNT(d1), AVG(d1) FROM druid.numfoo",
         ImmutableList.of(
@@ -4958,10 +4997,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testGroupByWithSortOnPostAggregationNoTopNConfig() throws Exception
   {
     // Use PlannerConfig to disable topN, so this query becomes a groupBy.
-
-    // Cannot vectorize due to "floatMin", "floatMax" aggregators.
-    cannotVectorize();
-
     testQuery(
         PLANNER_CONFIG_NO_TOPN,
         "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
@@ -5054,7 +5089,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations() throws Exception
   {
-    // Cannot vectorize due to "cardinality", "longMax" aggregators.
+    // Cannot vectorize due to "cardinality" aggregator.
     cannotVectorize();
 
     testQuery(
@@ -5228,7 +5263,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionAggregations() throws Exception
   {
-    // Cannot vectorize due to "doubleMax" aggregator.
+    // Cannot vectorize due to expressions.
     cannotVectorize();
 
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
@@ -6678,8 +6713,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNestedGroupBy() throws Exception
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
 
     testQuery(
         "SELECT\n"
