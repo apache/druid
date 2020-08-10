@@ -19,8 +19,13 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,25 +38,45 @@ import java.nio.ByteBuffer;
 public class DoubleMinAggregationTest
 {
   private DoubleMinAggregatorFactory doubleMinAggFactory;
+  private DoubleMinAggregatorFactory doubleMinVectorAggFactory;
+
   private ColumnSelectorFactory colSelectorFactory;
+  private VectorColumnSelectorFactory vectorColumnSelectorFactory;
   private TestDoubleColumnSelectorImpl selector;
 
-  private double[] values = {3.5d, 2.7d, 1.1d, 1.3d};
+  private final double[] values = {3.5d, 2.7d, 1.1d, 1.3d};
+  private final double[] doubleValues1 = {5d, 2d, 4d, 100d, 1d, 5d, -2d, -3d, 0d, 55d};
 
   public DoubleMinAggregationTest() throws Exception
   {
     String aggSpecJson = "{\"type\": \"doubleMin\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
     doubleMinAggFactory = TestHelper.makeJsonMapper().readValue(aggSpecJson, DoubleMinAggregatorFactory.class);
+
+    String vectorAggSpecJson = "{\"type\": \"doubleMin\", \"name\": \"dbl\", \"fieldName\": \"dblFld\"}";
+    doubleMinVectorAggFactory = TestHelper.makeJsonMapper().readValue(vectorAggSpecJson, DoubleMinAggregatorFactory.class);
   }
 
   @Before
   public void setup()
   {
+    NullHandling.initializeForTests();
     selector = new TestDoubleColumnSelectorImpl(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
+
+
+    VectorValueSelector vectorValueSelector = EasyMock.createMock(VectorValueSelector.class);
+    EasyMock.expect(vectorValueSelector.getDoubleVector()).andReturn(doubleValues1).anyTimes();
+    EasyMock.expect(vectorValueSelector.getNullVector()).andReturn(null).anyTimes();
+    EasyMock.replay(vectorValueSelector);
+
+    vectorColumnSelectorFactory = EasyMock.createMock(VectorColumnSelectorFactory.class);
+    EasyMock.expect(vectorColumnSelectorFactory.getColumnCapabilities("dblFld"))
+            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.DOUBLE).setDictionaryEncoded(true)).anyTimes();
+    EasyMock.expect(vectorColumnSelectorFactory.makeValueSelector("dblFld")).andReturn(vectorValueSelector).anyTimes();
+    EasyMock.replay(vectorColumnSelectorFactory);
   }
 
   @Test
@@ -85,6 +110,34 @@ public class DoubleMinAggregationTest
     Assert.assertEquals(values[2], ((Double) agg.get(buffer, 0)).doubleValue(), 0.0001);
     Assert.assertEquals((long) values[2], agg.getLong(buffer, 0));
     Assert.assertEquals(values[2], agg.getFloat(buffer, 0), 0.0001);
+  }
+
+  @Test
+  public void testDoubleMinVectorAggregator()
+  {
+    // Some sanity.
+    Assert.assertTrue(doubleMinVectorAggFactory.canVectorize(vectorColumnSelectorFactory));
+    VectorValueSelector vectorValueSelector = doubleMinVectorAggFactory.vectorSelector(vectorColumnSelectorFactory);
+    Assert.assertEquals(doubleValues1, vectorValueSelector.getDoubleVector());
+
+    VectorAggregator vectorAggregator = doubleMinVectorAggFactory.factorizeVector(vectorColumnSelectorFactory);
+
+    final ByteBuffer buf = ByteBuffer.allocate(doubleMinVectorAggFactory.getMaxIntermediateSizeWithNulls() * 3);
+    vectorAggregator.init(buf, 0);
+    vectorAggregator.aggregate(buf, 0, 0, 3);
+    Assert.assertEquals(doubleValues1[1], vectorAggregator.get(buf, 0));
+
+    vectorAggregator.init(buf, 8);
+    vectorAggregator.aggregate(buf, 8, 0, 3);
+    Assert.assertEquals(doubleValues1[1], vectorAggregator.get(buf, 8));
+
+    vectorAggregator.init(buf, 16);
+    vectorAggregator.aggregate(buf, 16, 3, 7);
+    Assert.assertEquals(doubleValues1[6], vectorAggregator.get(buf, 16));
+
+    vectorAggregator.init(buf, 0);
+    vectorAggregator.aggregate(buf, 0, 0, 10);
+    Assert.assertEquals(doubleValues1[7], vectorAggregator.get(buf, 0));
   }
 
   @Test
