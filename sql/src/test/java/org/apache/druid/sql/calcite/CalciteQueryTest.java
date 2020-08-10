@@ -5040,9 +5040,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Use context to disable topN, so this query becomes a groupBy.
 
-    // Cannot vectorize due to "floatMin", "floatMax" aggregators.
-    cannotVectorize();
-
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_NO_TOPN,
