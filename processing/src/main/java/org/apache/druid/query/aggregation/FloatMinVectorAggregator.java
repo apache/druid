@@ -36,7 +36,7 @@ public class FloatMinVectorAggregator implements VectorAggregator
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    buf.putFloat(position, Float.MAX_VALUE);
+    buf.putFloat(position, Float.POSITIVE_INFINITY);
   }
 
   @Override

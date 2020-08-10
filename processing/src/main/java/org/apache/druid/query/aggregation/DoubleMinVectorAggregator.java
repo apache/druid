@@ -36,7 +36,7 @@ public class DoubleMinVectorAggregator implements VectorAggregator
   @Override
   public void init(final ByteBuffer buf, final int position)
   {
-    buf.putDouble(position, Double.MAX_VALUE);
+    buf.putDouble(position, Double.POSITIVE_INFINITY);
   }
 
   @Override

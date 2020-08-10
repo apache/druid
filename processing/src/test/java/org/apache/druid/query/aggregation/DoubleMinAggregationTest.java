@@ -123,15 +123,15 @@ public class DoubleMinAggregationTest
     VectorAggregator vectorAggregator = doubleMinVectorAggFactory.factorizeVector(vectorColumnSelectorFactory);
 
     final ByteBuffer buf = ByteBuffer.allocate(doubleMinVectorAggFactory.getMaxIntermediateSizeWithNulls() * 3);
-    vectorAggregator.init(buf,  0);
+    vectorAggregator.init(buf, 0);
     vectorAggregator.aggregate(buf, 0, 0, 3);
     Assert.assertEquals(doubleValues1[1], vectorAggregator.get(buf, 0));
 
-    vectorAggregator.init(buf,  8);
+    vectorAggregator.init(buf, 8);
     vectorAggregator.aggregate(buf, 8, 0, 3);
     Assert.assertEquals(doubleValues1[1], vectorAggregator.get(buf, 8));
 
-    vectorAggregator.init(buf,  16);
+    vectorAggregator.init(buf, 16);
     vectorAggregator.aggregate(buf, 16, 3, 7);
     Assert.assertEquals(doubleValues1[6], vectorAggregator.get(buf, 16));
 

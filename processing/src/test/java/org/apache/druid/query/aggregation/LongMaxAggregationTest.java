@@ -123,7 +123,7 @@ public class LongMaxAggregationTest
     VectorAggregator vectorAggregator = longMaxVectorAggFactory.factorizeVector(vectorColumnSelectorFactory);
 
     final ByteBuffer buf = ByteBuffer.allocate(longMaxAggFactory.getMaxIntermediateSizeWithNulls() * 3);
-    vectorAggregator.init(buf,  0);
+    vectorAggregator.init(buf, 0);
 
     vectorAggregator.aggregate(buf, 0, 0, 3);
     Assert.assertEquals(longValues1[0], (long) vectorAggregator.get(buf, 0));

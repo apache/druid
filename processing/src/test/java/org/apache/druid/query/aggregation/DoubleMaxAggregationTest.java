@@ -122,15 +122,15 @@ public class DoubleMaxAggregationTest
     VectorAggregator vectorAggregator = doubleMaxVectorAggFactory.factorizeVector(vectorColumnSelectorFactory);
 
     final ByteBuffer buf = ByteBuffer.allocate(doubleMaxVectorAggFactory.getMaxIntermediateSizeWithNulls() * 3);
-    vectorAggregator.init(buf,  0);
+    vectorAggregator.init(buf, 0);
     vectorAggregator.aggregate(buf, 0, 0, 3);
     Assert.assertEquals(doubleValues1[0], vectorAggregator.get(buf, 0));
 
-    vectorAggregator.init(buf,  8);
+    vectorAggregator.init(buf, 8);
     vectorAggregator.aggregate(buf, 8, 0, 3);
     Assert.assertEquals(doubleValues1[0], vectorAggregator.get(buf, 8));
 
-    vectorAggregator.init(buf,  16);
+    vectorAggregator.init(buf, 16);
     vectorAggregator.aggregate(buf, 16, 4, 7);
     Assert.assertEquals(doubleValues1[5], vectorAggregator.get(buf, 16));
 
