@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import java.util.concurrent.TimeUnit;
 
@@ -53,6 +54,9 @@ public class QueryContexts
   public static final String JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY = "enableJoinFilterRewriteValueColumnFilters";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
+  public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
+  public static final String RETURN_PARTIAL_RESULTS_KEY = "returnPartialResults";
+  public static final String USE_CACHE_KEY = "useCache";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -143,7 +147,7 @@ public class QueryContexts
 
   public static <T> boolean isUseCache(Query<T> query, boolean defaultValue)
   {
-    return parseBoolean(query, "useCache", defaultValue);
+    return parseBoolean(query, USE_CACHE_KEY, defaultValue);
   }
 
   public static <T> boolean isPopulateResultLevelCache(Query<T> query)
@@ -181,9 +185,19 @@ public class QueryContexts
     return parseBoolean(query, "serializeDateTimeAsLongInner", defaultValue);
   }
 
+  public static <T> Vectorize getVectorize(Query<T> query)
+  {
+    return getVectorize(query, QueryContexts.DEFAULT_VECTORIZE);
+  }
+
   public static <T> Vectorize getVectorize(Query<T> query, Vectorize defaultValue)
   {
     return parseEnum(query, VECTORIZE_KEY, Vectorize.class, defaultValue);
+  }
+
+  public static <T> int getVectorSize(Query<T> query)
+  {
+    return getVectorSize(query, QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
   }
 
   public static <T> int getVectorSize(Query<T> query, int defaultSize)
@@ -342,6 +356,16 @@ public class QueryContexts
     final long defaultTimeout = parseLong(query, DEFAULT_TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
     Preconditions.checkState(defaultTimeout >= 0, "Timeout must be a non negative value, but was [%s]", defaultTimeout);
     return defaultTimeout;
+  }
+
+  public static <T> int getNumRetriesOnMissingSegments(Query<T> query, int defaultValue)
+  {
+    return query.getContextValue(NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, defaultValue);
+  }
+
+  public static <T> boolean allowReturnPartialResults(Query<T> query, boolean defaultValue)
+  {
+    return query.getContextBoolean(RETURN_PARTIAL_RESULTS_KEY, defaultValue);
   }
 
   static <T> long parseLong(Query<T> query, String key, long defaultValue)

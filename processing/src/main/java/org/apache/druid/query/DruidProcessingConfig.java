@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,14 +41,14 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
   @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
-  public int intermediateComputeSizeBytesConfigured()
+  public HumanReadableBytes intermediateComputeSizeBytesConfigured()
   {
-    return DEFAULT_PROCESSING_BUFFER_SIZE_BYTES;
+    return HumanReadableBytes.valueOf(DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
   }
 
   public int intermediateComputeSizeBytes()
   {
-    int sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
+    int sizeBytesConfigured = intermediateComputeSizeBytesConfigured().getBytesInInt();
     if (sizeBytesConfigured != DEFAULT_PROCESSING_BUFFER_SIZE_BYTES) {
       return sizeBytesConfigured;
     } else if (computedBufferSizeBytes.get() != null) {

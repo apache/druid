@@ -284,7 +284,7 @@ The following table shows how each ingestion method handles partitioning:
 ## Ingestion specs
 
 No matter what ingestion method you use, data is loaded into Druid using either one-time [tasks](tasks.html) or
-ongoing "supervisors" (which run and supervised a set of tasks over time). In any case, part of the task or supervisor
+ongoing "supervisors" (which run and supervise a set of tasks over time). In any case, part of the task or supervisor
 definition is an _ingestion spec_.
 
 Ingestion specs consists of three main components:

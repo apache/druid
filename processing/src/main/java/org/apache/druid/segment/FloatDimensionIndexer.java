@@ -25,6 +25,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -38,6 +41,8 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 {
   public static final Comparator<Float> FLOAT_COMPARATOR = Comparators.naturalNullsFirst();
 
+  private volatile boolean hasNulls = false;
+
   @Override
   public Float processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
@@ -45,13 +50,17 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+    Float f = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+    if (f == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return f;
   }
 
   @Override
   public void setSparseIndexed()
   {
-    // no-op, float columns do not have a dictionary to track null values
+    hasNulls = NullHandling.sqlCompatible();
   }
 
   @Override
@@ -88,6 +97,16 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   public int getCardinality()
   {
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+  }
+
+  @Override
+  public ColumnCapabilities getColumnCapabilities()
+  {
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
+    if (hasNulls) {
+      builder.setHasNulls(hasNulls);
+    }
+    return builder;
   }
 
   @Override

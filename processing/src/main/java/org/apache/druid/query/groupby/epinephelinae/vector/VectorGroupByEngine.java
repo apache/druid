@@ -26,7 +26,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.query.QueryConfig;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
@@ -95,8 +95,7 @@ public class VectorGroupByEngine
       @Nullable final DateTime fudgeTimestamp,
       @Nullable final Filter filter,
       final Interval interval,
-      final GroupByQueryConfig config,
-      final QueryConfig queryConfig
+      final GroupByQueryConfig config
   )
   {
     if (!canVectorize(query, storageAdapter, filter)) {
@@ -114,7 +113,7 @@ public class VectorGroupByEngine
                 interval,
                 query.getVirtualColumns(),
                 false,
-                queryConfig.getVectorSize(),
+                QueryContexts.getVectorSize(query),
                 null
             );
 

@@ -47,7 +47,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.indexing.TuningConfigs;
@@ -289,7 +289,7 @@ public class IndexGeneratorJob implements Jobby
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
       Iterable<String> oldDimOrder,
-      Map<String, ColumnCapabilitiesImpl> oldCapabilities
+      Map<String, ColumnCapabilities> oldCapabilities
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();

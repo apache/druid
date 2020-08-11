@@ -29,6 +29,8 @@ public class TestNGGroup
 
   public static final String INPUT_FORMAT = "input-format";
 
+  public static final String INPUT_SOURCE = "input-source";
+
   public static final String KAFKA_INDEX = "kafka-index";
 
   public static final String KAFKA_INDEX_SLOW = "kafka-index-slow";
@@ -41,12 +43,16 @@ public class TestNGGroup
 
   public static final String OTHER_INDEX = "other-index";
 
+  public static final String APPEND_INGESTION = "append-ingestion";
+
   public static final String PERFECT_ROLLUP_PARALLEL_BATCH_INDEX = "perfect-rollup-parallel-batch-index";
 
   /**
    * This group can only be run individually using -Dgroups=query since it requires specific test data setup.
    */
   public static final String QUERY = "query";
+
+  public static final String QUERY_RETRY = "query-retry";
 
   public static final String REALTIME_INDEX = "realtime-index";
 

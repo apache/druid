@@ -64,7 +64,6 @@ public class ITWikipediaQueryTest
   @BeforeMethod
   public void before() throws Exception
   {
-
     // ensure that wikipedia segments are loaded completely
     ITRetryUtil.retryUntilTrue(
         () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"

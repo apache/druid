@@ -193,7 +193,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
-        capabilities.isNullable().isTrue(),
+        capabilities.hasNulls().isTrue(),
         size,
         null,
         null,
@@ -229,7 +229,7 @@ public class SegmentAnalyzer
         min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
         max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
       }
-    } else if (capabilities.isDictionaryEncoded()) {
+    } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
       DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) columnHolder.getColumn();
       cardinality = theColumn.getCardinality();
@@ -244,7 +244,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
-        capabilities.isNullable().isTrue(),
+        capabilities.hasNulls().isTrue(),
         size,
         analyzingCardinality() ? cardinality : 0,
         min,
@@ -322,7 +322,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
-        capabilities.isNullable().isTrue(),
+        capabilities.hasNulls().isTrue(),
         size,
         cardinality,
         min,
@@ -339,7 +339,7 @@ public class SegmentAnalyzer
   {
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
-      final boolean nullable = capabilities != null && capabilities.isNullable().isTrue();
+      final boolean nullable = capabilities != null && capabilities.hasNulls().isTrue();
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {

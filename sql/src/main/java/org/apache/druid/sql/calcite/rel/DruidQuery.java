@@ -928,6 +928,7 @@ public class DruidQuery
         sorting != null
         ? new DefaultLimitSpec(
             sorting.getOrderBys(),
+            0,
             sorting.isLimited() ? Ints.checkedCast(sorting.getLimit()) : null
         )
         : NoopLimitSpec.instance(),

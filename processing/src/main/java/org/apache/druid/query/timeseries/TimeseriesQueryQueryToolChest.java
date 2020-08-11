@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
@@ -138,8 +139,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
       final Sequence<Result<TimeseriesResultValue>> finalSequence;
 
-      if (query.getGranularity().equals(Granularities.ALL) && !query.isSkipEmptyBuckets()) {
-        //Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus we have only one record
+      // When granularity = ALL, there is no grouping key for this query.
+      // To be more sql-compliant, we should return something (e.g., 0 for count queries) even when
+      // the sequence is empty.
+      if (query.getGranularity().equals(Granularities.ALL) &&
+          // Returns empty sequence if this query allows skipping empty buckets
+          !query.isSkipEmptyBuckets() &&
+          // Returns empty sequence if bySegment is set because bySegment results are mostly used for
+          // caching in historicals or debugging where the exact results are preferred.
+          !QueryContexts.isBySegment(query)) {
+        // Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus
+        // we have only one record.
         final List<Result<TimeseriesResultValue>> val = baseResults.toList();
         finalSequence = val.isEmpty() ? Sequences.simple(Collections.singletonList(
             getNullTimeseriesResultValue(query))) : Sequences.simple(val);
@@ -402,7 +412,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.addTimeColumn();
     if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
@@ -450,6 +459,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       final TimeseriesResultValue holder = result.getValue();
       final Map<String, Object> values = new HashMap<>(holder.getBaseObject());
       if (calculatePostAggs) {
+        // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
+        // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
+        // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
+        // This should be done before computing post aggregators since they can reference "timestampResultField".
+        if (StringUtils.isNotEmpty(query.getTimestampResultField()) && result.getTimestamp() != null) {
+          final DateTime timestamp = result.getTimestamp();
+          values.put(query.getTimestampResultField(), timestamp.getMillis());
+        }
         if (!query.getPostAggregatorSpecs().isEmpty()) {
           // put non finalized aggregators for calculating dependent post Aggregators
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
@@ -458,13 +475,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           for (PostAggregator postAgg : query.getPostAggregatorSpecs()) {
             values.put(postAgg.getName(), postAgg.compute(values));
           }
-        }
-        // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
-        // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
-        // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
-        if (StringUtils.isNotEmpty(query.getTimestampResultField()) && result.getTimestamp() != null) {
-          final DateTime timestamp = result.getTimestamp();
-          values.put(query.getTimestampResultField(), timestamp.getMillis());
         }
       }
       for (AggregatorFactory agg : query.getAggregatorSpecs()) {

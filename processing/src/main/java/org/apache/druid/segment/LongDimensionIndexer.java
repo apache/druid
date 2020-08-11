@@ -25,6 +25,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -38,6 +41,8 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
   public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
 
+  private volatile boolean hasNulls = false;
+
   @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
@@ -45,13 +50,17 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
+    Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
+    if (l == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return l;
   }
 
   @Override
   public void setSparseIndexed()
   {
-    // no-op, long columns do not have a dictionary to track null values
+    hasNulls = NullHandling.sqlCompatible();
   }
 
   @Override
@@ -88,6 +97,16 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   public int getCardinality()
   {
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+  }
+
+  @Override
+  public ColumnCapabilities getColumnCapabilities()
+  {
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+    if (hasNulls) {
+      builder.setHasNulls(hasNulls);
+    }
+    return builder;
   }
 
   @Override

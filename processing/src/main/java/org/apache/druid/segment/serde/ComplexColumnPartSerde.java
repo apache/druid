@@ -83,7 +83,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
         // since it isn't supported anywhere in the query engines)
         // longer term this needs to be captured by making the serde provide this information, and then this should
         // no longer be set to unknown but rather the actual values
-        builder.setNullable(ColumnCapabilities.Capable.UNKNOWN);
+        builder.setHasNulls(ColumnCapabilities.Capable.UNKNOWN);
         serde.deserializeColumn(buffer, builder);
       }
     };

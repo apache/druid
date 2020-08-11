@@ -106,14 +106,14 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setNullable(boolean nullable)
+  public ColumnBuilder setHasNulls(boolean nullable)
   {
-    this.capabilitiesBuilder.setIsNullable(nullable);
+    this.capabilitiesBuilder.setHasNulls(nullable);
     return this;
   }
-  public ColumnBuilder setNullable(ColumnCapabilities.Capable nullable)
+  public ColumnBuilder setHasNulls(ColumnCapabilities.Capable nullable)
   {
-    this.capabilitiesBuilder.setIsNullable(nullable);
+    this.capabilitiesBuilder.setHasNulls(nullable);
     return this;
   }
 

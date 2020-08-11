@@ -331,7 +331,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         );
         builder
             .setHasMultipleValues(hasMultipleValues)
-            .setNullable(firstDictionaryEntry == null)
+            .setHasNulls(firstDictionaryEntry == null)
             .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
 
         if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {

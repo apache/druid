@@ -86,7 +86,6 @@ You can check the Coordinator console located at `<COORDINATOR_IP>:<PORT>`. Make
 
 ```
 -Ddruid.segmentCache.locations=[{"path":"/tmp/druid/storageLocation","maxSize":"500000000000"}]
--Ddruid.server.maxSize=500000000000
  ```
 
 ## My queries are returning empty results

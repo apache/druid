@@ -21,6 +21,7 @@ package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
@@ -38,44 +39,73 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     if (other != null) {
       capabilities.type = other.getType();
       capabilities.dictionaryEncoded = other.isDictionaryEncoded();
-      capabilities.runLengthEncoded = other.isRunLengthEncoded();
       capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
       capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
       capabilities.hasMultipleValues = other.hasMultipleValues();
       capabilities.dictionaryValuesSorted = other.areDictionaryValuesSorted();
       capabilities.dictionaryValuesUnique = other.areDictionaryValuesUnique();
-      capabilities.nullable = other.isNullable();
+      capabilities.hasNulls = other.hasNulls();
       capabilities.filterable = other.isFilterable();
     }
     return capabilities;
   }
 
   /**
-   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
-   * {@link Capable#FALSE}, in order to present a snapshot of the state of the this column
+   * Copy a {@link ColumnCapabilities} and coerce all {@link ColumnCapabilities.Capable#UNKNOWN} to
+   * {@link ColumnCapabilities.Capable#TRUE} or {@link ColumnCapabilities.Capable#FALSE} as specified by
+   * {@link ColumnCapabilities.CoercionLogic}
    */
   @Nullable
-  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities)
-  {
-    return snapshot(capabilities, false);
-  }
-
-  /**
-   * Used at indexing time to finalize all {@link Capable#UNKNOWN} values to
-   * {@link Capable#FALSE} or {@link Capable#TRUE}, in order to present a snapshot of the state of the this column
-   */
-  @Nullable
-  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities, boolean unknownIsTrue)
+  public static ColumnCapabilitiesImpl snapshot(@Nullable final ColumnCapabilities capabilities, CoercionLogic coerce)
   {
     if (capabilities == null) {
       return null;
     }
     ColumnCapabilitiesImpl copy = copyOf(capabilities);
-    copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(unknownIsTrue);
-    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(unknownIsTrue);
-    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(unknownIsTrue);
-    copy.nullable = copy.nullable.coerceUnknownToBoolean(unknownIsTrue);
+    copy.dictionaryEncoded = copy.dictionaryEncoded.coerceUnknownToBoolean(coerce.dictionaryEncoded());
+    copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(coerce.dictionaryValuesSorted());
+    copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(coerce.dictionaryValuesUnique());
+    copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(coerce.multipleValues());
+    copy.hasNulls = copy.hasNulls.coerceUnknownToBoolean(coerce.hasNulls());
     return copy;
+  }
+
+  /**
+   * Snapshots a pair of capabilities and then merges them
+   */
+  @Nullable
+  public static ColumnCapabilitiesImpl merge(
+      @Nullable final ColumnCapabilities capabilities,
+      @Nullable final ColumnCapabilities other,
+      CoercionLogic coercionLogic
+  )
+  {
+    ColumnCapabilitiesImpl merged = snapshot(capabilities, coercionLogic);
+    ColumnCapabilitiesImpl otherSnapshot = snapshot(other, coercionLogic);
+    if (merged == null) {
+      return otherSnapshot;
+    } else if (otherSnapshot == null) {
+      return merged;
+    }
+
+    if (merged.type == null) {
+      merged.type = other.getType();
+    }
+
+    if (!merged.type.equals(otherSnapshot.getType())) {
+      throw new ISE("Cannot merge columns of type[%s] and [%s]", merged.type, otherSnapshot.getType());
+    }
+
+    merged.dictionaryEncoded = merged.dictionaryEncoded.or(otherSnapshot.isDictionaryEncoded());
+    merged.hasMultipleValues = merged.hasMultipleValues.or(otherSnapshot.hasMultipleValues());
+    merged.dictionaryValuesSorted = merged.dictionaryValuesSorted.and(otherSnapshot.areDictionaryValuesSorted());
+    merged.dictionaryValuesUnique = merged.dictionaryValuesUnique.and(otherSnapshot.areDictionaryValuesUnique());
+    merged.hasNulls = merged.hasNulls.or(other.hasNulls());
+    merged.hasInvertedIndexes |= otherSnapshot.hasBitmapIndexes();
+    merged.hasSpatialIndexes |= otherSnapshot.hasSpatialIndexes();
+    merged.filterable &= otherSnapshot.isFilterable();
+
+    return merged;
   }
 
   /**
@@ -100,7 +130,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
                                                                  .setDictionaryValuesUnique(false)
                                                                  .setHasSpatialIndexes(false);
     if (NullHandling.replaceWithDefault()) {
-      builder.setIsNullable(false);
+      builder.setHasNulls(false);
     }
     return builder;
   }
@@ -108,10 +138,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @Nullable
   private ValueType type = null;
 
-  private boolean dictionaryEncoded = false;
-  private boolean runLengthEncoded = false;
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
+  private Capable dictionaryEncoded = Capable.UNKNOWN;
   private Capable hasMultipleValues = Capable.UNKNOWN;
 
   // These capabilities are computed at query time and not persisted in the segment files.
@@ -122,7 +151,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @JsonIgnore
   private boolean filterable;
   @JsonIgnore
-  private Capable nullable = Capable.UNKNOWN;
+  private Capable hasNulls = Capable.UNKNOWN;
 
   @Override
   @JsonProperty
@@ -138,15 +167,16 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
-  @JsonProperty
-  public boolean isDictionaryEncoded()
+  @JsonProperty("dictionaryEncoded")
+  public Capable isDictionaryEncoded()
   {
     return dictionaryEncoded;
   }
 
+  @JsonSetter("dictionaryEncoded")
   public ColumnCapabilitiesImpl setDictionaryEncoded(boolean dictionaryEncoded)
   {
-    this.dictionaryEncoded = dictionaryEncoded;
+    this.dictionaryEncoded = Capable.of(dictionaryEncoded);
     return this;
   }
 
@@ -172,13 +202,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   {
     this.dictionaryValuesUnique = Capable.of(dictionaryValuesUnique);
     return this;
-  }
-
-  @Override
-  @JsonProperty
-  public boolean isRunLengthEncoded()
-  {
-    return runLengthEncoded;
   }
 
   @Override
@@ -221,20 +244,20 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
-  public Capable isNullable()
+  public Capable hasNulls()
   {
-    return nullable;
+    return hasNulls;
   }
 
-  public ColumnCapabilitiesImpl setIsNullable(boolean isNullable)
+  public ColumnCapabilitiesImpl setHasNulls(boolean hasNulls)
   {
-    nullable = Capable.of(isNullable);
+    this.hasNulls = Capable.of(hasNulls);
     return this;
   }
 
-  public ColumnCapabilitiesImpl setIsNullable(Capable isNullable)
+  public ColumnCapabilitiesImpl setHasNulls(Capable hasNulls)
   {
-    nullable = isNullable;
+    this.hasNulls = hasNulls;
     return this;
   }
 
@@ -251,33 +274,6 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setFilterable(boolean filterable)
   {
     this.filterable = filterable;
-    return this;
-  }
-
-  public ColumnCapabilities merge(@Nullable ColumnCapabilities other)
-  {
-    if (other == null) {
-      return this;
-    }
-
-    if (type == null) {
-      type = other.getType();
-    }
-
-    if (!type.equals(other.getType())) {
-      throw new ISE("Cannot merge columns of type[%s] and [%s]", type, other.getType());
-    }
-
-    this.dictionaryEncoded |= other.isDictionaryEncoded();
-    this.runLengthEncoded |= other.isRunLengthEncoded();
-    this.hasInvertedIndexes |= other.hasBitmapIndexes();
-    this.hasSpatialIndexes |= other.hasSpatialIndexes();
-    this.filterable &= other.isFilterable();
-    this.hasMultipleValues = this.hasMultipleValues.or(other.hasMultipleValues());
-    this.dictionaryValuesSorted = this.dictionaryValuesSorted.and(other.areDictionaryValuesSorted());
-    this.dictionaryValuesUnique = this.dictionaryValuesUnique.and(other.areDictionaryValuesUnique());
-    this.nullable = this.nullable.or(other.isNullable());
-
     return this;
   }
 }

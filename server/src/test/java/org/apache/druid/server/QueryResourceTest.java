@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,6 +35,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
@@ -202,7 +204,8 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -231,6 +234,111 @@ public class QueryResourceTest
         testServletRequest
     );
     Assert.assertNotNull(response);
+  }
+
+  @Test
+  public void testGoodQueryWithQueryConfigOverrideDefault() throws IOException
+  {
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(overrideConfig)
+        ),
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    final List<Result<TimeBoundaryResultValue>> responses = JSON_MAPPER.readValue(
+        baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertEquals(0, responses.size());
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
+    Assert.assertEquals(overrideConfigValue, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
+  }
+
+  @Test
+  public void testGoodQueryWithQueryConfigDoesNotOverrideQueryContext() throws IOException
+  {
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(overrideConfig)
+        ),
+        JSON_MAPPER,
+        JSON_MAPPER,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    Response response = queryResource.doPost(
+        // SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY context has overrideConfigKey with value of -1
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    final List<Result<TimeBoundaryResultValue>> responses = JSON_MAPPER.readValue(
+        baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertEquals(0, responses.size());
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
+    Assert.assertEquals(-1, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
   }
 
   @Test
@@ -471,7 +579,8 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            authMapper
+            authMapper,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -586,7 +695,8 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            authMapper
+            authMapper,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -709,7 +819,8 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            authMapper
+            authMapper,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
@@ -967,7 +1078,8 @@ public class QueryResourceTest
             new NoopServiceEmitter(),
             testRequestLogger,
             new AuthConfig(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of()))
         ),
         JSON_MAPPER,
         JSON_MAPPER,
