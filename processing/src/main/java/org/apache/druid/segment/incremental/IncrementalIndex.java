@@ -945,7 +945,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    */
   public void loadDimensionIterable(
       Iterable<String> oldDimensionOrder,
-      Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities
+      Map<String, ColumnCapabilities> oldColumnCapabilities
   )
   {
     synchronized (dimensionDescs) {
