@@ -153,8 +153,8 @@ public class ExpressionSelectors
         );
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING
-                 && capabilities.isDictionaryEncoded()
-                 && !capabilities.hasMultipleValues().isMaybeTrue()
+                 && capabilities.isDictionaryEncoded().isTrue()
+                 && capabilities.hasMultipleValues().isFalse()
                  && exprDetails.getArrayBindings().isEmpty()) {
         // Optimization for expressions that hit one scalar string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
@@ -225,7 +225,7 @@ public class ExpressionSelectors
       // not treating it as an array and not wanting to output an array
       if (capabilities != null
           && capabilities.getType() == ValueType.STRING
-          && capabilities.isDictionaryEncoded()
+          && capabilities.isDictionaryEncoded().isTrue()
           && !capabilities.hasMultipleValues().isUnknown()
           && !exprDetails.hasInputArrays()
           && !exprDetails.isOutputArray()
