@@ -260,7 +260,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     // exception trying to make an optimized string expression selector that was not appropriate to use for the
     // underlying dimension selector.
     // This occurred during schemaless ingestion with spare dimension values and no explicit null rows, so the
-    // conditions are replicated by this test.
+    // conditions are replicated by this test. See https://github.com/apache/druid/pull/10248 for details
     IncrementalIndexSchema schema = new IncrementalIndexSchema(
         0,
         new TimestampSpec("time", "millis", DateTimes.nowUtc()),
