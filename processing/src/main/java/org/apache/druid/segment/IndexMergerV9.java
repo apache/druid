@@ -1068,7 +1068,10 @@ public class IndexMergerV9 implements IndexMerger
   {
     Map<String, DimensionHandler> handlers = new LinkedHashMap<>();
     for (int i = 0; i < mergedDimensions.size(); i++) {
-      ColumnCapabilities capabilities = dimCapabilities.get(i);
+      ColumnCapabilities capabilities = ColumnCapabilitiesImpl.snapshot(
+          dimCapabilities.get(i),
+          DIMENSION_CAPABILITY_MERGE_LOGIC
+      );
       String dimName = mergedDimensions.get(i);
       DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dimName, capabilities, null);
       handlers.put(dimName, handler);

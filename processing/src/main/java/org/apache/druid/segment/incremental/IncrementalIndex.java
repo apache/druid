@@ -59,6 +59,7 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
+import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NilColumnValueSelector;
@@ -953,8 +954,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       }
       for (String dim : oldDimensionOrder) {
         if (dimensionDescs.get(dim) == null) {
-          ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
-          capabilities.setDictionaryEncoded(capabilities.getType().equals(ValueType.STRING));
+          ColumnCapabilitiesImpl capabilities = ColumnCapabilitiesImpl.snapshot(
+              oldColumnCapabilities.get(dim),
+              IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+          );
           DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
           addNewDimension(dim, handler);
         }
