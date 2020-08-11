@@ -40,6 +40,9 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.IndexedInts;
@@ -74,7 +77,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     private String minValue = null;
     @Nullable
     private String maxValue = null;
-    private int idForNull = ABSENT_VALUE_ID;
+    private volatile int idForNull = ABSENT_VALUE_ID;
 
     private final Object2IntMap<String> valueToId = new Object2IntOpenHashMap<>();
 
@@ -233,17 +236,19 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   private final DimensionDictionary dimLookup;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
+  private final boolean hasSpatialIndexes;
   private volatile boolean hasMultipleValues = false;
   private volatile boolean isSparse = false;
 
   @Nullable
   private SortedDimensionDictionary sortedLookup;
 
-  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
+  public StringDimensionIndexer(MultiValueHandling multiValueHandling, boolean hasBitmapIndexes, boolean hasSpatialIndexes)
   {
     this.dimLookup = new DimensionDictionary();
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
+    this.hasSpatialIndexes = hasSpatialIndexes;
   }
 
   @Override
@@ -400,6 +405,17 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     return dimLookup.size();
   }
 
+  /**
+   * returns true if all values are encoded in {@link #dimLookup}
+   */
+  private boolean dictionaryEncodesAllValues()
+  {
+    // name lookup is possible in advance if we explicitly process a value for every row, or if we've encountered an
+    // actual null value and it is present in our dictionary. otherwise the dictionary will be missing ids for implicit
+    // null values
+    return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
+  }
+
   @Override
   public int compareUnsortedEncodedKeyComponents(int[] lhs, int[] rhs)
   {
@@ -454,6 +470,37 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   public int getUnsortedEncodedKeyComponentHashCode(int[] key)
   {
     return Arrays.hashCode(key);
+  }
+
+  @Override
+  public ColumnCapabilities getColumnCapabilities()
+  {
+    ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+                                                                     .setHasBitmapIndexes(hasBitmapIndexes)
+                                                                     .setHasSpatialIndexes(hasSpatialIndexes)
+                                                                     .setDictionaryValuesUnique(true)
+                                                                     .setDictionaryValuesSorted(false);
+
+    // Strings are opportunistically multi-valued, but the capabilities are initialized as 'unknown', since a
+    // multi-valued row might be processed at any point during ingestion.
+    // We only explicitly set multiple values if we are certain that there are multiple values, otherwise, a race
+    // condition might occur where this indexer might process a multi-valued row in the period between obtaining the
+    // capabilities, and actually processing the rows with a selector. Leaving as unknown allows the caller to decide
+    // how to handle this.
+    if (hasMultipleValues) {
+      capabilites.setHasMultipleValues(true);
+    }
+    // Likewise, only set dictionaryEncoded if explicitly if true for a similar reason as multi-valued handling. The
+    // dictionary is populated as rows are processed, but there might be implicit default values not accounted for in
+    // the dictionary yet. We can be certain that the dictionary has an entry for every value if either of
+    //    a) we have already processed an explitic default (null) valued row for this column
+    //    b) the processing was not 'sparse', meaning that this indexer has processed an explict value for every row
+    // is true.
+    final boolean allValuesEncoded = dictionaryEncodesAllValues();
+    if (allValuesEncoded) {
+      capabilites.setDictionaryEncoded(true);
+    }
+    return capabilites;
   }
 
   @Override
@@ -630,9 +677,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
-        // name lookup is possible in advance if we got a value for every row (setSparseIndexed was not called on this
-        // column) or we've encountered an actual null value and it is present in our dictionary
-        return !isSparse || dimLookup.idForNull != ABSENT_VALUE_ID;
+        return dictionaryEncodesAllValues();
       }
 
       @Nullable
@@ -695,6 +740,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
   {
     return makeDimensionSelector(DefaultDimensionSpec.of(desc.getName()), currEntry, desc);
   }
+
 
   @Nullable
   @Override
