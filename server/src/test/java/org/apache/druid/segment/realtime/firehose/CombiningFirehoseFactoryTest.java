@@ -19,15 +19,18 @@
 
 package org.apache.druid.segment.realtime.firehose;
 
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -38,22 +41,27 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 public class CombiningFirehoseFactoryTest
 {
+  private CombiningFirehoseFactory combiningFirehoseFactory;
+  private List<FirehoseFactory> delegateFirehoses;
+
+  @Before
+  public void setUp()
+  {
+    delegateFirehoses = Arrays.asList(
+        new ListFirehoseFactory(Arrays.asList(makeRow(1, 1), makeRow(2, 2))),
+        new ListFirehoseFactory(Arrays.asList(makeRow(3, 3), makeRow(4, 4), makeRow(5, 5)))
+    );
+    combiningFirehoseFactory = new CombiningFirehoseFactory(delegateFirehoses);
+  }
 
   @Test
   public void testCombiningfirehose() throws IOException
   {
-    List<InputRow> list1 = Arrays.asList(makeRow(1, 1), makeRow(2, 2));
-    List<InputRow> list2 = Arrays.asList(makeRow(3, 3), makeRow(4, 4), makeRow(5, 5));
-    FirehoseFactory combiningFactory = new CombiningFirehoseFactory(
-        Arrays.asList(
-            new ListFirehoseFactory(list1),
-            new ListFirehoseFactory(list2)
-        )
-    );
-    final Firehose firehose = combiningFactory.connect(null, null);
+    final Firehose firehose = combiningFirehoseFactory.connect(null, null);
     for (int i = 1; i < 6; i++) {
       Assert.assertTrue(firehose.hasMore());
       final InputRow inputRow = firehose.nextRow();
@@ -62,6 +70,21 @@ public class CombiningFirehoseFactoryTest
     }
     Assert.assertFalse(firehose.hasMore());
   }
+
+  @Test
+  public void testFirehoseNotParallelizable()
+  {
+    Optional<InputSplit<List<FirehoseFactory>>> maybeFirehoseWithSplit = combiningFirehoseFactory.getSplits(null)
+                                                                                                 .findFirst();
+
+    Assert.assertTrue(maybeFirehoseWithSplit.isPresent());
+    FiniteFirehoseFactory<InputRowParser, List<FirehoseFactory>> firehoseWithSplit = combiningFirehoseFactory.withSplit(
+        maybeFirehoseWithSplit.get());
+    Assert.assertTrue(firehoseWithSplit instanceof CombiningFirehoseFactory);
+    Assert.assertFalse(combiningFirehoseFactory.isSplittable());
+    Assert.assertEquals(delegateFirehoses, ((CombiningFirehoseFactory) firehoseWithSplit).getDelegateFactoryList());
+  }
+
 
   private InputRow makeRow(final long timestamp, final float metricValue)
   {
