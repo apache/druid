@@ -21,11 +21,11 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -47,11 +47,15 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
@@ -62,6 +66,7 @@ import java.util.stream.IntStream;
  *
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
+@RunWith(Parameterized.class)
 public class ScanQueryResultOrderingTest
 {
   private static final String DATASOURCE = "datasource";
@@ -93,7 +98,7 @@ public class ScanQueryResultOrderingTest
                                                                 .add(ID_COLUMN, ValueType.LONG)
                                                                 .build();
 
-  private final List<RowBasedSegment<Object[]>> segments = ImmutableList.of(
+  private static final List<RowBasedSegment<Object[]>> SEGMENTS = ImmutableList.of(
       new RowBasedSegment<>(
           SegmentId.of(DATASOURCE, Intervals.of("2000-01-01/P1D"), "1", 0),
           ImmutableList.of(
@@ -136,8 +141,57 @@ public class ScanQueryResultOrderingTest
       )
   );
 
+  private final List<Integer> segmentToServerMap;
+  private final int limit;
+  private final int batchSize;
+  private final int maxRowsQueuedForOrdering;
+
   private ScanQueryRunnerFactory queryRunnerFactory;
   private List<QueryRunner<ScanResultValue>> segmentRunners;
+
+  @Parameterized.Parameters(name = "Segment-to-server map[{0}], limit[{1}], batchSize[{2}], maxRowsQueuedForOrdering[{3}]")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    // Set number of server equal to number of segments, then try all possible distributions of segments to servers.
+    final int numServers = SEGMENTS.size();
+
+    final Set<List<Integer>> segmentToServerMaps = Sets.cartesianProduct(
+        IntStream.range(0, SEGMENTS.size())
+                 .mapToObj(i -> IntStream.range(0, numServers).boxed().collect(Collectors.toSet()))
+                 .collect(Collectors.toList())
+    );
+
+    // Try every limit up to one past the total number of rows.
+    final Set<Integer> limits = new TreeSet<>();
+    final int totalNumRows = SEGMENTS.stream().mapToInt(s -> s.asStorageAdapter().getNumRows()).sum();
+    for (int i = 0; i <= totalNumRows + 1; i++) {
+      limits.add(i);
+    }
+
+    // Try various batch sizes.
+    final Set<Integer> batchSizes = ImmutableSortedSet.of(1, 2, 100);
+    final Set<Integer> maxRowsQueuedForOrderings = ImmutableSortedSet.of(1, 7, 100000);
+
+    return Sets.cartesianProduct(
+        segmentToServerMaps,
+        limits,
+        batchSizes,
+        maxRowsQueuedForOrderings
+    ).stream().map(args -> args.toArray(new Object[0])).collect(Collectors.toList());
+  }
+
+  public ScanQueryResultOrderingTest(
+      final List<Integer> segmentToServerMap,
+      final int limit,
+      final int batchSize,
+      final int maxRowsQueuedForOrdering
+  )
+  {
+    this.segmentToServerMap = segmentToServerMap;
+    this.limit = limit;
+    this.batchSize = batchSize;
+    this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
+  }
 
   @Before
   public void setUp()
@@ -151,7 +205,7 @@ public class ScanQueryResultOrderingTest
         new ScanQueryConfig()
     );
 
-    segmentRunners = segments.stream().map(queryRunnerFactory::createRunner).collect(Collectors.toList());
+    segmentRunners = SEGMENTS.stream().map(queryRunnerFactory::createRunner).collect(Collectors.toList());
   }
 
   @Test
@@ -258,114 +312,89 @@ public class ScanQueryResultOrderingTest
 
   private void assertResultsEquals(final ScanQuery query, final List<Integer> expectedResults)
   {
-    // Set number of server equal to number of segments, then try all possible distributions of segments to servers.
-    final int numServers = segmentRunners.size();
+    final List<List<Pair<SegmentId, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
+    for (int i = 0; i <= segmentToServerMap.stream().max(Comparator.naturalOrder()).orElse(0); i++) {
+      serverRunners.add(new ArrayList<>());
+    }
 
-    final Set<List<Integer>> segmentToServerMaps = Sets.cartesianProduct(
-        IntStream.range(0, segmentRunners.size())
-                 .mapToObj(i -> IntStream.range(0, numServers).boxed().collect(Collectors.toSet()))
-                 .collect(Collectors.toList())
+    for (int segmentNumber = 0; segmentNumber < segmentToServerMap.size(); segmentNumber++) {
+      final SegmentId segmentId = SEGMENTS.get(segmentNumber).getId();
+      final int serverNumber = segmentToServerMap.get(segmentNumber);
+
+      serverRunners.get(serverNumber).add(Pair.of(segmentId, segmentRunners.get(segmentNumber)));
+    }
+
+    // Simulates what the Historical servers would do.
+    final List<QueryRunner<ScanResultValue>> mergedServerRunners =
+        serverRunners.stream()
+                     .filter(runners -> !runners.isEmpty())
+                     .map(
+                         runners ->
+                             queryRunnerFactory.getToolchest().mergeResults(
+                                 new QueryRunner<ScanResultValue>()
+                                 {
+                                   @Override
+                                   public Sequence<ScanResultValue> run(
+                                       final QueryPlus<ScanResultValue> queryPlus,
+                                       final ResponseContext responseContext
+                                   )
+                                   {
+                                     return queryRunnerFactory.mergeRunners(
+                                         Execs.directExecutor(),
+                                         runners.stream().map(p -> p.rhs).collect(Collectors.toList())
+                                     ).run(
+                                         queryPlus.withQuery(
+                                             queryPlus.getQuery()
+                                                      .withQuerySegmentSpec(
+                                                          new MultipleSpecificSegmentSpec(
+                                                              runners.stream()
+                                                                     .map(p -> p.lhs.toDescriptor())
+                                                                     .collect(Collectors.toList())
+                                                          )
+                                                      )
+                                         ),
+                                         responseContext
+                                     );
+                                   }
+                                 }
+                             )
+                     )
+                     .collect(Collectors.toList());
+
+    // Simulates what the Broker would do.
+    final QueryRunner<ScanResultValue> brokerRunner = queryRunnerFactory.getToolchest().mergeResults(
+        (queryPlus, responseContext) -> {
+          final List<Sequence<ScanResultValue>> sequences =
+              mergedServerRunners.stream()
+                                 .map(runner -> runner.run(queryPlus.withoutThreadUnsafeState()))
+                                 .collect(Collectors.toList());
+
+          return new MergeSequence<>(
+              queryPlus.getQuery().getResultOrdering(),
+              Sequences.simple(sequences)
+          );
+        }
     );
 
-    for (List<Integer> segmentToServerMap : segmentToServerMaps) {
-      final List<List<Pair<SegmentId, QueryRunner<ScanResultValue>>>> serverRunners = new ArrayList<>();
-      for (int i = 0; i < numServers; i++) {
-        serverRunners.add(new ArrayList<>());
-      }
-
-      for (int segmentNumber = 0; segmentNumber < segmentToServerMap.size(); segmentNumber++) {
-        final SegmentId segmentId = segments.get(segmentNumber).getId();
-        final int serverNumber = segmentToServerMap.get(segmentNumber);
-
-        serverRunners.get(serverNumber).add(Pair.of(segmentId, segmentRunners.get(segmentNumber)));
-      }
-
-      // Simulates what the Historical servers would do.
-      final List<QueryRunner<ScanResultValue>> mergedServerRunners =
-          serverRunners.stream()
-                       .filter(runners -> !runners.isEmpty())
-                       .map(
-                           runners ->
-                               queryRunnerFactory.getToolchest().mergeResults(
-                                   new QueryRunner<ScanResultValue>()
-                                   {
-                                     @Override
-                                     public Sequence<ScanResultValue> run(
-                                         final QueryPlus<ScanResultValue> queryPlus,
-                                         final ResponseContext responseContext
-                                     )
-                                     {
-                                       return queryRunnerFactory.mergeRunners(
-                                           Execs.directExecutor(),
-                                           runners.stream().map(p -> p.rhs).collect(Collectors.toList())
-                                       ).run(
-                                           queryPlus.withQuery(
-                                               queryPlus.getQuery()
-                                                        .withQuerySegmentSpec(
-                                                            new MultipleSpecificSegmentSpec(
-                                                                runners.stream()
-                                                                       .map(p -> p.lhs.toDescriptor())
-                                                                       .collect(Collectors.toList())
-                                                            )
-                                                        )
+    // Finally: run the query.
+    final List<Integer> results = runQuery(
+        (ScanQuery) Druids.ScanQueryBuilder.copy(query)
+                                           .limit(limit)
+                                           .batchSize(batchSize)
+                                           .build()
+                                           .withOverriddenContext(
+                                               ImmutableMap.of(
+                                                   ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
+                                                   maxRowsQueuedForOrdering
+                                               )
                                            ),
-                                           responseContext
-                                       );
-                                     }
-                                   }
-                               )
-                       )
-                       .collect(Collectors.toList());
+        brokerRunner
+    );
 
-      // Simulates what the Broker would do.
-      final QueryRunner<ScanResultValue> brokerRunner = queryRunnerFactory.getToolchest().mergeResults(
-          (queryPlus, responseContext) -> {
-            final List<Sequence<ScanResultValue>> sequences =
-                mergedServerRunners.stream()
-                                   .map(runner -> runner.run(queryPlus.withoutThreadUnsafeState()))
-                                   .collect(Collectors.toList());
-
-            return new MergeSequence<>(
-                queryPlus.getQuery().getResultOrdering(),
-                Sequences.simple(sequences)
-            );
-          }
-      );
-
-      // Within this segment-to-server map, now run the query at every possible limit.
-      for (int limit = 0; limit < expectedResults.size() + 1; limit++) {
-        // Test a few different batch sizes.
-        for (int batchSize : new int[]{1, 2, 100}) {
-          // Test a few different values of maxRowsQueuedForOrdering (so we select different algorithms).
-          for (int maxRowsQueuedForOrdering : new int[]{1, 7, 100000}) {
-            final List<Integer> results = runQuery(
-                (ScanQuery) Druids.ScanQueryBuilder.copy(query)
-                                                   .limit(limit)
-                                                   .batchSize(batchSize)
-                                                   .build()
-                                                   .withOverriddenContext(
-                                                       ImmutableMap.of(
-                                                           ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                           maxRowsQueuedForOrdering
-                                                       )
-                                                   ),
-                brokerRunner
-            );
-            Assert.assertEquals(
-                StringUtils.format(
-                    "Segment-to-server map[%s], limit[%s], batchSize[%s], maxRowsQueuedForOrdering[%s]",
-                    segmentToServerMap,
-                    limit,
-                    batchSize,
-                    maxRowsQueuedForOrdering
-                ),
-                expectedResults.stream().limit(limit == 0 ? Long.MAX_VALUE : limit).collect(Collectors.toList()),
-                results
-            );
-          }
-        }
-      }
-    }
+    Assert.assertEquals(
+        expectedResults.stream().limit(limit == 0 ? Long.MAX_VALUE : limit).collect(Collectors.toList()),
+        results
+    );
   }
 
   private List<Integer> runQuery(final ScanQuery query, final QueryRunner<ScanResultValue> brokerRunner)
