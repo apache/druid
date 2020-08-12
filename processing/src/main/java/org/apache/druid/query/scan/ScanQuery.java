@@ -38,6 +38,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -301,7 +302,13 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     if (order == Order.NONE) {
       return Ordering.natural();
     }
-    return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
+    return Ordering.from(
+        new ScanResultValueTimestampComparator(this).thenComparing(
+            order == Order.ASCENDING
+            ? Comparator.naturalOrder()
+            : Comparator.<ScanResultValue>naturalOrder().reversed()
+        )
+    );
   }
 
   public ScanQuery withOffset(final long newOffset)
