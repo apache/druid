@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
@@ -2010,32 +2009,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(-1, dictIdSeeker.seek(3));
     Assert.assertEquals(2, dictIdSeeker.seek(4));
     Assert.assertEquals(-1, dictIdSeeker.seek(5));
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testCloser() throws Exception
-  {
-    final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
-    IncrementalIndexTest.populateIndex(timestamp, toPersist);
-    ColumnCapabilitiesImpl capabilities = (ColumnCapabilitiesImpl) toPersist.getCapabilities("dim1");
-    capabilities.setHasSpatialIndexes(true);
-
-    final File tempDir = temporaryFolder.newFolder();
-    final File v8TmpDir = new File(tempDir, "v8-tmp");
-    final File v9TmpDir = new File(tempDir, "v9-tmp");
-
-    try {
-      indexMerger.persist(toPersist, tempDir, indexSpec, null);
-    }
-    finally {
-      if (v8TmpDir.exists()) {
-        Assert.fail("v8-tmp dir not clean.");
-      }
-      if (v9TmpDir.exists()) {
-        Assert.fail("v9-tmp dir not clean.");
-      }
-    }
   }
 
   @Test

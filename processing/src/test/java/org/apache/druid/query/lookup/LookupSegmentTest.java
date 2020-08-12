@@ -138,7 +138,7 @@ public class LookupSegmentTest
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
     // running on top of lookups can take advantage of singly-valued optimizations.
     Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
@@ -151,7 +151,7 @@ public class LookupSegmentTest
     // running on top of lookups can take advantage of singly-valued optimizations.
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
