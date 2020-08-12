@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -74,7 +75,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
       new TimestampSpec(null, null, null),
       DimensionsSpec.EMPTY,
-      Collections.emptyList()
+      ColumnsFilter.all()
   );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList(TimestampSpec.DEFAULT_COLUMN, COLUMN),

@@ -31,6 +31,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.sampler.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -191,14 +192,7 @@ public class InputSourceSampler
       File tempDir
   )
   {
-    final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
-                                            .map(AggregatorFactory::getName)
-                                            .collect(Collectors.toList());
-    final InputRowSchema inputRowSchema = new InputRowSchema(
-        dataSchema.getTimestampSpec(),
-        dataSchema.getDimensionsSpec(),
-        metricsNames
-    );
+    final InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
 
     InputSourceReader reader = inputSource.reader(inputRowSchema, inputFormat, tempDir);
 

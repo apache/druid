@@ -1127,7 +1127,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             if (druidSource) {
               let newSpec = deepSet(spec, 'spec.dataSchema.timestampSpec', {
                 column: '__time',
-                format: 'iso',
+                format: 'millis',
               });
 
               if (typeof inputData.rollup === 'boolean') {

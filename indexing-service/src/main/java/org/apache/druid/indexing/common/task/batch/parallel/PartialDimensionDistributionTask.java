@@ -31,7 +31,6 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Rows;
@@ -46,23 +45,21 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link PartialDimensionDistributionParallelIndexTaskRunner}. This task
@@ -116,7 +113,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     );
   }
 
-  @VisibleForTesting  // Only for testing
+  @VisibleForTesting
+    // Only for testing
   PartialDimensionDistributionTask(
       @Nullable String id,
       final String groupId,
@@ -202,19 +200,12 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
-    List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
-                                      .map(AggregatorFactory::getName)
-                                      .collect(Collectors.toList());
     InputFormat inputFormat = inputSource.needsFormat()
                               ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
                               : null;
     InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
         inputSource.reader(
-            new InputRowSchema(
-                dataSchema.getTimestampSpec(),
-                dataSchema.getDimensionsSpec(),
-                metricsNames
-            ),
+            InputRowSchemas.fromDataSchema(dataSchema),
             inputFormat,
             toolbox.getIndexingTmpDir()
         )
@@ -357,7 +348,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       this(queryGranularity, BLOOM_FILTER_EXPECTED_INSERTIONS, BLOOM_FILTER_EXPECTED_FALSE_POSITIVE_PROBABILTY);
     }
 
-    @VisibleForTesting  // to allow controlling false positive rate of bloom filter
+    @VisibleForTesting
+      // to allow controlling false positive rate of bloom filter
     DedupInputRowFilter(
         Granularity queryGranularity,
         int bloomFilterExpectedInsertions,

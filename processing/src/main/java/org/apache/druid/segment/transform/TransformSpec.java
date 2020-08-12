@@ -126,6 +126,21 @@ public class TransformSpec
     return new Transformer(this);
   }
 
+  public Set<String> getRequiredColumns()
+  {
+    final Set<String> requiredColumns = new HashSet<>();
+
+    if (filter != null) {
+      requiredColumns.addAll(filter.getRequiredColumns());
+    }
+
+    for (Transform transform : transforms) {
+      requiredColumns.addAll(transform.getRequiredColumns());
+    }
+
+    return requiredColumns;
+  }
+
   @Override
   public boolean equals(final Object o)
   {

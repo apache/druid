@@ -39,7 +39,6 @@ import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.indexing.common.ReingestionTimelineUtils;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -74,6 +73,11 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
+/**
+ * An {@link org.apache.druid.data.input.InputSource} that allows reading from Druid segments.
+ *
+ * Used internally by {@link org.apache.druid.indexing.common.task.CompactionTask}, and can also be used directly.
+ */
 public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>
 {
   private static final Logger LOG = new Logger(DruidInputSource.class);
@@ -87,12 +91,20 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Nullable
   private final List<WindowedSegmentId> segmentIds;
   private final DimFilter dimFilter;
-  private final List<String> dimensions;
-  private final List<String> metrics;
   private final IndexIO indexIO;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final RetryPolicyFactory retryPolicyFactory;
+
+  /**
+   * Included for serde backwards-compatibility only. Not used.
+   */
+  private final List<String> dimensions;
+
+  /**
+   * Included for serde backwards-compatibility only. Not used.
+   */
+  private final List<String> metrics;
 
   @JsonCreator
   public DruidInputSource(
@@ -134,6 +146,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   @Nullable
   @JsonProperty
+  @JsonInclude(Include.NON_NULL)
   public Interval getInterval()
   {
     return interval;
@@ -148,18 +161,27 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   @JsonProperty("filter")
+  @JsonInclude(Include.NON_NULL)
   public DimFilter getDimFilter()
   {
     return dimFilter;
   }
 
+  /**
+   * Included for serde backwards-compatibility only. Not used.
+   */
   @JsonProperty
+  @JsonInclude(Include.NON_NULL)
   public List<String> getDimensions()
   {
     return dimensions;
   }
 
+  /**
+   * Included for serde backwards-compatibility only. Not used.
+   */
   @JsonProperty
+  @JsonInclude(Include.NON_NULL)
   public List<String> getMetrics()
   {
     return metrics;
@@ -181,25 +203,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               .from(partitionHolder)
               .transform(chunk -> new DruidSegmentInputEntity(segmentLoader, chunk.getObject(), holder.getInterval()));
         }).iterator();
-    final List<String> effectiveDimensions = ReingestionTimelineUtils.getDimensionsToReingest(
-        dimensions,
-        inputRowSchema.getDimensionsSpec(),
-        timeline
-    );
 
-    List<String> effectiveMetrics;
-    if (metrics == null) {
-      effectiveMetrics = ReingestionTimelineUtils.getUniqueMetrics(timeline);
-    } else {
-      effectiveMetrics = metrics;
-    }
-
-    final DruidSegmentInputFormat inputFormat = new DruidSegmentInputFormat(
-        indexIO,
-        dimFilter,
-        effectiveDimensions,
-        effectiveMetrics
-    );
+    final DruidSegmentInputFormat inputFormat = new DruidSegmentInputFormat(indexIO, dimFilter);
 
     return new InputEntityIteratingReader(
         inputRowSchema,
