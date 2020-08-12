@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -59,14 +60,16 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       KinesisIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
-      LockGranularity lockGranularityToUse
+      LockGranularity lockGranularityToUse,
+      InputStats inputStats
   )
   {
     super(
         task,
         parser,
         authorizerMapper,
-        lockGranularityToUse
+        lockGranularityToUse,
+        inputStats
     );
     this.task = task;
   }

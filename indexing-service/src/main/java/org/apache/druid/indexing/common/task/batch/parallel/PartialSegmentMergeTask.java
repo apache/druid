@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -40,6 +41,7 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -356,5 +358,16 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
           suffix
       );
     }
+  }
+
+  @Override
+  public Map<String, String[]> getMetricsDimensions()
+  {
+    return ImmutableMap.of(
+        DruidMetrics.TASK_ID, new String[] {getId()},
+        DruidMetrics.TASK_TYPE, new String[] {getType()},
+        DruidMetrics.DATASOURCE, new String[] {getDataSource()},
+        DruidMetrics.SUPERVISOR_ID, new String[] {getSupervisorTaskId()}
+    );
   }
 }

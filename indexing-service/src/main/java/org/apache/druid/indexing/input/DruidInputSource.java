@@ -29,11 +29,13 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -166,12 +168,12 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Override
-  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory, InputStats inputStats)
   {
     final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
 
     final List<TimelineObjectHolder<String, DataSegment>> timeline = createTimeline();
-    final Iterator<DruidSegmentInputEntity> entityIterator = FluentIterable
+    final Iterator<CountableInputEntity> entityIterator = FluentIterable
         .from(timeline)
         .transformAndConcat(holder -> {
           //noinspection ConstantConditions
@@ -179,7 +181,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
           //noinspection ConstantConditions
           return FluentIterable
               .from(partitionHolder)
-              .transform(chunk -> new DruidSegmentInputEntity(segmentLoader, chunk.getObject(), holder.getInterval()));
+              .transform(chunk -> new CountableInputEntity(new DruidSegmentInputEntity(segmentLoader, chunk.getObject(), holder.getInterval()), inputStats));
         }).iterator();
     final List<String> effectiveDimensions = ReingestionTimelineUtils.getDimensionsToReingest(
         dimensions,

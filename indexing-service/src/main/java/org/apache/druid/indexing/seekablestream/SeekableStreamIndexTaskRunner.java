@@ -40,6 +40,7 @@ import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
@@ -231,11 +232,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private volatile CopyOnWriteArrayList<SequenceMetadata<PartitionIdType, SequenceOffsetType>> sequences;
   private volatile Throwable backgroundThreadException;
 
+  private final InputStats inputStats;
+
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
       final AuthorizerMapper authorizerMapper,
-      final LockGranularity lockGranularityToUse
+      final LockGranularity lockGranularityToUse,
+      final InputStats inputStats
   )
   {
     Preconditions.checkNotNull(task);
@@ -257,6 +261,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
+    this.inputStats = inputStats;
 
     resetNextCheckpointTime();
   }
@@ -610,6 +615,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record : records) {
+            final long processedBytes = record.getData().parallelStream().mapToLong(value -> value.length).reduce(0, Long::sum);
+            getInputStats().incrementProcessedBytes(processedBytes);
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
             log.trace(
@@ -1856,6 +1863,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     // Finally, check if this record comes before the endOffsets for this partition.
     return isMoreToReadBeforeReadingRecord(recordSequenceNumber.get(), endOffsets.get(partition));
+  }
+
+  public InputStats getInputStats()
+  {
+    return inputStats;
   }
 
   /**

@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
@@ -68,7 +69,8 @@ public class InputSourceProcessor
       IndexTaskInputRowIteratorBuilder inputRowIteratorBuilder,
       RowIngestionMeters buildSegmentsMeters,
       ParseExceptionHandler parseExceptionHandler,
-      long pushTimeout
+      long pushTimeout,
+      InputStats inputStats
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     @Nullable
@@ -84,7 +86,8 @@ public class InputSourceProcessor
             inputFormat,
             AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
             buildSegmentsMeters,
-            parseExceptionHandler
+            parseExceptionHandler,
+            inputStats
         );
         final HandlingInputRowIterator iterator = inputRowIteratorBuilder
             .delegate(inputRowIterator)

@@ -20,10 +20,12 @@
 package org.apache.druid.indexing.seekablestream;
 
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
@@ -99,13 +101,14 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      InputStats inputStats
   )
   {
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createEntityIterator(),
+        createEntityIterator(inputStats),
         temporaryDirectory
     );
   }
@@ -114,7 +117,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
    * Returns an iterator converting each byte array from RecordSupplier into a ByteEntity. Note that the
    * returned iterator will be blocked until the RecordSupplier gives any data.
    */
-  CloseableIterator<InputEntity> createEntityIterator()
+  CloseableIterator<InputEntity> createEntityIterator(InputStats inputStats)
   {
     return new CloseableIterator<InputEntity>()
     {
@@ -144,7 +147,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType> exte
       @Override
       public InputEntity next()
       {
-        return new ByteEntity(bytesIterator.next());
+        return new CountableInputEntity(new ByteEntity(bytesIterator.next()), inputStats);
       }
 
       @Override

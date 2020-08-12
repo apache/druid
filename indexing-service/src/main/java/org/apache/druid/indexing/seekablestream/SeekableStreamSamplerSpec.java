@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -164,7 +165,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
           createRecordSupplier(),
           ioConfig.isUseEarliestSequenceNumber()
       );
-      this.entityIterator = inputSource.createEntityIterator();
+      this.entityIterator = inputSource.createEntityIterator(new InputStats()); // not counting sampler read bytes
     }
 
     @Override

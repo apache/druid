@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -65,13 +67,14 @@ public class InlineInputSource extends AbstractInputSource
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      InputStats inputStats
   )
   {
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Stream.of(new ByteEntity(StringUtils.toUtf8(data))).iterator(),
+        Stream.of(new CountableInputEntity(new ByteEntity(StringUtils.toUtf8(data)), inputStats)).iterator(),
         temporaryDirectory
     );
   }

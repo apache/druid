@@ -25,10 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -110,14 +112,18 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
   }
 
   @Override
-  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+  protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory,
+      InputStats inputStats
+  )
   {
     final SqlInputFormat inputFormat = new SqlInputFormat(objectMapper);
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
         createSplits(inputFormat, null)
-            .map(split -> new SqlEntity(split.get(), sqlFirehoseDatabaseConnector, foldCase, objectMapper)).iterator(),
+            .map(split -> new CountableInputEntity(
+                new SqlEntity(split.get(), sqlFirehoseDatabaseConnector, foldCase, objectMapper), inputStats))
+            .iterator(),
         temporaryDirectory
     );
   }
@@ -139,8 +145,8 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
     }
     SqlInputSource that = (SqlInputSource) o;
     return foldCase == that.foldCase &&
-           sqls.equals(that.sqls) &&
-           sqlFirehoseDatabaseConnector.equals(that.sqlFirehoseDatabaseConnector);
+        sqls.equals(that.sqls) &&
+        sqlFirehoseDatabaseConnector.equals(that.sqlFirehoseDatabaseConnector);
   }
 
   @Override

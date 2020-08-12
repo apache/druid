@@ -339,7 +339,8 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
               return true;
             },
             rowIngestionMeters,
-            parseExceptionHandler
+            parseExceptionHandler,
+            getInputStats()
         )
     ) {
       driver.startJob();

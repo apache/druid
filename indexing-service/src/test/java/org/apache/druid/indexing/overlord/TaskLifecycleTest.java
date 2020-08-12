@@ -41,6 +41,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -282,7 +283,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   private static class MockExceptionInputSource extends AbstractInputSource
   {
     @Override
-    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory, InputStats inputStats)
     {
       return new InputSourceReader()
       {
@@ -334,7 +335,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   private static class MockInputSource extends AbstractInputSource
   {
     @Override
-    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory, InputStats inputStats)
     {
       return new InputSourceReader()
       {

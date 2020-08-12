@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -81,7 +82,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             Collections.emptyList()
         ),
         inputFormat,
-        temporaryFolder.newFolder()
+        temporaryFolder.newFolder(),
+        new InputStats()
     );
 
     int read = 0;

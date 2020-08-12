@@ -80,8 +80,8 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       File temporaryDirectory
   )
   {
-    Preconditions.checkArgument(source instanceof DruidSegmentInputEntity);
-    this.source = (DruidSegmentInputEntity) source;
+    Preconditions.checkArgument(source.getBaseInputEntity() instanceof DruidSegmentInputEntity);
+    this.source = (DruidSegmentInputEntity) source.getBaseInputEntity();
     this.indexIO = indexIO;
     this.dimensions = dimensions;
     this.metrics = metrics;

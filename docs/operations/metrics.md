@@ -135,6 +135,12 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
 |`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
+## Ingestion metrics (General)
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/events/processedBytes`|Number of bytes read from source during ingestion, this will include bytes read for determining partitions if applicable.|dataSource, taskId, taskType, supervisorId (where applicable).|Varies|
+
 ## Ingestion Metrics (Kafka Indexing Service)
 
 These metrics are applicable for the Kafka Indexing Service.

@@ -73,14 +73,13 @@ public interface InputEntity
   /**
    * Fetches the input entity into the local storage.
    * This method might be preferred instead of {@link #open()}, for example
-   *
+   * <p>
    * - {@link InputFormat} requires expensive random access on remote storage.
    * - Holding a connection until you consume the entire InputStream is expensive.
    *
    * @param temporaryDirectory to store temp data. This directory will be removed automatically once
    *                           the task finishes.
    * @param fetchBuffer        is used to fetch remote entity into local storage.
-   *
    * @see FileUtils#copyLarge
    */
   default CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
@@ -124,5 +123,10 @@ public interface InputEntity
   default Predicate<Throwable> getRetryCondition()
   {
     return Predicates.alwaysFalse();
+  }
+
+  default InputEntity getBaseInputEntity()
+  {
+    return this;
   }
 }

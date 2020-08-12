@@ -57,7 +57,7 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
   )
   {
     this.inputRowSchema = inputRowSchema;
-    this.source = (SqlEntity) source;
+    this.source = (SqlEntity) source.getBaseInputEntity();
     this.temporaryDirectory = temporaryDirectory;
     this.objectMapper = objectMapper;
   }

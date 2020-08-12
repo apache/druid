@@ -22,6 +22,7 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.commons.io.FileUtils;
@@ -33,11 +34,14 @@ import org.apache.commons.io.filefilter.NotFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
@@ -107,7 +111,7 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   public Stream<InputSplit<List<File>>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
     return Streams.sequentialStreamFrom(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)))
-                  .map(InputSplit::new);
+        .map(InputSplit::new);
   }
 
   @Override
@@ -184,14 +188,21 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      InputStats inputStats
   )
   {
     //noinspection ConstantConditions
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Iterators.transform(getFileIterator(), FileEntity::new),
+        Iterators.transform(getFileIterator(), new Function<File, InputEntity>()
+        {
+          @Nullable @Override public InputEntity apply(@Nullable File file)
+          {
+            return new CountableInputEntity(new FileEntity(file), inputStats);
+          }
+        }),
         temporaryDirectory
     );
   }
@@ -207,8 +218,8 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     }
     LocalInputSource that = (LocalInputSource) o;
     return Objects.equals(baseDir, that.baseDir) &&
-           Objects.equals(filter, that.filter) &&
-           Objects.equals(files, that.files);
+        Objects.equals(filter, that.filter) &&
+        Objects.equals(files, that.files);
   }
 
   @Override

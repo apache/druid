@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
@@ -29,6 +30,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
@@ -51,6 +53,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.java.util.metrics.InputStatsMonitor;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -96,9 +100,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
   private TaskLockHelper taskLockHelper;
 
+  private final InputStats inputStats;
+
   protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
   {
     super(id, dataSource, context);
+    this.inputStats = new InputStats();
   }
 
   protected AbstractBatchIndexTask(
@@ -110,6 +117,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     super(id, groupId, taskResource, dataSource, context);
+    this.inputStats = new InputStats();
   }
 
   /**
@@ -122,6 +130,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
+    toolbox.addMonitor(new InputStatsMonitor(inputStats, getMetricsDimensions()));
+
     synchronized (this) {
       if (stopped) {
         return TaskStatus.failure(getId());
@@ -162,7 +172,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       @Nullable InputFormat inputFormat,
       Predicate<InputRow> rowFilter,
       RowIngestionMeters ingestionMeters,
-      ParseExceptionHandler parseExceptionHandler
+      ParseExceptionHandler parseExceptionHandler,
+      InputStats inputStats
   ) throws IOException
   {
     final List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
@@ -176,7 +187,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 metricsNames
             ),
             inputFormat,
-            tmpDir
+            tmpDir,
+            inputStats
         )
     );
     return new FilteringCloseableInputRowIterator(
@@ -248,6 +260,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public TaskLockHelper getTaskLockHelper()
   {
     return Preconditions.checkNotNull(taskLockHelper, "taskLockHelper is not initialized yet");
+  }
+
+  public InputStats getInputStats()
+  {
+    return inputStats;
   }
 
   /**
@@ -553,5 +570,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       this.intervals = intervals;
       this.segments = segments;
     }
+  }
+
+  public Map<String, String[]> getMetricsDimensions()
+  {
+    return ImmutableMap.of(
+        DruidMetrics.TASK_ID, new String[] {getId()},
+        DruidMetrics.TASK_TYPE, new String[] {getType()},
+        DruidMetrics.DATASOURCE, new String[] {getDataSource()}
+    );
   }
 }

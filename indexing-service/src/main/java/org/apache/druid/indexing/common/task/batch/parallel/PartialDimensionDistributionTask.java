@@ -204,7 +204,8 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
             inputFormat,
             AbstractBatchIndexTask.defaultRowFilter(granularitySpec),
             buildSegmentsMeters,
-            parseExceptionHandler
+            parseExceptionHandler,
+            getInputStats()
         );
         HandlingInputRowIterator iterator =
             new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimension, SKIP_NULL)

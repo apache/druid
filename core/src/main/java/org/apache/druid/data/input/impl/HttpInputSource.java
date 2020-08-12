@@ -23,10 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.CountableInputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.metadata.PasswordProvider;
 
@@ -105,16 +107,20 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   protected InputSourceReader formattableReader(
       InputRowSchema inputRowSchema,
       InputFormat inputFormat,
-      @Nullable File temporaryDirectory
+      @Nullable File temporaryDirectory,
+      InputStats inputStats
   )
   {
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(split -> new HttpEntity(
-            split.get(),
-            httpAuthenticationUsername,
-            httpAuthenticationPasswordProvider
+        createSplits(inputFormat, null).map(split -> new CountableInputEntity(
+            new HttpEntity(
+                split.get(),
+                httpAuthenticationUsername,
+                httpAuthenticationPasswordProvider
+            ),
+            inputStats
         )).iterator(),
         temporaryDirectory
     );
@@ -131,8 +137,8 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     }
     HttpInputSource source = (HttpInputSource) o;
     return Objects.equals(uris, source.uris) &&
-           Objects.equals(httpAuthenticationUsername, source.httpAuthenticationUsername) &&
-           Objects.equals(httpAuthenticationPasswordProvider, source.httpAuthenticationPasswordProvider);
+        Objects.equals(httpAuthenticationUsername, source.httpAuthenticationUsername) &&
+        Objects.equals(httpAuthenticationPasswordProvider, source.httpAuthenticationPasswordProvider);
   }
 
   @Override

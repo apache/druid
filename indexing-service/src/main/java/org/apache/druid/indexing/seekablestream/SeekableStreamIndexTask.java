@@ -24,7 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -39,6 +41,8 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.metrics.InputStatsMonitor;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -73,6 +77,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType>> runnerSupplier;
+  private final InputStats inputStats;
 
   @MonotonicNonNull
   protected AuthorizerMapper authorizerMapper;
@@ -98,6 +103,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.context = context;
+    this.inputStats = new InputStats();
     this.runnerSupplier = Suppliers.memoize(this::createTaskRunner);
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
@@ -142,6 +148,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   @Override
   public TaskStatus run(final TaskToolbox toolbox)
   {
+    toolbox.addMonitor(new InputStatsMonitor(inputStats, getMetricsDimensions()));
     return getRunner().run(toolbox);
   }
 
@@ -273,5 +280,19 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> getRunner()
   {
     return runnerSupplier.get();
+  }
+
+  public InputStats getInputStats()
+  {
+    return inputStats;
+  }
+
+  public Map<String, String[]> getMetricsDimensions()
+  {
+    return ImmutableMap.of(
+        DruidMetrics.TASK_ID, new String[] {getId()},
+        DruidMetrics.TASK_TYPE, new String[] {getType()},
+        DruidMetrics.DATASOURCE, new String[] {getDataSource()}
+    );
   }
 }
