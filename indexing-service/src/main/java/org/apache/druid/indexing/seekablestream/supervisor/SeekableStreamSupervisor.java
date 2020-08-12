@@ -423,7 +423,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           log.warn("Ignoring checkpoint request because taskGroup[%d] is inactive", taskGroupId);
           return false;
         } else {
-          throw new ISE("WTH?! cannot find taskGroup [%s] among all activelyReadingTaskGroups [%s]", taskGroupId,
+          throw new ISE("Cannot find taskGroup [%s] among all activelyReadingTaskGroups [%s]", taskGroupId,
                         activelyReadingTaskGroups
           );
         }
@@ -1494,7 +1494,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             final TaskData prevTaskData = taskGroup.tasks.putIfAbsent(taskId, new TaskData());
                             if (prevTaskData != null) {
                               throw new ISE(
-                                  "WTH? a taskGroup[%s] already exists for new task[%s]",
+                                  "taskGroup[%s] already exists for new task[%s]",
                                   prevTaskData,
                                   taskId
                               );
@@ -2526,7 +2526,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   // The below get should throw ExecutionException since result is null.
                   final Map<PartitionIdType, SequenceOffsetType> pauseResult = pauseFutures.get(i).get();
                   throw new ISE(
-                      "WTH? The pause request for task [%s] is supposed to fail, but returned [%s]",
+                      "Pause request for task [%s] should have failed, but returned [%s]",
                       taskId,
                       pauseResult
                   );
@@ -2682,7 +2682,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           final String taskId = entry.getKey();
           final TaskData taskData = entry.getValue();
 
-          Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
+          Preconditions.checkNotNull(taskData.status, "task[%s] has null status", taskId);
 
           if (taskData.status.isFailure()) {
             stateManager.recordCompletedTaskState(TaskState.FAILED);
@@ -2782,7 +2782,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           continue;
         }
 
-        Preconditions.checkNotNull(taskData.status, "WTH? task[%s] has a null status", taskId);
+        Preconditions.checkNotNull(taskData.status, "Task[%s] has null status", taskId);
 
         // remove failed tasks
         if (taskData.status.isFailure()) {

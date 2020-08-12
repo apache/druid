@@ -98,7 +98,7 @@ public class CompactSegments implements CoordinatorDuty
         for (TaskStatusPlus status : compactionTasks) {
           final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
           if (response == null) {
-            throw new ISE("WTH? got a null paylord from overlord for task[%s]", status.getId());
+            throw new ISE("Got a null paylord from overlord for task[%s]", status.getId());
           }
           if (COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
@@ -107,7 +107,7 @@ public class CompactSegments implements CoordinatorDuty
             final int numSubTasks = findNumMaxConcurrentSubTasks(compactionTaskQuery.getTuningConfig());
             numEstimatedNonCompleteCompactionTasks += numSubTasks + 1; // count the compaction task itself
           } else {
-            throw new ISE("WTH? task[%s] is not a compactionTask?", status.getId());
+            throw new ISE("task[%s] is not a compactionTask", status.getId());
           }
         }
 

@@ -395,7 +395,7 @@ public class LookupCoordinatorManager
                 lookupCoordinatorManagerConfig.getHostTimeout().getMillis() * 10,
                 TimeUnit.MILLISECONDS
             )) {
-          throw new ISE("WTF! LookupCoordinatorManager executor from last start() hasn't finished. Failed to Start.");
+          throw new ISE("LookupCoordinatorManager executor from last start() hasn't finished. Failed to Start.");
         }
 
         executorService = MoreExecutors.listeningDecorator(

@@ -71,6 +71,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -338,7 +339,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
       final TransactionalSegmentPublisher publisher = (mustBeNullOrEmptySegments, segments, commitMetadata) -> {
         if (mustBeNullOrEmptySegments != null && !mustBeNullOrEmptySegments.isEmpty()) {
-          throw new ISE("WTH? stream ingestion tasks are overwriting segments[%s]", mustBeNullOrEmptySegments);
+          throw new ISE(
+              "Stream ingestion task unexpectedly attempted to overwrite segments: %s",
+              SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptySegments)
+          );
         }
         final SegmentTransactionalInsertAction action = SegmentTransactionalInsertAction.appendAction(
             segments,

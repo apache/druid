@@ -157,7 +157,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
       final String mustBeNull = intervalToVersion.put(lock.getInterval(), lock.getVersion());
       if (mustBeNull != null) {
         throw new ISE(
-            "WTH? Two versions([%s], [%s]) for the same interval[%s]?",
+            "Unexpected state: Two versions([%s], [%s]) for the same interval[%s]",
             lock.getVersion(),
             mustBeNull,
             lock.getInterval()

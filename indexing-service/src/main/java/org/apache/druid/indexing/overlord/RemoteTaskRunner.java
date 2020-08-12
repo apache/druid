@@ -770,7 +770,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final RemoteTaskRunnerWorkItem removed = completeTasks.remove(taskId);
     final Worker worker;
     if (removed == null || (worker = removed.getWorker()) == null) {
-      log.makeAlert("WTF?! Asked to cleanup nonexistent task")
+      log.makeAlert("Asked to cleanup nonexistent task")
          .addData("taskId", taskId)
          .emit();
     } else {
@@ -901,7 +901,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(task.getId());
       if (workItem == null) {
-        log.makeAlert("WTF?! Got a null work item from pending tasks?! How can this be?!")
+        log.makeAlert("Ignoring null work item from pending task queue")
            .addData("taskId", task.getId())
            .emit();
         return false;
@@ -1119,7 +1119,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       zkWorker.setWorker(worker);
     } else {
       log.warn(
-          "WTF, worker[%s] updated its announcement but we didn't have a ZkWorker for it. Ignoring.",
+          "Worker[%s] updated its announcement but we didn't have a ZkWorker for it. Ignoring.",
           worker.getHost()
       );
     }

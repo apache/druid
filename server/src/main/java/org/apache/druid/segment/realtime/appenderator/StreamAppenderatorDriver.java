@@ -197,7 +197,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
     synchronized (segments) {
       final SegmentsForSequence activeSegmentsForSequence = segments.get(sequenceName);
       if (activeSegmentsForSequence == null) {
-        throw new ISE("WTF?! Asked to remove segments for sequenceName[%s] which doesn't exist...", sequenceName);
+        throw new ISE("Asked to remove segments for sequenceName[%s], which doesn't exist", sequenceName);
       }
 
       for (final SegmentIdWithShardSpec identifier : identifiers) {
@@ -207,7 +207,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         if (segmentsOfInterval == null ||
             segmentsOfInterval.getAppendingSegment() == null ||
             !segmentsOfInterval.getAppendingSegment().getSegmentIdentifier().equals(identifier)) {
-          throw new ISE("WTF?! Asked to remove segment[%s] that didn't exist...", identifier);
+          throw new ISE("Asked to remove segment[%s], which doesn't exist", identifier);
         }
         segmentsOfInterval.finishAppendingToCurrentActiveSegment(SegmentWithState::finishAppending);
       }
@@ -423,7 +423,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       if (segmentWithState.getState() == SegmentState.APPENDING) {
         if (pair != null && pair.lhs != null) {
           throw new ISE(
-              "WTF?! there was already an appendingSegment[%s] before adding an appendingSegment[%s]",
+              "appendingSegment[%s] existed before adding an appendingSegment[%s]",
               pair.lhs,
               segmentWithState
           );

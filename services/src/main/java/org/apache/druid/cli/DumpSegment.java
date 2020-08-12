@@ -189,7 +189,7 @@ public class DumpSegment extends GuiceRunnable
           runBitmaps(injector, index);
           break;
         default:
-          throw new ISE("WTF?! dumpType[%s] has no handler?", dumpType);
+          throw new ISE("dumpType[%s] has no handler", dumpType);
       }
     }
     catch (Exception e) {

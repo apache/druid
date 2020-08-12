@@ -221,7 +221,7 @@ public class Expressions
     final RexInputRef ref = (RexInputRef) rexNode;
     final String columnName = rowSignature.getColumnName(ref.getIndex());
     if (columnName == null) {
-      throw new ISE("WTF?! Expression referred to nonexistent index[%d]", ref.getIndex());
+      throw new ISE("Expression referred to nonexistent index[%d]", ref.getIndex());
     }
 
     return DruidExpression.fromColumn(columnName);
@@ -490,7 +490,7 @@ public class Expressions
                || kind == SqlKind.LESS_THAN
                || kind == SqlKind.LESS_THAN_OR_EQUAL) {
       final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      Preconditions.checkState(operands.size() == 2, "WTF?! Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
       boolean flip = false;
       RexNode lhs = operands.get(0);
       RexNode rhs = operands.get(1);
@@ -525,7 +525,7 @@ public class Expressions
             flippedKind = SqlKind.GREATER_THAN_OR_EQUAL;
             break;
           default:
-            throw new ISE("WTF?! Kind[%s] not expected here", kind);
+            throw new ISE("Kind[%s] not expected here", kind);
         }
       } else {
         flippedKind = kind;
@@ -632,7 +632,7 @@ public class Expressions
           filter = Bounds.lessThanOrEqualTo(boundRefKey, val);
           break;
         default:
-          throw new IllegalStateException("WTF?! Shouldn't have got here...");
+          throw new IllegalStateException("Shouldn't have got here");
       }
 
       return filter;
@@ -770,7 +770,7 @@ public class Expressions
       case LESS_THAN_OR_EQUAL:
         return Bounds.lessThan(boundRefKey, String.valueOf(interval.getEndMillis()));
       default:
-        throw new IllegalStateException("WTF?! Shouldn't have got here...");
+        throw new IllegalStateException("Shouldn't have got here");
     }
   }
 }
