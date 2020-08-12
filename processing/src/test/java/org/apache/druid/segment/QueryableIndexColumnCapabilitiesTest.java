@@ -124,11 +124,13 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Map<String, Object> eventWithNulls = new HashMap<>();
     eventWithNulls.put("time", DateTimes.nowUtc().getMillis());
     eventWithNulls.put("d1", null);
-    eventWithNulls.put("d2", null);
+    eventWithNulls.put("d2", ImmutableList.of());
     eventWithNulls.put("d3", null);
     eventWithNulls.put("d4", null);
     eventWithNulls.put("d5", null);
+
     rowsWithNulls.add(Iterables.getOnlyElement(parser.parseBatch(eventWithNulls)));
+
     IndexBuilder builderWithNulls = IndexBuilder.create()
                                                 .rows(rowsWithNulls)
                                                 .schema(
@@ -349,12 +351,6 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     // results for this complex aren't different, we only know that nullability is unknown
     assertComplexColumnCapabilites(INC_INDEX_WITH_NULLS.getCapabilities("m4"));
     assertComplexColumnCapabilites(MMAP_INDEX_WITH_NULLS.getColumnHolder("m4").getCapabilities());
-  }
-
-  @Test
-  public void testComplexColumnWithNulls()
-  {
-
   }
 
   private void assertComplexColumnCapabilites(ColumnCapabilities caps)
