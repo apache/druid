@@ -43,6 +43,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 
   private volatile boolean hasNulls = false;
 
+  @Nullable
   @Override
   public Double processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {

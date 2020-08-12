@@ -104,8 +104,6 @@ import java.util.stream.Stream;
 
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
-  private volatile DateTime maxIngestedEventTime;
-
   // Used to discover ValueType based on the class of values in a row
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
   public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
@@ -258,6 +256,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
+
+  private volatile DateTime maxIngestedEventTime;
+
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -474,10 +475,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  public boolean isRollup()
-  {
-    return rollup;
-  }
 
   public abstract FactsHolder getFacts();
 
@@ -570,6 +567,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       return parseExceptionMessages;
     }
+  }
+
+  public boolean isRollup()
+  {
+    return rollup;
   }
 
   @Override

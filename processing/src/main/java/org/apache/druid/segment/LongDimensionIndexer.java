@@ -43,6 +43,8 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   private volatile boolean hasNulls = false;
 
+
+  @Nullable
   @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
