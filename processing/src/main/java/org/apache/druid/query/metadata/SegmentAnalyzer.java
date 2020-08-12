@@ -193,7 +193,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
-        capabilities.hasNulls().isTrue(),
+        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
         null,
         null,
@@ -244,7 +244,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
-        capabilities.hasNulls().isTrue(),
+        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
         analyzingCardinality() ? cardinality : 0,
         min,
@@ -322,7 +322,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
-        capabilities.hasNulls().isTrue(),
+        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
         cardinality,
         min,
@@ -339,7 +339,8 @@ public class SegmentAnalyzer
   {
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
-      final boolean nullable = capabilities != null && capabilities.hasNulls().isTrue();
+      // if we don't know for sure, then we should plan to check for nulls
+      final boolean nullable = capabilities != null && capabilities.hasNulls().isMaybeTrue();
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {
