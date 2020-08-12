@@ -38,7 +38,7 @@ public class ColumnAnalysis
 
   private final String type;
   private final boolean hasMultipleValues;
-  private final boolean nullable;
+  private final boolean hasNulls;
   private final long size;
   private final Integer cardinality;
   private final Comparable minValue;
@@ -49,7 +49,7 @@ public class ColumnAnalysis
   public ColumnAnalysis(
       @JsonProperty("type") String type,
       @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
-      @JsonProperty("isNullable") boolean isNullable,
+      @JsonProperty("hasNulls") boolean hasNulls,
       @JsonProperty("size") long size,
       @JsonProperty("cardinality") Integer cardinality,
       @JsonProperty("minValue") Comparable minValue,
@@ -59,7 +59,7 @@ public class ColumnAnalysis
   {
     this.type = type;
     this.hasMultipleValues = hasMultipleValues;
-    this.nullable = isNullable;
+    this.hasNulls = hasNulls;
     this.size = size;
     this.cardinality = cardinality;
     this.minValue = minValue;
@@ -112,9 +112,9 @@ public class ColumnAnalysis
   }
 
   @JsonProperty
-  public boolean isNullable()
+  public boolean isHasNulls()
   {
-    return nullable;
+    return hasNulls;
   }
   public boolean isError()
   {
@@ -155,7 +155,7 @@ public class ColumnAnalysis
     return new ColumnAnalysis(
         type,
         multipleValues,
-        nullable || rhs.nullable,
+        hasNulls || rhs.hasNulls,
         size + rhs.getSize(),
         cardinality,
         newMin,
@@ -182,7 +182,7 @@ public class ColumnAnalysis
     return "ColumnAnalysis{" +
            "type='" + type + '\'' +
            ", hasMultipleValues=" + hasMultipleValues +
-           ", isNullable=" + nullable +
+           ", hasNulls=" + hasNulls +
            ", size=" + size +
            ", cardinality=" + cardinality +
            ", minValue=" + minValue +
@@ -202,7 +202,7 @@ public class ColumnAnalysis
     }
     ColumnAnalysis that = (ColumnAnalysis) o;
     return hasMultipleValues == that.hasMultipleValues &&
-           nullable == that.nullable &&
+           hasNulls == that.hasNulls &&
            size == that.size &&
            Objects.equals(type, that.type) &&
            Objects.equals(cardinality, that.cardinality) &&
@@ -214,6 +214,6 @@ public class ColumnAnalysis
   @Override
   public int hashCode()
   {
-    return Objects.hash(type, hasMultipleValues, nullable, size, cardinality, minValue, maxValue, errorMessage);
+    return Objects.hash(type, hasMultipleValues, hasNulls, size, cardinality, minValue, maxValue, errorMessage);
   }
 }

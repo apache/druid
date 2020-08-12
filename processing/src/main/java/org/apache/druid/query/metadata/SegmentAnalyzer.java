@@ -339,8 +339,7 @@ public class SegmentAnalyzer
   {
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
-      // if we don't know for sure, then we should plan to check for nulls
-      final boolean nullable = capabilities != null && capabilities.hasNulls().isMaybeTrue();
+      final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {
@@ -351,7 +350,7 @@ public class SegmentAnalyzer
 
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
         if (inputSizeFn == null) {
-          return new ColumnAnalysis(typeName, hasMultipleValues, nullable, 0, null, null, null, null);
+          return new ColumnAnalysis(typeName, hasMultipleValues, hasNulls, 0, null, null, null, null);
         }
 
         final int length = complexColumn.getLength();
@@ -363,7 +362,7 @@ public class SegmentAnalyzer
       return new ColumnAnalysis(
           typeName,
           hasMultipleValues,
-          nullable,
+          hasNulls,
           size,
           null,
           null,
