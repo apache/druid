@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -377,7 +377,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
           newCount = lastHydrant.getCount() + 1;
           if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
-            Map<String, ColumnCapabilitiesImpl> oldCapabilities;
+            Map<String, ColumnCapabilities> oldCapabilities;
             if (lastHydrant.hasSwapped()) {
               oldCapabilities = new HashMap<>();
               ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
@@ -385,7 +385,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
                 QueryableIndex oldIndex = segment.asQueryableIndex();
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
-                  oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumnHolder(dim).getCapabilities());
+                  oldCapabilities.put(dim, oldIndex.getColumnHolder(dim).getCapabilities());
                 }
               }
               finally {

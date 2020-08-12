@@ -200,7 +200,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
 
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
     Assert.assertTrue(capabilities.hasBitmapIndexes());
-    Assert.assertTrue(capabilities.isDictionaryEncoded());
+    Assert.assertTrue(capabilities.isDictionaryEncoded().isTrue());
     Assert.assertTrue(capabilities.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(capabilities.areDictionaryValuesUnique().isTrue());
   }
@@ -216,7 +216,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     Assert.assertFalse(capabilities.hasBitmapIndexes());
     Assert.assertFalse(capabilities.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(capabilities.areDictionaryValuesSorted().isTrue());
-    Assert.assertTrue(capabilities.isDictionaryEncoded());
+    Assert.assertTrue(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test

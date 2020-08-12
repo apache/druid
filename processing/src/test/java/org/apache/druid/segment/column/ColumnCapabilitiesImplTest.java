@@ -44,8 +44,7 @@ public class ColumnCapabilitiesImplTest
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
     Assert.assertEquals(ValueType.COMPLEX, cc.getType());
-    Assert.assertTrue(cc.isDictionaryEncoded());
-    Assert.assertFalse(cc.isRunLengthEncoded());
+    Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
     Assert.assertTrue(cc.hasSpatialIndexes());
     Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
@@ -69,8 +68,7 @@ public class ColumnCapabilitiesImplTest
     ColumnCapabilities cc = mapper.readValue(json, ColumnCapabilitiesImpl.class);
 
     Assert.assertEquals(ValueType.COMPLEX, cc.getType());
-    Assert.assertTrue(cc.isDictionaryEncoded());
-    Assert.assertTrue(cc.isRunLengthEncoded());
+    Assert.assertTrue(cc.isDictionaryEncoded().isTrue());
     Assert.assertTrue(cc.hasSpatialIndexes());
     Assert.assertTrue(cc.hasMultipleValues().isTrue());
     Assert.assertTrue(cc.hasBitmapIndexes());
