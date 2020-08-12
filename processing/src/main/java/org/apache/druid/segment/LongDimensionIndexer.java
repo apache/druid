@@ -133,7 +133,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       public boolean isNull()
       {
         final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return hasNulls && (dimIndex >= dims.length || dims[dimIndex] == null);
       }
 
       @Override

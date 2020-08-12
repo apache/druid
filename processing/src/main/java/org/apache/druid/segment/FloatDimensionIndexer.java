@@ -133,7 +133,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       public boolean isNull()
       {
         final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return hasNulls && (dimIndex >= dims.length || dims[dimIndex] == null);
       }
 
       @Override

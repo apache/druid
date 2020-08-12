@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
  */
 public class ColumnBuilder
 {
-  private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault(false);
+  private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;

@@ -239,9 +239,10 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
     // coercing any 'UNKNOWN' values to false
     Assert.assertFalse(
-        ColumnCapabilitiesImpl.snapshot(caps, IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC)
-                              .hasMultipleValues()
-                              .isMaybeTrue()
+        ColumnCapabilitiesImpl.snapshot(
+            caps,
+            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+        ).hasMultipleValues().isMaybeTrue()
     );
     Assert.assertFalse(caps.hasSpatialIndexes());
     Assert.assertTrue(caps.hasNulls().isUnknown());
@@ -264,21 +265,26 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d1");
     Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
-    Assert.assertTrue(caps.isDictionaryEncoded());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
     // multi-value is unknown unless explicitly set to 'true'
     Assert.assertTrue(caps.hasMultipleValues().isUnknown());
     // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
     // coercing any 'UNKNOWN' values to false
-    Assert.assertFalse(ColumnCapabilitiesImpl.snapshot(caps).hasMultipleValues().isMaybeTrue());
+    Assert.assertFalse(
+        ColumnCapabilitiesImpl.snapshot(
+            caps,
+            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+        ).hasMultipleValues().isMaybeTrue()
+    );
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.hasNulls().isUnknown());
+    Assert.assertTrue(caps.hasNulls().isTrue());
 
     caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d1").getCapabilities();
     Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
-    Assert.assertTrue(caps.isDictionaryEncoded());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
@@ -317,17 +323,17 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d2");
     Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
-    Assert.assertTrue(caps.isDictionaryEncoded());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertTrue(caps.hasMultipleValues().isTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
-    Assert.assertTrue(caps.hasNulls().isUnknown());
+    Assert.assertTrue(caps.hasNulls().isTrue());
 
     caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d2").getCapabilities();
     Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertTrue(caps.hasBitmapIndexes());
-    Assert.assertTrue(caps.isDictionaryEncoded());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertTrue(caps.hasMultipleValues().isTrue());
@@ -355,7 +361,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   {
     Assert.assertEquals(ValueType.COMPLEX, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
@@ -380,7 +386,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   {
     Assert.assertEquals(valueType, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());

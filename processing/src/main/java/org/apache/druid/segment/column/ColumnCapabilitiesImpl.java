@@ -33,6 +33,39 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
+  private static final CoercionLogic ALL_FALSE = new CoercionLogic()
+  {
+    @Override
+    public boolean dictionaryEncoded()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean dictionaryValuesSorted()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean dictionaryValuesUnique()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean multipleValues()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean hasNulls()
+    {
+      return false;
+    }
+  };
+
   public static ColumnCapabilitiesImpl copyOf(@Nullable final ColumnCapabilities other)
   {
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
@@ -112,9 +145,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
    * Creates a {@link ColumnCapabilitiesImpl} where all {@link ColumnCapabilities.Capable} that default to unknown
    * instead are coerced to true or false
    */
-  public static ColumnCapabilitiesImpl createDefault(boolean unknownIsTrue)
+  public static ColumnCapabilitiesImpl createDefault()
   {
-    return ColumnCapabilitiesImpl.snapshot(new ColumnCapabilitiesImpl(), unknownIsTrue);
+    return ColumnCapabilitiesImpl.snapshot(new ColumnCapabilitiesImpl(), ALL_FALSE);
   }
 
   /**
