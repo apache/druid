@@ -62,7 +62,7 @@ public abstract class ColumnsFilter
   /**
    * Check if a column should be included or not.
    */
-  public abstract boolean apply(final String column);
+  public abstract boolean apply(String column);
 
   public static class InclusionBased extends ColumnsFilter
   {

@@ -10,7 +10,8 @@
         ]
       },
       "timestampSpec": {
-        "column": "timestamp"
+        "column": "__time",
+        "format": "millis"
       },
       "metricsSpec": [
         {

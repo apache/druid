@@ -22,6 +22,8 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -40,7 +42,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
-public class TransformSpecTest
+public class TransformSpecTest extends NullHandlingTest
 {
   private static final MapInputRowParser PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -79,6 +81,11 @@ public class TransformSpecTest
         )
     );
 
+    Assert.assertEquals(
+        ImmutableSet.of("x", "y", "a", "b", "f", "g"),
+        transformSpec.getRequiredColumns()
+    );
+
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
     final InputRow row = parser.parseBatch(ROW1).get(0);
 
@@ -105,6 +112,11 @@ public class TransformSpecTest
         ImmutableList.of(
             new ExpressionTransform("x", "concat(x,y)", TestExprMacroTable.INSTANCE)
         )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of("x", "y"),
+        transformSpec.getRequiredColumns()
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
@@ -138,6 +150,12 @@ public class TransformSpecTest
         )
     );
 
+    Assert.assertEquals(
+        ImmutableSet.of("x", "f", "g", "y", "a", "b"),
+        transformSpec.getRequiredColumns()
+    );
+
+
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
     Assert.assertNotNull(parser.parseBatch(ROW1).get(0));
     Assert.assertNull(parser.parseBatch(ROW2).get(0));
@@ -152,6 +170,12 @@ public class TransformSpecTest
             new ExpressionTransform("__time", "(a + b) * 3600000", TestExprMacroTable.INSTANCE)
         )
     );
+
+    Assert.assertEquals(
+        ImmutableSet.of("a", "b"),
+        transformSpec.getRequiredColumns()
+    );
+
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
     final InputRow row = parser.parseBatch(ROW1).get(0);
@@ -169,6 +193,11 @@ public class TransformSpecTest
         ImmutableList.of(
             new ExpressionTransform("__time", "__time + 3600000", TestExprMacroTable.INSTANCE)
         )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of("__time"),
+        transformSpec.getRequiredColumns()
     );
 
     final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);

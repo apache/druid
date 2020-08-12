@@ -1269,9 +1269,9 @@ of milliseconds since the epoch (January 1, 1970 00:00:00 UTC). It is common to 
 want the output timestamp to be equivalent to the input timestamp. In this case, set the timestamp column to `__time`
 and the format to `auto` or `millis`.
 
-It is OK for the input and output datasources to be the same. In this case, the reindexed data will overwrite the
-previous data. Generally, if you are going to do this, it is a good idea to test out your reindexing by writing to
-a separate datasource before overwriting your main one.
+It is OK for the input and output datasources to be the same. In this case, newly generated data will overwrite the
+previous data for the intervals specified in the `granularitySpec`. Generally, if you are going to do this, it is a
+good idea to test out your reindexing by writing to a separate datasource before overwriting your main one.
 
 An example task spec is shown below. It reads from a hypothetical raw datasource `wikipedia_raw` and creates a new
 rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and "page".

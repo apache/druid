@@ -37,6 +37,7 @@ import java.util.stream.IntStream;
 /**
  * @deprecated only used by {@link org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory}
  */
+@Deprecated
 public class ReingestionTimelineUtils
 {
   /**

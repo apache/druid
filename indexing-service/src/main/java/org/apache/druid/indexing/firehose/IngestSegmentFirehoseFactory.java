@@ -64,6 +64,7 @@ import java.util.stream.Stream;
 /**
  * @deprecated use {@link DruidInputSource} instead
  */
+@Deprecated
 public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<InputRowParser, List<WindowedSegmentId>>
 {
   private static final EmittingLogger log = new EmittingLogger(IngestSegmentFirehoseFactory.class);
