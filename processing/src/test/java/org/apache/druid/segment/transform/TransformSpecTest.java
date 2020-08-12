@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.indexing;
+package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -35,8 +35,6 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.transform.ExpressionTransform;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
