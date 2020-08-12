@@ -177,9 +177,9 @@ public class InputSourceProcessor
       buildSegmentsMeters.incrementUnparseable();
     }
 
-//    if (logParseExceptions) {
+    if (logParseExceptions) {
       LOG.error(e, "Encountered parse exception");
-//    }
+    }
 
     if (buildSegmentsSavedParseExceptions != null) {
       buildSegmentsSavedParseExceptions.add(e);
