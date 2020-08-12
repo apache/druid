@@ -22,11 +22,11 @@ package org.apache.druid.query.scan;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -296,7 +296,7 @@ public class ScanQueryResultOrderingTest
                                      )
                                      {
                                        return queryRunnerFactory.mergeRunners(
-                                           MoreExecutors.sameThreadExecutor(),
+                                           Execs.directExecutor(),
                                            runners.stream().map(p -> p.rhs).collect(Collectors.toList())
                                        ).run(
                                            queryPlus.withQuery(
