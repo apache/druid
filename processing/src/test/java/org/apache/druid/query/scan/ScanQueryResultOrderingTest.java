@@ -334,28 +334,35 @@ public class ScanQueryResultOrderingTest
 
       // Within this segment-to-server map, now run the query at every possible limit.
       for (int limit = 0; limit < expectedResults.size() + 1; limit++) {
-        // Also try a few different values of maxRowsQueuedForOrdering (so we select different algorithms).
-        for (int maxRowsQueuedForOrdering : new int[]{1, 7, 100000}) {
-          final List<Integer> results = runQuery(
-              (ScanQuery) query.withLimit(limit)
-                               .withOverriddenContext(
-                                   ImmutableMap.of(
-                                       ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                       maxRowsQueuedForOrdering
-                                   )
-                               ),
-              brokerRunner
-          );
-          Assert.assertEquals(
-              StringUtils.format(
-                  "Segment-to-server map[%s], limit[%s], maxRowsQueuedForOrdering[%s]",
-                  segmentToServerMap,
-                  limit,
-                  maxRowsQueuedForOrdering
-              ),
-              expectedResults.stream().limit(limit == 0 ? Long.MAX_VALUE : limit).collect(Collectors.toList()),
-              results
-          );
+        // Test a few different batch sizes.
+        for (int batchSize : new int[]{1, 2, 100}) {
+          // Test a few different values of maxRowsQueuedForOrdering (so we select different algorithms).
+          for (int maxRowsQueuedForOrdering : new int[]{1, 7, 100000}) {
+            final List<Integer> results = runQuery(
+                (ScanQuery) Druids.ScanQueryBuilder.copy(query)
+                                                   .limit(limit)
+                                                   .batchSize(batchSize)
+                                                   .build()
+                                                   .withOverriddenContext(
+                                                       ImmutableMap.of(
+                                                           ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
+                                                           maxRowsQueuedForOrdering
+                                                       )
+                                                   ),
+                brokerRunner
+            );
+            Assert.assertEquals(
+                StringUtils.format(
+                    "Segment-to-server map[%s], limit[%s], batchSize[%s], maxRowsQueuedForOrdering[%s]",
+                    segmentToServerMap,
+                    limit,
+                    batchSize,
+                    maxRowsQueuedForOrdering
+                ),
+                expectedResults.stream().limit(limit == 0 ? Long.MAX_VALUE : limit).collect(Collectors.toList()),
+                results
+            );
+          }
         }
       }
     }
