@@ -221,7 +221,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   /**
-   * Offset for this query; behaves like SQL "LIMIT". Will always be positive. {@link Long#MAX_VALUE} is used in
+   * Limit for this query; behaves like SQL "LIMIT". Will always be positive. {@link Long#MAX_VALUE} is used in
    * situations where the user wants an effectively unlimited resultset.
    */
   @JsonProperty("limit")
