@@ -829,9 +829,7 @@ delivered due to an error.
 
 ### JDBC
 
-You can make Druid SQL queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). Once
-you've downloaded the Avatica client jar, add it to your classpath and use the connect string
-`jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
+You can make Druid SQL queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
 
 Example code:
 
@@ -849,7 +847,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
       final ResultSet resultSet = statement.executeQuery(query)
   ) {
     while (resultSet.next()) {
-      // Do something
+      // process result set
     }
   }
 }
@@ -884,6 +882,19 @@ final ResultSet resultSet = statement.executeQuery();
 Druid SQL supports setting connection parameters on the client. The parameters in the table below affect SQL planning.
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
 [Query context](query-context.html) for details on the possible options.
+
+```java
+String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
+
+// Set any query context parameters you need here.
+Properties connectionProperties = new Properties();
+connectionProperties.setProperty("sqlTimeZone", "America/Los_Angeles");
+connectionProperties.setProperty("useCache", "false");
+
+try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
+  // create and execute statements, process result sets, etc
+}
+```
 
 Note that to specify an unique identifier for SQL query, use `sqlQueryId` instead of `queryId`. Setting `queryId` for a SQL
 request has no effect, all native queries underlying SQL will use auto-generated queryId.

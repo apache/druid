@@ -138,7 +138,7 @@ public class ScanQueryRunnerFactoryTest
       });
       Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
       try {
-        List<ScanResultValue> output = FACTORY.priorityQueueSortAndLimit(
+        List<ScanResultValue> output = FACTORY.stableLimitingSort(
             inputSequence,
             query,
             ImmutableList.of(new Interval(

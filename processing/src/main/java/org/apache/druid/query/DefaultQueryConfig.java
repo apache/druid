@@ -19,43 +19,48 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.QueryContexts.Vectorize;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import com.google.common.collect.ImmutableMap;
+
+import javax.annotation.Nonnull;
+import java.util.Map;
 
 /**
  * A user configuration holder for all query types.
  * Any query-specific configurations should go to their own configuration.
- *
  * @see org.apache.druid.query.groupby.GroupByQueryConfig
  * @see org.apache.druid.query.search.SearchQueryConfig
  * @see org.apache.druid.query.topn.TopNQueryConfig
  * @see org.apache.druid.query.metadata.SegmentMetadataQueryConfig
  * @see org.apache.druid.query.scan.ScanQueryConfig
+ *
  */
-public class QueryConfig
+public class DefaultQueryConfig
 {
+  /**
+   * Note that context values should not be directly retrieved from this field but instead should
+   * be read through {@link QueryContexts}. This field contains context configs from runtime property
+   * which is then merged with configs passed in query context. The result of the merge is subsequently stored in
+   * the query context.  The order of precedence in merging of the configs is as follow:
+   * runtime property values (store in this class) override by query context parameter passed in with the query
+   */
   @JsonProperty
-  private Vectorize vectorize = QueryContexts.DEFAULT_VECTORIZE;
+  private final Map<String, Object> context;
 
-  @JsonProperty
-  private int vectorSize = QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE;
-
-  public Vectorize getVectorize()
+  @Nonnull
+  public Map<String, Object> getContext()
   {
-    return vectorize;
+    return context;
   }
 
-  public int getVectorSize()
+  @JsonCreator
+  public DefaultQueryConfig(@JsonProperty("context") Map<String, Object> context)
   {
-    return vectorSize;
-  }
-
-  public QueryConfig withOverrides(final Query<?> query)
-  {
-    final QueryConfig newConfig = new QueryConfig();
-    newConfig.vectorize = QueryContexts.getVectorize(query, vectorize);
-    newConfig.vectorSize = QueryContexts.getVectorSize(query, vectorSize);
-    return newConfig;
+    if (context == null) {
+      this.context = ImmutableMap.of();
+    } else {
+      this.context = context;
+    }
   }
 }

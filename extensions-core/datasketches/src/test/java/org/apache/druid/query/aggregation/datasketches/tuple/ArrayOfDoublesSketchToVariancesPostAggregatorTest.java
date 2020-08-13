@@ -19,57 +19,72 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class ArrayOfDoublesSketchToVariancesPostAggregatorTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void equalsAndHashCode()
+  public void testSerde() throws JsonProcessingException
   {
-    final PostAggregator postAgg1 = new ArrayOfDoublesSketchToVariancesPostAggregator(
+    final PostAggregator there = new ArrayOfDoublesSketchToVariancesPostAggregator(
         "a",
         new ConstantPostAggregator("", 0)
     );
-    @SuppressWarnings("ObjectEqualsNull")
-    final boolean equalsNull = postAgg1.equals(null);
-    Assert.assertFalse(equalsNull);
-    @SuppressWarnings({"EqualsWithItself", "SelfEquals"})
-    final boolean equalsSelf = postAgg1.equals(postAgg1); 
-    Assert.assertTrue(equalsSelf);
-    Assert.assertEquals(postAgg1.hashCode(), postAgg1.hashCode());
-
-    // equals
-    final PostAggregator postAgg2 = new ArrayOfDoublesSketchToVariancesPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0)
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    ArrayOfDoublesSketchToVariancesPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        ArrayOfDoublesSketchToVariancesPostAggregator.class
     );
-    Assert.assertTrue(postAgg1.equals(postAgg2));
-    Assert.assertEquals(postAgg1.hashCode(), postAgg2.hashCode());
 
-    // same class, different field
-    final PostAggregator postAgg3 = new ArrayOfDoublesSketchToVariancesPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 1)
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg3));
-
-    // same class, different name
-    final PostAggregator postAgg4 = new ArrayOfDoublesSketchToVariancesPostAggregator(
-        "b",
-        new ConstantPostAggregator("", 0)
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg4));
-
-    // different class, same parent, also not overriding equals and hashCode
-    final PostAggregator postAgg5 = new ArrayOfDoublesSketchToStringPostAggregator(
-        "a",
-        new ConstantPostAggregator("", 0)
-    );
-    Assert.assertFalse(postAgg1.equals(postAgg5));
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
+  @Test
+  public void testToString()
+  {
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToVariancesPostAggregator(
+        "a",
+        new ConstantPostAggregator("", 0)
+    );
+
+    Assert.assertEquals(
+        "ArrayOfDoublesSketchToVariancesPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testComparator()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Comparing arrays of variance values is not supported");
+    final PostAggregator postAgg = new ArrayOfDoublesSketchToVariancesPostAggregator(
+        "a",
+        new ConstantPostAggregator("", 0)
+    );
+    postAgg.getComparator();
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(ArrayOfDoublesSketchToVariancesPostAggregator.class)
+                  .withNonnullFields("name", "field")
+                  .withIgnoredFields("dependentFields")
+                  .usingGetClass()
+                  .verify();
+  }
 }

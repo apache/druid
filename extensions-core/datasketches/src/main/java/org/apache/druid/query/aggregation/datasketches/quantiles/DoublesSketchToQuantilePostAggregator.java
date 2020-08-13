@@ -31,6 +31,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class DoublesSketchToQuantilePostAggregator implements PostAggregator
@@ -80,14 +81,20 @@ public class DoublesSketchToQuantilePostAggregator implements PostAggregator
   @Override
   public Comparator<Double> getComparator()
   {
-    return new Comparator<Double>()
-    {
-      @Override
-      public int compare(final Double a, final Double b)
-      {
-        return Doubles.compare(a, b);
-      }
-    };
+    return Doubles::compare;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_QUANTILE_CACHE_TYPE_ID)
+        .appendCacheable(field).appendDouble(fraction).build();
+  }
+
+  @Override
+  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
+  {
+    return this;
   }
 
   @Override
@@ -107,7 +114,7 @@ public class DoublesSketchToQuantilePostAggregator implements PostAggregator
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -115,33 +122,15 @@ public class DoublesSketchToQuantilePostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final DoublesSketchToQuantilePostAggregator that = (DoublesSketchToQuantilePostAggregator) o;
-    if (!name.equals(that.name)) {
-      return false;
-    }
-    if (fraction != that.fraction) {
-      return false;
-    }
-    return field.equals(that.field);
+    DoublesSketchToQuantilePostAggregator that = (DoublesSketchToQuantilePostAggregator) o;
+    return Double.compare(that.fraction, fraction) == 0 &&
+           name.equals(that.name) &&
+           field.equals(that.field);
   }
 
   @Override
   public int hashCode()
   {
-    return (name.hashCode() * 31 + field.hashCode()) * 31 + Double.hashCode(fraction);
+    return Objects.hash(name, field, fraction);
   }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new CacheKeyBuilder(AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_QUANTILE_CACHE_TYPE_ID)
-        .appendCacheable(field).appendDouble(fraction).build();
-  }
-
-  @Override
-  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
-  {
-    return this;
-  }
-
 }

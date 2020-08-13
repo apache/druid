@@ -225,8 +225,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
 
     if (!keyIn.equals(keyCached)) {
-      // It is a bug if this happens. We expect the comparison to be quick, because in the sane case, identical objects
-      // will be used and therefore deep equality checks will be unnecessary.
+      // It is a bug if this happens. The implied key and the cached key should always match.
       throw new ISE("Pre-analysis mismatch, cannot execute query");
     }
 
