@@ -88,6 +88,7 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -1537,6 +1538,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         expected
+    );
+  }
+
+  @Test
+  public void testGroupByWithForceLimitPushDown() throws Exception
+  {
+    final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    context.put(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, true);
+
+    testQuery(
+        "SELECT dim1, dim2, COUNT(*) FROM druid.foo GROUP BY dim1, dim2 limit 1",
+        context,
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(
+                    new DefaultDimensionSpec("dim1", "d0", ValueType.STRING),
+                    new DefaultDimensionSpec("dim2", "d1", ValueType.STRING)
+                )
+                .setLimitSpec(
+                    new DefaultLimitSpec(
+                        ImmutableList.of(),
+                        1
+                    )
+                )
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setContext(context)
+                .build()
+        ),
+        ImmutableList.of(new Object[]{"", "a", 1L})
     );
   }
 

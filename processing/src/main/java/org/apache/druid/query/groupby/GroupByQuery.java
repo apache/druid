@@ -110,7 +110,6 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private final List<List<String>> subtotalsSpec;
 
-  private final boolean applyLimitPushDown;
   private final Function<Sequence<ResultRow>, Sequence<ResultRow>> postProcessingFn;
   private final RowSignature resultRowSignature;
 
@@ -120,6 +119,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
    */
   @Nullable
   private final DateTime universalTimestamp;
+
+  private final boolean canDoLimitPushDown;
+
+  /**
+   * A flag to force limit pushdown to historicals.
+   * Lazily initialized when calling {@link #validateAndGetForceLimitPushDown()}.
+   */
+  @Nullable
+  private Boolean forceLimitPushDown;
 
   @JsonCreator
   public GroupByQuery(
@@ -218,7 +226,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     this.postProcessingFn = postProcessingFn != null ? postProcessingFn : makePostProcessingFn();
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
-    this.applyLimitPushDown = determineApplyLimitPushDown();
+    this.canDoLimitPushDown = canDoLimitPushDown(
+        this.limitSpec,
+        this.havingSpec,
+        this.subtotalsSpec
+    );
   }
 
   @Nullable
@@ -409,7 +421,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean isApplyLimitPushDown()
   {
-    return applyLimitPushDown;
+    if (forceLimitPushDown == null) {
+      forceLimitPushDown = validateAndGetForceLimitPushDown();
+    }
+    return forceLimitPushDown || canDoLimitPushDown;
   }
 
   @JsonIgnore
@@ -474,13 +489,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
                   .build();
   }
 
-  private boolean determineApplyLimitPushDown()
+  private boolean canDoLimitPushDown(
+      @Nullable LimitSpec limitSpec,
+      @Nullable HavingSpec havingSpec,
+      @Nullable List<List<String>> subtotalsSpec
+  )
   {
-    if (subtotalsSpec != null) {
+    if (subtotalsSpec != null && !subtotalsSpec.isEmpty()) {
       return false;
     }
-
-    final boolean forceLimitPushDown = validateAndGetForceLimitPushDown();
 
     if (limitSpec instanceof DefaultLimitSpec) {
       DefaultLimitSpec limitSpecWithoutOffset = ((DefaultLimitSpec) limitSpec).withOffsetToLimit();
@@ -488,10 +505,6 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       // If only applying an orderby without a limit, don't try to push down
       if (!limitSpecWithoutOffset.isLimited()) {
         return false;
-      }
-
-      if (forceLimitPushDown) {
-        return true;
       }
 
       if (!getApplyLimitPushDownFromContext()) {
@@ -612,7 +625,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   public Ordering<ResultRow> getRowOrdering(final boolean granular)
   {
-    if (applyLimitPushDown) {
+    if (isApplyLimitPushDown()) {
       if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields((DefaultLimitSpec) limitSpec, dimensions)) {
         return getRowOrderingForPushDown(granular, (DefaultLimitSpec) limitSpec);
       }
