@@ -80,9 +80,7 @@ public class ITJdbcQueryTest
     connectionProperties.setProperty("password", "priest");
     connections = new String[]{
         StringUtils.format(CONNECTION_TEMPLATE, config.getRouterUrl()),
-        StringUtils.format(CONNECTION_TEMPLATE, config.getBrokerUrl()),
-        StringUtils.format(CONNECTION_TEMPLATE, config.getRouterTLSUrl()),
-        StringUtils.format(CONNECTION_TEMPLATE, config.getBrokerTLSUrl())
+        StringUtils.format(CONNECTION_TEMPLATE, config.getBrokerUrl())
     };
     // ensure that wikipedia segments are loaded completely
     ITRetryUtil.retryUntilTrue(
