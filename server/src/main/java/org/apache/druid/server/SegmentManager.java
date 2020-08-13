@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -42,6 +43,7 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -312,14 +314,17 @@ public class SegmentManager
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
             if (oldQueryable != null) {
-              dataSourceState.removeSegment(segment);
-
-              log.info("Attempting to close segment %s", segment.getId());
-              oldQueryable.close();
-
-              final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());
-              if (oldTable != null) {
-                oldTable.close();
+              try (final Closer closer = Closer.create()) {
+                dataSourceState.removeSegment(segment);
+                closer.register(oldQueryable);
+                log.info("Attempting to close segment %s", segment.getId());
+                final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());
+                if (oldTable != null) {
+                  closer.register(oldTable);
+                }
+              }
+              catch (IOException e) {
+                throw new RuntimeException(e);
               }
             } else {
               log.info(

@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -240,8 +239,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   private void checkIndexAndReader(String columnName, Object[] vals, Object[] nonmatchingVals)
   {
     checkColumnSelectorFactory(columnName);
-    final Closer closer = Closer.create();
-    try {
+    try (final Closer closer = Closer.create()) {
       final int columnIndex = columnNames.indexOf(columnName);
       final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
       closer.register(reader);
@@ -264,16 +262,15 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         Assert.assertEquals(0, valIndex.size());
       }
     }
-    finally {
-      CloseQuietly.close(closer);
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
   private void checkNonIndexedReader(String columnName)
   {
     checkColumnSelectorFactory(columnName);
-    final Closer closer = Closer.create();
-    try {
+    try (final Closer closer = Closer.create()) {
       final int columnIndex = columnNames.indexOf(columnName);
       final int numRows = backingSegment.asStorageAdapter().getNumRows();
       final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
@@ -297,15 +294,14 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         Assert.assertEquals(StringUtils.format("Column[%d] is not a key column", columnIndex), iae.getMessage());
       }
     }
-    finally {
-      CloseQuietly.close(closer);
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
   private void checkColumnSelectorFactory(String columnName)
   {
-    final Closer closer = Closer.create();
-    try {
+    try (final Closer closer = Closer.create()) {
       final int numRows = backingSegment.asStorageAdapter().getNumRows();
 
       final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
@@ -324,8 +320,8 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         Assert.assertEquals(selector.getObject(), tableSelector.getObject());
       }
     }
-    finally {
-      CloseQuietly.close(closer);
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 }

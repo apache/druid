@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -30,6 +29,7 @@ import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -103,8 +103,7 @@ public class IndexedTableJoinable implements Joinable
     if (filterColumnPosition < 0 || correlatedColumnPosition < 0) {
       return Optional.empty();
     }
-    Closer closer = Closer.create();
-    try {
+    try (final Closer closer = Closer.create()) {
       Set<String> correlatedValues = new HashSet<>();
       if (table.keyColumns().contains(searchColumnName)) {
         IndexedTable.Index index = table.columnIndex(filterColumnPosition);
@@ -144,8 +143,8 @@ public class IndexedTableJoinable implements Joinable
         return Optional.of(correlatedValues);
       }
     }
-    finally {
-      CloseQuietly.close(closer);
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 

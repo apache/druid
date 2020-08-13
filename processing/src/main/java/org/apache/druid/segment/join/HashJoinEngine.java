@@ -52,7 +52,12 @@ public class HashJoinEngine
    * not be queryable through the returned Cursor. This happens even if the right-hand joinable doesn't actually have a
    * column with this name.
    */
-  public static Cursor makeJoinCursor(final Cursor leftCursor, final JoinableClause joinableClause, boolean descending, final Closer closer)
+  public static Cursor makeJoinCursor(
+      final Cursor leftCursor,
+      final JoinableClause joinableClause,
+      final boolean descending,
+      final Closer closer
+  )
   {
     final ColumnSelectorFactory leftColumnSelectorFactory = leftCursor.getColumnSelectorFactory();
     final JoinMatcher joinMatcher = joinableClause.getJoinable()
