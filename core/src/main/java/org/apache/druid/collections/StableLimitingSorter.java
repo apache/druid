@@ -22,6 +22,7 @@ package org.apache.druid.collections;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
+import com.google.common.primitives.Ints;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -40,11 +41,13 @@ import java.util.Objects;
 public class StableLimitingSorter<T>
 {
   private final MinMaxPriorityQueue<NumberedElement<T>> queue;
+  private final int limit;
 
-  private long count = 0;
+  private long size = 0;
 
   public StableLimitingSorter(final Comparator<T> comparator, final int limit)
   {
+    this.limit = limit;
     this.queue = MinMaxPriorityQueue
         .orderedBy(
             Ordering.from(
@@ -61,7 +64,15 @@ public class StableLimitingSorter<T>
    */
   public void add(T element)
   {
-    queue.offer(new NumberedElement<>(element, count++));
+    queue.offer(new NumberedElement<>(element, size++));
+  }
+
+  /**
+   * Returns the number of elements currently in the sorter.
+   */
+  public int size()
+  {
+    return Ints.checkedCast(Math.min(size, limit));
   }
 
   /**
