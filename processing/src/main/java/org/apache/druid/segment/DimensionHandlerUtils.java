@@ -44,6 +44,7 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public final class DimensionHandlerUtils
@@ -61,6 +62,28 @@ public final class DimensionHandlerUtils
                                   .setDictionaryValuesUnique(false)
                                   .setDictionaryValuesSorted(false)
                                   .setHasBitmapIndexes(false);
+
+  public static final ConcurrentHashMap<String, DimensionHandlerProvider> DIMENSION_HANDLER_PROVIDERS = new ConcurrentHashMap<>();
+
+  public static void registerDimensionHandlerProvider(String type, DimensionHandlerProvider provider)
+  {
+    DIMENSION_HANDLER_PROVIDERS.compute(type, (key, value) -> {
+      if (value == null) {
+        return provider;
+      } else {
+        if (!value.getClass().getName().equals(provider.getClass().getName())) {
+          throw new ISE(
+              "Incompatible dimensionHandlerProvider for type[%s] already exists. Expected [%s], found [%s].",
+              key,
+              value.getClass().getName(),
+              provider.getClass().getName()
+          );
+        } else {
+          return value;
+        }
+      }
+    });
+  }
 
   private DimensionHandlerUtils()
   {
@@ -95,6 +118,14 @@ public final class DimensionHandlerUtils
 
     if (capabilities.getType() == ValueType.DOUBLE) {
       return new DoubleDimensionHandler(dimensionName);
+    }
+
+    if (capabilities.getType() == ValueType.COMPLEX && capabilities.getTypeName() != null) {
+      DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(capabilities.getTypeName());
+      if (provider == null) {
+        throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", capabilities.getTypeName());
+      }
+      return provider.get(dimensionName);
     }
 
     // Return a StringDimensionHandler by default (null columns will be treated as String typed)

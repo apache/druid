@@ -37,6 +37,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
     if (other != null) {
       capabilities.type = other.getType();
+      capabilities.typeName = other.getTypeName();
       capabilities.dictionaryEncoded = other.isDictionaryEncoded();
       capabilities.hasInvertedIndexes = other.hasBitmapIndexes();
       capabilities.hasSpatialIndexes = other.hasSpatialIndexes();
@@ -122,6 +123,9 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @Nullable
   private ValueType type = null;
 
+  @Nullable
+  private String typeName = null;
+
   private boolean hasInvertedIndexes = false;
   private boolean hasSpatialIndexes = false;
   private Capable dictionaryEncoded = Capable.UNKNOWN;
@@ -142,9 +146,22 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return type;
   }
 
+  @Override
+  @JsonProperty
+  public String getTypeName()
+  {
+    return typeName;
+  }
+
   public ColumnCapabilitiesImpl setType(ValueType type)
   {
     this.type = Preconditions.checkNotNull(type, "'type' must be nonnull");
+    return this;
+  }
+
+  public ColumnCapabilitiesImpl setTypeName(String typeName)
+  {
+    this.typeName = typeName;
     return this;
   }
 

@@ -33,6 +33,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
@@ -511,6 +513,7 @@ public class AggregationTestHelper implements Closeable
   public static IncrementalIndex createIncrementalIndex(
       Iterator rows,
       InputRowParser parser,
+      List<DimensionSchema> dimensions,
       final AggregatorFactory[] metrics,
       long minTimestamp,
       Granularity gran,
@@ -524,6 +527,7 @@ public class AggregationTestHelper implements Closeable
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(minTimestamp)
                 .withQueryGranularity(gran)
+                .withDimensionsSpec(new DimensionsSpec(dimensions, null, null))
                 .withMetrics(metrics)
                 .withRollup(rollup)
                 .build()
@@ -547,6 +551,30 @@ public class AggregationTestHelper implements Closeable
     }
 
     return index;
+  }
+
+  public static IncrementalIndex createIncrementalIndex(
+      Iterator rows,
+      InputRowParser parser,
+      final AggregatorFactory[] metrics,
+      long minTimestamp,
+      Granularity gran,
+      boolean deserializeComplexMetrics,
+      int maxRowCount,
+      boolean rollup
+  ) throws Exception
+  {
+    return createIncrementalIndex(
+        rows,
+        parser,
+        null,
+        metrics,
+        minTimestamp,
+        gran,
+        deserializeComplexMetrics,
+        maxRowCount,
+        rollup
+    );
   }
 
   public Segment persistIncrementalIndex(

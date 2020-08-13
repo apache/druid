@@ -31,6 +31,10 @@ public class ColumnBuilder
 {
   @Nullable
   private ValueType type = null;
+
+  @Nullable
+  private String typeName = null;
+
   private boolean hasMultipleValues = false;
   private boolean filterable = false;
   private boolean dictionaryEncoded = false;
@@ -58,6 +62,12 @@ public class ColumnBuilder
   public ColumnBuilder setType(ValueType type)
   {
     this.type = type;
+    return this;
+  }
+
+  public ColumnBuilder setTypeName(String typeName)
+  {
+    this.typeName = typeName;
     return this;
   }
 
@@ -112,6 +122,7 @@ public class ColumnBuilder
     return new SimpleColumnHolder(
         new ColumnCapabilitiesImpl()
             .setType(type)
+            .setTypeName(typeName)
             .setDictionaryEncoded(dictionaryEncoded)
             .setHasBitmapIndexes(bitmapIndex != null)
             .setDictionaryValuesSorted(dictionaryEncoded)

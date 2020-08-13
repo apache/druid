@@ -38,6 +38,12 @@ public interface ColumnCapabilities
   ValueType getType();
 
   /**
+   *
+   * If ValueType is COMPLEX, then the typeName associated with it.
+   */
+  String getTypeName();
+
+  /**
    * Is the column dictionary encoded? If so, a DimensionDictionarySelector may be used instead of using a value
    * selector, allowing algorithms to operate on primitive integer dictionary ids rather than the looked up dictionary
    * values
@@ -48,6 +54,7 @@ public interface ColumnCapabilities
    * If the column is dictionary encoded, are those values sorted? Useful to know for optimizations that can defer
    * looking up values and allowing sorting with the dictionary ids directly
    */
+
   Capable areDictionaryValuesSorted();
 
   /**
