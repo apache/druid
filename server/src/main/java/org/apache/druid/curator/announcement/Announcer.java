@@ -31,7 +31,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -136,13 +135,8 @@ public class Announcer
 
       started = false;
 
-
-      Closer closer = Closer.create();
-      for (PathChildrenCache cache : listeners.values()) {
-        closer.register(cache);
-      }
       try {
-        closer.close();
+        CloseableUtils.closeAll(listeners.values());
       }
       catch (IOException e) {
         throw new RuntimeException(e);

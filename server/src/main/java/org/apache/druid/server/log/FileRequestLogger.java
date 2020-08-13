@@ -100,10 +100,7 @@ public class FileRequestLogger implements RequestLogger
 
                   CloseableUtils.closeAndSuppressExceptions(
                       fileWriter,
-                      e -> log.warn(
-                          "Could not close log file for %s. Creating new log file anyway.",
-                          currentDay
-                      )
+                      e -> log.warn("Could not close log file for %s. Creating new log file anyway.", currentDay)
                   );
 
                   fileWriter = getFileWriter();

@@ -20,6 +20,7 @@
 package org.apache.druid.utils;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,18 +46,53 @@ public class CloseableUtilsTest
   private final Consumer<Exception> chomper = e -> chomped.incrementAndGet();
 
   @Test
-  public void test_closeAll_quiet() throws IOException
+  public void test_closeAll_array_quiet() throws IOException
   {
     CloseableUtils.closeAll(quietCloseable, quietCloseable2);
     assertClosed(quietCloseable, quietCloseable2);
   }
 
   @Test
-  public void test_closeAll_loud()
+  public void test_closeAll_list_quiet() throws IOException
+  {
+    CloseableUtils.closeAll(ImmutableList.of(quietCloseable, quietCloseable2));
+    assertClosed(quietCloseable, quietCloseable2);
+  }
+
+  @Test
+  public void test_closeAll_array_loud()
   {
     Exception e = null;
     try {
       CloseableUtils.closeAll(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
+    }
+    catch (Exception e2) {
+      e = e2;
+    }
+
+    assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
+
+    // First exception
+    Assert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
+
+    // Second exception
+    Assert.assertEquals(1, e.getSuppressed().length);
+    Assert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(RuntimeException.class));
+  }
+
+  @Test
+  public void test_closeAll_list_loud()
+  {
+    Exception e = null;
+    try {
+      CloseableUtils.closeAll(
+          ImmutableList.of(
+              quietCloseable,
+              ioExceptionCloseable,
+              quietCloseable2,
+              runtimeExceptionCloseable
+          )
+      );
     }
     catch (Exception e2) {
       e = e2;

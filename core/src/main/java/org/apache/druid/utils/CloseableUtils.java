@@ -19,13 +19,16 @@
 
 package org.apache.druid.utils;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.io.Closer;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -45,11 +48,21 @@ public final class CloseableUtils
    */
   public static void closeAll(Closeable first, Closeable... others) throws IOException
   {
+    final List<Closeable> closeables = new ArrayList<>(others.length + 1);
+    closeables.add(first);
+    closeables.addAll(Arrays.asList(others));
+    closeAll(closeables);
+  }
+
+  /**
+   * Close all the provided {@param closeables}, from first to last.
+   */
+  public static <T extends Closeable> void closeAll(Iterable<T> closeables) throws IOException
+  {
     final Closer closer = Closer.create();
 
     // Register in reverse order, so we close from first to last.
-    closer.registerAll(Lists.reverse(Arrays.asList(others)));
-    closer.register(first);
+    closer.registerAll(Lists.reverse(ImmutableList.copyOf(closeables)));
     closer.close();
   }
 
