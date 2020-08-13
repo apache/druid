@@ -737,6 +737,7 @@ A sample Coordinator dynamic config JSON object is shown below:
   "mergeBytesLimit": 100000000,
   "mergeSegmentsLimit" : 1000,
   "maxSegmentsToMove": 5,
+  "maxSegmentsToConsiderPerMove": 2147483647,
   "replicantLifetime": 15,
   "replicationThrottleLimit": 10,
   "emitBalancingStats": false,
@@ -755,6 +756,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
 |`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.md).|100|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
+|`maxSegmentsToConsiderPerMove`|The maximum number of segments to consider when picking a segment to move. For a cluster with a very large number of segments, choosing to set this to a non-default value may make sense for an experienced admin. A value of `<= 0` will be reset to the default automatically.|Integer.MAX_VALUE|
 |`replicantLifetime`|The maximum number of Coordinator runs for a segment to be replicated before we start alerting.|15|
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
 |`balancerComputeThreads`|Thread pool size for computing moving cost of segments in segment balancing. Consider increasing this if you have a lot of segments and moving segments starts to get stuck.|1|

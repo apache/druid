@@ -232,10 +232,19 @@ public class BalanceSegmentsTest
     mockCoordinator(coordinator);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentToMove(ImmutableList.of(new ServerHolder(druidServer2, peon2, false)), broadcastDatasources))
-            .andReturn(new BalancerSegmentHolder(druidServer2, segment3))
-            .andReturn(new BalancerSegmentHolder(druidServer2, segment4));
-    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(
+        strategy.pickSegmentToMove(
+            ImmutableList.of(
+                new ServerHolder(druidServer2, peon2, false)
+            ),
+            broadcastDatasources,
+            Integer.MAX_VALUE
+        )
+    ).andReturn(
+        new BalancerSegmentHolder(druidServer2, segment3)).andReturn(new BalancerSegmentHolder(druidServer2, segment4)
+    );
+
+    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment1))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment2));
 
@@ -300,7 +309,7 @@ public class BalanceSegmentsTest
     mockCoordinator(coordinator);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment1))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment2))
             .andReturn(new BalancerSegmentHolder(druidServer2, segment3))
@@ -349,7 +358,7 @@ public class BalanceSegmentsTest
     mockCoordinator(coordinator);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment1))
             .anyTimes();
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject())).andAnswer(() -> {
@@ -384,7 +393,7 @@ public class BalanceSegmentsTest
 
     ServerHolder holder2 = new ServerHolder(druidServer2, peon2, false);
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment1))
             .once();
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
@@ -637,7 +646,11 @@ public class BalanceSegmentsTest
     }
 
     @Override
-    public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders, Set<String> broadcastDatasources)
+    public BalancerSegmentHolder pickSegmentToMove(
+        List<ServerHolder> serverHolders,
+        Set<String> broadcastDatasources,
+        int numberOfSegmentsToConsider
+    )
     {
       return pickOrder.get(pickCounter.getAndIncrement() % pickOrder.size());
     }
@@ -661,9 +674,18 @@ public class BalanceSegmentsTest
 
     // either decommissioning servers list or acitve ones (ie servers list is [2] or [1, 3])
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentToMove(ImmutableList.of(new ServerHolder(druidServer2, peon2, true)), broadcastDatasources))
-            .andReturn(new BalancerSegmentHolder(druidServer2, segment2));
-    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(
+        strategy.pickSegmentToMove(
+            ImmutableList.of(
+                new ServerHolder(druidServer2, peon2, true)
+            ),
+            broadcastDatasources,
+            Integer.MAX_VALUE
+        )
+    ).andReturn(
+        new BalancerSegmentHolder(druidServer2, segment2)
+    );
+    EasyMock.expect(strategy.pickSegmentToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(new BalancerSegmentHolder(druidServer1, segment1));
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(new ServerHolder(druidServer3, peon3))

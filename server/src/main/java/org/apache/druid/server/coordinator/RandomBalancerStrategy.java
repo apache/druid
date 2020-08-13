@@ -54,9 +54,17 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public BalancerSegmentHolder pickSegmentToMove(List<ServerHolder> serverHolders, Set<String> broadcastDatasources)
+  public BalancerSegmentHolder pickSegmentToMove(
+      List<ServerHolder> serverHolders,
+      Set<String> broadcastDatasources,
+      int numberOfSegmentsToConsider
+  )
   {
-    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(serverHolders, broadcastDatasources);
+    return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(
+        serverHolders,
+        broadcastDatasources,
+        numberOfSegmentsToConsider
+    );
   }
 
   @Override

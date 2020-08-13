@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -28,9 +29,23 @@ import java.util.concurrent.ThreadLocalRandom;
 final class ReservoirSegmentSampler
 {
 
+  private static final EmittingLogger log = new EmittingLogger(ReservoirSegmentSampler.class);
+
+  /**
+   * Iterates over segments that live on the candidate servers passed in {@link ServerHolder} and (possibly) picks a
+   * segment to return to caller in a {@link BalancerSegmentHolder} object.
+   *
+   * @param serverHolders List of {@link ServerHolder} objects containing segments who are candidates to be chosen.
+   * @param broadcastDatasources Set of DataSource names that identify broadcast datasources. We don't want to consider
+   *                             segments from these datasources.
+   * @param numberOfSegmentsToConsider A limit on the number of segments to consider before short-circuiting and
+   *                                   returning immediately.
+   * @return
+   */
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(
       final List<ServerHolder> serverHolders,
-      Set<String> broadcastDatasources
+      Set<String> broadcastDatasources,
+      int numberOfSegmentsToConsider
   )
   {
     ServerHolder fromServerHolder = null;
@@ -56,6 +71,19 @@ final class ReservoirSegmentSampler
           proposalSegment = segment;
         }
         numSoFar++;
+
+        // We have iterated over the alloted number of segments and will return the currently proposed segment or null
+        if (numSoFar >= numberOfSegmentsToConsider) {
+          log.debug(
+              "Breaking out of iteration over potential segments to move because the limit for " +
+              "numberOfSegmentsToCondider [%d] has been hit", numberOfSegmentsToConsider
+          );
+          break;
+        }
+      }
+      // We have iterated over the alloted number of segments and will return the currently proposed segment or null
+      if (numSoFar >= numberOfSegmentsToConsider) {
+        break;
       }
     }
     if (fromServerHolder != null) {
