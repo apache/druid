@@ -52,7 +52,7 @@ public class ITCombiningFirehoseFactoryIndexTest extends AbstractITBatchIndexTes
           return StringUtils.replace(
               spec,
               "%%COMBINING_DATASOURCE%%",
-              INDEX_DATASOURCE
+              INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix()
           );
         }
         catch (Exception e) {
