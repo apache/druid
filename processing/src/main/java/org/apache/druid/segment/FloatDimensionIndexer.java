@@ -41,9 +41,9 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
 {
   public static final Comparator<Float> FLOAT_COMPARATOR = Comparators.naturalNullsFirst();
 
-  private final ColumnCapabilitiesImpl capabilities =
-      ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
+  private volatile boolean hasNulls = false;
 
+  @Nullable
   @Override
   public Float processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
@@ -51,13 +51,17 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+    Float f = DimensionHandlerUtils.convertObjectToFloat(dimValues, reportParseExceptions);
+    if (f == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return f;
   }
 
   @Override
   public void setSparseIndexed()
   {
-    // no-op, float columns do not have a dictionary to track null values
+    hasNulls = NullHandling.sqlCompatible();
   }
 
   @Override
@@ -99,7 +103,11 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
   @Override
   public ColumnCapabilities getColumnCapabilities()
   {
-    return capabilities;
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
+    if (hasNulls) {
+      builder.setHasNulls(hasNulls);
+    }
+    return builder;
   }
 
   @Override
@@ -126,7 +134,7 @@ public class FloatDimensionIndexer implements DimensionIndexer<Float, Float, Flo
       public boolean isNull()
       {
         final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return hasNulls && (dimIndex >= dims.length || dims[dimIndex] == null);
       }
 
       @Override
