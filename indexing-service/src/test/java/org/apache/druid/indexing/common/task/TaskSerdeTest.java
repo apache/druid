@@ -409,6 +409,7 @@ public class TaskSerdeTest
     final KillUnusedSegmentsTask task3 = (KillUnusedSegmentsTask) jsonMapper.readValue(
         jsonMapper.writeValueAsString(
             new ClientKillUnusedSegmentsTaskQuery(
+                null,
                 "foo",
                 Intervals.of("2010-01-01/P1D")
             )

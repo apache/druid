@@ -44,7 +44,7 @@ public interface IndexingServiceClient
 
   int getTotalWorkerCapacity();
 
-  String runTask(Object taskObject);
+  String runTask(String taskId, Object taskObject);
 
   String cancelTask(String taskId);
 

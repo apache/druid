@@ -67,7 +67,8 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   @Override
   public void killUnusedSegments(String dataSource, Interval interval)
   {
-    runTask(new ClientKillUnusedSegmentsTaskQuery(dataSource, interval));
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(null, dataSource, interval);
+    runTask(taskQuery.getId(), taskQuery);
   }
 
   @Override
@@ -89,18 +90,18 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
-    return runTask(
-        new ClientCompactionTaskQuery(
-            dataSource,
-            new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
-            tuningConfig,
-            context
-        )
+    final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
+        null,
+        dataSource,
+        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
+        tuningConfig,
+        context
     );
+    return runTask(taskQuery.getId(), taskQuery);
   }
 
   @Override
-  public String runTask(Object taskObject)
+  public String runTask(String taskId, Object taskObject)
   {
     try {
       // Warning, magic: here we may serialize ClientTaskQuery objects, but OverlordResource.taskPost() deserializes
@@ -114,11 +115,11 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
         if (!Strings.isNullOrEmpty(response.getContent())) {
           throw new ISE(
               "Failed to post task[%s] with error[%s].",
-              taskObject,
+              taskId,
               response.getContent()
           );
         } else {
-          throw new ISE("Failed to post task[%s]. Please check overlord log", taskObject);
+          throw new ISE("Failed to post task[%s]. Please check overlord log", taskId);
         }
       }
 
@@ -126,8 +127,14 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           response.getContent(),
           JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
-      final String taskId = (String) resultMap.get("task");
-      return Preconditions.checkNotNull(taskId, "Null task id for task[%s]", taskObject);
+      final String returnedTaskId = (String) resultMap.get("task");
+      Preconditions.checkState(
+          taskId.equals(returnedTaskId),
+          "Got a different taskId[%s]. Expected taskId[%s]",
+          returnedTaskId,
+          taskId
+      );
+      return taskId;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

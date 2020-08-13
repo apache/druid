@@ -39,7 +39,6 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
-import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -73,7 +72,6 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
@@ -769,7 +767,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private static void publishSegments(TaskToolbox toolbox, Map<String, PushedSegmentsReport> reportsMap)
       throws IOException
   {
-    final UsedSegmentChecker usedSegmentChecker = new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient());
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
     reportsMap
@@ -788,18 +785,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
     } else {
-      LOG.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
-      final Set<SegmentIdWithShardSpec> segmentsIdentifiers = reportsMap
-          .values()
-          .stream()
-          .flatMap(report -> report.getNewSegments().stream())
-          .map(SegmentIdWithShardSpec::fromDataSegment)
-          .collect(Collectors.toSet());
-      if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers).equals(newSegments)) {
-        LOG.info("Our segments really do exist, awaiting handoff.");
-      } else {
-        throw new ISE("Failed to publish segments[%s]", newSegments);
-      }
+      throw new ISE("Failed to publish segments", newSegments);
     }
   }
 

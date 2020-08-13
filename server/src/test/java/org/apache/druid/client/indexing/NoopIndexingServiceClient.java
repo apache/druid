@@ -62,7 +62,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public String runTask(Object taskObject)
+  public String runTask(String taskId, Object taskObject)
   {
     return null;
   }

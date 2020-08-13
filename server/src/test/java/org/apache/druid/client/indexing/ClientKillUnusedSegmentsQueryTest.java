@@ -38,7 +38,7 @@ public class ClientKillUnusedSegmentsQueryTest
   @Before
   public void setUp()
   {
-    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery(DATA_SOURCE, INTERVAL);
+    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery(null, DATA_SOURCE, INTERVAL);
   }
 
   @After

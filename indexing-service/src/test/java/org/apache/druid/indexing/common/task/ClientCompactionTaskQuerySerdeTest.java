@@ -67,6 +67,7 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
+        null,
         "datasource",
         new ClientCompactionIOConfig(
             new ClientCompactionIntervalSpec(

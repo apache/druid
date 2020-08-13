@@ -21,7 +21,10 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.utils.IdUtils;
 import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
 
 /**
  * Client representation of org.apache.druid.indexing.common.task.KillUnusedSegmentsTask. JSON searialization
@@ -30,24 +33,35 @@ import org.joda.time.Interval;
  */
 public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
 {
+  static final String TYPE = "kill";
+
+  private final String id;
   private final String dataSource;
   private final Interval interval;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
+      @JsonProperty("id") @Nullable String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )
   {
+    this.id = id == null ? IdUtils.newTaskId(TYPE, dataSource, interval) : id;
     this.dataSource = dataSource;
     this.interval = interval;
+  }
+
+  @Override
+  public String getId()
+  {
+    return id;
   }
 
   @JsonProperty
   @Override
   public String getType()
   {
-    return "kill";
+    return TYPE;
   }
 
   @JsonProperty

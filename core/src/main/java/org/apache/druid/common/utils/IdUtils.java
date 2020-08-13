@@ -22,8 +22,13 @@ package org.apache.druid.common.utils;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,5 +72,21 @@ public class IdUtils
   public static String getRandomIdWithPrefix(String prefix)
   {
     return UNDERSCORE_JOINER.join(prefix, IdUtils.getRandomId());
+  }
+
+  public static String newTaskId(final String typeName, String dataSource, @Nullable Interval interval)
+  {
+    final List<String> objects = new ArrayList<>();
+    final String suffix = getRandomId();
+    objects.add(typeName);
+    objects.add(dataSource);
+    objects.add(suffix);
+    if (interval != null) {
+      objects.add(interval.getStart().toString());
+      objects.add(interval.getEnd().toString());
+    }
+    objects.add(DateTimes.nowUtc().toString());
+
+    return String.join("_", objects);
   }
 }
