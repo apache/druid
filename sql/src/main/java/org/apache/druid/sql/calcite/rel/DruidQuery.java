@@ -995,6 +995,7 @@ public class DruidQuery
         getVirtualColumns(true),
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
         0,
+        0,
         scanLimit,
         order,
         filtration.getDimFilter(),

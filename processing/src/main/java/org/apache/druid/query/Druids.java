@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
+ *
  */
 public class Druids
 {
@@ -789,6 +790,7 @@ public class Druids
     private Map<String, Object> context;
     private ScanQuery.ResultFormat resultFormat;
     private int batchSize;
+    private long offset;
     private long limit;
     private DimFilter dimFilter;
     private List<String> columns;
@@ -803,6 +805,7 @@ public class Druids
       context = null;
       resultFormat = null;
       batchSize = 0;
+      offset = 0;
       limit = 0;
       dimFilter = null;
       columns = new ArrayList<>();
@@ -818,6 +821,7 @@ public class Druids
           virtualColumns,
           resultFormat,
           batchSize,
+          offset,
           limit,
           order,
           dimFilter,
@@ -835,6 +839,7 @@ public class Druids
           .virtualColumns(query.getVirtualColumns())
           .resultFormat(query.getResultFormat())
           .batchSize(query.getBatchSize())
+          .offset(query.getScanRowsOffset())
           .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
@@ -887,6 +892,12 @@ public class Druids
     public ScanQueryBuilder batchSize(int b)
     {
       batchSize = b;
+      return this;
+    }
+
+    public ScanQueryBuilder offset(long o)
+    {
+      offset = o;
       return this;
     }
 

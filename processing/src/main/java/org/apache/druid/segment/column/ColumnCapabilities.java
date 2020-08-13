@@ -81,6 +81,12 @@ public interface ColumnCapabilities
    */
   boolean isFilterable();
 
+  /**
+   * Does this column contain null values? If so, callers, especially for primitive numeric columns, will need to check
+   * for null value rows and act accordingly
+   */
+  Capable hasNulls();
+
   enum Capable
   {
     FALSE,
@@ -167,14 +173,14 @@ public interface ColumnCapabilities
     boolean dictionaryEncoded();
 
     /**
-     * If {@link ColumnCapabilities#areDictionaryValuesSorted()} ()} is {@link Capable#UNKNOWN}, define if it should be treated
-     * as true or false.
+     * If {@link ColumnCapabilities#areDictionaryValuesSorted()} ()} is {@link Capable#UNKNOWN}, define if it should be
+     * treated as true or false.
      */
     boolean dictionaryValuesSorted();
 
     /**
-     * If {@link ColumnCapabilities#areDictionaryValuesUnique()} ()} is {@link Capable#UNKNOWN}, define if it should be treated
-     * as true or false.
+     * If {@link ColumnCapabilities#areDictionaryValuesUnique()} ()} is {@link Capable#UNKNOWN}, define if it should be
+     * treated as true or false.
      */
     boolean dictionaryValuesUnique();
 
@@ -183,5 +189,11 @@ public interface ColumnCapabilities
      * as true or false.
      */
     boolean multipleValues();
+
+    /**
+     * If {@link ColumnCapabilities#hasNulls()} is {@link Capable#UNKNOWN}, define if it should be treated as true
+     * or false
+     */
+    boolean hasNulls();
   }
 }
