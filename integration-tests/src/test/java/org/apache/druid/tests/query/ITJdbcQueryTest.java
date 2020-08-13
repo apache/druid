@@ -107,7 +107,7 @@ public class ITJdbcQueryTest
         Assert.assertEquals(ImmutableList.of("druid"), catalogs);
 
         Set<String> schemas = new HashSet<>();
-        ResultSet schemasMetadata = metadata.getSchemas("druid",null);
+        ResultSet schemasMetadata = metadata.getSchemas("druid", null);
         while (schemasMetadata.next()) {
           final String schema = schemasMetadata.getString(1);
           schemas.add(schema);
@@ -117,7 +117,7 @@ public class ITJdbcQueryTest
         Assert.assertTrue(schemas.containsAll(ImmutableList.of("INFORMATION_SCHEMA", "druid", "lookup", "sys")));
 
         Set<String> druidTables = new HashSet<>();
-        ResultSet tablesMetadata = metadata.getTables("druid", "druid",null, null);
+        ResultSet tablesMetadata = metadata.getTables("druid", "druid", null, null);
         while (tablesMetadata.next()) {
           final String table = tablesMetadata.getString(3);
           druidTables.add(table);
@@ -125,16 +125,16 @@ public class ITJdbcQueryTest
         LOG.info("'druid' schema tables %s", druidTables);
         // maybe more tables than this, but at least should have these
         Assert.assertTrue(
-            druidTables.containsAll(ImmutableList.of("twitterstream", "wikipedia", "wikipedia_editstream"))
+            druidTables.containsAll(ImmutableList.of("twitterstream", "wikipedia", WIKIPEDIA_DATA_SOURCE))
         );
 
         Set<String> wikiColumns = new HashSet<>();
-        ResultSet columnsMetadata = metadata.getColumns("druid", "druid","wikipedia_editstream", null);
+        ResultSet columnsMetadata = metadata.getColumns("druid", "druid", WIKIPEDIA_DATA_SOURCE, null);
         while (columnsMetadata.next()) {
           final String column = columnsMetadata.getString(4);
           wikiColumns.add(column);
         }
-        LOG.info("'wikipedia_editstream' columns %s", wikiColumns);
+        LOG.info("'%s' columns %s", WIKIPEDIA_DATA_SOURCE, wikiColumns);
         // a lot more columns than this, but at least should have these
         Assert.assertTrue(
             wikiColumns.containsAll(ImmutableList.of("added", "city", "delta", "language"))
