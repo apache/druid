@@ -656,7 +656,7 @@ public class BoundFilterTest extends BaseFilterTest
             null,
             StringComparators.NUMERIC
         ),
-        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "2", "7") : ImmutableList.of("0")
+        canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2", "7") : ImmutableList.of("0")
     );
 
     assertFilterMatches(
@@ -670,7 +670,7 @@ public class BoundFilterTest extends BaseFilterTest
             null,
             StringComparators.NUMERIC
         ),
-        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "4", "6") : ImmutableList.of("0")
+        canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "4", "6") : ImmutableList.of("0")
     );
 
     assertFilterMatches(
@@ -684,7 +684,9 @@ public class BoundFilterTest extends BaseFilterTest
             null,
             StringComparators.NUMERIC
         ),
-        NullHandling.replaceWithDefault() ? ImmutableList.of("0", "3", "7") : ImmutableList.of("0")
+        NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
+        ? ImmutableList.of("0", "3", "7")
+        : ImmutableList.of("0")
     );
   }
 
