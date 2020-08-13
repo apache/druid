@@ -928,15 +928,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type)
   {
-    if (type == ValueType.STRING) {
-      // we start out as not having multiple values, but this might change as we encounter them
-      return new ColumnCapabilitiesImpl().setType(type)
-                                         .setHasBitmapIndexes(true)
-                                         .setDictionaryEncoded(true)
-                                         .setDictionaryValuesUnique(true)
-                                         .setDictionaryValuesSorted(false);
-    } else {
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+    switch (type) {
+      case STRING:
+        // we start out as not having multiple values, but this might change as we encounter them
+        return new ColumnCapabilitiesImpl().setType(type)
+                                           .setHasBitmapIndexes(true)
+                                           .setDictionaryEncoded(true)
+                                           .setDictionaryValuesUnique(true)
+                                           .setDictionaryValuesSorted(false);
+      case COMPLEX:
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true);
+      default:
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }
   }
 
@@ -1145,7 +1148,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       } else {
         // in an ideal world complex type reports its actual column capabilities...
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
-                                             .setHasNulls(ColumnCapabilities.Capable.UNKNOWN);
+                                             .setHasNulls(ColumnCapabilities.Capable.TRUE);
         this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
       }
     }

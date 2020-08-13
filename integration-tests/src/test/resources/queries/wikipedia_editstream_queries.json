@@ -1409,7 +1409,7 @@
                         "minValue":"",
                         "maxValue":"mmx._unknown",
                         "errorMessage":null,
-                        "nullable":false
+                        "hasNulls":false
                     },
                     "language":{
                         "type":"STRING",
@@ -1419,7 +1419,7 @@
                         "minValue":"ar",
                         "maxValue":"zh",
                         "errorMessage":null,
-                        "nullable":false
+                        "hasNulls":false
                     }
                 },
                 "size":0,

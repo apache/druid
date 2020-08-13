@@ -603,7 +603,7 @@
                         "minValue":"No",
                         "maxValue":"Yes",
                         "errorMessage":null,
-                        "nullable":false
+                        "hasNulls":false
                     }
                 },
                 "size":0,
@@ -625,7 +625,7 @@
                         "minValue":"No",
                         "maxValue":"Yes",
                         "errorMessage":null,
-                        "nullable":false
+                        "hasNulls":false
                     }
                 },
                 "size":0,
@@ -647,7 +647,7 @@
                         "minValue":"No",
                         "maxValue":"Yes",
                         "errorMessage":null,
-                        "nullable":false
+                        "hasNulls":false
                     }
                 },
                 "size":0,

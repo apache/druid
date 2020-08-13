@@ -462,7 +462,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 "hyperUnique",
                 false,
-                false,
+                true,
                 0,
                 null,
                 null,
