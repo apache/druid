@@ -120,7 +120,12 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private final DateTime universalTimestamp;
 
-  private final boolean canPushDownLimit;
+  private final boolean canDoLimitPushDown;
+
+  /**
+   * A flag to force limit pushdown to historicals.
+   * Lazily initialized when calling {@link #validateAndGetForceLimitPushDown()}.
+   */
   @Nullable
   private Boolean forceLimitPushDown;
 
@@ -221,7 +226,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     this.postProcessingFn = postProcessingFn != null ? postProcessingFn : makePostProcessingFn();
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
-    this.canPushDownLimit = canPushDown();
+    this.canDoLimitPushDown = canDoLimitPushDown(
+        this.limitSpec,
+        this.havingSpec,
+        this.subtotalsSpec
+    );
   }
 
   @Nullable
@@ -415,7 +424,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     if (forceLimitPushDown == null) {
       forceLimitPushDown = validateAndGetForceLimitPushDown();
     }
-    return forceLimitPushDown || canPushDownLimit;
+    return forceLimitPushDown || canDoLimitPushDown;
   }
 
   @JsonIgnore
@@ -480,9 +489,13 @@ public class GroupByQuery extends BaseQuery<ResultRow>
                   .build();
   }
 
-  private boolean canPushDown()
+  private boolean canDoLimitPushDown(
+      @Nullable LimitSpec limitSpec,
+      @Nullable HavingSpec havingSpec,
+      @Nullable List<List<String>> subtotalsSpec
+  )
   {
-    if (subtotalsSpec != null) {
+    if (subtotalsSpec != null && !subtotalsSpec.isEmpty()) {
       return false;
     }
 
