@@ -103,7 +103,7 @@ public class ITJdbcQueryTest
           final String catalog = catalogsMetadata.getString(1);
           catalogs.add(catalog);
         }
-        LOG.info("Catalogs[%s]", catalogs);
+        LOG.info("catalogs %s", catalogs);
         Assert.assertEquals(ImmutableList.of("druid"), catalogs);
 
         Set<String> schemas = new HashSet<>();
@@ -112,7 +112,8 @@ public class ITJdbcQueryTest
           final String schema = schemasMetadata.getString(1);
           schemas.add(schema);
         }
-        LOG.info("Schemas[%s]", schemas);
+        LOG.info("'druid' catalog schemas %s", schemas);
+        // maybe more schemas than this, but at least should have these
         Assert.assertTrue(schemas.containsAll(ImmutableList.of("INFORMATION_SCHEMA", "druid", "lookup", "sys")));
 
         Set<String> druidTables = new HashSet<>();
@@ -121,9 +122,22 @@ public class ITJdbcQueryTest
           final String table = tablesMetadata.getString(3);
           druidTables.add(table);
         }
-        LOG.info("Tables[druid.%s]", druidTables);
+        LOG.info("'druid' schema tables %s", druidTables);
+        // maybe more tables than this, but at least should have these
         Assert.assertTrue(
             druidTables.containsAll(ImmutableList.of("twitterstream", "wikipedia", "wikipedia_editstream"))
+        );
+
+        Set<String> wikiColumns = new HashSet<>();
+        ResultSet columnsMetadata = metadata.getColumns("druid", "druid","wikipedia_editstream", null);
+        while (columnsMetadata.next()) {
+          final String column = columnsMetadata.getString(4);
+          wikiColumns.add(column);
+        }
+        LOG.info("'wikipedia_editstream' columns %s", wikiColumns);
+        // a lot more columns than this, but at least should have these
+        Assert.assertTrue(
+            wikiColumns.containsAll(ImmutableList.of("added", "city", "delta", "language"))
         );
       }
       catch (SQLException throwables) {
