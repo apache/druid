@@ -30,6 +30,18 @@ function parseHjson(str: string) {
   return Hjson.parse(str);
 }
 
+export function extractRowColumnFromHjsonError(
+  error: Error,
+): { row: number; column: number } | undefined {
+  // Message would be something like:
+  // `Found '}' where a key name was expected at line 26,7`
+  // Use this to extract the row and column (subtract 1) and jump the cursor to the right place on click
+  const m = error.message.match(/line (\d+),(\d+)/);
+  if (!m) return;
+
+  return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
+}
+
 function stringifyJson(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
@@ -134,13 +146,10 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           onClick={() => {
             if (!aceEditor.current || !internalValueError) return;
 
-            // Message would be something like:
-            // `Found '}' where a key name was expected at line 26,7`
-            // Use this to extract the row and column (subtract 1) and jump the cursor to the right place on click
-            const m = internalValueError.message.match(/line (\d+),(\d+)/);
-            if (!m) return;
+            const rc = extractRowColumnFromHjsonError(internalValueError);
+            if (!rc) return;
 
-            aceEditor.current.getSelection().moveCursorTo(Number(m[1]) - 1, Number(m[2]) - 1);
+            aceEditor.current.getSelection().moveCursorTo(rc.row, rc.column);
             aceEditor.current.focus(); // Grab the focus also
           }}
         >
