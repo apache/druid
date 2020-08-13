@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-import classNames = require('classnames');
+import { Editor } from 'brace';
+import classNames from 'classnames';
 import Hjson from 'hjson';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AceEditor from 'react-ace';
 
 import './json-input.scss';
@@ -37,6 +38,16 @@ function stringifyJson(item: any): string {
   }
 }
 
+function deepEqual(a: any, b: any): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+interface InternalValue {
+  value?: any;
+  error?: Error;
+  stringified: string;
+}
+
 interface JsonInputProps {
   value: any;
   onChange: (value: any) => void;
@@ -48,52 +59,90 @@ interface JsonInputProps {
 
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   const { onChange, placeholder, focus, width, height, value } = props;
-  const stringifiedValue = stringifyJson(value);
-  const [stringValue, setStringValue] = useState(stringifiedValue);
-  const [blurred, setBlurred] = useState(false);
+  const [internalValue, setInternalValue] = useState<InternalValue>(() => ({
+    value,
+    stringified: stringifyJson(value),
+  }));
+  const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
+  const aceEditor = useRef<Editor | undefined>();
 
-  let parsedValue: any;
-  try {
-    parsedValue = parseHjson(stringValue);
-  } catch {}
-  if (typeof parsedValue !== 'object') parsedValue = undefined;
+  useEffect(() => {
+    if (!deepEqual(value, internalValue.value)) {
+      console.log('FORCE CHANGE!');
+      setInternalValue({
+        value,
+        stringified: stringifyJson(value),
+      });
+    }
+  }, [value]);
 
-  if (parsedValue !== undefined && stringifyJson(parsedValue) !== stringifiedValue) {
-    setStringValue(stringifiedValue);
-  }
-
+  const internalValueError = internalValue.error;
   return (
-    <AceEditor
-      className={classNames('json-input', { invalid: parsedValue === undefined && blurred })}
-      mode="hjson"
-      theme="solarized_dark"
-      onChange={(inputJson: string) => {
-        try {
-          const value = parseHjson(inputJson);
-          onChange(value);
-        } catch {}
-        setStringValue(inputJson);
-      }}
-      onFocus={() => setBlurred(false)}
-      onBlur={() => setBlurred(true)}
-      focus={focus}
-      fontSize={12}
-      width={width || '100%'}
-      height={height || '8vh'}
-      showPrintMargin={false}
-      showGutter={false}
-      value={stringValue}
-      placeholder={placeholder}
-      editorProps={{
-        $blockScrolling: Infinity,
-      }}
-      setOptions={{
-        enableBasicAutocompletion: false,
-        enableLiveAutocompletion: false,
-        showLineNumbers: false,
-        tabSize: 2,
-      }}
-      style={{}}
-    />
+    <div className={classNames('json-input', { invalid: showErrorIfNeeded && internalValueError })}>
+      <AceEditor
+        mode="hjson"
+        theme="solarized_dark"
+        onChange={(inputJson: string) => {
+          let value: any;
+          let error: Error | undefined;
+          try {
+            value = parseHjson(inputJson);
+          } catch (e) {
+            error = e;
+          }
+
+          setInternalValue({
+            value,
+            error,
+            stringified: inputJson,
+          });
+
+          if (!error) {
+            onChange(value);
+          }
+
+          if (showErrorIfNeeded) {
+            setShowErrorIfNeeded(false);
+          }
+        }}
+        onBlur={() => setShowErrorIfNeeded(true)}
+        focus={focus}
+        fontSize={12}
+        width={width || '100%'}
+        height={height || '8vh'}
+        showPrintMargin={false}
+        showGutter={false}
+        value={internalValue.stringified}
+        placeholder={placeholder}
+        editorProps={{
+          $blockScrolling: Infinity,
+        }}
+        setOptions={{
+          enableBasicAutocompletion: false,
+          enableLiveAutocompletion: false,
+          showLineNumbers: false,
+          tabSize: 2,
+        }}
+        style={{}}
+        onLoad={(editor: any) => {
+          aceEditor.current = editor;
+        }}
+      />
+      {showErrorIfNeeded && internalValueError && (
+        <div
+          className="json-error"
+          onClick={() => {
+            if (!aceEditor.current || !internalValueError) return;
+            const m = internalValueError.message.match(/line (\d+),(\d+)/);
+            if (!m) return;
+
+            aceEditor.current.getSelection().moveCursorTo(Number(m[1]) - 1, Number(m[2]) - 1);
+            aceEditor.current.focus(); // Grab the focus also
+          }}
+        >
+          {internalValueError.message}
+        </div>
+      )}
+    </div>
   );
 });
