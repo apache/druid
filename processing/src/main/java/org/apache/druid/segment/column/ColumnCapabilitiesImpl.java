@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
@@ -32,6 +33,39 @@ import javax.annotation.Nullable;
  */
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
+  private static final CoercionLogic ALL_FALSE = new CoercionLogic()
+  {
+    @Override
+    public boolean dictionaryEncoded()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean dictionaryValuesSorted()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean dictionaryValuesUnique()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean multipleValues()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean hasNulls()
+    {
+      return false;
+    }
+  };
+
   public static ColumnCapabilitiesImpl copyOf(@Nullable final ColumnCapabilities other)
   {
     final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
@@ -43,6 +77,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       capabilities.hasMultipleValues = other.hasMultipleValues();
       capabilities.dictionaryValuesSorted = other.areDictionaryValuesSorted();
       capabilities.dictionaryValuesUnique = other.areDictionaryValuesUnique();
+      capabilities.hasNulls = other.hasNulls();
       capabilities.filterable = other.isFilterable();
     }
     return capabilities;
@@ -64,6 +99,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     copy.dictionaryValuesSorted = copy.dictionaryValuesSorted.coerceUnknownToBoolean(coerce.dictionaryValuesSorted());
     copy.dictionaryValuesUnique = copy.dictionaryValuesUnique.coerceUnknownToBoolean(coerce.dictionaryValuesUnique());
     copy.hasMultipleValues = copy.hasMultipleValues.coerceUnknownToBoolean(coerce.multipleValues());
+    copy.hasNulls = copy.hasNulls.coerceUnknownToBoolean(coerce.hasNulls());
     return copy;
   }
 
@@ -97,6 +133,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     merged.hasMultipleValues = merged.hasMultipleValues.or(otherSnapshot.hasMultipleValues());
     merged.dictionaryValuesSorted = merged.dictionaryValuesSorted.and(otherSnapshot.areDictionaryValuesSorted());
     merged.dictionaryValuesUnique = merged.dictionaryValuesUnique.and(otherSnapshot.areDictionaryValuesUnique());
+    merged.hasNulls = merged.hasNulls.or(other.hasNulls());
     merged.hasInvertedIndexes |= otherSnapshot.hasBitmapIndexes();
     merged.hasSpatialIndexes |= otherSnapshot.hasSpatialIndexes();
     merged.filterable &= otherSnapshot.isFilterable();
@@ -104,19 +141,31 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return merged;
   }
 
+  /**
+   * Creates a {@link ColumnCapabilitiesImpl} where all {@link ColumnCapabilities.Capable} that default to unknown
+   * instead are coerced to true or false
+   */
+  public static ColumnCapabilitiesImpl createDefault()
+  {
+    return ColumnCapabilitiesImpl.snapshot(new ColumnCapabilitiesImpl(), ALL_FALSE);
+  }
 
   /**
    * Create a no frills, simple column with {@link ValueType} set and everything else false
    */
   public static ColumnCapabilitiesImpl createSimpleNumericColumnCapabilities(ValueType valueType)
   {
-    return new ColumnCapabilitiesImpl().setType(valueType)
-                                       .setHasMultipleValues(false)
-                                       .setHasBitmapIndexes(false)
-                                       .setDictionaryEncoded(false)
-                                       .setDictionaryValuesSorted(false)
-                                       .setDictionaryValuesUnique(false)
-                                       .setHasSpatialIndexes(false);
+    ColumnCapabilitiesImpl builder = new ColumnCapabilitiesImpl().setType(valueType)
+                                                                 .setHasMultipleValues(false)
+                                                                 .setHasBitmapIndexes(false)
+                                                                 .setDictionaryEncoded(false)
+                                                                 .setDictionaryValuesSorted(false)
+                                                                 .setDictionaryValuesUnique(false)
+                                                                 .setHasSpatialIndexes(false);
+    if (NullHandling.replaceWithDefault()) {
+      builder.setHasNulls(false);
+    }
+    return builder;
   }
 
   @Nullable
@@ -134,6 +183,8 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   private Capable dictionaryValuesUnique = Capable.UNKNOWN;
   @JsonIgnore
   private boolean filterable;
+  @JsonIgnore
+  private Capable hasNulls = Capable.UNKNOWN;
 
   @Override
   @JsonProperty
@@ -222,6 +273,24 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
     this.hasMultipleValues = Capable.of(hasMultipleValues);
+    return this;
+  }
+
+  @Override
+  public Capable hasNulls()
+  {
+    return hasNulls;
+  }
+
+  public ColumnCapabilitiesImpl setHasNulls(boolean hasNulls)
+  {
+    this.hasNulls = Capable.of(hasNulls);
+    return this;
+  }
+
+  public ColumnCapabilitiesImpl setHasNulls(Capable hasNulls)
+  {
+    this.hasNulls = hasNulls;
     return this;
   }
 

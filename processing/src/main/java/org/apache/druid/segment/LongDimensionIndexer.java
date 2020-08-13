@@ -41,10 +41,10 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
   public static final Comparator LONG_COMPARATOR = Comparators.<Long>naturalNullsFirst();
 
-  private final ColumnCapabilitiesImpl capabilities =
-      ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+  private volatile boolean hasNulls = false;
 
 
+  @Nullable
   @Override
   public Long processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
@@ -52,13 +52,17 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
 
-    return DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
+    Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
+    if (l == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return l;
   }
 
   @Override
   public void setSparseIndexed()
   {
-    // no-op, long columns do not have a dictionary to track null values
+    hasNulls = NullHandling.sqlCompatible();
   }
 
   @Override
@@ -100,7 +104,11 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   @Override
   public ColumnCapabilities getColumnCapabilities()
   {
-    return capabilities;
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
+    if (hasNulls) {
+      builder.setHasNulls(hasNulls);
+    }
+    return builder;
   }
 
   @Override
@@ -127,7 +135,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
       public boolean isNull()
       {
         final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return hasNulls && (dimIndex >= dims.length || dims[dimIndex] == null);
       }
 
       @Override
