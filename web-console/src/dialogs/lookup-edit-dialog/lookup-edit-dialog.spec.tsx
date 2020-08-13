@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
 import { isDisabled, LookupEditDialog } from './lookup-edit-dialog';
 
 describe('lookup edit dialog', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog = (
+    const lookupEditDialog = shallow(
       <LookupEditDialog
         onClose={() => {}}
         onSubmit={() => {}}
@@ -34,11 +34,10 @@ describe('lookup edit dialog', () => {
         lookupSpec={{ type: 'map', map: {} }}
         isEdit={false}
         allLookupTiers={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']}
-      />
+      />,
     );
 
-    render(lookupEditDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
+    expect(lookupEditDialog).toMatchSnapshot();
   });
 });
 
