@@ -21,6 +21,7 @@ package org.apache.druid.tests.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
@@ -53,6 +54,8 @@ public class ITJdbcQueryTest
   private static final Logger LOG = new Logger(ITJdbcQueryTest.class);
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String CONNECTION_TEMPLATE = "jdbc:avatica:remote:url=%s/druid/v2/sql/avatica/";
+  private static final String TLS_CONNECTION_TEMPLATE =
+      "jdbc:avatica:remote:url=%s/druid/v2/sql/avatica/;truststore=%s;truststore_password=%s";
 
   private static final String QUERY_TEMPLATE =
       "SELECT \"user\", SUM(\"added\"), COUNT(*)" +
@@ -67,10 +70,13 @@ public class ITJdbcQueryTest
   private Properties connectionProperties;
 
   @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
+  private IntegrationTestingConfig config;
 
   @Inject
-  private IntegrationTestingConfig config;
+  SSLClientConfig sslConfig;
+
+  @Inject
+  private CoordinatorResourceTestClient coordinatorClient;
 
   @BeforeMethod
   public void before()
@@ -80,7 +86,19 @@ public class ITJdbcQueryTest
     connectionProperties.setProperty("password", "priest");
     connections = new String[]{
         StringUtils.format(CONNECTION_TEMPLATE, config.getRouterUrl()),
-        StringUtils.format(CONNECTION_TEMPLATE, config.getBrokerUrl())
+        StringUtils.format(CONNECTION_TEMPLATE, config.getBrokerUrl()),
+        StringUtils.format(
+            TLS_CONNECTION_TEMPLATE,
+            config.getRouterTLSUrl(),
+            sslConfig.getTrustStorePath(),
+            sslConfig.getTrustStorePasswordProvider().getPassword()
+        ),
+        StringUtils.format(
+            TLS_CONNECTION_TEMPLATE,
+            config.getBrokerTLSUrl(),
+            sslConfig.getTrustStorePath(),
+            sslConfig.getTrustStorePasswordProvider().getPassword()
+        )
     };
     // ensure that wikipedia segments are loaded completely
     ITRetryUtil.retryUntilTrue(
