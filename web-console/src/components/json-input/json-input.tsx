@@ -38,6 +38,7 @@ function stringifyJson(item: any): string {
   }
 }
 
+// Not the best way to check for deep equality but good enough for what we need
 function deepEqual(a: any, b: any): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -68,7 +69,6 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
 
   useEffect(() => {
     if (!deepEqual(value, internalValue.value)) {
-      console.log('FORCE CHANGE!');
       setInternalValue({
         value,
         stringified: stringifyJson(value),
@@ -133,6 +133,10 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           className="json-error"
           onClick={() => {
             if (!aceEditor.current || !internalValueError) return;
+
+            // Message would be something like:
+            // `Found '}' where a key name was expected at line 26,7`
+            // Use this to extract the row and column (subtract 1) and jump the cursor to the right place on click
             const m = internalValueError.message.match(/line (\d+),(\d+)/);
             if (!m) return;
 
