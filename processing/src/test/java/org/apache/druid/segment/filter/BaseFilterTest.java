@@ -163,7 +163,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       .build();
 
   static InputRow makeDefaultSchemaRow(
-      @Nullable Object ... elements
+      @Nullable Object... elements
   )
   {
     return makeSchemaRow(DEFAULT_PARSER, DEFAULT_ROW_SIGNATURE, elements);
@@ -173,7 +173,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   static InputRow makeSchemaRow(
       final InputRowParser<Map<String, Object>> parser,
       final RowSignature signature,
-      @Nullable Object ... elements
+      @Nullable Object... elements
   )
   {
     Preconditions.checkArgument(signature.size() == elements.length);
@@ -181,7 +181,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     for (int i = 0; i < signature.size(); i++) {
       final String columnName = signature.getColumnName(i);
       final Object value = elements[i];
-        mapRow.put(columnName, value);
+      mapRow.put(columnName, value);
     }
     return parser.parseBatch(mapRow).get(0);
   }

@@ -362,8 +362,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
     Assert.assertFalse(caps.hasMultipleValues().isUnknown());
-    // we don't know
-    Assert.assertTrue(caps.hasNulls().isUnknown());
+    Assert.assertTrue(caps.hasNulls().isTrue());
   }
 
   private void assertNonStringColumnCapabilities(ColumnCapabilities caps, ValueType valueType)
