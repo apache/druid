@@ -194,7 +194,7 @@ public class TopNQueryEngine
     }
     if (capabilities != null && capabilities.getType() == ValueType.STRING) {
       // string columns must use the on heap algorithm unless they have the following capabilites
-      return capabilities.isDictionaryEncoded() && capabilities.areDictionaryValuesUnique().isTrue();
+      return capabilities.isDictionaryEncoded().isTrue() && capabilities.areDictionaryValuesUnique().isTrue();
     } else {
       // non-strings are not eligible to use the pooled algorithm, and should use a heap algorithm
       return false;

@@ -227,7 +227,7 @@ public class SegmentAnalyzer
         min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
         max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
       }
-    } else if (capabilities.isDictionaryEncoded()) {
+    } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
       DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) columnHolder.getColumn();
       cardinality = theColumn.getCardinality();
