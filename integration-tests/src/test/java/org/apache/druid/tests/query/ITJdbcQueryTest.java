@@ -55,7 +55,7 @@ public class ITJdbcQueryTest
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
   private static final String CONNECTION_TEMPLATE = "jdbc:avatica:remote:url=%s/druid/v2/sql/avatica/";
   private static final String TLS_CONNECTION_TEMPLATE =
-      "jdbc:avatica:remote:url=%s/druid/v2/sql/avatica/;truststore=%s;truststore_password=%s";
+      "jdbc:avatica:remote:url=%s/druid/v2/sql/avatica/;truststore=%s;truststore_password=%s;keystore=%s;keystore_password=%s;key_password=%s";
 
   private static final String QUERY_TEMPLATE =
       "SELECT \"user\", SUM(\"added\"), COUNT(*)" +
@@ -91,13 +91,19 @@ public class ITJdbcQueryTest
             TLS_CONNECTION_TEMPLATE,
             config.getRouterTLSUrl(),
             sslConfig.getTrustStorePath(),
-            sslConfig.getTrustStorePasswordProvider().getPassword()
+            sslConfig.getTrustStorePasswordProvider().getPassword(),
+            sslConfig.getKeyStorePath(),
+            sslConfig.getKeyStorePasswordProvider().getPassword(),
+            sslConfig.getKeyStorePasswordProvider().getPassword()
         ),
         StringUtils.format(
             TLS_CONNECTION_TEMPLATE,
             config.getBrokerTLSUrl(),
             sslConfig.getTrustStorePath(),
-            sslConfig.getTrustStorePasswordProvider().getPassword()
+            sslConfig.getTrustStorePasswordProvider().getPassword(),
+            sslConfig.getKeyStorePath(),
+            sslConfig.getKeyStorePasswordProvider().getPassword(),
+            sslConfig.getKeyStorePasswordProvider().getPassword()
         )
     };
     // ensure that wikipedia segments are loaded completely
