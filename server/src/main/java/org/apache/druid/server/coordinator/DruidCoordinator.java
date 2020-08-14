@@ -617,21 +617,31 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
-    return ImmutableList.of(
-        new LogUsedSegments(),
+    List<CoordinatorDuty> duties = new ArrayList<>();
+    if (config.isLogUsedSegmentsDutyEnabled()) {
+      duties.add(new LogUsedSegments());
+    }
+    duties.addAll(ImmutableList.of(
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(DruidCoordinator.this),
         new UnloadUnusedSegments(),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
         new BalanceSegments(DruidCoordinator.this),
         new EmitClusterStatsAndMetrics(DruidCoordinator.this)
+    ));
+    log.debug(
+        "Done making historical management duties %s",
+        duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
+    return duties;
   }
 
   private List<CoordinatorDuty> makeIndexingServiceDuties()
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
-    duties.add(new LogUsedSegments());
+    if (config.isLogUsedSegmentsDutyEnabled()) {
+      duties.add(new LogUsedSegments());
+    }
     duties.addAll(makeCompactSegmentsDuty());
     duties.addAll(indexingServiceDuties);
 

@@ -32,6 +32,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
+  private final boolean logUsedSegmentsDutyEnabled;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -41,7 +42,8 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorKillPeriod,
       Duration coordinatorKillDurationToRetain,
       int coordinatorKillMaxSegments,
-      Duration getLoadQueuePeonRepeatDelay
+      Duration getLoadQueuePeonRepeatDelay,
+      boolean logUsedSegmentsDutyEnabled
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -52,6 +54,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
+    this.logUsedSegmentsDutyEnabled = logUsedSegmentsDutyEnabled;
   }
 
   @Override
@@ -94,6 +97,12 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getLoadTimeoutDelay()
   {
     return loadTimeoutDelay == null ? super.getLoadTimeoutDelay() : loadTimeoutDelay;
+  }
+
+  @Override
+  public boolean isLogUsedSegmentsDutyEnabled()
+  {
+    return logUsedSegmentsDutyEnabled;
   }
 
   @Override
