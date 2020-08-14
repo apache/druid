@@ -667,7 +667,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test
-  public void testBalancerThreadNumber() throws InterruptedException
+  public void testBalancerThreadNumber()
   {
     DruidCoordinator c = EasyMock.createNiceMock(DruidCoordinator.class);
     CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
