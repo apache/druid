@@ -25,6 +25,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Client representation of org.apache.druid.indexing.common.task.KillUnusedSegmentsTask. JSON searialization
@@ -51,6 +52,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.interval = interval;
   }
 
+  @JsonProperty
   @Override
   public String getId()
   {
@@ -75,5 +77,26 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ClientKillUnusedSegmentsTaskQuery that = (ClientKillUnusedSegmentsTaskQuery) o;
+    return Objects.equals(id, that.id) &&
+           Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(interval, that.interval);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, dataSource, interval);
   }
 }

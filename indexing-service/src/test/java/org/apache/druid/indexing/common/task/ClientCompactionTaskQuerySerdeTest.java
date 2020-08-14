@@ -67,7 +67,7 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
-        null,
+        "id",
         "datasource",
         new ClientCompactionIOConfig(
             new ClientCompactionIntervalSpec(
@@ -97,6 +97,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final byte[] json = mapper.writeValueAsBytes(query);
     final CompactionTask task = (CompactionTask) mapper.readValue(json, Task.class);
 
+    Assert.assertEquals(query.getId(), task.getId());
     Assert.assertEquals(query.getDataSource(), task.getDataSource());
     Assert.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
     Assert.assertEquals(

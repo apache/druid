@@ -57,6 +57,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
     this.context = context;
   }
 
+  @JsonProperty
   @Override
   public String getId()
   {
