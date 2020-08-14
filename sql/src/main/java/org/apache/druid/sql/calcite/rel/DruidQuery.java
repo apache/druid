@@ -37,7 +37,6 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -53,8 +52,6 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
-import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
-import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
@@ -76,6 +73,7 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.OffsetLimit;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -88,6 +86,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -525,16 +524,11 @@ public class DruidQuery
     final Sort sort = Preconditions.checkNotNull(partialQuery.getSort(), "sort");
     final Project sortProject = partialQuery.getSortProject();
 
-    // Extract limit.
-    final Long limit = sort.fetch != null ? ((Number) RexLiteral.value(sort.fetch)).longValue() : null;
-    final List<OrderByColumnSpec> orderBys = new ArrayList<>(sort.getChildExps().size());
-
-    if (sort.offset != null) {
-      // Druid cannot currently handle LIMIT with OFFSET.
-      throw new CannotBuildQueryException(sort);
-    }
+    // Extract limit and offset.
+    final OffsetLimit offsetLimit = OffsetLimit.fromSort(sort);
 
     // Extract orderBy column specs.
+    final List<OrderByColumnSpec> orderBys = new ArrayList<>(sort.getChildExps().size());
     for (int sortKey = 0; sortKey < sort.getChildExps().size(); sortKey++) {
       final RexNode sortExpression = sort.getChildExps().get(sortKey);
       final RelFieldCollation collation = sort.getCollation().getFieldCollations().get(sortKey);
@@ -583,7 +577,7 @@ public class DruidQuery
       projection = Projection.postAggregation(sortProject, plannerContext, rowSignature, "s");
     }
 
-    return Sorting.create(orderBys, limit, projection);
+    return Sorting.create(orderBys, offsetLimit, projection);
   }
 
   /**
@@ -762,9 +756,20 @@ public class DruidQuery
           Iterables.getOnlyElement(grouping.getDimensions()).toDimensionSpec().getOutputName()
       );
       if (sorting != null) {
-        // If there is sorting, set timeseriesLimit to given value if less than Integer.Max_VALUE
-        if (sorting.isLimited()) {
-          timeseriesLimit = Ints.checkedCast(sorting.getLimit());
+        if (sorting.getOffsetLimit().hasOffset()) {
+          // Timeseries cannot handle offsets.
+          return null;
+        }
+
+        if (sorting.getOffsetLimit().hasLimit()) {
+          final long limit = sorting.getOffsetLimit().getLimit();
+
+          if (limit == 0) {
+            // Can't handle zero limit (the Timeseries query engine would treat it as unlimited).
+            return null;
+          }
+
+          timeseriesLimit = Ints.checkedCast(limit);
         }
 
         switch (sorting.getSortKind(dimensionExpression.getOutputName())) {
@@ -817,14 +822,18 @@ public class DruidQuery
   @Nullable
   public TopNQuery toTopNQuery()
   {
-    // Must have GROUP BY one column, no GROUPING SETS, ORDER BY ≤ 1 column, limit less than maxTopNLimit, no HAVING.
+    // Must have GROUP BY one column, no GROUPING SETS, ORDER BY ≤ 1 column, LIMIT > 0 and ≤ maxTopNLimit,
+    // no OFFSET, no HAVING.
     final boolean topNOk = grouping != null
                            && grouping.getDimensions().size() == 1
                            && !grouping.getSubtotals().hasEffect(grouping.getDimensionSpecs())
                            && sorting != null
                            && (sorting.getOrderBys().size() <= 1
-                               && sorting.isLimited() && sorting.getLimit() <= plannerContext.getPlannerConfig()
-                                                                                             .getMaxTopNLimit())
+                               && sorting.getOffsetLimit().hasLimit()
+                               && sorting.getOffsetLimit().getLimit() > 0
+                               && sorting.getOffsetLimit().getLimit() <= plannerContext.getPlannerConfig()
+                                                                                       .getMaxTopNLimit()
+                               && !sorting.getOffsetLimit().hasOffset())
                            && grouping.getHavingFilter() == null;
 
     if (!topNOk) {
@@ -875,7 +884,7 @@ public class DruidQuery
         getVirtualColumns(true),
         dimensionSpec,
         topNMetricSpec,
-        Ints.checkedCast(sorting.getLimit()),
+        Ints.checkedCast(sorting.getOffsetLimit().getLimit()),
         filtration.getQuerySegmentSpec(),
         filtration.getDimFilter(),
         Granularities.ALL,
@@ -894,6 +903,11 @@ public class DruidQuery
   public GroupByQuery toGroupByQuery()
   {
     if (grouping == null) {
+      return null;
+    }
+
+    if (sorting != null && sorting.getOffsetLimit().hasLimit() && sorting.getOffsetLimit().getLimit() <= 0) {
+      // Cannot handle zero or negative limits.
       return null;
     }
 
@@ -925,13 +939,7 @@ public class DruidQuery
         grouping.getAggregatorFactories(),
         postAggregators,
         havingSpec,
-        sorting != null
-        ? new DefaultLimitSpec(
-            sorting.getOrderBys(),
-            0,
-            sorting.isLimited() ? Ints.checkedCast(sorting.getLimit()) : null
-        )
-        : NoopLimitSpec.instance(),
+        Optional.ofNullable(sorting).orElse(Sorting.none()).limitSpec(),
         grouping.getSubtotals().toSubtotalsSpec(grouping.getDimensionSpecs()),
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
@@ -957,11 +965,21 @@ public class DruidQuery
 
     final Filtration filtration = Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
     final ScanQuery.Order order;
+    long scanOffset = 0L;
     long scanLimit = 0L;
 
     if (sorting != null) {
-      if (sorting.isLimited()) {
-        scanLimit = sorting.getLimit();
+      scanOffset = sorting.getOffsetLimit().getOffset();
+
+      if (sorting.getOffsetLimit().hasLimit()) {
+        final long limit = sorting.getOffsetLimit().getLimit();
+
+        if (limit == 0) {
+          // Can't handle zero limit (the Scan query engine would treat it as unlimited).
+          return null;
+        }
+
+        scanLimit = limit;
       }
 
       final Sorting.SortKind sortKind = sorting.getSortKind(ColumnHolder.TIME_COLUMN_NAME);
@@ -995,7 +1013,7 @@ public class DruidQuery
         getVirtualColumns(true),
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
         0,
-        0,
+        scanOffset,
         scanLimit,
         order,
         filtration.getDimFilter(),

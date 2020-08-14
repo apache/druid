@@ -54,6 +54,7 @@ FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
 [ HAVING expr ]
 [ ORDER BY expr [ ASC | DESC ], expr [ ASC | DESC ], ... ]
 [ LIMIT limit ]
+[ OFFSET offset ]
 [ UNION ALL <another query> ]
 ```
 
@@ -118,11 +119,29 @@ can only order by the `__time` column. For aggregation queries, ORDER BY can ord
 
 ### LIMIT
 
-The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
-to Data processes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
-versions of Druid will support pushing down limits using the native GroupBy query type as well. If you notice that
-adding a limit doesn't change performance very much, then it's likely that Druid didn't push down the limit for your
-query.
+The LIMIT clause limits the number of rows returned. In some situations Druid will push down this limit to data servers,
+which boosts performance. Limits are always pushed down for queries that run with the native Scan or TopN query types.
+With the native GroupBy query type, it is pushed down when ordering on a column that you are grouping by. If you notice
+that adding a limit doesn't change performance very much, then it's possible that Druid wasn't able to push down the
+limit for your query.
+
+### OFFSET
+
+The OFFSET clause skips a certain number of rows when returning results.
+
+If both LIMIT and OFFSET are provided, then OFFSET will be applied first, followed by LIMIT. For example, using
+LIMIT 100 OFFSET 10 will return 100 rows, starting from row number 10.
+
+Together, LIMIT and OFFSET can be used to implement pagination. However, note that if the underlying datasource is
+modified between page fetches, then the different pages will not necessarily align with each other.
+
+There are two important factors that can affect the performance of queries that use OFFSET:
+
+- Skipped rows still need to be generated internally and then discarded, meaning that raising offsets to high values
+  can cause queries to use additional resources.
+- OFFSET is only supported by the Scan and GroupBy [native query types](#query-types). Therefore, a query with OFFSET
+  will use one of those two types, even if it might otherwise have run as a Timeseries or TopN. Switching query engines
+  in this way can affect performance.
 
 ### UNION ALL
 
@@ -708,14 +727,15 @@ approximate, regardless of configuration.
 
 Druid does not support all SQL features. In particular, the following features are not supported.
 
-- JOIN between native datasources (table, lookup, subquery) and system tables.
+- JOIN between native datasources (table, lookup, subquery) and [system tables](#metadata-tables).
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
 - JOIN conditions containing a constant value inside the condition.
 - JOIN conditions on a column which contains a multi-value dimension.
 - OVER clauses, and analytic functions such as `LAG` and `LEAD`.
-- OFFSET clauses.
+- ORDER BY for a non-aggregating query, except for `ORDER BY __time` or `ORDER BY __time DESC`, which are supported.
+  This restriction only applies to non-aggregating queries; you can ORDER BY any column in an aggregating query.
 - DDL and DML.
-- Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on [metadata tables](#metadata-tables).
+- Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on [system tables](#metadata-tables).
 
 Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features
 include:
