@@ -22,7 +22,7 @@ title: "Druid Redis Cache"
   ~ under the License.
   -->
 
-A cache implementation for Druid based on [Redis](https://github.com/antirez/redis).
+A cache implementation for Druid based on [Redis](https://github.com/redis/redis).
 
 Below are guidance and configuration options known to this module.
 
@@ -30,7 +30,7 @@ Below are guidance and configuration options known to this module.
 
 Use [pull-deps](../../operations/pull-deps.md) tool shipped with Druid to install this [extension](../../development/extensions.md#community-extensions) on broker, historical and middle manager nodes.
 
-```
+```bash
 java -classpath "druid_dir/lib/*" org.apache.druid.cli.Main tools pull-deps -c org.apache.druid.extensions.contrib:druid-redis-cache:{VERSION}
 ```
 
@@ -56,7 +56,7 @@ Note: some redis cloud service providers provide redis cluster service via a red
 | Properties |Description|Default|Required|
 |--------------------|-----------|-------|--------|
 |`druid.cache.cluster.nodes`| Redis nodes in a cluster, represented in comma separated string. See example below | None | yes |
-|`druid.cache.cluster.maxRedirection`| Max retry count | 5 | None |
+|`druid.cache.cluster.maxRedirection`| Max retry count | 5 | no |
 
 #### Example 
 
@@ -85,7 +85,7 @@ Except for the properties above, there are some extra properties which can be cu
 |--------------------|-----------|-------|--------|
 |`druid.cache.password`| Password to access redis server/cluster | None |no|
 |`druid.cache.expiration`|Expiration for cache entries | P1D |no|
-|`druid.cache.timeout`|Timeout for get cache entries from Redis|PT2S|no|
+|`druid.cache.timeout`|Timeout for connecting to Redis and reading entries from Redis|PT2S|no|
 |`druid.cache.maxTotalConnections`|Max total connections to Redis|8|no|
 |`druid.cache.maxIdleConnections`|Max idle connections to Redis|8|no|
 |`druid.cache.minIdleConnections`|Min idle connections to Redis|0|no|

@@ -53,7 +53,7 @@ public class RedisStandaloneCacheTest
     @Override
     public DurationConfig getTimeout()
     {
-      return new DurationConfig(2000);
+      return new DurationConfig("PT2S");
     }
 
     @Override
@@ -89,7 +89,7 @@ public class RedisStandaloneCacheTest
   @Test
   public void testBasicInjection() throws Exception
   {
-    String json = "{ \"host\": \"localhost\", \"port\":6379, \"expiration\": 3600}";
+    String json = "{ \"host\": \"localhost\", \"port\": 6379, \"expiration\": 3600}";
     final RedisCacheConfig config = new ObjectMapper().readValue(json, RedisCacheConfig.class);
 
     Injector injector = Initialization.makeInjectorWithModules(

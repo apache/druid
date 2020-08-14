@@ -115,12 +115,12 @@ public class RedisCacheConfigTest
   public void testClusterPriority() throws IOException
   {
     ObjectMapper mapper = new ObjectMapper();
-    RedisCacheConfig fromJson = mapper.readValue("{\"expiration\":1000,"
+    RedisCacheConfig fromJson = mapper.readValue("{\"expiration\": 1000,"
                                                  + "\"cluster\": {"
-                                                 + "\"nodes\":\"127.0.0.1:6379\""
+                                                 + "\"nodes\": \"127.0.0.1:6379\""
                                                  + "},"
-                                                 + "\"host\":\"127.0.0.1\","
-                                                 + "\"port\":6379"
+                                                 + "\"host\": \"127.0.0.1\","
+                                                 + "\"port\": 6379"
                                                  + "}", RedisCacheConfig.class);
 
     try (Cache cache = RedisCacheFactory.create(fromJson)) {
@@ -133,9 +133,9 @@ public class RedisCacheConfigTest
   {
     ObjectMapper mapper = new ObjectMapper();
     RedisCacheConfig fromJson = mapper.readValue(
-        "{\"expiration\":1000,"
+        "{\"expiration\": 1000,"
         + "\"cluster\": {"
-        + "\"nodes\":\"127.0.0.1\"" //<===Invalid Node
+        + "\"nodes\": \"127.0.0.1\"" //<===Invalid Node
         + "}"
         + "}",
         RedisCacheConfig.class
@@ -149,13 +149,13 @@ public class RedisCacheConfigTest
   }
 
   @Test
-  public void testClusterInvalidFormat() throws IOException
+  public void testClusterLackOfPort() throws IOException
   {
     ObjectMapper mapper = new ObjectMapper();
     RedisCacheConfig fromJson = mapper.readValue(
         "{\"expiration\":1000,"
         + "\"cluster\": {"
-        + "\"nodes\":\"127.0.0.1:\"" //<===Invalid Node
+        + "\"nodes\": \"127.0.0.1:\""
         + "}"
         + "}",
         RedisCacheConfig.class
@@ -163,7 +163,7 @@ public class RedisCacheConfigTest
 
     expectedException.expect(new ExceptionMatcher(
         IAE.class,
-        new StartWithMatcher("Invalid redis cluster")
+        new StartWithMatcher("Invalid port")
     ));
     RedisCacheFactory.create(fromJson);
   }
@@ -173,9 +173,9 @@ public class RedisCacheConfigTest
   {
     ObjectMapper mapper = new ObjectMapper();
     RedisCacheConfig fromJson = mapper.readValue(
-        "{\"expiration\":1000,"
+        "{\"expiration\": 1000,"
         + "\"cluster\": {"
-        + "\"nodes\":\"127.0.0.1:0\"" //<===Invalid Port
+        + "\"nodes\": \"127.0.0.1:0\"" //<===Invalid Port
         + "}"
         + "}",
         RedisCacheConfig.class
@@ -183,7 +183,7 @@ public class RedisCacheConfigTest
 
     expectedException.expect(new ExceptionMatcher(
         IAE.class,
-        new ContainsMatcher("invalid port")
+        new ContainsMatcher("Invalid port")
     ));
     RedisCacheFactory.create(fromJson);
   }
@@ -193,9 +193,9 @@ public class RedisCacheConfigTest
   {
     ObjectMapper mapper = new ObjectMapper();
     RedisCacheConfig fromJson = mapper.readValue(
-        "{\"expiration\":1000,"
+        "{\"expiration\": 1000,"
         + "\"cluster\": {"
-        + "\"nodes\":\"127.0.0.1:65536\"" //<===Invalid Port
+        + "\"nodes\": \"127.0.0.1:65536\"" //<===Invalid Port
         + "}"
         + "}",
         RedisCacheConfig.class
@@ -203,7 +203,7 @@ public class RedisCacheConfigTest
 
     expectedException.expect(new ExceptionMatcher(
         IAE.class,
-        new ContainsMatcher("invalid port")
+        new ContainsMatcher("Invalid port")
     ));
     RedisCacheFactory.create(fromJson);
   }
@@ -213,7 +213,7 @@ public class RedisCacheConfigTest
   {
     ObjectMapper mapper = new ObjectMapper();
     RedisCacheConfig fromJson = mapper.readValue(
-        "{\"expiration\":1000"
+        "{\"expiration\": 1000"
         + "}",
         RedisCacheConfig.class
     );

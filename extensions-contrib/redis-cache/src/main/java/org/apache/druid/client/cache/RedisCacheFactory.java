@@ -39,24 +39,24 @@ public class RedisCacheFactory
       Set<HostAndPort> nodes = Arrays.stream(config.getCluster().getNodes().split(","))
                                      .map(String::trim)
                                      .filter(StringUtils::isNotBlank)
-                                     .map(host -> {
-                                       int index = host.indexOf(':');
-                                       if (index <= 0 || index == host.length()) {
-                                         throw new IAE("Invalid redis cluster configuration: %s", host);
+                                     .map(hostAndPort -> {
+                                       int index = hostAndPort.indexOf(':');
+                                       if (index <= 0 || index == hostAndPort.length()) {
+                                         throw new IAE("Invalid redis cluster configuration: %s", hostAndPort);
                                        }
 
                                        int port;
                                        try {
-                                         port = Integer.parseInt(host.substring(index + 1));
+                                         port = Integer.parseInt(hostAndPort.substring(index + 1));
                                        }
                                        catch (NumberFormatException e) {
-                                         throw new IAE("Invalid redis cluster configuration: invalid port %s", host);
+                                         throw new IAE("Invalid port in %s", hostAndPort);
                                        }
                                        if (port <= 0 || port > 65535) {
-                                         throw new IAE("Invalid redis cluster configuration: invalid port %s", host);
+                                         throw new IAE("Invalid port in %s", hostAndPort);
                                        }
 
-                                       return new HostAndPort(host.substring(0, index), port);
+                                       return new HostAndPort(hostAndPort.substring(0, index), port);
                                      }).collect(Collectors.toSet());
 
       JedisPoolConfig poolConfig = new JedisPoolConfig();
@@ -65,19 +65,19 @@ public class RedisCacheFactory
       poolConfig.setMinIdle(config.getMinIdleConnections());
 
       JedisCluster cluster;
-      if (StringUtils.isNotBlank(config.getPassword())) {
+      if (config.getPassword() != null) {
         cluster = new JedisCluster(
             nodes,
-            config.getTimeout().getMillisecondsAsInt(),
-            config.getTimeout().getMillisecondsAsInt(),
+            config.getTimeout().getMillisecondsAsInt(), //connection timeout
+            config.getTimeout().getMillisecondsAsInt(), //read timeout
             config.getCluster().getMaxRedirection(),
-            config.getPassword(),
+            config.getPassword().getPassword(),
             poolConfig
         );
       } else {
         cluster = new JedisCluster(
             nodes,
-            config.getTimeout().getMillisecondsAsInt(),
+            config.getTimeout().getMillisecondsAsInt(), //connection timeout and read timeout
             config.getCluster().getMaxRedirection(),
             poolConfig
         );
@@ -101,8 +101,8 @@ public class RedisCacheFactory
               poolConfig,
               config.getHost(),
               config.getPort(),
-              config.getTimeout().getMillisecondsAsInt(),
-              config.getPassword(),
+              config.getTimeout().getMillisecondsAsInt(), //connection timeout and read timeout
+              config.getPassword() == null ? null : config.getPassword().getPassword(),
               config.getDatabase(),
               null
           ),

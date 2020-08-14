@@ -20,7 +20,9 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.metadata.PasswordProvider;
 import org.joda.time.Period;
 import redis.clients.jedis.Protocol;
 
@@ -70,9 +72,10 @@ public class RedisCacheConfig
     }
 
     /**
-     * Support for inner call and testcases
+     * kept for test cases only
      */
-    public DurationConfig(long milliseconds)
+    @VisibleForTesting
+    DurationConfig(long milliseconds)
     {
       this.milliseconds = milliseconds;
     }
@@ -135,7 +138,7 @@ public class RedisCacheConfig
   private int minIdleConnections = 0;
 
   @JsonProperty
-  private String password;
+  private PasswordProvider password;
 
   @JsonProperty
   @Min(0)
@@ -184,7 +187,7 @@ public class RedisCacheConfig
     return cluster;
   }
 
-  public String getPassword()
+  public PasswordProvider getPassword()
   {
     return password;
   }

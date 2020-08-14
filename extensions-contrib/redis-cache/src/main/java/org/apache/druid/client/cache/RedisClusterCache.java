@@ -58,7 +58,7 @@ public class RedisClusterCache extends AbstractRedisCache
     try {
       cluster.close();
     }
-    catch (IOException e) {
+    catch (IOException ignored) {
     }
   }
 }
