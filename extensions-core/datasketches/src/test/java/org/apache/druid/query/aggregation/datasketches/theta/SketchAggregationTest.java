@@ -118,6 +118,18 @@ public class SketchAggregationTest
         groupByQueryString
     );
 
+    final String expectedSummary = "\n### HeapCompactOrderedSketch SUMMARY: \n"
+                                   + "   Estimate                : 50.0\n"
+                                   + "   Upper Bound, 95% conf   : 50.0\n"
+                                   + "   Lower Bound, 95% conf   : 50.0\n"
+                                   + "   Theta (double)          : 1.0\n"
+                                   + "   Theta (long)            : 9223372036854775807\n"
+                                   + "   Theta (long) hex        : 7fffffffffffffff\n"
+                                   + "   EstMode?                : false\n"
+                                   + "   Empty?                  : false\n"
+                                   + "   Retained Entries        : 50\n"
+                                   + "   Seed Hash               : 93cc | 37836\n"
+                                   + "### END SKETCH SUMMARY\n";
     List<ResultRow> results = seq.toList();
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
@@ -137,6 +149,7 @@ public class SketchAggregationTest
                         new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2)
                     )
                     .put("sketchUnionPostAggEstimate", 50.0)
+                    .put("sketchSummary", expectedSummary)
                     .put("sketchIntersectionPostAggEstimate", 50.0)
                     .put("sketchAnotBPostAggEstimate", 0.0)
                     .put("non_existing_col_validation", 0.0)

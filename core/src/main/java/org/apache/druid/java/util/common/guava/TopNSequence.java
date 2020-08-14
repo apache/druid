@@ -17,22 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.query.groupby.orderby;
+package org.apache.druid.java.util.common.guava;
 
-import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.guava.Accumulator;
-import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.collections.StableLimitingSorter;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 
+/**
+ * Simultaneously sorts and limits its input.
+ *
+ * The sort is stable, meaning that equal elements (as determined by the comparator) will not be reordered.
+ */
 public class TopNSequence<T> extends BaseSequence<T, Iterator<T>>
 {
   public TopNSequence(
       final Sequence<T> input,
-      final Ordering<T> ordering,
+      final Comparator<T> ordering,
       final int limit
   )
   {
@@ -47,45 +49,18 @@ public class TopNSequence<T> extends BaseSequence<T, Iterator<T>>
             }
 
             // Materialize the topN values
-            final MinMaxPriorityQueue<T> queue = MinMaxPriorityQueue
-                .orderedBy(ordering)
-                .maximumSize(limit)
-                .create();
+            final StableLimitingSorter<T> sorter = new StableLimitingSorter<>(ordering, limit);
 
             input.accumulate(
-                queue,
-                new Accumulator<MinMaxPriorityQueue<T>, T>()
-                {
-                  @Override
-                  public MinMaxPriorityQueue<T> accumulate(MinMaxPriorityQueue<T> theQueue, T row)
-                  {
-                    theQueue.offer(row);
-                    return theQueue;
-                  }
+                sorter,
+                (theSorter, element) -> {
+                  theSorter.add(element);
+                  return theSorter;
                 }
             );
 
             // Now return them when asked
-            return new Iterator<T>()
-            {
-              @Override
-              public boolean hasNext()
-              {
-                return !queue.isEmpty();
-              }
-
-              @Override
-              public T next()
-              {
-                return queue.poll();
-              }
-
-              @Override
-              public void remove()
-              {
-                throw new UnsupportedOperationException();
-              }
-            };
+            return sorter.drain();
           }
 
           @Override

@@ -20,6 +20,7 @@
 package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.Query;
 
 import java.util.List;
@@ -27,14 +28,12 @@ import java.util.Map;
 
 public class QueryWithResults extends AbstractQueryWithResults<Query>
 {
-
   @JsonCreator
   public QueryWithResults(
-      Query query,
-      List<Map<String, Object>> expectedResults
+      @JsonProperty("query") Query query,
+      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
   )
   {
     super(query, expectedResults);
   }
-
 }

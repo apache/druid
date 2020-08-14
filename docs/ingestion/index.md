@@ -284,7 +284,7 @@ The following table shows how each ingestion method handles partitioning:
 ## Ingestion specs
 
 No matter what ingestion method you use, data is loaded into Druid using either one-time [tasks](tasks.html) or
-ongoing "supervisors" (which run and supervised a set of tasks over time). In any case, part of the task or supervisor
+ongoing "supervisors" (which run and supervise a set of tasks over time). In any case, part of the task or supervisor
 definition is an _ingestion spec_.
 
 Ingestion specs consists of three main components:
@@ -464,8 +464,8 @@ A `dimensionsSpec` can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| dimensions | A list of [dimension names or objects](#dimension-objects). Cannot have the same column in both `dimensions` and `dimensionExclusions`.<br><br>If this is an empty array, Druid will treat all non-timestamp, non-metric columns that do not appear in `dimensionExclusions` as String-typed dimension columns (see [inclusions and exclusions](#inclusions-and-exclusions) below). | `[]` |
-| dimensionExclusions | The names of dimensions to exclude from ingestion. Only names are supported here, not objects. Cannot have the same column in both `dimensions` and `dimensionExclusions`.| `[]` |
+| dimensions | A list of [dimension names or objects](#dimension-objects). Cannot have the same column in both `dimensions` and `dimensionExclusions`.<br><br>If this and `spatialDimensions` are both null or empty arrays, Druid will treat all non-timestamp, non-metric columns that do not appear in `dimensionExclusions` as String-typed dimension columns. See [inclusions and exclusions](#inclusions-and-exclusions) below for details. | `[]` |
+| dimensionExclusions | The names of dimensions to exclude from ingestion. Only names are supported here, not objects.<br><br>This list is only used if the `dimensions` and `spatialDimensions` lists are both null or empty arrays; otherwise it is ignored. See [inclusions and exclusions](#inclusions-and-exclusions) below for details. | `[]` |
 | spatialDimensions | An array of [spatial dimensions](../development/geo.md). | `[]` |
 
 #### Dimension objects
@@ -485,7 +485,7 @@ Dimension objects can have the following components:
 
 Druid will interpret a `dimensionsSpec` in two possible ways: _normal_ or _schemaless_.
 
-Normal interpretation occurs when either `dimensions` or `spatialDimensions` is non-empty. In this case, the combination of the two lists will be taken as the set of dimensions to be ingested.
+Normal interpretation occurs when either `dimensions` or `spatialDimensions` is non-empty. In this case, the combination of the two lists will be taken as the set of dimensions to be ingested, and the list of `dimensionExclusions` will be ignored.
 
 Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` are empty or null. In this case, the set of dimensions is determined in the following way:
 

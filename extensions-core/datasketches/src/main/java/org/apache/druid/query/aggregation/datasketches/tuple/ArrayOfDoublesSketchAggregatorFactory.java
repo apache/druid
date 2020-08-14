@@ -302,37 +302,6 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean equals(final Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof ArrayOfDoublesSketchAggregatorFactory)) {
-      return false;
-    }
-    final ArrayOfDoublesSketchAggregatorFactory that = (ArrayOfDoublesSketchAggregatorFactory) o;
-    if (!name.equals(that.name)) {
-      return false;
-    }
-    if (!fieldName.equals(that.fieldName)) {
-      return false;
-    }
-    if (nominalEntries != that.nominalEntries) {
-      return false;
-    }
-    if (!Objects.equals(metricColumns, that.metricColumns)) {
-      return false;
-    }
-    return numberOfValues == that.numberOfValues;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(name, fieldName, nominalEntries, metricColumns, numberOfValues);
-  }
-
-  @Override
   public String toString()
   {
     return this.getClass().getSimpleName() + "{"
@@ -344,4 +313,26 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
         + "}";
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ArrayOfDoublesSketchAggregatorFactory that = (ArrayOfDoublesSketchAggregatorFactory) o;
+    return nominalEntries == that.nominalEntries &&
+           numberOfValues == that.numberOfValues &&
+           name.equals(that.name) &&
+           fieldName.equals(that.fieldName) &&
+           Objects.equals(metricColumns, that.metricColumns);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(name, fieldName, nominalEntries, numberOfValues, metricColumns);
+  }
 }

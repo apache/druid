@@ -24,6 +24,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -37,6 +40,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -214,6 +218,59 @@ public class HashBasedNumberedShardSpecTest
     Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1)));
     Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
     Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+  }
+
+  @Test
+  public void testPossibleInDomain()
+  {
+    final RangeSet<String> rangeSet = TreeRangeSet.create();
+    rangeSet.add(Range.closed("123", "123"));
+    final Map<String, RangeSet<String>> domain = ImmutableMap.of("visitor_id", rangeSet);
+
+    // Without partition info
+    HashBasedNumberedShardSpec shardSpec = new HashBasedNumberedShardSpec(
+        0,
+        1,
+        0,
+        1,
+        ImmutableList.of(),
+        objectMapper
+    );
+    Assert.assertTrue(shardSpec.possibleInDomain(domain));
+
+    // With partition info and matching partition dimensions
+    final int numBuckets = 3;
+    List<HashBasedNumberedShardSpec> shardSpecs = ImmutableList.of(
+        new HashBasedNumberedShardSpec(
+            0,
+            numBuckets,
+            0,
+            numBuckets,
+            ImmutableList.of("visitor_id"),
+            objectMapper
+        ),
+        new HashBasedNumberedShardSpec(
+            1,
+            numBuckets,
+            1,
+            numBuckets,
+            ImmutableList.of("visitor_id"),
+            objectMapper
+        ),
+        new HashBasedNumberedShardSpec(
+            2,
+            numBuckets,
+            2,
+            numBuckets,
+            ImmutableList.of("visitor_id"),
+            objectMapper
+        )
+    );
+    Assert.assertEquals(1, shardSpecs.stream().filter(s -> s.possibleInDomain(domain)).count());
+
+    // Partition dimensions not match
+    final Map<String, RangeSet<String>> domain1 = ImmutableMap.of("vistor_id_1", rangeSet);
+    Assert.assertEquals(shardSpecs.size(), shardSpecs.stream().filter(s -> s.possibleInDomain(domain1)).count());
   }
 
   public boolean assertExistsInOneSpec(List<ShardSpec> specs, InputRow row)

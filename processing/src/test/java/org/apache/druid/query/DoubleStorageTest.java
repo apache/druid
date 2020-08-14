@@ -156,6 +156,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.LONG.toString(),
                 false,
+                false,
                 100,
                 null,
                 null,
@@ -166,6 +167,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
+                false,
                 120,
                 1,
                 DIM_VALUE,
@@ -175,6 +177,7 @@ public class DoubleStorageTest
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
                 ValueType.DOUBLE.toString(),
+                false,
                 false,
                 80,
                 null,
@@ -198,6 +201,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.LONG.toString(),
                 false,
+                false,
                 100,
                 null,
                 null,
@@ -208,6 +212,7 @@ public class DoubleStorageTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
+                false,
                 120,
                 1,
                 DIM_VALUE,
@@ -217,6 +222,7 @@ public class DoubleStorageTest
             DIM_FLOAT_NAME,
             new ColumnAnalysis(
                 ValueType.FLOAT.toString(),
+                false,
                 false,
                 80,
                 null,
