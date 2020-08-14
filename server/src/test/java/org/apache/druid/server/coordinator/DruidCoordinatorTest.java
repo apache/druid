@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
@@ -663,6 +664,43 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(segmentsMetadataManager);
     EasyMock.verify(metadataRuleManager);
+  }
+
+  @Test
+  public void testBalancerThreadNumber() throws InterruptedException
+  {
+    DruidCoordinator c = EasyMock.createNiceMock(DruidCoordinator.class);
+    CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
+    EasyMock.expect(c.getDynamicConfigs()).andReturn(dynamicConfig).anyTimes();
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
+    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
+    EasyMock.replay(c, dynamicConfig);
+
+    DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0);
+    // before initialization
+    Assert.assertEquals(0, duty.getCachedBalancerThreadNumber());
+    Assert.assertNull(duty.getBalancerExec());
+
+    // first initialization
+    duty.initBalancerExecutor();
+    Assert.assertEquals(5, duty.getCachedBalancerThreadNumber());
+    ListeningExecutorService firstExec = duty.getBalancerExec();
+    Assert.assertNotNull(firstExec);
+
+    // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
+    duty.initBalancerExecutor();
+    Assert.assertEquals(5, duty.getCachedBalancerThreadNumber());
+    ListeningExecutorService secondExec = duty.getBalancerExec();
+    Assert.assertNotNull(secondExec);
+    Assert.assertTrue(firstExec == secondExec);
+
+    // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
+    duty.initBalancerExecutor();
+    Assert.assertEquals(10, duty.getCachedBalancerThreadNumber());
+    ListeningExecutorService thirdExec = duty.getBalancerExec();
+    Assert.assertNotNull(thirdExec);
+    Assert.assertFalse(secondExec == thirdExec);
+    Assert.assertFalse(firstExec == thirdExec);
   }
 
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(int latchCount,

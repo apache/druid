@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -647,22 +648,53 @@ public class DruidCoordinator
     return ImmutableList.of(compactSegments);
   }
 
-  private class DutiesRunnable implements Runnable
+  protected class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
+    private int cachedBalancerThreadNumber;
+    private ListeningExecutorService balancerExec;
 
-    private DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
+    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
     {
       this.duties = duties;
       this.startingLeaderCounter = startingLeaderCounter;
     }
 
+    @VisibleForTesting
+    protected void initBalancerExecutor()
+    {
+      final int currentNumber = getDynamicConfigs().getBalancerComputeThreads();
+      final String threadNameFormat = "coordinator-cost-balancer-%s";
+      // fist time initialization
+      if (balancerExec == null) {
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            currentNumber,
+            threadNameFormat
+        ));
+        cachedBalancerThreadNumber = currentNumber;
+        return;
+      }
+
+      if (cachedBalancerThreadNumber != currentNumber) {
+        log.info(
+            "balancerComputeThreads has been changed from [%s] to [%s], recreating the thread pool.",
+            cachedBalancerThreadNumber,
+            currentNumber
+        );
+        balancerExec.shutdownNow();
+        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+            currentNumber,
+            threadNameFormat
+        ));
+        cachedBalancerThreadNumber = currentNumber;
+      }
+    }
+
     @Override
     public void run()
     {
-      ListeningExecutorService balancerExec = null;
       try {
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
@@ -684,10 +716,7 @@ public class DruidCoordinator
           }
         }
 
-        balancerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-            getDynamicConfigs().getBalancerComputeThreads(),
-            "coordinator-cost-balancer-%s"
-        ));
+        initBalancerExecutor();
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
@@ -733,11 +762,24 @@ public class DruidCoordinator
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
-      finally {
-        if (balancerExec != null) {
-          balancerExec.shutdownNow();
-        }
-      }
+    }
+
+    /**
+     * This method should be used for only testing.
+     */
+    @VisibleForTesting
+    public int getCachedBalancerThreadNumber()
+    {
+      return cachedBalancerThreadNumber;
+    }
+
+    /**
+     * This method should be used for only testing.
+     */
+    @VisibleForTesting
+    public ListeningExecutorService getBalancerExec()
+    {
+      return balancerExec;
     }
   }
 
