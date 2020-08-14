@@ -785,7 +785,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
     } else {
-      throw new ISE("Failed to publish segments", newSegments);
+      throw new ISE("Failed to publish segments");
     }
   }
 
