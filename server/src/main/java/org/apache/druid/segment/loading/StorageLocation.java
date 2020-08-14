@@ -134,8 +134,6 @@ public class StorageLocation
       currSizeBytes += segmentSize;
       return segmentFileToAdd;
     } else {
-      log.error("No space is reserced or druid.segmentCache.locations is reached maxSize in location [%s], " +
-              "cant not handle the segmentId [%s] in this loaction", path, segmentId);
       return null;
     }
   }
@@ -149,7 +147,7 @@ public class StorageLocation
   boolean canHandle(String segmentId, long segmentSize)
   {
     if (availableSizeBytes() < segmentSize) {
-      log.warn(
+      log.error(
           "Segment[%s:%,d] too large for storage[%s:%,d]. Check your druid.segmentCache.locations maxSize param",
           segmentId,
           segmentSize,
@@ -162,7 +160,7 @@ public class StorageLocation
     if (freeSpaceToKeep > 0) {
       long currFreeSpace = path.getFreeSpace();
       if ((freeSpaceToKeep + segmentSize) > currFreeSpace) {
-        log.warn(
+        log.error(
             "Segment[%s:%,d] too large for storage[%s:%,d] to maintain suggested freeSpace[%d], current freeSpace is [%d].",
             segmentId,
             segmentSize,
