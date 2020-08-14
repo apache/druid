@@ -425,7 +425,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return interruptedQueryCount.get();
   }
 
-  private static String getAvaticaConnectionId(Map<String, Object> requestMap)
+  @VisibleForTesting
+  static String getAvaticaConnectionId(Map<String, Object> requestMap)
   {
     // avatica commands always have a 'connectionId'. If commands are not part of a prepared statement, this appears at
     // the top level of the request, but if it is part of a statement, then it will be nested in the 'statementHandle'.
