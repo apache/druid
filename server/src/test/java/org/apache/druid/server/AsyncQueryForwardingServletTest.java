@@ -437,45 +437,40 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     final int statementId = 1337;
     final int maxNumRows = 1000;
 
-    final List<String> jsonRequests = ImmutableList.of(
-        mapper.writeValueAsString(new Service.CatalogsRequest(connectionId)),
-        mapper.writeValueAsString(new Service.SchemasRequest(connectionId, "druid", null)),
-        mapper.writeValueAsString(new Service.TablesRequest(connectionId, "druid", "druid", null, null)),
-        mapper.writeValueAsString(new Service.ColumnsRequest(connectionId, "druid", "druid", "someTable", null)),
-        mapper.writeValueAsString(
-            new Service.PrepareAndExecuteRequest(
-                connectionId,
-                statementId,
-                query,
-                maxNumRows
-            )
+    final List<? extends Service.Request> jsonRequests = ImmutableList.of(
+        new Service.CatalogsRequest(connectionId),
+        new Service.SchemasRequest(connectionId, "druid", null),
+        new Service.TablesRequest(connectionId, "druid", "druid", null, null),
+        new Service.ColumnsRequest(connectionId, "druid", "druid", "someTable", null),
+        new Service.PrepareAndExecuteRequest(
+            connectionId,
+            statementId,
+            query,
+            maxNumRows
         ),
-        mapper.writeValueAsString(new Service.PrepareRequest(connectionId, query, maxNumRows)),
-        mapper.writeValueAsString(
-            new Service.ExecuteRequest(
-                new Meta.StatementHandle(connectionId, statementId, null),
-                ImmutableList.of(),
-                maxNumRows
-            )
+        new Service.PrepareRequest(connectionId, query, maxNumRows),
+        new Service.ExecuteRequest(
+            new Meta.StatementHandle(connectionId, statementId, null),
+            ImmutableList.of(),
+            maxNumRows
         ),
-        mapper.writeValueAsString(new Service.CloseStatementRequest(connectionId, statementId)),
-        mapper.writeValueAsString(new Service.CloseConnectionRequest(connectionId))
+        new Service.CloseStatementRequest(connectionId, statementId),
+        new Service.CloseConnectionRequest(connectionId)
     );
-    for (String request : jsonRequests) {
+
+    for (Service.Request request : jsonRequests) {
+      final String json = mapper.writeValueAsString(request);
       Assert.assertEquals(
-          StringUtils.format("Failed %s", request),
+          StringUtils.format("Failed %s", json),
           connectionId,
-          AsyncQueryForwardingServlet.getAvaticaConnectionId(asMap(request, mapper))
+          AsyncQueryForwardingServlet.getAvaticaConnectionId(asMap(json, mapper))
       );
     }
   }
 
-  private static Map<String, Object> asMap(String json, ObjectMapper objectMapper) throws JsonProcessingException
+  private static Map<String, Object> asMap(String json, ObjectMapper mapper) throws JsonProcessingException
   {
-    return objectMapper.readValue(
-        json,
-        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-    );
+    return mapper.readValue(json, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
   }
 
   private static class TestServer implements org.apache.druid.client.selector.Server
