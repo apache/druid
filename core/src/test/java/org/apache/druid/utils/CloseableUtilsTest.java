@@ -20,7 +20,6 @@
 package org.apache.druid.utils;
 
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,6 +29,7 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -48,14 +48,14 @@ public class CloseableUtilsTest
   @Test
   public void test_closeAll_array_quiet() throws IOException
   {
-    CloseableUtils.closeAll(quietCloseable, quietCloseable2);
+    CloseableUtils.closeAll(quietCloseable, null, quietCloseable2);
     assertClosed(quietCloseable, quietCloseable2);
   }
 
   @Test
   public void test_closeAll_list_quiet() throws IOException
   {
-    CloseableUtils.closeAll(ImmutableList.of(quietCloseable, quietCloseable2));
+    CloseableUtils.closeAll(Arrays.asList(quietCloseable, null, quietCloseable2));
     assertClosed(quietCloseable, quietCloseable2);
   }
 
@@ -64,7 +64,7 @@ public class CloseableUtilsTest
   {
     Exception e = null;
     try {
-      CloseableUtils.closeAll(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
+      CloseableUtils.closeAll(quietCloseable, null, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
     }
     catch (Exception e2) {
       e = e2;
@@ -86,8 +86,9 @@ public class CloseableUtilsTest
     Exception e = null;
     try {
       CloseableUtils.closeAll(
-          ImmutableList.of(
+          Arrays.asList(
               quietCloseable,
+              null,
               ioExceptionCloseable,
               quietCloseable2,
               runtimeExceptionCloseable

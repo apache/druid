@@ -19,7 +19,6 @@
 
 package org.apache.druid.utils;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.io.Closer;
 
@@ -62,7 +61,7 @@ public final class CloseableUtils
     final Closer closer = Closer.create();
 
     // Register in reverse order, so we close from first to last.
-    closer.registerAll(Lists.reverse(ImmutableList.copyOf(closeables)));
+    closer.registerAll(Lists.reverse(Lists.newArrayList(closeables)));
     closer.close();
   }
 
