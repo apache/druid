@@ -45,7 +45,7 @@ public class ScanResultValueTimestampComparator implements Comparator<ScanResult
     int comparison = Longs.compare(
         o1.getFirstEventTimestamp(scanQuery.getResultFormat()),
         o2.getFirstEventTimestamp(scanQuery.getResultFormat()));
-    if (scanQuery.getOrder().equals(ScanQuery.Order.DESCENDING)) {
+    if (scanQuery.getOrder().equals(ScanQuery.Order.ASCENDING)) {
       return comparison;
     }
     return comparison * -1;

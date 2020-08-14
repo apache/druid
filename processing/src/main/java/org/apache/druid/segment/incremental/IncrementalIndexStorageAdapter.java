@@ -78,6 +78,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         {
           return true;
         }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return true;
+        }
       };
 
   private static final ColumnCapabilities.CoercionLogic SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
@@ -103,6 +109,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
         @Override
         public boolean multipleValues()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean hasNulls()
         {
           return false;
         }

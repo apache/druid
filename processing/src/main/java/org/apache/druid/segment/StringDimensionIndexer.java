@@ -501,6 +501,10 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
     if (allValuesEncoded) {
       capabilites.setDictionaryEncoded(true);
     }
+
+    if (isSparse || dimLookup.idForNull != ABSENT_VALUE_ID) {
+      capabilites.setHasNulls(true);
+    }
     return capabilites;
   }
 

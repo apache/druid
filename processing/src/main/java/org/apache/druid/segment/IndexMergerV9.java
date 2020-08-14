@@ -115,6 +115,12 @@ public class IndexMergerV9 implements IndexMerger
         {
           return false;
         }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return false;
+        }
       };
 
   public static final ColumnCapabilities.CoercionLogic METRIC_CAPABILITY_MERGE_LOGIC =
@@ -140,6 +146,12 @@ public class IndexMergerV9 implements IndexMerger
 
         @Override
         public boolean multipleValues()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean hasNulls()
         {
           return false;
         }

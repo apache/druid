@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -32,6 +33,7 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
@@ -53,6 +55,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -63,11 +66,12 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
 
   private static IncrementalIndex INC_INDEX;
   private static QueryableIndex MMAP_INDEX;
+  private static IncrementalIndex INC_INDEX_WITH_NULLS;
+  private static QueryableIndex MMAP_INDEX_WITH_NULLS;
 
   @BeforeClass
   public static void setup() throws IOException
   {
-    List<InputRow> rows = new ArrayList<>();
     MapInputRowParser parser = new MapInputRowParser(
         new TimeAndDimsParseSpec(
             new TimestampSpec("time", "auto", null),
@@ -83,6 +87,14 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
             )
         )
     );
+    AggregatorFactory[] metricsSpecs = new AggregatorFactory[] {
+        new CountAggregatorFactory("cnt"),
+        new DoubleSumAggregatorFactory("m1", "d3"),
+        new FloatSumAggregatorFactory("m2", "d4"),
+        new LongSumAggregatorFactory("m3", "d5"),
+        new HyperUniquesAggregatorFactory("m4", "d1")
+    };
+    List<InputRow> rows = new ArrayList<>();
     Map<String, Object> event =
         ImmutableMap.<String, Object>builder().put("time", DateTimes.nowUtc().getMillis())
                                               .put("d1", "some string")
@@ -92,17 +104,12 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                               .put("d5", 10L)
                                               .build();
     rows.add(Iterables.getOnlyElement(parser.parseBatch(event)));
+
     IndexBuilder builder = IndexBuilder.create()
                                        .rows(rows)
                                        .schema(
                                            new IncrementalIndexSchema.Builder()
-                                               .withMetrics(
-                                                   new CountAggregatorFactory("cnt"),
-                                                   new DoubleSumAggregatorFactory("m1", "d3"),
-                                                   new FloatSumAggregatorFactory("m2", "d4"),
-                                                   new LongSumAggregatorFactory("m3", "d5"),
-                                                   new HyperUniquesAggregatorFactory("m4", "d1")
-                                               )
+                                               .withMetrics(metricsSpecs)
                                                .withDimensionsSpec(parser)
                                                .withRollup(false)
                                                .build()
@@ -110,6 +117,32 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                        .tmpDir(temporaryFolder.newFolder());
     INC_INDEX = builder.buildIncrementalIndex();
     MMAP_INDEX = builder.buildMMappedIndex();
+
+    List<InputRow> rowsWithNulls = new ArrayList<>();
+    rowsWithNulls.add(Iterables.getOnlyElement(parser.parseBatch(event)));
+
+    Map<String, Object> eventWithNulls = new HashMap<>();
+    eventWithNulls.put("time", DateTimes.nowUtc().getMillis());
+    eventWithNulls.put("d1", null);
+    eventWithNulls.put("d2", ImmutableList.of());
+    eventWithNulls.put("d3", null);
+    eventWithNulls.put("d4", null);
+    eventWithNulls.put("d5", null);
+
+    rowsWithNulls.add(Iterables.getOnlyElement(parser.parseBatch(eventWithNulls)));
+
+    IndexBuilder builderWithNulls = IndexBuilder.create()
+                                                .rows(rowsWithNulls)
+                                                .schema(
+                                                    new IncrementalIndexSchema.Builder()
+                                                        .withMetrics(metricsSpecs)
+                                                        .withDimensionsSpec(parser)
+                                                        .withRollup(false)
+                                                        .build()
+                                                )
+                                                .tmpDir(temporaryFolder.newFolder());
+    INC_INDEX_WITH_NULLS = builderWithNulls.buildIncrementalIndex();
+    MMAP_INDEX_WITH_NULLS = builderWithNulls.buildMMappedIndex();
   }
 
   @AfterClass
@@ -117,6 +150,8 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   {
     INC_INDEX.close();
     MMAP_INDEX.close();
+    INC_INDEX_WITH_NULLS.close();
+    MMAP_INDEX_WITH_NULLS.close();
   }
 
   @Test
@@ -145,6 +180,53 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   }
 
   @Test
+  public void testNumericColumnsWithNulls()
+  {
+    // incremental index
+    // time does not have nulls
+    assertNonStringColumnCapabilities(
+        INC_INDEX_WITH_NULLS.getCapabilities(ColumnHolder.TIME_COLUMN_NAME),
+        ValueType.LONG
+    );
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d3"), ValueType.DOUBLE);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d4"), ValueType.FLOAT);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("d5"), ValueType.LONG);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m1"), ValueType.DOUBLE);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m2"), ValueType.FLOAT);
+    assertNonStringColumnCapabilitiesWithNulls(INC_INDEX_WITH_NULLS.getCapabilities("m3"), ValueType.LONG);
+
+    // segment index
+    assertNonStringColumnCapabilities(
+        MMAP_INDEX_WITH_NULLS.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getCapabilities(),
+        ValueType.LONG
+    );
+    assertNonStringColumnCapabilitiesWithNulls(
+        MMAP_INDEX_WITH_NULLS.getColumnHolder("d3").getCapabilities(),
+        ValueType.DOUBLE
+    );
+    assertNonStringColumnCapabilitiesWithNulls(
+        MMAP_INDEX_WITH_NULLS.getColumnHolder("d4").getCapabilities(),
+        ValueType.FLOAT
+    );
+    assertNonStringColumnCapabilitiesWithNulls(
+        MMAP_INDEX_WITH_NULLS.getColumnHolder("d5").getCapabilities(),
+        ValueType.LONG
+    );
+    assertNonStringColumnCapabilitiesWithNulls(
+        MMAP_INDEX_WITH_NULLS.getColumnHolder("m1").getCapabilities(),
+        ValueType.DOUBLE
+    );
+    assertNonStringColumnCapabilitiesWithNulls(
+        MMAP_INDEX_WITH_NULLS.getColumnHolder("m2").getCapabilities(),
+        ValueType.FLOAT
+    );
+    assertNonStringColumnCapabilitiesWithNulls(
+        MMAP_INDEX_WITH_NULLS.getColumnHolder("m3").getCapabilities(),
+        ValueType.LONG
+    );
+  }
+
+  @Test
   public void testStringColumn()
   {
     ColumnCapabilities caps = INC_INDEX.getCapabilities("d1");
@@ -159,11 +241,13 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
     // coercing any 'UNKNOWN' values to false
     Assert.assertFalse(
-        ColumnCapabilitiesImpl.snapshot(caps, IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC)
-                              .hasMultipleValues()
-                              .isMaybeTrue()
+        ColumnCapabilitiesImpl.snapshot(
+            caps,
+            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+        ).hasMultipleValues().isMaybeTrue()
     );
     Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertTrue(caps.hasNulls().isUnknown());
 
     caps = MMAP_INDEX.getColumnHolder("d1").getCapabilities();
     Assert.assertEquals(ValueType.STRING, caps.getType());
@@ -173,6 +257,41 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertFalse(caps.hasNulls().isMaybeTrue());
+  }
+
+
+  @Test
+  public void testStringColumnWithNulls()
+  {
+    ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d1");
+    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertTrue(caps.hasBitmapIndexes());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
+    // multi-value is unknown unless explicitly set to 'true'
+    Assert.assertTrue(caps.hasMultipleValues().isUnknown());
+    // at index merge or query time we 'complete' the capabilities to take a snapshot of the current state,
+    // coercing any 'UNKNOWN' values to false
+    Assert.assertFalse(
+        ColumnCapabilitiesImpl.snapshot(
+            caps,
+            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+        ).hasMultipleValues().isMaybeTrue()
+    );
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertTrue(caps.hasNulls().isTrue());
+
+    caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d1").getCapabilities();
+    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertTrue(caps.hasBitmapIndexes());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
+    Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertTrue(caps.hasNulls().isTrue());
   }
 
   @Test
@@ -186,6 +305,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertTrue(caps.hasMultipleValues().isTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertTrue(caps.hasNulls().isUnknown());
 
     caps = MMAP_INDEX.getColumnHolder("d2").getCapabilities();
     Assert.assertEquals(ValueType.STRING, caps.getType());
@@ -195,13 +315,54 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertTrue(caps.hasMultipleValues().isTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertFalse(caps.hasNulls().isMaybeTrue());
+  }
+
+
+  @Test
+  public void testMultiStringColumnWithNulls()
+  {
+    ColumnCapabilities caps = INC_INDEX_WITH_NULLS.getCapabilities("d2");
+    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertTrue(caps.hasBitmapIndexes());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertTrue(caps.hasMultipleValues().isTrue());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertTrue(caps.hasNulls().isTrue());
+
+    caps = MMAP_INDEX_WITH_NULLS.getColumnHolder("d2").getCapabilities();
+    Assert.assertEquals(ValueType.STRING, caps.getType());
+    Assert.assertTrue(caps.hasBitmapIndexes());
+    Assert.assertTrue(caps.isDictionaryEncoded().isTrue());
+    Assert.assertTrue(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertTrue(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertTrue(caps.hasMultipleValues().isTrue());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertTrue(caps.hasNulls().isTrue());
   }
 
   @Test
   public void testComplexColumn()
   {
-    assertNonStringColumnCapabilities(INC_INDEX.getCapabilities("m4"), ValueType.COMPLEX);
-    assertNonStringColumnCapabilities(MMAP_INDEX.getColumnHolder("m4").getCapabilities(), ValueType.COMPLEX);
+    assertComplexColumnCapabilites(INC_INDEX.getCapabilities("m4"));
+    assertComplexColumnCapabilites(MMAP_INDEX.getColumnHolder("m4").getCapabilities());
+    // results for this complex aren't different, we only know that nullability is unknown
+    assertComplexColumnCapabilites(INC_INDEX_WITH_NULLS.getCapabilities("m4"));
+    assertComplexColumnCapabilites(MMAP_INDEX_WITH_NULLS.getColumnHolder("m4").getCapabilities());
+  }
+
+  private void assertComplexColumnCapabilites(ColumnCapabilities caps)
+  {
+    Assert.assertEquals(ValueType.COMPLEX, caps.getType());
+    Assert.assertFalse(caps.hasBitmapIndexes());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertFalse(caps.hasMultipleValues().isUnknown());
+    Assert.assertTrue(caps.hasNulls().isTrue());
   }
 
   private void assertNonStringColumnCapabilities(ColumnCapabilities caps, ValueType valueType)
@@ -213,5 +374,19 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
+    Assert.assertFalse(caps.hasNulls().isTrue());
+  }
+
+  private void assertNonStringColumnCapabilitiesWithNulls(ColumnCapabilities caps, ValueType valueType)
+  {
+    Assert.assertEquals(valueType, caps.getType());
+    Assert.assertFalse(caps.hasBitmapIndexes());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
+    Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
+    Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
+    Assert.assertFalse(caps.hasSpatialIndexes());
+    // check isMaybeTrue because incremental index uses Unknown
+    Assert.assertEquals(NullHandling.sqlCompatible(), caps.hasNulls().isMaybeTrue());
   }
 }
