@@ -94,7 +94,7 @@ public class ITJdbcQueryTest
             sslConfig.getTrustStorePasswordProvider().getPassword(),
             sslConfig.getKeyStorePath(),
             sslConfig.getKeyStorePasswordProvider().getPassword(),
-            sslConfig.getKeyStorePasswordProvider().getPassword()
+            sslConfig.getKeyManagerPasswordProvider().getPassword()
         ),
         StringUtils.format(
             TLS_CONNECTION_TEMPLATE,
@@ -103,7 +103,7 @@ public class ITJdbcQueryTest
             sslConfig.getTrustStorePasswordProvider().getPassword(),
             sslConfig.getKeyStorePath(),
             sslConfig.getKeyStorePasswordProvider().getPassword(),
-            sslConfig.getKeyStorePasswordProvider().getPassword()
+            sslConfig.getKeyManagerPasswordProvider().getPassword()
         )
     };
     // ensure that wikipedia segments are loaded completely
