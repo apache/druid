@@ -31,11 +31,27 @@ import java.util.Set;
 
 public interface IndexingServiceClient
 {
-  void killUnusedSegments(String dataSource, Interval interval);
+  default void killUnusedSegments(String dataSource, Interval interval)
+  {
+    killUnusedSegments("", dataSource, interval);
+  }
+
+  void killUnusedSegments(String idPrefix, String dataSource, Interval interval);
 
   int killPendingSegments(String dataSource, DateTime end);
 
+  default String compactSegments(
+      List<DataSegment> segments,
+      int compactionTaskPriority,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
+      @Nullable Map<String, Object> context
+  )
+  {
+    return compactSegments("", segments, compactionTaskPriority, tuningConfig, context);
+  }
+
   String compactSegments(
+      String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,

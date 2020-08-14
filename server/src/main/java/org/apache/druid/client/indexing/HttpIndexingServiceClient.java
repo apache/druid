@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -65,14 +66,16 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void killUnusedSegments(String dataSource, Interval interval)
+  public void killUnusedSegments(String idPrefix, String dataSource, Interval interval)
   {
-    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(null, dataSource, interval);
-    runTask(taskQuery.getId(), taskQuery);
+    final String taskId = IdUtils.newTaskId(idPrefix, ClientKillUnusedSegmentsTaskQuery.TYPE, dataSource, interval);
+    final ClientTaskQuery taskQuery = new ClientKillUnusedSegmentsTaskQuery(taskId, dataSource, interval);
+    runTask(taskId, taskQuery);
   }
 
   @Override
   public String compactSegments(
+      String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
       ClientCompactionTaskQueryTuningConfig tuningConfig,
@@ -90,14 +93,15 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context = context == null ? new HashMap<>() : context;
     context.put("priority", compactionTaskPriority);
 
+    final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
-        null,
+        taskId,
         dataSource,
         new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments)),
         tuningConfig,
         context
     );
-    return runTask(taskQuery.getId(), taskQuery);
+    return runTask(taskId, taskQuery);
   }
 
   @Override

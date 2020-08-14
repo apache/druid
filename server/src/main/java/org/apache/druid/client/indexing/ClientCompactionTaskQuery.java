@@ -21,9 +21,8 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.utils.IdUtils;
+import com.google.common.base.Preconditions;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
@@ -43,14 +42,14 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
 
   @JsonCreator
   public ClientCompactionTaskQuery(
-      @JsonProperty("id") @Nullable String id,
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("ioConfig") ClientCompactionIOConfig ioConfig,
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    this.id = id == null ? IdUtils.newTaskId(TYPE, dataSource, null) : id;
+    this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig;

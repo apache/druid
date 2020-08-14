@@ -19,11 +19,13 @@
 
 package org.apache.druid.common.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -74,18 +76,40 @@ public class IdUtils
     return UNDERSCORE_JOINER.join(prefix, IdUtils.getRandomId());
   }
 
-  public static String newTaskId(final String typeName, String dataSource, @Nullable Interval interval)
+  public static String newTaskId(String typeName, String dataSource, @Nullable Interval interval)
+  {
+    return newTaskId("", typeName, dataSource, interval);
+  }
+
+  public static String newTaskId(String idPrefix, String typeName, String dataSource, @Nullable Interval interval)
+  {
+    return newTaskId(idPrefix, getRandomId(), DateTimes.nowUtc(), typeName, dataSource, interval);
+  }
+
+  /**
+   * This method is only visible to outside only for testing.
+   * Use {@link #newTaskId(String, String, Interval)} or {@link #newTaskId(String, String, String, Interval)} instead.
+   */
+  @VisibleForTesting
+  static String newTaskId(
+      String idPrefix,
+      String idSuffix,
+      DateTime now,
+      String typeName,
+      String dataSource,
+      @Nullable Interval interval
+  )
   {
     final List<String> objects = new ArrayList<>();
-    final String suffix = getRandomId();
+    objects.add(idPrefix);
     objects.add(typeName);
     objects.add(dataSource);
-    objects.add(suffix);
+    objects.add(idSuffix);
     if (interval != null) {
       objects.add(interval.getStart().toString());
       objects.add(interval.getEnd().toString());
     }
-    objects.add(DateTimes.nowUtc().toString());
+    objects.add(now.toString());
 
     return String.join("_", objects);
   }

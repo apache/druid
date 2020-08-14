@@ -23,17 +23,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -63,7 +68,7 @@ public class ClientCompactionTaskQuerySerdeTest
   private static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
 
   @Test
-  public void testSerde() throws IOException
+  public void testClientCompactionTaskQueryToCompactionTask() throws IOException
   {
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
@@ -91,7 +96,7 @@ public class ClientCompactionTaskQuerySerdeTest
             1000L,
             100
         ),
-        new HashMap<>()
+        ImmutableMap.of("key", "value")
     );
 
     final byte[] json = mapper.writeValueAsBytes(query);
@@ -141,6 +146,94 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getTuningConfig().getMaxNumConcurrentSubTasks()
     );
     Assert.assertEquals(query.getContext(), task.getContext());
+  }
+
+  @Test
+  public void testCompactionTaskToClientCompactionTaskQuery() throws IOException
+  {
+    final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
+    final CompactionTask task = new CompactionTask.Builder(
+        "datasource",
+        mapper,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        ROW_INGESTION_METERS_FACTORY,
+        new NoopIndexingServiceClient(),
+        COORDINATOR_CLIENT,
+        new SegmentLoaderFactory(null, mapper),
+        new RetryPolicyFactory(new RetryPolicyConfig()),
+        APPENDERATORS_MANAGER
+    ).inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
+     .tuningConfig(
+         new ParallelIndexTuningConfig(
+             null,
+             null,
+             40000,
+             2000L,
+             null,
+             null,
+             new SegmentsSplitHintSpec(100000L),
+             new DynamicPartitionsSpec(100, 30000L),
+             new IndexSpec(
+                 new DefaultBitmapSerdeFactory(),
+                 CompressionStrategy.LZ4,
+                 CompressionStrategy.LZF,
+                 LongEncodingStrategy.LONGS
+             ),
+             null,
+             null,
+             null,
+             null,
+             1000L,
+             null,
+             null,
+             100,
+             null,
+             null,
+             null,
+             null,
+             null,
+             null,
+             null,
+             null,
+             null
+         )
+     )
+     .build();
+
+
+    final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
+        task.getId(),
+        "datasource",
+        new ClientCompactionIOConfig(
+            new ClientCompactionIntervalSpec(
+                Intervals.of("2019/2020"),
+                "testSha256OfSortedSegmentIds"
+            )
+        ),
+        new ClientCompactionTaskQueryTuningConfig(
+            100,
+            40000,
+            2000L,
+            30000L,
+            new SegmentsSplitHintSpec(100000L),
+            new IndexSpec(
+                new DefaultBitmapSerdeFactory(),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.LZF,
+                LongEncodingStrategy.LONGS
+            ),
+            0,
+            1000L,
+            100
+        ),
+        new HashMap<>()
+    );
+
+    final byte[] json = mapper.writeValueAsBytes(task);
+    final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) mapper.readValue(json, ClientTaskQuery.class);
+
+    Assert.assertEquals(expected, actual);
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)

@@ -19,10 +19,7 @@
 
 package org.apache.druid.client.indexing;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -31,9 +28,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
-public class ClientKillUnusedSegmentsQueryTest
+public class ClientKillUnusedSegmentsTaskQueryTest
 {
   private static final String DATA_SOURCE = "data_source";
   public static final DateTime START = DateTimes.nowUtc();
@@ -44,7 +39,7 @@ public class ClientKillUnusedSegmentsQueryTest
   @Before
   public void setUp()
   {
-    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery(null, DATA_SOURCE, INTERVAL);
+    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery("killTaskId", DATA_SOURCE, INTERVAL);
   }
 
   @After
@@ -69,21 +64,6 @@ public class ClientKillUnusedSegmentsQueryTest
   public void testGetInterval()
   {
     Assert.assertEquals(INTERVAL, clientKillUnusedSegmentsQuery.getInterval());
-  }
-
-  @Test
-  public void testSerde() throws IOException
-  {
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    objectMapper.registerSubtypes(
-        new NamedType(ClientKillUnusedSegmentsTaskQuery.class, ClientKillUnusedSegmentsTaskQuery.TYPE)
-    );
-    final byte[] json = objectMapper.writeValueAsBytes(clientKillUnusedSegmentsQuery);
-    final ClientKillUnusedSegmentsTaskQuery fromJson = objectMapper.readValue(
-        json,
-        ClientKillUnusedSegmentsTaskQuery.class
-    );
-    Assert.assertEquals(clientKillUnusedSegmentsQuery, fromJson);
   }
 
   @Test
