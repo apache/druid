@@ -57,7 +57,9 @@ public class LookupSchema extends AbstractSchema
     final ImmutableMap.Builder<String, Table> tableMapBuilder = ImmutableMap.builder();
 
     for (final String lookupName : lookupProvider.getAllLookupNames()) {
-      tableMapBuilder.put(lookupName, new DruidTable(new LookupDataSource(lookupName), ROW_SIGNATURE));
+      // all lookups should be also joinable through lookup joinable factory, and lookups are effectively broadcast
+      // (if we ignore lookup tiers...)
+      tableMapBuilder.put(lookupName, new DruidTable(new LookupDataSource(lookupName), ROW_SIGNATURE, true, true));
     }
 
     return tableMapBuilder.build();

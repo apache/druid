@@ -31,6 +31,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.ValueType;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 @JsonTypeName("buckets")
@@ -114,5 +115,28 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
         .appendFloat(bucketSize)
         .appendFloat(offset)
         .build();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    BucketsPostAggregator that = (BucketsPostAggregator) o;
+    return Float.compare(that.bucketSize, bucketSize) == 0 &&
+           Float.compare(that.offset, offset) == 0;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), bucketSize, offset);
   }
 }

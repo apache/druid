@@ -80,6 +80,13 @@ public class InlineJoinableFactoryTest
     Assert.assertEquals(3, joinable.getCardinality("long"));
   }
 
+  @Test
+  public void testIsDirectlyJoinable()
+  {
+    Assert.assertTrue(factory.isDirectlyJoinable(inlineDataSource));
+    Assert.assertFalse(factory.isDirectlyJoinable(new TableDataSource("foo")));
+  }
+
   private static JoinConditionAnalysis makeCondition(final String condition)
   {
     return JoinConditionAnalysis.forExpression(condition, PREFIX, ExprMacroTable.nil());

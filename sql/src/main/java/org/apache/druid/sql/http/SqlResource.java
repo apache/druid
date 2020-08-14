@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.server.QueryCapacityExceededException;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
@@ -175,6 +176,11 @@ public class SqlResource
     catch (QueryCapacityExceededException cap) {
       lifecycle.emitLogsAndMetrics(cap, remoteAddr, -1);
       return Response.status(QueryCapacityExceededException.STATUS_CODE).entity(jsonMapper.writeValueAsBytes(cap)).build();
+    }
+    catch (QueryUnsupportedException unsupported) {
+      log.warn(unsupported, "Failed to handle query: %s", sqlQuery);
+      lifecycle.emitLogsAndMetrics(unsupported, remoteAddr, -1);
+      return Response.status(QueryUnsupportedException.STATUS_CODE).entity(jsonMapper.writeValueAsBytes(unsupported)).build();
     }
     catch (ForbiddenException e) {
       throw e; // let ForbiddenExceptionMapper handle this

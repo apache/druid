@@ -90,6 +90,8 @@ IANA
 IETF
 IP
 IPv4
+IS_BROADCAST
+IS_JOINABLE
 IS0
 ISO-8601
 ISO8601
@@ -98,6 +100,7 @@ IndexTask
 InfluxDB
 InputFormat
 InputSource
+InputSources
 Integer.MAX_VALUE
 JBOD
 JDBC
@@ -133,6 +136,7 @@ MiddleManagers
 Montréal
 Murmur3
 NFS
+OCF
 OLAP
 OOMs
 OpenJDK
@@ -150,6 +154,7 @@ S3
 SDK
 SIGAR
 SPNEGO
+SqlInputSource
 SQLServer
 SSD
 SSDs
@@ -253,6 +258,7 @@ hostname
 hostnames
 http
 https
+idempotency
 i.e.
 influxdb
 ingestionSpec
@@ -261,6 +267,7 @@ inlined
 interruptible
 jackson-jq
 javadoc
+joinable
 kerberos
 keystore
 keytab
@@ -321,8 +328,10 @@ prepend
 prepended
 prepending
 prepends
+prepopulated
 preprocessing
 priori
+procs
 programmatically
 proto
 proxied
@@ -347,6 +356,7 @@ rsync
 runtime
 schemas
 searchable
+seekable-stream
 servlet
 simple-client-sslcontext
 sharded
@@ -363,6 +373,7 @@ subqueries
 subquery
 subsecond
 substring
+subtasks
 symlink
 tiering
 timeseries
@@ -383,6 +394,7 @@ unmergeable
 unmerged
 unparseable
 unparsed
+unsetting
 useFilterCNF
 uptime
 uris
@@ -448,6 +460,8 @@ v9
 DskipTests
 Papache-release
 Pdist
+Ddruid.console.skip
+yaml
  - ../docs/development/extensions-contrib/ambari-metrics-emitter.md
 ambari-metrics
 metricName
@@ -564,6 +578,14 @@ thriftJar
  - ../docs/development/extensions-contrib/time-min-max.md
 timeMax
 timeMin
+ - ../docs/development/extensions-contrib/aliyun-oss-extensions.md
+Aliyun
+aliyun
+OSS
+AccessKey
+aliyun-oss
+oss
+url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
@@ -1064,6 +1086,7 @@ nextafter
 nvl
 parse_long
 regexp_extract
+regexp_like
 result1
 result2
 rint
@@ -1123,6 +1146,7 @@ un
 4G
 5MB
 64KB
+7KB
 8G
 G1GC
 GroupBys
@@ -1153,7 +1177,7 @@ Sys
 SysMonitor
 TaskCountStatsMonitor
 bufferCapacity
-bufferPoolName
+bufferpoolName
 cms
 cpuName
 cpuTime
@@ -1531,6 +1555,9 @@ dsql
  - ../docs/tutorials/tutorial-update-data.md
 bear-111
  - ../docs/configuration/index.md
+1GiB
+KiB
+GiB
 00.000Z
 100ms
 10ms
@@ -1548,6 +1575,7 @@ EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
+GCE
 HadoopIndexTasks
 HttpEmitter
 HttpPostEmitter
@@ -1556,6 +1584,7 @@ JRE8u60
 KeyManager
 L1
 L2
+ListManagedInstances
 LoadSpec
 LoggingEmitter
 Los_Angeles
@@ -1597,6 +1626,8 @@ affinityConfig
 allowAll
 ANDed
 array_mod
+autoscale
+autoscalers
 batch_index_task
 cgroup
 classloader
@@ -1634,6 +1665,8 @@ floatMax
 floatMin
 floatSum
 freeSpacePercent
+gce
+gce-extensions
 getCanonicalHostName
 groupBy
 hdfs
@@ -1740,3 +1773,21 @@ UserGroupInformation
 CVE-2019-17571
 CVE-2019-12399
 CVE-2018-17196
+bin.tar.gz
+ - ../docs/configuration/human-readable-byte.md
+0s
+1T
+3G
+1_000
+1_000_000
+1_000_000_000
+1_000_000_000_000
+1_000_000_000_000_000
+Giga
+Tera
+Peta
+KiB
+MiB
+GiB
+TiB
+PiB

@@ -20,6 +20,7 @@ import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/co
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
+import { SqlQuery, SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable, { Filter } from 'react-table';
 
@@ -41,7 +42,6 @@ import { AppToaster } from '../../singletons/toaster';
 import {
   addFilter,
   countBy,
-  escapeSqlIdentifier,
   formatBytes,
   formatNumber,
   getDruidErrorMessage,
@@ -53,7 +53,7 @@ import {
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
-import { RuleUtil } from '../../utils/load-rule';
+import { Rule, RuleUtil } from '../../utils/load-rule';
 import { LocalStorageBackedArray } from '../../utils/local-storage-backed-array';
 import { deepGet } from '../../utils/object-change';
 
@@ -107,7 +107,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
 
 interface Datasource {
   datasource: string;
-  rules: any[];
+  rules: Rule[];
   [key: string]: any;
 }
 
@@ -125,7 +125,7 @@ interface DatasourceQueryResultRow {
 
 interface RetentionDialogOpenOn {
   datasource: string;
-  rules: any[];
+  rules: Rule[];
 }
 
 interface CompactionDialogOpenOn {
@@ -145,7 +145,7 @@ export interface DatasourcesViewState {
   datasourcesLoading: boolean;
   datasources: Datasource[] | null;
   tiers: string[];
-  defaultRules: any[];
+  defaultRules: Rule[];
   datasourcesError?: string;
   datasourceFilter: Filter[];
 
@@ -497,6 +497,11 @@ GROUP BY 1`;
             onClick={() => goToQuery(DatasourcesView.DATASOURCE_SQL)}
           />
         )}
+        <MenuItem
+          icon={IconNames.EDIT}
+          text="Edit default retention rules"
+          onClick={this.editDefaultRules}
+        />
       </MoreButton>
     );
   }
@@ -598,7 +603,7 @@ GROUP BY 1`;
       {
         icon: IconNames.APPLICATION,
         title: 'Query with SQL',
-        onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
+        onAction: () => goToQuery(SqlQuery.create(SqlRef.table(datasource)).toString()),
       },
       {
         icon: IconNames.GANTT_CHART,
@@ -700,13 +705,14 @@ GROUP BY 1`;
   }
 
   renderRetentionDialog() {
-    const { retentionDialogOpenOn, tiers } = this.state;
+    const { retentionDialogOpenOn, tiers, defaultRules } = this.state;
     if (!retentionDialogOpenOn) return null;
 
     return (
       <RetentionDialog
         datasource={retentionDialogOpenOn.datasource}
         rules={retentionDialogOpenOn.rules}
+        defaultRules={defaultRules}
         tiers={tiers}
         onEditDefaults={this.editDefaultRules}
         onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}

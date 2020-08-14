@@ -39,7 +39,7 @@ public class ServerHolderTest
 {
   private static final List<DataSegment> SEGMENTS = ImmutableList.of(
       new DataSegment(
-          "test",
+          "src1",
           Intervals.of("2015-04-12/2015-04-13"),
           "1",
           ImmutableMap.of("containerName", "container1", "blobPath", "blobPath1"),
@@ -50,7 +50,7 @@ public class ServerHolderTest
           1
       ),
       new DataSegment(
-          "test",
+          "src2",
           Intervals.of("2015-04-12/2015-04-13"),
           "1",
           ImmutableMap.of("containerName", "container2", "blobPath", "blobPath2"),
@@ -176,5 +176,23 @@ public class ServerHolderTest
     Assert.assertNotEquals(h1, h3);
     Assert.assertNotEquals(h1, h4);
     Assert.assertNotEquals(h1, h5);
+  }
+
+  @Test
+  public void testIsServingSegment()
+  {
+    final ServerHolder h1 = new ServerHolder(
+        new ImmutableDruidServer(
+            new DruidServerMetadata("name1", "host1", null, 100L, ServerType.HISTORICAL, "tier1", 0),
+            0L,
+            ImmutableMap.of("src1", DATA_SOURCES.get("src1")),
+            1
+        ),
+        new LoadQueuePeonTester()
+    );
+    Assert.assertTrue(h1.isServingSegment(SEGMENTS.get(0)));
+    Assert.assertFalse(h1.isServingSegment(SEGMENTS.get(1)));
+    Assert.assertTrue(h1.isServingSegment(SEGMENTS.get(0).getId()));
+    Assert.assertFalse(h1.isServingSegment(SEGMENTS.get(1).getId()));
   }
 }

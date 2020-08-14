@@ -90,7 +90,7 @@ public class MinPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public String toString()
   {
-    return "QuantilePostAggregator{" +
+    return "MinPostAggregator{" +
            "fieldName='" + fieldName + '\'' +
            '}';
   }

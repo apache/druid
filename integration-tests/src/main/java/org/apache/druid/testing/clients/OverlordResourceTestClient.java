@@ -43,6 +43,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -156,6 +157,15 @@ public class OverlordResourceTestClient
     return getTasks(StringUtils.format("tasks?state=complete&datasource=%s", StringUtils.urlEncode(dataSource)));
   }
 
+  public List<TaskResponseObject> getUncompletedTasksForDataSource(final String dataSource)
+  {
+    List<TaskResponseObject> uncompletedTasks = new ArrayList<>();
+    uncompletedTasks.addAll(getTasks(StringUtils.format("tasks?state=pending&datasource=%s", StringUtils.urlEncode(dataSource))));
+    uncompletedTasks.addAll(getTasks(StringUtils.format("tasks?state=running&datasource=%s", StringUtils.urlEncode(dataSource))));
+    uncompletedTasks.addAll(getTasks(StringUtils.format("tasks?state=waiting&datasource=%s", StringUtils.urlEncode(dataSource))));
+    return uncompletedTasks;
+  }
+
   private List<TaskResponseObject> getTasks(String identifier)
   {
     try {
@@ -243,7 +253,7 @@ public class OverlordResourceTestClient
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while submitting supervisor to overlord, response [%s %s]",
+            "Error while submitting supervisor to overlord, response [%s: %s]",
             response.getStatus(),
             response.getContent()
         );

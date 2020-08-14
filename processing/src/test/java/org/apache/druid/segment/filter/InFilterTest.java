@@ -32,19 +32,24 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -84,6 +89,9 @@ public class InFilterTest extends BaseFilterTest
   {
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -329,11 +337,13 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "N/A"), ImmutableList.of());
     assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.of());
     assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "HELLO"), ImmutableList.of("a", "d"));
-    assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),
-            ImmutableList.of("a", "b", "c", "d", "e", "f"));
+    assertFilterMatches(
+        toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
+    );
 
     final Map<String, String> stringMap2 = ImmutableMap.of(
-            "a", "e"
+        "a", "e"
     );
     LookupExtractor mapExtractor2 = new MapLookupExtractor(stringMap2, false);
     LookupExtractionFn lookupFn2 = new LookupExtractionFn(mapExtractor2, true, null, false, true);
@@ -342,8 +352,8 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim0", lookupFn2, "a"), ImmutableList.of());
 
     final Map<String, String> stringMap3 = ImmutableMap.of(
-            "c", "500",
-            "100", "e"
+        "c", "500",
+        "100", "e"
     );
     LookupExtractor mapExtractor3 = new MapLookupExtractor(stringMap3, false);
     LookupExtractionFn lookupFn3 = new LookupExtractionFn(mapExtractor3, false, null, false, true);
@@ -354,11 +364,38 @@ public class InFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testRequiredColumnRewrite()
+  {
+    InDimFilter filter = (InDimFilter) toInFilter("dim0", "a", "c").toFilter();
+    InDimFilter filter2 = (InDimFilter) toInFilter("dim1", "a", "c").toFilter();
+
+    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+
+    Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
+    Assert.assertEquals(filter2, rewrittenFilter);
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
+  }
+
+  @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(InFilter.class)
+    EqualsVerifier.forClass(InDimFilter.class)
                   .usingGetClass()
                   .withNonnullFields("dimension", "values")
+                  .withIgnoredFields("cacheKeySupplier", "predicateFactory", "cachedOptimizedFilter")
+                  .verify();
+  }
+
+  @Test
+  public void test_equals_forInFilterDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(InDimFilter.InFilterDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .withNonnullFields("values")
                   .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
                   .verify();
   }

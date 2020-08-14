@@ -89,7 +89,7 @@ export function makeBooleanFilter(): FilterRender {
 
 interface NeedleAndMode {
   needle: string;
-  mode: 'exact' | 'prefix';
+  mode: 'exact' | 'includes';
 }
 
 function getNeedleAndMode(input: string): NeedleAndMode {
@@ -101,7 +101,7 @@ function getNeedleAndMode(input: string): NeedleAndMode {
   }
   return {
     needle: input.startsWith(`"`) ? input.substring(1) : input,
-    mode: 'prefix',
+    mode: 'includes',
   };
 }
 
@@ -113,7 +113,7 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
   if (needleAndMode.mode === 'exact') {
     return needle === haystack;
   }
-  return haystack.startsWith(needle);
+  return haystack.includes(needle);
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): string {
@@ -123,7 +123,7 @@ export function sqlQueryCustomTableFilter(filter: Filter): string {
   if (needleAndMode.mode === 'exact') {
     return `${columnName} = '${needle}'`;
   } else {
-    return `LOWER(${columnName}) LIKE LOWER('${needle}%')`;
+    return `LOWER(${columnName}) LIKE LOWER('%${needle}%')`;
   }
 }
 
@@ -307,10 +307,6 @@ export function downloadFile(text: string, type: string, filename: string): void
     type: blobType,
   });
   FileSaver.saveAs(blob, filename);
-}
-
-export function escapeSqlIdentifier(identifier: string): string {
-  return `"${identifier.replace(/"/g, '""')}"`;
 }
 
 export function copyAndAlert(copyString: string, alertMessage: string): void {

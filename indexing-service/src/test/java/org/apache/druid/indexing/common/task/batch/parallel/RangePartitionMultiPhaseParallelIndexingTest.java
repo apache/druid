@@ -25,17 +25,22 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
 import org.apache.druid.common.config.NullValueHandlingConfig;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.hamcrest.Matchers;
 import org.joda.time.Interval;
@@ -57,8 +62,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -79,15 +88,22 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   private static final String LIST_DELIMITER = "|";
   private static final List<String> DIMS = ImmutableList.of(DIM1, DIM2);
   private static final String TEST_FILE_NAME_PREFIX = "test_";
+  private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec(TIME, "auto", null);
+  private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
+      DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))
+  );
   private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      new TimestampSpec(
-          TIME,
-          "auto",
-          null
-      ),
-      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))),
+      TIMESTAMP_SPEC,
+      DIMENSIONS_SPEC,
       LIST_DELIMITER,
       Arrays.asList(TIME, DIM1, DIM2, "val"),
+      false,
+      0
+  );
+  private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
+      Arrays.asList(TIME, DIM1, DIM2, "val"),
+      LIST_DELIMITER,
+      false,
       false,
       0
   );
@@ -148,7 +164,15 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
           for (int d = 0; d < DIM_FILE_CARDINALITY; d++) {
             int rowIndex = i * DIM_FILE_CARDINALITY + d;
             String dim1Value = createDim1Value(rowIndex, fileIndex, useMultivalueDim);
+
+            // This is the original row
             writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex, intervalToDims);
+
+            // This row should not get rolled up with original row
+            writeRow(writer, i + d, dim1Value, fileIndex + NUM_FILE, intervalToDims);
           }
         }
       }
@@ -191,24 +215,122 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   @Test
   public void createsCorrectRangePartitions() throws Exception
   {
-    int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
     final Set<DataSegment> publishedSegments = runTestTask(
-        PARSE_SPEC,
-        INTERVAL_TO_INDEX,
-        inputDir,
-        TEST_FILE_NAME_PREFIX + "*",
         new SingleDimensionPartitionsSpec(
             targetRowsPerSegment,
             null,
             DIM1,
             false
         ),
-        maxNumConcurrentSubTasks,
-        useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS
+        useMultivalueDim ? TaskState.FAILED : TaskState.SUCCESS,
+        false
     );
 
     if (!useMultivalueDim) {
       assertRangePartitions(publishedSegments);
+    }
+  }
+
+  @Test
+  public void testAppendLinearlyPartitionedSegmentsToHashPartitionedDatasourceSuccessfullyAppend()
+  {
+    if (useMultivalueDim) {
+      return;
+    }
+    final int targetRowsPerSegment = NUM_ROW / DIM_FILE_CARDINALITY / NUM_PARTITION;
+    final Set<DataSegment> publishedSegments = new HashSet<>();
+    publishedSegments.addAll(
+        runTestTask(
+            new SingleDimensionPartitionsSpec(
+                targetRowsPerSegment,
+                null,
+                DIM1,
+                false
+            ),
+            TaskState.SUCCESS,
+            false
+        )
+    );
+    // Append
+    publishedSegments.addAll(
+        runTestTask(
+            new DynamicPartitionsSpec(5, null),
+            TaskState.SUCCESS,
+            true
+        )
+    );
+    // And append again
+    publishedSegments.addAll(
+        runTestTask(
+            new DynamicPartitionsSpec(10, null),
+            TaskState.SUCCESS,
+            true
+        )
+    );
+
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    publishedSegments.forEach(
+        segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+    );
+    for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
+      final List<DataSegment> segments = entry.getValue();
+      final List<DataSegment> rangedSegments = segments
+          .stream()
+          .filter(segment -> segment.getShardSpec().getClass() == SingleDimensionShardSpec.class)
+          .collect(Collectors.toList());
+      final List<DataSegment> linearSegments = segments
+          .stream()
+          .filter(segment -> segment.getShardSpec().getClass() == NumberedShardSpec.class)
+          .collect(Collectors.toList());
+
+      for (DataSegment rangedSegment : rangedSegments) {
+        final SingleDimensionShardSpec rangeShardSpec = (SingleDimensionShardSpec) rangedSegment.getShardSpec();
+        for (DataSegment linearSegment : linearSegments) {
+          Assert.assertEquals(rangedSegment.getInterval(), linearSegment.getInterval());
+          Assert.assertEquals(rangedSegment.getVersion(), linearSegment.getVersion());
+          final NumberedShardSpec numberedShardSpec = (NumberedShardSpec) linearSegment.getShardSpec();
+          Assert.assertEquals(rangeShardSpec.getNumCorePartitions(), numberedShardSpec.getNumCorePartitions());
+          Assert.assertTrue(rangeShardSpec.getPartitionNum() < numberedShardSpec.getPartitionNum());
+        }
+      }
+    }
+  }
+
+  private Set<DataSegment> runTestTask(
+      PartitionsSpec partitionsSpec,
+      TaskState expectedTaskState,
+      boolean appendToExisting
+  )
+  {
+    if (isUseInputFormatApi()) {
+      return runTestTask(
+          TIMESTAMP_SPEC,
+          DIMENSIONS_SPEC,
+          INPUT_FORMAT,
+          null,
+          INTERVAL_TO_INDEX,
+          inputDir,
+          TEST_FILE_NAME_PREFIX + "*",
+          partitionsSpec,
+          maxNumConcurrentSubTasks,
+          expectedTaskState,
+          appendToExisting
+      );
+    } else {
+      return runTestTask(
+          null,
+          null,
+          null,
+          PARSE_SPEC,
+          INTERVAL_TO_INDEX,
+          inputDir,
+          TEST_FILE_NAME_PREFIX + "*",
+          partitionsSpec,
+          maxNumConcurrentSubTasks,
+          expectedTaskState,
+          appendToExisting
+      );
     }
   }
 

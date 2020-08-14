@@ -137,9 +137,8 @@ public class LookupSegmentTest
     // Note: the "k" column does not actually have multiple values, but the RowBasedStorageAdapter doesn't allow
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
     // running on top of lookups can take advantage of singly-valued optimizations.
-    Assert.assertFalse(capabilities.hasMultipleValues());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
-    Assert.assertFalse(capabilities.isComplete());
+    Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
@@ -151,9 +150,8 @@ public class LookupSegmentTest
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
     // running on top of lookups can take advantage of singly-valued optimizations.
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertFalse(capabilities.hasMultipleValues());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
-    Assert.assertFalse(capabilities.isComplete());
+    Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test

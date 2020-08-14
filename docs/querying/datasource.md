@@ -107,6 +107,70 @@ To see a list of all lookup datasources, use the SQL query
 > `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
 > usually faster than joining to a lookup datasource.
 
+Refer to the [Query execution](query-execution.md#table) page for more details on how queries are executed when you
+use table datasources.
+
+### `union`
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Native-->
+```json
+{
+  "queryType": "scan",
+  "dataSource": {
+    "type": "union",
+    "dataSources": ["<tableDataSourceName1>", "<tableDataSourceName2>", "<tableDataSourceName3>"]
+  },
+  "columns": ["column1", "column2"],
+  "intervals": ["0000/3000"]
+}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+Union datasources allow you to treat two or more table datasources as a single datasource. The datasources being unioned
+do not need to have identical schemas. If they do not fully match up, then columns that exist in one table but not
+another will be treated as if they contained all null values in the tables where they do not exist.
+
+Union datasources are not available in Druid SQL.
+
+Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
+use union datasources.
+
+### `inline`
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Native-->
+```json
+{
+  "queryType": "scan",
+  "dataSource": {
+    "type": "inline",
+    "columnNames": ["country", "city"],
+    "rows": [
+      ["United States", "San Francisco"],
+      ["Canada", "Calgary"]
+    ]
+  },
+  "columns": ["country", "city"],
+  "intervals": ["0000/3000"]
+}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+Inline datasources allow you to query a small amount of data that is embedded in the query itself. They are useful when
+you want to write a query on a small amount of data without loading it first. They are also useful as inputs into a
+[join](#join). Druid also uses them internally to handle subqueries that need to be inlined on the Broker. See the
+[`query` datasource](#query) documentation for more details.
+
+There are two fields in an inline datasource: an array of `columnNames` and an array of `rows`. Each row is an array
+that must be exactly as long as the list of `columnNames`. The first element in each row corresponds to the first
+column in `columnNames`, and so on.
+
+Inline datasources are not available in Druid SQL.
+
+Refer to the [Query execution](query-execution.md#inline) page for more details on how queries are executed when you
+use inline datasources.
+
 ### `query`
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -157,8 +221,8 @@ Query datasources allow you to issue subqueries. In native queries, they can app
 
 > Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
 > processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
-> bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md) documentation
-> for more details on how subqueries are executed and what limits will apply.
+> bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md#query)
+> page for more details on how subqueries are executed and what limits will apply.
 
 ### `join`
 
@@ -210,8 +274,8 @@ other than the leftmost "base" table must fit in memory. It also means that the 
 feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
 [query](#query) datasources.
 
-For information about how Druid executes queries involving joins, refer to the
-[Query execution](query-execution.html#join) page.
+Refer to the [Query execution](query-execution.md#join) page for more details on how queries are executed when you
+use join datasources.
 
 #### Joins in SQL
 
@@ -268,72 +332,21 @@ perform best if `d.field` is a string.
 4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
 to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
 common use cases.
+5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into 
+Join's children). Druid only supports pushing predicates into the join if they originated from 
+above the join. Hence, the location of predicates and filters in your Druid SQL is very important. 
+Also, as a result of this, comma joins should be avoided.
 
 #### Future work for joins
 
 Joins are an area of active development in Druid. The following features are missing today but may appear in
 future versions:
 
+- Reordering of predicates and filters (pushing up and/or pushing down) to get the most performant plan.
 - Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value).
 - RIGHT OUTER and FULL OUTER joins. Currently, they are partially implemented. Queries will run but results will not
 always be correct.
 - Performance-related optimizations as mentioned in the [previous section](#join-performance).
 - Join algorithms other than broadcast hash-joins.
-
-### `union`
-
-<!--DOCUSAURUS_CODE_TABS-->
-<!--Native-->
-```json
-{
-  "queryType": "scan",
-  "dataSource": {
-    "type": "union",
-    "dataSources": ["<tableDataSourceName1>", "<tableDataSourceName2>", "<tableDataSourceName3>"]
-  },
-  "columns": ["column1", "column2"],
-  "intervals": ["0000/3000"]
-}
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-Union datasources allow you to treat two or more table datasources as a single datasource. The datasources being unioned
-do not need to have identical schemas. If they do not fully match up, then columns that exist in one table but not
-another will be treated as if they contained all null values in the tables where they do not exist.
-
-Union datasources are not available in Druid SQL.
-
-Refer to the [Query execution](query-execution.md#union) documentation for more details on how union datasources
-are executed.
-
-### `inline`
-
-<!--DOCUSAURUS_CODE_TABS-->
-<!--Native-->
-```json
-{
-  "queryType": "scan",
-  "dataSource": {
-    "type": "inline",
-    "columnNames": ["country", "city"],
-    "rows": [
-      ["United States", "San Francisco"],
-      ["Canada", "Calgary"]
-    ]
-  },
-  "columns": ["country", "city"],
-  "intervals": ["0000/3000"]
-}
-```
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-Inline datasources allow you to query a small amount of data that is embedded in the query itself. They are useful when
-you want to write a query on a small amount of data without loading it first. They are also useful as inputs into a
-[join](#join). Druid also uses them internally to handle subqueries that need to be inlined on the Broker. See the
-[`query` datasource](#query) documentation for more details.
-
-There are two fields in an inline datasource: an array of `columnNames` and an array of `rows`. Each row is an array
-that must be exactly as long as the list of `columnNames`. The first element in each row corresponds to the first
-column in `columnNames`, and so on.
-
-Inline datasources are not available in Druid SQL.
+- Join condition on a column compared to a constant value.
+- Join conditions on a column containing a multi-value dimension.

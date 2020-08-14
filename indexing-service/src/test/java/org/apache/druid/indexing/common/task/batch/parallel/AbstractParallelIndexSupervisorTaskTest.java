@@ -37,7 +37,9 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -45,6 +47,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -131,35 +134,42 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       false,
       0
   );
-  static final InputFormat DEFAULT_INPUT_FORMAT = DEFAULT_PARSE_SPEC.toInputFormat();
-  static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING = new ParallelIndexTuningConfig(
+  static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
+      Arrays.asList("ts", "dim", "val"),
       null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      2,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      false,
+      false,
+      0
   );
+  public static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING =
+      new ParallelIndexTuningConfig(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          2,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
 
@@ -214,6 +224,42 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   {
     taskRunner.shutdown();
     temporaryFolder.delete();
+  }
+
+  protected ParallelIndexTuningConfig newTuningConfig(
+      PartitionsSpec partitionsSpec,
+      int maxNumConcurrentSubTasks,
+      boolean forceGuaranteedRollup
+  )
+  {
+    return new ParallelIndexTuningConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        new MaxSizeSplitHintSpec(1L), // set maxSplitSize to 1 so that each split has only one file.
+        partitionsSpec,
+        null,
+        null,
+        null,
+        forceGuaranteedRollup,
+        null,
+        null,
+        null,
+        null,
+        maxNumConcurrentSubTasks,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
   }
 
   protected LocalIndexingServiceClient getIndexingServiceClient()
@@ -514,7 +560,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         new NamedType(ParallelIndexSupervisorTask.class, ParallelIndexSupervisorTask.TYPE),
         new NamedType(SinglePhaseSubTask.class, SinglePhaseSubTask.TYPE),
         new NamedType(PartialHashSegmentGenerateTask.class, PartialHashSegmentGenerateTask.TYPE),
-        new NamedType(PartialHashSegmentMergeTask.class, PartialHashSegmentMergeTask.TYPE),
         new NamedType(PartialRangeSegmentGenerateTask.class, PartialRangeSegmentGenerateTask.TYPE),
         new NamedType(PartialGenericSegmentMergeTask.class, PartialGenericSegmentMergeTask.TYPE),
         new NamedType(PartialDimensionDistributionTask.class, PartialDimensionDistributionTask.TYPE)
@@ -639,7 +684,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           supervisorTaskId,
           location.getSubTaskId(),
           location.getInterval(),
-          location.getPartitionId()
+          location.getBucketId()
       );
       if (zippedFile == null) {
         throw new ISE("Can't find segment file for location[%s] at path[%s]", location);

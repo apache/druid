@@ -19,6 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -30,13 +34,73 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class DoublesSketchToCDFPostAggregatorTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    final PostAggregator there = new DoublesSketchToCDFPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[]{0.25, 0.75}
+    );
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    DoublesSketchToCDFPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        DoublesSketchToCDFPostAggregator.class
+    );
+
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+  }
+
+  @Test
+  public void testToString()
+  {
+    final PostAggregator postAgg = new DoublesSketchToCDFPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[]{0.25, 0.75}
+    );
+
+    Assert.assertEquals(
+        "DoublesSketchToCDFPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, splitPoints=[0.25, 0.75]}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testComparator()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Comparing histograms is not supported");
+    final PostAggregator postAgg = new DoublesSketchToCDFPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        new double[]{0.25, 0.75}
+    );
+    postAgg.getComparator();
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(DoublesSketchToCDFPostAggregator.class)
+                  .withNonnullFields("name", "field", "splitPoints")
+                  .usingGetClass()
+                  .verify();
+  }
+
   @Test
   public void emptySketch()
   {

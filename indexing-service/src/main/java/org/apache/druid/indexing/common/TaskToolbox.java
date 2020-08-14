@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.inject.Provider;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -38,6 +39,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.IndexIO;
@@ -56,6 +58,7 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
@@ -85,7 +88,8 @@ public class TaskToolbox
    * because it may be unavailable, e. g. for batch tasks running in Spark or Hadoop.
    */
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
-  private final MonitorScheduler monitorScheduler;
+  @Nullable
+  private final Provider<MonitorScheduler> monitorSchedulerProvider;
   private final ExecutorService queryExecutorService;
   private final JoinableFactory joinableFactory;
   private final SegmentLoader segmentLoader;
@@ -119,7 +123,7 @@ public class TaskToolbox
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       ExecutorService queryExecutorService,
       JoinableFactory joinableFactory,
-      MonitorScheduler monitorScheduler,
+      @Nullable Provider<MonitorScheduler> monitorSchedulerProvider,
       SegmentLoader segmentLoader,
       ObjectMapper jsonMapper,
       File taskWorkDir,
@@ -150,7 +154,7 @@ public class TaskToolbox
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.queryExecutorService = queryExecutorService;
     this.joinableFactory = joinableFactory;
-    this.monitorScheduler = monitorScheduler;
+    this.monitorSchedulerProvider = monitorSchedulerProvider;
     this.segmentLoader = segmentLoader;
     this.jsonMapper = jsonMapper;
     this.taskWorkDir = taskWorkDir;
@@ -238,9 +242,34 @@ public class TaskToolbox
     return joinableFactory;
   }
 
+  @Nullable
   public MonitorScheduler getMonitorScheduler()
   {
-    return monitorScheduler;
+    return monitorSchedulerProvider == null ? null : monitorSchedulerProvider.get();
+  }
+
+  /**
+   * Adds a monitor to the monitorScheduler if it is configured
+   * @param monitor
+   */
+  public void addMonitor(Monitor monitor)
+  {
+    MonitorScheduler scheduler = getMonitorScheduler();
+    if (scheduler != null) {
+      scheduler.addMonitor(monitor);
+    }
+  }
+
+  /**
+   * Adds a monitor to the monitorScheduler if it is configured
+   * @param monitor
+   */
+  public void removeMonitor(Monitor monitor)
+  {
+    MonitorScheduler scheduler = getMonitorScheduler();
+    if (scheduler != null) {
+      scheduler.removeMonitor(monitor);
+    }
   }
 
   public ObjectMapper getJsonMapper()
@@ -305,7 +334,14 @@ public class TaskToolbox
 
   public File getIndexingTmpDir()
   {
-    return new File(taskWorkDir, "indexing-tmp");
+    final File tmpDir = new File(taskWorkDir, "indexing-tmp");
+    try {
+      FileUtils.forceMkdir(tmpDir);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return tmpDir;
   }
 
   public File getMergeDir()

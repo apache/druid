@@ -2,9 +2,9 @@
   "type": "index_hadoop",
   "spec": {
     "dataSchema": {
-      "dataSource": "batchHadoop",
+      "dataSource": "%%DATASOURCE%%",
       "parser": {
-        "type": "string",
+        "type": "hadoopyString",
         "parseSpec": {
           "format": "tsv",
           "timestampSpec": {
@@ -53,7 +53,7 @@
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "paths": "%%HADOOP_TEST_PATH%%"
+        "paths": "/batch_index/hadoop_tsv/batch_hadoop.data"
       }
     },
     "tuningConfig": {
@@ -64,7 +64,19 @@
         "type": "hashed"
       },
       "jobProperties": {
-        "fs.permissions.umask-mode": "022"
+        "fs.permissions.umask-mode": "022",
+        "fs.default.name" : "hdfs://druid-it-hadoop:9000",
+        "fs.defaultFS" : "hdfs://druid-it-hadoop:9000",
+        "dfs.datanode.address" : "druid-it-hadoop",
+        "dfs.client.use.datanode.hostname" : "true",
+        "dfs.datanode.use.datanode.hostname" : "true",
+        "yarn.resourcemanager.hostname" : "druid-it-hadoop",
+        "yarn.nodemanager.vmem-check-enabled" : "false",
+        "mapreduce.map.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
+        "mapreduce.job.user.classpath.first" : "true",
+        "mapreduce.reduce.java.opts" : "-Duser.timezone=UTC -Dfile.encoding=UTF-8",
+        "mapreduce.map.memory.mb" : 1024,
+        "mapreduce.reduce.memory.mb" : 1024
       },
       "rowFlushBoundary": 10000
     }

@@ -27,3 +27,5 @@ SERVICE_DRUID_JAVA_OPTS=-server -Xmx128m -XX:+UseG1GC -agentlib:jdwp=transport=d
 druid_auth_basic_common_cacheDirectory=/tmp/authCache/router
 druid_sql_avatica_enable=true
 druid_server_https_crlPath=/tls/revocations.crl
+druid_router_managementProxy_enabled=true
+

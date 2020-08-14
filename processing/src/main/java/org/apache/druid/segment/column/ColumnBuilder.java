@@ -29,11 +29,7 @@ import javax.annotation.Nullable;
  */
 public class ColumnBuilder
 {
-  @Nullable
-  private ValueType type = null;
-  private boolean hasMultipleValues = false;
-  private boolean filterable = false;
-  private boolean dictionaryEncoded = false;
+  private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
@@ -43,6 +39,7 @@ public class ColumnBuilder
   private Supplier<SpatialIndex> spatialIndex = null;
   @Nullable
   private SmooshedFileMapper fileMapper = null;
+
 
   public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
   {
@@ -57,27 +54,29 @@ public class ColumnBuilder
 
   public ColumnBuilder setType(ValueType type)
   {
-    this.type = type;
+    this.capabilitiesBuilder.setType(type);
     return this;
   }
 
   public ColumnBuilder setHasMultipleValues(boolean hasMultipleValues)
   {
-    this.hasMultipleValues = hasMultipleValues;
+    this.capabilitiesBuilder.setHasMultipleValues(hasMultipleValues);
     return this;
   }
 
   public ColumnBuilder setDictionaryEncodedColumnSupplier(Supplier<? extends DictionaryEncodedColumn<?>> columnSupplier)
   {
     this.columnSupplier = columnSupplier;
-    this.dictionaryEncoded = true;
+    this.capabilitiesBuilder.setDictionaryEncoded(true);
+    this.capabilitiesBuilder.setDictionaryValuesSorted(true);
+    this.capabilitiesBuilder.setDictionaryValuesUnique(true);
     return this;
   }
 
   @SuppressWarnings("unused")
   public ColumnBuilder setFilterable(boolean filterable)
   {
-    this.filterable = filterable;
+    this.capabilitiesBuilder.setFilterable(filterable);
     return this;
   }
 
@@ -96,33 +95,32 @@ public class ColumnBuilder
   public ColumnBuilder setBitmapIndex(Supplier<BitmapIndex> bitmapIndex)
   {
     this.bitmapIndex = bitmapIndex;
+    this.capabilitiesBuilder.setHasBitmapIndexes(true);
     return this;
   }
 
   public ColumnBuilder setSpatialIndex(Supplier<SpatialIndex> spatialIndex)
   {
     this.spatialIndex = spatialIndex;
+    this.capabilitiesBuilder.setHasSpatialIndexes(true);
+    return this;
+  }
+
+  public ColumnBuilder setHasNulls(boolean nullable)
+  {
+    this.capabilitiesBuilder.setHasNulls(nullable);
+    return this;
+  }
+  public ColumnBuilder setHasNulls(ColumnCapabilities.Capable nullable)
+  {
+    this.capabilitiesBuilder.setHasNulls(nullable);
     return this;
   }
 
   public ColumnHolder build()
   {
-    Preconditions.checkState(type != null, "Type must be set.");
+    Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(
-        new ColumnCapabilitiesImpl()
-            .setType(type)
-            .setDictionaryEncoded(dictionaryEncoded)
-            .setHasBitmapIndexes(bitmapIndex != null)
-            .setDictionaryValuesSorted(dictionaryEncoded)
-            .setDictionaryValuesUnique(dictionaryEncoded)
-            .setHasSpatialIndexes(spatialIndex != null)
-            .setHasMultipleValues(hasMultipleValues)
-            .setIsComplete(true)
-            .setFilterable(filterable),
-        columnSupplier,
-        bitmapIndex,
-        spatialIndex
-    );
+    return new SimpleColumnHolder(capabilitiesBuilder, columnSupplier, bitmapIndex, spatialIndex);
   }
 }

@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.cardinality.HyperLogLogCollectorAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -57,17 +58,13 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
   public static Object estimateCardinality(@Nullable Object object, boolean round)
   {
-    if (object == null) {
-      return 0;
-    }
-
     final HyperLogLogCollector collector = (HyperLogLogCollector) object;
 
-    // Avoid ternary, it causes estimateCardinalityRound to be cast to double.
+    // Avoid ternary for round check as it causes estimateCardinalityRound to be cast to double.
     if (round) {
-      return collector.estimateCardinalityRound();
+      return collector == null ? 0L : collector.estimateCardinalityRound();
     } else {
-      return collector.estimateCardinality();
+      return collector == null ? 0d : collector.estimateCardinality();
     }
   }
 
@@ -140,7 +137,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean canVectorize()
+  public boolean canVectorize(ColumnInspector columnInspector)
   {
     return true;
   }

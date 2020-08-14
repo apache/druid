@@ -94,9 +94,9 @@ public class CoordinatorResourceTestClient
     return StringUtils.format("%sdatasources/%s/segments?full", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
-  private String getLoadStatusURL()
+  private String getLoadStatusURL(String dataSource)
   {
-    return StringUtils.format("%s%s", getCoordinatorURL(), "loadstatus");
+    return StringUtils.format("%sdatasources/%s/loadstatus?forceMetadataRefresh=true&interval=1970-01-01/2999-01-01", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
   /** return a list of the segment dates for the specified data source */
@@ -172,11 +172,27 @@ public class CoordinatorResourceTestClient
     }
   }
 
-  private Map<String, Integer> getLoadStatus()
+  private Map<String, Integer> getLoadStatus(String dataSorce)
   {
+    String url = getLoadStatusURL(dataSorce);
     Map<String, Integer> status;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, getLoadStatusURL());
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, new URL(url)),
+          responseHandler
+      ).get();
+
+      if (response.getStatus().getCode() == HttpResponseStatus.NO_CONTENT.getCode()) {
+        return null;
+      }
+      if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+      }
 
       status = jsonMapper.readValue(
           response.getContent(), new TypeReference<Map<String, Integer>>()
@@ -192,8 +208,8 @@ public class CoordinatorResourceTestClient
 
   public boolean areSegmentsLoaded(String dataSource)
   {
-    final Map<String, Integer> status = getLoadStatus();
-    return (status.containsKey(dataSource) && status.get(dataSource) == 100.0);
+    final Map<String, Integer> status = getLoadStatus(dataSource);
+    return (status != null && status.containsKey(dataSource) && status.get(dataSource) == 100.0);
   }
 
   public void unloadSegmentsForDataSource(String dataSource)

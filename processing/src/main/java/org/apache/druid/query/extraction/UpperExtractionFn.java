@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Locale;
+import java.util.Objects;
 
 @JsonTypeName("upper")
 public class UpperExtractionFn extends DimExtractionFn
@@ -78,5 +79,25 @@ public class UpperExtractionFn extends DimExtractionFn
                      .put((byte) 0XFF)
                      .put(localeBytes)
                      .array();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    UpperExtractionFn that = (UpperExtractionFn) o;
+    return Objects.equals(locale, that.locale) &&
+           Objects.equals(localeString, that.localeString);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(locale, localeString);
   }
 }

@@ -88,7 +88,7 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public String toString()
   {
-    return "QuantilePostAggregator{" +
+    return "MaxPostAggregator{" +
            "fieldName='" + fieldName + '\'' +
            '}';
   }

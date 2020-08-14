@@ -59,6 +59,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -226,8 +227,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  boolean determineLockGranularityandTryLockWithSegments(TaskActionClient client, List<DataSegment> segments)
-      throws IOException
+  boolean determineLockGranularityandTryLockWithSegments(
+      TaskActionClient client,
+      List<DataSegment> segments,
+      BiConsumer<LockGranularity, List<DataSegment>> segmentCheckFunction
+  ) throws IOException
   {
     final boolean forceTimeChunkLock = getContextValue(
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
@@ -236,6 +240,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
       taskLockHelper = new TaskLockHelper(false);
+      segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
           new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
@@ -243,6 +248,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
       taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT);
+      segmentCheckFunction.accept(result.lockGranularity, segments);
       return tryLockWithDetermineResult(client, result);
     }
   }
@@ -363,7 +369,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    */
   public static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
   {
-    Preconditions.checkState(
+    Preconditions.checkArgument(
         !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );

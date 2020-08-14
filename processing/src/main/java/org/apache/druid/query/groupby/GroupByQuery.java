@@ -27,6 +27,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
@@ -78,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -108,7 +110,6 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private final List<List<String>> subtotalsSpec;
 
-  private final boolean applyLimitPushDown;
   private final Function<Sequence<ResultRow>, Sequence<ResultRow>> postProcessingFn;
   private final RowSignature resultRowSignature;
 
@@ -118,6 +119,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
    */
   @Nullable
   private final DateTime universalTimestamp;
+
+  private final boolean canDoLimitPushDown;
+
+  /**
+   * A flag to force limit pushdown to historicals.
+   * Lazily initialized when calling {@link #validateAndGetForceLimitPushDown()}.
+   */
+  @Nullable
+  private Boolean forceLimitPushDown;
 
   @JsonCreator
   public GroupByQuery(
@@ -130,7 +140,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") @Nullable HavingSpec havingSpec,
-      @JsonProperty("limitSpec") LimitSpec limitSpec,
+      @JsonProperty("limitSpec") @Nullable LimitSpec limitSpec,
       @JsonProperty("subtotalsSpec") @Nullable List<List<String>> subtotalsSpec,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -181,7 +191,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       final @Nullable List<AggregatorFactory> aggregatorSpecs,
       final @Nullable List<PostAggregator> postAggregatorSpecs,
       final @Nullable HavingSpec havingSpec,
-      final LimitSpec limitSpec,
+      final @Nullable LimitSpec limitSpec,
       final @Nullable List<List<String>> subtotalsSpec,
       final @Nullable Function<Sequence<ResultRow>, Sequence<ResultRow>> postProcessingFn,
       final Map<String, Object> context
@@ -216,7 +226,11 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     this.postProcessingFn = postProcessingFn != null ? postProcessingFn : makePostProcessingFn();
 
     // Check if limit push down configuration is valid and check if limit push down will be applied
-    this.applyLimitPushDown = determineApplyLimitPushDown();
+    this.canDoLimitPushDown = canDoLimitPushDown(
+        this.limitSpec,
+        this.havingSpec,
+        this.subtotalsSpec
+    );
   }
 
   @Nullable
@@ -249,8 +263,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return subtotalsSpec;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -407,7 +421,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean isApplyLimitPushDown()
   {
-    return applyLimitPushDown;
+    if (forceLimitPushDown == null) {
+      forceLimitPushDown = validateAndGetForceLimitPushDown();
+    }
+    return forceLimitPushDown || canDoLimitPushDown;
   }
 
   @JsonIgnore
@@ -472,24 +489,22 @@ public class GroupByQuery extends BaseQuery<ResultRow>
                   .build();
   }
 
-  private boolean determineApplyLimitPushDown()
+  private boolean canDoLimitPushDown(
+      @Nullable LimitSpec limitSpec,
+      @Nullable HavingSpec havingSpec,
+      @Nullable List<List<String>> subtotalsSpec
+  )
   {
-    if (subtotalsSpec != null) {
+    if (subtotalsSpec != null && !subtotalsSpec.isEmpty()) {
       return false;
     }
 
-    final boolean forceLimitPushDown = validateAndGetForceLimitPushDown();
-
     if (limitSpec instanceof DefaultLimitSpec) {
-      DefaultLimitSpec defaultLimitSpec = (DefaultLimitSpec) limitSpec;
+      DefaultLimitSpec limitSpecWithoutOffset = ((DefaultLimitSpec) limitSpec).withOffsetToLimit();
 
       // If only applying an orderby without a limit, don't try to push down
-      if (!defaultLimitSpec.isLimited()) {
+      if (!limitSpecWithoutOffset.isLimited()) {
         return false;
-      }
-
-      if (forceLimitPushDown) {
-        return true;
       }
 
       if (!getApplyLimitPushDownFromContext()) {
@@ -610,7 +625,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   public Ordering<ResultRow> getRowOrdering(final boolean granular)
   {
-    if (applyLimitPushDown) {
+    if (isApplyLimitPushDown()) {
       if (!DefaultLimitSpec.sortingOrderHasNonGroupingFields((DefaultLimitSpec) limitSpec, dimensions)) {
         return getRowOrderingForPushDown(granular, (DefaultLimitSpec) limitSpec);
       }
@@ -867,7 +882,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     private List<PostAggregator> postAggregatorSpecs;
     @Nullable
     private HavingSpec havingSpec;
-
+    @Nullable
     private Map<String, Object> context;
 
     @Nullable
@@ -1115,6 +1130,17 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       return this;
     }
 
+    public Builder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public Builder queryId(String queryId)
+    {
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
+      return this;
+    }
+
     public Builder overrideContext(Map<String, Object> contextOverride)
     {
       this.context = computeOverriddenContext(context, contextOverride);
@@ -1140,7 +1166,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         if (orderByColumnSpecs.isEmpty() && limit == Integer.MAX_VALUE) {
           theLimitSpec = NoopLimitSpec.instance();
         } else {
-          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
+          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, 0, limit);
         }
       } else {
         theLimitSpec = limitSpec;

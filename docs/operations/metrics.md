@@ -242,9 +242,9 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/pool/init`|Initial pool.|poolKind, poolName.|Varies.|
 |`jvm/pool/max`|Max pool.|poolKind, poolName.|Varies.|
 |`jvm/pool/used`|Pool used.|poolKind, poolName.|< max pool|
-|`jvm/bufferpool/count`|Bufferpool count.|bufferPoolName.|Varies.|
-|`jvm/bufferpool/used`|Bufferpool used.|bufferPoolName.|close to capacity|
-|`jvm/bufferpool/capacity`|Bufferpool capacity.|bufferPoolName.|Varies.|
+|`jvm/bufferpool/count`|Bufferpool count.|bufferpoolName.|Varies.|
+|`jvm/bufferpool/used`|Bufferpool used.|bufferpoolName.|close to capacity|
+|`jvm/bufferpool/capacity`|Bufferpool capacity.|bufferpoolName.|Varies.|
 |`jvm/mem/init`|Initial memory.|memKind.|Varies.|
 |`jvm/mem/max`|Max memory.|memKind.|Varies.|
 |`jvm/mem/used`|Used memory.|memKind.|< max memory|

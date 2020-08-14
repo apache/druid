@@ -20,11 +20,13 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,6 +45,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -117,7 +120,7 @@ public class SqlSegmentsMetadataManagerTest
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
     SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.seconds(1));
+    config.setPollDuration(Period.seconds(3));
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
@@ -148,30 +151,124 @@ public class SqlSegmentsMetadataManagerTest
   }
 
   @Test
-  public void testPoll()
+  public void testPollPeriodically()
   {
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertNull(dataSourcesSnapshot);
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
-    sqlSegmentsMetadataManager.poll();
     Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+    // This call make sure that the first poll is completed
+    sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
+    Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
     Assert.assertEquals(
         ImmutableSet.of("wikipedia"),
         sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
     );
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
-        sqlSegmentsMetadataManager
-            .getImmutableDataSourcesWithAllUsedSegments()
-            .stream()
-            .map(ImmutableDruidDataSource::getName)
-            .collect(Collectors.toList())
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
+                           .stream()
+                           .map(ImmutableDruidDataSource::getName)
+                           .collect(Collectors.toList())
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
+        ImmutableSet.copyOf(dataSourcesSnapshot.getDataSource("wikipedia").getSegments())
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(sqlSegmentsMetadataManager.iterateAllUsedSegments())
+        ImmutableSet.copyOf(dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot())
+    );
+  }
+
+  @Test
+  public void testPollOnDemand()
+  {
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertNull(dataSourcesSnapshot);
+    // This should return false and not wait/poll anything as we did not schedule periodic poll
+    Assert.assertFalse(sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay());
+    Assert.assertNull(dataSourcesSnapshot);
+    // This call will force on demand poll
+    sqlSegmentsMetadataManager.forceOrWaitOngoingDatabasePoll();
+    Assert.assertFalse(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+    Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.OnDemandDatabasePoll);
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertEquals(
+        ImmutableSet.of("wikipedia"),
+        sqlSegmentsMetadataManager.retrieveAllDataSourceNames()
+    );
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia"),
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
+                           .stream()
+                           .map(ImmutableDruidDataSource::getName)
+                           .collect(Collectors.toList())
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(dataSourcesSnapshot.getDataSource("wikipedia").getSegments())
+    );
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot())
+    );
+  }
+
+  @Test(timeout = 60_000)
+  public void testPollPeriodicallyAndOnDemandInterleave() throws Exception
+  {
+    DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertNull(dataSourcesSnapshot);
+    sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+    // This call make sure that the first poll is completed
+    sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
+    Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia"),
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
+                           .stream()
+                           .map(ImmutableDruidDataSource::getName)
+                           .collect(Collectors.toList())
+    );
+    final String newDataSource2 = "wikipedia2";
+    final DataSegment newSegment2 = createNewSegment1(newDataSource2);
+    publisher.publishSegment(newSegment2);
+
+    // This call will force on demand poll
+    sqlSegmentsMetadataManager.forceOrWaitOngoingDatabasePoll();
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+    Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.OnDemandDatabasePoll);
+    // New datasource should now be in the snapshot since we just force on demand poll.
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia2", "wikipedia"),
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
+                           .stream()
+                           .map(ImmutableDruidDataSource::getName)
+                           .collect(Collectors.toList())
+    );
+
+    final String newDataSource3 = "wikipedia3";
+    final DataSegment newSegment3 = createNewSegment1(newDataSource3);
+    publisher.publishSegment(newSegment3);
+
+    // This time wait for periodic poll (not doing on demand poll so we have to wait a bit...)
+    while (sqlSegmentsMetadataManager.getDataSourcesSnapshot().getDataSource(newDataSource3) == null) {
+      Thread.sleep(1000);
+    }
+    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+    Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
+    dataSourcesSnapshot = sqlSegmentsMetadataManager.getDataSourcesSnapshot();
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia2", "wikipedia3", "wikipedia"),
+        dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
+                           .stream()
+                           .map(ImmutableDruidDataSource::getName)
+                           .collect(Collectors.toList())
     );
   }
 
@@ -749,4 +846,46 @@ public class SqlSegmentsMetadataManagerTest
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
     sqlSegmentsMetadataManager.stopPollingDatabasePeriodically();
   }
+
+  @Test
+  public void testIterateAllUsedNonOvershadowedSegmentsForDatasourceInterval() throws Exception
+  {
+    final Interval theInterval = Intervals.of("2012-03-15T00:00:00.000/2012-03-20T00:00:00.000");
+    Optional<Iterable<DataSegment>> segments = sqlSegmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+        "wikipedia", theInterval, true
+    );
+    Assert.assertTrue(segments.isPresent());
+    Set<DataSegment> dataSegmentSet = ImmutableSet.copyOf(segments.get());
+    Assert.assertEquals(1, dataSegmentSet.size());
+    Assert.assertTrue(dataSegmentSet.contains(segment1));
+
+    final DataSegment newSegment2 = createSegment(
+        "wikipedia",
+        "2012-03-16T00:00:00.000/2012-03-17T00:00:00.000",
+        "2017-10-15T20:19:12.565Z",
+        "index/y=2017/m=10/d=15/2017-10-16T20:19:12.565Z/0/index.zip",
+        0
+    );
+    publisher.publishSegment(newSegment2);
+
+    // New segment is not returned since we call without force poll
+    segments = sqlSegmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+        "wikipedia", theInterval, false
+    );
+    Assert.assertTrue(segments.isPresent());
+    dataSegmentSet = ImmutableSet.copyOf(segments.get());
+    Assert.assertEquals(1, dataSegmentSet.size());
+    Assert.assertTrue(dataSegmentSet.contains(segment1));
+
+    // New segment is returned since we call with force poll
+    segments = sqlSegmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+        "wikipedia", theInterval, true
+    );
+    Assert.assertTrue(segments.isPresent());
+    dataSegmentSet = ImmutableSet.copyOf(segments.get());
+    Assert.assertEquals(2, dataSegmentSet.size());
+    Assert.assertTrue(dataSegmentSet.contains(segment1));
+    Assert.assertTrue(dataSegmentSet.contains(newSegment2));
+  }
+
 }

@@ -114,5 +114,4 @@ public class ArrayOfDoublesSketchTTestPostAggregator extends ArrayOfDoublesSketc
         .appendCacheables(getFields())
         .build();
   }
-
 }

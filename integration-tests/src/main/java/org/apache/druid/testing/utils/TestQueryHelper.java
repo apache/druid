@@ -39,24 +39,6 @@ public class TestQueryHelper extends AbstractTestQueryHelper<QueryWithResults>
   }
 
   @Override
-  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
-  {
-    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
-    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
-  }
-
-  public void testQueriesFromString(String str, int timesToRun) throws Exception
-  {
-    testQueriesFromString(getQueryURL(broker), str, timesToRun);
-    testQueriesFromString(getQueryURL(brokerTLS), str, timesToRun);
-    testQueriesFromString(getQueryURL(router), str, timesToRun);
-    testQueriesFromString(getQueryURL(routerTLS), str, timesToRun);
-  }
-
-
-  @Override
   public String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2?pretty", schemeAndHost);

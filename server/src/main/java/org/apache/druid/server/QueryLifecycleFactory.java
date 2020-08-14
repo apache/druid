@@ -19,9 +19,11 @@
 
 package org.apache.druid.server;
 
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -38,6 +40,7 @@ public class QueryLifecycleFactory
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
+  private final DefaultQueryConfig defaultQueryConfig;
 
   @Inject
   public QueryLifecycleFactory(
@@ -47,7 +50,8 @@ public class QueryLifecycleFactory
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthConfig authConfig,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final Supplier<DefaultQueryConfig> queryConfigSupplier
   )
   {
     this.warehouse = warehouse;
@@ -56,6 +60,7 @@ public class QueryLifecycleFactory
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
+    this.defaultQueryConfig = queryConfigSupplier.get();
   }
 
   public QueryLifecycle factorize()
@@ -67,6 +72,7 @@ public class QueryLifecycleFactory
         emitter,
         requestLogger,
         authorizerMapper,
+        defaultQueryConfig,
         System.currentTimeMillis(),
         System.nanoTime()
     );

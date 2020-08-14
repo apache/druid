@@ -41,7 +41,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-public class LikeDimFilter implements DimFilter
+public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   // Regex matching characters that are definitely okay to include unescaped in a regex.
   // Leads to excessively paranoid escaping, although shouldn't affect runtime beyond compiling the regex.
@@ -285,6 +285,11 @@ public class LikeDimFilter implements DimFilter
 
     public boolean matches(@Nullable final String s)
     {
+      return matches(s, pattern);
+    }
+
+    private static boolean matches(@Nullable final String s, Pattern pattern)
+    {
       String val = NullHandling.nullToEmptyIfNeeded(s);
       return val != null && pattern.matcher(val).matches();
     }
@@ -310,48 +315,7 @@ public class LikeDimFilter implements DimFilter
 
     public DruidPredicateFactory predicateFactory(final ExtractionFn extractionFn)
     {
-      return new DruidPredicateFactory()
-      {
-        @Override
-        public Predicate<String> makeStringPredicate()
-        {
-          if (extractionFn != null) {
-            return input -> matches(extractionFn.apply(input));
-          } else {
-            return input -> matches(input);
-          }
-        }
-
-        @Override
-        public DruidLongPredicate makeLongPredicate()
-        {
-          if (extractionFn != null) {
-            return input -> matches(extractionFn.apply(input));
-          } else {
-            return input -> matches(String.valueOf(input));
-          }
-        }
-
-        @Override
-        public DruidFloatPredicate makeFloatPredicate()
-        {
-          if (extractionFn != null) {
-            return input -> matches(extractionFn.apply(input));
-          } else {
-            return input -> matches(String.valueOf(input));
-          }
-        }
-
-        @Override
-        public DruidDoublePredicate makeDoublePredicate()
-        {
-          if (extractionFn != null) {
-            return input -> matches(extractionFn.apply(input));
-          } else {
-            return input -> matches(String.valueOf(input));
-          }
-        }
-      };
+      return new PatternDruidPredicateFactory(extractionFn, pattern);
     }
 
     public String getPrefix()
@@ -362,6 +326,100 @@ public class LikeDimFilter implements DimFilter
     public SuffixMatch getSuffixMatch()
     {
       return suffixMatch;
+    }
+
+    @VisibleForTesting
+    static class PatternDruidPredicateFactory implements DruidPredicateFactory
+    {
+      private final ExtractionFn extractionFn;
+      private final Pattern pattern;
+
+      PatternDruidPredicateFactory(ExtractionFn extractionFn, Pattern pattern)
+      {
+        this.extractionFn = extractionFn;
+        this.pattern = pattern;
+      }
+
+      @Override
+      public Predicate<String> makeStringPredicate()
+      {
+        if (extractionFn != null) {
+          return input -> matches(extractionFn.apply(input), pattern);
+        } else {
+          return input -> matches(input, pattern);
+        }
+      }
+
+      @Override
+      public DruidLongPredicate makeLongPredicate()
+      {
+        if (extractionFn != null) {
+          return input -> matches(extractionFn.apply(input), pattern);
+        } else {
+          return input -> matches(String.valueOf(input), pattern);
+        }
+      }
+
+      @Override
+      public DruidFloatPredicate makeFloatPredicate()
+      {
+        if (extractionFn != null) {
+          return input -> matches(extractionFn.apply(input), pattern);
+        } else {
+          return input -> matches(String.valueOf(input), pattern);
+        }
+      }
+
+      @Override
+      public DruidDoublePredicate makeDoublePredicate()
+      {
+        if (extractionFn != null) {
+          return input -> matches(extractionFn.apply(input), pattern);
+        } else {
+          return input -> matches(String.valueOf(input), pattern);
+        }
+      }
+
+      @Override
+      public boolean equals(Object o)
+      {
+        if (this == o) {
+          return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+          return false;
+        }
+        PatternDruidPredicateFactory that = (PatternDruidPredicateFactory) o;
+        return Objects.equals(extractionFn, that.extractionFn) &&
+               Objects.equals(pattern.toString(), that.pattern.toString());
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return Objects.hash(extractionFn, pattern.toString());
+      }
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      LikeMatcher that = (LikeMatcher) o;
+      return getSuffixMatch() == that.getSuffixMatch() &&
+             Objects.equals(getPrefix(), that.getPrefix()) &&
+             Objects.equals(pattern.toString(), that.pattern.toString());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(getSuffixMatch(), getPrefix(), pattern.toString());
     }
   }
 }

@@ -53,6 +53,9 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.jclouds\.api/openstack\-keystone@.*$</packageUrl>
     <cve>CVE-2015-7546</cve>
+    <cve>CVE-2020-12689</cve>
+    <cve>CVE-2020-12690</cve>
+    <cve>CVE-2020-12691</cve>
   </suppress>
 
   <!-- FIXME: These are suppressed so that CI can enforce that no new vulnerable dependencies are added. -->
@@ -186,6 +189,13 @@
      ]]></notes>
      <packageUrl regex="true">^pkg:npm/node\-sass@.*$</packageUrl>
      <vulnerabilityName>CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')</vulnerabilityName>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+    Druid is not a native app, so the vulnerability flagged is a false positive.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.google\.oauth-client/google\-oauth\-client@.*$</packageUrl>
+    <cve>CVE-2020-7692</cve>
   </suppress>
   <suppress>
     <!--

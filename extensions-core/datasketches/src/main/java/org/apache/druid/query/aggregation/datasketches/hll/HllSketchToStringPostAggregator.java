@@ -61,6 +61,19 @@ public class HllSketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public PostAggregator getField()
+  {
+    return field;
+  }
+
+  @Override
   public Comparator<String> getComparator()
   {
     return Comparator.nullsFirst(Comparator.naturalOrder());
@@ -71,13 +84,6 @@ public class HllSketchToStringPostAggregator implements PostAggregator
   {
     final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
     return sketch.toString();
-  }
-
-  @Override
-  @JsonProperty
-  public String getName()
-  {
-    return name;
   }
 
   @Override
@@ -92,10 +98,13 @@ public class HllSketchToStringPostAggregator implements PostAggregator
     return this;
   }
 
-  @JsonProperty
-  public PostAggregator getField()
+  @Override
+  public byte[] getCacheKey()
   {
-    return field;
+    return new CacheKeyBuilder(AggregatorUtil.HLL_SKETCH_TO_STRING_CACHE_TYPE_ID)
+        .appendString(name)
+        .appendCacheable(field)
+        .build();
   }
 
   @Override
@@ -108,22 +117,17 @@ public class HllSketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof HllSketchToStringPostAggregator)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final HllSketchToStringPostAggregator that = (HllSketchToStringPostAggregator) o;
-
-    if (!name.equals(that.name)) {
-      return false;
-    }
-
-    return field.equals(that.field);
+    HllSketchToStringPostAggregator that = (HllSketchToStringPostAggregator) o;
+    return name.equals(that.name) &&
+           field.equals(that.field);
   }
 
   @Override
@@ -131,14 +135,4 @@ public class HllSketchToStringPostAggregator implements PostAggregator
   {
     return Objects.hash(name, field);
   }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new CacheKeyBuilder(AggregatorUtil.HLL_SKETCH_TO_STRING_CACHE_TYPE_ID)
-        .appendString(name)
-        .appendCacheable(field)
-        .build();
-  }
-
 }

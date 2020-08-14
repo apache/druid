@@ -22,8 +22,8 @@ package org.apache.druid.query.aggregation.tdigestsketch;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Doubles;
 import com.tdunning.math.stats.MergingDigest;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
@@ -41,7 +41,6 @@ import java.util.Set;
  */
 public class TDigestSketchToQuantilePostAggregator implements PostAggregator
 {
-
   private final String name;
   private final PostAggregator field;
 
@@ -94,9 +93,9 @@ public class TDigestSketchToQuantilePostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator<double[]> getComparator()
+  public Comparator<Double> getComparator()
   {
-    throw new IAE("Comparing arrays of quantiles is not supported");
+    return Doubles::compare;
   }
 
   @Override

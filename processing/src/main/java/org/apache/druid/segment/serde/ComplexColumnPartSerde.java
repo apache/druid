@@ -21,7 +21,9 @@ package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
 
@@ -33,11 +35,17 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   @Nullable
   private final ComplexMetricSerde serde;
   private final Serializer serializer;
+  private static final Logger log = new Logger(ComplexColumnPartSerde.class);
 
   private ComplexColumnPartSerde(String typeName, Serializer serializer)
   {
     this.typeName = typeName;
     this.serde = ComplexMetrics.getSerdeForType(typeName);
+    if (this.serde == null) {
+      // Not choosing to fail here since this gets handled as
+      // an UnknownTypeComplexColumn. See SimpleColumnHolder#getColumn.
+      log.warn("Unknown complex column of type %s detected", typeName);
+    }
     this.serializer = serializer;
   }
 
@@ -71,6 +79,11 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   {
     return (buffer, builder, columnConfig) -> {
       if (serde != null) {
+        // we don't currently know if complex column can have nulls (or can be multi-valued, but not making that change
+        // since it isn't supported anywhere in the query engines)
+        // longer term this needs to be captured by making the serde provide this information, and then this should
+        // no longer be set to true but rather the actual values
+        builder.setHasNulls(ColumnCapabilities.Capable.TRUE);
         serde.deserializeColumn(buffer, builder);
       }
     };

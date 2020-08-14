@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.tuple.ArrayOfDoublesSketch;
 import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketch;
 import org.apache.datasketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
@@ -68,22 +68,10 @@ public class ArrayOfDoublesSketchAggregatorFactoryTest
   @Test
   public void testEquals()
   {
-    final ArrayOfDoublesSketchAggregatorFactory a1 = new ArrayOfDoublesSketchAggregatorFactory(
-        "name",
-        "field",
-        1,
-        ImmutableList.of("met"),
-        1
-    );
-    final ArrayOfDoublesSketchAggregatorFactory a2 = new ArrayOfDoublesSketchAggregatorFactory(
-        "name",
-        "field",
-        1,
-        ImmutableList.of("met"),
-        1
-    );
-
-    Assert.assertEquals(a1, a2);
+    EqualsVerifier.forClass(ArrayOfDoublesSketchAggregatorFactory.class)
+                  .withNonnullFields("name", "fieldName")
+                  .usingGetClass()
+                  .verify();
   }
 
   @Test

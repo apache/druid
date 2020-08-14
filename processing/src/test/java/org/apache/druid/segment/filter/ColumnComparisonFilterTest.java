@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -191,5 +192,13 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
         new ExtractionDimensionSpec("dim0", "dim0", lookupFn),
         new ExtractionDimensionSpec("dim1", "dim1", lookupFn)
     )), ImmutableList.of("2", "5", "7", "8"));
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(ColumnComparisonFilter.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

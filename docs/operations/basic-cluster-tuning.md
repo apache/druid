@@ -90,17 +90,15 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 
 #### Segment Cache Size
 
-`druid.server.maxSize` controls the total size of segment data that can be assigned by the Coordinator to a Historical.
-
-`druid.segmentCache.locations` specifies locations where segment data can be stored on the Historical. The sum of available disk space across these locations should equal `druid.server.maxSize`.
+`druid.segmentCache.locations` specifies locations where segment data can be stored on the Historical. The sum of available disk space across these locations is set as the default value for property: `druid.server.maxSize`, which controls the total size of segment data that can be assigned by the Coordinator to a Historical.
 
 Segments are memory-mapped by Historical processes using any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system). Segments that are not currently in memory will be paged from disk when queried.
 
-Therefore, `druid.server.maxSize` should be set such that a Historical is not allocated an excessive amount of segment data. As the value of (`free system memory` / `druid.server.maxSize`) increases, a greater proportion of segments can be kept in memory, allowing for better query performance.
+Therefore, the size of cache locations set within `druid.segmentCache.locations` should be such that a Historical is not allocated an excessive amount of segment data. As the value of (`free system memory` / total size of all `druid.segmentCache.locations`) increases, a greater proportion of segments can be kept in memory, allowing for better query performance. The total segment data size assigned to a Historical can be overridden with `druid.server.maxSize`, but this is not required for most of the use cases.
 
 #### Number of Historicals
 
-The number of Historicals needed in a cluster depends on how much data the cluster has. For good performance, you will want enough Historicals such that each Historical has a good (`free system memory` / `druid.server.maxSize`) ratio, as described in the segment cache size section above.
+The number of Historicals needed in a cluster depends on how much data the cluster has. For good performance, you will want enough Historicals such that each Historical has a good (`free system memory` / total size of all `druid.segmentCache.locations`) ratio, as described in the segment cache size section above.
 
 Having a smaller number of big servers is generally better than having a large number of small servers, as long as you have enough fault tolerance for your use case.
 
@@ -115,7 +113,7 @@ To estimate total memory usage of the Historical under these guidelines:
 - Heap: `(0.5GB * number of CPU cores) + (2 * total size of lookup maps) + druid.cache.sizeInBytes`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
-The Historical will use any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system) for memory-mapping of segments on disk. For better query performance, you will want to ensure a good (`free system memory` / `druid.server.maxSize`) ratio so that a greater proportion of segments can be kept in memory.
+The Historical will use any available free system memory (i.e., memory not used by the Historical JVM and heap/direct memory buffers or other processes on the system) for memory-mapping of segments on disk. For better query performance, you will want to ensure a good (`free system memory` / total size of all `druid.segmentCache.locations`) ratio so that a greater proportion of segments can be kept in memory.
 
 #### Segment sizes matter
 
@@ -389,7 +387,7 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 ```
 -Duser.timezone=UTC
 -Dfile.encoding=UTF-8
--Djava.io.tmpdir=<something other than /tmp which might be mounted to volatile tmpfs file system>
+-Djava.io.tmpdir=<should not be volatile tmpfs and also has good read and write speed. Strongly recommended to avoid using NFS mount>
 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 -Dorg.jboss.logging.provider=slf4j
 -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.SLF4JLogger
@@ -407,14 +405,14 @@ Enabling process termination on out-of-memory errors is useful as well, since th
 -XX:+ExitOnOutOfMemoryError
 -XX:+HeapDumpOnOutOfMemoryError
 -XX:HeapDumpPath=/var/logs/druid/historical.hprof
--XX:MaxDirectMemorySize=10240g
+-XX:MaxDirectMemorySize=1g
 ```
+> Please note that the flag settings above represent sample, general guidelines only. Be careful to use values appropriate 
+for your specific scenario and be sure to test any changes in staging environments.
 
 `ExitOnOutOfMemoryError` flag is only supported starting JDK 8u92 . For older versions, `-XX:OnOutOfMemoryError='kill -9 %p'` can be used.
 
 `MaxDirectMemorySize` restricts JVM from allocating more than specified limit, by setting it to unlimited JVM restriction is lifted and OS level memory limits would still be effective. It's still important to make sure that Druid is not configured to allocate more off-heap memory than your machine has available. Important settings here include `druid.processing.numThreads`, `druid.processing.numMergeBuffers`, and `druid.processing.buffer.sizeBytes`.
-
-Please note that above flags are general guidelines only. Be cautious and feel free to change them if necessary for the specific deployment.
 
 Additionally, for large JVM heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
 

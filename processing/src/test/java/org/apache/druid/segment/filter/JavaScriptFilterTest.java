@@ -22,18 +22,23 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -53,6 +58,9 @@ public class JavaScriptFilterTest extends BaseFilterTest
   {
     super(testName, DEFAULT_ROWS, indexBuilder, finisher, cnf, optimize);
   }
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @AfterClass
   public static void tearDown() throws Exception
@@ -207,7 +215,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testNumericNull()
   {
-    if (NullHandling.replaceWithDefault()) {
+    if (canTestNumericNullsAsDefaultValues) {
       assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNullFilter, null), ImmutableList.of());
       assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNullFilter, null), ImmutableList.of());
       assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNullFilter, null), ImmutableList.of());
@@ -219,6 +227,25 @@ public class JavaScriptFilterTest extends BaseFilterTest
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNumericValueFilter("5.5"), null), ImmutableList.of("2"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNumericValueFilter("120.0245"), null), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNumericValueFilter("9001"), null), ImmutableList.of("4"));
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(JavaScriptFilter.class)
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testRequiredColumnRewrite()
+  {
+    Filter filter = newJavaScriptDimFilter("dim3", jsValueFilter("a"), null).toFilter();
+    Assert.assertFalse(filter.supportsRequiredColumnRewrite());
+
+    expectedException.expect(UnsupportedOperationException.class);
+    expectedException.expectMessage("Required column rewrite is not supported by this filter.");
+    filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
   }
 
   private JavaScriptDimFilter newJavaScriptDimFilter(

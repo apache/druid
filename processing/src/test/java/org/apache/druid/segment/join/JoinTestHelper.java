@@ -99,6 +99,7 @@ public class JoinTestHelper
                   .add("regionIsoCode", ValueType.STRING)
                   .add("countryIsoCode", ValueType.STRING)
                   .add("regionName", ValueType.STRING)
+                  .add("extraField", ValueType.STRING)
                   .build();
 
   private static final ColumnProcessorFactory<Supplier<Object>> SIMPLE_READER =
@@ -140,6 +141,8 @@ public class JoinTestHelper
           return selector::getObject;
         }
       };
+
+  public static final String INDEXED_TABLE_VERSION = DateTimes.nowUtc().toString();
 
   private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
@@ -254,7 +257,8 @@ public class JoinTestHelper
             rows,
             createMapRowAdapter(COUNTRIES_SIGNATURE),
             COUNTRIES_SIGNATURE,
-            ImmutableSet.of("countryNumber", "countryIsoCode")
+            ImmutableSet.of("countryNumber", "countryIsoCode"),
+            INDEXED_TABLE_VERSION
         )
     );
   }
@@ -267,7 +271,8 @@ public class JoinTestHelper
             rows,
             createMapRowAdapter(REGIONS_SIGNATURE),
             REGIONS_SIGNATURE,
-            ImmutableSet.of("regionIsoCode", "countryIsoCode")
+            ImmutableSet.of("regionIsoCode", "countryIsoCode"),
+            INDEXED_TABLE_VERSION
         )
     );
   }
