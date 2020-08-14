@@ -232,6 +232,10 @@ possible for two aggregators in the same SQL query to have different filters.
 
 Only the COUNT aggregation can accept DISTINCT.
 
+> The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
+> functions can produce inconsistent results across the same query. Any functions that operate on an input type of "float"
+> may also see these differences in aggregation results across multiple query runs.
+
 |Function|Notes|
 |--------|-----|
 |`COUNT(*)`|Counts the number of rows.|
