@@ -1335,14 +1335,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"abc"},
-            new Object[]{"def"}
+            new Object[]{"def"},
+            new Object[]{"1"}
         )
     );
   }
 
   @Test
-  public void testSelectLimitWrappingOnTopOfOffsetAndLimit() throws Exception
+  public void testSelectLimitWrappingOnTopOfOffsetAndLowLimit() throws Exception
   {
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 1 OFFSET 1",
@@ -1361,6 +1361,31 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"def"}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectLimitWrappingOnTopOfOffsetAndHighLimit() throws Exception
+  {
+    testQuery(
+        "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 10 OFFSET 1",
+        OUTER_LIMIT_CONTEXT,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns(ImmutableList.of("__time", "dim1"))
+                .offset(1)
+                .limit(2)
+                .order(ScanQuery.Order.DESCENDING)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(OUTER_LIMIT_CONTEXT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"def"},
+            new Object[]{"1"}
         )
     );
   }
