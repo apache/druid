@@ -233,8 +233,11 @@ possible for two aggregators in the same SQL query to have different filters.
 Only the COUNT aggregation can accept DISTINCT.
 
 > The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
-> functions can produce inconsistent results across the same query. Any functions that operate on an input type of "float"
-> may also see these differences in aggregation results across multiple query runs.
+> functions can produce inconsistent results across the same query. 
+>
+> Functions that operates on an input type of "float" or "double" may also see these differences in aggregation
+> results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
+> consider using the `ROUND` function to smooth out the inconsistencies between queries.  
 
 |Function|Notes|
 |--------|-----|
