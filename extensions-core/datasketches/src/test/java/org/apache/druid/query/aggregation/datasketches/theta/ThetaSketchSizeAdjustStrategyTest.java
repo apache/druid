@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.google.common.collect.ImmutableMap;
@@ -10,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -22,39 +42,57 @@ import org.openjdk.jol.info.GraphLayout;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.apache.druid.segment.incremental.OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG;
-
 public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTest
 {
+  private static final int MAX_ROWS = 100000;
+
   @Before
   public void setup()
   {
     SketchModule.registerSerde();
-    System.setProperty(ADJUST_BYTES_INMEMORY_FLAG, "true");
+    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "true");
+    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_PERIOD, 200 + "");
   }
 
   @Test
   public void testAdjustStrategyInstanceByPara()
   {
-    System.setProperty(ADJUST_BYTES_INMEMORY_FLAG, "false");
+    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "false");
     final AggregatorFactory aggregatorFactoryAndNullStrategy = new SketchMergeAggregatorFactory("theta01",
         "theta01",
         1024, null, null, null);
     Assert.assertEquals(true, aggregatorFactoryAndNullStrategy.getMaxIntermediateSizeAdjustStrategy() == null);
 
-    System.setProperty(ADJUST_BYTES_INMEMORY_FLAG, "true");
+    System.setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "true");
     final AggregatorFactory aggregatorFactoryAndStrategy = new SketchMergeAggregatorFactory("theta01",
         "theta01",
         1024, null, null, null);
     Assert.assertEquals(true, aggregatorFactoryAndStrategy.getMaxIntermediateSizeAdjustStrategy() != null);
 
-    System.getProperties().remove(ADJUST_BYTES_INMEMORY_FLAG);
-    final String defaultParaVal = System.getProperties().getProperty(ADJUST_BYTES_INMEMORY_FLAG);
+    System.getProperties().remove(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG);
+    final String defaultParaVal = System.getProperties().getProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG);
     final AggregatorFactory aggregatorFactoryAndStrategyDefault = new SketchMergeAggregatorFactory("theta01",
         "theta01",
         1024, null, null, null);
-    Assert.assertEquals(null, defaultParaVal);
-    Assert.assertEquals(true, aggregatorFactoryAndStrategyDefault.getMaxIntermediateSizeAdjustStrategy() != null);
+    Assert.assertEquals(true, defaultParaVal == null && aggregatorFactoryAndStrategyDefault
+        .getMaxIntermediateSizeAdjustStrategy() != null);
+
+    System.getProperties().setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_FLAG, "true");
+    System.getProperties().setProperty(OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_PERIOD, 10000 + "");
+    OnheapIncrementalIndex index = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withQueryGranularity(Granularities.MINUTE)
+                .withMetrics(new SketchMergeAggregatorFactory("theta01", "theta01",
+                    1024, null, null, null))
+                .build()
+        )
+        .setMaxRowCount(MAX_ROWS)
+        .buildOnheap();
+    Assert.assertEquals(true, index.existsAsyncAdjust() && !index.existsSyncAdjust()
+        && index.getRowNeedAsyncAdjustAggIndex().length == 1 && index.getRowNeedSyncAdjustAggIndex().length == 0);
+    Assert.assertEquals(true, index.getAdjustBytesInMemoryPeriod() <= OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_PERIOD_MAX
+        && index.getAdjustBytesInMemoryPeriod() >= OnheapIncrementalIndex.ADJUST_BYTES_INMEMORY_PERIOD_MIN);
   }
 
   @Test
@@ -67,7 +105,7 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
       aggregatorFactory = new SketchMergeAggregatorFactory("theta01",
           "theta01",
           1024, null, null, null);
-      Assert.assertEquals(true, strategy != null && strategy.appendBytesOnRollupNum().length == strategy
+      Assert.assertEquals(true, strategy != null && strategy.adjustWithRollupNum().length == strategy
           .appendBytesOnRollupNum().length);
 
       final long maxBytesPerAgg = aggregatorFactory.getMaxIntermediateSize();
@@ -111,60 +149,64 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
   @Test
   public void testAppendBytesInMemoryOnRollupCardinal() throws IndexSizeExceededException, InterruptedException
   {
-    final int size = 1024;
+    final int size = 16384;
     ThetaSketchSizeAdjustStrategy strategy = new ThetaSketchSizeAdjustStrategy(size);
-
+    System.out.println(strategy);
     int[] rollupCardinals = strategy.adjustWithRollupNum();
     int[] appendBytes = strategy.appendBytesOnRollupNum();
+
     for (int i = 0; i < rollupCardinals.length; i++) {
+      AggregatorFactory[] metrics = {new SketchMergeAggregatorFactory("theta01", "theta01",
+          size, null, null, null),
+          new SketchMergeAggregatorFactory("theta02", "theta02",
+              size, null, null, null)};
       final int cardinalIndex = i;
       OnheapIncrementalIndex index = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withQueryGranularity(Granularities.MINUTE)
-                  .withMetrics(
-                      new SketchMergeAggregatorFactory("theta01", "theta01",
-                          size, null, null, null))
+                  .withMetrics(metrics)
                   .build()
           )
-          .setMaxRowCount(10_0000)
+          .setMaxRowCount(MAX_ROWS)
           .buildOnheap();
       OnheapIncrementalIndex index2 = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withQueryGranularity(Granularities.MINUTE)
-                  .withMetrics(
-                      new SketchMergeAggregatorFactory("theta01", "theta01",
-                          size, null, null, null))
+                  .withMetrics(metrics)
                   .build()
           )
-          .setMaxRowCount(10_0000)
+          .setMaxRowCount(MAX_ROWS)
           .buildOnheap();
 
+      IncrementalIndexAddResult addResult = null;
       for (int j = 0; j < rollupCardinals[cardinalIndex]; ++j) {
         int thetaVal2 = j;
-        index.add(new MapBasedInputRow(
+        addResult = index.add(new MapBasedInputRow(
             0,
             Collections.singletonList("dim1"),
             ImmutableMap.of("dim1", 1,
-                "theta01", 1)
+                "theta01", 1, "theta02", 1)
         ));
 
         index2.add(new MapBasedInputRow(
             0,
             Collections.singletonList("dim1"),
             ImmutableMap.of("dim1", 1,
-                "theta01", thetaVal2)
+                "theta01", thetaVal2, "theta02", thetaVal2)
         ));
       }
       Thread.sleep(index.getAdjustBytesInMemoryPeriod() * 2);
-      index2.add(new MapBasedInputRow(
+      final IncrementalIndexAddResult addResult2 = index2.add(new MapBasedInputRow(
           0,
           Collections.singletonList("dim1"),
           ImmutableMap.of("dim1", 1,
-              "theta01", "ab")
+              "theta01", "aa", "theta02", "aa")
       ));
-      Assert.assertEquals(index2.getBytesInMemory().get() - index.getBytesInMemory().get(), appendBytes[cardinalIndex]);
+      index.stopAdjust();
+      index2.stopAdjust();
+      Assert.assertEquals(Arrays.stream(Arrays.copyOfRange(appendBytes, 0, cardinalIndex + 1)).sum() * metrics.length, addResult2.getBytesInMemory() - addResult.getBytesInMemory());
     }
   }
 
@@ -196,9 +238,9 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
                 .withMetrics(metrics)
                 .build()
         )
-        .setMaxRowCount(10_0000)
+        .setMaxRowCount(MAX_ROWS)
         .buildOnheap();
-    final int[] rowNeedAdjustAggIndex = index.getRowNeedAdjustAggIndex();
+    final int[] rowNeedAdjustAggIndex = index.getRowNeedAsyncAdjustAggIndex();
     Assert.assertArrayEquals(actualNeedAdjustMetricIndex, rowNeedAdjustAggIndex);
   }
 }

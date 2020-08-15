@@ -33,11 +33,12 @@ public class ColumnAnalysis
 
   public static ColumnAnalysis error(String reason)
   {
-    return new ColumnAnalysis("STRING", false, -1, null, null, null, ERROR_PREFIX + reason);
+    return new ColumnAnalysis("STRING", false, false, -1, null, null, null, ERROR_PREFIX + reason);
   }
 
   private final String type;
   private final boolean hasMultipleValues;
+  private final boolean hasNulls;
   private final long size;
   private final Integer cardinality;
   private final Comparable minValue;
@@ -48,6 +49,7 @@ public class ColumnAnalysis
   public ColumnAnalysis(
       @JsonProperty("type") String type,
       @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
+      @JsonProperty("hasNulls") boolean hasNulls,
       @JsonProperty("size") long size,
       @JsonProperty("cardinality") Integer cardinality,
       @JsonProperty("minValue") Comparable minValue,
@@ -57,6 +59,7 @@ public class ColumnAnalysis
   {
     this.type = type;
     this.hasMultipleValues = hasMultipleValues;
+    this.hasNulls = hasNulls;
     this.size = size;
     this.cardinality = cardinality;
     this.minValue = minValue;
@@ -108,6 +111,11 @@ public class ColumnAnalysis
     return errorMessage;
   }
 
+  @JsonProperty
+  public boolean isHasNulls()
+  {
+    return hasNulls;
+  }
   public boolean isError()
   {
     return (errorMessage != null && !errorMessage.isEmpty());
@@ -144,7 +152,16 @@ public class ColumnAnalysis
     Comparable newMin = choose(minValue, rhs.minValue, false);
     Comparable newMax = choose(maxValue, rhs.maxValue, true);
 
-    return new ColumnAnalysis(type, multipleValues, size + rhs.getSize(), cardinality, newMin, newMax, null);
+    return new ColumnAnalysis(
+        type,
+        multipleValues,
+        hasNulls || rhs.hasNulls,
+        size + rhs.getSize(),
+        cardinality,
+        newMin,
+        newMax,
+        null
+    );
   }
 
   private <T extends Comparable> T choose(T obj1, T obj2, boolean max)
@@ -165,6 +182,7 @@ public class ColumnAnalysis
     return "ColumnAnalysis{" +
            "type='" + type + '\'' +
            ", hasMultipleValues=" + hasMultipleValues +
+           ", hasNulls=" + hasNulls +
            ", size=" + size +
            ", cardinality=" + cardinality +
            ", minValue=" + minValue +
@@ -184,6 +202,7 @@ public class ColumnAnalysis
     }
     ColumnAnalysis that = (ColumnAnalysis) o;
     return hasMultipleValues == that.hasMultipleValues &&
+           hasNulls == that.hasNulls &&
            size == that.size &&
            Objects.equals(type, that.type) &&
            Objects.equals(cardinality, that.cardinality) &&
@@ -195,6 +214,6 @@ public class ColumnAnalysis
   @Override
   public int hashCode()
   {
-    return Objects.hash(type, hasMultipleValues, size, cardinality, minValue, maxValue, errorMessage);
+    return Objects.hash(type, hasMultipleValues, hasNulls, size, cardinality, minValue, maxValue, errorMessage);
   }
 }

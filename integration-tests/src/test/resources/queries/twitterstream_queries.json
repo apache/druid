@@ -592,66 +592,69 @@
         },
         "expectedResults": [
             {
-                "id": "twitterstream_2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z_2013-01-02T04:13:41.980Z_v9",
-                "intervals": ["2013-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"],
-                "columns": {
-                    "has_links": {
-                        "type": "STRING",
-                        "hasMultipleValues": false,
-                        "size": 0,
-                        "cardinality": 2,
+                "id":"twitterstream_2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z_2013-01-02T04:13:41.980Z_v9",
+                "intervals":["2013-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"],
+                "columns":{
+                    "has_links":{
+                        "type":"STRING",
+                        "hasMultipleValues":false,
+                        "size":0,
+                        "cardinality":2,
                         "minValue":"No",
                         "maxValue":"Yes",
-                        "errorMessage": null
+                        "errorMessage":null,
+                        "hasNulls":false
                     }
                 },
-                "size": 0,
-                "numRows": 3702583,
-                "aggregators": null,
-                "timestampSpec": null,
-                "queryGranularity": null,
+                "size":0,
+                "numRows":3702583,
+                "aggregators":null,
+                "timestampSpec":null,
+                "queryGranularity":null,
                 "rollup":null
             },
             {
-                "id": "twitterstream_2013-01-02T00:00:00.000Z_2013-01-03T00:00:00.000Z_2013-01-03T03:44:58.791Z_v9",
-                "intervals": ["2013-01-02T00:00:00.000Z/2013-01-03T00:00:00.000Z"],
-                "columns": {
-                    "has_links": {
-                        "type": "STRING",
-                        "hasMultipleValues": false,
-                        "size": 0,
-                        "cardinality": 2,
+                "id":"twitterstream_2013-01-02T00:00:00.000Z_2013-01-03T00:00:00.000Z_2013-01-03T03:44:58.791Z_v9",
+                "intervals":["2013-01-02T00:00:00.000Z/2013-01-03T00:00:00.000Z"],
+                "columns":{
+                    "has_links":{
+                        "type":"STRING",
+                        "hasMultipleValues":false,
+                        "size":0,
+                        "cardinality":2,
                         "minValue":"No",
                         "maxValue":"Yes",
-                        "errorMessage": null
+                        "errorMessage":null,
+                        "hasNulls":false
                     }
                 },
-                "size": 0,
-                "numRows": 3743002,
-                "aggregators": null,
-                "timestampSpec": null,
-                "queryGranularity": null,
+                "size":0,
+                "numRows":3743002,
+                "aggregators":null,
+                "timestampSpec":null,
+                "queryGranularity":null,
                 "rollup":null
             },
             {
-                "id": "twitterstream_2013-01-03T00:00:00.000Z_2013-01-04T00:00:00.000Z_2013-01-04T04:09:13.590Z_v9",
-                "intervals": ["2013-01-03T00:00:00.000Z/2013-01-04T00:00:00.000Z"],
-                "columns": {
-                    "has_links": {
-                        "type": "STRING",
-                        "hasMultipleValues": false,
-                        "size": 0,
-                        "cardinality": 2,
+                "id":"twitterstream_2013-01-03T00:00:00.000Z_2013-01-04T00:00:00.000Z_2013-01-04T04:09:13.590Z_v9",
+                "intervals":["2013-01-03T00:00:00.000Z/2013-01-04T00:00:00.000Z"],
+                "columns":{
+                    "has_links":{
+                        "type":"STRING",
+                        "hasMultipleValues":false,
+                        "size":0,
+                        "cardinality":2,
                         "minValue":"No",
                         "maxValue":"Yes",
-                        "errorMessage": null
+                        "errorMessage":null,
+                        "hasNulls":false
                     }
                 },
-                "size": 0,
+                "size":0,
                 "numRows":3502959,
-                "aggregators": null,
-                "timestampSpec": null,
-                "queryGranularity": null,
+                "aggregators":null,
+                "timestampSpec":null,
+                "queryGranularity":null,
                 "rollup":null
             }
         ]

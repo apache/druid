@@ -51,7 +51,7 @@ public class RowBasedColumnSelectorFactoryTest
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, ColumnHolder.TIME_COLUMN_NAME);
     Assert.assertEquals(ValueType.LONG, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
@@ -65,7 +65,7 @@ public class RowBasedColumnSelectorFactoryTest
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, STRING_COLUMN_NAME);
     Assert.assertEquals(ValueType.STRING, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertTrue(caps.hasMultipleValues().isUnknown());
@@ -79,7 +79,7 @@ public class RowBasedColumnSelectorFactoryTest
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, LONG_COLUMN_NAME);
     Assert.assertEquals(ValueType.LONG, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
@@ -93,7 +93,7 @@ public class RowBasedColumnSelectorFactoryTest
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, FLOAT_COLUMN_NAME);
     Assert.assertEquals(ValueType.FLOAT, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
@@ -107,7 +107,7 @@ public class RowBasedColumnSelectorFactoryTest
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, DOUBLE_COLUMN_NAME);
     Assert.assertEquals(ValueType.DOUBLE, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
@@ -121,7 +121,7 @@ public class RowBasedColumnSelectorFactoryTest
         RowBasedColumnSelectorFactory.getColumnCapabilities(ROW_SIGNATURE, COMPLEX_COLUMN_NAME);
     Assert.assertEquals(ValueType.COMPLEX, caps.getType());
     Assert.assertFalse(caps.hasBitmapIndexes());
-    Assert.assertFalse(caps.isDictionaryEncoded());
+    Assert.assertFalse(caps.isDictionaryEncoded().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesSorted().isTrue());
     Assert.assertFalse(caps.areDictionaryValuesUnique().isTrue());
     Assert.assertTrue(caps.hasMultipleValues().isUnknown());

@@ -170,8 +170,11 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(0, addResult.getNextRedundantBytes());
 
-    final int[] rowNeedAdjustAggIndex = index.rowNeedAdjustAggIndex;
-    Assert.assertEquals(true, rowNeedAdjustAggIndex != null && rowNeedAdjustAggIndex.length == 0);
+    final int[] rowNeedAsyncAdjustAggIndex = index.rowNeedAsyncAdjustAggIndex;
+    Assert.assertEquals(true, rowNeedAsyncAdjustAggIndex != null && rowNeedAsyncAdjustAggIndex.length == 0);
+
+    final int[] rowNeedSyncAdjustAggIndex = index.rowNeedSyncAdjustAggIndex;
+    Assert.assertEquals(true, rowNeedSyncAdjustAggIndex != null && rowNeedSyncAdjustAggIndex.length == 0);
 
     addResult = new IncrementalIndexAddResult(1, 2, addResult.getParseException());
     Assert.assertEquals(true, addResult.getNextRedundantBytes() == 0 && addResult

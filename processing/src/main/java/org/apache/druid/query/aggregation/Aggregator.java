@@ -80,14 +80,4 @@ public interface Aggregator extends Closeable
   {
     return 0;
   }
-
-  /**
-   * True if required adjust bytesInMemory{@link IncrementalIndex#bytesInMemory}
-   *
-   * @return
-   */
-  default boolean requiredAdjustSize()
-  {
-    return false;
-  }
 }

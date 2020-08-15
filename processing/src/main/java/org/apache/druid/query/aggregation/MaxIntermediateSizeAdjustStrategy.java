@@ -26,6 +26,13 @@ public abstract class MaxIntermediateSizeAdjustStrategy
 {
 
   /**
+   * Synchronous or asynchronous adjustment
+   *
+   * @return
+   */
+  public abstract boolean isSyncAjust();
+
+  /**
    * Specify the number of aggregates in a list that need to be sorted from small to large
    *
    * @return

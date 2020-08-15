@@ -98,12 +98,14 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   private final String dimensionName;
   private final MultiValueHandling multiValueHandling;
   private final boolean hasBitmapIndexes;
+  private final boolean hasSpatialIndexes;
 
-  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling, boolean hasBitmapIndexes)
+  public StringDimensionHandler(String dimensionName, MultiValueHandling multiValueHandling, boolean hasBitmapIndexes, boolean hasSpatialIndexes)
   {
     this.dimensionName = dimensionName;
     this.multiValueHandling = multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
+    this.hasSpatialIndexes = hasSpatialIndexes;
   }
 
   @Override
@@ -139,7 +141,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes);
   }
 
   @Override

@@ -87,12 +87,6 @@ public class SketchAggregator implements Aggregator
   }
 
   @Override
-  public boolean requiredAdjustSize()
-  {
-    return true;
-  }
-
-  @Override
   public float getFloat()
   {
     throw new UnsupportedOperationException("Not implemented");
