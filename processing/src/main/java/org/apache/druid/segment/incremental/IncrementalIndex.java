@@ -314,6 +314,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     for (AggregatorFactory metric : metrics) {
       MetricDesc metricDesc = new MetricDesc(metricDescs.size(), metric);
       metricDescs.put(metricDesc.getName(), metricDesc);
+      timeAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
       index++;
       final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric.getMaxIntermediateSizeAdjustStrategy();
       if (maxIntermediateSizeAdjustStrategy == null) {
@@ -324,7 +325,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       } else {
         asyncIndex[asyncCount++] = index;
       }
-      timeAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
     }
     rowNeedSyncAdjustAggIndex = new int[syncCount];
     System.arraycopy(syncIndex, 0, rowNeedSyncAdjustAggIndex, 0, syncCount);
