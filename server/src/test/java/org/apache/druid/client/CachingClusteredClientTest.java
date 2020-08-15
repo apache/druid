@@ -1658,6 +1658,7 @@ public class CachingClusteredClientTest
             partitionNum,
             partitions,
             partitionDimensions,
+            null,
             ServerTestHelper.MAPPER
         ),
         null,

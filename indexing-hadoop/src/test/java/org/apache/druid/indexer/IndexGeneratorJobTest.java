@@ -565,6 +565,7 @@ public class IndexGeneratorJobTest
             shardInfo[0],
             shardInfo[1],
             null,
+            null,
             HadoopDruidIndexerConfig.JSON_MAPPER
         ));
       }

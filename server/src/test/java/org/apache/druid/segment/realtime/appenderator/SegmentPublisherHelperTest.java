@@ -103,9 +103,9 @@ public class SegmentPublisherHelperTest
   public void testAnnotateCorePartitionSetSizeForHashNumberedShardSpec()
   {
     final Set<DataSegment> segments = ImmutableSet.of(
-        newSegment(new BuildingHashBasedNumberedShardSpec(0, 0, 3, null, new ObjectMapper())),
-        newSegment(new BuildingHashBasedNumberedShardSpec(1, 1, 3, null, new ObjectMapper())),
-        newSegment(new BuildingHashBasedNumberedShardSpec(2, 2, 3, null, new ObjectMapper()))
+        newSegment(new BuildingHashBasedNumberedShardSpec(0, 0, 3, null, null, new ObjectMapper())),
+        newSegment(new BuildingHashBasedNumberedShardSpec(1, 1, 3, null, null, new ObjectMapper())),
+        newSegment(new BuildingHashBasedNumberedShardSpec(2, 2, 3, null, null, new ObjectMapper()))
     );
     final Set<DataSegment> annotated = SegmentPublisherHelper.annotateShardSpec(segments);
     for (DataSegment segment : annotated) {
@@ -147,9 +147,9 @@ public class SegmentPublisherHelperTest
   public void testAnnotateShardSpecThrowingExceptionForBucketNumberedShardSpec()
   {
     final Set<DataSegment> segments = ImmutableSet.of(
-        newSegment(new HashBucketShardSpec(0, 3, null, new ObjectMapper())),
-        newSegment(new HashBucketShardSpec(1, 3, null, new ObjectMapper())),
-        newSegment(new HashBucketShardSpec(2, 3, null, new ObjectMapper()))
+        newSegment(new HashBucketShardSpec(0, 3, null, null, new ObjectMapper())),
+        newSegment(new HashBucketShardSpec(1, 3, null, null, new ObjectMapper())),
+        newSegment(new HashBucketShardSpec(2, 3, null, null, new ObjectMapper()))
     );
     expectedException.expect(IllegalStateException.class);
     expectedException.expectMessage("Cannot publish segments with shardSpec");

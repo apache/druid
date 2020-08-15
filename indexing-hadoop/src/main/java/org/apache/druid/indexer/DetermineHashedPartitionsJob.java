@@ -29,6 +29,8 @@ import com.google.common.io.Closeables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -36,6 +38,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -169,6 +172,10 @@ public class DetermineHashedPartitionsJob implements Jobby
         log.info("Determined Intervals for Job [%s].", config.getSegmentGranularIntervals());
       }
       Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>(DateTimeComparator.getInstance());
+      PartitionsSpec partitionsSpec = config.getPartitionsSpec();
+      HashPartitionFunction partitionFunction = partitionsSpec instanceof HashedPartitionsSpec
+                                                ? ((HashedPartitionsSpec) partitionsSpec).getPartitionFunction()
+                                                : null;
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
@@ -199,6 +206,7 @@ public class DetermineHashedPartitionsJob implements Jobby
                         i,
                         numberOfShards,
                         null,
+                        partitionFunction,
                         HadoopDruidIndexerConfig.JSON_MAPPER
                     ),
                     shardCount++

@@ -25,16 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.Rows;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -49,9 +44,8 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
   static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
 
-  private static final HashFunction HASH_FUNCTION = Hashing.murmur3_32();
-
   private final int bucketId;
+
   /**
    * Number of hash buckets
    */
@@ -60,6 +54,15 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   @JsonIgnore
   private final List<String> partitionDimensions;
 
+  /**
+   * A hash function to use for pruning segments at query time. This function can be null unless it is explicitly
+   * specified in {@link org.apache.druid.indexer.partitions.HashedPartitionsSpec}. This is because the default
+   * hash function used to create segments at ingestion time can change over time, but we don't guarantee the changed
+   * hash function is backward-compatible. The query will process all segments if this function is null.
+   */
+  @Nullable
+  private final HashPartitionFunction hashPartitionFunction;
+
   @JsonCreator
   public HashBasedNumberedShardSpec(
       @JsonProperty("partitionNum") int partitionNum,    // partitionId
@@ -67,6 +70,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       @JsonProperty("bucketId") @Nullable Integer bucketId, // nullable for backward compatibility
       @JsonProperty("numBuckets") @Nullable Integer numBuckets, // nullable for backward compatibility
       @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
+      @JsonProperty("hashPartitionFunctions") @Nullable HashPartitionFunction hashPartitionFunction,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
@@ -76,8 +80,9 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     // If numBuckets is missing, assume that any hash bucket is not empty.
     // Use the core partition set size as the number of buckets.
     this.numBuckets = numBuckets == null ? partitions : numBuckets;
-    this.jsonMapper = jsonMapper;
     this.partitionDimensions = partitionDimensions == null ? DEFAULT_PARTITION_DIMENSIONS : partitionDimensions;
+    this.hashPartitionFunction = hashPartitionFunction;
+    this.jsonMapper = jsonMapper;
   }
 
   @JsonProperty
@@ -98,6 +103,13 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return partitionDimensions;
   }
 
+  @JsonProperty
+  @Nullable
+  public HashPartitionFunction getHashPartitionFunction()
+  {
+    return hashPartitionFunction;
+  }
+
   @Override
   public List<String> getDomainDimensions()
   {
@@ -105,134 +117,26 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
-  public boolean isInChunk(long timestamp, InputRow inputRow)
-  {
-    return getBucketIndex(hash(timestamp, inputRow), numBuckets) == bucketId % numBuckets;
-  }
-
-  /**
-   * Check if the current segment possibly holds records if the values of dimensions in {@link #partitionDimensions}
-   * are of {@code partitionDimensionsValues}
-   *
-   * @param partitionDimensionsValues An instance of values of dimensions in {@link #partitionDimensions}
-   *
-   * @return Whether the current segment possibly holds records for the given values of partition dimensions
-   */
-  private boolean isInChunk(Map<String, String> partitionDimensionsValues)
-  {
-    assert !partitionDimensions.isEmpty();
-    List<Object> groupKey = Lists.transform(
-        partitionDimensions,
-        o -> Collections.singletonList(partitionDimensionsValues.get(o))
-    );
-    try {
-      return getBucketIndex(hash(jsonMapper, groupKey), numBuckets) == bucketId % numBuckets;
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
-   * This method calculates the hash based on whether {@param partitionDimensions} is null or not.
-   * If yes, then both {@param timestamp} and dimension columns in {@param inputRow} are used {@link Rows#toGroupKey}
-   * Or else, columns in {@param partitionDimensions} are used
-   *
-   * @param timestamp should be bucketed with query granularity
-   * @param inputRow row from input data
-   *
-   * @return hash value
-   */
-  protected int hash(long timestamp, InputRow inputRow)
-  {
-    return hash(jsonMapper, partitionDimensions, timestamp, inputRow);
-  }
-
-  public static int hash(ObjectMapper jsonMapper, List<String> partitionDimensions, long timestamp, InputRow inputRow)
-  {
-    final List<Object> groupKey = getGroupKey(partitionDimensions, timestamp, inputRow);
-    try {
-      return hash(jsonMapper, groupKey);
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @VisibleForTesting
-  static List<Object> getGroupKey(final List<String> partitionDimensions, final long timestamp, final InputRow inputRow)
-  {
-    if (partitionDimensions.isEmpty()) {
-      return Rows.toGroupKey(timestamp, inputRow);
-    } else {
-      return Lists.transform(partitionDimensions, inputRow::getDimension);
-    }
-  }
-
-  @VisibleForTesting
-  public static int hash(ObjectMapper jsonMapper, List<Object> objects) throws JsonProcessingException
-  {
-    return HASH_FUNCTION.hashBytes(jsonMapper.writeValueAsBytes(objects)).asInt();
-  }
-
-  @Override
   public ShardSpecLookup getLookup(final List<? extends ShardSpec> shardSpecs)
   {
-    return createHashLookup(jsonMapper, partitionDimensions, shardSpecs, numBuckets);
-  }
-
-  static ShardSpecLookup createHashLookup(
-      ObjectMapper jsonMapper,
-      List<String> partitionDimensions,
-      List<? extends ShardSpec> shardSpecs,
-      int numBuckets
-  )
-  {
-    return (long timestamp, InputRow row) -> {
-      int index = getBucketIndex(hash(jsonMapper, partitionDimensions, timestamp, row), numBuckets);
-      return shardSpecs.get(index);
-    };
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    HashBasedNumberedShardSpec that = (HashBasedNumberedShardSpec) o;
-    return bucketId == that.bucketId &&
-           numBuckets == that.numBuckets &&
-           Objects.equals(partitionDimensions, that.partitionDimensions);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(super.hashCode(), bucketId, numBuckets, partitionDimensions);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "HashBasedNumberedShardSpec{" +
-           "partitionNum=" + getPartitionNum() +
-           ", partitions=" + getNumCorePartitions() +
-           ", bucketId=" + bucketId +
-           ", numBuckets=" + numBuckets +
-           ", partitionDimensions=" + partitionDimensions +
-           '}';
+    return new HashPartitioner(
+        jsonMapper,
+        hashPartitionFunction,
+        partitionDimensions,
+        numBuckets
+    ).createHashLookup(shardSpecs);
   }
 
   @Override
   public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
   {
+    // hashPartitionFunction should be used instead of HashPartitioner at query time.
+    // We should process all segments if hashPartitionFunction is null because we don't know what hash function
+    // was used to create segments at ingestion time.
+    if (hashPartitionFunction == null) {
+      return true;
+    }
+
     // If no partitionDimensions are specified during ingestion, hash is based on all dimensions plus the truncated
     // input timestamp according to QueryGranularity instead of just partitionDimensions. Since we don't store in shard
     // specs the truncated timestamps of the events that fall into the shard after ingestion, there's no way to recover
@@ -261,35 +165,36 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
       }
     }
 
-    return !domainSet.isEmpty() && chunkPossibleInDomain(domainSet, new HashMap<>());
+    return !domainSet.isEmpty() && chunkPossibleInDomain(hashPartitionFunction, domainSet, new HashMap<>());
   }
 
   /**
    * Recursively enumerate all possible combinations of values for dimensions in {@link #partitionDimensions} based on
    * {@code domainSet}, test if any combination matches the current segment
    *
+   * @param hashPartitionFunction     hash function used to create segments at ingestion time
    * @param domainSet                 The set where values of dimensions in {@link #partitionDimensions} are
    *                                  drawn from
    * @param partitionDimensionsValues A map from dimensions in {@link #partitionDimensions} to their values drawn from
    *                                  {@code domainSet}
-   *
    * @return Whether the current segment possibly holds records for the provided domain. Return false if and only if
    * none of the combinations matches this segment
    */
   private boolean chunkPossibleInDomain(
+      HashPartitionFunction hashPartitionFunction,
       Map<String, Set<String>> domainSet,
       Map<String, String> partitionDimensionsValues
   )
   {
     int curIndex = partitionDimensionsValues.size();
     if (curIndex == partitionDimensions.size()) {
-      return isInChunk(partitionDimensionsValues);
+      return isInChunk(hashPartitionFunction, partitionDimensionsValues);
     }
 
     String dimension = partitionDimensions.get(curIndex);
     for (String e : domainSet.get(dimension)) {
       partitionDimensionsValues.put(dimension, e);
-      if (chunkPossibleInDomain(domainSet, partitionDimensionsValues)) {
+      if (chunkPossibleInDomain(hashPartitionFunction, domainSet, partitionDimensionsValues)) {
         return true;
       }
       partitionDimensionsValues.remove(dimension);
@@ -298,8 +203,68 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return false;
   }
 
-  private static int getBucketIndex(int hash, int numBuckets)
+  /**
+   * Check if the current segment possibly holds records if the values of dimensions in {@link #partitionDimensions}
+   * are of {@code partitionDimensionsValues}
+   *
+   * @param hashPartitionFunction     hash function used to create segments at ingestion time
+   * @param partitionDimensionsValues An instance of values of dimensions in {@link #partitionDimensions}
+   *
+   * @return Whether the current segment possibly holds records for the given values of partition dimensions
+   */
+  private boolean isInChunk(HashPartitionFunction hashPartitionFunction, Map<String, String> partitionDimensionsValues)
   {
-    return Math.abs(hash % numBuckets);
+    assert !partitionDimensions.isEmpty();
+    List<Object> groupKey = Lists.transform(
+        partitionDimensions,
+        o -> Collections.singletonList(partitionDimensionsValues.get(o))
+    );
+    return hashPartitionFunction.hash(serializeGroupKey(jsonMapper, groupKey), numBuckets) == bucketId;
+  }
+
+  public static byte[] serializeGroupKey(ObjectMapper jsonMapper, List<Object> partitionKeys)
+  {
+    try {
+      return jsonMapper.writeValueAsBytes(partitionKeys);
+    }
+    catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    HashBasedNumberedShardSpec that = (HashBasedNumberedShardSpec) o;
+    return bucketId == that.bucketId &&
+           numBuckets == that.numBuckets &&
+           Objects.equals(partitionDimensions, that.partitionDimensions) &&
+           hashPartitionFunction == that.hashPartitionFunction;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), bucketId, numBuckets, partitionDimensions, hashPartitionFunction);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "HashBasedNumberedShardSpec{" +
+           "bucketId=" + bucketId +
+           ", numBuckets=" + numBuckets +
+           ", partitionDimensions=" + partitionDimensions +
+           ", hashPartitionFunction=" + hashPartitionFunction +
+           '}';
   }
 }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -88,6 +87,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
@@ -545,6 +545,7 @@ public class IndexTaskTest extends IngestionTestBase
       Assert.assertEquals("test", segment.getDataSource());
       Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
       Assert.assertEquals(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+      final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
 
       final File segmentFile = segmentLoader.getSegmentFiles(segment);
 
@@ -561,21 +562,22 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           null
       );
+      final HashPartitionFunction hashPartitionFunction = hashBasedNumberedShardSpec.getHashPartitionFunction() == null
+                                                          ? HashPartitionFunction.MURMUR3_32_ABS
+                                                          : hashBasedNumberedShardSpec.getHashPartitionFunction();
       final List<Integer> hashes = cursorSequence
           .map(cursor -> {
             final DimensionSelector selector = cursor.getColumnSelectorFactory()
                                                      .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-            try {
-              final int hash = HashBasedNumberedShardSpec.hash(
-                  jsonMapper,
-                  Collections.singletonList(selector.getObject())
-              );
-              cursor.advance();
-              return hash;
-            }
-            catch (JsonProcessingException e) {
-              throw new RuntimeException(e);
-            }
+            final int hash = hashPartitionFunction.hash(
+                HashBasedNumberedShardSpec.serializeGroupKey(
+                    jsonMapper,
+                    Collections.singletonList(selector.getObject())
+                ),
+                hashBasedNumberedShardSpec.getNumBuckets()
+            );
+            cursor.advance();
+            return hash;
           })
           .toList();
 

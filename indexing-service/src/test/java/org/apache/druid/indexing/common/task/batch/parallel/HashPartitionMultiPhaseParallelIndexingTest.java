@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -245,12 +246,26 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     for (List<DataSegment> segmentsInInterval : intervalToSegments.values()) {
       Assert.assertEquals(2, segmentsInInterval.size());
       for (DataSegment segment : segmentsInInterval) {
+        Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+        final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
-        final int hash = HashBasedNumberedShardSpec.hash(getObjectMapper(), (List<Object>) results.get(0).getEvents());
+        final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
+            HashBasedNumberedShardSpec.serializeGroupKey(
+                getObjectMapper(),
+                (List<Object>) results.get(0).getEvents()
+            ),
+            shardSpec.getNumBuckets()
+        );
         for (ScanResultValue value : results) {
           Assert.assertEquals(
               hash,
-              HashBasedNumberedShardSpec.hash(getObjectMapper(), (List<Object>) value.getEvents())
+              HashPartitionFunction.MURMUR3_32_ABS.hash(
+                  HashBasedNumberedShardSpec.serializeGroupKey(
+                      getObjectMapper(),
+                      (List<Object>) value.getEvents()
+                  ),
+                  shardSpec.getNumBuckets()
+              )
           );
         }
       }

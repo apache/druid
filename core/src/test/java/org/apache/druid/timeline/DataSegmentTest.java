@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.TestObjectMapper;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -60,12 +59,6 @@ public class DataSegmentTest
       public <T> PartitionChunk<T> createChunk(T obj)
       {
         return null;
-      }
-
-      @Override
-      public boolean isInChunk(long timestamp, InputRow inputRow)
-      {
-        return false;
       }
 
       @Override

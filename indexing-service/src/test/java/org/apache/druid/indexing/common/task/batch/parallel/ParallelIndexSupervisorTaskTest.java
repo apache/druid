@@ -132,7 +132,7 @@ public class ParallelIndexSupervisorTaskTest
           false,
           "subTaskId",
           createInterval(id),
-          new BuildingHashBasedNumberedShardSpec(id, id, id + 1, null, new ObjectMapper())
+          new BuildingHashBasedNumberedShardSpec(id, id, id + 1, null, null, new ObjectMapper())
       );
     }
 

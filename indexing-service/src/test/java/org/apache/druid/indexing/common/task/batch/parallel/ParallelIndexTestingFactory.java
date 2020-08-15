@@ -105,6 +105,7 @@ class ParallelIndexTestingFactory
       PARTITION_ID,
       PARTITION_ID + 1,
       Collections.singletonList("dim"),
+      null,
       ParallelIndexTestingFactory.NESTED_OBJECT_MAPPER
   );
 
