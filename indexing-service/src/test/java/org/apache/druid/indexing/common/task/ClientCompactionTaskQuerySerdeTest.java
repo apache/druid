@@ -152,7 +152,7 @@ public class ClientCompactionTaskQuerySerdeTest
   public void testCompactionTaskToClientCompactionTaskQuery() throws IOException
   {
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
-    final CompactionTask task = new CompactionTask.Builder(
+    final CompactionTask.Builder builder = new CompactionTask.Builder(
         "datasource",
         mapper,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
@@ -163,44 +163,45 @@ public class ClientCompactionTaskQuerySerdeTest
         new SegmentLoaderFactory(null, mapper),
         new RetryPolicyFactory(new RetryPolicyConfig()),
         APPENDERATORS_MANAGER
-    ).inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
-     .tuningConfig(
-         new ParallelIndexTuningConfig(
-             null,
-             null,
-             40000,
-             2000L,
-             null,
-             null,
-             new SegmentsSplitHintSpec(100000L),
-             new DynamicPartitionsSpec(100, 30000L),
-             new IndexSpec(
-                 new DefaultBitmapSerdeFactory(),
-                 CompressionStrategy.LZ4,
-                 CompressionStrategy.LZF,
-                 LongEncodingStrategy.LONGS
-             ),
-             null,
-             null,
-             null,
-             null,
-             1000L,
-             null,
-             null,
-             100,
-             null,
-             null,
-             null,
-             null,
-             null,
-             null,
-             null,
-             null,
-             null
-         )
-     )
-     .build();
-
+    );
+    final CompactionTask task = builder
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))
+        .tuningConfig(
+            new ParallelIndexTuningConfig(
+                null,
+                null,
+                40000,
+                2000L,
+                null,
+                null,
+                new SegmentsSplitHintSpec(100000L),
+                new DynamicPartitionsSpec(100, 30000L),
+                new IndexSpec(
+                    new DefaultBitmapSerdeFactory(),
+                    CompressionStrategy.LZ4,
+                    CompressionStrategy.LZF,
+                    LongEncodingStrategy.LONGS
+                ),
+                null,
+                null,
+                null,
+                null,
+                1000L,
+                null,
+                null,
+                100,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        )
+        .build();
 
     final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
         task.getId(),

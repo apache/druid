@@ -78,10 +78,10 @@ public class IdUtils
 
   public static String newTaskId(String typeName, String dataSource, @Nullable Interval interval)
   {
-    return newTaskId("", typeName, dataSource, interval);
+    return newTaskId(null, typeName, dataSource, interval);
   }
 
-  public static String newTaskId(String idPrefix, String typeName, String dataSource, @Nullable Interval interval)
+  public static String newTaskId(@Nullable String idPrefix, String typeName, String dataSource, @Nullable Interval interval)
   {
     return newTaskId(idPrefix, getRandomId(), DateTimes.nowUtc(), typeName, dataSource, interval);
   }
@@ -92,7 +92,7 @@ public class IdUtils
    */
   @VisibleForTesting
   static String newTaskId(
-      String idPrefix,
+      @Nullable String idPrefix,
       String idSuffix,
       DateTime now,
       String typeName,
@@ -101,7 +101,9 @@ public class IdUtils
   )
   {
     final List<String> objects = new ArrayList<>();
-    objects.add(idPrefix);
+    if (idPrefix != null) {
+      objects.add(idPrefix);
+    }
     objects.add(typeName);
     objects.add(dataSource);
     objects.add(idSuffix);
