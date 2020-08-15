@@ -76,7 +76,7 @@ public class HashBasedNumberedPartialShardSpecTest
     Assert.assertEquals(expected.getBucketId(), map.get("bucketId"));
     Assert.assertEquals(expected.getNumBuckets(), map.get("numPartitions"));
     Assert.assertEquals(expected.getBucketId(), map.get("bucketId"));
-    Assert.assertEquals(expected.getHashPartitionFunction(), map.get("hashPartitionFunction"));
+    Assert.assertEquals(expected.getHashPartitionFunction().toString(), map.get("hashPartitionFunction"));
   }
 
   @Test

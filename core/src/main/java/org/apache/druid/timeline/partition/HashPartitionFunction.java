@@ -44,7 +44,7 @@ public enum HashPartitionFunction
   /**
    * Returns an ID of a hash bucket for the given {@code serializedRow}.
    */
-  abstract public int hash(byte[] serializedRow, int numBuckets);
+  public abstract int hash(byte[] serializedRow, int numBuckets);
 
   @JsonCreator
   public static HashPartitionFunction fromString(String type)

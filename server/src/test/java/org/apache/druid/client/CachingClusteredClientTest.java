@@ -72,6 +72,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -106,6 +107,7 @@ import org.apache.druid.query.search.SearchQueryQueryToolChest;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -127,6 +129,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
+import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -152,17 +155,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.stream.IntStream;
 
 /**
  *
@@ -1544,7 +1551,7 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testHashBasedPruning()
+  public void testHashBasedPruningQueryContextEnabled()
   {
     DimFilter filter = new AndDimFilter(
         new SelectorDimFilter("dim1", "a", null),
@@ -1640,6 +1647,90 @@ public class CachingClusteredClientTest
     Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
   }
 
+  @Test
+  public void testHashBasedPruningQueryContextDisabledNoSegmentPruning()
+  {
+    DimFilter filter = new AndDimFilter(
+        new SelectorDimFilter("dim1", "a", null),
+        new BoundDimFilter("dim2", "e", "zzz", true, true, false, null, StringComparators.LEXICOGRAPHIC),
+        // Equivalent filter of dim3 below is InDimFilter("dim3", Arrays.asList("c"), null)
+        new AndDimFilter(
+            new InDimFilter("dim3", Arrays.asList("a", "c", "e", "g"), null),
+            new BoundDimFilter("dim3", "aaa", "ddd", false, false, false, null, StringComparators.LEXICOGRAPHIC)
+        )
+    );
+
+    final Map<String, Object> context = new HashMap<>(CONTEXT);
+    context.put(QueryContexts.SEGMENT_PRUNING_KEY, false);
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .filters(filter)
+                                                        .granularity(GRANULARITY)
+                                                        .intervals(SEG_SPEC)
+                                                        .intervals("2011-01-05/2011-01-10")
+                                                        .aggregators(RENAMED_AGGS)
+                                                        .postAggregators(RENAMED_POST_AGGS)
+                                                        .context(context)
+                                                        .randomQueryId();
+
+    TimeseriesQuery query = builder.build();
+
+    QueryRunner runner = new FinalizeResultsQueryRunner(getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest());
+
+    final Interval interval1 = Intervals.of("2011-01-06/2011-01-07");
+    final Interval interval2 = Intervals.of("2011-01-07/2011-01-08");
+    final Interval interval3 = Intervals.of("2011-01-08/2011-01-09");
+
+    final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    List<String> partitionDimensions = ImmutableList.of("dim1");
+    final int numPartitions1 = 6;
+    for (int i = 0; i < numPartitions1; i++) {
+      ServerSelector selector = makeMockHashBasedSelector(lastServer, partitionDimensions, i, numPartitions1);
+      timeline.add(interval1, "v", new NumberedPartitionChunk<>(i, numPartitions1, selector));
+    }
+
+    partitionDimensions = ImmutableList.of("dim2");
+    final int numPartitions2 = 3;
+    for (int i = 0; i < numPartitions2; i++) {
+      ServerSelector selector = makeMockHashBasedSelector(lastServer, partitionDimensions, i, numPartitions2);
+      timeline.add(interval2, "v", new NumberedPartitionChunk<>(i, numPartitions2, selector));
+    }
+
+    partitionDimensions = ImmutableList.of("dim1", "dim3");
+    final int numPartitions3 = 4;
+    for (int i = 0; i < numPartitions3; i++) {
+      ServerSelector selector = makeMockHashBasedSelector(lastServer, partitionDimensions, i, numPartitions3);
+      timeline.add(interval3, "v", new NumberedPartitionChunk<>(i, numPartitions3, selector));
+    }
+
+    final Capture<QueryPlus> capture = Capture.newInstance();
+    final Capture<ResponseContext> contextCap = Capture.newInstance();
+
+    QueryRunner mockRunner = EasyMock.createNiceMock(QueryRunner.class);
+    EasyMock.expect(mockRunner.run(EasyMock.capture(capture), EasyMock.capture(contextCap)))
+            .andReturn(Sequences.empty())
+            .anyTimes();
+    EasyMock.expect(serverView.getQueryRunner(lastServer))
+            .andReturn(mockRunner)
+            .anyTimes();
+    EasyMock.replay(serverView);
+    EasyMock.replay(mockRunner);
+
+    // Expected to read all segments
+    Set<SegmentDescriptor> expcetedDescriptors = new HashSet<>();
+    IntStream.range(0, numPartitions1).forEach(i -> expcetedDescriptors.add(new SegmentDescriptor(interval1, "v", i)));
+    IntStream.range(0, numPartitions2).forEach(i -> expcetedDescriptors.add(new SegmentDescriptor(interval2, "v", i)));
+    IntStream.range(0, numPartitions3).forEach(i -> expcetedDescriptors.add(new SegmentDescriptor(interval3, "v", i)));
+
+    runner.run(QueryPlus.wrap(query)).toList();
+    QuerySegmentSpec querySegmentSpec = ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec();
+    Assert.assertSame(MultipleSpecificSegmentSpec.class, querySegmentSpec.getClass());
+    final Set<SegmentDescriptor> actualDescriptors = new HashSet<>(
+        ((MultipleSpecificSegmentSpec) querySegmentSpec).getDescriptors()
+    );
+    Assert.assertEquals(expcetedDescriptors, actualDescriptors);
+  }
+
   private ServerSelector makeMockHashBasedSelector(
       DruidServer server,
       List<String> partitionDimensions,
@@ -1658,7 +1749,7 @@ public class CachingClusteredClientTest
             partitionNum,
             partitions,
             partitionDimensions,
-            null,
+            HashPartitionFunction.MURMUR3_32_ABS,
             ServerTestHelper.MAPPER
         ),
         null,
