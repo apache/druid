@@ -540,7 +540,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
               segmentsAndCommitMetadata.getSegments(),
               metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
           );
-        }
+        },
+        Execs.directExecutor()
     );
   }
 

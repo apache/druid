@@ -780,7 +780,7 @@ class QuotableWhiteSpaceSplitter implements Iterable<String>
             if (inQuotes) {
               return false;
             }
-            return CharMatcher.BREAKING_WHITESPACE.matches(c);
+            return CharMatcher.breakingWhitespace().matches(c);
           }
         }
     ).omitEmptyStrings().split(string).iterator();

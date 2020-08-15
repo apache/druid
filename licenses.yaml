@@ -303,9 +303,29 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 16.0.1
+version: 28.2-jre
 libraries:
   - com.google.guava: guava
+
+---
+
+name: Guava InternalFutureFailureAccess and InternalFutures
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.1
+libraries:
+  - com.google.guava: failureaccess
+
+---
+
+name: Guava ListenableFuture only
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 9999.0-empty-to-avoid-conflict-with-guava
+libraries:
+  - com.google.guava: listenablefuture
 
 ---
 
@@ -332,6 +352,16 @@ notices:
   - guice-assistedinject: |
       Google Guice - Extensions - AssistedInject
       Copyright 2006-2016 Google, Inc.
+
+---
+
+name: J2ObjC
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 

@@ -253,7 +253,8 @@ public abstract class WorkerTaskManager
           {
             submitNoticeToExec(new StatusNotice(task, TaskStatus.failure(task.getId())));
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 

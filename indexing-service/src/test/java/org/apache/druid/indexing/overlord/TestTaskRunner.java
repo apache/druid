@@ -228,7 +228,8 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
           {
             runningItems.remove(taskRunnerWorkItem);
           }
-        }
+        },
+        Execs.directExecutor()
     );
 
     return statusFuture;

@@ -671,7 +671,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           {
             removedWorkerCleanups.remove(workerHostAndPort, cleanupTask);
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 

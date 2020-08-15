@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.hrtr.WorkerHolder;
 import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.WorkerTaskMonitor;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -192,7 +193,8 @@ public class TaskManagementResource
               log.debug(ex, "Request timed out or closed already.");
             }
           }
-        }
+        },
+        Execs.directExecutor()
     );
 
     asyncContext.setTimeout(timeout);

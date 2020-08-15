@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -905,12 +904,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> normalReplicaFuture = runTask(normalReplica);
     // Simulating one replica is slower than the other
-    final ListenableFuture<TaskStatus> staleReplicaFuture = Futures.transform(
+    final ListenableFuture<TaskStatus> staleReplicaFuture = Futures.transformAsync(
         taskExec.submit(() -> {
           Thread.sleep(1000);
           return staleReplica;
         }),
-        (AsyncFunction<Task, TaskStatus>) this::runTask
+        this::runTask,
+        Execs.directExecutor()
     );
 
     while (normalReplica.getRunner().getStatus() != Status.PAUSED) {
