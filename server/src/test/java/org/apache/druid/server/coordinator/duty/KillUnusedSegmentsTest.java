@@ -110,7 +110,7 @@ public class KillUnusedSegmentsTest
             Duration.parse("PT86400S"),
             1000,
             Duration.ZERO,
-            false
+            true
         )
     );
 
