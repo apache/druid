@@ -28,6 +28,17 @@
   Reference: https://github.com/apache/druid/pull/7894/files
 -->
 <FindBugsFilter>
+    <!-- Ignore "equals" bugs for JsonInclude filter classes. They rely on strange-looking "equals" methods. -->
+    <Match>
+        <And>
+            <Bug pattern="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS"/>
+            <Or>
+                <Class name="org.apache.druid.query.scan.ScanQuery$ScanRowsLimitJsonIncludeFilter"/>
+                <Class name="org.apache.druid.query.groupby.orderby.DefaultLimitSpec$LimitJsonIncludeFilter"/>
+            </Or>
+        </And>
+    </Match>
+
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION"/>
     <Bug pattern="BC_UNCONFIRMED_CAST"/>
     <Bug pattern="BIT_SIGNED_CHECK_HIGH_BIT"/>

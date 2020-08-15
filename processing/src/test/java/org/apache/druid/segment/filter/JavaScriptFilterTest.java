@@ -215,7 +215,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testNumericNull()
   {
-    if (NullHandling.replaceWithDefault()) {
+    if (canTestNumericNullsAsDefaultValues) {
       assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNullFilter, null), ImmutableList.of());
       assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNullFilter, null), ImmutableList.of());
       assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNullFilter, null), ImmutableList.of());

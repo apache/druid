@@ -16,23 +16,22 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { shallow } from 'enzyme';
 import React from 'react';
 
 import { CompactionDialog } from './compaction-dialog';
 
 describe('compaction dialog', () => {
   it('matches snapshot', () => {
-    const compactionDialog = (
+    const compactionDialog = shallow(
       <CompactionDialog
         onClose={() => {}}
         onSave={() => {}}
         onDelete={() => {}}
         datasource={'test'}
         compactionConfig={{}}
-      />
+      />,
     );
-    render(compactionDialog);
-    expect(document.body.lastChild).toMatchSnapshot();
+    expect(compactionDialog).toMatchSnapshot();
   });
 });
