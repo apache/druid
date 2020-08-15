@@ -317,13 +317,12 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       timeAndMetricsColumnCapabilities.put(metricDesc.getName(), metricDesc.getCapabilities());
       index++;
       final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = metric.getMaxIntermediateSizeAdjustStrategy();
-      if (maxIntermediateSizeAdjustStrategy == null) {
-        continue;
-      }
-      if (maxIntermediateSizeAdjustStrategy.isSyncAjust()) {
-        syncIndex[syncCount++] = index;
-      } else {
-        asyncIndex[asyncCount++] = index;
+      if (maxIntermediateSizeAdjustStrategy != null) {
+        if (maxIntermediateSizeAdjustStrategy.isSyncAjust()) {
+          syncIndex[syncCount++] = index;
+        } else {
+          asyncIndex[asyncCount++] = index;
+        }
       }
     }
     rowNeedSyncAdjustAggIndex = new int[syncCount];
