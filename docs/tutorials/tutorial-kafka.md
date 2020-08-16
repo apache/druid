@@ -128,7 +128,7 @@ Click `Next: Tune` to go to the tuning step.
 ![Data loader tune](../assets/tutorial-kafka-data-loader-07.png "Data loader tune")
 
 In the `Tune` step is it *very important* to set `Use earliest offset` to `True` since we want to consume the data from the start of the stream.
-There are no other changes that need to be made hear, so click `Next: Publish` to go to the `Publish` step.
+There are no other changes that need to be made here, so click `Next: Publish` to go to the `Publish` step.
 
 ![Data loader publish](../assets/tutorial-kafka-data-loader-08.png "Data loader publish")
 
