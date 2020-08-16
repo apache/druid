@@ -28,6 +28,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
@@ -58,6 +59,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -95,6 +97,7 @@ public class ForkingTaskRunner
   private final DruidNode node;
   private final ListeningExecutorService exec;
   private final PortFinder portFinder;
+  private final StartupLoggingConfig startupLoggingConfig;
 
   private volatile boolean stopping = false;
 
@@ -106,7 +109,8 @@ public class ForkingTaskRunner
       Properties props,
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
-      @Self DruidNode node
+      @Self DruidNode node,
+      StartupLoggingConfig startupLoggingConfig
   )
   {
     super(jsonMapper, taskConfig);
@@ -115,6 +119,7 @@ public class ForkingTaskRunner
     this.taskLogPusher = taskLogPusher;
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
+    this.startupLoggingConfig = startupLoggingConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -338,7 +343,7 @@ public class ForkingTaskRunner
                           jsonMapper.writeValue(taskFile, task);
                         }
 
-                        LOGGER.info("Running command: %s", Joiner.on(" ").join(command));
+                        LOGGER.info("Running command: %s", getMaskedCommand(startupLoggingConfig.getMaskProperties(), command));
                         taskWorkItem.processHolder = new ProcessHolder(
                           new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
                           logFile,
@@ -625,6 +630,23 @@ public class ForkingTaskRunner
         taskInfo.processHolder.process.destroy();
       }
     }
+  }
+
+  String getMaskedCommand(List<String> maskedProperties, List<String> command)
+  {
+    final Set<String> maskedPropertiesSet = Sets.newHashSet(maskedProperties);
+    final Iterator<String> maskedIterator = command.stream().map(element -> {
+      String[] splits = element.split("=", 2);
+      if (splits.length == 2) {
+        for (String masked : maskedPropertiesSet) {
+          if (splits[0].contains(masked)) {
+            return StringUtils.format("%s=%s", splits[0], "<masked>");
+          }
+        }
+      }
+      return element;
+    }).iterator();
+    return Joiner.on(" ").join(maskedIterator);
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem

@@ -86,7 +86,7 @@ public class Filters
   @Nullable
   public static Filter toFilter(@Nullable DimFilter dimFilter)
   {
-    return dimFilter == null ? null : dimFilter.toFilter();
+    return dimFilter == null ? null : dimFilter.toOptimizedFilter();
   }
 
   /**
@@ -160,7 +160,7 @@ public class Filters
    *
    * @return an iterable of bitmaps
    */
-  static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
+  public static Iterable<ImmutableBitmap> bitmapsFromIndexes(final IntIterable indexes, final BitmapIndex bitmapIndex)
   {
     // Do not use Iterables.transform() to avoid boxing/unboxing integers.
     return new Iterable<ImmutableBitmap>()
@@ -404,7 +404,7 @@ public class Filters
     };
   }
 
-  static boolean supportsSelectivityEstimation(
+  public static boolean supportsSelectivityEstimation(
       Filter filter,
       String dimension,
       ColumnSelector columnSelector,
@@ -414,7 +414,7 @@ public class Filters
     if (filter.supportsBitmapIndex(indexSelector)) {
       final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
       if (columnHolder != null) {
-        return !columnHolder.getCapabilities().hasMultipleValues().isMaybeTrue();
+        return columnHolder.getCapabilities().hasMultipleValues().isFalse();
       }
     }
     return false;

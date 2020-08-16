@@ -54,6 +54,10 @@ The software requirements for the installation machine are:
 `DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the 
 `bin/verify-java` script.
 
+Before installing a production Druid instance, be sure to consider the user account on the operating system under 
+which Druid will run. This is important because any Druid console user will have, effectively, the same permissions as 
+that user. So, for example, the file browser UI will show console users the files that the underlying user can 
+access. In general, avoid running Druid as root user. Consider creating a dedicated user account for running Druid.   
 
 ## Step 1. Install Druid
 

@@ -50,7 +50,7 @@ describe('general', () => {
           id: 'datasource',
           value: `hello`,
         }),
-      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('hello%')"`);
+      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('%hello%')"`);
 
       expect(
         sqlQueryCustomTableFilter({

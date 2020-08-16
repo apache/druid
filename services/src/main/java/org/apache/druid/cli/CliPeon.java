@@ -91,6 +91,7 @@ import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
@@ -108,6 +109,7 @@ import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffN
 import org.apache.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -193,6 +195,7 @@ public class CliPeon extends GuiceRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/peon");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+            binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
 
             JsonConfigProvider.bind(binder, "druid.task.executor", DruidNode.class, Parent.class);
 
@@ -268,6 +271,7 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
+        new InputSourceModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule()
     );

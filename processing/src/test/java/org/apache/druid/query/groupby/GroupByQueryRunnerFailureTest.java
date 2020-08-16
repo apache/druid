@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.InsufficientResourcesException;
-import org.apache.druid.query.QueryConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryInterruptedException;
@@ -111,7 +110,6 @@ public class GroupByQueryRunnerFailureTest
         new GroupByStrategyV2(
             DEFAULT_PROCESSING_CONFIG,
             configSupplier,
-            Suppliers.ofInstance(new QueryConfig()),
             BUFFER_POOL,
             MERGE_BUFFER_POOL,
             mapper,
@@ -280,5 +278,42 @@ public class GroupByQueryRunnerFailureTest
         holder.forEach(ReferenceCountingResourceHolder::close);
       }
     }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testTimeoutExceptionOnQueryable()
+  {
+    expectedException.expect(QueryInterruptedException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(TimeoutException.class));
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .build();
+
+    GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(
+        GroupByQueryRunnerTest.DEFAULT_MAPPER,
+        new GroupByQueryConfig()
+        {
+          @Override
+          public String getDefaultStrategy()
+          {
+            return "v2";
+          }
+
+          @Override
+          public boolean isSingleThreaded()
+          {
+            return true;
+          }
+        }
+    );
+    QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query);
   }
 }

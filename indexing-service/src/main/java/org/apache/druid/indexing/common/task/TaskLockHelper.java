@@ -182,7 +182,7 @@ public class TaskLockHelper
 
   private boolean tryLockSegments(TaskActionClient actionClient, List<DataSegment> segments) throws IOException
   {
-    final Map<Interval, List<DataSegment>> intervalToSegments = groupSegmentsByInterval(segments);
+    final Map<Interval, List<DataSegment>> intervalToSegments = SegmentUtils.groupSegmentsByInterval(segments);
     final Closer lockCloserOnError = Closer.create();
     for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
       final Interval interval = entry.getKey();
@@ -303,14 +303,5 @@ public class TaskLockHelper
     if (atomicUpdateGroupSize != sortedSegments.get(sortedSegments.size() - 1).getAtomicUpdateGroupSize()) {
       throw new ISE("All atomicUpdateGroup must be compacted together");
     }
-  }
-
-  private static Map<Interval, List<DataSegment>> groupSegmentsByInterval(List<DataSegment> segments)
-  {
-    final Map<Interval, List<DataSegment>> map = new HashMap<>();
-    for (DataSegment segment : segments) {
-      map.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment);
-    }
-    return map;
   }
 }

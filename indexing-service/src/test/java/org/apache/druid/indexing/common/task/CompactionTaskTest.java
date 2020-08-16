@@ -52,6 +52,7 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
@@ -579,6 +580,7 @@ public class CompactionTaskTest
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -645,6 +647,7 @@ public class CompactionTaskTest
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
         null,
@@ -712,6 +715,7 @@ public class CompactionTaskTest
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
         null,
@@ -779,6 +783,7 @@ public class CompactionTaskTest
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(tuningConfig),
         null,
@@ -840,6 +845,7 @@ public class CompactionTaskTest
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         customSpec,
@@ -881,6 +887,7 @@ public class CompactionTaskTest
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -915,6 +922,7 @@ public class CompactionTaskTest
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(SEGMENTS)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -955,6 +963,7 @@ public class CompactionTaskTest
     segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -978,6 +987,7 @@ public class CompactionTaskTest
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1019,6 +1029,7 @@ public class CompactionTaskTest
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,
@@ -1054,6 +1065,7 @@ public class CompactionTaskTest
   {
     final List<ParallelIndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
         toolbox,
+        LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
         new PartitionConfigurationManager(TUNING_CONFIG),
         null,

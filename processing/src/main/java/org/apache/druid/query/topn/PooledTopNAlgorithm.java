@@ -36,6 +36,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.FilteredOffset;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.historical.HistoricalColumnSelector;
@@ -49,7 +50,18 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ * This {@link TopNAlgorithm} is highly specialized for processing aggregates on string columns that are
+ * {@link ColumnCapabilities#isDictionaryEncoded()} and {@link ColumnCapabilities#areDictionaryValuesUnique()}. This
+ * algorithm is built around using a direct {@link ByteBuffer} from the 'processing pool' of intermediary results
+ * buffers, to aggregate using the dictionary id directly as the key, to defer looking up the value until is necessary.
  *
+ * At runtime, this implementation is specialized with wizardry to optimize for processing common top-n query shapes,
+ * see {@link #computeSpecializedScanAndAggregateImplementations},
+ * {@link Generic1AggPooledTopNScanner} and {@link Generic1AggPooledTopNScannerPrototype},
+ * {@link Generic2AggPooledTopNScanner} and {@link Generic2AggPooledTopNScannerPrototype},
+ * {@link org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop},
+ * {@link org.apache.druid.query.monomorphicprocessing.HotLoopCallee},
+ * {@link org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector} for more details.
  */
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>

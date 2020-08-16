@@ -928,6 +928,7 @@ public class DruidQuery
         sorting != null
         ? new DefaultLimitSpec(
             sorting.getOrderBys(),
+            0,
             sorting.isLimited() ? Ints.checkedCast(sorting.getLimit()) : null
         )
         : NoopLimitSpec.instance(),
@@ -993,6 +994,7 @@ public class DruidQuery
         filtration.getQuerySegmentSpec(),
         getVirtualColumns(true),
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
+        0,
         0,
         scanLimit,
         order,

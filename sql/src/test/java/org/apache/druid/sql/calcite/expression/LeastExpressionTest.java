@@ -213,6 +213,24 @@ public class LeastExpressionTest extends ExpressionTestBase
   }
 
   @Test
+  public void testDecimalWithNullShouldReturnString()
+  {
+    testExpression(
+        Arrays.asList(
+            testHelper.makeLiteral(BigDecimal.valueOf(1.2)),
+            testHelper.makeLiteral(BigDecimal.valueOf(3.4)),
+            testHelper.getConstantNull()
+        ),
+        buildExpectedExpression(
+            1.2,
+            3.4,
+            null
+        ),
+        "1.2"
+    );
+  }
+
+  @Test
   public void testTimestamp()
   {
     testExpression(

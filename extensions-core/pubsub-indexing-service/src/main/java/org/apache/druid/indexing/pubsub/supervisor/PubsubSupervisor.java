@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.indexer.TaskIdUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
@@ -249,7 +249,7 @@ public class PubsubSupervisor implements Supervisor
         try {
           while (true) {
             while (taskIds.size() < taskCount) {
-              String taskId = TaskIdUtils.getRandomIdWithPrefix(subscriptionName);
+              String taskId = IdUtils.getRandomIdWithPrefix(subscriptionName);
               PubsubIndexTask pubsubIndexTask = new PubsubIndexTask(
                   taskId,
                   new TaskResource(subscriptionName, 1),

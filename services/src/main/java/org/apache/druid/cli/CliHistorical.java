@@ -19,7 +19,9 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
@@ -43,6 +45,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerManager;
 import org.apache.druid.server.coordination.ServerType;
@@ -83,13 +86,14 @@ public class CliHistorical extends ServerRunnable
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8283);
           binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
+          binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
 
           // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
           LifecycleModule.register(binder, Server.class);
           binder.bind(ServerManager.class).in(LazySingleton.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
           binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
-          binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
+          bindQuerySegmentWalker(binder);
 
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
@@ -116,5 +120,14 @@ public class CliHistorical extends ServerRunnable
         },
         new LookupModule()
     );
+  }
+
+  /**
+   * This method is visible for testing query retry on missing segments. See {@link CliHistoricalForQueryRetryTest}.
+   */
+  @VisibleForTesting
+  public void bindQuerySegmentWalker(Binder binder)
+  {
+    binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
   }
 }

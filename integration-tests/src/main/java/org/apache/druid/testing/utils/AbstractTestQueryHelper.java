@@ -63,9 +63,23 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     this.routerTLS = config.getRouterTLSUrl();
   }
 
-  public abstract void testQueriesFromFile(String filePath, int timesToRun) throws Exception;
-
   public abstract String getQueryURL(String schemeAndHost);
+
+  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
+  {
+    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
+  }
+
+  public void testQueriesFromString(String str, int timesToRun) throws Exception
+  {
+    testQueriesFromString(getQueryURL(broker), str, timesToRun);
+    testQueriesFromString(getQueryURL(brokerTLS), str, timesToRun);
+    testQueriesFromString(getQueryURL(router), str, timesToRun);
+    testQueriesFromString(getQueryURL(routerTLS), str, timesToRun);
+  }
 
   public void testQueriesFromFile(String url, String filePath, int timesToRun) throws Exception
   {

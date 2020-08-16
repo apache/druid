@@ -75,7 +75,13 @@ public class DataSegmentTest
       }
 
       @Override
-      public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs)
+      public int getNumCorePartitions()
+      {
+        return 0;
+      }
+
+      @Override
+      public ShardSpecLookup getLookup(List<? extends ShardSpec> shardSpecs)
       {
         return null;
       }
@@ -90,12 +96,6 @@ public class DataSegmentTest
       public boolean possibleInDomain(Map<String, RangeSet<String>> domain)
       {
         return true;
-      }
-
-      @Override
-      public boolean isCompatible(Class<? extends ShardSpec> other)
-      {
-        return false;
       }
     };
   }

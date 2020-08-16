@@ -2703,7 +2703,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         this::makeTimeseriesAndScanConglomerate,
         Execs.directExecutor(), // queryExecutorService
         NoopJoinableFactory.INSTANCE,
-        EasyMock.createMock(MonitorScheduler.class),
+        () -> EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),

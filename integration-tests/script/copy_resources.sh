@@ -32,7 +32,17 @@ rm -rf $SHARED_DIR/docker
 cp -R docker $SHARED_DIR/docker
 mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
 
+# install logging config
+cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
+
+# copy the integration test jar, it provides test-only extension implementations
+cp target/druid-integration-tests*.jar $SHARED_DIR/docker/lib
+
 # move extensions into a seperate extension folder
+# For druid-integration-tests
+mkdir -p $SHARED_DIR/docker/extensions/druid-integration-tests
+# We don't want to copy tests jar.
+cp $SHARED_DIR/docker/lib/druid-integration-tests-*[^s].jar $SHARED_DIR/docker/extensions/druid-integration-tests
 # For druid-s3-extensions
 mkdir -p $SHARED_DIR/docker/extensions/druid-s3-extensions
 mv $SHARED_DIR/docker/lib/druid-s3-extensions-* $SHARED_DIR/docker/extensions/druid-s3-extensions
@@ -49,11 +59,13 @@ mv $SHARED_DIR/docker/lib/druid-hdfs-storage-* $SHARED_DIR/docker/extensions/dru
 mkdir -p $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
 mv $SHARED_DIR/docker/lib/druid-kinesis-indexing-service-* $SHARED_DIR/docker/extensions/druid-kinesis-indexing-service
 # For druid-parquet-extensions
+# Using cp so that this extensions is included when running Druid without loadList and as a option for the loadList
 mkdir -p $SHARED_DIR/docker/extensions/druid-parquet-extensions
-mv $SHARED_DIR/docker/lib/druid-parquet-extensions-* $SHARED_DIR/docker/extensions/druid-parquet-extensions
+cp $SHARED_DIR/docker/lib/druid-parquet-extensions-* $SHARED_DIR/docker/extensions/druid-parquet-extensions
 # For druid-orc-extensions
+# Using cp so that this extensions is included when running Druid without loadList and as a option for the loadList
 mkdir -p $SHARED_DIR/docker/extensions/druid-orc-extensions
-mv $SHARED_DIR/docker/lib/druid-orc-extensions-* $SHARED_DIR/docker/extensions/druid-orc-extensions
+cp $SHARED_DIR/docker/lib/druid-orc-extensions-* $SHARED_DIR/docker/extensions/druid-orc-extensions
 
 # Pull Hadoop dependency if needed
 if [ -n "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" ] && [ "$DRUID_INTEGRATION_TEST_START_HADOOP_DOCKER" == true ]
@@ -61,12 +73,6 @@ then
   java -cp "$SHARED_DIR/docker/lib/*" -Ddruid.extensions.hadoopDependenciesDir="$SHARED_DIR/hadoop-dependencies" org.apache.druid.cli.Main tools pull-deps -h org.apache.hadoop:hadoop-client:2.8.5 -h org.apache.hadoop:hadoop-aws:2.8.5 -h org.apache.hadoop:hadoop-azure:2.8.5
   curl https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop2-latest.jar --output $SHARED_DIR/docker/lib/gcs-connector-hadoop2-latest.jar
 fi
-
-# install logging config
-cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
-
-# copy the integration test jar, it provides test-only extension implementations
-cp target/druid-integration-tests*.jar $SHARED_DIR/docker/lib
 
 # one of the integration tests needs the wikiticker sample data
 mkdir -p $SHARED_DIR/wikiticker-it

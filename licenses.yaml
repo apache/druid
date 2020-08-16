@@ -1295,7 +1295,7 @@ name: Apache Calcite Avatica
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.15.0
+version: 1.17.0
 libraries:
   - org.apache.calcite.avatica: avatica-core
   - org.apache.calcite.avatica: avatica-metrics
@@ -1303,13 +1303,13 @@ libraries:
 notices:
   - avatica-core: |
       Apache Calcite Avatica
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
   - avatica-metrics: |
       Apache Calcite Avatica Metrics
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
   - avatica-server: |
       Apache Calcite Avatica Server
-      Copyright 2012-2018 The Apache Software Foundation
+      Copyright 2012-2020 The Apache Software Foundation
 ---
 
 name: Apache Curator
@@ -1661,7 +1661,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.12.v20180830
+version: 9.4.30.v20200611
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2016,7 +2016,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.8.11
+version: 0.9.0
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -3251,7 +3251,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 2.5.0
+version: 2.6.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3260,7 +3260,7 @@ libraries:
 notices:
   - kafka-clients: |
       Apache Kafka
-      Copyright 2019 The Apache Software Foundation.
+      Copyright 2020 The Apache Software Foundation.
 
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
@@ -3625,7 +3625,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.2.8
+version: 42.2.14
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3637,7 +3637,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.2.8
+version: 42.2.14
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3649,7 +3649,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.2.8
+version: 42.2.14
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4159,9 +4159,9 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 2.5.0
+version: 2.6.0
 libraries:
-  - org.apache.kafka: kafka_2.12
+  - org.apache.kafka: kafka_2.13
   - org.apache.kafka: kafka-clients
 notices:
   - kafka-clients:
@@ -4707,7 +4707,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.6.1
+version: 0.8.4
 
 ---
 

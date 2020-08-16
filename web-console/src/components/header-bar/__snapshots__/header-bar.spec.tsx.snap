@@ -159,7 +159,7 @@ exports[`header bar matches snapshot 1`] = `
           />
           <Blueprint3.MenuItem
             disabled={false}
-            href="https://druid.apache.org/docs/0.17.0"
+            href="https://druid.apache.org/docs/0.19.0"
             icon="th"
             multiline={false}
             popoverProps={Object {}}

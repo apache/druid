@@ -26,14 +26,16 @@ import {
   InputGroup,
   NumericInput,
   Switch,
-  TagInput,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { Rule, RuleUtil } from '../../utils/load-rule';
+import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 
 import './rule-editor.scss';
+
+const PERIOD_SUGGESTIONS: string[] = ['P1D', 'P7D', 'P1M', 'P1Y', 'P1000Y'];
 
 export interface RuleEditorProps {
   rule: Rule;
@@ -47,7 +49,6 @@ export interface RuleEditorProps {
 export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps) {
   const { rule, onChange, tiers, onDelete, moveUp, moveDown } = props;
   const [isOpen, setIsOpen] = useState(true);
-  if (!rule) return null;
 
   function removeTier(key: string) {
     const newTierReplicants = Object.assign({}, rule.tieredReplicants);
@@ -174,12 +175,16 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                 })}
               </HTMLSelect>
               {RuleUtil.hasPeriod(rule) && (
-                <InputGroup
+                <SuggestibleInput
                   value={rule.period || ''}
-                  onChange={(e: any) =>
-                    onChange(RuleUtil.changePeriod(rule, e.target.value as any))
-                  }
-                  placeholder="P1D"
+                  onValueChange={period => {
+                    if (typeof period === 'undefined') return;
+                    // Ensure the period is upper case and does not contain anytihng but the allowed chars
+                    period = period.toUpperCase().replace(/[^PYMDTHS0-9]/g, '');
+                    onChange(RuleUtil.changePeriod(rule, period));
+                  }}
+                  placeholder={PERIOD_SUGGESTIONS[0]}
+                  suggestions={PERIOD_SUGGESTIONS}
                 />
               )}
               {RuleUtil.hasIncludeFuture(rule) && (
@@ -207,15 +212,6 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
             <FormGroup>
               {renderTiers()}
               {renderTierAdder()}
-            </FormGroup>
-          )}
-          {RuleUtil.hasColocatedDataSources(rule) && (
-            <FormGroup label="Colocated datasources">
-              <TagInput
-                values={rule.colocatedDataSources || []}
-                onChange={(v: any) => onChange(RuleUtil.changeColocatedDataSources(rule, v))}
-                fill
-              />
             </FormGroup>
           )}
         </Card>

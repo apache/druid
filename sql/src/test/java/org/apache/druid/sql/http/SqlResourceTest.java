@@ -243,6 +243,23 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(true);
   }
 
+
+  @Test
+  public void testCountStarExtendedCharacters() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery("SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'", null, false, null, null)
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("cnt", 1)
+        ),
+        rows
+    );
+    checkSqlRequestLog(true);
+  }
+
   @Test
   public void testTimestampsInResponse() throws Exception
   {

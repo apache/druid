@@ -28,11 +28,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.indexer.TaskIdUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -147,7 +147,7 @@ public class DataSchema
 
   private static void validateDatasourceName(String dataSource)
   {
-    TaskIdUtils.validateId("dataSource", dataSource);
+    IdUtils.validateId("dataSource", dataSource);
   }
 
   private static DimensionsSpec computeDimensionsSpec(

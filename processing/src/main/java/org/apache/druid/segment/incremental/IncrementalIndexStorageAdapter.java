@@ -52,6 +52,74 @@ import java.util.Iterator;
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
+  private static final ColumnCapabilities.CoercionLogic STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
+      new ColumnCapabilities.CoercionLogic()
+      {
+        @Override
+        public boolean dictionaryEncoded()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean dictionaryValuesSorted()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean dictionaryValuesUnique()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean multipleValues()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return true;
+        }
+      };
+
+  private static final ColumnCapabilities.CoercionLogic SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
+      new ColumnCapabilities.CoercionLogic()
+      {
+        @Override
+        public boolean dictionaryEncoded()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesSorted()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesUnique()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean multipleValues()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return false;
+        }
+      };
+
   final IncrementalIndex<?> index;
 
   public IncrementalIndexStorageAdapter(IncrementalIndex<?> index)
@@ -154,7 +222,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), true);
+    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column), STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC);
   }
 
   /**
@@ -165,7 +233,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
    */
   public ColumnCapabilities getSnapshotColumnCapabilities(String column)
   {
-    return ColumnCapabilitiesImpl.snapshot(index.getCapabilities(column));
+    return ColumnCapabilitiesImpl.snapshot(
+        index.getCapabilities(column),
+        SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
+    );
   }
 
   @Override

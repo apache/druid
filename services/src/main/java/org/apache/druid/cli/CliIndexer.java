@@ -59,11 +59,13 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.http.ShuffleResource;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -111,6 +113,7 @@ public class CliIndexer extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/indexer");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
+            binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
@@ -202,6 +205,7 @@ public class CliIndexer extends ServerRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new IndexingServiceTuningConfigModule(),
+        new InputSourceModule(),
         new QueryablePeonModule(),
         new CliIndexerServerModule(properties),
         new LookupModule()

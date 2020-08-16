@@ -44,13 +44,7 @@ public class BroadcastDistributionRuleSerdeTest
   {
     return Lists.newArrayList(
         new Object[]{new ForeverBroadcastDistributionRule()},
-        new Object[]{new ForeverBroadcastDistributionRule()},
-        new Object[]{new ForeverBroadcastDistributionRule()},
         new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"))},
-        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"))},
-        new Object[]{new IntervalBroadcastDistributionRule(Intervals.of("0/1000"))},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null)},
-        new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null)},
         new Object[]{new PeriodBroadcastDistributionRule(new Period(1000), null)}
     );
   }

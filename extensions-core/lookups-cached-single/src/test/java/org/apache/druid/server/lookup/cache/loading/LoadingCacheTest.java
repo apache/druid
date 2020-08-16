@@ -141,7 +141,7 @@ public class LoadingCacheTest
         return "value2";
       }
     });
-    Assert.assertEquals(loadingCache.getAllPresent(IMMUTABLE_MAP.keySet()), Collections.EMPTY_MAP);
+    Assert.assertEquals(loadingCache.getAllPresent(IMMUTABLE_MAP.keySet()), Collections.emptyMap());
   }
 
   @Test

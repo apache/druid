@@ -19,7 +19,9 @@
 
 package org.apache.druid.guice.http;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Binder;
+import com.google.inject.Binding;
 import com.google.inject.Module;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -29,10 +31,12 @@ import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class JettyHttpClientModule implements Module
 {
@@ -44,60 +48,26 @@ public class JettyHttpClientModule implements Module
   }
 
   private final String propertyPrefix;
-  private Annotation annotation = null;
-  private Class<? extends Annotation> annotationClazz = null;
+  private final Class<? extends Annotation> annotationClazz;
 
-  public JettyHttpClientModule(String propertyPrefix)
+  public JettyHttpClientModule(String propertyPrefix, Class<? extends Annotation> annotationClazz)
   {
-    this.propertyPrefix = propertyPrefix;
-  }
-
-  public JettyHttpClientModule(String propertyPrefix, Class<? extends Annotation> annotation)
-  {
-    this.propertyPrefix = propertyPrefix;
-    this.annotationClazz = annotation;
-  }
-
-  public JettyHttpClientModule(String propertyPrefix, Annotation annotation)
-  {
-    this.propertyPrefix = propertyPrefix;
-    this.annotation = annotation;
+    this.propertyPrefix = Preconditions.checkNotNull(propertyPrefix, "propertyPrefix");
+    this.annotationClazz = Preconditions.checkNotNull(annotationClazz, "annotationClazz");
   }
 
   @Override
   public void configure(Binder binder)
   {
-    if (annotation != null) {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotation);
-      binder.bind(HttpClient.class)
-            .annotatedWith(annotation)
-            .toProvider(new HttpClientProvider(annotation))
-            .in(LazySingleton.class);
-    } else if (annotationClazz != null) {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
-      binder.bind(HttpClient.class)
-            .annotatedWith(annotationClazz)
-            .toProvider(new HttpClientProvider(annotationClazz))
-            .in(LazySingleton.class);
-    } else {
-      JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class);
-      binder.bind(HttpClient.class)
-            .toProvider(new HttpClientProvider())
-            .in(LazySingleton.class);
-    }
+    JsonConfigProvider.bind(binder, propertyPrefix, DruidHttpClientConfig.class, annotationClazz);
+    binder.bind(HttpClient.class)
+          .annotatedWith(annotationClazz)
+          .toProvider(new HttpClientProvider(annotationClazz))
+          .in(LazySingleton.class);
   }
 
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
-    public HttpClientProvider()
-    {
-    }
-
-    public HttpClientProvider(Annotation annotation)
-    {
-      super(annotation);
-    }
-
     public HttpClientProvider(Class<? extends Annotation> annotation)
     {
       super(annotation);
@@ -109,9 +79,10 @@ public class JettyHttpClientModule implements Module
       final DruidHttpClientConfig config = getConfigProvider().get().get();
 
       final HttpClient httpClient;
-      if (getSslContextBinding() != null) {
-        final SslContextFactory sslContextFactory = new SslContextFactory();
-        sslContextFactory.setSslContext(getSslContextBinding().getProvider().get());
+      final Binding<SSLContext> sslContextBinding = getSslContextBinding();
+      if (sslContextBinding != null) {
+        final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
+        sslContextFactory.setSslContext(sslContextBinding.getProvider().get());
         httpClient = new HttpClient(sslContextFactory);
       } else {
         httpClient = new HttpClient();

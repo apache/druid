@@ -40,6 +40,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 
@@ -63,6 +64,9 @@ public class ParallelMergeCombiningSequenceTest
 
   private ForkJoinPool pool;
 
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Before
   public void setup()
   {
@@ -80,8 +84,6 @@ public class ParallelMergeCombiningSequenceTest
     pool.shutdown();
   }
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testOrderedResultBatchFromSequence() throws IOException
@@ -448,12 +450,21 @@ public class ParallelMergeCombiningSequenceTest
         "exploded"
     );
     assertException(input);
+  }
 
+  @Test
+  public void testExceptionOnInputSequenceRead2() throws Exception
+  {
+    List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(25));
     input.add(explodingSequence(11));
     input.add(nonBlockingSequence(12));
 
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage(
+        "exploded"
+    );
     assertException(input);
   }
 
@@ -529,6 +540,32 @@ public class ParallelMergeCombiningSequenceTest
     assertException(input, 8, 64, 1000, 500);
   }
 
+  @Test
+  public void testGracefulCloseOfYielderCancelsPool() throws Exception
+  {
+
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(nonBlockingSequence(10_000));
+    input.add(nonBlockingSequence(9_001));
+    input.add(nonBlockingSequence(7_777));
+    input.add(nonBlockingSequence(8_500));
+    input.add(nonBlockingSequence(5_000));
+    input.add(nonBlockingSequence(8_888));
+
+    assertResultWithEarlyClose(input, 128, 1024, 256, reportMetrics -> {
+      Assert.assertEquals(2, reportMetrics.getParallelism());
+      Assert.assertEquals(6, reportMetrics.getInputSequences());
+      // 49166 is total set of results if yielder were fully processed, expect somewhere more than 0 but less than that
+      // this isn't super indicative of anything really, since closing the yielder would have triggered the baggage
+      // to run, which runs this metrics reporter function, while the actual processing could still be occuring on the
+      // pool in the background and the yielder still operates as intended if cancellation isn't in fact happening.
+      // other tests ensure that this is true though (yielder.next throwing an exception for example)
+      Assert.assertTrue(49166 > reportMetrics.getInputRows());
+      Assert.assertTrue(0 < reportMetrics.getInputRows());
+    });
+  }
+
+
   private void assertResult(List<Sequence<IntPair>> sequences) throws InterruptedException, IOException
   {
     assertResult(
@@ -600,6 +637,87 @@ public class ParallelMergeCombiningSequenceTest
     Assert.assertEquals(0, pool.getRunningThreadCount());
     combiningYielder.close();
     parallelMergeCombineYielder.close();
+    // cancellation trigger should not be set if sequence was fully yielded and close is called
+    // (though shouldn't actually matter even if it was...)
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+  }
+
+  private void assertResultWithEarlyClose(
+      List<Sequence<IntPair>> sequences,
+      int batchSize,
+      int yieldAfter,
+      int closeYielderAfter,
+      Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter
+  )
+      throws InterruptedException, IOException
+  {
+    final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
+        new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
+        INT_PAIR_ORDERING,
+        INT_PAIR_MERGE_FN
+    );
+
+    final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
+        pool,
+        sequences,
+        INT_PAIR_ORDERING,
+        INT_PAIR_MERGE_FN,
+        true,
+        5000,
+        0,
+        TEST_POOL_SIZE,
+        yieldAfter,
+        batchSize,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS,
+        reporter
+    );
+
+    Yielder<IntPair> combiningYielder = Yielders.each(combiningSequence);
+    Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);
+
+    IntPair prev = null;
+
+    int yields = 0;
+    while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
+      if (yields >= closeYielderAfter) {
+        parallelMergeCombineYielder.close();
+        combiningYielder.close();
+        break;
+      } else {
+        yields++;
+        Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+        Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+        prev = parallelMergeCombineYielder.get();
+        combiningYielder = combiningYielder.next(combiningYielder.get());
+        parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
+      }
+    }
+    // trying to next the yielder creates sadness for you
+    final String expectedExceptionMsg = "Already closed";
+    try {
+      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+      parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
+      // this should explode so the contradictory next statement should not be reached
+      Assert.assertTrue(false);
+    }
+    catch (RuntimeException rex) {
+      Assert.assertEquals(expectedExceptionMsg, rex.getMessage());
+    }
+
+    // cancellation gizmo of sequence should be cancelled, and also should contain our expected message
+    Assert.assertTrue(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+    Assert.assertEquals(
+        expectedExceptionMsg,
+        parallelMergeCombineSequence.getCancellationGizmo().getRuntimeException().getMessage()
+    );
+
+    while (pool.getRunningThreadCount() > 0) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(0, pool.getRunningThreadCount());
+
+    Assert.assertFalse(combiningYielder.isDone());
+    Assert.assertFalse(parallelMergeCombineYielder.isDone());
   }
 
   private void assertException(List<Sequence<IntPair>> sequences) throws Exception
@@ -653,6 +771,12 @@ public class ParallelMergeCombiningSequenceTest
       parallelMergeCombineYielder.close();
     }
     catch (Exception ex) {
+      sequences.forEach(sequence -> {
+        if (sequence instanceof ExplodingSequence) {
+          ExplodingSequence exploder = (ExplodingSequence) sequence;
+          Assert.assertEquals(1, exploder.getCloseCount());
+        }
+      });
       LOG.warn(ex, "exception:");
       throw ex;
     }
@@ -808,42 +932,60 @@ public class ParallelMergeCombiningSequenceTest
   private static Sequence<IntPair> explodingSequence(int explodeAfter)
   {
     final int explodeAt = explodeAfter + 1;
-    return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
-        {
-          @Override
-          public Iterator<IntPair> make()
+
+    // we start at one because we only need to close if the sequence is actually made
+    AtomicInteger explodedIteratorMakerCleanup = new AtomicInteger(1);
+
+    // just hijacking this class to use it's interface... which i override..
+    return new ExplodingSequence(
+        new BaseSequence<>(
+          new BaseSequence.IteratorMaker<IntPair, Iterator<IntPair>>()
           {
-            return new Iterator<IntPair>()
+            @Override
+            public Iterator<IntPair> make()
             {
-              int mergeKey = 0;
-              int rowCounter = 0;
-              @Override
-              public boolean hasNext()
+              // we got yielder, decrement so we expect it to be incremented again on cleanup
+              explodedIteratorMakerCleanup.decrementAndGet();
+              return new Iterator<IntPair>()
               {
-                return rowCounter < explodeAt;
-              }
-
-              @Override
-              public IntPair next()
-              {
-                if (rowCounter == explodeAfter) {
-                  throw new RuntimeException("exploded");
+                int mergeKey = 0;
+                int rowCounter = 0;
+                @Override
+                public boolean hasNext()
+                {
+                  return rowCounter < explodeAt;
                 }
-                mergeKey += incrementMergeKeyAmount();
-                rowCounter++;
-                return makeIntPair(mergeKey);
-              }
-            };
-          }
 
-          @Override
-          public void cleanup(Iterator<IntPair> iterFromMake)
-          {
-            // nothing to cleanup
+                @Override
+                public IntPair next()
+                {
+                  if (rowCounter == explodeAfter) {
+                    throw new RuntimeException("exploded");
+                  }
+                  mergeKey += incrementMergeKeyAmount();
+                  rowCounter++;
+                  return makeIntPair(mergeKey);
+                }
+              };
+            }
+
+            @Override
+            public void cleanup(Iterator<IntPair> iterFromMake)
+            {
+              explodedIteratorMakerCleanup.incrementAndGet();
+            }
           }
-        }
-    );
+        ),
+        false,
+        false
+    )
+    {
+      @Override
+      public long getCloseCount()
+      {
+        return explodedIteratorMakerCleanup.get();
+      }
+    };
   }
 
   private static List<IntPair> generateOrderedPairs(int length)
