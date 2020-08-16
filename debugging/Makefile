@@ -12,15 +12,15 @@ build:
 build_pi:
 	$(DEBUG_DIR)/build_druid.sh -pi
 run:
-	$(DEBUG_DIR)/run.sh &
+	$(DEBUG_DIR)/run.sh
 push:
-	/usr/local/bin/python3 $(DEBUG_DIR)/send_to_pubsub.py
+	python3 $(DEBUG_DIR)/send_to_pubsub.py
 cluster:
-	$(DEBUG_DIR)/run_cluster.sh &
+	$(DEBUG_DIR)/run_cluster.sh
 clean:
 	rm -r $(DATADIR)
 subspec:
-	$(SRC_DIR)/submit_spec.sh
+	$(DEBUG_DIR)/submit_spec.sh
 stop:
 	$(BINDIR)/service --down -d $(DATADIR)
 

@@ -53,6 +53,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.seekablestream.StreamChunkParser;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
@@ -149,6 +150,7 @@ public class PubsubIndexTaskRunner implements ChatHandler
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
   private volatile IngestionState ingestionState;
+  private final String sequenceName;
 
   PubsubIndexTaskRunner(
       PubsubIndexTask task,
@@ -181,6 +183,7 @@ public class PubsubIndexTaskRunner implements ChatHandler
               .map(AggregatorFactory::getName)
               .collect(Collectors.toList())
     );
+    this.sequenceName = DateTimes.nowUtc() + "-seq";
   }
 
   private boolean isPaused()
@@ -368,7 +371,7 @@ public class PubsubIndexTaskRunner implements ChatHandler
 
   public String getSequenceName()
   {
-    return "pubsub-sequence";
+    return sequenceName;
   }
 
   private void publishAndRegisterHandoff(Committer committer)

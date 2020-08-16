@@ -5,8 +5,8 @@ cd ../
 if [ "$1" != "-pi" ]; then
   mvn clean install -Pdist -DskipTests=true
 else
-  mvn clean install -DskipTests=true -pl :druid-pubsub-indexing-service
-  mvn clean install -Pdist -DskipTests=true -pl :distribution
+  mvn clean install -DskipTests=true -Dcheckstyle.skip -Dpmd.skip -pl :druid-pubsub-indexing-service
+  mvn clean install -Pdist -DskipTests=true -Dcheckstyle.skip -Dpmd.skip -pl :distribution
 fi
 
 mv distribution/target/apache*.tar.gz ../builds
