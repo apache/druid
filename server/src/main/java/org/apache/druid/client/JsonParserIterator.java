@@ -25,17 +25,14 @@ import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.ResourceLimitExceededException;
-import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletResponse;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,7 +54,6 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
   private final String url;
   private final String host;
   private final ObjectMapper objectMapper;
-  private final BytesAccumulatingResponseHandler responseHandler;
   private final boolean hasTimeout;
   private final long timeoutAt;
   private final String queryId;
@@ -68,8 +64,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       String url,
       @Nullable Query<T> query,
       String host,
-      ObjectMapper objectMapper,
-      BytesAccumulatingResponseHandler responseHandler
+      ObjectMapper objectMapper
   )
   {
     this.typeRef = typeRef;
@@ -85,7 +80,6 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     this.jp = null;
     this.host = host;
     this.objectMapper = objectMapper;
-    this.responseHandler = responseHandler;
     this.hasTimeout = timeoutAt > -1;
   }
 
@@ -137,16 +131,6 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         InputStream is = hasTimeout
                          ? future.get(timeLeftMillis, TimeUnit.MILLISECONDS)
                          : future.get();
-        if (responseHandler != null && responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-          interruptQuery(
-              new RE(
-                  "Unexpected response status [%s] description [%s] from request url[%s]",
-                  responseHandler.getStatus(),
-                  responseHandler.getDescription(),
-                  url
-              )
-          );
-        }
         if (is != null) {
           jp = objectMapper.getFactory().createParser(is);
         } else {
