@@ -231,6 +231,15 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
     broadcastTable.columnReader(columnNames.indexOf(DIM_NOT_EXISTS));
   }
 
+  @Test
+  public void testNonexistentColumnOutOfRange()
+  {
+    final int non = columnNames.size();
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage(StringUtils.format("Column[%s] is not a valid column", non));
+    broadcastTable.columnReader(non);
+  }
+
   private void checkIndexAndReader(String columnName, Object[] vals)
   {
     checkIndexAndReader(columnName, vals, new Object[0]);

@@ -143,6 +143,11 @@ public class RowSignature
     return columnPositions.containsKey(columnName);
   }
 
+  public boolean contains(final int columnNumber)
+  {
+    return 0 <= columnNumber && columnNumber < columnNames.size();
+  }
+
   /**
    * Returns the first position of {@code columnName} in this row signature, or -1 if it does not appear.
    *

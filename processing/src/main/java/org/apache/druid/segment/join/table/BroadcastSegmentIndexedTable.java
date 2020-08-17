@@ -202,7 +202,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   @Override
   public Reader columnReader(int column)
   {
-    if (column < 0 || rowSignature.getColumnName(0) == null) {
+    if (!rowSignature.contains(column)) {
       throw new IAE("Column[%d] is not a valid column for segment[%s]", column, segment.getId());
     }
     final SimpleAscendingOffset offset = new SimpleAscendingOffset(adapter.getNumRows());
