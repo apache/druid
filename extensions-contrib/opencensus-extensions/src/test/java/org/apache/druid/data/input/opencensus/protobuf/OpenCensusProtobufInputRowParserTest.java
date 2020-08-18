@@ -80,7 +80,7 @@ public class OpenCensusProtobufInputRowParserTest
                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "value", ""),
                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "foo_key", "")
             )
-        ), null
+        ), null, null
     );
 
     parseSpecWithDimensions = new JSONParseSpec(
@@ -95,7 +95,7 @@ public class OpenCensusProtobufInputRowParserTest
                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "value", ""),
                 new JSONPathFieldSpec(JSONPathFieldType.ROOT, "foo_key", "")
             )
-        ), null
+        ), null, null
     );
   }
 
