@@ -141,7 +141,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     if (isInputThetaSketch) {
       return SketchModule.THETA_SKETCH_MERGE_AGG;

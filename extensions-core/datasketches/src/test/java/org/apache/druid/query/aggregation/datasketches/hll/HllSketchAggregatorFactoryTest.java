@@ -351,7 +351,7 @@ public class HllSketchAggregatorFactoryTest
     }
 
     @Override
-    public String getTypeName()
+    public String getComplexTypeName()
     {
       return DUMMY_TYPE_NAME;
     }

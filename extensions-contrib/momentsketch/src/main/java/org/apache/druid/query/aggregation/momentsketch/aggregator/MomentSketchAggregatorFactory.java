@@ -240,7 +240,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return TYPE_NAME;
   }

@@ -140,7 +140,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
-          final String complexTypeName = agg.getTypeName();
+          final String complexTypeName = agg.getComplexTypeName();
           final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
           if (serde == null) {
             throw new ISE("Don't know how to handle type[%s]", complexTypeName);
@@ -1125,7 +1125,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       } else {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
                                              .setHasNulls(ColumnCapabilities.Capable.TRUE);
-        String complexTypeName = factory.getTypeName();
+        String complexTypeName = factory.getComplexTypeName();
         ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
         if (serde != null) {
           this.type = serde.getTypeName();

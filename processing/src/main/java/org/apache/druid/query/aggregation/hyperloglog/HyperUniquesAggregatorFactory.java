@@ -260,7 +260,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     if (isInputHyperUnique) {
       return "preComputedHyperUnique";

@@ -420,7 +420,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public String getTypeName()
+    public String getComplexTypeName()
     {
       return TYPE;
     }

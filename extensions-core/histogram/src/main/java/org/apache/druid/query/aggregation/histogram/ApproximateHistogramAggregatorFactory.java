@@ -300,7 +300,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "approximateHistogram";
   }

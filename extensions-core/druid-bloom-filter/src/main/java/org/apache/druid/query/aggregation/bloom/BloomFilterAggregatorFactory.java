@@ -179,7 +179,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME;
   }

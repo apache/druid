@@ -87,7 +87,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return VARIANCE_TYPE_NAME;
   }

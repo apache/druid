@@ -182,9 +182,9 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
-    return delegate.getTypeName();
+    return delegate.getComplexTypeName();
   }
 
   @Override

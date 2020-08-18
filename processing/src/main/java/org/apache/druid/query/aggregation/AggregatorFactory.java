@@ -234,11 +234,11 @@ public abstract class AggregatorFactory implements Cacheable
    * must be a corresponding {@link org.apache.druid.segment.serde.ComplexMetricSerde} which was registered with
    * {@link org.apache.druid.segment.serde.ComplexMetrics#registerSerde} using this type name.
    *
-   * If you need a ValueType enum corresponding to this aggregator, use {@link #getTypeName} instead.
+   * If you need a ValueType enum corresponding to this aggregator, use {@link #getType} instead.
    *
    * @throws IllegalStateException if getType() != ValueType.COMPLEX
    */
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     throw new ISE("Complex type name not is not available for %s of type %s", getName(), getType());
   }

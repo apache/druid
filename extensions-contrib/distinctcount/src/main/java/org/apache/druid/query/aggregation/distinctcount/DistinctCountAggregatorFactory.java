@@ -195,7 +195,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "distinctCount";
   }

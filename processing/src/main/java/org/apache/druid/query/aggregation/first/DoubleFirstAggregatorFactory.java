@@ -283,7 +283,7 @@ public class DoubleFirstAggregatorFactory extends AggregatorFactory
   @Override
   public ValueType getFinalizedType()
   {
-    // this is a copy of getTypeName in the hopes that someday groupby v1 is no more and it will report it's actual
+    // this is a copy of getComplexTypeName in the hopes that someday groupby v1 is no more and it will report it's actual
     // type of COMPLEX
     return storeDoubleAsFloat ? ValueType.FLOAT : ValueType.DOUBLE;
   }

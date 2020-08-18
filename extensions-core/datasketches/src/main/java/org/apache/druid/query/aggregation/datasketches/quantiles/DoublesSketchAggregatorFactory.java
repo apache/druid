@@ -248,7 +248,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return DoublesSketchModule.DOUBLES_SKETCH;
   }

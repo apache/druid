@@ -215,7 +215,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "serializablePairLongString";
   }

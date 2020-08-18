@@ -285,7 +285,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "hyperUnique";
   }
