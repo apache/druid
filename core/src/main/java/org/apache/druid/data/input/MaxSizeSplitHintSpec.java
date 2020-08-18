@@ -22,6 +22,7 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 
@@ -44,7 +45,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
   public static final String TYPE = "maxSize";
 
   @VisibleForTesting
-  static final HumanReadableBytes DEFAULT_MAX_SPLIT_SIZE = new HumanReadableBytes("512MiB");
+  static final HumanReadableBytes DEFAULT_MAX_SPLIT_SIZE = new HumanReadableBytes("1GiB");
 
   /**
    * There are two known issues when a split contains a large list of files.
@@ -71,6 +72,8 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
   {
     this.maxSplitSize = maxSplitSize == null ? DEFAULT_MAX_SPLIT_SIZE : maxSplitSize;
     this.maxNumFiles = maxNumFiles == null ? DEFAULT_MAX_NUM_FILES : maxNumFiles;
+    Preconditions.checkArgument(this.maxSplitSize.getBytes() > 0, "maxSplitSize should be larger than 0");
+    Preconditions.checkArgument(this.maxNumFiles > 0, "maxNumFiles should be larger than 0");
   }
 
   @VisibleForTesting

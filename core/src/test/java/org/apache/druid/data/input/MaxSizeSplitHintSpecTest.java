@@ -25,7 +25,9 @@ import com.google.common.collect.Lists;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,6 +36,9 @@ import java.util.stream.IntStream;
 
 public class MaxSizeSplitHintSpecTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws IOException
   {
@@ -55,6 +60,22 @@ public class MaxSizeSplitHintSpecTest
                         + "}\n";
     final MaxSizeSplitHintSpec fromJson = (MaxSizeSplitHintSpec) mapper.readValue(json, SplitHintSpec.class);
     Assert.assertEquals(new MaxSizeSplitHintSpec(new HumanReadableBytes(1024L), 20_000), fromJson);
+  }
+
+  @Test
+  public void testConstructorWith0MaxNumFiles()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("maxNumFiles should be larger than 0");
+    new MaxSizeSplitHintSpec(null, 0);
+  }
+
+  @Test
+  public void testConstructorWith0MaxSplitSize()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("maxSplitSize should be larger than 0");
+    new MaxSizeSplitHintSpec(0, null);
   }
 
   @Test
