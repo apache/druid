@@ -83,7 +83,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             false
         )
     );
-    getIndexingServiceClient().runTask(task);
+    getIndexingServiceClient().runTask(task.getId(), task);
     while (task.getCurrentRunner() == null) {
       Thread.sleep(100);
     }
