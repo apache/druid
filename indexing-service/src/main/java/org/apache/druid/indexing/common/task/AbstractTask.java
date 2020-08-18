@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.utils.IdUtils;
@@ -41,8 +40,6 @@ import java.util.Map;
 
 public abstract class AbstractTask implements Task
 {
-  private static final Joiner ID_JOINER = Joiner.on("_");
-
   @JsonIgnore
   private final String id;
 
