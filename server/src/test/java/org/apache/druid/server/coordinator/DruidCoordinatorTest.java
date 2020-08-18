@@ -669,35 +669,66 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testBalancerThreadNumber()
   {
-    DruidCoordinator c = EasyMock.createNiceMock(DruidCoordinator.class);
     CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
-    EasyMock.expect(c.getDynamicConfigs()).andReturn(dynamicConfig).anyTimes();
     EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
     EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
-    EasyMock.replay(c, dynamicConfig);
+
+    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference(dynamicConfig)).anyTimes();
+
+    ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
+    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
+
+    DruidCoordinator c = new DruidCoordinator(
+        null,
+        null,
+        configManager,
+        null,
+        null,
+        null,
+        null,
+        null,
+        scheduledExecutorFactory,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
 
     DruidCoordinator.DutiesRunnable duty = c.new DutiesRunnable(Collections.emptyList(), 0);
     // before initialization
-    Assert.assertEquals(0, duty.getCachedBalancerThreadNumber());
-    Assert.assertNull(duty.getBalancerExec());
+    Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
+    Assert.assertNull(c.getBalancerExec());
 
     // first initialization
     duty.initBalancerExecutor();
-    Assert.assertEquals(5, duty.getCachedBalancerThreadNumber());
-    ListeningExecutorService firstExec = duty.getBalancerExec();
+    System.out.println("c.getCachedBalancerThreadNumber(): " + c.getCachedBalancerThreadNumber());
+    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService firstExec = c.getBalancerExec();
     Assert.assertNotNull(firstExec);
 
     // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
     duty.initBalancerExecutor();
-    Assert.assertEquals(5, duty.getCachedBalancerThreadNumber());
-    ListeningExecutorService secondExec = duty.getBalancerExec();
+    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService secondExec = c.getBalancerExec();
     Assert.assertNotNull(secondExec);
     Assert.assertTrue(firstExec == secondExec);
 
     // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
     duty.initBalancerExecutor();
-    Assert.assertEquals(10, duty.getCachedBalancerThreadNumber());
-    ListeningExecutorService thirdExec = duty.getBalancerExec();
+    Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
+    ListeningExecutorService thirdExec = c.getBalancerExec();
     Assert.assertNotNull(thirdExec);
     Assert.assertFalse(secondExec == thirdExec);
     Assert.assertFalse(firstExec == thirdExec);

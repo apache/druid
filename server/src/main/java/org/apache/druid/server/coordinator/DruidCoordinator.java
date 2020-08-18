@@ -150,6 +150,9 @@ public class DruidCoordinator
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
 
+  private int cachedBalancerThreadNumber;
+  private ListeningExecutorService balancerExec;
+
   @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,
@@ -484,6 +487,24 @@ public class DruidCoordinator
     }
   }
 
+  /**
+   * This method should be used for only testing.
+   */
+  @VisibleForTesting
+  public int getCachedBalancerThreadNumber()
+  {
+    return cachedBalancerThreadNumber;
+  }
+
+  /**
+   * This method should be used for only testing.
+   */
+  @VisibleForTesting
+  public ListeningExecutorService getBalancerExec()
+  {
+    return balancerExec;
+  }
+
   @LifecycleStart
   public void start()
   {
@@ -525,6 +546,10 @@ public class DruidCoordinator
       started = false;
 
       exec.shutdownNow();
+
+      if (balancerExec != null) {
+        balancerExec.shutdownNow();
+      }
     }
   }
 
@@ -613,6 +638,11 @@ public class DruidCoordinator
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
       segmentsMetadataManager.stopPollingDatabasePeriodically();
+
+      if (balancerExec != null) {
+        balancerExec.shutdownNow();
+        balancerExec = null;
+      }
     }
   }
 
@@ -653,8 +683,8 @@ public class DruidCoordinator
     private final long startTimeNanos = System.nanoTime();
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
-    private int cachedBalancerThreadNumber;
-    private ListeningExecutorService balancerExec;
+    //private int cachedBalancerThreadNumber;
+    //private ListeningExecutorService balancerExec;
 
     protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
     {
@@ -762,24 +792,6 @@ public class DruidCoordinator
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
-    }
-
-    /**
-     * This method should be used for only testing.
-     */
-    @VisibleForTesting
-    public int getCachedBalancerThreadNumber()
-    {
-      return cachedBalancerThreadNumber;
-    }
-
-    /**
-     * This method should be used for only testing.
-     */
-    @VisibleForTesting
-    public ListeningExecutorService getBalancerExec()
-    {
-      return balancerExec;
     }
   }
 
