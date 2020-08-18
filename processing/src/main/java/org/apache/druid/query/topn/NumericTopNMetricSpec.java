@@ -103,16 +103,20 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
   public Comparator getComparator(List<AggregatorFactory> aggregatorSpecs, List<PostAggregator> postAggregatorSpecs)
   {
     Comparator comp = null;
-    for (AggregatorFactory factory : aggregatorSpecs) {
-      if (metric.equals(factory.getName())) {
-        comp = factory.getComparator();
-        break;
-      }
-    }
     for (PostAggregator pf : postAggregatorSpecs) {
       if (metric.equals(pf.getName())) {
         comp = pf.getComparator();
         break;
+      }
+    }
+
+    // use comparator from PostAggregator if exists
+    if (comp == null) {
+      for (AggregatorFactory factory : aggregatorSpecs) {
+        if (metric.equals(factory.getName())) {
+          comp = factory.getComparator();
+          break;
+        }
       }
     }
 
