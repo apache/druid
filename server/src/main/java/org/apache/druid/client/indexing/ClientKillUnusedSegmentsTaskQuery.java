@@ -21,7 +21,10 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.joda.time.Interval;
+
+import java.util.Objects;
 
 /**
  * Client representation of org.apache.druid.indexing.common.task.KillUnusedSegmentsTask. JSON searialization
@@ -30,24 +33,36 @@ import org.joda.time.Interval;
  */
 public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
 {
+  public static final String TYPE = "kill";
+
+  private final String id;
   private final String dataSource;
   private final Interval interval;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
+      @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )
   {
+    this.id = Preconditions.checkNotNull(id, "id");
     this.dataSource = dataSource;
     this.interval = interval;
   }
 
   @JsonProperty
   @Override
+  public String getId()
+  {
+    return id;
+  }
+
+  @JsonProperty
+  @Override
   public String getType()
   {
-    return "kill";
+    return TYPE;
   }
 
   @JsonProperty
@@ -61,5 +76,26 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ClientKillUnusedSegmentsTaskQuery that = (ClientKillUnusedSegmentsTaskQuery) o;
+    return Objects.equals(id, that.id) &&
+           Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(interval, that.interval);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(id, dataSource, interval);
   }
 }
