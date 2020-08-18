@@ -194,6 +194,12 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return getType();
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return Double.BYTES + Byte.BYTES;

@@ -212,6 +212,12 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.LONG;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return Long.BYTES;

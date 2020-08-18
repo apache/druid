@@ -225,10 +225,7 @@ public abstract class AggregatorFactory implements Cacheable
    * and {@link #combine}.
    * @return
    */
-  public ValueType getFinalizedType()
-  {
-    return getType();
-  }
+  public abstract ValueType getFinalizedType();
 
   /**
    * Get the complex type name of the intermediate type for this aggregator.
@@ -238,6 +235,8 @@ public abstract class AggregatorFactory implements Cacheable
    * {@link org.apache.druid.segment.serde.ComplexMetrics#registerSerde} using this type name.
    *
    * If you need a ValueType enum corresponding to this aggregator, use {@link #getTypeName} instead.
+   *
+   * @throws IllegalStateException if getType() != ValueType.COMPLEX
    */
   public String getTypeName()
   {

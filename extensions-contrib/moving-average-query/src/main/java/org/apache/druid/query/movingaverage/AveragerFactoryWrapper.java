@@ -178,6 +178,12 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
     return ValueType.COMPLEX;
   }
 
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return getType();
+  }
+
   /**
    * Not implemented. Throws UnsupportedOperationException.
    */
@@ -186,5 +192,4 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   {
     throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
-
 }

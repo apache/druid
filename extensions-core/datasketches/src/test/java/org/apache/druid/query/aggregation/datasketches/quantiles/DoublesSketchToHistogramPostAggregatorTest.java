@@ -203,7 +203,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
                       "a",
                       new FieldAccessPostAggregator("field", "sketch"),
                       new double[] {3.5},
-                      24
+                      null
                   )
               )
               .build();

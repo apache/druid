@@ -274,6 +274,12 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.FLOAT;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return Double.BYTES;

@@ -227,6 +227,12 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return TDigestSketchUtils.getMaxIntermdiateTDigestSize(compression);
@@ -305,5 +311,4 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
            + ", compression=" + compression
            + "}";
   }
-
 }

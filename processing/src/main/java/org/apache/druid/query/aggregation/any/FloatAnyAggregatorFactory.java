@@ -192,6 +192,12 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.FLOAT;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return Float.BYTES + Byte.BYTES;

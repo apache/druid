@@ -255,6 +255,12 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     // k double precision moments, 2 doubles for the min and max

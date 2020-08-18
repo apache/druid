@@ -414,6 +414,12 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
+    public ValueType getType()
+    {
+      return ValueType.COMPLEX;
+    }
+
+    @Override
     public String getTypeName()
     {
       return TYPE;
@@ -429,6 +435,12 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     public byte[] getCacheKey()
     {
       return new byte[0];
+    }
+
+    @Override
+    public ValueType getFinalizedType()
+    {
+      return getType();
     }
   }
 

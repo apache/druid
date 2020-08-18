@@ -1119,7 +1119,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
       ValueType valueType = factory.getType();
 
-      if (valueType.isComplex()) {
+      if (valueType.isPrimitive()) {
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+        this.type = valueType.toString();
+      } else {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
                                              .setHasNulls(ColumnCapabilities.Capable.TRUE);
         String complexTypeName = factory.getTypeName();
@@ -1127,11 +1130,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         if (serde != null) {
           this.type = serde.getTypeName();
         } else {
-          throw new ISE("Don't know how to handle type[%s]", complexTypeName);
+          throw new ISE("Don't know how to handle complex type[%s] of type[%s]", complexTypeName, valueType);
         }
-      } else {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
-        this.type = valueType.toString();
       }
     }
 

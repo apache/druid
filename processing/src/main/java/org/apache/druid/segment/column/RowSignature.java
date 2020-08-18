@@ -236,13 +236,13 @@ public class RowSignature
     {
       for (final AggregatorFactory aggregator : aggregators) {
         final ValueType type = aggregator.getType();
-
+        
         if (type.equals(aggregator.getFinalizedType())) {
           add(aggregator.getName(), type);
         } else {
           // Use null if the type depends on whether or not the aggregator is finalized, since
           // we don't know if it will be finalized or not. So null (i.e. unknown) is the proper
-          // thing to do.
+          // thing to do (currently).
           add(aggregator.getName(), null);
         }
       }

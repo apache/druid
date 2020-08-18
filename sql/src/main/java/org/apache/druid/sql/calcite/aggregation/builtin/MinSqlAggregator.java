@@ -49,7 +49,7 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       final String expression
   )
   {
-    final ValueType valueType = Calcites.getValueTypeForSqlTypeName(aggregateCall.getType().getSqlTypeName());
+    final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
     return Aggregation.create(createMinAggregatorFactory(valueType, name, fieldName, expression, macroTable));
   }
 

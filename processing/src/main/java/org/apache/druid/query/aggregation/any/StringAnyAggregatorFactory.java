@@ -154,6 +154,12 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.STRING;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return Integer.BYTES + maxStringBytes;

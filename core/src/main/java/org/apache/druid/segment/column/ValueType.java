@@ -24,13 +24,26 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 
+/**
+ * This enumeration defines the Druid type system used to indicate the type of data stored in columns, produced by
+ * expressions, used to allow query processing engine algorithms to compute results, used to compute query result
+ * row signatures, and all other type needs.
+ *
+ * Currently only the primitive types ({@link #isPrimitive()} is true) and {@link #COMPLEX} can be stored in columns
+ * and are the only types handled directly by the query engines. Array types can currently be produced by expressions
+ * and by some post-aggregators, but do not currently have special engine handling, and should be used by implementors
+ * sparingly until full engine support is in place.
+ */
 public enum ValueType
 {
+  // primitive types
   DOUBLE,
   FLOAT,
   LONG,
   STRING,
+  // non-primitive types
   COMPLEX,
+  // transient array types (also non-primitive)
   DOUBLE_ARRAY,
   LONG_ARRAY,
   STRING_ARRAY;
@@ -41,14 +54,14 @@ public enum ValueType
     return isNumeric(this);
   }
 
-  public boolean isPrimitiveScalar()
+  public boolean isPrimitive()
   {
     return this.equals(ValueType.STRING) || isNumeric(this);
   }
 
   public boolean isComplex()
   {
-    return !isPrimitiveScalar();
+    return !isPrimitive();
   }
 
   @Nullable

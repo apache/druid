@@ -194,6 +194,12 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return BloomKFilter.computeSizeBytes(maxNumEntries);
