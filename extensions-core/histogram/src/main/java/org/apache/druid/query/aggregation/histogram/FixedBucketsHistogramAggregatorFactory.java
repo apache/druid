@@ -29,9 +29,12 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -97,6 +100,24 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
         numBuckets,
         outlierHandlingMode
     );
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
+  {
+    return new FixedBucketsHistogramVectorAggregator(
+        columnSelectorFactory.makeObjectSelector(fieldName),
+        lowerLimit,
+        upperLimit,
+        numBuckets,
+        outlierHandlingMode
+    );
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   @Override

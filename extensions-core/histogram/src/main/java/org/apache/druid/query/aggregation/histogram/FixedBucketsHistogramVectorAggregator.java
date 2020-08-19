@@ -19,19 +19,19 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
+public class FixedBucketsHistogramVectorAggregator implements VectorAggregator
 {
-  private final BaseObjectColumnValueSelector selector;
+  private final VectorObjectSelector selector;
   private final FixedBucketsHistogramBufferAggregatorInternal innerAggregator;
 
-  public FixedBucketsHistogramBufferAggregator(
-      BaseObjectColumnValueSelector selector,
+  public FixedBucketsHistogramVectorAggregator(
+      VectorObjectSelector selector,
       double lowerLimit,
       double upperLimit,
       int numBuckets,
@@ -54,12 +54,28 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-    Object val = selector.getObject();
-    innerAggregator.aggregate(buf, position, val);
+    Object[] vector = selector.getObjectVector();
+    FixedBucketsHistogram histogram = innerAggregator.get(buf, position);
+    for (int i = startRow; i < endRow; i++) {
+      innerAggregator.combine(histogram, vector[i]);
+    }
+    innerAggregator.put(buf, position, histogram);
   }
 
+  @Override
+  public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
+  {
+    Object[] vector = selector.getObjectVector();
+    for (int i = 0; i < numRows; i++) {
+      int position = positions[i] + positionOffset;
+      Object val = vector[rows != null ? rows[i] : i];
+      innerAggregator.aggregate(buf, position, val);
+    }
+  }
+
+  @Nullable
   @Override
   public Object get(ByteBuffer buf, int position)
   {
@@ -67,32 +83,8 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("FixedBucketsHistogramBufferAggregator does not support getFloat()");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("FixedBucketsHistogramBufferAggregator does not support getLong()");
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("FixedBucketsHistogramBufferAggregator does not support getDouble()");
-  }
-
-  @Override
   public void close()
   {
-    // no resources to cleanup
-  }
-
-  @Override
-  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-  {
-    inspector.visit("selector", selector);
+    // Nothing to close
   }
 }
