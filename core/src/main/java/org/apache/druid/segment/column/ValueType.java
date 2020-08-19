@@ -30,9 +30,10 @@ import javax.annotation.Nullable;
  * row signatures, and all other type needs.
  *
  * Currently only the primitive types ({@link #isPrimitive()} is true) and {@link #COMPLEX} can be stored in columns
- * and are the only types handled directly by the query engines. Array types can currently be produced by expressions
- * and by some post-aggregators, but do not currently have special engine handling, and should be used by implementors
- * sparingly until full engine support is in place.
+ * and are also the only types handled directly by the query engines. Array types can currently be produced by
+ * expressions and by some post-aggregators, but do not currently have special engine handling, and should be used by
+ * implementors sparingly until full engine support is in place. Aggregators should never specify array types as their
+ * output type until the engines fully support these types.
  */
 public enum ValueType
 {
@@ -49,19 +50,21 @@ public enum ValueType
   STRING_ARRAY;
 
 
+  /**
+   * Type is a numeric type, not including numeric array types
+   */
   public boolean isNumeric()
   {
     return isNumeric(this);
   }
 
+  /**
+   * Type is a 'primitive' type, which includes the {@link #isNumeric} types and {@link #STRING}, but not
+   * {@link #COMPLEX} or array types.
+   */
   public boolean isPrimitive()
   {
     return this.equals(ValueType.STRING) || isNumeric(this);
-  }
-
-  public boolean isComplex()
-  {
-    return !isPrimitive();
   }
 
   @Nullable

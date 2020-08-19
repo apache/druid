@@ -44,6 +44,10 @@ public interface PostAggregator extends Cacheable
   @Nullable
   String getName();
 
+  /**
+   * Return the output {@link ValueType} of this post aggregator.
+   */
+  @Nullable
   ValueType getType();
 
   /**

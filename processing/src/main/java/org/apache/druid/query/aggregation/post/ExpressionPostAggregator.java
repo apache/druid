@@ -64,6 +64,9 @@ public class ExpressionPostAggregator implements PostAggregator
   @Nullable
   private final String ordering;
 
+  @Nullable
+  private final ValueType outputType;
+
   private final ExprMacroTable macroTable;
   private final Map<String, Function<Object, Object>> finalizers;
 
@@ -104,6 +107,7 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
+        null, // in the future this will be computed by decorate
         macroTable,
         finalizers,
         parsed,
@@ -115,6 +119,7 @@ public class ExpressionPostAggregator implements PostAggregator
       final String name,
       final String expression,
       @Nullable final String ordering,
+      @Nullable final ValueType outputType,
       final ExprMacroTable macroTable,
       final Map<String, Function<Object, Object>> finalizers,
       final Supplier<Expr> parsed,
@@ -126,6 +131,10 @@ public class ExpressionPostAggregator implements PostAggregator
     this.name = name;
     this.expression = expression;
     this.ordering = ordering;
+    // allow nulls to match previous behavior when type was never specified, however this should be non-nullable
+    // in the future, when expression support type inference
+    this.outputType = outputType;
+    // comparator should be specialized to output type ... someday
     this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
     this.macroTable = macroTable;
     this.finalizers = finalizers;
@@ -172,9 +181,8 @@ public class ExpressionPostAggregator implements PostAggregator
   @Override
   public ValueType getType()
   {
-    // this is wrong, replace with Expr output type based on the input types once it is available
-    // but treat as string for now
-    return ValueType.STRING;
+    // computed by decorate
+    return outputType;
   }
 
   @Override
@@ -184,6 +192,7 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
+        null, // this should be computed from expression output type once it supports output type inference
         macroTable,
         CollectionUtils.mapValues(aggregators, aggregatorFactory -> aggregatorFactory::finalizeComputation),
         parsed,
@@ -229,7 +238,7 @@ public class ExpressionPostAggregator implements PostAggregator
      * Ensures the following order: numeric > NaN > Infinite.
      *
      * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
-     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ExprMacroTable, Map, Supplier)}.
+     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ValueType, ExprMacroTable, Map, Supplier, Supplier)}.
      */
     @SuppressWarnings("unused")
     numericFirst {
