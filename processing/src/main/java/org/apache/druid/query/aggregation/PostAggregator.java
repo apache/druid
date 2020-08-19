@@ -45,7 +45,8 @@ public interface PostAggregator extends Cacheable
   String getName();
 
   /**
-   * Return the output {@link ValueType} of this post aggregator.
+   * Return the output type of a row processed with this post aggregator. Refer to the {@link ValueType} javadocs
+   * for details on the implications of choosing a type.
    */
   @Nullable
   ValueType getType();

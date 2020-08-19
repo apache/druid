@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 
 /**
- * This enumeration defines the Druid type system used to indicate the type of data stored in columns, produced by
- * expressions, used to allow query processing engine algorithms to compute results, used to compute query result
+ * This enumeration defines the Druid type system used to indicate the type of data stored in columns and produced by
+ * expressions and aggregations, used to allow query processing engine algorithms to compute results, used to compute query result
  * row signatures, and all other type needs.
  *
  * Currently only the primitive types ({@link #isPrimitive()} is true) and {@link #COMPLEX} can be stored in columns
@@ -37,17 +37,56 @@ import javax.annotation.Nullable;
  */
 public enum ValueType
 {
-  // primitive types
+  /**
+   * 64-bit double precision floating point number primitive type. This type may be used as a grouping key, or as an
+   * input to any aggregators which support primitive numerical operations like sums, minimums, maximums, etc, as well
+   * as an input to expression virtual columns.
+   */
   DOUBLE,
+  /**
+   * 32-bit single precision floating point number primitive type. This type may be used as a grouping key, or as an
+   * input to any aggregators which support primitive numerical operations like sums, minimums, maximums, etc, as well
+   * as an input to expression virtual columns.
+   */
   FLOAT,
+  /**
+   * 64-bit integer number primitve type. This type may be used as a grouping key, or as an
+   * input to any aggregators which support primitive numerical operations like sums, minimums, maximums, etc, as well
+   * as an input to expression virtual columns.
+   */
   LONG,
+  /**
+   * String object type. This type may be used as a grouping key, an input to certain types of complex sketch
+   * aggregators, and as an input to expression virtual columns. String types might potentially be 'multi-valued' when
+   * stored in segments, and contextually at various layers of query processing, but this information is not available
+   * through this enum alone, and must be accompany this type indicator to properly handle.
+   */
   STRING,
-  // non-primitive types
-  COMPLEX,
-  // transient array types (also non-primitive)
+  /**
+   * Array object of 64-bit double precision floating point numbers. This type is not currently supported as a grouping
+   * key for aggregations, cannot be used as an input for numerical primitive aggregations such as sums, and may have
+   * limited support as an input among complex type sketch aggregators.
+   */
   DOUBLE_ARRAY,
+  /**
+   * Array object of 64-bit integer numbers. This type is not currently supported as a grouping key for aggregations,
+   * and may have limited support as an input among complex type sketch aggregators.
+   */
   LONG_ARRAY,
-  STRING_ARRAY;
+  /**
+   * Array object of String objects. This type is not currently supported as a grouping key for aggregations,
+   * and may have limited support as an input among complex type sketch aggregators.
+   */
+  STRING_ARRAY,
+  /**
+   * Placeholder for arbitrary 'complex' types, which have a corresponding serializer/deserializer implementation. Note
+   * that knowing a type is complex alone isn't enough information to work with it directly, and additional information
+   * in the form of a type name that is registered in the complex type registry must be available to make this type
+   * meaningful. This type is not currently supported as a grouping key for aggregations, and may not be used as an
+   * input to expression virtual columns, and might only be supported by the specific aggregators crafted to handle
+   * this complex type.
+   */
+  COMPLEX;
 
 
   /**
@@ -61,6 +100,9 @@ public enum ValueType
   /**
    * Type is a 'primitive' type, which includes the {@link #isNumeric} types and {@link #STRING}, but not
    * {@link #COMPLEX} or array types.
+   *
+   * Primitive types support being used for grouping to compute aggregates in both group by and top-n query engines,
+   * while non-primitive types currently do not
    */
   public boolean isPrimitive()
   {
