@@ -330,7 +330,7 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      indexingServiceClient.killUnusedSegments(dataSourceName, theInterval);
+      indexingServiceClient.killUnusedSegments("api-issued", dataSourceName, theInterval);
       return Response.ok().build();
     }
     catch (Exception e) {

@@ -100,6 +100,11 @@ public class SegmentAnalyzer
 
     Map<String, ColumnAnalysis> columns = new TreeMap<>();
 
+    Function<String, ColumnCapabilities> adapterCapabilitesFn =
+        storageAdapter instanceof IncrementalIndexStorageAdapter
+        ? ((IncrementalIndexStorageAdapter) storageAdapter)::getSnapshotColumnCapabilities
+        : storageAdapter::getColumnCapabilities;
+
     for (String columnName : columnNames) {
       final ColumnHolder columnHolder = index == null ? null : index.getColumnHolder(columnName);
       final ColumnCapabilities capabilities;
@@ -108,11 +113,7 @@ public class SegmentAnalyzer
       } else {
         // this can be removed if we get to the point where IncrementalIndexStorageAdapter.getColumnCapabilities
         // accurately reports the capabilities
-        if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
-          capabilities = ((IncrementalIndexStorageAdapter) storageAdapter).getSnapshotColumnCapabilities(columnName);
-        } else {
-          capabilities = storageAdapter.getColumnCapabilities(columnName);
-        }
+        capabilities = adapterCapabilitesFn.apply(columnName);
       }
 
       final ColumnAnalysis analysis;
@@ -146,7 +147,7 @@ public class SegmentAnalyzer
     }
 
     // Add time column too
-    ColumnCapabilities timeCapabilities = storageAdapter.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
+    ColumnCapabilities timeCapabilities = adapterCapabilitesFn.apply(ColumnHolder.TIME_COLUMN_NAME);
     if (timeCapabilities == null) {
       timeCapabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
     }
@@ -192,6 +193,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
+        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
         null,
         null,
@@ -227,7 +229,7 @@ public class SegmentAnalyzer
         min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
         max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
       }
-    } else if (capabilities.isDictionaryEncoded()) {
+    } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
       DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) columnHolder.getColumn();
       cardinality = theColumn.getCardinality();
@@ -242,6 +244,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
+        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
         analyzingCardinality() ? cardinality : 0,
         min,
@@ -319,6 +322,7 @@ public class SegmentAnalyzer
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues().isTrue(),
+        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
         size,
         cardinality,
         min,
@@ -335,6 +339,7 @@ public class SegmentAnalyzer
   {
     try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
+      final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
       long size = 0;
 
       if (analyzingSize() && complexColumn != null) {
@@ -345,7 +350,7 @@ public class SegmentAnalyzer
 
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
         if (inputSizeFn == null) {
-          return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null, null, null);
+          return new ColumnAnalysis(typeName, hasMultipleValues, hasNulls, 0, null, null, null, null);
         }
 
         final int length = complexColumn.getLength();
@@ -357,6 +362,7 @@ public class SegmentAnalyzer
       return new ColumnAnalysis(
           typeName,
           hasMultipleValues,
+          hasNulls,
           size,
           null,
           null,

@@ -21,20 +21,41 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.TestObjectColumnSelector;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IndexSizeExceededException;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class ExpressionColumnValueSelectorTest
+public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSupplierFromDimensionSelector()
@@ -229,6 +250,86 @@ public class ExpressionColumnValueSelectorTest
         withNulls,
         ExpressionSelectors.coerceEvalToSelectorObject(ExprEval.ofStringArray(new String[]{"a", null, "c"}))
     );
+  }
+
+  @Test
+  public void testIncrementIndexStringSelector() throws IndexSizeExceededException
+  {
+    // This test covers a regression caused by ColumnCapabilites.isDictionaryEncoded not matching the value of
+    // DimensionSelector.nameLookupPossibleInAdvance in the indexers of an IncrementalIndex, which resulted in an
+    // exception trying to make an optimized string expression selector that was not appropriate to use for the
+    // underlying dimension selector.
+    // This occurred during schemaless ingestion with spare dimension values and no explicit null rows, so the
+    // conditions are replicated by this test. See https://github.com/apache/druid/pull/10248 for details
+    IncrementalIndexSchema schema = new IncrementalIndexSchema(
+        0,
+        new TimestampSpec("time", "millis", DateTimes.nowUtc()),
+        Granularities.NONE,
+        VirtualColumns.EMPTY,
+        DimensionsSpec.EMPTY,
+        new AggregatorFactory[]{new CountAggregatorFactory("count")},
+        true
+    );
+
+    IncrementalIndex index = new IncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).buildOnheap();
+    index.add(
+        new MapBasedInputRow(
+            DateTimes.nowUtc().getMillis(),
+            ImmutableList.of("x"),
+            ImmutableMap.of("x", "foo")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            DateTimes.nowUtc().plusMillis(1000).getMillis(),
+            ImmutableList.of("y"),
+            ImmutableMap.of("y", "foo")
+        )
+    );
+
+    IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+
+    Sequence<Cursor> cursors = adapter.makeCursors(
+        null,
+        Intervals.ETERNITY,
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+    int rowsProcessed = cursors.map(cursor -> {
+      DimensionSelector xExprSelector = ExpressionSelectors.makeDimensionSelector(
+          cursor.getColumnSelectorFactory(),
+          Parser.parse("concat(x, 'foo')", ExprMacroTable.nil()),
+          null
+      );
+      DimensionSelector yExprSelector = ExpressionSelectors.makeDimensionSelector(
+          cursor.getColumnSelectorFactory(),
+          Parser.parse("concat(y, 'foo')", ExprMacroTable.nil()),
+          null
+      );
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        Object x = xExprSelector.getObject();
+        Object y = yExprSelector.getObject();
+        List<String> expectedFoo = Collections.singletonList("foofoo");
+        List<String> expectedNull = NullHandling.replaceWithDefault()
+                                    ? Collections.singletonList("foo")
+                                    : Collections.singletonList(null);
+        if (rowCount == 0) {
+          Assert.assertEquals(expectedFoo, x);
+          Assert.assertEquals(expectedNull, y);
+        } else {
+          Assert.assertEquals(expectedNull, x);
+          Assert.assertEquals(expectedFoo, y);
+        }
+        rowCount++;
+        cursor.advance();
+      }
+      return rowCount;
+    }).accumulate(0, (in, acc) -> in + acc);
+
+    Assert.assertEquals(2, rowsProcessed);
   }
 
   private static DimensionSelector dimensionSelectorFromSupplier(

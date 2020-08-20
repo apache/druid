@@ -19,16 +19,15 @@
 
 package org.apache.druid.guice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Guice;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
-import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.initialization.Initialization;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
@@ -46,8 +45,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Collections;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -58,8 +55,6 @@ public class StorageNodeModuleTest
   @Rule
   public ExpectedException exceptionRule = ExpectedException.none();
 
-  @Mock(answer = Answers.RETURNS_MOCKS)
-  private ObjectMapper mapper;
   @Mock(answer = Answers.RETURNS_MOCKS)
   private DruidNode self;
   @Mock(answer = Answers.RETURNS_MOCKS)
@@ -169,24 +164,24 @@ public class StorageNodeModuleTest
 
   private Injector makeInjector(boolean withServerTypeConfig)
   {
-    return Guice.createInjector(
-        Modules.override(
+    return Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(), (ImmutableList.of(Modules.override(
             (binder) -> {
               binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(self);
-              binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
               binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-              binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
             },
-            target
-        ).with(
-            (binder) -> {
-              binder.bind(SegmentLoaderConfig.class).toInstance(segmentLoaderConfig);
-              if (withServerTypeConfig) {
-                binder.bind(ServerTypeConfig.class).toInstance(serverTypeConfig);
+            target).with(
+              (binder) -> {
+                binder.bind(SegmentLoaderConfig.class).toInstance(segmentLoaderConfig);
+                if (withServerTypeConfig) {
+                  binder.bind(ServerTypeConfig.class).toInstance(serverTypeConfig);
+                }
               }
-            }
-        )
-    );
+                                                                )
+        )));
   }
 
   private void mockSegmentCacheNotConfigured()
