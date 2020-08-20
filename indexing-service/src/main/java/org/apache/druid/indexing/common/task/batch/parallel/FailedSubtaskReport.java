@@ -19,24 +19,50 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.TaskState;
 
-/**
- * Each sub task of {@link ParallelIndexSupervisorTask} reports the result of indexing using this class.
- */
-@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = PushedSegmentsReport.class)
-@JsonSubTypes(value = {
-    @Type(name = PushedSegmentsReport.TYPE, value = PushedSegmentsReport.class),
-    @Type(name = DimensionDistributionReport.TYPE, value = DimensionDistributionReport.class),
-    @Type(name = GeneratedPartitionsMetadataReport.TYPE, value = GeneratedPartitionsMetadataReport.class)
-})
-public interface SubTaskReport
+public class FailedSubtaskReport implements SubTaskReport
 {
-  String getTaskId();
+  private final String taskId;
+  private final String error;
+  private final long duration;
 
-  TaskState getState();
+  @JsonCreator
+  public FailedSubtaskReport(
+      @JsonProperty("taskId") String taskId,
+      @JsonProperty("error") String error,
+      @JsonProperty("duration") long duration
+  )
+  {
+    this.taskId = taskId;
+    this.error = error;
+    this.duration = duration;
+  }
+
+  @JsonProperty
+  @Override
+  public String getTaskId()
+  {
+    return taskId;
+  }
+
+  @JsonProperty
+  public String getError()
+  {
+    return error;
+  }
+
+  @JsonProperty
+  public long getDuration()
+  {
+    return duration;
+  }
+
+  @Override
+  public TaskState getState()
+  {
+    return TaskState.FAILED;
+  }
 }

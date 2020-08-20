@@ -29,10 +29,13 @@ import java.util.Objects;
  * This report is collected by {@link ParallelIndexSupervisorTask} and
  * used to generate {@link PartialSegmentMergeIOConfig}.
  */
-abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SubTaskReport
+abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SucceededSubtaskReport
 {
   private final String taskId;
   private final List<T> partitionStats;
+  // TODO: Total input/output bytes/rows
+  // TODO: Number of filtered rows and unparseable rows
+  // TODO: Num of disk spills, spill time
 
   GeneratedPartitionsReport(String taskId, List<T> partitionStats)
   {

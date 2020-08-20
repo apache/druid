@@ -154,15 +154,8 @@ public class ClientCompactionTaskQuerySerdeTest
     final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
     final CompactionTask.Builder builder = new CompactionTask.Builder(
         "datasource",
-        mapper,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        ROW_INGESTION_METERS_FACTORY,
-        new NoopIndexingServiceClient(),
-        COORDINATOR_CLIENT,
         new SegmentLoaderFactory(null, mapper),
-        new RetryPolicyFactory(new RetryPolicyConfig()),
-        APPENDERATORS_MANAGER
+        new RetryPolicyFactory(new RetryPolicyConfig())
     );
     final CompactionTask task = builder
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"))

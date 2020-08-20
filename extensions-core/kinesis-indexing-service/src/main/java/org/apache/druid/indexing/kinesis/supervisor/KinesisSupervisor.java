@@ -174,11 +174,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           (KinesisIndexTaskTuningConfig) taskTuningConfig,
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
-          null,
-          null,
-          rowIngestionMetersFactory,
-          awsCredentialsConfig,
-          null
+          awsCredentialsConfig
       ));
     }
     return taskList;

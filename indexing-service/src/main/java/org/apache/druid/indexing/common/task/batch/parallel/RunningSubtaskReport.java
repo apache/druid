@@ -19,24 +19,12 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import org.apache.druid.indexer.TaskState;
 
-/**
- * Each sub task of {@link ParallelIndexSupervisorTask} reports the result of indexing using this class.
- */
-@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = PushedSegmentsReport.class)
-@JsonSubTypes(value = {
-    @Type(name = PushedSegmentsReport.TYPE, value = PushedSegmentsReport.class),
-    @Type(name = DimensionDistributionReport.TYPE, value = DimensionDistributionReport.class),
-    @Type(name = GeneratedPartitionsMetadataReport.TYPE, value = GeneratedPartitionsMetadataReport.class)
-})
-public interface SubTaskReport
+public interface RunningSubtaskReport extends SubTaskReport
 {
-  String getTaskId();
-
-  TaskState getState();
+  default TaskState getTaskState()
+  {
+    return TaskState.RUNNING;
+  }
 }

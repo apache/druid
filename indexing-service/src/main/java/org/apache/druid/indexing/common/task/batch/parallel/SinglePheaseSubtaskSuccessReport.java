@@ -19,24 +19,24 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import org.apache.druid.indexer.TaskState;
-
-/**
- * Each sub task of {@link ParallelIndexSupervisorTask} reports the result of indexing using this class.
- */
-@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = PushedSegmentsReport.class)
-@JsonSubTypes(value = {
-    @Type(name = PushedSegmentsReport.TYPE, value = PushedSegmentsReport.class),
-    @Type(name = DimensionDistributionReport.TYPE, value = DimensionDistributionReport.class),
-    @Type(name = GeneratedPartitionsMetadataReport.TYPE, value = GeneratedPartitionsMetadataReport.class)
-})
-public interface SubTaskReport
+public class SinglePheaseSubtaskSuccessReport implements SucceededSubtaskReport
 {
-  String getTaskId();
+  //private final String taskId;
+  //private final Set<DataSegment> oldSegments;
+  //private final Set<DataSegment> newSegments;
 
-  TaskState getState();
+  //private final RowIngestionMetersTotals rowIngestionMetersTotals;
+  // TODO: BytesIngestionMetersTotals?
+
+  // TODO: needs output number of rows/bytes after rollup
+
+  // TODO: separate class for spilling?
+  //private final int spilled;
+  //private final long totalSpillTime;
+
+  @Override
+  public String getTaskId()
+  {
+    return null;
+  }
 }

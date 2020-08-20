@@ -32,7 +32,6 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.java.util.common.StringUtils;
@@ -190,7 +189,6 @@ public class PartialDimensionDistributionTaskTest
       PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()
           .inputSource(inlineInputSource)
           .tuningConfig(tuningConfig)
-          .taskClientFactory(ParallelIndexTestingFactory.createTaskClientFactory())
           .build();
 
       task.runTask(taskToolbox);
@@ -210,7 +208,6 @@ public class PartialDimensionDistributionTaskTest
           .build();
       PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()
           .tuningConfig(tuningConfig)
-          .taskClientFactory(ParallelIndexTestingFactory.createTaskClientFactory())
           .build();
 
       task.runTask(taskToolbox);
@@ -227,7 +224,6 @@ public class PartialDimensionDistributionTaskTest
           .build();
       PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()
           .tuningConfig(tuningConfig)
-          .taskClientFactory(ParallelIndexTestingFactory.createTaskClientFactory())
           .build();
 
       exception.expect(RuntimeException.class);
@@ -372,7 +368,6 @@ public class PartialDimensionDistributionTaskTest
     public void returnsSuccessIfNoExceptions() throws Exception
     {
       PartialDimensionDistributionTask task = new PartialDimensionDistributionTaskBuilder()
-          .taskClientFactory(ParallelIndexTestingFactory.createTaskClientFactory())
           .build();
 
       TaskStatus taskStatus = task.runTask(taskToolbox);
@@ -389,8 +384,7 @@ public class PartialDimensionDistributionTaskTest
       EasyMock.replay(taskClient);
 
       try {
-        taskBuilder.taskClientFactory((taskInfoProvider, callerId, numThreads, httpTimeout, numRetries) -> taskClient)
-                   .build()
+        taskBuilder.build()
                    .runTask(taskToolbox);
       }
       catch (Exception e) {
@@ -412,8 +406,6 @@ public class PartialDimensionDistributionTaskTest
         .build();
     private DataSchema dataSchema =
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS);
-    private IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory =
-        ParallelIndexTestingFactory.TASK_CLIENT_FACTORY;
     private Supplier<PartialDimensionDistributionTask.DedupInputRowFilter> dedupRowDimValueFilterSupplier = null;
 
     @SuppressWarnings("SameParameterValue")
@@ -438,14 +430,6 @@ public class PartialDimensionDistributionTaskTest
     PartialDimensionDistributionTaskBuilder dataSchema(DataSchema dataSchema)
     {
       this.dataSchema = dataSchema;
-      return this;
-    }
-
-    PartialDimensionDistributionTaskBuilder taskClientFactory(
-        IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory
-    )
-    {
-      this.taskClientFactory = taskClientFactory;
       return this;
     }
 
@@ -477,8 +461,6 @@ public class PartialDimensionDistributionTaskTest
           ParallelIndexTestingFactory.NUM_ATTEMPTS,
           ingestionSpec,
           ParallelIndexTestingFactory.CONTEXT,
-          ParallelIndexTestingFactory.INDEXING_SERVICE_CLIENT,
-          taskClientFactory,
           supplier
       );
     }

@@ -19,21 +19,17 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -70,10 +66,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty(PROP_SPEC) final ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     super(
@@ -83,9 +76,6 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
         supervisorTaskId,
         ingestionSchema,
         context,
-        indexingServiceClient,
-        taskClientFactory,
-        appenderatorsManager,
         new DefaultIndexTaskInputRowIteratorBuilder()
     );
 

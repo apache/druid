@@ -19,24 +19,29 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import org.apache.druid.indexer.TaskState;
+import org.apache.druid.timeline.DataSegment;
 
-/**
- * Each sub task of {@link ParallelIndexSupervisorTask} reports the result of indexing using this class.
- */
-@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = PushedSegmentsReport.class)
-@JsonSubTypes(value = {
-    @Type(name = PushedSegmentsReport.TYPE, value = PushedSegmentsReport.class),
-    @Type(name = DimensionDistributionReport.TYPE, value = DimensionDistributionReport.class),
-    @Type(name = GeneratedPartitionsMetadataReport.TYPE, value = GeneratedPartitionsMetadataReport.class)
-})
-public interface SubTaskReport
+import java.util.Set;
+
+public class PartialSegmentMergeTaskSuccessReport
 {
-  String getTaskId();
+  private final String taskId;
+  private final Set<DataSegment> oldSegments;
+  private final Set<DataSegment> newSegments;
 
-  TaskState getState();
+  // TODO: Total input/output bytes/rows
+  // TODO: Num of disk spills, spill time (for tertiary partitioning)
+
+  // TODO: class for fetching. probably need more details than just fetchTime for fetches
+
+  public PartialSegmentMergeTaskSuccessReport(
+      String taskId,
+      Set<DataSegment> oldSegments,
+      Set<DataSegment> newSegments
+  )
+  {
+    this.taskId = taskId;
+    this.oldSegments = oldSegments;
+    this.newSegments = newSegments;
+  }
 }

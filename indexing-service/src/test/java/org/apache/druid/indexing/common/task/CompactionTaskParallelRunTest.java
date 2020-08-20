@@ -36,8 +36,6 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
-import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.batch.parallel.AbstractParallelIndexSupervisorTaskTest;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIOConfig;
@@ -53,9 +51,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -97,16 +92,13 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2014-01-01/2014-01-02");
 
-  private final AppenderatorsManager appenderatorsManager = new TestAppenderatorsManager();
   private final LockGranularity lockGranularity;
-  private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
   private File inputDir;
 
   public CompactionTaskParallelRunTest(LockGranularity lockGranularity)
   {
     this.lockGranularity = lockGranularity;
-    this.rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
   }
 
   @Before
@@ -137,15 +129,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        rowIngestionMetersFactory,
-        null,
-        null,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -162,15 +147,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     runIndexTask(null, true);
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        rowIngestionMetersFactory,
-        null,
-        null,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -214,15 +192,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
     runIndexTask(null, true);
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        rowIngestionMetersFactory,
-        null,
-        null,
         getSegmentLoaderFactory(),
-        RETRY_POLICY_FACTORY,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask compactionTask = builder
         .inputSpec(new CompactionIntervalSpec(INTERVAL_TO_INDEX, null))
@@ -326,12 +297,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             ioConfig,
             tuningConfig
         ),
-        null,
-        null,
-        new NoopChatHandlerProvider(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     runTask(indexTask);

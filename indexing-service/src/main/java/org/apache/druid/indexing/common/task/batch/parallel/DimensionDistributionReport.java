@@ -27,13 +27,15 @@ import org.joda.time.Interval;
 import java.util.Map;
 import java.util.Objects;
 
-public class DimensionDistributionReport implements SubTaskReport
+public class DimensionDistributionReport implements SucceededSubtaskReport
 {
   static final String TYPE = "dimension_distribution";
   private static final String PROP_DISTRIBUTIONS = "distributions";
 
   private final String taskId;
   private final Map<Interval, StringDistribution> intervalToDistribution;
+  // TODO: Total input bytes/rows
+  // TODO: Number of filtered rows and unparseable rows
 
   @JsonCreator
   public DimensionDistributionReport(
