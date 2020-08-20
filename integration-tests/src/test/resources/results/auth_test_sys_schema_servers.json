@@ -8,5 +8,15 @@
     "tier": "_default_tier",
     "curr_size": 2208932412,
     "max_size": 5000000000
+  },
+  {
+    "server": "172.172.172.8:8282",
+    "host": "172.172.172.8",
+    "plaintext_port": 8082,
+    "tls_port": 8282,
+    "server_type": "broker",
+    "tier": "_default_tier",
+    "curr_size": 0,
+    "max_size": 1000000000
   }
 ]
