@@ -58,6 +58,7 @@ public class ApproximateHistogramFoldingVectorAggregator implements VectorAggreg
         innerAggregator.foldFast(histogram, other);
       }
     }
+    innerAggregator.put(buf, position, histogram);
   }
 
   @Override

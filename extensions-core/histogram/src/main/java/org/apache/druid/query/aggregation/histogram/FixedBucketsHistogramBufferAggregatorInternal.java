@@ -83,7 +83,7 @@ public class FixedBucketsHistogramBufferAggregatorInternal
     } else if (next instanceof FixedBucketsHistogram) {
       histogram.combineHistogram((FixedBucketsHistogram) next);
     } else {
-      Double x = ((Number) next).doubleValue();
+      double x = ((Number) next).doubleValue();
       histogram.add(x);
     }
   }

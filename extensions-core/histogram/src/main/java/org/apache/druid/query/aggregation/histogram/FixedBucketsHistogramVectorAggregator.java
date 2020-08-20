@@ -20,18 +20,18 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class FixedBucketsHistogramVectorAggregator implements VectorAggregator
 {
-  private final VectorObjectSelector selector;
+  private final VectorValueSelector selector;
   private final FixedBucketsHistogramBufferAggregatorInternal innerAggregator;
 
   public FixedBucketsHistogramVectorAggregator(
-      VectorObjectSelector selector,
+      VectorValueSelector selector,
       double lowerLimit,
       double upperLimit,
       int numBuckets,
@@ -56,10 +56,11 @@ public class FixedBucketsHistogramVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-    Object[] vector = selector.getObjectVector();
+    double[] vector = selector.getDoubleVector();
+    boolean[] isNull = selector.getNullVector();
     FixedBucketsHistogram histogram = innerAggregator.get(buf, position);
     for (int i = startRow; i < endRow; i++) {
-      innerAggregator.combine(histogram, vector[i]);
+      innerAggregator.combine(histogram, toObject(vector, isNull, i));
     }
     innerAggregator.put(buf, position, histogram);
   }
@@ -67,10 +68,12 @@ public class FixedBucketsHistogramVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
   {
-    Object[] vector = selector.getObjectVector();
+    double[] vector = selector.getDoubleVector();
+    boolean[] isNull = selector.getNullVector();
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
-      Object val = vector[rows != null ? rows[i] : i];
+      int index = rows != null ? rows[i] : i;
+      Double val = toObject(vector, isNull, index);
       innerAggregator.aggregate(buf, position, val);
     }
   }
@@ -86,5 +89,11 @@ public class FixedBucketsHistogramVectorAggregator implements VectorAggregator
   public void close()
   {
     // Nothing to close
+  }
+
+  @Nullable
+  private Double toObject(double[] vector, @Nullable boolean[] isNull, int index)
+  {
+    return (isNull != null && isNull[index]) ? null : vector[index];
   }
 }

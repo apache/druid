@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.histogram;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -34,6 +35,8 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -105,19 +108,29 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
   {
-    return new FixedBucketsHistogramVectorAggregator(
-        columnSelectorFactory.makeObjectSelector(fieldName),
-        lowerLimit,
-        upperLimit,
-        numBuckets,
-        outlierHandlingMode
-    );
+    ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+    if (null == capabilities) {
+      throw new IAE("could not find the column type for column %s", fieldName);
+    }
+    ValueType type = capabilities.getType();
+    if (type.isNumeric()) {
+      return new FixedBucketsHistogramVectorAggregator(
+          columnSelectorFactory.makeValueSelector(fieldName),
+          lowerLimit,
+          upperLimit,
+          numBuckets,
+          outlierHandlingMode
+      );
+    } else {
+      throw new IAE("cannot vectorize fixed bucket histogram aggregation for type %s", type);
+    }
   }
 
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return true;
+    ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return (capabilities != null) && capabilities.getType().isNumeric();
   }
 
   @Override

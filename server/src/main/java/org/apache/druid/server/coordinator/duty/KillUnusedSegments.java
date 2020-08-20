@@ -111,7 +111,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         final Interval intervalToKill = findIntervalForKill(dataSource, maxSegmentsToKill);
         if (intervalToKill != null) {
           try {
-            indexingServiceClient.killUnusedSegments(dataSource, intervalToKill);
+            indexingServiceClient.killUnusedSegments("coordinator-issued", dataSource, intervalToKill);
           }
           catch (Exception ex) {
             log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
