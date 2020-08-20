@@ -56,7 +56,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
    *   The default is either 64MB or 4MB depending on MySQL version. Updating metadata store can fail if the serialized
    *   ingestion spec is larger than this limit.
    *
-   * The default is consertively chosen as 1000.
+   * The default is conservatively chosen as 1000.
    */
   @VisibleForTesting
   static final int DEFAULT_MAX_NUM_FILES = 1000;
