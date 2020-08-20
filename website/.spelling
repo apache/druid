@@ -283,6 +283,7 @@ lookups
 mapreduce
 masse
 maxNumFiles
+maxNumSegments
 max_map_count
 memcached
 mergeable
