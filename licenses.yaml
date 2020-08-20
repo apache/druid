@@ -3081,12 +3081,16 @@ notices:
 ---
 
 name: Kafka Schema Registry Client
-version: 3.0.1
+version: 5.5.1
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
 libraries:
   - io.confluent: kafka-schema-registry-client
+  - io.confluent: common-config
+  - io.confluent: common-utils
+  - com.101tec: zkclient
+  - org.apache.kafka: kafka-clients
 
 ---
 
