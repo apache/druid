@@ -175,7 +175,7 @@ public class ClientCompactionTaskQuerySerdeTest
                 2000L,
                 null,
                 null,
-                new SegmentsSplitHintSpec(100000L),
+                new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
                 new DynamicPartitionsSpec(100, 30000L),
                 new IndexSpec(
                     new DefaultBitmapSerdeFactory(),
@@ -218,7 +218,7 @@ public class ClientCompactionTaskQuerySerdeTest
             40000,
             2000L,
             30000L,
-            new SegmentsSplitHintSpec(100000L),
+            new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
             new IndexSpec(
                 new DefaultBitmapSerdeFactory(),
                 CompressionStrategy.LZ4,
