@@ -22,7 +22,12 @@ package org.apache.druid.query.aggregation.histogram;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class ApproximateHistogramFoldingBufferAggregatorInternal
+/**
+ * A helper class used by {@link ApproximateHistogramFoldingBufferAggregator} and
+ * {@link ApproximateHistogramFoldingVectorAggregator} for aggregation operations on byte buffers.
+ * Getting the object from value selectors is outside this class.
+ */
+final class ApproximateHistogramFoldingBufferAggregatorInternal
 {
   private final int resolution;
   private final float upperLimit;

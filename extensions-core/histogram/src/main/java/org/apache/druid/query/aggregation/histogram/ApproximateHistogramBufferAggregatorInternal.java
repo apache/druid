@@ -21,7 +21,11 @@ package org.apache.druid.query.aggregation.histogram;
 
 import java.nio.ByteBuffer;
 
-class ApproximateHistogramBufferAggregatorInternal
+/**
+ * A helper class used by {@link ApproximateHistogramBufferAggregator} and {@link ApproximateHistogramVectorAggregator}
+ * for aggregation operations on byte buffers. Getting the object from value selectors is outside this class.
+ */
+final class ApproximateHistogramBufferAggregatorInternal
 {
   private final int resolution;
 

@@ -19,12 +19,15 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import org.apache.druid.common.config.NullHandling;
-
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class FixedBucketsHistogramBufferAggregatorInternal
+/**
+ * A helper class used by {@link FixedBucketsHistogramBufferAggregator} and
+ * {@link FixedBucketsHistogramVectorAggregator} for aggregation operations on byte buffers.
+ * Getting the object from value selectors is outside this class.
+ */
+final class FixedBucketsHistogramBufferAggregatorInternal
 {
   private final double lowerLimit;
   private final double upperLimit;
@@ -38,7 +41,6 @@ public class FixedBucketsHistogramBufferAggregatorInternal
       FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode
   )
   {
-
     this.lowerLimit = lowerLimit;
     this.upperLimit = upperLimit;
     this.numBuckets = numBuckets;
@@ -64,28 +66,10 @@ public class FixedBucketsHistogramBufferAggregatorInternal
     mutationBuffer.position(position);
 
     FixedBucketsHistogram h0 = FixedBucketsHistogram.fromByteBufferFullNoSerdeHeader(mutationBuffer);
-    combine(h0, val);
+    h0.combine(val);
 
     mutationBuffer.position(position);
     mutationBuffer.put(h0.toBytesFull(false));
-  }
-
-  public void combine(FixedBucketsHistogram histogram, @Nullable Object next)
-  {
-    if (next == null) {
-      if (NullHandling.replaceWithDefault()) {
-        histogram.incrementMissing();
-      } else {
-        histogram.add(NullHandling.defaultDoubleValue());
-      }
-    } else if (next instanceof String) {
-      histogram.combineHistogram(FixedBucketsHistogram.fromBase64((String) next));
-    } else if (next instanceof FixedBucketsHistogram) {
-      histogram.combineHistogram((FixedBucketsHistogram) next);
-    } else {
-      double x = ((Number) next).doubleValue();
-      histogram.add(x);
-    }
   }
 
   public FixedBucketsHistogram get(ByteBuffer buf, int position)

@@ -85,6 +85,6 @@ public class ApproximateHistogramFoldingVectorAggregator implements VectorAggreg
   @Override
   public void close()
   {
-
+    // Nothing to close
   }
 }

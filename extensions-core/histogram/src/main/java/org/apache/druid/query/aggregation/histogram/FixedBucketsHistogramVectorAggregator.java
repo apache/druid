@@ -60,7 +60,7 @@ public class FixedBucketsHistogramVectorAggregator implements VectorAggregator
     boolean[] isNull = selector.getNullVector();
     FixedBucketsHistogram histogram = innerAggregator.get(buf, position);
     for (int i = startRow; i < endRow; i++) {
-      innerAggregator.combine(histogram, toObject(vector, isNull, i));
+      histogram.combine(toObject(vector, isNull, i));
     }
     innerAggregator.put(buf, position, histogram);
   }
