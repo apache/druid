@@ -17,21 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.jackson;
+package org.apache.druid.segment;
 
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.druid.segment.loading.BroadcastJoinableMMappedQueryableSegmentizerFactory;
-import org.apache.druid.segment.loading.MMappedQueryableSegmentizerFactory;
+import org.apache.druid.segment.data.Offset;
 
-public class SegmentizerModule extends SimpleModule
+public abstract class SimpleSettableOffset extends Offset
 {
-  public SegmentizerModule()
-  {
-    super("SegmentizerModule");
-    registerSubtypes(new NamedType(MMappedQueryableSegmentizerFactory.class, "mMapSegmentFactory"));
-    registerSubtypes(
-        new NamedType(BroadcastJoinableMMappedQueryableSegmentizerFactory.class, "broadcastJoinableMMapSegmentFactory")
-    );
-  }
+  public abstract void setCurrentOffset(int currentOffset);
 }

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
@@ -254,14 +255,15 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         queryMetrics
     );
 
-    return Sequences.map(
+    Closer joinablesCloser = Closer.create();
+    return Sequences.<Cursor, Cursor>map(
         baseCursorSequence,
         cursor -> {
           assert cursor != null;
           Cursor retVal = cursor;
 
           for (JoinableClause clause : clauses) {
-            retVal = HashJoinEngine.makeJoinCursor(retVal, clause);
+            retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
           }
 
           return PostJoinCursor.wrap(
@@ -270,7 +272,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
               joinFilterSplit.getJoinTableFilter().isPresent() ? joinFilterSplit.getJoinTableFilter().get() : null
           );
         }
-    );
+    ).withBaggage(joinablesCloser);
   }
 
   /**
