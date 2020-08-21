@@ -164,7 +164,10 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper())
     );
     for (DataSegment segment : compactedSegments) {
-      Assert.assertSame(NumberedShardSpec.class, segment.getShardSpec().getClass());
+      Assert.assertSame(
+          lockGranularity == LockGranularity.TIME_CHUNK ? NumberedShardSpec.class : NumberedOverwriteShardSpec.class,
+          segment.getShardSpec().getClass()
+      );
       Assert.assertEquals(expectedState, segment.getLastCompactionState());
     }
   }

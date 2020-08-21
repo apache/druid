@@ -316,8 +316,10 @@ public class ClientCompactionTaskQueryTuningConfig
       return false;
     }
     ClientCompactionTaskQueryTuningConfig that = (ClientCompactionTaskQueryTuningConfig) o;
-    return Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
+    return Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
+           Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
            Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
+           Objects.equals(maxTotalRows, that.maxTotalRows) &&
            Objects.equals(splitHintSpec, that.splitHintSpec) &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
@@ -338,8 +340,10 @@ public class ClientCompactionTaskQueryTuningConfig
   public int hashCode()
   {
     return Objects.hash(
+        maxRowsPerSegment,
         maxRowsInMemory,
         maxBytesInMemory,
+        maxTotalRows,
         splitHintSpec,
         partitionsSpec,
         indexSpec,
@@ -361,8 +365,10 @@ public class ClientCompactionTaskQueryTuningConfig
   public String toString()
   {
     return "ClientCompactionTaskQueryTuningConfig{" +
-           "maxRowsInMemory=" + maxRowsInMemory +
+           "maxRowsPerSegment=" + maxRowsPerSegment +
+           ", maxRowsInMemory=" + maxRowsInMemory +
            ", maxBytesInMemory=" + maxBytesInMemory +
+           ", maxTotalRows=" + maxTotalRows +
            ", splitHintSpec=" + splitHintSpec +
            ", partitionsSpec=" + partitionsSpec +
            ", indexSpec=" + indexSpec +
