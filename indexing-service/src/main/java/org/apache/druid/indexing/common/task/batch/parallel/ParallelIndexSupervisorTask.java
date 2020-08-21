@@ -77,6 +77,7 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -764,7 +765,28 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return Pair.of(start, stop);
   }
 
-  private static void publishSegments(TaskToolbox toolbox, Map<String, PushedSegmentsReport> reportsMap)
+  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+      boolean storeCompactionState,
+      TaskToolbox toolbox,
+      IndexTuningConfig tuningConfig
+  )
+  {
+    if (storeCompactionState) {
+      final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
+      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap);
+      return segments -> segments
+          .stream()
+          .map(s -> s.withLastCompactionState(compactionState))
+          .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
+  }
+
+  private void publishSegments(
+      TaskToolbox toolbox,
+      Map<String, PushedSegmentsReport> reportsMap
+  )
       throws IOException
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
@@ -775,12 +797,22 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
         });
+    final boolean storeCompactionState = getContextValue(
+        Tasks.STORE_COMPACTION_STATE_KEY,
+        Tasks.DEFAULT_STORE_COMPACTION_STATE
+    );
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = compactionStateAnnotateFunction(
+        storeCompactionState,
+        toolbox,
+        ingestionSchema.getTuningConfig()
+    );
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
             SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
         );
     final boolean published = newSegments.isEmpty()
-                              || publisher.publishSegments(oldSegments, newSegments, null).isSuccess();
+                              || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null)
+                                          .isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
@@ -944,7 +976,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @Nullable
-  private static String findVersion(Map<Interval, String> versions, Interval interval)
+  public static String findVersion(Map<Interval, String> versions, Interval interval)
   {
     return versions.entrySet().stream()
                    .filter(entry -> entry.getKey().contains(interval))

@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputRow;
@@ -141,7 +140,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 
     final ListenableFuture<SegmentsAndCommitMetadata> future = Futures.transform(
         pushInBackground(null, requestedSegmentIdsForSequences, false),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::dropInBackground
+        this::dropInBackground
     );
 
     final SegmentsAndCommitMetadata segmentsAndCommitMetadata =
@@ -197,7 +196,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    */
   public ListenableFuture<SegmentsAndCommitMetadata> publishAll(
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
-      final TransactionalSegmentPublisher publisher
+      final TransactionalSegmentPublisher publisher,
+      final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
     final Map<String, SegmentsForSequence> snapshot;
@@ -222,7 +222,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 .collect(Collectors.toList()),
             null
         ),
-        publisher
+        publisher,
+        outputSegmentsAnnotateFunction
     );
   }
 }
