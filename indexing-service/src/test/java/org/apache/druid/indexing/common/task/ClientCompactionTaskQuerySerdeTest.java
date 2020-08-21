@@ -139,28 +139,52 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getTuningConfig().getMaxBytesInMemory()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getMaxRowsPerSegment(),
-        task.getTuningConfig().getMaxRowsPerSegment()
-    );
-    Assert.assertEquals(
-        query.getTuningConfig().getMaxTotalRows(),
-        task.getTuningConfig().getMaxTotalRows()
-    );
-    Assert.assertEquals(
         query.getTuningConfig().getSplitHintSpec(),
         task.getTuningConfig().getSplitHintSpec()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getPartitionsSpec(),
+        task.getTuningConfig().getPartitionsSpec()
     );
     Assert.assertEquals(
         query.getTuningConfig().getIndexSpec(),
         task.getTuningConfig().getIndexSpec()
     );
     Assert.assertEquals(
+        query.getTuningConfig().getIndexSpecForIntermediatePersists(),
+        task.getTuningConfig().getIndexSpecForIntermediatePersists()
+    );
+    Assert.assertEquals(
         query.getTuningConfig().getPushTimeout().longValue(),
         task.getTuningConfig().getPushTimeout()
     );
     Assert.assertEquals(
+        query.getTuningConfig().getSegmentWriteOutMediumFactory(),
+        task.getTuningConfig().getSegmentWriteOutMediumFactory()
+    );
+    Assert.assertEquals(
         query.getTuningConfig().getMaxNumConcurrentSubTasks().intValue(),
         task.getTuningConfig().getMaxNumConcurrentSubTasks()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getMaxRetry().intValue(),
+        task.getTuningConfig().getMaxRetry()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getTaskStatusCheckPeriodMs().longValue(),
+        task.getTuningConfig().getTaskStatusCheckPeriodMs()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getChatHandlerTimeout(),
+        task.getTuningConfig().getChatHandlerTimeout()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getMaxNumSegmentsToMerge().intValue(),
+        task.getTuningConfig().getMaxNumSegmentsToMerge()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getTotalNumMergeTasks().intValue(),
+        task.getTuningConfig().getTotalNumMergeTasks()
     );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
@@ -235,10 +259,10 @@ public class ClientCompactionTaskQuerySerdeTest
             )
         ),
         new ClientCompactionTaskQueryTuningConfig(
-            null,
+            100,
             40000,
             2000L,
-            null,
+            30000L,
             new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
             new DynamicPartitionsSpec(100, 30000L),
             new IndexSpec(
