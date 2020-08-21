@@ -32,18 +32,13 @@ import java.util.Set;
  * and sends a report to the supervisorTask. Once the supervisorTask collects all reports,
  * it publishes all the pushed segments at once.
  */
-public class PushedSegmentsReport implements SucceededSubtaskReport
+public class PushedSegmentsReport implements SubTaskReport
 {
   public static final String TYPE = "pushed_segments";
 
   private final String taskId;
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
-
-  // TODO: Total input/output bytes/rows
-  // TODO: Number of filtered rows and unparseable rows (if any)
-  // TODO: Num of disk spills, spill time (if any)
-  // TODO: Fetch time (if any)
 
   @JsonCreator
   public PushedSegmentsReport(

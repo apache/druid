@@ -212,12 +212,6 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     {
       return taskId;
     }
-
-    @Override
-    public TaskState getState()
-    {
-      return TaskState.SUCCESS;
-    }
   }
 
   private static class ReportingNoopTask extends NoopTask

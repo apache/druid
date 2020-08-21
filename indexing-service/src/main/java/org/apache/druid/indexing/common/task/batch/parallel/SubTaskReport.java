@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import org.apache.druid.indexer.TaskState;
 
 /**
  * Each sub task of {@link ParallelIndexSupervisorTask} reports the result of indexing using this class.
@@ -37,6 +36,4 @@ import org.apache.druid.indexer.TaskState;
 public interface SubTaskReport
 {
   String getTaskId();
-
-  TaskState getState();
 }
