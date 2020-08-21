@@ -35,7 +35,12 @@ import {
   ViewControlBar,
 } from '../../components';
 import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
-import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
+import {
+  AsyncActionDialog,
+  CompactionDialog,
+  RetentionDialog,
+  VersionManageDialog,
+} from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -152,6 +157,7 @@ export interface DatasourcesViewState {
   showDisabled: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
   compactionDialogOpenOn?: CompactionDialogOpenOn;
+  versionManageDialogOpenOn: { datasource: string } | null;
   dropDataDatasource?: string;
   enableDatasource?: string;
   killDatasource?: string;
@@ -232,6 +238,8 @@ GROUP BY 1`;
       chartHeight: window.innerHeight * 0.4,
 
       actions: [],
+
+      versionManageDialogOpenOn: null,
     };
 
     this.datasourceQueryManager = new QueryManager({
@@ -500,6 +508,18 @@ GROUP BY 1`;
     );
   }
 
+  renderVersionManageDialog() {
+    const { versionManageDialogOpenOn } = this.state;
+    if (!versionManageDialogOpenOn) return null;
+
+    return (
+      <VersionManageDialog
+        datasource={versionManageDialogOpenOn.datasource}
+        onClose={() => this.setState({ versionManageDialogOpenOn: null })}
+      />
+    );
+  }
+
   private saveRules = async (datasource: string, rules: any[], comment: string) => {
     try {
       await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
@@ -595,7 +615,7 @@ GROUP BY 1`;
 
     const goToActions: BasicAction[] = [
       {
-        icon: IconNames.APPLICATION,
+        icon: IconNames.HISTORY,
         title: 'Query with SQL',
         onAction: () => goToQuery(`SELECT * FROM ${escapeSqlIdentifier(datasource)}`),
       },
@@ -603,6 +623,11 @@ GROUP BY 1`;
         icon: IconNames.GANTT_CHART,
         title: 'Go to tasks',
         onAction: () => goToTask(datasource),
+      },
+      {
+        icon: IconNames.APPLICATION,
+        title: 'Segment version management',
+        onAction: () => this.setState({ versionManageDialogOpenOn: { datasource: datasource } }),
       },
     ];
 
@@ -976,6 +1001,7 @@ GROUP BY 1`;
         {this.renderDropReloadAction()}
         {this.renderKillAction()}
         {this.renderRetentionDialog()}
+        {this.renderVersionManageDialog()}
         {this.renderCompactionDialog()}
       </>
     );

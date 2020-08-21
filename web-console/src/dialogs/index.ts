@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 export * from './about-dialog/about-dialog';
 export * from './async-action-dialog/async-action-dialog';
 export * from './compaction-dialog/compaction-dialog';
@@ -30,3 +29,4 @@ export * from './spec-dialog/spec-dialog';
 export * from './supervisor-table-action-dialog/supervisor-table-action-dialog';
 export * from './table-action-dialog/table-action-dialog';
 export * from './task-table-action-dialog/task-table-action-dialog';
+export * from './version-manage-dialog/version-manage-dialog';
