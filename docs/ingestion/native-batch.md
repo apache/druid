@@ -69,6 +69,9 @@ Some other cloud storage types are supported with the legacy [`firehose`](#fireh
 The below `firehose` types are also splittable. Note that only text formats are supported
 with the `firehose`.
 
+### Compression formats supported
+The supported compression formats for native batch ingestion are `bz2`, `gz`, `xz`, `zip`, `sz (Snappy)`, and `zst (ZSTD)`.
+
 - [`static-cloudfiles`](../development/extensions-contrib/cloudfiles.md#firehose)
 
 You may want to consider the below things:
