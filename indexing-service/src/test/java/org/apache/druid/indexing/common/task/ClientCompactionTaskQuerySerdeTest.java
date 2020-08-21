@@ -52,8 +52,10 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -81,19 +83,33 @@ public class ClientCompactionTaskQuerySerdeTest
             )
         ),
         new ClientCompactionTaskQueryTuningConfig(
-            100,
+            null,
             40000,
             2000L,
-            30000L,
+            null,
             new SegmentsSplitHintSpec(100000L),
+            new DynamicPartitionsSpec(100, 30000L),
             new IndexSpec(
                 new DefaultBitmapSerdeFactory(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
             ),
-            null,
+            new IndexSpec(
+                new DefaultBitmapSerdeFactory(),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.UNCOMPRESSED,
+                LongEncodingStrategy.AUTO
+            ),
+            2,
             1000L,
+            TmpFileSegmentWriteOutMediumFactory.instance(),
+            100,
+            5,
+            1000L,
+            new Duration(3000L),
+            7,
+            1000,
             100
         ),
         ImmutableMap.of("key", "value")
@@ -182,20 +198,25 @@ public class ClientCompactionTaskQuerySerdeTest
                     CompressionStrategy.LZF,
                     LongEncodingStrategy.LONGS
                 ),
-                null,
-                null,
+                new IndexSpec(
+                    new DefaultBitmapSerdeFactory(),
+                    CompressionStrategy.LZ4,
+                    CompressionStrategy.UNCOMPRESSED,
+                    LongEncodingStrategy.AUTO
+                ),
+                2,
                 null,
                 null,
                 1000L,
-                null,
+                TmpFileSegmentWriteOutMediumFactory.instance(),
                 null,
                 100,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                5,
+                1000L,
+                new Duration(3000L),
+                7,
+                1000,
+                100,
                 null,
                 null,
                 null
@@ -213,19 +234,33 @@ public class ClientCompactionTaskQuerySerdeTest
             )
         ),
         new ClientCompactionTaskQueryTuningConfig(
-            100,
+            null,
             40000,
             2000L,
-            30000L,
+            null,
             new SegmentsSplitHintSpec(100000L),
+            new DynamicPartitionsSpec(100, 30000L),
             new IndexSpec(
                 new DefaultBitmapSerdeFactory(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
             ),
-            0,
+            new IndexSpec(
+                new DefaultBitmapSerdeFactory(),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.UNCOMPRESSED,
+                LongEncodingStrategy.AUTO
+            ),
+            2,
             1000L,
+            TmpFileSegmentWriteOutMediumFactory.instance(),
+            100,
+            5,
+            1000L,
+            new Duration(3000L),
+            7,
+            1000,
             100
         ),
         new HashMap<>()
