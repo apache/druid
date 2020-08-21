@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -164,7 +165,7 @@ public class DataSourceCompactionConfigTest
         1000,
         10000L,
         2000L,
-        new SegmentsSplitHintSpec(10000L),
+        new SegmentsSplitHintSpec(new HumanReadableBytes(10000L), null),
         new IndexSpec(
             new RoaringBitmapSerdeFactory(false),
             CompressionStrategy.LZF,
