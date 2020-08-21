@@ -450,7 +450,7 @@ public class FixedBucketsHistogram
         incrementMissing();
       }
     } else if (val instanceof String) {
-      combineHistogram(FixedBucketsHistogram.fromBase64((String) val));
+      combineHistogram(fromBase64((String) val));
     } else if (val instanceof FixedBucketsHistogram) {
       combineHistogram((FixedBucketsHistogram) val);
     } else if (val instanceof Number) {
