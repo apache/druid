@@ -360,7 +360,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             RETRY_POLICY_FACTORY,
             DATA_SOURCE,
             INTERVAL_TO_INDEX,
-            new SegmentsSplitHintSpec(1L) // each segment gets its own split with this config
+            new SegmentsSplitHintSpec(null, 1)
         )
     );
 

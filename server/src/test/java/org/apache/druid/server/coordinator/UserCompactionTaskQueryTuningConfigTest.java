@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
@@ -76,7 +77,7 @@ public class UserCompactionTaskQueryTuningConfigTest
         40000,
         2000L,
         null,
-        new SegmentsSplitHintSpec(100000L),
+        new SegmentsSplitHintSpec(new HumanReadableBytes(42L), null),
         new DynamicPartitionsSpec(1000, 20000L),
         new IndexSpec(
             new DefaultBitmapSerdeFactory(),
