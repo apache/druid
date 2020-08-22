@@ -1,0 +1,165 @@
+---
+id: auth-ldap
+title: "Using LDAP auth"
+---
+
+To rely on LDAP as the user authentication and authorization mechanism for Druid, follow these steps. 
+
+1. Verify the LDAP connection from druid cluster
+Before you start
+
+Verify that AD can be reached from the druid Master nodes.  A command-line tool which comes handy for this is ldapsearch and ldapwhoami.  This command-line tool is part of  OpenLDAP. To install this in RHEL
+
+yum install openldap*
+Test the credential works by the following command 
+
+ldapwhoami -vv -H ldap://<ip address>:389  -D"uuser1@example.com" -W
+The following result will be displayed:
+
+
+Please refer to the troubleshooting section if the above command is not working.
+
+Make sure to execute the ldapsearch command to verify the search criteria is proper.
+
+eg . The command for searching for user uuser1@example.com  is shown as below
+
+ldapsearch -x -W -H ldap://<ldap server ip>  -D"uuser1@example.com" -b "dc=example,dc=com" "(sAMAccountName=uuser1)"
+ Following results are displayed.  memberOf attribute shows the list of groups the user belongs. This value is used in the groupmapping which is covered later in the article. LDAP authentication search for value in attribute  sAMAccountName for authentication 
+
+2. How to configure Druid to authenticate a user with LDAP/Active Directory  
+Enable druid-basic-security  under common.runtime.properties and need to be updated in all the nodes in the druid cluster.  This file is located under conf dir . For the quickstart , this file is present under conf-quickstart/druid/_common/common.runtime.properties
+Make sure druid.extensions.loadList have druid-basic-security 
+Update the following properties  in the common.runtime.properties 
+Create a user in LDAP which is used for internal communication . In the config below we used a user named "internal@example.com". Use the same user as the initial admin user.
+
+```
+druid.auth.authenticatorChain=["ldap"]
+druid.auth.authenticator.ldap.type=basic
+druid.auth.authenticator.ldap.enableCacheNotifications=true
+druid.auth.authenticator.ldap.credentialsValidator.type=ldap
+druid.auth.authenticator.ldap.credentialsValidator.url=ldap://<AD host>:<AD port>
+druid.auth.authenticator.ldap.credentialsValidator.bindUser=<AD admin user eg: Administrator@example.com>
+druid.auth.authenticator.ldap.credentialsValidator.bindPassword=<AD admin password>
+druid.auth.authenticator.ldap.credentialsValidator.baseDn=<base dn eg: dc=example,dc=com>
+druid.auth.authenticator.ldap.credentialsValidator.userSearch=< this we get the from ldap search eg:(&(sAMAccountName=%s)(objectClass=user))>
+druid.auth.authenticator.ldap.credentialsValidator.userAttribute=sAMAccountName
+druid.auth.authenticator.ldap.authorizerName=ldapauth
+druid.escalator.type=basic
+druid.escalator.internalClientUsername=<AD interal user eg:internal>
+druid.escalator.internalClientPassword=Welcome123
+druid.escalator.authorizerName=ldapauth
+druid.auth.authorizers=["ldapauth"]
+druid.auth.authorizer.ldapauth.type=basic
+druid.auth.authorizer.ldapauth.initialAdminUser=AD user which can act as initial admin user eg: internal>
+druid.auth.authorizer.ldapauth.initialAdminRole=admin
+druid.auth.authorizer.ldapauth.roleProvider.type=ldap
+```
+
+3. Make use of LDAP groups to assign roles.
+LDAP groups can be mapped to a role in Druid. Members in a group will get access to the permissions of the corresponding role. 
+
+Before creating the group mapping in druid we need to have the role created .  Use the druid rest api to create the role.  Use a user with admin user role to create the role. In the sample config we have used user : internal@example.com as the admin user, hence we can use the same user to create the role.
+
+Step 1: Creating a Role if not exists
+
+Creating a role is a POST request to the coordinator.  In this article, we make use of curl command to call the rest API. Alternatively, you can use other REST clients like postman, etc.
+
+Below are the REST APIs to create the role to read access for datasource, config, state.
+
+Note:  The REST API need to call the coordinator node. The examples used in this article use localhost as the coordinator host and 8081 as coordinator port. Please change this according to your deployment.
+
+Call the following API to create role `readRole` . 
+
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST  http://localhost:8081>/druid-ext/basic-security/authorization/db/ldapauth/roles/readRole 
+For advanced role permission for each resourceAction please ref to the documentation link
+
+Check the role is created successfully by executing the below rest api
+
+curl -i -v  -H "Content-Type: application/json" -u internal -X GET  http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/roles
+Step 2: Add permission to Role 
+
+Add multiple permission to the role . In this example, we are going to add a read-only access to a `wikipedia` data source. 
+
+Execute the following rest API to assign permission to the role. 
+
+Save the following JSON into a file perm.json
+
+```
+[{ "resource": { "name": "wikipedia", "type": "DATASOURCE" }, "action": "READ" }
+,{ "resource": { "name": ".*", "type": "STATE" }, "action": "READ" },
+{ "resource": {"name": ".*", "type": "CONFIG"}, "action": "READ"}]
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d@perm.json  http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/roles/readRole/permissions
+```
+
+Execute the above command to assign  the permission to role.
+
+The state and config permission is only if you want to see the data source in the druid console. Otherwise for querying the data source only  below entry is enough 
+
+```
+[{ "resource": { "name": "wikipedia", "type": "DATASOURCE" }, "action": "READ" }]
+```
+
+You can also provide the name in the form of regular expression . eg to give access to all the data sources starting with wiki give name as  { "name": "wiki.*", .....
+
+
+Step 3: Create group Mapping 
+
+In this article we make use of LDAP group : "group1" to assign the role.  The "group1" is created in the directory and is the prerequisite for this step.
+
+Use the Druid API to create the group mapping and allocate initial roles.  Creating a group mapping requires the below payload and saved it in a file  groupmap.json 
+
+```
+{
+    "name": "group1map",
+    "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
+    "roles": [
+        "readRole"
+    ]
+}
+```
+Call the API for groupMapping as below
+
+```
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+```
+
+Check if the group mapping is created successfully by executing the following API. This will list all the group mappings.
+
+```
+curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
+```
+
+To check the details of a specific group mapping use the following API
+
+```
+curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+```
+
+To add additional roles to the group mapping use the following API 
+
+```
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
+```
+
+Assign roles for individual LDAP user 
+Once security is configured to authenticate the LDAP the user will only verify the user password with LDAP. One of the prerequisites is to add the LDAP user to Druid. 
+
+To add a user use the below authentication API
+
+```
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<AD user> 
+```
+
+Role Assignment : 
+Use the below API to assign the role to a user 
+
+```
+curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/<AD user>/roles/<rolename> 
+```
+
+Troubleshooting
+
+1. Unable to reach LDAP from druid node :
+   * The default LDAP port is 389, check if the LDAP/AD server is running in 389
+   * Check if the network firewall allows connecting to the LDAP port.
+   * Check with the LDAP admin if whitelisting the LDAP client is required. In that case, add the coordinator node to AD whitelist. 
