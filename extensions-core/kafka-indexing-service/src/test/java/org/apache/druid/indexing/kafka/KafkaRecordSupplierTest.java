@@ -587,7 +587,7 @@ public class KafkaRecordSupplierTest
   }
 
   @Test
-  public void testAddConsumerPropertiesFromConfig() throws Exception
+  public void testAddConsumerPropertiesFromConfig()
   {
     DynamicConfigProvider dynamicConfigProvider = new MapBasedDynamicConfigProvider(
         ImmutableMap.of("kafka.prop.2", "value.2", KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY, "pwd2")
