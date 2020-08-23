@@ -43,12 +43,9 @@ public class PubsubIndexTaskModule implements DruidModule
             .registerSubtypes(
                 new NamedType(PubsubIndexTask.class, "index_pubsub"),
                 new NamedType(PubsubIndexTaskIOConfig.class, "pubsub"),
-                // "PubsubTuningConfig" is not the ideal name, but is needed for backwards compatibility.
-                // (Older versions of Druid didn't specify a type name and got this one by default.)
                 new NamedType(PubsubIndexTaskTuningConfig.class, "PubsubTuningConfig"),
                 new NamedType(PubsubSupervisorTuningConfig.class, "pubsub"),
-                new NamedType(PubsubSupervisorSpec.class, "pubsub"),
-                new NamedType(PubsubSamplerSpec.class, "pubsub")
+                new NamedType(PubsubSupervisorSpec.class, "pubsub")
             )
     );
   }

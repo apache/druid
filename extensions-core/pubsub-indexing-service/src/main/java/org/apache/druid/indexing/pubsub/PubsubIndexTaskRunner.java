@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.pubsub;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -41,7 +40,6 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -55,7 +53,6 @@ import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.seekablestream.StreamChunkParser;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -72,40 +69,27 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
- * Pubsub indexing task runner supporting incremental segments publishing
+ * Pubsub indexing task runner
  */
 public class PubsubIndexTaskRunner implements ChatHandler
 {
   private static final EmittingLogger log = new EmittingLogger(PubsubIndexTaskRunner.class);
-  protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
   protected final Lock pollRetryLock = new ReentrantLock();
   protected final Condition isAwaitingRetry = pollRetryLock.newCondition();
   private final PubsubIndexTaskIOConfig ioConfig;
@@ -121,35 +105,11 @@ public class PubsubIndexTaskRunner implements ChatHandler
   private final InputRowSchema inputRowSchema;
   private final InputFormat inputFormat;
   private final RowIngestionMeters rowIngestionMeters;
-  // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
-  // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
-  // the ingestion loop has been stopped at the returned sequences and will not ingest any more data until resumed. The
-  // fields are used as follows (every step requires acquiring [pauseLock]):
-  //   Pausing:
-  //   - In pause(), [pauseRequested] is set to true and then execution waits for [status] to change to PAUSED, with the
-  //     condition checked when [hasPaused] is signalled.
-  //   - In possiblyPause() called from the main loop, if [pauseRequested] is true, [status] is set to PAUSED,
-  //     [hasPaused] is signalled, and execution pauses until [pauseRequested] becomes false, either by being set or by
-  //     the [pauseMillis] timeout elapsing. [pauseRequested] is checked when [shouldResume] is signalled.
-  //   Resuming:
-  //   - In resume(), [pauseRequested] is set to false, [shouldResume] is signalled, and execution waits for [status] to
-  //     change to something other than PAUSED, with the condition checked when [shouldResume] is signalled.
-  //   - In possiblyPause(), when [shouldResume] is signalled, if [pauseRequested] has become false the pause loop ends,
-  //     [status] is changed to STARTING and [shouldResume] is signalled.
-  private final Lock pauseLock = new ReentrantLock();
-  private final Condition hasPaused = pauseLock.newCondition();
-  private final Condition shouldResume = pauseLock.newCondition();
-  private final AtomicBoolean publishOnStop = new AtomicBoolean(false);
-  private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
-  private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
-  protected volatile boolean pauseRequested = false;
-  private volatile DateTime startTime;
-  private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
+
+  //TODO
   private volatile TaskToolbox toolbox;
-  private volatile Thread runThread;
   private volatile Appenderator appenderator;
   private volatile StreamAppenderatorDriver driver;
-  private volatile IngestionState ingestionState;
   private final String sequenceName;
 
   PubsubIndexTaskRunner(
@@ -184,16 +144,6 @@ public class PubsubIndexTaskRunner implements ChatHandler
               .collect(Collectors.toList())
     );
     this.sequenceName = DateTimes.nowUtc() + "-seq";
-  }
-
-  private boolean isPaused()
-  {
-    return status == Status.PAUSED;
-  }
-
-  private void requestPause()
-  {
-    pauseRequested = true;
   }
 
   public TaskStatus run(TaskToolbox toolbox)
@@ -453,132 +403,6 @@ public class PubsubIndexTaskRunner implements ChatHandler
     catch (ExecutionException e) {
       log.error(e, "pubsub error");
     }
-  }
-
-  @GET
-  @Path("/checkpoints")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Map<Integer, Object> getCheckpointsHTTP(
-      @Context final HttpServletRequest req
-  )
-  {
-    // authorizationCheck(req, Action.READ);
-    // return getCheckpoints();
-    return null;
-  }
-
-  /**
-   * Signals the ingestion loop to pause.
-   *
-   * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
-   * method has timed out and returned before the task has paused; 200 OK with a map of the current partition sequences
-   * in the response body if the task successfully paused
-   */
-  @POST
-  @Path("/pause")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response pauseHTTP(
-      @Context final HttpServletRequest req
-  ) throws InterruptedException
-  {
-    // authorizationCheck(req, Action.WRITE);
-    return pause();
-  }
-
-  @VisibleForTesting
-  public Response pause() throws InterruptedException
-  {
-    if (!(status == Status.PAUSED || status == Status.READING)) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
-                     .build();
-    }
-
-    pauseLock.lockInterruptibly();
-    try {
-      pauseRequested = true;
-
-      pollRetryLock.lockInterruptibly();
-      try {
-        isAwaitingRetry.signalAll();
-      }
-      finally {
-        pollRetryLock.unlock();
-      }
-
-      if (isPaused()) {
-        shouldResume.signalAll(); // kick the monitor so it re-awaits with the new pauseMillis
-      }
-
-      long nanos = TimeUnit.SECONDS.toNanos(2);
-      while (!isPaused()) {
-        if (nanos <= 0L) {
-          return Response.status(Response.Status.ACCEPTED)
-                         .entity("Request accepted but task has not yet paused")
-                         .build();
-        }
-        nanos = hasPaused.awaitNanos(nanos);
-      }
-    }
-    finally {
-      pauseLock.unlock();
-    }
-
-    try {
-      return Response.ok().entity(toolbox.getJsonMapper().writeValueAsString("TODO: res")).build();
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @POST
-  @Path("/resume")
-  public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
-  {
-    // authorizationCheck(req, Action.WRITE);
-    resume();
-    return Response.status(Response.Status.OK).build();
-  }
-
-  @VisibleForTesting
-  public void resume() throws InterruptedException
-  {
-    pauseLock.lockInterruptibly();
-    try {
-      pauseRequested = false;
-      shouldResume.signalAll();
-
-      long nanos = TimeUnit.SECONDS.toNanos(5);
-      while (isPaused()) {
-        if (nanos <= 0L) {
-          throw new RuntimeException("Resume command was not accepted within 5 seconds");
-        }
-        nanos = shouldResume.awaitNanos(nanos);
-      }
-    }
-    finally {
-      pauseLock.unlock();
-    }
-  }
-
-  @GET
-  @Path("/time/start")
-  @Produces(MediaType.APPLICATION_JSON)
-  public DateTime getStartTime(@Context final HttpServletRequest req)
-  {
-    // authorizationCheck(req, Action.WRITE);
-    return startTime;
-  }
-
-
-  public enum Status
-  {
-    NOT_STARTED,
-    STARTING,
-    READING,
-    PAUSED,
-    PUBLISHING
   }
 }
 

@@ -22,13 +22,10 @@ package org.apache.druid.indexing.pubsub;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
@@ -41,10 +38,8 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -79,8 +74,6 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<PubsubIndexTaskRunner> runnerSupplier;
 
-
-  private final ObjectMapper configMapper;
   private final PubsubIndexTaskIOConfig ioConfig;
 
   // This value can be tuned in some tests
@@ -97,7 +90,6 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject ObjectMapper configMapper,
       @JacksonInject AppenderatorsManager appenderatorsManager
   )
   {
@@ -111,7 +103,6 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
     log.error("creating pubsub task");
     log.error(dataSchema.toString());
     log.error(dataSchema.getDataSource());
-    this.configMapper = configMapper;
 
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -130,17 +121,6 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
-  }
-
-  long getPollRetryMs()
-  {
-    return pollRetryMs;
-  }
-
-  @VisibleForTesting
-  void setPollRetryMs(long retryMs)
-  {
-    this.pollRetryMs = retryMs;
   }
 
   protected PubsubIndexTaskRunner createTaskRunner()
@@ -171,41 +151,6 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  public boolean withinMinMaxRecordTime(final InputRow row)
-  {
-    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
-                                             && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
-
-    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
-                                            && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
-
-    if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
-      final String errorMsg = StringUtils.format(
-          "Encountered row with timestamp that cannot be represented as a long: [%s]",
-          row
-      );
-      throw new ParseException(errorMsg);
-    }
-
-    if (log.isDebugEnabled()) {
-      if (beforeMinimumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMinimumMessageTime().get()
-        );
-      } else if (afterMaximumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMaximumMessageTime().get()
-        );
-      }
-    }
-
-    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
-  }
-
   @JsonProperty
   public PubsubIndexTaskTuningConfig getTuningConfig()
   {
@@ -233,18 +178,13 @@ public class PubsubIndexTask extends AbstractTask implements ChatHandler
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
-
+    //TODO
   }
 
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     return getRunner().run(toolbox);
-  }
-
-  public Appenderator getAppenderator()
-  {
-    return getRunner().getAppenderator();
   }
 
   public PubsubIndexTaskRunner getRunner()

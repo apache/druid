@@ -53,7 +53,7 @@ public class PubsubRecordSupplier implements Closeable
   }
 
   @Nonnull
-  public List<ReceivedMessage> poll(long timeout)
+  public List<ReceivedMessage> poll(long timeout) //TODO
   {
     try {
       SubscriberStubSettings subscriberStubSettings =
@@ -65,7 +65,7 @@ public class PubsubRecordSupplier implements Closeable
                                 .build();
 
       try (SubscriberStub subscriber = GrpcSubscriberStub.create(subscriberStubSettings)) {
-        int numOfMessages = 10;   // max number of messages to be pulled
+        int numOfMessages = 10;   //TODO
         String subscriptionName = ProjectSubscriptionName.format(projectId, subscription);
         PullRequest pullRequest =
             PullRequest.newBuilder()

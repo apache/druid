@@ -51,7 +51,6 @@ public class PubsubSupervisorSpec implements SupervisorSpec
   protected final TaskMaster taskMaster;
   protected final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   protected final PubsubIndexTaskClientFactory indexTaskClientFactory;
-  protected final ObjectMapper mapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
   protected final ServiceEmitter emitter;
   protected final DruidMonitorSchedulerConfig monitorSchedulerConfig;
@@ -75,7 +74,6 @@ public class PubsubSupervisorSpec implements SupervisorSpec
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       @JacksonInject PubsubIndexTaskClientFactory pubsubIndexTaskClientFactory,
-      @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
@@ -91,16 +89,12 @@ public class PubsubSupervisorSpec implements SupervisorSpec
                                ? tuningConfig
                                : PubsubSupervisorTuningConfig.defaultConfig()
                            );
-    log.error("loggin spec");
-    log.error(this.ingestionSchema.toString());
-    log.error(this.ingestionSchema.getDataSchema().toString());
     this.context = context;
 
     this.taskStorage = taskStorage;
     this.taskMaster = taskMaster;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.indexTaskClientFactory = pubsubIndexTaskClientFactory;
-    this.mapper = mapper;
     this.emitter = emitter;
     this.monitorSchedulerConfig = monitorSchedulerConfig;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
@@ -196,7 +190,6 @@ public class PubsubSupervisorSpec implements SupervisorSpec
         taskMaster,
         indexerMetadataStorageCoordinator,
         indexTaskClientFactory,
-        mapper,
         this,
         rowIngestionMetersFactory
     );
@@ -235,7 +228,6 @@ public class PubsubSupervisorSpec implements SupervisorSpec
         taskMaster,
         indexerMetadataStorageCoordinator,
         indexTaskClientFactory,
-        mapper,
         emitter,
         monitorSchedulerConfig,
         rowIngestionMetersFactory,

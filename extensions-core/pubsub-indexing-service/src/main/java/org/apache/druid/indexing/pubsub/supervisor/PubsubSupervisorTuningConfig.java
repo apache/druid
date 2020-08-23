@@ -32,17 +32,14 @@ import java.io.File;
 
 public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
 {
-  private static final String DEFAULT_OFFSET_FETCH_PERIOD = "PT30S";
   private final Integer workerThreads;
   private final Integer chatThreads;
   private final Long chatRetries;
   private final Duration httpTimeout;
   private final Duration shutdownTimeout;
-  private final Duration offsetFetchPeriod;
   int DEFAULT_CHAT_RETRIES = 8;
   String DEFAULT_HTTP_TIMEOUT = "PT10S";
   String DEFAULT_SHUTDOWN_TIMEOUT = "PT80S";
-  String DEFAULT_REPARTITION_TRANSITION_DURATION = "PT2M";
 
   public PubsubSupervisorTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
@@ -54,8 +51,6 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
-      // This parameter is left for compatibility when reading existing configs, to be removed in Druid 0.12.
-      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") Boolean resetOffsetAutomatically,
@@ -100,16 +95,11 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
         shutdownTimeout,
         DEFAULT_SHUTDOWN_TIMEOUT
     );
-    this.offsetFetchPeriod = PubsubSupervisorTuningConfig.defaultDuration(
-        offsetFetchPeriod,
-        DEFAULT_OFFSET_FETCH_PERIOD
-    );
   }
 
   public static PubsubSupervisorTuningConfig defaultConfig()
   {
     return new PubsubSupervisorTuningConfig(
-        null,
         null,
         null,
         null,
@@ -171,12 +161,6 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
     return shutdownTimeout;
   }
 
-  @JsonProperty
-  public Duration getOffsetFetchPeriod()
-  {
-    return offsetFetchPeriod;
-  }
-
   @Override
   public String toString()
   {
@@ -198,7 +182,6 @@ public class PubsubSupervisorTuningConfig extends PubsubIndexTaskTuningConfig
            ", chatRetries=" + chatRetries +
            ", httpTimeout=" + httpTimeout +
            ", shutdownTimeout=" + shutdownTimeout +
-           ", offsetFetchPeriod=" + offsetFetchPeriod +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", logParseExceptions=" + isLogParseExceptions() +
            ", maxParseExceptions=" + getMaxParseExceptions() +

@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.pubsub.supervisor;
 
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -31,7 +29,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -50,7 +47,6 @@ import org.apache.druid.indexing.pubsub.PubsubIndexTaskClient;
 import org.apache.druid.indexing.pubsub.PubsubIndexTaskClientFactory;
 import org.apache.druid.indexing.pubsub.PubsubIndexTaskIOConfig;
 import org.apache.druid.indexing.pubsub.PubsubIndexTaskTuningConfig;
-import org.apache.druid.indexing.pubsub.PubsubRecordSupplier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -58,39 +54,23 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
- * Supervisor responsible for managing the PubsubIndexTasks for a single dataSource. At a high level, the class accepts a
- * {@link PubsubSupervisorSpec} which includes the pubsub topic and configuration as well as an ingestion spec which will
- * be used to generate the indexing tasks. The run loop periodically refreshes it's list of running indexing tasks and
- * ensures that there are enough tasks to satisfy the desired number of replicas.
- * As tasks complete, new tasks are queued to process next packets.
+ *TODO
  */
 public class PubsubSupervisor implements Supervisor
 {
 
   private static final EmittingLogger log = new EmittingLogger(PubsubSupervisor.class);
-  private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
-  private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
-  private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
-  private static final Long NOT_SET = -1L;
-  private static final Long END_OF_PARTITION = Long.MAX_VALUE;
-  private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   protected final PubsubSupervisorStateManager stateManager;
-  protected final ObjectMapper sortingMapper;
   protected final String dataSource;
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
@@ -100,30 +80,15 @@ public class PubsubSupervisor implements Supervisor
   private final PubsubIndexTaskClient taskClient;
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
-  private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
   private final ExecutorService exec;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ScheduledExecutorService scheduledExec;
   private final ScheduledExecutorService reportingExec;
   private final ListeningExecutorService workerExec;
-  private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
-  private final Object stopLock = new Object();
-  private final Object stateChangeLock = new Object();
-  private final Object recordSupplierLock = new Object();
   private final PubsubSupervisorIOConfig ioConfig;
   private final PubsubSupervisorTuningConfig tuningConfig;
   private final PubsubIndexTaskTuningConfig taskTuningConfig;
-  private volatile Map<Integer, Long> latestSequenceFromStream;
-  private boolean listenerRegistered = false;
-  private long lastRunTime;
-  private int initRetryCounter = 0;
-  private volatile DateTime firstRunTime;
-  private volatile DateTime earlyStopTime = null;
-  private volatile PubsubRecordSupplier recordSupplier;
-  private volatile boolean started = false;
-  private volatile boolean stopped = false;
-  private volatile boolean lifecycleStarted = false;
   private volatile Integer taskCount = 1;
   private volatile List<String> taskIds = new ArrayList<>();
 
@@ -132,7 +97,6 @@ public class PubsubSupervisor implements Supervisor
       final TaskMaster taskMaster,
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       final PubsubIndexTaskClientFactory taskClientFactory,
-      final ObjectMapper mapper,
       final PubsubSupervisorSpec spec,
       final RowIngestionMetersFactory rowIngestionMetersFactory
   )
@@ -140,7 +104,6 @@ public class PubsubSupervisor implements Supervisor
     this.taskStorage = taskStorage;
     this.taskMaster = taskMaster;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
-    this.sortingMapper = mapper.copy().configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     this.spec = spec;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.dataSource = spec.getDataSchema().getDataSource();
@@ -194,15 +157,9 @@ public class PubsubSupervisor implements Supervisor
       }
     };
 
-    this.futureTimeoutInSeconds = Math.max(
-        MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
-        tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
-                                         + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
-    );
-
     int chatThreads = (this.tuningConfig.getChatThreads() != null
                        ? this.tuningConfig.getChatThreads()
-                       : Math.min(10, this.ioConfig.getTaskCount() * this.ioConfig.getReplicas()));
+                       : Math.min(10, this.ioConfig.getTaskCount()));
     this.taskClient = taskClientFactory.build(
         taskInfoProvider,
         dataSource,
@@ -260,7 +217,6 @@ public class PubsubSupervisor implements Supervisor
                   null,
                   null,
                   rowIngestionMetersFactory,
-                  sortingMapper,
                   null
               );
               try {
@@ -294,13 +250,13 @@ public class PubsubSupervisor implements Supervisor
   @Override
   public void stop(boolean stopGracefully)
   {
-    // TODO
+    //TODO
   }
 
   @Override
   public SupervisorReport getStatus()
   {
-    return null; // TODO
+    return null; //TODO
   }
 
   @Override
@@ -312,7 +268,7 @@ public class PubsubSupervisor implements Supervisor
   @Override
   public Map<String, Map<String, Object>> getStats()
   {
-    return ImmutableMap.of(); // TODO
+    return ImmutableMap.of(); //TODO
   }
 
   @Override
@@ -325,7 +281,7 @@ public class PubsubSupervisor implements Supervisor
   @Override
   public void reset(DataSourceMetadata dataSourceMetadata)
   {
-    // TODO
+    //TODO
   }
 
   /**
@@ -340,15 +296,6 @@ public class PubsubSupervisor implements Supervisor
   @Override
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
-    // TODO
+    //TODO
   }
-
-  /**
-   * Notice is used to queue tasks that are internal to the supervisor
-   */
-  private interface Notice
-  {
-    void handle() throws ExecutionException, InterruptedException, TimeoutException;
-  }
-
 }

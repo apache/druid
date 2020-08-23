@@ -21,12 +21,9 @@ package org.apache.druid.indexing.pubsub.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.java.util.common.IAE;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -42,59 +39,33 @@ public class PubsubSupervisorIOConfig
   private final String subscription;
   @Nullable
   private final InputFormat inputFormat; // nullable for backward compatibility
-  private final Integer replicas;
   private final Integer taskCount;
   private final Duration taskDuration;
   private final Duration startDelay;
   private final Duration period;
   private final Duration completionTimeout;
-  private final Optional<Duration> lateMessageRejectionPeriod;
-  private final Optional<Duration> earlyMessageRejectionPeriod;
-  private final Optional<DateTime> lateMessageRejectionStartDateTime;
 
   @JsonCreator
   public PubsubSupervisorIOConfig(
       @JsonProperty("projectId") String projectId,
       @JsonProperty("subscription") String subscription,
       @JsonProperty("inputFormat") InputFormat inputFormat,
-      @JsonProperty("replicas") Integer replicas,
       @JsonProperty("taskCount") Integer taskCount,
       @JsonProperty("taskDuration") Period taskDuration,
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
-      @JsonProperty("completionTimeout") Period completionTimeout,
-      @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
-      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime
+      @JsonProperty("completionTimeout") Period completionTimeout
   )
   {
     this.projectId = Preconditions.checkNotNull(projectId, "project id cannot be null");
     this.subscription = Preconditions.checkNotNull(subscription, "subscription cannot be null");
     this.inputFormat = inputFormat;
-    this.replicas = replicas != null ? replicas : 1;
     this.taskCount = taskCount != null ? taskCount : 1;
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
     this.startDelay = defaultDuration(startDelay, "PT5S");
     this.period = defaultDuration(period, "PT30S");
     this.completionTimeout = defaultDuration(completionTimeout, "PT30M");
-    this.lateMessageRejectionPeriod = lateMessageRejectionPeriod == null
-                                      ? Optional.absent()
-                                      : Optional.of(lateMessageRejectionPeriod.toStandardDuration());
-    this.lateMessageRejectionStartDateTime = lateMessageRejectionStartDateTime == null
-                                             ? Optional.absent()
-                                             : Optional.of(lateMessageRejectionStartDateTime);
-    this.earlyMessageRejectionPeriod = earlyMessageRejectionPeriod == null
-                                       ? Optional.absent()
-                                       : Optional.of(earlyMessageRejectionPeriod.toStandardDuration());
-
-    if (this.lateMessageRejectionPeriod.isPresent()
-        && this.lateMessageRejectionStartDateTime.isPresent()) {
-      throw new IAE("SeekableStreamSupervisorIOConfig does not support "
-                    + "both properties lateMessageRejectionStartDateTime "
-                    + "and lateMessageRejectionPeriod.");
-    }
-
     this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
   }
 
@@ -115,12 +86,6 @@ public class PubsubSupervisorIOConfig
   public InputFormat getInputFormat(@Nullable ParseSpec parseSpec)
   {
     return inputFormat;
-  }
-
-  @JsonProperty
-  public Integer getReplicas()
-  {
-    return replicas;
   }
 
   @JsonProperty
@@ -154,24 +119,6 @@ public class PubsubSupervisorIOConfig
   }
 
   @JsonProperty
-  public Optional<Duration> getEarlyMessageRejectionPeriod()
-  {
-    return earlyMessageRejectionPeriod;
-  }
-
-  @JsonProperty
-  public Optional<Duration> getLateMessageRejectionPeriod()
-  {
-    return lateMessageRejectionPeriod;
-  }
-
-  @JsonProperty
-  public Optional<DateTime> getLateMessageRejectionStartDateTime()
-  {
-    return lateMessageRejectionStartDateTime;
-  }
-
-  @JsonProperty
   public String getProjectId()
   {
     return projectId;
@@ -195,16 +142,12 @@ public class PubsubSupervisorIOConfig
     return "PubsubSupervisorIOConfig{" +
            "projectId='" + getProjectId() + '\'' +
            ", subscription='" + getSubscription() + '\'' +
-           ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
            ", pollTimeout=" + pollTimeout +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +
            ", completionTimeout=" + getCompletionTimeout() +
-           ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
-           ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
-           ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            '}';
   }
 
