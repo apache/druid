@@ -2672,7 +2672,7 @@ function guessInputFormat(sampleData: string[]): InputFormat {
       return inputFormatFromType('orc');
     }
     // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
-    if (sampleDatum.startsWith('Obj')) {
+    if (sampleDatum.startsWith('Obj') && sampleDatum.charCodeAt(3) === 1) {
       return inputFormatFromType('avro_ocf');
     }
 
