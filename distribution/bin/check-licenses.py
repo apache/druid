@@ -201,9 +201,12 @@ class DependencyReportParser(HTMLParser):
             raise Exception("Unknown attr_index [{}]".format(self.attr_index))
 
     def set_license(self, data):
-        if data.upper().find("GPL") < 0:
-            if self.license != 'Apache License version 2.0':
-                self.license = self.compatible_license_names[data]
+        try:
+            if data.upper().find("GPL") < 0:
+                if self.license != 'Apache License version 2.0':
+                    self.license = self.compatible_license_names[data]
+        except KeyError as e:
+            print(e)
 
 
 def print_log_to_stderr(string):
@@ -216,6 +219,7 @@ def build_compatible_license_names():
     compatible_licenses['Apache 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache-2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2'] = 'Apache License version 2.0'
+    compatible_licenses['Apache License 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache Software License - Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['The Apache License, Version 2.0'] = 'Apache License version 2.0'
@@ -223,6 +227,7 @@ def build_compatible_license_names():
     compatible_licenses['Apache License Version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache License Version 2'] = 'Apache License version 2.0'
     compatible_licenses['Apache License v2.0'] = 'Apache License version 2.0'
+    compatible_licenses['Apache License, 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache License, version 2.0'] = 'Apache License version 2.0'
     compatible_licenses['Apache 2.0 License'] = 'Apache License version 2.0'
 
@@ -259,6 +264,14 @@ def build_compatible_license_names():
     compatible_licenses['Eclipse Public License - Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License, Version 1.0'] = 'Eclipse Public License 1.0'
     compatible_licenses['Eclipse Public License v1.0'] = 'Eclipse Public License 1.0'
+    compatible_licenses['EPL 1.0'] = 'Eclipse Public License 1.0'
+
+    compatible_licenses['Eclipse Public License 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['The Eclipse Public License, Version 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License - Version 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License, Version 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License v2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['EPL 2.0'] = 'Eclipse Public License 2.0'
 
     compatible_licenses['Eclipse Distribution License 1.0'] = 'Eclipse Distribution License 1.0'
     compatible_licenses['Eclipse Distribution License - v 1.0'] = 'Eclipse Distribution License 1.0'
