@@ -142,12 +142,12 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     // The values set can be huge. Try to avoid copying the set if possible.
     // Note that we may still need to copy values to a list for caching. See getCacheKey().
-    if (NullHandling.sqlCompatible() || !values.remove("")) {
-      this.values = values;
-    } else {
+    if (!NullHandling.sqlCompatible() && values.remove("")) {
+      // In Non sql compatible mode, empty strings should be converted to nulls for the filter.
+      // In sql compatible mode, empty strings and nulls should be treated differently
       values.add(null);
-      this.values = values;
     }
+    this.values = values;
 
     this.dimension = Preconditions.checkNotNull(dimension, "dimension cannot be null");
     this.extractionFn = extractionFn;
