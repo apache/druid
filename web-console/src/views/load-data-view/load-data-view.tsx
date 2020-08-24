@@ -706,6 +706,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <div className="main bp3-input">
           {this.renderIngestionCard('kafka')}
           {this.renderIngestionCard('kinesis')}
+          {this.renderIngestionCard('azure-event-hubs')}
           {this.renderIngestionCard('index_parallel:s3')}
           {this.renderIngestionCard('index_parallel:azure')}
           {this.renderIngestionCard('index_parallel:google')}
@@ -800,6 +801,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'kinesis':
         return <p>Load streaming data in real-time from Amazon Kinesis.</p>;
 
+      case 'azure-event-hubs':
+        return (
+          <>
+            <p>Azure Event Hubs provides an Apache Kafka compatible API for consuming data.</p>
+            <p>
+              Data from an Event Hub can be streamed into Druid by enabling the Kafka API on the
+              Namespace.
+            </p>
+            <p>
+              Please see the{' '}
+              <ExternalLink href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-for-kafka-ecosystem-overview">
+                Event Hub documentation
+              </ExternalLink>{' '}
+              for more information.
+            </p>
+          </>
+        );
+
       case 'example':
         if (exampleManifests && exampleManifests.length) {
           return; // Yield to example picker controls
@@ -849,6 +868,37 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               intent={Intent.PRIMARY}
               onClick={() => {
                 this.updateSpec(updateIngestionType(spec, selectedComboType as any));
+                this.updateStep('connect');
+              }}
+            />
+          </FormGroup>
+        );
+
+      case 'azure-event-hubs':
+        return (
+          <FormGroup>
+            <Button
+              text="Connect via Kafka API"
+              rightIcon={IconNames.ARROW_RIGHT}
+              intent={Intent.PRIMARY}
+              onClick={() => {
+                let newSpec = updateIngestionType(spec, 'kafka');
+                newSpec = deepSet(
+                  newSpec,
+                  'spec.ioConfig.consumerProperties.{security.protocol}',
+                  'SASL_SSL',
+                );
+                newSpec = deepSet(
+                  newSpec,
+                  'spec.ioConfig.consumerProperties.{sasl.mechanism}',
+                  'PLAIN',
+                );
+                newSpec = deepSet(
+                  newSpec,
+                  'spec.ioConfig.consumerProperties.{sasl.jaas.config}',
+                  `org.apache.kafka.common.security.plain.PlainLoginModule required username="$ConnectionString" password="Value of 'Connection string-primary key' in the Azure UI";`,
+                );
+                this.updateSpec(newSpec);
                 this.updateStep('connect');
               }}
             />
