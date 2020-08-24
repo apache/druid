@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -143,5 +144,20 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     final InDimFilter filter = new InDimFilter("dim", Collections.singleton("v1"), null);
     Assert.assertEquals(new SelectorDimFilter("dim", "v1", null), filter.optimize());
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(InDimFilter.class)
+                  .usingGetClass()
+                  .withIgnoredFields("predicateFactory", "cacheKeySupplier", "cachedOptimizedFilter")
+                  // Calculating the hashCode of all the values in a set can be expensive for large sets.
+                  // In order to speed up hashCode computation, we use the size of the values in the hashCode
+                  // computation. If there are 2 filters on the same dimension with the same extraction function
+                  // operating on the same number of values, there will be a collision.
+                  // The `equals` method will check that all values in the list match exactly.
+                  .withPrefabValues(Set.class, ImmutableSet.of("one"), ImmutableSet.of("one", "two"))
+                  .verify();
   }
 }

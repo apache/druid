@@ -62,6 +62,7 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -82,13 +83,16 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
   public static final int NUMERIC_HASHING_THRESHOLD = 16;
 
+  @Nonnull
   // Values can contain `null` object
   private final Set<String> values;
+  @Nonnull
   private final String dimension;
   @Nullable
   private final ExtractionFn extractionFn;
   @Nullable
   private final FilterTuning filterTuning;
+  @Nonnull
   private final DruidPredicateFactory predicateFactory;
 
   @JsonIgnore
@@ -382,7 +386,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public int hashCode()
   {
-    return Objects.hash(values, dimension, extractionFn, filterTuning);
+    return Objects.hash(values.size(), dimension, extractionFn, filterTuning);
   }
 
   private byte[] computeCacheKey()
