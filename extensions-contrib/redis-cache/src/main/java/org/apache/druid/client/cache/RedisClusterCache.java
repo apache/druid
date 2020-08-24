@@ -19,14 +19,46 @@
 
 package org.apache.druid.client.cache;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import redis.clients.jedis.JedisCluster;
 
-@JsonTypeName("redis")
-public class RedisCacheProvider extends RedisCacheConfig implements CacheProvider
+import java.io.IOException;
+import java.util.List;
+
+public class RedisClusterCache extends AbstractRedisCache
 {
-  @Override
-  public Cache get()
+  private JedisCluster cluster;
+
+  RedisClusterCache(JedisCluster cluster, RedisCacheConfig config)
   {
-    return RedisCacheFactory.create(this);
+    super(config);
+    this.cluster = cluster;
+  }
+
+  @Override
+  protected byte[] getFromRedis(byte[] key)
+  {
+    return cluster.get(key);
+  }
+
+  @Override
+  protected void putToRedis(byte[] key, byte[] value, RedisCacheConfig.DurationConfig expiration)
+  {
+    cluster.setex(key, (int) expiration.getSeconds(), value);
+  }
+
+  @Override
+  protected List<byte[]> mgetFromRedis(byte[]... keys)
+  {
+    return cluster.mget(keys);
+  }
+
+  @Override
+  protected void cleanup()
+  {
+    try {
+      cluster.close();
+    }
+    catch (IOException ignored) {
+    }
   }
 }
