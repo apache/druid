@@ -80,7 +80,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
   // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
   // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
-  public static final int NUMERIC_HASHING_THRESHOLD = 16;
+  public static final int NUMERIC_HASHING_THRESHOLD =
+      Integer.parseInt(System.getProperty("druid.query.filter.inDimFilter.numericHashingThreshold", "1"));
 
   // Values can contain `null` object
   private final Set<String> values;
@@ -109,6 +110,25 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         values,
         extractionFn,
         filterTuning,
+        null
+    );
+  }
+
+  /**
+   *
+   * @param dimension
+   * @param values This collection instance can be reused if possible to avoid copying a big collection.
+   *               Callers should <b>not</b> modify the collection after it is passed to this constructor.
+   */
+  public InDimFilter(
+      String dimension,
+      Set<String> values
+  )
+  {
+    this(
+        dimension,
+        values,
+        null,
         null
     );
   }
