@@ -77,7 +77,6 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -763,24 +762,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     int stop = start + chunk + (index < remainder ? 1 : 0);
 
     return Pair.of(start, stop);
-  }
-
-  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
-      boolean storeCompactionState,
-      TaskToolbox toolbox,
-      IndexTuningConfig tuningConfig
-  )
-  {
-    if (storeCompactionState) {
-      final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
-      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap);
-      return segments -> segments
-          .stream()
-          .map(s -> s.withLastCompactionState(compactionState))
-          .collect(Collectors.toSet());
-    } else {
-      return Function.identity();
-    }
   }
 
   private void publishSegments(
