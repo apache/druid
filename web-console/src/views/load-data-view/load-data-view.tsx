@@ -876,33 +876,41 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
       case 'azure-event-hubs':
         return (
-          <FormGroup>
-            <Button
-              text="Connect via Kafka API"
-              rightIcon={IconNames.ARROW_RIGHT}
-              intent={Intent.PRIMARY}
-              onClick={() => {
-                let newSpec = updateIngestionType(spec, 'kafka');
-                newSpec = deepSet(
-                  newSpec,
-                  'spec.ioConfig.consumerProperties.{security.protocol}',
-                  'SASL_SSL',
-                );
-                newSpec = deepSet(
-                  newSpec,
-                  'spec.ioConfig.consumerProperties.{sasl.mechanism}',
-                  'PLAIN',
-                );
-                newSpec = deepSet(
-                  newSpec,
-                  'spec.ioConfig.consumerProperties.{sasl.jaas.config}',
-                  `org.apache.kafka.common.security.plain.PlainLoginModule required username="$ConnectionString" password="Value of 'Connection string-primary key' in the Azure UI";`,
-                );
-                this.updateSpec(newSpec);
-                this.updateStep('connect');
-              }}
-            />
-          </FormGroup>
+          <>
+            <FormGroup>
+              <Callout intent={Intent.WARNING}>
+                Please review and fill in the <Code>consumerProperties</Code> on the next step.
+              </Callout>
+            </FormGroup>
+            <FormGroup>
+              <Button
+                text="Connect via Kafka API"
+                rightIcon={IconNames.ARROW_RIGHT}
+                intent={Intent.PRIMARY}
+                onClick={() => {
+                  // Use the kafka ingestion type but preset some consumerProperties required for Event Hubs
+                  let newSpec = updateIngestionType(spec, 'kafka');
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.ioConfig.consumerProperties.{security.protocol}',
+                    'SASL_SSL',
+                  );
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.ioConfig.consumerProperties.{sasl.mechanism}',
+                    'PLAIN',
+                  );
+                  newSpec = deepSet(
+                    newSpec,
+                    'spec.ioConfig.consumerProperties.{sasl.jaas.config}',
+                    `org.apache.kafka.common.security.plain.PlainLoginModule required username="$ConnectionString" password="Value of 'Connection string-primary key' in the Azure UI";`,
+                  );
+                  this.updateSpec(newSpec);
+                  this.updateStep('connect');
+                }}
+              />
+            </FormGroup>
+          </>
         );
 
       case 'example':
