@@ -67,6 +67,8 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -147,9 +149,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    final Optional<TableDataSource> baseTableDataSource = analysis.getBaseTableDataSource();
+    final List<TableDataSource> tables = analysis.getBaseTableDataSources().orElse(Collections.emptyList());
 
-    if (!baseTableDataSource.isPresent() || !dataSource.equals(baseTableDataSource.get().getName())) {
+    if (tables.size() != 1 || !dataSource.equals(Iterables.getOnlyElement(tables).getName())) {
       // Report error, since we somehow got a query for a datasource we can't handle.
       throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
     }

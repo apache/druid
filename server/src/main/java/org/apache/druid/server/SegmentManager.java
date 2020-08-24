@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -44,6 +45,8 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -205,8 +208,13 @@ public class SegmentManager
 
   private TableDataSource getTableDataSource(DataSourceAnalysis analysis)
   {
-    return analysis.getBaseTableDataSource()
-                   .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+    final List<TableDataSource> tables = analysis.getBaseTableDataSources().orElse(Collections.emptyList());
+
+    if (tables.size() == 1) {
+      return Iterables.getOnlyElement(tables);
+    } else {
+      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
+    }
   }
 
   /**
@@ -247,10 +255,16 @@ public class SegmentManager
               if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
                 dataSourceState.tablesLookup.put(segment.getId(), new ReferenceCountingIndexedTable(table));
               } else {
-                log.error("Cannot load segment[%s] with IndexedTable, no existing segments are joinable", segment.getId());
+                log.error(
+                    "Cannot load segment[%s] with IndexedTable, no existing segments are joinable",
+                    segment.getId()
+                );
               }
             } else if (dataSourceState.tablesLookup.size() > 0) {
-              log.error("Cannot load segment[%s] without IndexedTable, all existing segments are joinable", segment.getId());
+              log.error(
+                  "Cannot load segment[%s] without IndexedTable, all existing segments are joinable",
+                  segment.getId()
+              );
             }
             loadedIntervals.add(
                 segment.getInterval(),

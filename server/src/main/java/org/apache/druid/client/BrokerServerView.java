@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -48,6 +49,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -307,12 +309,14 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(final DataSourceAnalysis analysis)
   {
-    final TableDataSource tableDataSource =
-        analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+    final List<TableDataSource> tables = analysis.getBaseTableDataSources().orElse(Collections.emptyList());
 
-    synchronized (lock) {
-      return Optional.ofNullable(timelines.get(tableDataSource.getName()));
+    if (tables.size() == 1) {
+      synchronized (lock) {
+        return Optional.ofNullable(timelines.get(Iterables.getOnlyElement(tables).getName()));
+      }
+    } else {
+      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
     }
   }
 

@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
@@ -41,30 +42,27 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
     Query<T> query = queryPlus.getQuery();
-    DataSource dataSource = query.getDataSource();
-    if (dataSource instanceof UnionDataSource) {
+
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+
+    if (analysis.isConcreteTableBased() && analysis.getBaseTableDataSources().get().size() != 1) {
+      // Union of tables.
 
       return new MergeSequence<>(
           query.getResultOrdering(),
           Sequences.simple(
               Lists.transform(
-                  ((UnionDataSource) dataSource).getDataSources(),
-                  new Function<DataSource, Sequence<T>>()
-                  {
-                    @Override
-                    public Sequence<T> apply(DataSource singleSource)
-                    {
-                      return baseRunner.run(
+                  analysis.getBaseTableDataSources().get(),
+                  (Function<DataSource, Sequence<T>>) singleSource ->
+                      baseRunner.run(
                           queryPlus.withQuery(
-                              query.withDataSource(singleSource)
-                                   // assign the subqueryId. this will be used to validate that every query servers
-                                   // have responded per subquery in RetryQueryRunner
-                                   .withDefaultSubQueryId()
+                              Queries.withBaseDataSource(query, singleSource)
+                                     // assign the subqueryId. this will be used to validate that every query servers
+                                     // have responded per subquery in RetryQueryRunner
+                                     .withDefaultSubQueryId()
                           ),
                           responseContext
-                      );
-                    }
-                  }
+                      )
               )
           )
       );

@@ -68,7 +68,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(TABLE_FOO, analysis.getDataSource());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(ImmutableList.of(TABLE_FOO)), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
@@ -86,7 +86,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(unionDataSource, analysis.getDataSource());
     Assert.assertEquals(unionDataSource, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(unionDataSource.getChildren()), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
@@ -104,7 +104,7 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isQuery());
     Assert.assertEquals(queryDataSource, analysis.getDataSource());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(ImmutableList.of(TABLE_FOO)), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.of(queryDataSource.getQuery()), analysis.getBaseQuery());
     Assert.assertEquals(
         Optional.of(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS)),
@@ -126,7 +126,7 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isQuery());
     Assert.assertEquals(queryDataSource, analysis.getDataSource());
     Assert.assertEquals(unionDataSource, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(unionDataSource.getChildren()), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.of(queryDataSource.getQuery()), analysis.getBaseQuery());
     Assert.assertEquals(
         Optional.of(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS)),
@@ -146,7 +146,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(LOOKUP_LOOKYLOO, analysis.getDataSource());
     Assert.assertEquals(LOOKUP_LOOKYLOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
@@ -164,7 +164,7 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isQuery());
     Assert.assertEquals(queryDataSource, analysis.getDataSource());
     Assert.assertEquals(LOOKUP_LOOKYLOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.of(queryDataSource.getQuery()), analysis.getBaseQuery());
     Assert.assertEquals(
         Optional.of(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS)),
@@ -184,7 +184,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(INLINE, analysis.getDataSource());
     Assert.assertEquals(INLINE, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
@@ -222,7 +222,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(joinDataSource, analysis.getDataSource());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(ImmutableList.of(TABLE_FOO)), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
@@ -272,7 +272,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(joinDataSource, analysis.getDataSource());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(ImmutableList.of(TABLE_FOO)), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
@@ -301,7 +301,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(joinDataSource, analysis.getDataSource());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSources());
     Assert.assertEquals(
         ImmutableList.of(
             new PreJoinableClause("1.", subquery(TABLE_FOO), JoinType.INNER, joinClause("1."))
@@ -328,7 +328,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isGlobal());
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(joinDataSource, analysis.getDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(unionDataSource.getChildren()), analysis.getBaseTableDataSources());
     Assert.assertEquals(unionDataSource, analysis.getBaseDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
@@ -363,7 +363,7 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isQuery());
     Assert.assertEquals(queryDataSource, analysis.getDataSource());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.of(ImmutableList.of(TABLE_FOO)), analysis.getBaseTableDataSources());
     Assert.assertEquals(
         Optional.of(
             subquery(
@@ -407,7 +407,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(joinDataSource, analysis.getDataSource());
     Assert.assertEquals(LOOKUP_LOOKYLOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
@@ -436,7 +436,7 @@ public class DataSourceAnalysisTest
     Assert.assertFalse(analysis.isQuery());
     Assert.assertEquals(joinDataSource, analysis.getDataSource());
     Assert.assertEquals(LOOKUP_LOOKYLOO, analysis.getBaseDataSource());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseTableDataSources());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(

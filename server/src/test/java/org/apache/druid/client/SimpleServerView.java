@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.QueryableDruidServer;
@@ -136,7 +137,9 @@ public class SimpleServerView implements TimelineServerView
   @Override
   public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
   {
-    return Optional.ofNullable(timelines.get(analysis.getBaseTableDataSource().get().getName()));
+    return Optional.ofNullable(
+        timelines.get(Iterables.getOnlyElement(analysis.getBaseTableDataSources().get()).getName())
+    );
   }
 
   @Override

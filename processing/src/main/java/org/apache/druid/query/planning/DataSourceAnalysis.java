@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.planning;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -36,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Analysis of a datasource for purposes of deciding how to execute a particular query.
@@ -168,7 +171,7 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the base (bottom-leftmost) datasource.
+   * Returns the base (bottom-leftmost) datasource.
    */
   public DataSource getBaseDataSource()
   {
@@ -176,15 +179,27 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the same datasource as {@link #getBaseDataSource()}, but only if it is a table. Useful on data servers,
-   * since they generally can only handle queries where the base datasource is a table.
+   * If {@link #getBaseDataSource()} is a {@link TableDataSource}, returns it. If it's a {@link UnionDataSource} of
+   * {@link TableDataSource}, returns the list of tables. Otherwise, returns an empty Optional.
+   *
+   * This returns nonempty if, and only if, {@link #isConcreteTableBased()} is true.
    */
-  public Optional<TableDataSource> getBaseTableDataSource()
+  public Optional<List<TableDataSource>> getBaseTableDataSources()
   {
-    if (baseDataSource instanceof TableDataSource) {
-      return Optional.of((TableDataSource) baseDataSource);
-    } else {
+    if (!isConcreteTableBased()) {
       return Optional.empty();
+    } else if (baseDataSource instanceof TableDataSource) {
+      return Optional.of(ImmutableList.of((TableDataSource) baseDataSource));
+    } else if (baseDataSource instanceof UnionDataSource) {
+      return Optional.of(
+          baseDataSource.getChildren()
+                        .stream()
+                        .map(o -> (TableDataSource) o)
+                        .collect(Collectors.toList())
+      );
+    } else {
+      // We don't expect to actually see this message, due to the isConcreteTableBased check above.
+      throw new ISE("Expected 'table' or 'union' datasource");
     }
   }
 
