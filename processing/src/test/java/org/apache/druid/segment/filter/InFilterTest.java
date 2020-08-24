@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -378,26 +377,6 @@ public class InFilterTest extends BaseFilterTest
     expectedException.expect(IAE.class);
     expectedException.expectMessage("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0");
     filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"));
-  }
-
-  @Test
-  public void test_equals()
-  {
-    EqualsVerifier.forClass(InDimFilter.class)
-                  .usingGetClass()
-                  .withNonnullFields("dimension", "values")
-                  .withIgnoredFields("cacheKeySupplier", "predicateFactory", "cachedOptimizedFilter")
-                  .verify();
-  }
-
-  @Test
-  public void test_equals_forInFilterDruidPredicateFactory()
-  {
-    EqualsVerifier.forClass(InDimFilter.InFilterDruidPredicateFactory.class)
-                  .usingGetClass()
-                  .withNonnullFields("values")
-                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
-                  .verify();
   }
 
   private DimFilter toInFilter(String dim)

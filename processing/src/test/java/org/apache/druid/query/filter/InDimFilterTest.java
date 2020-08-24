@@ -160,4 +160,13 @@ public class InDimFilterTest extends InitializedNullHandlingTest
                   .withPrefabValues(Set.class, ImmutableSet.of("one"), ImmutableSet.of("one", "two"))
                   .verify();
   }
+  @Test
+  public void testEqualsContractForInFilterDruidPredicateFactory()
+  {
+    EqualsVerifier.forClass(InDimFilter.InFilterDruidPredicateFactory.class)
+                  .usingGetClass()
+                  .withNonnullFields("values")
+                  .withIgnoredFields("longPredicateSupplier", "floatPredicateSupplier", "doublePredicateSupplier")
+                  .verify();
+  }
 }
