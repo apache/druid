@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -61,7 +62,30 @@ public class SketchAggregatorFactoryTest
                   new FieldAccessPostAggregator("merge-access", "merge"),
                   new FinalizingFieldAccessPostAggregator("merge-finalize", "merge"),
                   new FieldAccessPostAggregator("mergeFinalize-access", "mergeFinalize"),
-                  new FinalizingFieldAccessPostAggregator("mergeFinalize-finalize", "mergeFinalize")
+                  new FinalizingFieldAccessPostAggregator("mergeFinalize-finalize", "mergeFinalize"),
+                  new SketchEstimatePostAggregator(
+                      "sketchEstimate",
+                      new FieldAccessPostAggregator(null, "merge"),
+                      null
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "sketchEstimateStdDev",
+                      new FieldAccessPostAggregator(null, "merge"),
+                      2
+                  ),
+                  new SketchSetPostAggregator(
+                      "sketchSet",
+                      "UNION",
+                      null,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator(null, "oldMerge"),
+                          new FieldAccessPostAggregator(null, "merge")
+                      )
+                  ),
+                  new SketchToStringPostAggregator(
+                      "sketchString",
+                      new FieldAccessPostAggregator(null, "merge")
+                  )
               )
               .build();
 
@@ -84,6 +108,10 @@ public class SketchAggregatorFactoryTest
                     .add("merge-finalize", ValueType.COMPLEX)
                     .add("mergeFinalize-access", ValueType.COMPLEX)
                     .add("mergeFinalize-finalize", ValueType.DOUBLE)
+                    .add("sketchEstimate", ValueType.DOUBLE)
+                    .add("sketchEstimateStdDev", ValueType.COMPLEX)
+                    .add("sketchSet", ValueType.COMPLEX)
+                    .add("sketchString", ValueType.STRING)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
