@@ -17,16 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.seekablestream;
+package org.apache.druid.indexing;
 
+import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.Transformer;
+import org.apache.druid.segment.transform.TransformingInputEntityReader;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -39,7 +44,6 @@ import java.util.List;
  * Abstraction for parsing stream data which internally uses {@link org.apache.druid.data.input.InputEntityReader}
  * or {@link InputRowParser}. This class will be useful untill we remove the deprecated InputRowParser.
  */
-// TODO(aditya-r-m): find a cleaner way to use it for pubsub indexing service
 public class StreamChunkParser
 {
   @Nullable
@@ -105,5 +109,54 @@ public class StreamChunkParser
       }
     }
     return rows;
+  }
+
+  /**
+   * A settable {@link InputEntityReader}. This class is intended to be used for only stream parsing in Kafka or Kinesis
+   * indexing.
+   */
+  static class SettableByteEntityReader implements InputEntityReader
+  {
+    private final InputFormat inputFormat;
+    private final InputRowSchema inputRowSchema;
+    private final Transformer transformer;
+    private final File indexingTmpDir;
+
+    private InputEntityReader delegate;
+
+    SettableByteEntityReader(
+        InputFormat inputFormat,
+        InputRowSchema inputRowSchema,
+        TransformSpec transformSpec,
+        File indexingTmpDir
+    )
+    {
+      this.inputFormat = Preconditions.checkNotNull(inputFormat, "inputFormat");
+      this.inputRowSchema = inputRowSchema;
+      this.transformer = transformSpec.toTransformer();
+      this.indexingTmpDir = indexingTmpDir;
+    }
+
+    void setEntity(ByteEntity entity)
+    {
+      this.delegate = new TransformingInputEntityReader(
+          // Yes, we are creating a new reader for every stream chunk.
+          // This should be fine as long as initializing a reader is cheap which it is for now.
+          inputFormat.createReader(inputRowSchema, entity, indexingTmpDir),
+          transformer
+      );
+    }
+
+    @Override
+    public CloseableIterator<InputRow> read() throws IOException
+    {
+      return delegate.read();
+    }
+
+    @Override
+    public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
+    {
+      return delegate.sample();
+    }
   }
 }

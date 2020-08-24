@@ -22,7 +22,6 @@ package org.apache.druid.indexing.pubsub;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -41,6 +40,7 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.StreamChunkParser;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
@@ -50,7 +50,6 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
-import org.apache.druid.indexing.seekablestream.StreamChunkParser;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.collect.Utils;
@@ -79,7 +78,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -91,7 +89,6 @@ public class PubsubIndexTaskRunner implements ChatHandler
 {
   private static final EmittingLogger log = new EmittingLogger(PubsubIndexTaskRunner.class);
   protected final Lock pollRetryLock = new ReentrantLock();
-  protected final Condition isAwaitingRetry = pollRetryLock.newCondition();
   private final PubsubIndexTaskIOConfig ioConfig;
   private final PubsubIndexTaskTuningConfig tuningConfig;
   private final PubsubIndexTask task;
@@ -155,7 +152,6 @@ public class PubsubIndexTaskRunner implements ChatHandler
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
       final String errorMsg = Throwables.getStackTraceAsString(e);
-      // toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg));
       return TaskStatus.failure(
           task.getId(),
           errorMsg
@@ -238,7 +234,7 @@ public class PubsubIndexTaskRunner implements ChatHandler
     }
     appenderator = task.newAppenderator(fireDepartmentMetrics, toolbox);
     driver = task.newDriver(appenderator, toolbox, fireDepartmentMetrics);
-    final Object restoredMetadata = driver.startJob(
+    driver.startJob(
         segmentId -> {
           try {
             if (lockGranularityToUse == LockGranularity.SEGMENT) {
@@ -314,11 +310,6 @@ public class PubsubIndexTaskRunner implements ChatHandler
     return TaskStatus.success(task.getId());
   }
 
-  public Appenderator getAppenderator()
-  {
-    return appenderator;
-  }
-
   public String getSequenceName()
   {
     return sequenceName;
@@ -353,13 +344,6 @@ public class PubsubIndexTaskRunner implements ChatHandler
           @Override
           public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)
           {
-            log.info(
-                "Published segments [%s] for sequence [%s] with metadata [%s].",
-                String.join(", ", Lists.transform(publishedSegmentsAndCommitMetadata.getSegments(), DataSegment::toString)),
-                getSequenceName(),
-                Preconditions.checkNotNull(publishedSegmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata")
-            );
-
             Futures.transform(
                 driver.registerHandoff(publishedSegmentsAndCommitMetadata),
                 new Function<SegmentsAndCommitMetadata, Void>()
