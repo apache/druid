@@ -66,7 +66,7 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   @Override
   public ValueType getType()
   {
-    return ValueType.DOUBLE;
+    return round ? ValueType.LONG : ValueType.DOUBLE;
   }
 
   @JsonProperty

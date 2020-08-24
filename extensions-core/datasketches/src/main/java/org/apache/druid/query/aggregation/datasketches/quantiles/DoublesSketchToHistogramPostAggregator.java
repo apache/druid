@@ -109,7 +109,7 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   @Override
   public ValueType getType()
   {
-    return ValueType.COMPLEX;
+    return ValueType.DOUBLE_ARRAY;
   }
 
   @JsonProperty

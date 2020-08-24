@@ -29,6 +29,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.column.ValueTypes;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +40,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
 {
   private final String name;
   private final String fieldName;
+  @Nullable
   private final ValueType finalizedType;
   private final Comparator<Object> comparator;
   private final Function<Object, Object> finalizer;
@@ -55,7 +57,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   private FinalizingFieldAccessPostAggregator(
       final String name,
       final String fieldName,
-      final ValueType finalizedType,
+      @Nullable final ValueType finalizedType,
       final Comparator<Object> comparator,
       final Function<Object, Object> finalizer
   )

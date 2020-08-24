@@ -50,10 +50,10 @@ public class FieldAccessPostAggregator implements PostAggregator
       @JsonProperty("fieldName") String fieldName
   )
   {
-    this(name, fieldName, ValueTypes.defaultAggregationType());
+    this(name, fieldName, null);
   }
 
-  private FieldAccessPostAggregator(@Nullable String name, String fieldName, ValueType type)
+  private FieldAccessPostAggregator(@Nullable String name, String fieldName, @Nullable ValueType type)
   {
     Preconditions.checkNotNull(fieldName);
     this.name = name;
