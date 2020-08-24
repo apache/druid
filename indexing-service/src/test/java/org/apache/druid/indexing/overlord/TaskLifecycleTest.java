@@ -137,6 +137,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -171,7 +172,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
-public class TaskLifecycleTest
+public class TaskLifecycleTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -247,7 +248,6 @@ public class TaskLifecycleTest
   private TaskQueueConfig tqc;
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
-  private AppenderatorsManager appenderatorsManager;
   private DruidNode druidNode = new DruidNode("dummy", "dummy", false, 10000, null, true, false);
   private TaskLocation taskLocation = TaskLocation.create(
       druidNode.getHost(),
@@ -571,12 +571,20 @@ public class TaskLifecycleTest
       TestIndexerMetadataStorageCoordinator mdc
   ) throws IOException
   {
+    return setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, new TestAppenderatorsManager());
+  }
+
+  private TaskToolboxFactory setUpTaskToolboxFactory(
+      DataSegmentPusher dataSegmentPusher,
+      SegmentHandoffNotifierFactory handoffNotifierFactory,
+      TestIndexerMetadataStorageCoordinator mdc,
+      AppenderatorsManager appenderatorsManager
+  ) throws IOException
+  {
     Preconditions.checkNotNull(queryRunnerFactoryConglomerate);
     Preconditions.checkNotNull(monitorScheduler);
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
-
-    appenderatorsManager = new TestAppenderatorsManager();
 
     taskLockbox = new TaskLockbox(taskStorage, mdc);
     tac = new LocalTaskActionClientFactory(
@@ -670,7 +678,7 @@ public class TaskLifecycleTest
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new NoopChatHandlerProvider(),
         TEST_UTILS.getRowIngestionMetersFactory(),
-        new TestAppenderatorsManager(),
+        appenderatorsManager,
         new NoopIndexingServiceClient(),
         null,
         null,
@@ -1325,6 +1333,10 @@ public class TaskLifecycleTest
         new NoopServiceEmitter(),
         () -> queryRunnerFactoryConglomerate
     );
+
+    tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, unifiedIndexerAppenderatorsManager);
+    taskRunner = setUpThreadPoolTaskRunner(tb);
+    taskQueue = setUpTaskQueue(taskStorage, taskRunner);
 
     final Task indexTask = new IndexTask(
         null,
