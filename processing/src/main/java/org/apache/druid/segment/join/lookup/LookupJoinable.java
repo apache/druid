@@ -20,7 +20,7 @@
 package org.apache.druid.segment.join.lookup;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -33,6 +33,7 @@ import org.apache.druid.segment.join.Joinable;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -106,10 +107,10 @@ public class LookupJoinable implements Joinable
     Set<String> correlatedValues;
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(searchColumnName)) {
       if (LookupColumnSelectorFactory.KEY_COLUMN.equals(retrievalColumnName)) {
-        correlatedValues = Sets.newHashSet(searchColumnValue);
+        correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
         // This should not happen in practice because the column to be joined on must be a key.
-        correlatedValues = Sets.newHashSet(extractor.apply(searchColumnValue));
+        correlatedValues = Collections.singleton(extractor.apply(searchColumnValue));
       }
     } else {
       if (!allowNonKeyColumnSearch) {
@@ -117,11 +118,11 @@ public class LookupJoinable implements Joinable
       }
       if (LookupColumnSelectorFactory.VALUE_COLUMN.equals(retrievalColumnName)) {
         // This should not happen in practice because the column to be joined on must be a key.
-        correlatedValues = Sets.newHashSet(searchColumnValue);
+        correlatedValues = ImmutableSet.of(searchColumnValue);
       } else {
         // Lookup extractor unapply only provides a list of strings, so we can't respect
         // maxCorrelationSetSize easily. This should be handled eventually.
-        correlatedValues = Sets.newHashSet(extractor.unapply(searchColumnValue));
+        correlatedValues = ImmutableSet.copyOf(extractor.unapply(searchColumnValue));
       }
     }
     return Optional.of(correlatedValues);

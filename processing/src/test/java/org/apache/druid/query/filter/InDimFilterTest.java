@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -58,35 +59,24 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testInitWithoutEmptyStringsShouldUseValuesAsIs()
-  {
-    Set<String> values = Sets.newHashSet("good", "bad", null);
-    final InDimFilter inDimFilter = new InDimFilter("dimTest", values, null);
-    Assert.assertSame(values, inDimFilter.getValues());
-    Assert.assertEquals(3, values.size());
-    Assert.assertEquals(Sets.newHashSet("good", "bad", null), inDimFilter.getValues());
-  }
-
-  @Test
-  public void testInitWithEmptyStringsShouldUseValuesAndReplaceWithNullInNonSqlCompatibleMode()
-  {
-    Set<String> values = Sets.newHashSet("good", "bad", "");
-    final InDimFilter inDimFilter = new InDimFilter("dimTest", values, null);
-    Assert.assertSame(values, inDimFilter.getValues());
-    Assert.assertEquals(3, values.size());
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(Sets.newHashSet("good", "bad", ""), inDimFilter.getValues());
-    } else {
-      Assert.assertEquals(Sets.newHashSet("good", "bad", null), inDimFilter.getValues());
-    }
-  }
-
-  @Test
   public void testGetValuesWithValuesSetOfNonEmptyStringsUseTheGivenSet()
   {
-    final Set<String> values = Sets.newHashSet("v1", "v2", "v3");
+    final Set<String> values = ImmutableSet.of("v1", "v2", "v3");
     final InDimFilter filter = new InDimFilter("dim", values, null, null);
     Assert.assertSame(values, filter.getValues());
+  }
+
+  @Test
+  public void testGetValuesWithValuesSetIncludingEmptyString()
+  {
+    final Set<String> values = Sets.newHashSet("v1", "", "v3");
+    final InDimFilter filter = new InDimFilter("dim", values, null, null);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertNotSame(values, filter.getValues());
+      Assert.assertEquals(Sets.newHashSet("v1", null, "v3"), filter.getValues());
+    } else {
+      Assert.assertSame(values, filter.getValues());
+    }
   }
 
   @Test
