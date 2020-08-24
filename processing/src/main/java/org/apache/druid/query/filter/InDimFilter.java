@@ -74,7 +74,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
@@ -143,10 +142,11 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     // The values set can be huge. Try to avoid copying the set if possible.
     // Note that we may still need to copy values to a list for caching. See getCacheKey().
-    if ((NullHandling.sqlCompatible() || values.stream().noneMatch(NullHandling::needsEmptyToNull))) {
+    if (NullHandling.sqlCompatible() || !values.remove("")) {
       this.values = values;
     } else {
-      this.values = values.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toSet());
+      values.add(null);
+      this.values = values;
     }
 
     this.dimension = Preconditions.checkNotNull(dimension, "dimension cannot be null");
