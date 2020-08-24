@@ -34,6 +34,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -142,10 +143,14 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     // The values set can be huge. Try to avoid copying the set if possible.
     // Note that we may still need to copy values to a list for caching. See getCacheKey().
-    if (NullHandling.sqlCompatible() || !values.remove("")) {
-      this.values = values;
+    if (!NullHandling.sqlCompatible() && values.contains("")) {
+      // In Non sql compatible mode, empty strings should be converted to nulls for the filter.
+      // In sql compatible mode, empty strings and nulls should be treated differently
+      this.values = Sets.newHashSetWithExpectedSize(values.size());
+      for (String v : values) {
+        this.values.add(NullHandling.emptyToNullIfNeeded(v));
+      }
     } else {
-      values.add(null);
       this.values = values;
     }
 
