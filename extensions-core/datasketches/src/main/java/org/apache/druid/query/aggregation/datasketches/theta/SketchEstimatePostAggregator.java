@@ -104,7 +104,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
   @Override
   public ValueType getType()
   {
-    return errorBoundsStdDev ? ValueType.COMPLEX : ValueType.DOUBLE;
+    return errorBoundsStdDev != null ? ValueType.COMPLEX : ValueType.DOUBLE;
   }
 
   @Override
