@@ -212,7 +212,7 @@ public class DoublesSketchToHistogramPostAggregatorTest
         RowSignature.builder()
                     .addTimeColumn()
                     .add("sketch", null)
-                    .add("a", ValueType.COMPLEX)
+                    .add("a", ValueType.DOUBLE_ARRAY)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
