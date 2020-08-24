@@ -129,7 +129,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             false
         )
     );
-    getIndexingServiceClient().runTask(task);
+    getIndexingServiceClient().runTask(task.getId(), task);
     Thread.sleep(1000);
 
     final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();

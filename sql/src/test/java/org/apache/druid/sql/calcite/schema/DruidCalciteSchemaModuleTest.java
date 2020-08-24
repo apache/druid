@@ -105,7 +105,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
         binder -> {
           binder.bind(QueryLifecycleFactory.class).toInstance(queryLifecycleFactory);
           binder.bind(TimelineServerView.class).toInstance(serverView);
-          binder.bind(JoinableFactory.class).toInstance(new MapJoinableFactory(ImmutableMap.of()));
+          binder.bind(JoinableFactory.class).toInstance(new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()));
           binder.bind(PlannerConfig.class).toInstance(plannerConfig);
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);

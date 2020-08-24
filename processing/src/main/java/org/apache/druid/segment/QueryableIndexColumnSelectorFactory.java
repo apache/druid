@@ -40,7 +40,7 @@ import java.util.function.Function;
  * It's counterpart for incremental index is {@link
  * org.apache.druid.segment.incremental.IncrementalIndexColumnSelectorFactory}.
  */
-class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
+public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
 {
   private final QueryableIndex index;
   private final VirtualColumns virtualColumns;
@@ -56,7 +56,7 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   private final Map<DimensionSpec, DimensionSelector> dimensionSelectorCache;
   private final Map<String, ColumnValueSelector> valueSelectorCache;
 
-  QueryableIndexColumnSelectorFactory(
+  public QueryableIndexColumnSelectorFactory(
       QueryableIndex index,
       VirtualColumns virtualColumns,
       boolean descending,
