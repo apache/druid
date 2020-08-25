@@ -27,7 +27,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -126,7 +125,7 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
       //noinspection unchecked
       theComparator = (Comparator) Comparators.naturalNullsFirst();
       theFinalizer = Function.identity();
-      finalizedType = ValueTypes.defaultAggregationType();
+      finalizedType = null;
     }
 
     return new FinalizingFieldAccessPostAggregator(

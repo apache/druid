@@ -70,11 +70,6 @@ public class ValueTypes
     }
   }
 
-  public static ValueType defaultAggregationType()
-  {
-    return ValueType.DOUBLE;
-  }
-
   private ValueTypes()
   {
     // no instantiation

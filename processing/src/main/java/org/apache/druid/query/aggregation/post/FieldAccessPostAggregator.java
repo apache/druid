@@ -27,7 +27,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -103,7 +102,7 @@ public class FieldAccessPostAggregator implements PostAggregator
     if (aggregators != null && aggregators.containsKey(fieldName)) {
       type = aggregators.get(fieldName).getType();
     } else {
-      type = ValueTypes.defaultAggregationType();
+      type = null;
     }
 
     return new FieldAccessPostAggregator(
