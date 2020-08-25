@@ -89,8 +89,9 @@ public class FixedBucketsHistogramVectorAggregatorTest
     Assert.assertEquals(5, h.getCount());
     Assert.assertEquals(1.0, h.getMin(), 0.01);
     Assert.assertEquals(16.0, h.getMax(), 0.01);
-    Assert.assertEquals(0, h.getMissingValueCount());
-    Assert.assertEquals(1, h.getLowerOutlierCount());    // Due to default value of null which is 0
+    // Default value of null is 0 which is an outlier.
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0 : 1, h.getMissingValueCount());
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 1 : 0, h.getLowerOutlierCount());
     Assert.assertEquals(0, h.getUpperOutlierCount());
 
     factory = buildHistogramAggFactory("field_2");
