@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -656,23 +657,26 @@ public class ClientQuerySegmentWalkerTest
             .build()
     );
 
-    final JoinableFactory joinableFactory = new MapJoinableFactory(
-        ImmutableMap.<Class<? extends DataSource>, JoinableFactory>builder()
-            .put(InlineDataSource.class, new InlineJoinableFactory())
-            .put(GlobalTableDataSource.class, new JoinableFactory()
-            {
-              @Override
-              public boolean isDirectlyJoinable(DataSource dataSource)
-              {
-                return ((GlobalTableDataSource) dataSource).getName().equals(GLOBAL);
-              }
+    final JoinableFactory globalFactory = new JoinableFactory()
+    {
+      @Override
+      public boolean isDirectlyJoinable(DataSource dataSource)
+      {
+        return ((GlobalTableDataSource) dataSource).getName().equals(GLOBAL);
+      }
 
-              @Override
-              public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
-              {
-                return Optional.empty();
-              }
-            })
+      @Override
+      public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
+      {
+        return Optional.empty();
+      }
+    };
+
+    final JoinableFactory joinableFactory = new MapJoinableFactory(
+        ImmutableSet.of(globalFactory, new InlineJoinableFactory()),
+        ImmutableMap.<Class<? extends JoinableFactory>, Class<? extends DataSource>>builder()
+            .put(InlineJoinableFactory.class, InlineDataSource.class)
+            .put(globalFactory.getClass(), GlobalTableDataSource.class)
             .build()
     );
 

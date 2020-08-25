@@ -41,22 +41,26 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 {
   public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.naturalNullsFirst();
 
-  private final ColumnCapabilitiesImpl capabilities =
-      ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
+  private volatile boolean hasNulls = false;
 
+  @Nullable
   @Override
   public Double processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
   {
     if (dimValues instanceof List) {
       throw new UnsupportedOperationException("Numeric columns do not support multivalue rows.");
     }
-    return DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+    Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+    if (d == null) {
+      hasNulls = NullHandling.sqlCompatible();
+    }
+    return d;
   }
 
   @Override
   public void setSparseIndexed()
   {
-    // no-op, double columns do not have a dictionary to track null values
+    hasNulls = NullHandling.sqlCompatible();
   }
 
   @Override
@@ -98,7 +102,11 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
   @Override
   public ColumnCapabilities getColumnCapabilities()
   {
-    return capabilities;
+    ColumnCapabilitiesImpl builder = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
+    if (hasNulls) {
+      builder.setHasNulls(hasNulls);
+    }
+    return builder;
   }
 
   @Override
@@ -125,7 +133,7 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
       public boolean isNull()
       {
         final Object[] dims = currEntry.get().getDims();
-        return dimIndex >= dims.length || dims[dimIndex] == null;
+        return hasNulls && (dimIndex >= dims.length || dims[dimIndex] == null);
       }
 
       @Override

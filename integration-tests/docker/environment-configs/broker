@@ -39,3 +39,6 @@ druid_sql_avatica_enable=true
 druid_server_https_crlPath=/tls/revocations.crl
 druid_query_scheduler_laning_strategy=manual
 druid_query_scheduler_laning_lanes_one=1
+druid_segmentCache_locations=[{"path":"/shared/druid/brokerIndexCache","maxSize":1000000000}]
+druid_server_maxSize=1000000000
+druid_sql_planner_metadataRefreshPeriod=PT15S

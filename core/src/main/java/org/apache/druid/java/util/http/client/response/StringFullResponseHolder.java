@@ -38,7 +38,6 @@ public class StringFullResponseHolder extends FullResponseHolder<String>
     this.builder = new StringBuilder(response.getContent().toString(charset));
   }
 
-  @Override
   public StringFullResponseHolder addChunk(String chunk)
   {
     builder.append(chunk);
