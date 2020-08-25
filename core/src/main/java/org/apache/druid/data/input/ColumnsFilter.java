@@ -69,7 +69,7 @@ public abstract class ColumnsFilter
    * Returns a new filter with a particular column added. The returned filter will return true from {@link #apply}
    * on this column.
    */
-  public abstract ColumnsFilter plus(final String column);
+  public abstract ColumnsFilter plus(String column);
 
   public static class InclusionBased extends ColumnsFilter
   {
