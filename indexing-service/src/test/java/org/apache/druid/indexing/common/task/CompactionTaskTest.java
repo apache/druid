@@ -1284,7 +1284,7 @@ public class CompactionTaskTest
     )
     {
       super(
-          null,
+          new TaskConfig(null, null, null, null, null, false, null, null, null, false),
           null,
           taskActionClient,
           null,

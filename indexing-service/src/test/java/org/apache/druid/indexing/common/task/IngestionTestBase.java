@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -292,7 +293,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskToolbox box = new TaskToolbox(
-            null,
+            new TaskConfig(null, null, null, null, null, false, null, null, null, false),
             new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false),
             taskActionClient,
             null,
