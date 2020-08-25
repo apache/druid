@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.indexing;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -27,7 +28,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ClientKillUnusedSegmentsQueryTest
+public class ClientKillUnusedSegmentsTaskQueryTest
 {
   private static final String DATA_SOURCE = "data_source";
   public static final DateTime START = DateTimes.nowUtc();
@@ -38,7 +39,7 @@ public class ClientKillUnusedSegmentsQueryTest
   @Before
   public void setUp()
   {
-    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery(DATA_SOURCE, INTERVAL);
+    clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery("killTaskId", DATA_SOURCE, INTERVAL);
   }
 
   @After
@@ -63,5 +64,14 @@ public class ClientKillUnusedSegmentsQueryTest
   public void testGetInterval()
   {
     Assert.assertEquals(INTERVAL, clientKillUnusedSegmentsQuery.getInterval());
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(ClientKillUnusedSegmentsTaskQuery.class)
+                  .usingGetClass()
+                  .withNonnullFields("id", "dataSource", "interval")
+                  .verify();
   }
 }

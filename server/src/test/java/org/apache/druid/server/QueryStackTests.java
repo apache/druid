@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.java.util.common.Pair;
@@ -68,7 +69,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.LookupJoinableFactory;
-import org.apache.druid.segment.join.MapJoinableFactoryTest;
+import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -78,6 +79,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Utilities for creating query-stack objects for tests.
@@ -303,22 +305,31 @@ public class QueryStackTests
       LookupExtractorFactoryContainerProvider lookupProvider
   )
   {
-    return makeJoinableFactoryFromDefault(lookupProvider, null);
+    return makeJoinableFactoryFromDefault(lookupProvider, null, null);
   }
 
   public static JoinableFactory makeJoinableFactoryFromDefault(
       @Nullable LookupExtractorFactoryContainerProvider lookupProvider,
-      @Nullable Map<Class<? extends DataSource>, JoinableFactory> custom
+      @Nullable Set<JoinableFactory> customFactories,
+      @Nullable Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> customMappings
   )
   {
-    ImmutableMap.Builder<Class<? extends DataSource>, JoinableFactory> builder = ImmutableMap.builder();
-    builder.put(InlineDataSource.class, new InlineJoinableFactory());
+    ImmutableSet.Builder<JoinableFactory> setBuilder = ImmutableSet.builder();
+    ImmutableMap.Builder<Class<? extends JoinableFactory>, Class<? extends DataSource>> mapBuilder =
+        ImmutableMap.builder();
+    setBuilder.add(new InlineJoinableFactory());
+    mapBuilder.put(InlineJoinableFactory.class, InlineDataSource.class);
     if (lookupProvider != null) {
-      builder.put(LookupDataSource.class, new LookupJoinableFactory(lookupProvider));
+      setBuilder.add(new LookupJoinableFactory(lookupProvider));
+      mapBuilder.put(LookupJoinableFactory.class, LookupDataSource.class);
     }
-    if (custom != null) {
-      builder.putAll(custom);
+    if (customFactories != null) {
+      setBuilder.addAll(customFactories);
     }
-    return MapJoinableFactoryTest.fromMap(builder.build());
+    if (customMappings != null) {
+      mapBuilder.putAll(customMappings);
+    }
+
+    return new MapJoinableFactory(setBuilder.build(), mapBuilder.build());
   }
 }

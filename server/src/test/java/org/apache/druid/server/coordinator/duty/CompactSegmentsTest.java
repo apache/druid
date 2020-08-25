@@ -356,7 +356,6 @@ public class CompactSegmentsTest
     private final ObjectMapper jsonMapper;
 
     private int compactVersionSuffix = 0;
-    private int idSuffix = 0;
 
     private TestDruidLeaderClient(ObjectMapper jsonMapper)
     {
@@ -434,15 +433,15 @@ public class CompactSegmentsTest
                                                  .flatMap(holder -> Streams.sequentialStreamFrom(holder.getObject()))
                                                  .map(PartitionChunk::getObject)
                                                  .collect(Collectors.toList());
-      final String taskId = compactSegments(
+      compactSegments(
           timeline,
           segments,
           compactionTaskQuery.getTuningConfig()
       );
-      return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskId)));
+      return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskQuery.getId())));
     }
 
-    private String compactSegments(
+    private void compactSegments(
         VersionedIntervalTimeline<String, DataSegment> timeline,
         List<DataSegment> segments,
         ClientCompactionTaskQueryTuningConfig tuningConfig
@@ -503,8 +502,6 @@ public class CompactSegmentsTest
             compactSegment.getShardSpec().createChunk(compactSegment)
         );
       }
-
-      return "task_" + idSuffix++;
     }
   }
 

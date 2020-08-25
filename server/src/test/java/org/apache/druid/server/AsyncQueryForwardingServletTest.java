@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -29,6 +30,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
+import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.avatica.remote.Service;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
@@ -41,6 +44,7 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
@@ -83,6 +87,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Deflater;
@@ -420,6 +426,51 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             "intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"
         )
     );
+  }
+
+  @Test
+  public void testGetAvaticaConnectionId() throws JsonProcessingException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final String query = "SELECT someColumn FROM druid.someTable WHERE someColumn IS NOT NULL";
+    final String connectionId = "000000-0000-0000-00000000";
+    final int statementId = 1337;
+    final int maxNumRows = 1000;
+
+    final List<? extends Service.Request> jsonRequests = ImmutableList.of(
+        new Service.CatalogsRequest(connectionId),
+        new Service.SchemasRequest(connectionId, "druid", null),
+        new Service.TablesRequest(connectionId, "druid", "druid", null, null),
+        new Service.ColumnsRequest(connectionId, "druid", "druid", "someTable", null),
+        new Service.PrepareAndExecuteRequest(
+            connectionId,
+            statementId,
+            query,
+            maxNumRows
+        ),
+        new Service.PrepareRequest(connectionId, query, maxNumRows),
+        new Service.ExecuteRequest(
+            new Meta.StatementHandle(connectionId, statementId, null),
+            ImmutableList.of(),
+            maxNumRows
+        ),
+        new Service.CloseStatementRequest(connectionId, statementId),
+        new Service.CloseConnectionRequest(connectionId)
+    );
+
+    for (Service.Request request : jsonRequests) {
+      final String json = mapper.writeValueAsString(request);
+      Assert.assertEquals(
+          StringUtils.format("Failed %s", json),
+          connectionId,
+          AsyncQueryForwardingServlet.getAvaticaConnectionId(asMap(json, mapper))
+      );
+    }
+  }
+
+  private static Map<String, Object> asMap(String json, ObjectMapper mapper) throws JsonProcessingException
+  {
+    return mapper.readValue(json, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
   }
 
   private static class TestServer implements org.apache.druid.client.selector.Server

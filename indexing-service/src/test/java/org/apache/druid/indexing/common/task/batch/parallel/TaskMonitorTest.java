@@ -245,7 +245,7 @@ public class TaskMonitorTest
   private class TestIndexingServiceClient extends NoopIndexingServiceClient
   {
     @Override
-    public String runTask(Object taskObject)
+    public String runTask(String taskId, Object taskObject)
     {
       final TestTask task = (TestTask) taskObject;
       tasks.put(task.getId(), TaskState.RUNNING);
