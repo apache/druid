@@ -201,12 +201,9 @@ class DependencyReportParser(HTMLParser):
             raise Exception("Unknown attr_index [{}]".format(self.attr_index))
 
     def set_license(self, data):
-        try:
-            if data.upper().find("GPL") < 0:
-                if self.license != 'Apache License version 2.0':
-                    self.license = self.compatible_license_names[data]
-        except KeyError as e:
-            print(e)
+        if data.upper().find("GPL") < 0:
+            if self.license != 'Apache License version 2.0':
+                self.license = self.compatible_license_names[data]
 
 
 def print_log_to_stderr(string):

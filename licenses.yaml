@@ -3089,9 +3089,98 @@ libraries:
   - io.confluent: kafka-schema-registry-client
   - io.confluent: common-config
   - io.confluent: common-utils
-  - com.101tec: zkclient
+
+---
+
+  name: com.101tec zkclient
+  license_category: binary
+  version: '0.10'
+  module: druid-ranger-security
+  license_name: Apache License version 2.0
+  libraries:
+    - com.101tec: zkclient
+
+---
+
+name: Kafka Client
+version: 5.5.1-ccs
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
   - org.apache.kafka: kafka-clients
 
+---
+
+  name: swagger-annotations
+  version: 1.6.0
+  license_category: binary
+  module: extensions/druid-avro-extensions
+  license_name: Apache License version 2.0
+  libraries:
+    - io.swagger: swagger-annotations
+
+---
+
+  name: jersey-common
+  version: '2.30'
+  license_category: binary
+  module: extensions/druid-avro-extensions
+  license_name: Apache License version 2.0
+  libraries:
+    - org.glassfish.jersey.core: jersey-common
+  skip_dependency_report_check: true
+
+---
+
+  name: osgi-resource-locator
+  version: 1.0.3
+  license_category: binary
+  module: extensions/druid-avro-extensions
+  license_name: Eclipse Public License 2.0
+  libraries:
+    - org.glassfish.hk2: osgi-resource-locator
+  
+---
+
+  name: jakarta.inject
+  version: 2.6.1
+  license_category: binary
+  module: extensions/druid-avro-extensions
+  license_name: Eclipse Public License 2.0
+  libraries:
+    - org.glassfish.hk2.external: jakarta.inject
+  
+---
+
+  name: jakarta.annotation
+  version: 1.3.5
+  license_category: binary
+  module: extensions/druid-avro-extensions
+  license_name: Eclipse Public License 2.0
+  libraries:
+    - jakarta.annotation: jakarta.annotation-api
+    
+---
+
+  name: javax.ws.rs-api
+  version: 2.1.1
+  license_category: binary
+  module: extensions/druid-avro-extensions
+  license_name: Eclipse Public License 2.0
+  libraries:
+    - javax.ws.rs: javax.ws.rs-api
+  
+---
+
+  name: jakarta.ws.rs-api
+  version: 2.1.6
+  license_category: binary
+  module: extensions/druid-avro-extensions
+  license_name: Eclipse Public License 2.0
+  libraries:
+    - jakarta.ws.rs: jakarta.ws.rs-api
+        
 ---
 
 name: Apache Velocity Engine
