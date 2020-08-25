@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -90,7 +90,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   /**
    * Timestamp formats that the standard __time column can be parsed with.
    */
-  private static final Set<String> STANDARD_TIME_COLUMN_FORMATS = ImmutableSet.of("millis", "__time");
+  private static final Set<String> STANDARD_TIME_COLUMN_FORMATS = ImmutableSortedSet.of("auto", "millis");
 
   private final String dataSource;
   // Exactly one of interval and segmentIds should be non-null. Typically 'interval' is specified directly
@@ -227,7 +227,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
                + "the 'druid' input source, set druid.indexer.task.ignoreTimestampSpecForDruidInputSource to false.");
 
       inputRowSchemaToUse = new InputRowSchema(
-          new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
+          new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, STANDARD_TIME_COLUMN_FORMATS.iterator().next(), null),
           inputRowSchema.getDimensionsSpec(),
           inputRowSchema.getColumnsFilter().plus(ColumnHolder.TIME_COLUMN_NAME)
       );
