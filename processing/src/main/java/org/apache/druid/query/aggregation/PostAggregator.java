@@ -52,11 +52,10 @@ public interface PostAggregator extends Cacheable
   ValueType getType();
 
   /**
-   * Returns a richer post aggregator which are built from the given aggregators with their names and some accessible
-   * environmental variables such as ones in the object scope.
-   *
-   * @param aggregators A map of aggregator factories with their names.
-   *
+   * Allows returning an enriched post aggregator, built from contextual information available from the given map of
+   * {@link AggregatorFactory} keyed by their names. Callers must call this method before calling {@link #compute} or
+   * {@link #getComparator}. This is typically done in the constructor of queries which support post aggregators, via
+   * {@link org.apache.druid.query.Queries#prepareAggregations}.
    */
   PostAggregator decorate(Map<String, AggregatorFactory> aggregators);
 }

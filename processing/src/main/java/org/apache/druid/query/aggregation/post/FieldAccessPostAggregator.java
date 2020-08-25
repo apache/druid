@@ -41,6 +41,8 @@ public class FieldAccessPostAggregator implements PostAggregator
   @Nullable
   private final String name;
   private final String fieldName;
+  // type is ignored from equals and friends because it is computed by decorate, and all post-aggs should be decorated
+  // prior to usage (and is currently done so in the query constructors of all queries which can have post-aggs)
   @Nullable
   private final ValueType type;
 
