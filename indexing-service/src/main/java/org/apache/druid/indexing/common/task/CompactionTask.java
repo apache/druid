@@ -183,8 +183,8 @@ public class CompactionTask extends AbstractBatchIndexTask
 
   @JsonCreator
   public CompactionTask(
-      @JsonProperty("id") final String id,
-      @JsonProperty("resource") final TaskResource taskResource,
+      @JsonProperty("id") @Nullable final String id,
+      @JsonProperty("resource") @Nullable final TaskResource taskResource,
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("interval") @Deprecated @Nullable final Interval interval,
       @JsonProperty("segments") @Deprecated @Nullable final List<DataSegment> segments,

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -108,6 +109,7 @@ public class IndexedTableJoinableTest
   {
     target = new IndexedTableJoinable(indexedTable);
   }
+
   @Test
   public void getAvailableColumns()
   {
@@ -137,7 +139,7 @@ public class IndexedTableJoinableTest
   {
     final ColumnCapabilities capabilities = target.getColumnCapabilities("str");
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertTrue(capabilities.isDictionaryEncoded());
+    Assert.assertTrue(capabilities.isDictionaryEncoded().isTrue());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
     Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
@@ -148,7 +150,7 @@ public class IndexedTableJoinableTest
   {
     final ColumnCapabilities capabilities = target.getColumnCapabilities("long");
     Assert.assertEquals(ValueType.LONG, capabilities.getType());
-    Assert.assertFalse(capabilities.isDictionaryEncoded());
+    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
     Assert.assertFalse(capabilities.hasBitmapIndexes());
     Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(capabilities.hasSpatialIndexes());
@@ -169,7 +171,13 @@ public class IndexedTableJoinableTest
         PREFIX,
         ExprMacroTable.nil()
     );
-    final JoinMatcher joinMatcher = target.makeJoinMatcher(dummyColumnSelectorFactory, condition, false);
+    final JoinMatcher joinMatcher = target.makeJoinMatcher(
+        dummyColumnSelectorFactory,
+        condition,
+        false,
+        false,
+        Closer.create()
+    );
 
     final DimensionSelector selector = joinMatcher.getColumnSelectorFactory()
                                                   .makeDimensionSelector(DefaultDimensionSpec.of("str"));

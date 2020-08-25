@@ -340,7 +340,7 @@ public class GroupByQueryEngineV2
 
               // Now check column capabilities.
               final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues().isMaybeTrue()) ||
+              return (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse()) ||
                      (missingMeansNonExistent && columnCapabilities == null);
             });
   }

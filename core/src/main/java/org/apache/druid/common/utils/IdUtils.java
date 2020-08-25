@@ -19,11 +19,18 @@
 
 package org.apache.druid.common.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,5 +74,45 @@ public class IdUtils
   public static String getRandomIdWithPrefix(String prefix)
   {
     return UNDERSCORE_JOINER.join(prefix, IdUtils.getRandomId());
+  }
+
+  public static String newTaskId(String typeName, String dataSource, @Nullable Interval interval)
+  {
+    return newTaskId(null, typeName, dataSource, interval);
+  }
+
+  public static String newTaskId(@Nullable String idPrefix, String typeName, String dataSource, @Nullable Interval interval)
+  {
+    return newTaskId(idPrefix, getRandomId(), DateTimes.nowUtc(), typeName, dataSource, interval);
+  }
+
+  /**
+   * This method is only visible to outside only for testing.
+   * Use {@link #newTaskId(String, String, Interval)} or {@link #newTaskId(String, String, String, Interval)} instead.
+   */
+  @VisibleForTesting
+  static String newTaskId(
+      @Nullable String idPrefix,
+      String idSuffix,
+      DateTime now,
+      String typeName,
+      String dataSource,
+      @Nullable Interval interval
+  )
+  {
+    final List<String> objects = new ArrayList<>();
+    if (idPrefix != null) {
+      objects.add(idPrefix);
+    }
+    objects.add(typeName);
+    objects.add(dataSource);
+    objects.add(idSuffix);
+    if (interval != null) {
+      objects.add(interval.getStart().toString());
+      objects.add(interval.getEnd().toString());
+    }
+    objects.add(now.toString());
+
+    return String.join("_", objects);
   }
 }

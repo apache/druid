@@ -238,7 +238,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               retryPolicyFactory,
               dataSource,
               interval,
-              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
+              splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
           )
       );
     } else {
@@ -258,7 +258,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               retryPolicyFactory,
               dataSource,
               interval,
-              splitHintSpec == null ? new MaxSizeSplitHintSpec(null) : splitHintSpec
+              splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
           )
       );
     } else {
@@ -299,8 +299,10 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   {
     final SplitHintSpec convertedSplitHintSpec;
     if (splitHintSpec instanceof SegmentsSplitHintSpec) {
+      final SegmentsSplitHintSpec segmentsSplitHintSpec = (SegmentsSplitHintSpec) splitHintSpec;
       convertedSplitHintSpec = new MaxSizeSplitHintSpec(
-          ((SegmentsSplitHintSpec) splitHintSpec).getMaxInputSegmentBytesPerTask()
+          segmentsSplitHintSpec.getMaxInputSegmentBytesPerTask(),
+          segmentsSplitHintSpec.getMaxNumSegments()
       );
     } else {
       convertedSplitHintSpec = splitHintSpec;

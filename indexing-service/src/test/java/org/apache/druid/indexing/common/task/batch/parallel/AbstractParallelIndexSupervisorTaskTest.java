@@ -239,7 +239,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        new MaxSizeSplitHintSpec(1L), // set maxSplitSize to 1 so that each split has only one file.
+        new MaxSizeSplitHintSpec(null, 1),
         partitionsSpec,
         null,
         null,
@@ -454,7 +454,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public String runTask(Object taskObject)
+    public String runTask(String taskId, Object taskObject)
     {
       final Task task = (Task) taskObject;
       return taskRunner.run(injectIfNeeded(task));

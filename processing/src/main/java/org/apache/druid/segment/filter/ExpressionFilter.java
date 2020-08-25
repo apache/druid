@@ -115,7 +115,7 @@ public class ExpressionFilter implements Filter
       // multiple values. The lack of multiple values is important because expression filters treat multi-value
       // arrays as nulls, which doesn't permit index based filtering.
       final String column = Iterables.getOnlyElement(requiredBindings.get());
-      return selector.getBitmapIndex(column) != null && !selector.hasMultipleValues(column).isMaybeTrue();
+      return selector.getBitmapIndex(column) != null && selector.hasMultipleValues(column).isFalse();
     } else {
       // Multi-column expression.
       return false;
