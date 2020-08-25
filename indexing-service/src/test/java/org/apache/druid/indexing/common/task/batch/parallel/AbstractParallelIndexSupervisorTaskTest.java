@@ -203,7 +203,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             false,
             null,
             null,
-            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null))
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
+            false
         ),
         null
     );
