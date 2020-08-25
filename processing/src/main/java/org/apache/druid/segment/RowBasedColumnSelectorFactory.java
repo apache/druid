@@ -102,15 +102,22 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
 
       // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
       // Do not set hasMultipleValues, because even though we might return multiple values, setting it affirmatively
-      // causes expression selectors to always treat us as arrays, so leave as unknown.
+      // causes expression selectors to always treat us as arrays, so leave as unknown, unless we know it is explictly
+      // an array type
       if (valueType != null) {
         if (valueType.isNumeric()) {
           return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
         }
-        return new ColumnCapabilitiesImpl()
+
+        ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl()
             .setType(valueType)
             .setDictionaryValuesUnique(false)
             .setDictionaryValuesSorted(false);
+
+        if (valueType.isArray()) {
+          capabilities.setHasMultipleValues(true);
+        }
+        return capabilities;
       } else {
         return null;
       }

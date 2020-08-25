@@ -98,6 +98,14 @@ public enum ValueType
   }
 
   /**
+   * Type is an array type
+   */
+  public boolean isArray()
+  {
+    return isArray(this);
+  }
+
+  /**
    * Type is a 'primitive' type, which includes the {@link #isNumeric} types and {@link #STRING}, but not
    * {@link #COMPLEX} or array types.
    *
@@ -122,5 +130,10 @@ public enum ValueType
   public static boolean isNumeric(ValueType type)
   {
     return type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE;
+  }
+
+  public static boolean isArray(ValueType type)
+  {
+    return type == ValueType.DOUBLE_ARRAY || type == ValueType.LONG_ARRAY || type == ValueType.STRING_ARRAY;
   }
 }
