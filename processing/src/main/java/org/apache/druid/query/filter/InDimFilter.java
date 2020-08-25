@@ -34,6 +34,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -75,7 +76,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
@@ -147,10 +147,15 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     // The values set can be huge. Try to avoid copying the set if possible.
     // Note that we may still need to copy values to a list for caching. See getCacheKey().
-    if ((NullHandling.sqlCompatible() || values.stream().noneMatch(NullHandling::needsEmptyToNull))) {
-      this.values = values;
+    if (!NullHandling.sqlCompatible() && values.contains("")) {
+      // In Non sql compatible mode, empty strings should be converted to nulls for the filter.
+      // In sql compatible mode, empty strings and nulls should be treated differently
+      this.values = Sets.newHashSetWithExpectedSize(values.size());
+      for (String v : values) {
+        this.values.add(NullHandling.emptyToNullIfNeeded(v));
+      }
     } else {
-      this.values = values.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toSet());
+      this.values = values;
     }
 
     this.dimension = Preconditions.checkNotNull(dimension, "dimension cannot be null");

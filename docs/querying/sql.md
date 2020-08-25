@@ -226,6 +226,13 @@ Grouping by a multi-value expression will observe the native Druid multi-value a
 the `UNNEST` functionality available in some other SQL dialects. Refer to the documentation on
 [multi-value string dimensions](multi-value-dimensions.html) for additional details.
 
+> Because multi-value dimensions are treated by the SQL planner as `VARCHAR`, there are some inconsistencies between how
+> they are handled in Druid SQL and in native queries. For example, expressions involving multi-value dimensions may be
+> incorrectly optimized by the Druid SQL planner: `multi_val_dim = 'a' AND multi_val_dim = 'b'` will be optimized to
+> `false`, even though it is possible for a single row to have both "a" and "b" as values for `multi_val_dim`. The
+> SQL behavior of multi-value dimensions will change in a future release to more closely align with their behavior
+> in native queries.
+
 ### NULL values
 
 The `druid.generic.useDefaultValueForNull` [runtime property](../configuration/index.html#sql-compatible-null-handling)
@@ -747,10 +754,13 @@ Druid does not support all SQL features. In particular, the following features a
 Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features
 include:
 
-- [Union datasources](datasource.html#union)
-- [Inline datasources](datasource.html#inline)
+- [Union datasources](datasource.html#union).
+- [Inline datasources](datasource.html#inline).
 - [Spatial filters](../development/geo.html).
 - [Query cancellation](querying.html#query-cancellation).
+- [Multi-value dimensions](#multi-value-strings) are only partially implemented in Druid SQL. There are known
+inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
+the SQL planner.
 
 ## Client APIs
 
