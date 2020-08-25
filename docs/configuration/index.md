@@ -1901,12 +1901,6 @@ Supported query contexts:
 |`maxResults`|Can be used to lower the value of `druid.query.groupBy.maxResults` for this query.|None|
 |`useOffheap`|Set to true to store aggregations off-heap when merging results.|false|
 
-#### Filter configurations configurations
-
-|Key|Description|Default|
-|---|-----------|-------|
-|`druid.query.filter.inDimFilter.numericHashingThreshold`|The threshold at which the engine should use a `Set` to check whether the value matches the filter. If the number of values in the filter is less than the threshold, the engine will use a binary search algorithm to determine if a value matches the filter.|1|
-
 ### Router
 
 #### Router Process Configs
