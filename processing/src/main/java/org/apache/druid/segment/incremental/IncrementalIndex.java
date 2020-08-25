@@ -1122,7 +1122,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       if (valueType.isNumeric()) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
         this.type = valueType.toString();
-      } else if (ValueType.COMPLEX.equals(valueType)){
+      } else if (ValueType.COMPLEX.equals(valueType)) {
         capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
                                              .setHasNulls(ColumnCapabilities.Capable.TRUE);
         String complexTypeName = factory.getComplexTypeName();
