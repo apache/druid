@@ -625,7 +625,8 @@ public class CompactionTask extends AbstractBatchIndexTask
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,
-            retryPolicyFactory
+            retryPolicyFactory,
+            toolbox.getConfig()
         ),
         null,
         false

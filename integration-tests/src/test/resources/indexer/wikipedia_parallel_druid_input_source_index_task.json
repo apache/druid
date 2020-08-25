@@ -10,8 +10,8 @@
         ]
       },
       "timestampSpec": {
-        "column": "__time",
-        "format": "millis"
+        "column": "ignored-see-ignoreTimestampSpecForDruidInputSource",
+        "format": "iso"
       },
       "metricsSpec": [
         {

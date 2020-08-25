@@ -52,11 +52,29 @@ public class ColumnsFilterTest
   }
 
   @Test
+  public void testInclusionBasedPlus()
+  {
+    Assert.assertEquals(
+        ColumnsFilter.inclusionBased(ImmutableSet.of("a", "b", "c")),
+        ColumnsFilter.inclusionBased(ImmutableSet.of("b", "c")).plus("a").plus("c")
+    );
+  }
+
+  @Test
   public void testExclusionBased()
   {
     Assert.assertEquals(
         ImmutableList.of("a", "c"),
         apply(ColumnsFilter.exclusionBased(ImmutableSet.of("b")), COLUMNS)
+    );
+  }
+
+  @Test
+  public void testExclusionBasedPlus()
+  {
+    Assert.assertEquals(
+        ColumnsFilter.exclusionBased(ImmutableSet.of("b")),
+        ColumnsFilter.exclusionBased(ImmutableSet.of("b", "c")).plus("a").plus("c")
     );
   }
 

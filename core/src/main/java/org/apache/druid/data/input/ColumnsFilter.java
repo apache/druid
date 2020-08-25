@@ -20,6 +20,7 @@
 package org.apache.druid.data.input;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -64,6 +65,12 @@ public abstract class ColumnsFilter
    */
   public abstract boolean apply(String column);
 
+  /**
+   * Returns a new filter with a particular column added. The returned filter will return true from {@link #apply}
+   * on this column.
+   */
+  public abstract ColumnsFilter plus(final String column);
+
   public static class InclusionBased extends ColumnsFilter
   {
     private final Set<String> inclusions;
@@ -77,6 +84,18 @@ public abstract class ColumnsFilter
     public boolean apply(String column)
     {
       return inclusions.contains(column);
+    }
+
+    @Override
+    public ColumnsFilter plus(String column)
+    {
+      if (inclusions.contains(column)) {
+        return this;
+      } else {
+        final Set<String> copy = new HashSet<>(inclusions);
+        copy.add(column);
+        return new InclusionBased(copy);
+      }
     }
 
     @Override
@@ -120,6 +139,18 @@ public abstract class ColumnsFilter
     public boolean apply(String column)
     {
       return !exclusions.contains(column);
+    }
+
+    @Override
+    public ColumnsFilter plus(String column)
+    {
+      if (!exclusions.contains(column)) {
+        return this;
+      } else {
+        final Set<String> copy = new HashSet<>(exclusions);
+        copy.remove(column);
+        return new ExclusionBased(copy);
+      }
     }
 
     @Override

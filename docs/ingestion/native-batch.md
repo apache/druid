@@ -1329,6 +1329,11 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 }
 ```
 
+> Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
+> have ingestion specs that rely on this and cannot rewrite them, set
+> [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
+> to `true` to enable a compatibility mode where the timestampSpec is ignored.
+
 ### SQL Input Source
 
 The SQL input source is used to read data directly from RDBMS.

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
@@ -39,9 +40,11 @@ import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -49,6 +52,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -68,6 +72,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -82,6 +87,11 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 {
   private static final Logger LOG = new Logger(DruidInputSource.class);
 
+  /**
+   * Timestamp formats that the standard __time column can be parsed with.
+   */
+  private static final Set<String> STANDARD_TIME_COLUMN_FORMATS = ImmutableSet.of("millis", "__time");
+
   private final String dataSource;
   // Exactly one of interval and segmentIds should be non-null. Typically 'interval' is specified directly
   // by the user creating this firehose and 'segmentIds' is used for sub-tasks if it is split for parallel
@@ -95,6 +105,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final RetryPolicyFactory retryPolicyFactory;
+  private final TaskConfig taskConfig;
 
   /**
    * Included for serde backwards-compatibility only. Not used.
@@ -119,7 +130,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       @JacksonInject IndexIO indexIO,
       @JacksonInject CoordinatorClient coordinatorClient,
       @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
-      @JacksonInject RetryPolicyFactory retryPolicyFactory
+      @JacksonInject RetryPolicyFactory retryPolicyFactory,
+      @JacksonInject TaskConfig taskConfig
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -136,6 +148,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
     this.segmentLoaderFactory = Preconditions.checkNotNull(segmentLoaderFactory, "null SegmentLoaderFactory");
     this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
+    this.taskConfig = Preconditions.checkNotNull(taskConfig, "null taskConfig");
   }
 
   @JsonProperty
@@ -206,8 +219,35 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     final DruidSegmentInputFormat inputFormat = new DruidSegmentInputFormat(indexIO, dimFilter);
 
+    final InputRowSchema inputRowSchemaToUse;
+
+    if (taskConfig.isIgnoreTimestampSpecForDruidInputSource()) {
+      // Legacy compatibility mode; see https://github.com/apache/druid/pull/10267.
+      LOG.warn("Ignoring the provided timestampSpec and reading the __time column instead. To use timestampSpecs with "
+               + "the 'druid' input source, set druid.indexer.task.ignoreTimestampSpecForDruidInputSource to false.");
+
+      inputRowSchemaToUse = new InputRowSchema(
+          new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
+          inputRowSchema.getDimensionsSpec(),
+          inputRowSchema.getColumnsFilter().plus(ColumnHolder.TIME_COLUMN_NAME)
+      );
+    } else {
+      inputRowSchemaToUse = inputRowSchema;
+    }
+
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(inputRowSchemaToUse.getTimestampSpec().getTimestampColumn())
+        && !STANDARD_TIME_COLUMN_FORMATS.contains(inputRowSchemaToUse.getTimestampSpec().getTimestampFormat())) {
+      // Slight chance the user did this intentionally, but not likely. Log a warning.
+      LOG.warn(
+          "The provided timestampSpec refers to the %s column without using format %s. If you wanted to read the "
+          + "column as-is, switch formats.",
+          inputRowSchemaToUse.getTimestampSpec().getTimestampColumn(),
+          STANDARD_TIME_COLUMN_FORMATS
+      );
+    }
+
     return new InputEntityIteratingReader(
-        inputRowSchema,
+        inputRowSchemaToUse,
         inputFormat,
         entityIterator,
         temporaryDirectory
@@ -279,7 +319,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         indexIO,
         coordinatorClient,
         segmentLoaderFactory,
-        retryPolicyFactory
+        retryPolicyFactory,
+        taskConfig
     );
   }
 
