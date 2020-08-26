@@ -19,9 +19,7 @@
 
 package org.apache.druid.query.planning;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -38,7 +36,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Analysis of a datasource for purposes of deciding how to execute a particular query.
@@ -179,27 +176,29 @@ public class DataSourceAnalysis
   }
 
   /**
-   * If {@link #getBaseDataSource()} is a {@link TableDataSource}, returns it. If it's a {@link UnionDataSource} of
-   * {@link TableDataSource}, returns the list of tables. Otherwise, returns an empty Optional.
+   * If {@link #getBaseDataSource()} is a {@link TableDataSource}, returns it. Otherwise, returns an empty Optional.
    *
-   * This returns nonempty if, and only if, {@link #isConcreteTableBased()} is true.
+   * Note that this can return empty even if {@link #isConcreteTableBased()} is true. This happens if the base
+   * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
    */
-  public Optional<List<TableDataSource>> getBaseTableDataSources()
+  public Optional<TableDataSource> getBaseTableDataSource()
   {
-    if (!isConcreteTableBased()) {
-      return Optional.empty();
-    } else if (baseDataSource instanceof TableDataSource) {
-      return Optional.of(ImmutableList.of((TableDataSource) baseDataSource));
-    } else if (baseDataSource instanceof UnionDataSource) {
-      return Optional.of(
-          baseDataSource.getChildren()
-                        .stream()
-                        .map(o -> (TableDataSource) o)
-                        .collect(Collectors.toList())
-      );
+    if (baseDataSource instanceof TableDataSource) {
+      return Optional.of((TableDataSource) baseDataSource);
     } else {
-      // We don't expect to actually see this message, due to the isConcreteTableBased check above.
-      throw new ISE("Expected 'table' or 'union' datasource");
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * If {@link #getBaseDataSource()} is a {@link UnionDataSource}, returns it. Otherwise, returns an empty Optional.
+   */
+  public Optional<UnionDataSource> getBaseUnionDataSource()
+  {
+    if (baseDataSource instanceof UnionDataSource) {
+      return Optional.of((UnionDataSource) baseDataSource);
+    } else {
+      return Optional.empty();
     }
   }
 
@@ -258,8 +257,8 @@ public class DataSourceAnalysis
 
   /**
    * Returns true if this datasource is concrete-based (see {@link #isConcreteBased()}, and the base datasource is a
-   * 'table' or union of them. This is an important property because it corresponds to datasources that can be handled
-   * by Druid data servers, like Historicals.
+   * {@link TableDataSource} or a {@link UnionDataSource} composed entirely of {@link TableDataSource}. This is an
+   * important property, because it corresponds to datasources that can be handled by Druid's distributed query stack.
    */
   public boolean isConcreteTableBased()
   {
@@ -267,10 +266,11 @@ public class DataSourceAnalysis
     // check is redundant. But in the future, we will likely want to support unions of things other than tables,
     // so check anyway for future-proofing.
     return isConcreteBased() && (baseDataSource instanceof TableDataSource
-                                 || (baseDataSource instanceof UnionDataSource &&
-                                     baseDataSource.getChildren()
-                                                   .stream()
-                                                   .allMatch(ds -> ds instanceof TableDataSource)));
+                                 || (baseDataSource instanceof UnionDataSource
+                                     && baseDataSource.getChildren().size() > 0
+                                     && baseDataSource.getChildren()
+                                                      .stream()
+                                                      .allMatch(ds -> ds instanceof TableDataSource)));
   }
 
   /**

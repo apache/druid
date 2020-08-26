@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -51,7 +50,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -335,11 +333,8 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
       final Task task = runningItem.getTask();
 
-      // Expecting a query with a single base table.
-      final TableDataSource table =
-          Iterables.getOnlyElement(analysis.getBaseTableDataSources().orElse(Collections.emptyList()));
-
-      if (task.getDataSource().equals(table.getName())) {
+      if (analysis.getBaseTableDataSource().isPresent()
+          && task.getDataSource().equals(analysis.getBaseTableDataSource().get().getName())) {
         final QueryRunner<T> taskQueryRunner = task.getQueryRunner(query);
 
         if (taskQueryRunner != null) {

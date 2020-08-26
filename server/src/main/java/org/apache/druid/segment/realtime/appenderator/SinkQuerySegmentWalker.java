@@ -51,7 +51,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -67,8 +66,6 @@ import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -149,12 +146,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-    final List<TableDataSource> tables = analysis.getBaseTableDataSources().orElse(Collections.emptyList());
 
-    if (tables.size() != 1 || !dataSource.equals(Iterables.getOnlyElement(tables).getName())) {
-      // Report error, since we somehow got a query for a datasource we can't handle.
-      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
-    }
+    // Sanity check: make sure the query is based on the table we're meant to handle.
+    analysis.getBaseTableDataSource()
+            .filter(ds -> dataSource.equals(ds.getName()))
+            .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {

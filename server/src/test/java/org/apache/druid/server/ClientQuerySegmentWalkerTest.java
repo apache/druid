@@ -409,6 +409,39 @@ public class ClientQuerySegmentWalkerTest
   }
 
   @Test
+  public void testGroupByOnUnionOfOneTable()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(
+                                       new UnionDataSource(ImmutableList.of(new TableDataSource(FOO)))
+                                   )
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Intervals.ONLY_ETERNITY)
+                                   .setDimensions(DefaultDimensionSpec.of("s"))
+                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+                                   .build()
+                                   .withId(UUID.randomUUID().toString());
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            ExpectedQuery.cluster(query.withDataSource(new TableDataSource(FOO)))
+        ),
+        ImmutableList.of(
+            new Object[]{"x", 2L},
+            new Object[]{"y", 1L},
+            new Object[]{"z", 1L}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
   public void testJoinOnGroupByOnTable()
   {
     final GroupByQuery subquery =

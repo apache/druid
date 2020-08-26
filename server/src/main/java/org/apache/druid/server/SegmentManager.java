@@ -20,7 +20,6 @@
 package org.apache.druid.server;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -45,8 +44,6 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -208,13 +205,8 @@ public class SegmentManager
 
   private TableDataSource getTableDataSource(DataSourceAnalysis analysis)
   {
-    final List<TableDataSource> tables = analysis.getBaseTableDataSources().orElse(Collections.emptyList());
-
-    if (tables.size() == 1) {
-      return Iterables.getOnlyElement(tables);
-    } else {
-      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
-    }
+    return analysis.getBaseTableDataSource()
+                   .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
   }
 
   /**

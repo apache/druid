@@ -161,10 +161,8 @@ public class Queries
     // Verify preconditions and invariants, just in case.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
 
-    List<TableDataSource> tables = analysis.getBaseTableDataSources().orElse(Collections.emptyList());
-
-    // Must have exactly one table.
-    if (tables.size() != 1) {
+    // Sanity check: query must be based on a single table.
+    if (!analysis.getBaseTableDataSource().isPresent()) {
       throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
     }
 
