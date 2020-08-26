@@ -29,11 +29,11 @@ import java.util.Map;
  * This is used to get [secure] configuration in various places in an extensible way.
  */
 @ExtensionPoint
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MapBasedDynamicConfigProvider.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MapStringDynamicConfigProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "map", value = MapBasedDynamicConfigProvider.class),
+    @JsonSubTypes.Type(name = "mapString", value = MapStringDynamicConfigProvider.class),
 })
-public interface DynamicConfigProvider
+public interface DynamicConfigProvider<T>
 {
-  Map<String, String> getConfig();
+  Map<String, T> getConfig();
 }

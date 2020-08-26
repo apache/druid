@@ -209,6 +209,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       }
     }
 
+    // Additional DynamicConfigProvider based extensible support for all consumer properties
     Object dynamicConfigProviderJson = consumerProperties.get(KafkaSupervisorIOConfig.DRUID_DYNAMIC_CONFIG_PROVIDER_KEY);
     if (dynamicConfigProviderJson != null) {
       DynamicConfigProvider dynamicConfigProvider = configMapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);

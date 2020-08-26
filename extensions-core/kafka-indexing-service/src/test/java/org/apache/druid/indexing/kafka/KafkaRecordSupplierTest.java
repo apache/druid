@@ -30,7 +30,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
-import org.apache.druid.metadata.MapBasedDynamicConfigProvider;
+import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.druid.segment.TestHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -589,7 +589,7 @@ public class KafkaRecordSupplierTest
   @Test
   public void testAddConsumerPropertiesFromConfig()
   {
-    DynamicConfigProvider dynamicConfigProvider = new MapBasedDynamicConfigProvider(
+    DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
         ImmutableMap.of("kafka.prop.2", "value.2", KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY, "pwd2")
     );
 

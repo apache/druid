@@ -19,29 +19,26 @@
 
 package org.apache.druid.metadata;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.util.Map;
-
-public class MapBasedDynamicConfigProvider implements DynamicConfigProvider
+public class MapStringDynamicConfigProviderTest
 {
-  private final ImmutableMap<String, String> config;
-
-  @JsonCreator
-  public MapBasedDynamicConfigProvider(
-      @JsonProperty("config") Map<String, String> config
-  )
+  @Test
+  public void testSerde() throws Exception
   {
-    this.config = ImmutableMap.copyOf(config);
-  }
+    DynamicConfigProvider<String> original = new MapStringDynamicConfigProvider(ImmutableMap.of("k", "v"));
 
+    ObjectMapper jsonMapper = new ObjectMapper();
 
-  @Override
-  @JsonProperty
-  public Map<String, String> getConfig()
-  {
-    return config;
+    MapStringDynamicConfigProvider recreated = (MapStringDynamicConfigProvider) jsonMapper.readValue(
+        jsonMapper.writeValueAsString(original),
+        DynamicConfigProvider.class
+    );
+
+    Assert.assertEquals(1, recreated.getConfig().size());
+    Assert.assertEquals("v", recreated.getConfig().get("k"));
   }
 }
