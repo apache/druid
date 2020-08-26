@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.DirectDruidClient;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -1022,6 +1023,58 @@ public class ClientQuerySegmentWalkerTest
             new Object[]{946684800000L, "6.0", 3L},
             new Object[]{946684800000L, "1.0", 1L}
         )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTimeseriesOnArrays()
+  {
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(ARRAY)
+                                .granularity(Granularities.ALL)
+                                .intervals(Collections.singletonList(INTERVAL))
+                                .aggregators(new LongSumAggregatorFactory("sum", "al"))
+                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .build()
+                                .withId(UUID.randomUUID().toString());
+
+    // sum doesn't know what to do with an array, so gets 0
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTimeseriesOnArraysUnknown()
+  {
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(ARRAY_UNKNOWN)
+                                .granularity(Granularities.ALL)
+                                .intervals(Collections.singletonList(INTERVAL))
+                                .aggregators(new LongSumAggregatorFactory("sum", "al"))
+                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .build()
+                                .withId(UUID.randomUUID().toString());
+
+    // sum doesn't know what to do with an array also if type is null, so gets 0
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
