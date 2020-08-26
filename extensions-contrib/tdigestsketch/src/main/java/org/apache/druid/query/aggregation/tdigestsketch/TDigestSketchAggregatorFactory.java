@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -211,9 +212,24 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return TYPE_NAME;
+  }
+
+  /**
+   * actual type is {@link MergingDigest}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override
@@ -295,5 +311,4 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
            + ", compression=" + compression
            + "}";
   }
-
 }

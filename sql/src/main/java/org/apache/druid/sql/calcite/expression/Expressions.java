@@ -470,7 +470,7 @@ public class Expressions
         final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             druidExpression,
-            operand.getType().getSqlTypeName()
+            operand.getType()
         );
 
         equalFilter = new SelectorDimFilter(
@@ -559,7 +559,7 @@ public class Expressions
         VirtualColumn virtualLhs = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             lhsExpression,
-            lhs.getType().getSqlTypeName()
+            lhs.getType()
         );
 
         column = virtualLhs.getOutputName();
@@ -607,7 +607,7 @@ public class Expressions
       }
 
       // Numeric lhs needs a numeric comparison.
-      final StringComparator comparator = Calcites.getStringComparatorForSqlTypeName(lhs.getType().getSqlTypeName());
+      final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
       final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
       final DimFilter filter;
 
