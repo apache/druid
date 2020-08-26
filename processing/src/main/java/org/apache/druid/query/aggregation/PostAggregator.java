@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Cacheable;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -44,11 +45,17 @@ public interface PostAggregator extends Cacheable
   String getName();
 
   /**
-   * Returns a richer post aggregator which are built from the given aggregators with their names and some accessible
-   * environmental variables such as ones in the object scope.
-   *
-   * @param aggregators A map of aggregator factories with their names.
-   *
+   * Return the output type of a row processed with this post aggregator. Refer to the {@link ValueType} javadocs
+   * for details on the implications of choosing a type.
+   */
+  @Nullable
+  ValueType getType();
+
+  /**
+   * Allows returning an enriched post aggregator, built from contextual information available from the given map of
+   * {@link AggregatorFactory} keyed by their names. Callers must call this method before calling {@link #compute} or
+   * {@link #getComparator}. This is typically done in the constructor of queries which support post aggregators, via
+   * {@link org.apache.druid.query.Queries#prepareAggregations}.
    */
   PostAggregator decorate(Map<String, AggregatorFactory> aggregators);
 }

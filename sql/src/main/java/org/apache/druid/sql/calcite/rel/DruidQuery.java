@@ -390,8 +390,8 @@ public class DruidQuery
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
 
-      final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-      final ValueType outputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      final RelDataType dataType = rexNode.getType();
+      final ValueType outputType = Calcites.getValueTypeForRelDataType(dataType);
       if (outputType == null || outputType == ValueType.COMPLEX) {
         // Can't group on unknown or COMPLEX types.
         throw new CannotBuildQueryException(aggregate, rexNode);
@@ -405,7 +405,7 @@ public class DruidQuery
         virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             plannerContext,
             druidExpression,
-            sqlTypeName
+            dataType
         );
         dimensions.add(DimensionExpression.ofVirtualColumn(
             virtualColumn.getOutputName(),
