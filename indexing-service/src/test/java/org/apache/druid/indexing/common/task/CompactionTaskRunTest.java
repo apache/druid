@@ -262,15 +262,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
-        rowIngestionMetersFactory,
-        indexingServiceClient,
-        coordinatorClient,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        appenderatorsManager
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask compactionTask = builder
