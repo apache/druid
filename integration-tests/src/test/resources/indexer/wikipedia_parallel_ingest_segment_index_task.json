@@ -61,7 +61,7 @@
       "forceGuaranteedRollup": "%%FORCE_GUARANTEED_ROLLUP%%",
       "splitHintSpec": {
         "type": "maxSize",
-        "maxSplitSize": 1
+        "maxNumFiles": 1
       },
       "partitionsSpec": %%PARTITIONS_SPEC%%
     }

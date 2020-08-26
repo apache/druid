@@ -104,8 +104,6 @@ import java.util.stream.Stream;
 
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
-  private volatile DateTime maxIngestedEventTime;
-
   // Used to discover ValueType based on the class of values in a row
   // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
   public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
@@ -259,6 +257,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   // This is modified on add() in a critical section.
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
+
+  private volatile DateTime maxIngestedEventTime;
+
 
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
@@ -480,10 +481,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  public boolean isRollup()
-  {
-    return rollup;
-  }
 
   public abstract FactsHolder getFacts();
 
@@ -576,6 +573,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       return parseExceptionMessages;
     }
+  }
+
+  public boolean isRollup()
+  {
+    return rollup;
   }
 
   @Override
@@ -932,16 +934,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type, String typeName)
   {
-    if (type == ValueType.STRING) {
-      // we start out as not having multiple values, but this might change as we encounter them
-      return new ColumnCapabilitiesImpl().setType(type)
-                                         .setTypeName(typeName)
-                                         .setHasBitmapIndexes(true)
-                                         .setDictionaryEncoded(true)
-                                         .setDictionaryValuesUnique(true)
-                                         .setDictionaryValuesSorted(false);
-    } else {
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setTypeName(typeName);
+    switch (type) {
+      case STRING:
+        // we start out as not having multiple values, but this might change as we encounter them
+        return new ColumnCapabilitiesImpl().setType(type)
+                                           .setHasBitmapIndexes(true)
+                                           .setDictionaryEncoded(true)
+                                           .setDictionaryValuesUnique(true)
+                                           .setDictionaryValuesSorted(false);
+      case COMPLEX:
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true).setTypeName(typeName);
+      default:
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }
   }
 
@@ -1149,7 +1153,8 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         this.type = typeInfo;
       } else {
         // in an ideal world complex type reports its actual column capabilities...
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX);
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
+                                             .setHasNulls(ColumnCapabilities.Capable.TRUE);
         this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
       }
     }
