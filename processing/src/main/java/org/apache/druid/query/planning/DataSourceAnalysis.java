@@ -266,11 +266,10 @@ public class DataSourceAnalysis
     // check is redundant. But in the future, we will likely want to support unions of things other than tables,
     // so check anyway for future-proofing.
     return isConcreteBased() && (baseDataSource instanceof TableDataSource
-                                 || (baseDataSource instanceof UnionDataSource
-                                     && baseDataSource.getChildren().size() > 0
-                                     && baseDataSource.getChildren()
-                                                      .stream()
-                                                      .allMatch(ds -> ds instanceof TableDataSource)));
+                                 || (baseDataSource instanceof UnionDataSource &&
+                                     baseDataSource.getChildren()
+                                                   .stream()
+                                                   .allMatch(ds -> ds instanceof TableDataSource)));
   }
 
   /**
