@@ -34,7 +34,12 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
@@ -42,11 +47,13 @@ import org.apache.druid.segment.loading.NoopDataSegmentMover;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -145,6 +152,21 @@ public class SingleTaskBackgroundRunnerTest
         TaskState.SUCCESS,
         runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
     );
+  }
+
+  @Test
+  public void testGetQueryRunner() throws ExecutionException, InterruptedException
+  {
+    runner.run(new NoopTask(null, null, "foo", 500L, 0, null, null, null)).get().getStatusCode();
+
+    final QueryRunner<ScanResultValue> queryRunner =
+        Druids.newScanQueryBuilder()
+              .dataSource("foo")
+              .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+              .build()
+              .getRunner(runner);
+
+    Assert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
   }
 
   @Test

@@ -307,12 +307,12 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(final DataSourceAnalysis analysis)
   {
-    final TableDataSource tableDataSource =
+    final TableDataSource table =
         analysis.getBaseTableDataSource()
                 .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
 
     synchronized (lock) {
-      return Optional.ofNullable(timelines.get(tableDataSource.getName()));
+      return Optional.ofNullable(timelines.get(table.getName()));
     }
   }
 

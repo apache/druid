@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 
 import java.util.Collections;
@@ -160,6 +161,7 @@ public class Queries
     // Verify preconditions and invariants, just in case.
     final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
 
+    // Sanity check: query must be based on a single table.
     if (!analysis.getBaseTableDataSource().isPresent()) {
       throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
     }
@@ -168,6 +170,47 @@ public class Queries
         && !analysis.getBaseQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
       // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
       throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
+    }
+
+    return retVal;
+  }
+
+  /**
+   * Rewrite "query" to refer to some specific base datasource, instead of the one it currently refers to.
+   *
+   * Unlike the seemingly-similar {@link Query#withDataSource}, this will walk down the datasource tree and replace
+   * only the base datasource (in the sense defined in {@link DataSourceAnalysis}).
+   */
+  public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
+  {
+    final Query<T> retVal;
+
+    if (query.getDataSource() instanceof QueryDataSource) {
+      final Query<?> subQuery = ((QueryDataSource) query.getDataSource()).getQuery();
+      retVal = query.withDataSource(new QueryDataSource(withBaseDataSource(subQuery, newBaseDataSource)));
+    } else {
+      final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+
+      DataSource current = newBaseDataSource;
+
+      for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
+        current = JoinDataSource.create(
+            current,
+            clause.getDataSource(),
+            clause.getPrefix(),
+            clause.getCondition(),
+            clause.getJoinType()
+        );
+      }
+
+      retVal = query.withDataSource(current);
+    }
+
+    // Verify postconditions, just in case.
+    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
+
+    if (!newBaseDataSource.equals(analysis.getBaseDataSource())) {
+      throw new ISE("Unable to replace base dataSource");
     }
 
     return retVal;
