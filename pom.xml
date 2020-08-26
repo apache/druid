@@ -923,6 +923,12 @@
                 <version>0.9.0</version>
             </dependency>
             <dependency>
+                <groupId>me.lemire.integercompression</groupId>
+                <artifactId>JavaFastPFOR</artifactId>
+                <version>0.1.11</version>
+                <!--<version>0.1.12-SNAPSHOT</version>-->
+            </dependency>
+            <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
                 <version>7.1</version>

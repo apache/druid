@@ -54,10 +54,12 @@ import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.data.ShapeShiftingColumnarIntsSerializer;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarMultiIntsSerializer;
+import org.apache.druid.segment.data.codecs.ints.IntFormEncoder;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -65,6 +67,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -219,6 +222,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
   protected void setupEncodedValueWriter() throws IOException
   {
     final CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
+    final IndexSpec.ColumnEncodingStrategy intEncodingStrategy = indexSpec.getIntEncodingStrategy();
 
     String filenameBase = StringUtils.format("%s.forward_dim", dimensionName);
     if (capabilities.hasMultipleValues().isTrue()) {
@@ -235,16 +239,36 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
             new VSizeColumnarMultiIntsSerializer(dimensionName, segmentWriteOutMedium, cardinality);
       }
     } else {
-      if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
-        encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
-            dimensionName,
-            segmentWriteOutMedium,
-            filenameBase,
-            cardinality,
-            compressionStrategy
-        );
+      if (intEncodingStrategy.getStrategy().equals(IndexSpec.EncodingStrategy.COMPRESSION)) {
+        if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
+          encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
+              dimensionName,
+              segmentWriteOutMedium,
+              filenameBase,
+              cardinality,
+              compressionStrategy
+          );
+        } else {
+          encodedValueSerializer = new VSizeColumnarIntsSerializer(segmentWriteOutMedium, cardinality);
+        }
       } else {
-        encodedValueSerializer = new VSizeColumnarIntsSerializer(segmentWriteOutMedium, cardinality);
+        final ByteOrder byteOrder = IndexIO.BYTE_ORDER;
+        // todo: allow specification of encoders on index spec?
+        IntFormEncoder[] intEncoders = ShapeShiftingColumnarIntsSerializer.getDefaultIntFormEncoders(
+            intEncodingStrategy.getBlockSize(),
+            compressionStrategy,
+            segmentWriteOutMedium.getCloser(),
+            byteOrder
+        );
+
+        encodedValueSerializer =
+            new ShapeShiftingColumnarIntsSerializer(
+                segmentWriteOutMedium,
+                intEncoders,
+                intEncodingStrategy.getOptimizationTarget(),
+                intEncodingStrategy.getBlockSize(),
+                byteOrder
+            );
       }
     }
     encodedValueSerializer.open();
@@ -536,6 +560,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
     boolean hasMultiValue = capabilities.hasMultipleValues().isTrue();
     final CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
+    final IndexSpec.ColumnEncodingStrategy intEncodingStrategy = indexSpec.getIntEncodingStrategy();
 
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.STRING);
@@ -546,7 +571,8 @@ public class StringDimensionMergerV9 implements DimensionMergerV9
         .withValue(
             encodedValueSerializer,
             hasMultiValue,
-            compressionStrategy != CompressionStrategy.UNCOMPRESSED
+            compressionStrategy != CompressionStrategy.UNCOMPRESSED,
+            intEncodingStrategy.getStrategy().equals(IndexSpec.EncodingStrategy.SHAPESHIFT)
         )
         .withBitmapSerdeFactory(bitmapSerdeFactory)
         .withBitmapIndex(bitmapWriter)

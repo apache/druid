@@ -31,7 +31,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Streams array of integers out in the binary format described by {@link V3CompressedVSizeColumnarMultiIntsSupplier}
  */
-public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiIntsSerializer
+public class V3CompressedVSizeColumnarMultiIntsSerializer implements ColumnarMultiIntsSerializer
 {
   private static final byte VERSION = V3CompressedVSizeColumnarMultiIntsSupplier.VERSION;
 

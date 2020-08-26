@@ -131,6 +131,13 @@ public class ColumnValueGenerator
           ret = Float.parseFloat(input.toString());
         }
         break;
+      case INT:
+        if (input instanceof Number) {
+          ret = ((Number) input).intValue();
+        } else {
+          ret = Integer.parseInt(input.toString());
+        }
+        break;
       default:
         throw new UnsupportedOperationException("Unknown data type: " + type);
     }

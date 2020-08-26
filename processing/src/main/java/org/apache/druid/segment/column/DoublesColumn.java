@@ -86,4 +86,9 @@ public class DoublesColumn implements NumericColumn
   {
     inspector.visit("column", column);
   }
+
+  public ColumnarDoubles getColumn()
+  {
+    return column;
+  }
 }

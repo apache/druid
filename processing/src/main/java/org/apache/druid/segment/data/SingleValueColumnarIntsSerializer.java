@@ -24,7 +24,7 @@ import java.io.IOException;
 /**
  * Serializer that produces {@link ColumnarInts}.
  */
-public abstract class SingleValueColumnarIntsSerializer implements ColumnarIntsSerializer
+public interface SingleValueColumnarIntsSerializer extends ColumnarIntsSerializer
 {
-  public abstract void addValue(int val) throws IOException;
+  void addValue(int val) throws IOException;
 }

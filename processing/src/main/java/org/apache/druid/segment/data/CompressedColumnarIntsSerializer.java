@@ -33,7 +33,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Streams array of integers out in the binary format described by {@link CompressedColumnarIntsSupplier}
  */
-public class CompressedColumnarIntsSerializer extends SingleValueColumnarIntsSerializer
+public class CompressedColumnarIntsSerializer implements SingleValueColumnarIntsSerializer
 {
   private static final byte VERSION = CompressedColumnarIntsSupplier.VERSION;
 

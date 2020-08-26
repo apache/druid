@@ -309,7 +309,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     }
   }
 
-  private class CompressedVSizeColumnarInts implements ColumnarInts
+  protected class CompressedVSizeColumnarInts implements ColumnarInts
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedBuffers = baseBuffers.singleThreaded();
 

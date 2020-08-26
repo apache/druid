@@ -123,7 +123,7 @@ public class GroupByBenchmark
   @Param({"4"})
   private int numSegments;
 
-  @Param({"2", "4"})
+  @Param({"2"})
   private int numProcessingThreads;
 
   @Param({"-1"})
@@ -132,10 +132,10 @@ public class GroupByBenchmark
   @Param({"100000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A", "basic.nested"})
+  @Param({"basic.nested"})
   private String schemaAndQuery;
 
-  @Param({"v1", "v2"})
+  @Param({"v2"})
   private String defaultStrategy;
 
   @Param({"all", "day"})

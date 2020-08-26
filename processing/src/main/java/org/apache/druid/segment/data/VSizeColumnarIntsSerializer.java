@@ -35,7 +35,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Streams integers out in the binary format described by {@link VSizeColumnarInts}
  */
-public class VSizeColumnarIntsSerializer extends SingleValueColumnarIntsSerializer
+public class VSizeColumnarIntsSerializer implements SingleValueColumnarIntsSerializer
 {
   private static final byte VERSION = VSizeColumnarInts.VERSION;
 
