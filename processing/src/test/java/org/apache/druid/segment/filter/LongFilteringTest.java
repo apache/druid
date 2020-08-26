@@ -73,6 +73,7 @@ public class LongFilteringTest extends BaseFilterTest
   private static final String TIMESTAMP_COLUMN = "ts";
   private static int EXECUTOR_NUM_THREADS = 16;
   private static int EXECUTOR_NUM_TASKS = 2000;
+  private static final int NUM_FILTER_VALUES = 32;
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -245,8 +246,8 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
-    List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
-    for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
+    List<String> infilterValues = new ArrayList<>(NUM_FILTER_VALUES);
+    for (int i = 0; i < NUM_FILTER_VALUES; i++) {
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(
@@ -393,8 +394,8 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
-    List<String> infilterValues = new ArrayList<>(InDimFilter.NUMERIC_HASHING_THRESHOLD * 2);
-    for (int i = 0; i < InDimFilter.NUMERIC_HASHING_THRESHOLD * 2; i++) {
+    List<String> infilterValues = new ArrayList<>(NUM_FILTER_VALUES);
+    for (int i = 0; i < NUM_FILTER_VALUES; i++) {
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatchesMultithreaded(

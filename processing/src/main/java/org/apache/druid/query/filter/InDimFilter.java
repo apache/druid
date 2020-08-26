@@ -67,7 +67,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -79,11 +78,14 @@ import java.util.Set;
 
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
+  /**
+   * The maximum number of values that should be used in hashcode computation.
+   * A performance bottleneck was first observed in filters with more than 20K values,
+   * so we set this to 5k as a guesstimate. No benchmarks have been done to validate
+   * the optimal number of values to include in the hashcode to minimize collisions,
+   * while still having the hashcode compute quickly.
+   */
   private static final int MAX_NUM_VALS_IN_HASHCODE = 5_000;
-
-  // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
-  // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
-  public static final int NUMERIC_HASHING_THRESHOLD = 16;
 
   @Nonnull
   // Values can contain `null` object
@@ -125,6 +127,25 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
         values,
         extractionFn,
         filterTuning,
+        null
+    );
+  }
+
+  /**
+   *
+   * @param dimension
+   * @param values This collection instance can be reused if possible to avoid copying a big collection.
+   *               Callers should <b>not</b> modify the collection after it is passed to this constructor.
+   */
+  public InDimFilter(
+      String dimension,
+      Set<String> values
+  )
+  {
+    this(
+        dimension,
+        values,
+        null,
         null
     );
   }
@@ -540,14 +561,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       }
     }
 
-    if (longs.size() > NUMERIC_HASHING_THRESHOLD) {
-      final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
-      return longHashSet::contains;
-    } else {
-      final long[] longArray = longs.toLongArray();
-      Arrays.sort(longArray);
-      return input -> Arrays.binarySearch(longArray, input) >= 0;
-    }
+
+    final LongOpenHashSet longHashSet = new LongOpenHashSet(longs);
+    return longHashSet::contains;
   }
 
   private static DruidFloatPredicate createFloatPredicate(final Set<String> values)
@@ -560,16 +576,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       }
     }
 
-    if (floatBits.size() > NUMERIC_HASHING_THRESHOLD) {
-      final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
-
-      return input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
-    } else {
-      final int[] floatBitsArray = floatBits.toIntArray();
-      Arrays.sort(floatBitsArray);
-
-      return input -> Arrays.binarySearch(floatBitsArray, Float.floatToIntBits(input)) >= 0;
-    }
+    final IntOpenHashSet floatBitsHashSet = new IntOpenHashSet(floatBits);
+    return input -> floatBitsHashSet.contains(Float.floatToIntBits(input));
   }
 
   private static DruidDoublePredicate createDoublePredicate(final Set<String> values)
@@ -582,16 +590,8 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       }
     }
 
-    if (doubleBits.size() > NUMERIC_HASHING_THRESHOLD) {
-      final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
-
-      return input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
-    } else {
-      final long[] doubleBitsArray = doubleBits.toLongArray();
-      Arrays.sort(doubleBitsArray);
-
-      return input -> Arrays.binarySearch(doubleBitsArray, Double.doubleToLongBits(input)) >= 0;
-    }
+    final LongOpenHashSet doubleBitsHashSet = new LongOpenHashSet(doubleBits);
+    return input -> doubleBitsHashSet.contains(Double.doubleToLongBits(input));
   }
 
   @VisibleForTesting
