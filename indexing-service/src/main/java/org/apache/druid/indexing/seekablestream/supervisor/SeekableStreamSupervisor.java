@@ -2202,14 +2202,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     throw new UnsupportedOperationException("This supervisor type does not support partition expiration.");
   }
 
-  protected SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetadataWithClosedPartitions(
-      SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata,
-      Set<PartitionIdType> closedPartitionIds
-  )
-  {
-    throw new UnsupportedOperationException("This supervisor type does not support partition closing.");
-  }
-
   /**
    * Perform a sanity check on the datasource metadata returned by
    * {@link #createDataSourceMetadataWithExpiredPartitions}.
