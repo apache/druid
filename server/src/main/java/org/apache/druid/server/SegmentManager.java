@@ -247,16 +247,10 @@ public class SegmentManager
               if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
                 dataSourceState.tablesLookup.put(segment.getId(), new ReferenceCountingIndexedTable(table));
               } else {
-                log.error(
-                    "Cannot load segment[%s] with IndexedTable, no existing segments are joinable",
-                    segment.getId()
-                );
+                log.error("Cannot load segment[%s] with IndexedTable, no existing segments are joinable", segment.getId());
               }
             } else if (dataSourceState.tablesLookup.size() > 0) {
-              log.error(
-                  "Cannot load segment[%s] without IndexedTable, all existing segments are joinable",
-                  segment.getId()
-              );
+              log.error("Cannot load segment[%s] without IndexedTable, all existing segments are joinable", segment.getId());
             }
             loadedIntervals.add(
                 segment.getInterval(),
