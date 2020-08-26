@@ -130,6 +130,14 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       throw new ISE("Cannot merge columns of type[%s] and [%s]", merged.type, otherSnapshot.getType());
     }
 
+    if (merged.type == ValueType.COMPLEX && merged.typeName == null) {
+      merged.typeName = other.getTypeName();
+    }
+
+    if (merged.type == ValueType.COMPLEX && merged.typeName != null && !merged.typeName.equals(other.getTypeName())) {
+      throw new ISE("Cannot merge columns of typeName[%s] and [%s]", merged.typeName, other.getTypeName());
+    }
+
     merged.dictionaryEncoded = merged.dictionaryEncoded.or(otherSnapshot.isDictionaryEncoded());
     merged.hasMultipleValues = merged.hasMultipleValues.or(otherSnapshot.hasMultipleValues());
     merged.dictionaryValuesSorted = merged.dictionaryValuesSorted.and(otherSnapshot.areDictionaryValuesSorted());
