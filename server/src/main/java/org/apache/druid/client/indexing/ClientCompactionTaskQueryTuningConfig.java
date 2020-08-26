@@ -22,32 +22,56 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class ClientCompactionTaskQueryTuningConfig
 {
+  @Deprecated
   @Nullable
   private final Integer maxRowsPerSegment;
   @Nullable
   private final Integer maxRowsInMemory;
   @Nullable
   private final Long maxBytesInMemory;
+  @Deprecated
   @Nullable
   private final Long maxTotalRows;
   @Nullable
   private final SplitHintSpec splitHintSpec;
   @Nullable
+  private final PartitionsSpec partitionsSpec;
+  @Nullable
   private final IndexSpec indexSpec;
+  @Nullable
+  private final IndexSpec indexSpecForIntermediatePersists;
   @Nullable
   private final Integer maxPendingPersists;
   @Nullable
   private final Long pushTimeout;
   @Nullable
+  private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
+  @Nullable
   private final Integer maxNumConcurrentSubTasks;
+  @Nullable
+  private final Integer maxRetry;
+  @Nullable
+  private final Long taskStatusCheckPeriodMs;
+  @Nullable
+  private final Duration chatHandlerTimeout;
+  @Nullable
+  private final Integer chatHandlerNumRetries;
+  @Nullable
+  private final Integer maxNumSegmentsToMerge;
+  @Nullable
+  private final Integer totalNumMergeTasks;
 
   public static ClientCompactionTaskQueryTuningConfig from(
       @Nullable UserCompactionTaskQueryTuningConfig userCompactionTaskQueryTuningConfig,
@@ -64,6 +88,15 @@ public class ClientCompactionTaskQueryTuningConfig
           null,
           null,
           null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
           null
       );
     } else {
@@ -73,25 +106,43 @@ public class ClientCompactionTaskQueryTuningConfig
           userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
           userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
           userCompactionTaskQueryTuningConfig.getSplitHintSpec(),
+          userCompactionTaskQueryTuningConfig.getPartitionsSpec(),
           userCompactionTaskQueryTuningConfig.getIndexSpec(),
+          userCompactionTaskQueryTuningConfig.getIndexSpecForIntermediatePersists(),
           userCompactionTaskQueryTuningConfig.getMaxPendingPersists(),
           userCompactionTaskQueryTuningConfig.getPushTimeout(),
-          userCompactionTaskQueryTuningConfig.getMaxNumConcurrentSubTasks()
+          userCompactionTaskQueryTuningConfig.getSegmentWriteOutMediumFactory(),
+          userCompactionTaskQueryTuningConfig.getMaxNumConcurrentSubTasks(),
+          userCompactionTaskQueryTuningConfig.getMaxRetry(),
+          userCompactionTaskQueryTuningConfig.getTaskStatusCheckPeriodMs(),
+          userCompactionTaskQueryTuningConfig.getChatHandlerTimeout(),
+          userCompactionTaskQueryTuningConfig.getChatHandlerNumRetries(),
+          userCompactionTaskQueryTuningConfig.getMaxNumSegmentsToMerge(),
+          userCompactionTaskQueryTuningConfig.getTotalNumMergeTasks()
       );
     }
   }
 
   @JsonCreator
   public ClientCompactionTaskQueryTuningConfig(
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
+      @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+      @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
-      @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks
+      @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
+      @JsonProperty("maxNumConcurrentSubTasks") @Nullable Integer maxNumConcurrentSubTasks,
+      @JsonProperty("maxRetry") @Nullable Integer maxRetry,
+      @JsonProperty("taskStatusCheckPeriodMs") @Nullable Long taskStatusCheckPeriodMs,
+      @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
+      @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
+      @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
+      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks
   )
   {
     this.maxRowsPerSegment = maxRowsPerSegment;
@@ -99,10 +150,19 @@ public class ClientCompactionTaskQueryTuningConfig
     this.maxBytesInMemory = maxBytesInMemory;
     this.maxTotalRows = maxTotalRows;
     this.splitHintSpec = splitHintSpec;
+    this.partitionsSpec = partitionsSpec;
     this.indexSpec = indexSpec;
+    this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists;
     this.maxPendingPersists = maxPendingPersists;
     this.pushTimeout = pushTimeout;
+    this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.maxNumConcurrentSubTasks = maxNumConcurrentSubTasks;
+    this.maxRetry = maxRetry;
+    this.taskStatusCheckPeriodMs = taskStatusCheckPeriodMs;
+    this.chatHandlerTimeout = chatHandlerTimeout;
+    this.chatHandlerNumRetries = chatHandlerNumRetries;
+    this.maxNumSegmentsToMerge = maxNumSegmentsToMerge;
+    this.totalNumMergeTasks = totalNumMergeTasks;
   }
 
   @JsonProperty
@@ -111,6 +171,7 @@ public class ClientCompactionTaskQueryTuningConfig
     return "index_parallel";
   }
 
+  @Deprecated
   @JsonProperty
   @Nullable
   public Integer getMaxRowsPerSegment()
@@ -132,6 +193,7 @@ public class ClientCompactionTaskQueryTuningConfig
     return maxBytesInMemory;
   }
 
+  @Deprecated
   @JsonProperty
   @Nullable
   public Long getMaxTotalRows()
@@ -139,16 +201,18 @@ public class ClientCompactionTaskQueryTuningConfig
     return maxTotalRows;
   }
 
-  @Nullable
   @JsonProperty
+  @Nullable
   public SplitHintSpec getSplitHintSpec()
   {
     return splitHintSpec;
   }
 
-  public long getMaxTotalRowsOr(long defaultMaxTotalRows)
+  @JsonProperty
+  @Nullable
+  public PartitionsSpec getPartitionsSpec()
   {
-    return maxTotalRows == null ? defaultMaxTotalRows : maxTotalRows;
+    return partitionsSpec;
   }
 
   @JsonProperty
@@ -160,9 +224,23 @@ public class ClientCompactionTaskQueryTuningConfig
 
   @JsonProperty
   @Nullable
+  public IndexSpec getIndexSpecForIntermediatePersists()
+  {
+    return indexSpecForIntermediatePersists;
+  }
+
+  @JsonProperty
+  @Nullable
   public Integer getMaxPendingPersists()
   {
     return maxPendingPersists;
+  }
+
+  @JsonProperty
+  public boolean isForceGuaranteedRollup()
+  {
+    // Should be always true for non-dynamic partitionsSpec for now.
+    return partitionsSpec != null && !(partitionsSpec instanceof DynamicPartitionsSpec);
   }
 
   @JsonProperty
@@ -174,9 +252,58 @@ public class ClientCompactionTaskQueryTuningConfig
 
   @JsonProperty
   @Nullable
+  public SegmentWriteOutMediumFactory getSegmentWriteOutMediumFactory()
+  {
+    return segmentWriteOutMediumFactory;
+  }
+
+  @JsonProperty
+  @Nullable
   public Integer getMaxNumConcurrentSubTasks()
   {
     return maxNumConcurrentSubTasks;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getMaxRetry()
+  {
+    return maxRetry;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Long getTaskStatusCheckPeriodMs()
+  {
+    return taskStatusCheckPeriodMs;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Duration getChatHandlerTimeout()
+  {
+    return chatHandlerTimeout;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getChatHandlerNumRetries()
+  {
+    return chatHandlerNumRetries;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getMaxNumSegmentsToMerge()
+  {
+    return maxNumSegmentsToMerge;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getTotalNumMergeTasks()
+  {
+    return totalNumMergeTasks;
   }
 
   @Override
@@ -190,14 +317,23 @@ public class ClientCompactionTaskQueryTuningConfig
     }
     ClientCompactionTaskQueryTuningConfig that = (ClientCompactionTaskQueryTuningConfig) o;
     return Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
-           Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
            Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
+           Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
            Objects.equals(maxTotalRows, that.maxTotalRows) &&
            Objects.equals(splitHintSpec, that.splitHintSpec) &&
+           Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
+           Objects.equals(indexSpecForIntermediatePersists, that.indexSpecForIntermediatePersists) &&
            Objects.equals(maxPendingPersists, that.maxPendingPersists) &&
            Objects.equals(pushTimeout, that.pushTimeout) &&
-           Objects.equals(maxNumConcurrentSubTasks, that.maxNumConcurrentSubTasks);
+           Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
+           Objects.equals(maxNumConcurrentSubTasks, that.maxNumConcurrentSubTasks) &&
+           Objects.equals(maxRetry, that.maxRetry) &&
+           Objects.equals(taskStatusCheckPeriodMs, that.taskStatusCheckPeriodMs) &&
+           Objects.equals(chatHandlerTimeout, that.chatHandlerTimeout) &&
+           Objects.equals(chatHandlerNumRetries, that.chatHandlerNumRetries) &&
+           Objects.equals(maxNumSegmentsToMerge, that.maxNumSegmentsToMerge) &&
+           Objects.equals(totalNumMergeTasks, that.totalNumMergeTasks);
   }
 
   @Override
@@ -205,30 +341,48 @@ public class ClientCompactionTaskQueryTuningConfig
   {
     return Objects.hash(
         maxRowsPerSegment,
-        maxBytesInMemory,
         maxRowsInMemory,
+        maxBytesInMemory,
         maxTotalRows,
         splitHintSpec,
+        partitionsSpec,
         indexSpec,
+        indexSpecForIntermediatePersists,
         maxPendingPersists,
         pushTimeout,
-        maxNumConcurrentSubTasks
+        segmentWriteOutMediumFactory,
+        maxNumConcurrentSubTasks,
+        maxRetry,
+        taskStatusCheckPeriodMs,
+        chatHandlerTimeout,
+        chatHandlerNumRetries,
+        maxNumSegmentsToMerge,
+        totalNumMergeTasks
     );
   }
 
   @Override
   public String toString()
   {
-    return "ClientCompactQueryTuningConfig{" +
+    return "ClientCompactionTaskQueryTuningConfig{" +
            "maxRowsPerSegment=" + maxRowsPerSegment +
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", maxBytesInMemory=" + maxBytesInMemory +
            ", maxTotalRows=" + maxTotalRows +
            ", splitHintSpec=" + splitHintSpec +
+           ", partitionsSpec=" + partitionsSpec +
            ", indexSpec=" + indexSpec +
+           ", indexSpecForIntermediatePersists=" + indexSpecForIntermediatePersists +
            ", maxPendingPersists=" + maxPendingPersists +
            ", pushTimeout=" + pushTimeout +
+           ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
            ", maxNumConcurrentSubTasks=" + maxNumConcurrentSubTasks +
+           ", maxRetry=" + maxRetry +
+           ", taskStatusCheckPeriodMs=" + taskStatusCheckPeriodMs +
+           ", chatHandlerTimeout=" + chatHandlerTimeout +
+           ", chatHandlerNumRetries=" + chatHandlerNumRetries +
+           ", maxNumSegmentsToMerge=" + maxNumSegmentsToMerge +
+           ", totalNumMergeTasks=" + totalNumMergeTasks +
            '}';
   }
 }

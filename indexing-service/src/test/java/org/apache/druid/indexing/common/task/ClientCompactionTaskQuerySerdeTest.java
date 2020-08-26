@@ -53,8 +53,10 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -82,19 +84,33 @@ public class ClientCompactionTaskQuerySerdeTest
             )
         ),
         new ClientCompactionTaskQueryTuningConfig(
-            100,
+            null,
             40000,
             2000L,
-            30000L,
+            null,
             new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
+            new DynamicPartitionsSpec(100, 30000L),
             new IndexSpec(
                 new DefaultBitmapSerdeFactory(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
             ),
-            null,
+            new IndexSpec(
+                new DefaultBitmapSerdeFactory(),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.UNCOMPRESSED,
+                LongEncodingStrategy.AUTO
+            ),
+            2,
             1000L,
+            TmpFileSegmentWriteOutMediumFactory.instance(),
+            100,
+            5,
+            1000L,
+            new Duration(3000L),
+            7,
+            1000,
             100
         ),
         ImmutableMap.of("key", "value")
@@ -123,28 +139,52 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getTuningConfig().getMaxBytesInMemory()
     );
     Assert.assertEquals(
-        query.getTuningConfig().getMaxRowsPerSegment(),
-        task.getTuningConfig().getMaxRowsPerSegment()
-    );
-    Assert.assertEquals(
-        query.getTuningConfig().getMaxTotalRows(),
-        task.getTuningConfig().getMaxTotalRows()
-    );
-    Assert.assertEquals(
         query.getTuningConfig().getSplitHintSpec(),
         task.getTuningConfig().getSplitHintSpec()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getPartitionsSpec(),
+        task.getTuningConfig().getPartitionsSpec()
     );
     Assert.assertEquals(
         query.getTuningConfig().getIndexSpec(),
         task.getTuningConfig().getIndexSpec()
     );
     Assert.assertEquals(
+        query.getTuningConfig().getIndexSpecForIntermediatePersists(),
+        task.getTuningConfig().getIndexSpecForIntermediatePersists()
+    );
+    Assert.assertEquals(
         query.getTuningConfig().getPushTimeout().longValue(),
         task.getTuningConfig().getPushTimeout()
     );
     Assert.assertEquals(
+        query.getTuningConfig().getSegmentWriteOutMediumFactory(),
+        task.getTuningConfig().getSegmentWriteOutMediumFactory()
+    );
+    Assert.assertEquals(
         query.getTuningConfig().getMaxNumConcurrentSubTasks().intValue(),
         task.getTuningConfig().getMaxNumConcurrentSubTasks()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getMaxRetry().intValue(),
+        task.getTuningConfig().getMaxRetry()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getTaskStatusCheckPeriodMs().longValue(),
+        task.getTuningConfig().getTaskStatusCheckPeriodMs()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getChatHandlerTimeout(),
+        task.getTuningConfig().getChatHandlerTimeout()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getMaxNumSegmentsToMerge().intValue(),
+        task.getTuningConfig().getMaxNumSegmentsToMerge()
+    );
+    Assert.assertEquals(
+        query.getTuningConfig().getTotalNumMergeTasks().intValue(),
+        task.getTuningConfig().getTotalNumMergeTasks()
     );
     Assert.assertEquals(query.getContext(), task.getContext());
   }
@@ -183,20 +223,25 @@ public class ClientCompactionTaskQuerySerdeTest
                     CompressionStrategy.LZF,
                     LongEncodingStrategy.LONGS
                 ),
-                null,
-                null,
+                new IndexSpec(
+                    new DefaultBitmapSerdeFactory(),
+                    CompressionStrategy.LZ4,
+                    CompressionStrategy.UNCOMPRESSED,
+                    LongEncodingStrategy.AUTO
+                ),
+                2,
                 null,
                 null,
                 1000L,
-                null,
+                TmpFileSegmentWriteOutMediumFactory.instance(),
                 null,
                 100,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                5,
+                1000L,
+                new Duration(3000L),
+                7,
+                1000,
+                100,
                 null,
                 null,
                 null
@@ -219,14 +264,28 @@ public class ClientCompactionTaskQuerySerdeTest
             2000L,
             30000L,
             new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
+            new DynamicPartitionsSpec(100, 30000L),
             new IndexSpec(
                 new DefaultBitmapSerdeFactory(),
                 CompressionStrategy.LZ4,
                 CompressionStrategy.LZF,
                 LongEncodingStrategy.LONGS
             ),
-            0,
+            new IndexSpec(
+                new DefaultBitmapSerdeFactory(),
+                CompressionStrategy.LZ4,
+                CompressionStrategy.UNCOMPRESSED,
+                LongEncodingStrategy.AUTO
+            ),
+            2,
             1000L,
+            TmpFileSegmentWriteOutMediumFactory.instance(),
+            100,
+            5,
+            1000L,
+            new Duration(3000L),
+            7,
+            1000,
             100
         ),
         new HashMap<>()
