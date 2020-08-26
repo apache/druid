@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -75,6 +76,15 @@ public class SketchConstantPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  /**
+   * actual type is {@link SketchHolder}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override

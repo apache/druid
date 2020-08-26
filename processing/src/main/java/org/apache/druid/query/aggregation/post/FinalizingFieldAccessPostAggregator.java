@@ -26,9 +26,12 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -36,6 +39,10 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
 {
   private final String name;
   private final String fieldName;
+  // type is ignored from equals and friends because it is computed by decorate, and all post-aggs should be decorated
+  // prior to usage (and is currently done so in the query constructors of all queries which can have post-aggs)
+  @Nullable
+  private final ValueType finalizedType;
   private final Comparator<Object> comparator;
   private final Function<Object, Object> finalizer;
 
@@ -45,18 +52,20 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
       @JsonProperty("fieldName") String fieldName
   )
   {
-    this(name, fieldName, null, null);
+    this(name, fieldName, null, null, null);
   }
 
   private FinalizingFieldAccessPostAggregator(
       final String name,
       final String fieldName,
+      @Nullable final ValueType finalizedType,
       final Comparator<Object> comparator,
       final Function<Object, Object> finalizer
   )
   {
     this.name = name;
     this.fieldName = fieldName;
+    this.finalizedType = finalizedType;
     this.comparator = comparator;
     this.finalizer = finalizer;
   }
@@ -95,28 +104,34 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
   }
 
   @Override
+  public ValueType getType()
+  {
+    return finalizedType;
+  }
+
+  @Override
   public FinalizingFieldAccessPostAggregator decorate(final Map<String, AggregatorFactory> aggregators)
   {
     final Comparator<Object> theComparator;
     final Function<Object, Object> theFinalizer;
+    final ValueType finalizedType;
 
     if (aggregators != null && aggregators.containsKey(fieldName)) {
       //noinspection unchecked
       theComparator = aggregators.get(fieldName).getComparator();
+      theFinalizer = aggregators.get(fieldName)::finalizeComputation;
+      finalizedType = aggregators.get(fieldName).getFinalizedType();
     } else {
       //noinspection unchecked
       theComparator = (Comparator) Comparators.naturalNullsFirst();
-    }
-
-    if (aggregators != null && aggregators.containsKey(fieldName)) {
-      theFinalizer = aggregators.get(fieldName)::finalizeComputation;
-    } else {
       theFinalizer = Function.identity();
+      finalizedType = null;
     }
 
     return new FinalizingFieldAccessPostAggregator(
         name,
         fieldName,
+        finalizedType,
         theComparator,
         theFinalizer
     );
@@ -157,10 +172,10 @@ public class FinalizingFieldAccessPostAggregator implements PostAggregator
 
     FinalizingFieldAccessPostAggregator that = (FinalizingFieldAccessPostAggregator) o;
 
-    if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
+    if (!Objects.equals(fieldName, that.fieldName)) {
       return false;
     }
-    if (name != null ? !name.equals(that.name) : that.name != null) {
+    if (!Objects.equals(name, that.name)) {
       return false;
     }
 
