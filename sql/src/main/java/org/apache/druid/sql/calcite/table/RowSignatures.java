@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.table;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
@@ -57,13 +56,14 @@ public class RowSignatures
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
 
     for (int i = 0; i < rowOrder.size(); i++) {
-      final RelDataTypeField field = rowType.getFieldList().get(i);
-      final SqlTypeName sqlTypeName = field.getType().getSqlTypeName();
-      final ValueType valueType;
-
-      valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      final RelDataType dataType = rowType.getFieldList().get(i).getType();
+      final ValueType valueType = Calcites.getValueTypeForRelDataType(dataType);
       if (valueType == null) {
-        throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, rowOrder.get(i));
+        throw new ISE(
+            "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
+            dataType.getSqlTypeName(),
+            rowOrder.get(i)
+        );
       }
 
       rowSignatureBuilder.add(rowOrder.get(i), valueType);
@@ -121,6 +121,15 @@ public class RowSignatures
             break;
           case DOUBLE:
             type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
+            break;
+          case STRING_ARRAY:
+            type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
+            break;
+          case LONG_ARRAY:
+            type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
+            break;
+          case DOUBLE_ARRAY:
+            type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
             break;
           case COMPLEX:
             // Loses information about exactly what kind of complex column this is.

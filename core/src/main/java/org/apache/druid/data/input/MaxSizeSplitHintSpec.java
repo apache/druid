@@ -22,7 +22,9 @@ package org.apache.druid.data.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -43,20 +45,53 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
   public static final String TYPE = "maxSize";
 
   @VisibleForTesting
-  static final long DEFAULT_MAX_SPLIT_SIZE = 512 * 1024 * 1024;
+  static final HumanReadableBytes DEFAULT_MAX_SPLIT_SIZE = new HumanReadableBytes("1GiB");
 
-  private final long maxSplitSize;
+  /**
+   * There are two known issues when a split contains a large list of files.
+   *
+   * - 'jute.maxbuffer' in ZooKeeper. This system property controls the max size of ZNode. As its default is 500KB,
+   *   task allocation can fail if the serialized ingestion spec is larger than this limit.
+   * - 'max_allowed_packet' in MySQL. This is the max size of a communication packet sent to a MySQL server.
+   *   The default is either 64MB or 4MB depending on MySQL version. Updating metadata store can fail if the serialized
+   *   ingestion spec is larger than this limit.
+   *
+   * The default is conservatively chosen as 1000.
+   */
+  @VisibleForTesting
+  static final int DEFAULT_MAX_NUM_FILES = 1000;
+
+  private final HumanReadableBytes maxSplitSize;
+  private final int maxNumFiles;
 
   @JsonCreator
-  public MaxSizeSplitHintSpec(@JsonProperty("maxSplitSize") @Nullable Long maxSplitSize)
+  public MaxSizeSplitHintSpec(
+      @JsonProperty("maxSplitSize") @Nullable HumanReadableBytes maxSplitSize,
+      @JsonProperty("maxNumFiles") @Nullable Integer maxNumFiles
+  )
   {
     this.maxSplitSize = maxSplitSize == null ? DEFAULT_MAX_SPLIT_SIZE : maxSplitSize;
+    this.maxNumFiles = maxNumFiles == null ? DEFAULT_MAX_NUM_FILES : maxNumFiles;
+    Preconditions.checkArgument(this.maxSplitSize.getBytes() > 0, "maxSplitSize should be larger than 0");
+    Preconditions.checkArgument(this.maxNumFiles > 0, "maxNumFiles should be larger than 0");
+  }
+
+  @VisibleForTesting
+  public MaxSizeSplitHintSpec(long maxSplitSize, @Nullable Integer maxNumFiles)
+  {
+    this(new HumanReadableBytes(maxSplitSize), maxNumFiles);
   }
 
   @JsonProperty
-  public long getMaxSplitSize()
+  public HumanReadableBytes getMaxSplitSize()
   {
     return maxSplitSize;
+  }
+
+  @JsonProperty
+  public int getMaxNumFiles()
+  {
+    return maxNumFiles;
   }
 
   @Override
@@ -68,6 +103,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
     );
     return new Iterator<List<T>>()
     {
+      private final long maxSplitSizeBytes = maxSplitSize.getBytes();
       private T peeking;
 
       @Override
@@ -84,12 +120,13 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
         }
         final List<T> current = new ArrayList<>();
         long splitSize = 0;
-        while (splitSize < maxSplitSize && (peeking != null || nonEmptyFileOnlyIterator.hasNext())) {
+        while (splitSize < maxSplitSizeBytes && (peeking != null || nonEmptyFileOnlyIterator.hasNext())) {
           if (peeking == null) {
             peeking = nonEmptyFileOnlyIterator.next();
           }
           final long size = inputAttributeExtractor.apply(peeking).getSize();
-          if (current.isEmpty() || splitSize + size < maxSplitSize) {
+          if (current.isEmpty() // each split should have at least one file even if the file is larger than maxSplitSize
+              || (splitSize + size < maxSplitSizeBytes && current.size() < maxNumFiles)) {
             current.add(peeking);
             splitSize += size;
             peeking = null;
@@ -113,12 +150,13 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
       return false;
     }
     MaxSizeSplitHintSpec that = (MaxSizeSplitHintSpec) o;
-    return maxSplitSize == that.maxSplitSize;
+    return maxNumFiles == that.maxNumFiles &&
+           Objects.equals(maxSplitSize, that.maxSplitSize);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(maxSplitSize);
+    return Objects.hash(maxSplitSize, maxNumFiles);
   }
 }

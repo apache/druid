@@ -275,7 +275,11 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
                 new DataSegment(
                     getDataSource(),
                     interval,
-                    Preconditions.checkNotNull(intervalToVersion.get(interval), "version for interval[%s]", interval),
+                    Preconditions.checkNotNull(
+                        ParallelIndexSupervisorTask.findVersion(intervalToVersion, interval),
+                        "version for interval[%s]",
+                        interval
+                    ),
                     null, // will be filled in the segmentPusher
                     mergedFileAndDimensionNames.rhs,
                     metricNames,
@@ -285,7 +289,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
                 ),
                 false
             ),
-            exception -> exception instanceof Exception,
+            exception -> !(exception instanceof NullPointerException) && exception instanceof Exception,
             5
         );
         pushedSegments.add(segment);

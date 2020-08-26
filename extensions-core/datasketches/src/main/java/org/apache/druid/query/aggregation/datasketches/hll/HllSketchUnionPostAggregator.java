@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -68,6 +69,15 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  /**
+   * actual type is {@link HllSketch}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @JsonProperty

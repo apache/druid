@@ -310,8 +310,7 @@ public class SinglePhaseSubTask extends AbstractBatchIndexTask
         fireDepartmentMetrics,
         toolbox,
         dataSchema,
-        tuningConfig,
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
+        tuningConfig
     );
     final List<String> metricsNames = Arrays.stream(ingestionSchema.getDataSchema().getAggregators())
                                             .map(AggregatorFactory::getName)

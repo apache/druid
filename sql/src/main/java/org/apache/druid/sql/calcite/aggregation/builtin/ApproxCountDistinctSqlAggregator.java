@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
@@ -101,10 +102,14 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         && rowSignature.getColumnType(arg.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
       aggregatorFactory = new HyperUniquesAggregatorFactory(aggregatorName, arg.getDirectColumn(), false, true);
     } else {
-      final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
-      final ValueType inputType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+      final RelDataType dataType = rexNode.getType();
+      final ValueType inputType = Calcites.getValueTypeForRelDataType(dataType);
       if (inputType == null) {
-        throw new ISE("Cannot translate sqlTypeName[%s] to Druid type for field[%s]", sqlTypeName, aggregatorName);
+        throw new ISE(
+            "Cannot translate sqlTypeName[%s] to Druid type for field[%s]",
+            dataType.getSqlTypeName(),
+            aggregatorName
+        );
       }
 
       final DimensionSpec dimensionSpec;
@@ -113,7 +118,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
         dimensionSpec = arg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
         VirtualColumn virtualColumn =
-            virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, sqlTypeName);
+            virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, dataType);
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
         myvirtualColumns.add(virtualColumn);
       }

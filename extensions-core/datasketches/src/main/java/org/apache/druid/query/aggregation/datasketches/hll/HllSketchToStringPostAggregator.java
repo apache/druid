@@ -26,6 +26,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -83,6 +84,12 @@ public class HllSketchToStringPostAggregator implements PostAggregator
   {
     final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
     return sketch.toString();
+  }
+
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.STRING;
   }
 
   @Override

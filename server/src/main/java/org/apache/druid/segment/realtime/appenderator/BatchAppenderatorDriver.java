@@ -197,7 +197,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
    */
   public ListenableFuture<SegmentsAndCommitMetadata> publishAll(
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
-      final TransactionalSegmentPublisher publisher
+      final TransactionalSegmentPublisher publisher,
+      final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
     final Map<String, SegmentsForSequence> snapshot;
@@ -222,7 +223,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                 .collect(Collectors.toList()),
             null
         ),
-        publisher
+        publisher,
+        outputSegmentsAnnotateFunction
     );
   }
 }

@@ -227,7 +227,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        new MaxSizeSplitHintSpec(1L), // set maxSplitSize to 1 so that each split has only one file.
+        new MaxSizeSplitHintSpec(null, 1),
         partitionsSpec,
         null,
         null,

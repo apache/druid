@@ -19,6 +19,7 @@
 # one word per line, to define a file override use ' - filename'
 # where filename is relative to this configuration file
 32-bit
+500MiB
 64-bit
 ACL
 APIs
@@ -178,6 +179,7 @@ UTF-8
 UTF8
 XMLs
 ZK
+ZSTD
 accessor
 ad-hoc
 aggregator
@@ -281,6 +283,8 @@ lookback
 lookups
 mapreduce
 masse
+maxNumFiles
+maxNumSegments
 max_map_count
 memcached
 mergeable
@@ -373,6 +377,7 @@ subqueries
 subquery
 subsecond
 substring
+subtask
 subtasks
 symlink
 tiering
@@ -553,6 +558,8 @@ namespacePrefix
 src
  - ../docs/development/extensions-contrib/redis-cache.md
 loadList
+pull-deps
+PT2S
  - ../docs/development/extensions-contrib/sqlserver.md
 com.microsoft.sqlserver.jdbc.SQLServerDriver
 sqljdbc

@@ -132,6 +132,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
@@ -888,8 +889,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         buildSegmentsFireDepartmentMetrics,
         toolbox,
         dataSchema,
-        tuningConfig,
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
+        tuningConfig
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
@@ -918,9 +918,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final Set<DataSegment> inputSegments = getTaskLockHelper().isUseSegmentLock()
                                              ? getTaskLockHelper().getLockedExistingSegments()
                                              : null;
+      final boolean storeCompactionState = getContextValue(
+          Tasks.STORE_COMPACTION_STATE_KEY,
+          Tasks.DEFAULT_STORE_COMPACTION_STATE
+      );
+      final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction =
+          compactionStateAnnotateFunction(
+              storeCompactionState,
+              toolbox,
+              ingestionSchema.getTuningConfig()
+          );
+
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndCommitMetadata published =
-          awaitPublish(driver.publishAll(inputSegments, publisher), pushTimeout);
+          awaitPublish(driver.publishAll(inputSegments, publisher, annotateFunction), pushTimeout);
       appenderator.close();
 
       ingestionState = IngestionState.COMPLETED;

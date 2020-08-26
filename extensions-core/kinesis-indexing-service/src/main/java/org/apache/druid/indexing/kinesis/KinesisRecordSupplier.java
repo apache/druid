@@ -718,9 +718,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
     for (Map.Entry<String, String> partitionOffset : currentOffsets.entrySet()) {
-      StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
-      long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
-      partitionLag.put(partitionOffset.getKey(), currentLag);
+      if (KinesisSequenceNumber.isValidAWSKinesisSequence(partitionOffset.getValue())) {
+        StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
+        long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
+        partitionLag.put(partitionOffset.getKey(), currentLag);
+      }
     }
     return partitionLag;
   }

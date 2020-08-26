@@ -737,7 +737,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return Pair.of(start, stop);
   }
 
-  private static void publishSegments(TaskToolbox toolbox, Map<String, PushedSegmentsReport> reportsMap)
+  private void publishSegments(
+      TaskToolbox toolbox,
+      Map<String, PushedSegmentsReport> reportsMap
+  )
       throws IOException
   {
     final Set<DataSegment> oldSegments = new HashSet<>();
@@ -748,12 +751,22 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           oldSegments.addAll(report.getOldSegments());
           newSegments.addAll(report.getNewSegments());
         });
+    final boolean storeCompactionState = getContextValue(
+        Tasks.STORE_COMPACTION_STATE_KEY,
+        Tasks.DEFAULT_STORE_COMPACTION_STATE
+    );
+    final Function<Set<DataSegment>, Set<DataSegment>> annotateFunction = compactionStateAnnotateFunction(
+        storeCompactionState,
+        toolbox,
+        ingestionSchema.getTuningConfig()
+    );
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient().submit(
             SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish)
         );
     final boolean published = newSegments.isEmpty()
-                              || publisher.publishSegments(oldSegments, newSegments, null).isSuccess();
+                              || publisher.publishSegments(oldSegments, newSegments, annotateFunction, null)
+                                          .isSuccess();
 
     if (published) {
       LOG.info("Published [%d] segments", newSegments.size());
@@ -913,7 +926,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   }
 
   @Nullable
-  private static String findVersion(Map<Interval, String> versions, Interval interval)
+  public static String findVersion(Map<Interval, String> versions, Interval interval)
   {
     return versions.entrySet().stream()
                    .filter(entry -> entry.getKey().contains(interval))
