@@ -33,7 +33,6 @@ import org.apache.druid.indexing.common.task.InputSourceProcessor;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
 import org.apache.druid.query.DruidMetrics;
@@ -178,8 +177,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         toolbox,
         dataSchema,
         tuningConfig,
-        new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager()),
-        getContextValue(Tasks.STORE_COMPACTION_STATE_KEY, Tasks.DEFAULT_STORE_COMPACTION_STATE)
+        new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager())
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
