@@ -19,11 +19,8 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 
 import java.util.Map;
 
@@ -36,38 +33,12 @@ class PartialDimensionDistributionParallelIndexTaskRunner
 {
   private static final String PHASE_NAME = "partial dimension distribution";
 
-  // For tests
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
-
   PartialDimensionDistributionParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
-  )
-  {
-    this(
-        toolbox,
-        taskId,
-        groupId,
-        ingestionSchema,
-        context,
-        indexingServiceClient,
-        null
-    );
-  }
-
-  @VisibleForTesting
-  PartialDimensionDistributionParallelIndexTaskRunner(
-      TaskToolbox toolbox,
-      String taskId,
-      String groupId,
-      ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory
+      Map<String, Object> context
   )
   {
     super(
@@ -75,10 +46,8 @@ class PartialDimensionDistributionParallelIndexTaskRunner
         taskId,
         groupId,
         ingestionSchema,
-        context,
-        indexingServiceClient
+        context
     );
-    this.taskClientFactory = taskClientFactory;
   }
 
   @Override
@@ -115,9 +84,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
             getSupervisorTaskId(),
             numAttempts,
             subTaskIngestionSpec,
-            getContext(),
-            getIndexingServiceClient(),
-            taskClientFactory
+            getContext()
         );
       }
     };

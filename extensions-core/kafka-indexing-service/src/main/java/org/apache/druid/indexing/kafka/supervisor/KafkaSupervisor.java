@@ -227,11 +227,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
           (KafkaIndexTaskTuningConfig) taskTuningConfig,
           (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
-          null,
-          null,
-          rowIngestionMetersFactory,
-          sortingMapper,
-          null
+          sortingMapper
       ));
     }
     return taskList;

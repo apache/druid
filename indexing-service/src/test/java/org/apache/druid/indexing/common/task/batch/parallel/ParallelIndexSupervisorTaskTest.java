@@ -229,11 +229,6 @@ public class ParallelIndexSupervisorTaskTest
           null,
           null,
           indexIngestionSpec,
-          null,
-          null,
-          null,
-          null,
-          null,
           null
       );
     }

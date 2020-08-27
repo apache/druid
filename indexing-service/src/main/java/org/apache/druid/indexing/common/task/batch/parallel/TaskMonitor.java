@@ -277,13 +277,13 @@ public class TaskMonitor<T extends Task>
   {
     T task = spec.newSubTask(numAttempts);
     try {
-      indexingServiceClient.runTask(task);
+      indexingServiceClient.runTask(task.getId(), task);
     }
     catch (Exception e) {
       if (isUnknownTypeIdException(e)) {
         log.warn(e, "Got an unknown type id error. Retrying with a backward compatible type.");
         task = spec.newSubTaskWithBackwardCompatibleType(numAttempts);
-        indexingServiceClient.runTask(task);
+        indexingServiceClient.runTask(task.getId(), task);
       } else {
         throw e;
       }

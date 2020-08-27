@@ -53,6 +53,16 @@ public class UnionDataSourceTest
   );
 
   @Test
+  public void test_constructor_empty()
+  {
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("'dataSources' must be non-null and non-empty for 'union'");
+
+    //noinspection ResultOfObjectAllocationIgnored
+    new UnionDataSource(Collections.emptyList());
+  }
+
+  @Test
   public void test_getTableNames()
   {
     Assert.assertEquals(ImmutableSet.of("foo", "bar"), unionDataSource.getTableNames());

@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.cache;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiftyonred.mock_jedis.MockJedis;
 import com.fiftyonred.mock_jedis.MockJedisPool;
 import com.google.common.collect.ImmutableList;
@@ -41,24 +42,24 @@ import redis.clients.jedis.JedisPoolConfig;
 import java.util.Map;
 import java.util.UUID;
 
-public class RedisCacheTest
+public class RedisStandaloneCacheTest
 {
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
-  private RedisCache cache;
+  private RedisStandaloneCache cache;
   private final RedisCacheConfig cacheConfig = new RedisCacheConfig()
   {
     @Override
-    public int getTimeout()
+    public DurationConfig getTimeout()
     {
-      return 10;
+      return new DurationConfig("PT2S");
     }
 
     @Override
-    public long getExpiration()
+    public DurationConfig getExpiration()
     {
-      return 3600000;
+      return new DurationConfig("PT1H");
     }
   };
 
@@ -82,19 +83,24 @@ public class RedisCacheTest
       }
     });
 
-    cache = RedisCache.create(pool, cacheConfig);
+    cache = new RedisStandaloneCache(pool, cacheConfig);
   }
 
   @Test
   public void testBasicInjection() throws Exception
   {
-    final RedisCacheConfig config = new RedisCacheConfig();
+    String json = "{ \"host\": \"localhost\", \"port\": 6379, \"expiration\": 3600}";
+    final RedisCacheConfig config = new ObjectMapper().readValue(json, RedisCacheConfig.class);
+
     Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), ImmutableList.of(
             binder -> {
               binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
               binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+
+              binder.bindConstant().annotatedWith(Names.named("host")).to("localhost");
+              binder.bindConstant().annotatedWith(Names.named("port")).to(6379);
 
               binder.bind(RedisCacheConfig.class).toInstance(config);
               binder.bind(Cache.class).toProvider(RedisCacheProviderWithConfig.class).in(ManageLifecycle.class);
@@ -105,7 +111,7 @@ public class RedisCacheTest
     lifecycle.start();
     try {
       Cache cache = injector.getInstance(Cache.class);
-      Assert.assertEquals(RedisCache.class, cache.getClass());
+      Assert.assertEquals(RedisStandaloneCache.class, cache.getClass());
     }
     finally {
       lifecycle.stop();
@@ -206,7 +212,7 @@ class RedisCacheProviderWithConfig extends RedisCacheProvider
   @Override
   public Cache get()
   {
-    return RedisCache.create(config);
+    return RedisCacheFactory.create(config);
   }
 }
 

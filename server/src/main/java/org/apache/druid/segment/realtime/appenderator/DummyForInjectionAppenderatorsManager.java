@@ -80,7 +80,6 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
