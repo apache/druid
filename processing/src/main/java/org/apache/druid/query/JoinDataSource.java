@@ -74,6 +74,9 @@ public class JoinDataSource implements DataSource
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
   }
 
+  /**
+   * Create a join dataSource from a string condition.
+   */
   @JsonCreator
   public static JoinDataSource create(
       @JsonProperty("left") DataSource left,
@@ -95,6 +98,20 @@ public class JoinDataSource implements DataSource
         ),
         joinType
     );
+  }
+
+  /**
+   * Create a join dataSource from an existing {@link JoinConditionAnalysis}.
+   */
+  public static JoinDataSource create(
+      final DataSource left,
+      final DataSource right,
+      final String rightPrefix,
+      final JoinConditionAnalysis conditionAnalysis,
+      final JoinType joinType
+  )
+  {
+    return new JoinDataSource(left, right, rightPrefix, conditionAnalysis, joinType);
   }
 
   @Override

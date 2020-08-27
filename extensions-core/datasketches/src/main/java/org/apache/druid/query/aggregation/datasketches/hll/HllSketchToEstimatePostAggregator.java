@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -60,6 +61,12 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ValueType getType()
+  {
+    return round ? ValueType.LONG : ValueType.DOUBLE;
   }
 
   @JsonProperty

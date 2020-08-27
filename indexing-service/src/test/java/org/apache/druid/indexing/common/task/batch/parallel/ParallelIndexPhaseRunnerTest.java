@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -86,7 +85,6 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
         "supervisorTaskId",
         "groupId",
         AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING,
-        getIndexingServiceClient(),
         10,
         12
     );
@@ -104,7 +102,6 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
         "supervisorTaskId",
         "groupId",
         AbstractParallelIndexSupervisorTaskTest.DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING,
-        getIndexingServiceClient(),
         10,
         8
     );
@@ -121,7 +118,6 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
         String supervisorTaskId,
         String groupId,
         ParallelIndexTuningConfig tuningConfig,
-        IndexingServiceClient indexingServiceClient,
         int actualNumSubTasks,
         int estimatedNumSubTasks
     )
@@ -131,8 +127,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
           supervisorTaskId,
           groupId,
           tuningConfig,
-          Collections.emptyMap(),
-          indexingServiceClient
+          Collections.emptyMap()
       );
       this.actualNumSubTasks = actualNumSubTasks;
       this.estimatedNumSubTasks = estimatedNumSubTasks;

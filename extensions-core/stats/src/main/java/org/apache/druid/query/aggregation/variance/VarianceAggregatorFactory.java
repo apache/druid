@@ -87,9 +87,24 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return VARIANCE_TYPE_NAME;
+  }
+
+  /**
+   * actual type is {@link VarianceAggregatorCollector}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.DOUBLE;
   }
 
   @Override

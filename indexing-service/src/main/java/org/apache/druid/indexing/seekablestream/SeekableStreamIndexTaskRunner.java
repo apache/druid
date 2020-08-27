@@ -25,7 +25,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -60,7 +59,6 @@ import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.input.InputRowSchemas;
@@ -80,17 +78,16 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
 import org.apache.druid.utils.CollectionUtils;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -205,18 +202,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final InputFormat inputFormat;
   @Nullable
   private final InputRowParser<ByteBuffer> parser;
-  private final AuthorizerMapper authorizerMapper;
-  private final Optional<ChatHandlerProvider> chatHandlerProvider;
   private final CircularBuffer<Throwable> savedParseExceptions;
   private final String stream;
-  private final RowIngestionMeters rowIngestionMeters;
-  private final AppenderatorsManager appenderatorsManager;
 
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndCommitMetadata>> handOffWaitList = new ArrayList<>();
 
   private final LockGranularity lockGranularityToUse;
+
+  @MonotonicNonNull
+  private RowIngestionMeters rowIngestionMeters;
+
+  @MonotonicNonNull
+  private AuthorizerMapper authorizerMapper;
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -236,10 +235,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
       final AuthorizerMapper authorizerMapper,
-      final Optional<ChatHandlerProvider> chatHandlerProvider,
       final CircularBuffer<Throwable> savedParseExceptions,
-      final RowIngestionMetersFactory rowIngestionMetersFactory,
-      final AppenderatorsManager appenderatorsManager,
       final LockGranularity lockGranularityToUse
   )
   {
@@ -251,11 +247,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.inputFormat = ioConfig.getInputFormat();
     this.parser = parser;
     this.authorizerMapper = authorizerMapper;
-    this.chatHandlerProvider = chatHandlerProvider;
     this.savedParseExceptions = savedParseExceptions;
     this.stream = ioConfig.getStartSequenceNumbers().getStream();
-    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
-    this.appenderatorsManager = appenderatorsManager;
     this.endOffsets = new ConcurrentHashMap<>(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     this.sequences = new CopyOnWriteArrayList<>();
     this.ingestionState = IngestionState.NOT_STARTED;
@@ -374,12 +367,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     initializeSequences();
 
-    if (chatHandlerProvider.isPresent()) {
-      log.debug("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
-      chatHandlerProvider.get().register(task.getId(), this, false);
-    } else {
-      log.warn("No chat handler detected.");
-    }
+    authorizerMapper = toolbox.getAuthorizerMapper();
+    rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
+
+    log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
+    toolbox.getChatHandlerProvider().register(task.getId(), this, false);
 
     runThread = Thread.currentThread();
 
@@ -409,7 +401,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     Throwable caughtExceptionOuter = null;
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier = task.newTaskRecordSupplier()) {
 
-      if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+      if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
       }
@@ -896,11 +888,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         if (driver != null) {
           driver.close();
         }
-        if (chatHandlerProvider.isPresent()) {
-          chatHandlerProvider.get().unregister(task.getId());
-        }
+        toolbox.getChatHandlerProvider().unregister(task.getId());
 
-        if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+        if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
           toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
           toolbox.getDataSegmentServerAnnouncer().unannounce();
         }

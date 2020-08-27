@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.DirectDruidClient;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -119,6 +120,8 @@ public class ClientQuerySegmentWalkerTest
   private static final String BAR = "bar";
   private static final String MULTI = "multi";
   private static final String GLOBAL = "broadcast";
+  private static final String ARRAY = "array";
+  private static final String ARRAY_UNKNOWN = "array_nulls";
 
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
@@ -163,6 +166,40 @@ public class ClientQuerySegmentWalkerTest
                   .addTimeColumn()
                   .add("s", ValueType.STRING)
                   .add("n", ValueType.LONG)
+                  .build()
+  );
+
+
+  private static final List<Object[]> ARRAY_INLINE_ROWS =
+      ImmutableList.<Object[]>builder()
+          .add(new Object[]{INTERVAL.getStartMillis(), "x", 1, ImmutableList.of(1.0, 2.0), ImmutableList.of(1L, 2L), ImmutableList.of("1.0", "2.0")})
+          .add(new Object[]{INTERVAL.getStartMillis(), "x", 2, ImmutableList.of(2.0, 4.0), ImmutableList.of(2L, 4L), ImmutableList.of("2.0", "4.0")})
+          .add(new Object[]{INTERVAL.getStartMillis(), "y", 3, ImmutableList.of(3.0, 6.0), ImmutableList.of(3L, 6L), ImmutableList.of("3.0", "6.0")})
+          .add(new Object[]{INTERVAL.getStartMillis(), "z", 4, ImmutableList.of(4.0, 8.0), ImmutableList.of(4L, 8L), ImmutableList.of("4.0", "8.0")})
+          .build();
+
+  private static final InlineDataSource ARRAY_INLINE = InlineDataSource.fromIterable(
+      ARRAY_INLINE_ROWS,
+      RowSignature.builder()
+                  .addTimeColumn()
+                  .add("s", ValueType.STRING)
+                  .add("n", ValueType.LONG)
+                  .add("ad", ValueType.DOUBLE_ARRAY)
+                  .add("al", ValueType.LONG_ARRAY)
+                  .add("as", ValueType.STRING_ARRAY)
+                  .build()
+  );
+
+
+  private static final InlineDataSource ARRAY_INLINE_UNKNOWN = InlineDataSource.fromIterable(
+      ARRAY_INLINE_ROWS,
+      RowSignature.builder()
+                  .addTimeColumn()
+                  .add("s", ValueType.STRING)
+                  .add("n", ValueType.LONG)
+                  .add("ad", null)
+                  .add("al", null)
+                  .add("as", null)
                   .build()
   );
 
@@ -409,6 +446,39 @@ public class ClientQuerySegmentWalkerTest
   }
 
   @Test
+  public void testGroupByOnUnionOfOneTable()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(
+                                       new UnionDataSource(ImmutableList.of(new TableDataSource(FOO)))
+                                   )
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Intervals.ONLY_ETERNITY)
+                                   .setDimensions(DefaultDimensionSpec.of("s"))
+                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+                                   .build()
+                                   .withId(UUID.randomUUID().toString());
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            ExpectedQuery.cluster(query.withDataSource(new TableDataSource(FOO)))
+        ),
+        ImmutableList.of(
+            new Object[]{"x", 2L},
+            new Object[]{"y", 1L},
+            new Object[]{"z", 1L}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
   public void testJoinOnGroupByOnTable()
   {
     final GroupByQuery subquery =
@@ -466,6 +536,95 @@ public class ClientQuerySegmentWalkerTest
     Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testJoinOnGroupByOnUnionOfTables()
+  {
+    final UnionDataSource unionDataSource = new UnionDataSource(
+        ImmutableList.of(
+            new TableDataSource(FOO),
+            new TableDataSource(BAR)
+        )
+    );
+
+    final GroupByQuery subquery =
+        GroupByQuery.builder()
+                    .setDataSource(unionDataSource)
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Collections.singletonList(INTERVAL))
+                    .setDimensions(DefaultDimensionSpec.of("s"))
+                    .setDimFilter(new SelectorDimFilter("s", "y", null))
+                    .build();
+
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(
+                                       JoinDataSource.create(
+                                           unionDataSource,
+                                           new QueryDataSource(subquery),
+                                           "j.",
+                                           "\"j.s\" == \"s\"",
+                                           JoinType.INNER,
+                                           ExprMacroTable.nil()
+                                       )
+                                   )
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Intervals.ONLY_ETERNITY)
+                                   .setDimensions(DefaultDimensionSpec.of("s"), DefaultDimensionSpec.of("j.s"))
+                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+                                   .build()
+                                   .withId(UUID.randomUUID().toString());
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            ExpectedQuery.cluster(
+                subquery.withDataSource(
+                    subquery.getDataSource().getChildren().get(0)
+                )
+            ),
+            ExpectedQuery.cluster(
+                subquery.withDataSource(
+                    subquery.getDataSource().getChildren().get(1)
+                )
+            ),
+            ExpectedQuery.cluster(
+                query.withDataSource(
+                    query.getDataSource().withChildren(
+                        ImmutableList.of(
+                            unionDataSource.getChildren().get(0),
+                            InlineDataSource.fromIterable(
+                                ImmutableList.of(new Object[]{"y"}),
+                                RowSignature.builder().add("s", ValueType.STRING).build()
+                            )
+                        )
+                    )
+                )
+            ),
+            ExpectedQuery.cluster(
+                query.withDataSource(
+                    query.getDataSource().withChildren(
+                        ImmutableList.of(
+                            unionDataSource.getChildren().get(1),
+                            InlineDataSource.fromIterable(
+                                ImmutableList.of(new Object[]{"y"}),
+                                RowSignature.builder().add("s", ValueType.STRING).build()
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(new Object[]{"y", "y", 1L})
+    );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(4, scheduler.getTotalRun().get());
+    Assert.assertEquals(4, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(4, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(4, scheduler.getTotalReleased().get());
   }
 
   @Test
@@ -635,6 +794,417 @@ public class ClientQuerySegmentWalkerTest
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }
 
+  @Test
+  public void testGroupByOnArraysDoubles()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("ad"))
+                                   .build()
+                                   .withId("queryId");
+
+
+    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Cannot create query type helper from invalid type [DOUBLE_ARRAY]");
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysUnknownDoubles()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY_UNKNOWN)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("ad"))
+                                   .build()
+                                   .withId("queryId");
+
+
+    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // behavior of sorts
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{"1.0"},
+            new Object[]{"2.0"},
+            new Object[]{"3.0"},
+            new Object[]{"4.0"},
+            new Object[]{"6.0"},
+            new Object[]{"8.0"}
+          )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testGroupByOnArraysLongs()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("al"))
+                                   .build()
+                                   .withId("queryId");
+
+    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Cannot create query type helper from invalid type [LONG_ARRAY]");
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysUnknownLongs()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY_UNKNOWN)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("al"))
+                                   .build()
+                                   .withId("queryId");
+
+
+    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // behavior of sorts
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{"1"},
+            new Object[]{"2"},
+            new Object[]{"3"},
+            new Object[]{"4"},
+            new Object[]{"6"},
+            new Object[]{"8"}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testGroupByOnArraysStrings()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("as"))
+                                   .build()
+                                   .withId("queryId");
+
+
+    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Cannot create query type helper from invalid type [STRING_ARRAY]");
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testGroupByOnArraysUnknownStrings()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(ARRAY_UNKNOWN)
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Collections.singletonList(INTERVAL))
+                                   .setDimensions(DefaultDimensionSpec.of("as"))
+                                   .build()
+                                   .withId("queryId");
+
+
+    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // behavior of sorts
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{"1.0"},
+            new Object[]{"2.0"},
+            new Object[]{"3.0"},
+            new Object[]{"4.0"},
+            new Object[]{"6.0"},
+            new Object[]{"8.0"}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+
+  @Test
+  public void testTopNArraysDoubles()
+  {
+    final TopNQuery query =
+        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
+                                          .granularity(Granularities.ALL)
+                                          .intervals(Intervals.ONLY_ETERNITY)
+                                          .dimension(DefaultDimensionSpec.of("ad"))
+                                          .metric("sum_n")
+                                          .threshold(1000)
+                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                                          .build()
+                                          .withId(UUID.randomUUID().toString());
+
+
+    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Cannot create query type helper from invalid type [DOUBLE_ARRAY]");
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testTopNOnArraysUnknownDoubles()
+  {
+    final TopNQuery query =
+        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY_UNKNOWN)
+                                          .granularity(Granularities.ALL)
+                                          .intervals(Intervals.ONLY_ETERNITY)
+                                          .dimension(DefaultDimensionSpec.of("ad"))
+                                          .metric("sum_n")
+                                          .threshold(1000)
+                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                                          .build()
+                                          .withId(UUID.randomUUID().toString());
+
+
+    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // behavior of sorts
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{946684800000L, "4.0", 6L},
+            new Object[]{946684800000L, "8.0", 4L},
+            new Object[]{946684800000L, "2.0", 3L},
+            new Object[]{946684800000L, "3.0", 3L},
+            new Object[]{946684800000L, "6.0", 3L},
+            new Object[]{946684800000L, "1.0", 1L}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTopNOnArraysLongs()
+  {
+    final TopNQuery query =
+        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
+                                          .granularity(Granularities.ALL)
+                                          .intervals(Intervals.ONLY_ETERNITY)
+                                          .dimension(DefaultDimensionSpec.of("al"))
+                                          .metric("sum_n")
+                                          .threshold(1000)
+                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                                          .build()
+                                          .withId(UUID.randomUUID().toString());
+
+    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Cannot create query type helper from invalid type [LONG_ARRAY]");
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testTopNOnArraysUnknownLongs()
+  {
+    final TopNQuery query =
+        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY_UNKNOWN)
+                                          .granularity(Granularities.ALL)
+                                          .intervals(Intervals.ONLY_ETERNITY)
+                                          .dimension(DefaultDimensionSpec.of("al"))
+                                          .metric("sum_n")
+                                          .threshold(1000)
+                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                                          .build()
+                                          .withId(UUID.randomUUID().toString());
+
+
+    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // behavior of sorts
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{946684800000L, "4", 6L},
+            new Object[]{946684800000L, "8", 4L},
+            new Object[]{946684800000L, "2", 3L},
+            new Object[]{946684800000L, "3", 3L},
+            new Object[]{946684800000L, "6", 3L},
+            new Object[]{946684800000L, "1", 1L}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTopNOnArraysStrings()
+  {
+    final TopNQuery query =
+        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
+                                          .granularity(Granularities.ALL)
+                                          .intervals(Intervals.ONLY_ETERNITY)
+                                          .dimension(DefaultDimensionSpec.of("as"))
+                                          .metric("sum_n")
+                                          .threshold(1000)
+                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                                          .build()
+                                          .withId(UUID.randomUUID().toString());
+
+
+    // group by cannot handle true array types, expect this, RuntimeExeception with IAE in stack trace
+    expectedException.expect(RuntimeException.class);
+    expectedException.expectMessage("Cannot create query type helper from invalid type [STRING_ARRAY]");
+
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testTopNOnArraysUnknownStrings()
+  {
+    final TopNQuery query =
+        (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY_UNKNOWN)
+                                          .granularity(Granularities.ALL)
+                                          .intervals(Intervals.ONLY_ETERNITY)
+                                          .dimension(DefaultDimensionSpec.of("as"))
+                                          .metric("sum_n")
+                                          .threshold(1000)
+                                          .aggregators(new LongSumAggregatorFactory("sum_n", "n"))
+                                          .build()
+                                          .withId(UUID.randomUUID().toString());
+
+
+    // 'unknown' is treated as ValueType.STRING. this might not always be the case, so this is a test case of wacky
+    // behavior of sorts
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(
+            new Object[]{946684800000L, "4.0", 6L},
+            new Object[]{946684800000L, "8.0", 4L},
+            new Object[]{946684800000L, "2.0", 3L},
+            new Object[]{946684800000L, "3.0", 3L},
+            new Object[]{946684800000L, "6.0", 3L},
+            new Object[]{946684800000L, "1.0", 1L}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTimeseriesOnArrays()
+  {
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(ARRAY)
+                                .granularity(Granularities.ALL)
+                                .intervals(Collections.singletonList(INTERVAL))
+                                .aggregators(new LongSumAggregatorFactory("sum", "al"))
+                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .build()
+                                .withId(UUID.randomUUID().toString());
+
+    // sum doesn't know what to do with an array, so gets 0
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testTimeseriesOnArraysUnknown()
+  {
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(ARRAY_UNKNOWN)
+                                .granularity(Granularities.ALL)
+                                .intervals(Collections.singletonList(INTERVAL))
+                                .aggregators(new LongSumAggregatorFactory("sum", "al"))
+                                .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+                                .build()
+                                .withId(UUID.randomUUID().toString());
+
+    // sum doesn't know what to do with an array also if type is null, so gets 0
+    testQuery(
+        query,
+        ImmutableList.of(ExpectedQuery.cluster(query)),
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
   /**
    * Initialize (or reinitialize) our {@link #walker} and {@link #closer} with default scheduler.
    */
@@ -719,12 +1289,14 @@ public class ClientQuerySegmentWalkerTest
     walker = QueryStackTests.createClientQuerySegmentWalker(
         new CapturingWalker(
             QueryStackTests.createClusterQuerySegmentWalker(
-                ImmutableMap.of(
-                    FOO, makeTimeline(FOO, FOO_INLINE),
-                    BAR, makeTimeline(BAR, BAR_INLINE),
-                    MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE),
-                    GLOBAL, makeTimeline(GLOBAL, FOO_INLINE)
-                ),
+                ImmutableMap.<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>>builder()
+                    .put(FOO, makeTimeline(FOO, FOO_INLINE))
+                    .put(BAR, makeTimeline(BAR, BAR_INLINE))
+                    .put(MULTI, makeTimeline(MULTI, MULTI_VALUE_INLINE))
+                    .put(GLOBAL, makeTimeline(GLOBAL, FOO_INLINE))
+                    .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
+                    .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
+                    .build(),
                 joinableFactory,
                 conglomerate,
                 schedulerForTest

@@ -121,9 +121,9 @@ public abstract class SimpleFloatAggregatorFactory extends NullableNumericAggreg
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return "float";
+    return ValueType.FLOAT;
   }
 
   @Override

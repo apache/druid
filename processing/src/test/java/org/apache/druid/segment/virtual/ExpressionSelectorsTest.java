@@ -43,6 +43,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.TestObjectColumnSelector;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -58,7 +59,95 @@ import java.util.List;
 public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 {
   @Test
-  public void testSupplierFromDimensionSelector()
+  public void test_canMapOverDictionary_oneSingleValueInput()
+  {
+    Assert.assertTrue(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.FALSE
+        )
+    );
+  }
+
+  @Test
+  public void test_canMapOverDictionary_oneSingleValueInputSpecifiedTwice()
+  {
+    Assert.assertTrue(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("concat(dim1, dim1) == 2", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.FALSE
+        )
+    );
+  }
+
+  @Test
+  public void test_canMapOverDictionary_oneMultiValueInput()
+  {
+    Assert.assertTrue(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.TRUE
+        )
+    );
+  }
+
+  @Test
+  public void test_canMapOverDictionary_oneUnknownInput()
+  {
+    Assert.assertFalse(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.UNKNOWN
+        )
+    );
+  }
+
+  @Test
+  public void test_canMapOverDictionary_oneSingleValueInputInArrayContext()
+  {
+    Assert.assertFalse(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("array_contains(dim1, 2)", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.FALSE
+        )
+    );
+  }
+
+  @Test
+  public void test_canMapOverDictionary_oneMultiValueInputInArrayContext()
+  {
+    Assert.assertFalse(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("array_contains(dim1, 2)", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.TRUE
+        )
+    );
+  }
+
+  @Test
+  public void test_canMapOverDictionary_oneUnknownInputInArrayContext()
+  {
+    Assert.assertFalse(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("array_contains(dim1, 2)", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.UNKNOWN
+        )
+    );
+  }
+
+  @Test
+  public void test_canMapOverDictionary()
+  {
+    Assert.assertTrue(
+        ExpressionSelectors.canMapOverDictionary(
+            Parser.parse("dim1 == 2", ExprMacroTable.nil()).analyzeInputs(),
+            ColumnCapabilities.Capable.FALSE
+        )
+    );
+  }
+
+  @Test
+  public void test_supplierFromDimensionSelector()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromDimensionSelector(
@@ -77,7 +166,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSupplierFromObjectSelectorObject()
+  public void test_supplierFromObjectSelector_onObject()
   {
     final SettableSupplier<Object> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
@@ -101,7 +190,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSupplierFromObjectSelectorNumber()
+  public void test_supplierFromObjectSelector_onNumber()
   {
     final SettableSupplier<Number> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
@@ -120,7 +209,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSupplierFromObjectSelectorString()
+  public void test_supplierFromObjectSelector_onString()
   {
     final SettableSupplier<String> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
@@ -138,7 +227,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testSupplierFromObjectSelectorList()
+  public void test_supplierFromObjectSelector_onList()
   {
     final SettableSupplier<List> settableSupplier = new SettableSupplier<>();
     final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
@@ -154,7 +243,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceListToArray()
+  public void test_coerceListToArray()
   {
     List<Long> longList = ImmutableList.of(1L, 2L, 3L);
     Assert.assertArrayEquals(new Long[]{1L, 2L, 3L}, (Long[]) ExpressionSelectors.coerceListToArray(longList));
@@ -225,7 +314,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testCoerceExprToValue()
+  public void test_coerceEvalToSelectorObject()
   {
     Assert.assertEquals(
         ImmutableList.of(1L, 2L, 3L),
@@ -253,7 +342,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIncrementIndexStringSelector() throws IndexSizeExceededException
+  public void test_incrementalIndexStringSelector() throws IndexSizeExceededException
   {
     // This test covers a regression caused by ColumnCapabilites.isDictionaryEncoded not matching the value of
     // DimensionSelector.nameLookupPossibleInAdvance in the indexers of an IncrementalIndex, which resulted in an

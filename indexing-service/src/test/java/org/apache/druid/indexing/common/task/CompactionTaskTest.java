@@ -104,7 +104,6 @@ import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -169,12 +168,10 @@ public class CompactionTaskTest
   private static final Map<Interval, DimensionSchema> MIXED_TYPE_COLUMN_MAP = new HashMap<>();
   private static final ParallelIndexTuningConfig TUNING_CONFIG = createTuningConfig();
 
-  private static final RowIngestionMetersFactory ROW_INGESTION_METERS_FACTORY = new TestUtils()
-      .getRowIngestionMetersFactory();
+  private static final TestUtils TEST_UTILS = new TestUtils();
   private static final Map<DataSegment, File> SEGMENT_MAP = new HashMap<>();
   private static final CoordinatorClient COORDINATOR_CLIENT = new TestCoordinatorClient(SEGMENT_MAP);
-  private static IndexingServiceClient INDEXING_SERVICE_CLIENT = new NoopIndexingServiceClient();
-  private static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
+  private static final IndexingServiceClient INDEXING_SERVICE_CLIENT = new NoopIndexingServiceClient();
   private static final ObjectMapper OBJECT_MAPPER = setupInjectablesInObjectMapper(new DefaultObjectMapper());
   private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
 
@@ -270,10 +267,10 @@ public class CompactionTaskTest
                 binder -> {
                   binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
                   binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
-                  binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
+                  binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentLoaderFactory.class).toInstance(new SegmentLoaderFactory(null, objectMapper));
-                  binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
+                  binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                   binder.bind(IndexingServiceClient.class).toInstance(INDEXING_SERVICE_CLIENT);
                 }
             )
@@ -360,15 +357,8 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        OBJECT_MAPPER,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        INDEXING_SERVICE_CLIENT,
-        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        APPENDERATORS_MANAGER
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
         .inputSpec(
@@ -388,15 +378,8 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        OBJECT_MAPPER,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        INDEXING_SERVICE_CLIENT,
-        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        APPENDERATORS_MANAGER
+        RETRY_POLICY_FACTORY
     );
     final CompactionTask task = builder
         .segments(SEGMENTS)
@@ -414,15 +397,8 @@ public class CompactionTaskTest
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
-        OBJECT_MAPPER,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        INDEXING_SERVICE_CLIENT,
-        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        APPENDERATORS_MANAGER
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask task = builder
@@ -487,27 +463,20 @@ public class CompactionTaskTest
             null
         ),
         null,
-        OBJECT_MAPPER,
+        toolbox.getJsonMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
+        toolbox.getChatHandlerProvider(),
+        toolbox.getRowIngestionMetersFactory(),
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY,
-        APPENDERATORS_MANAGER
+        toolbox.getAppenderatorsManager()
     );
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        OBJECT_MAPPER,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        INDEXING_SERVICE_CLIENT,
-        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        APPENDERATORS_MANAGER
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask expectedFromJson = builder
@@ -542,11 +511,11 @@ public class CompactionTaskTest
             OBJECT_MAPPER,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             null,
-            ROW_INGESTION_METERS_FACTORY,
+            toolbox.getRowIngestionMetersFactory(),
             COORDINATOR_CLIENT,
             segmentLoaderFactory,
             RETRY_POLICY_FACTORY,
-            APPENDERATORS_MANAGER
+            toolbox.getAppenderatorsManager()
         );
 
     final ObjectMapper mapper = new DefaultObjectMapper((DefaultObjectMapper) OBJECT_MAPPER);
@@ -586,7 +555,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -653,7 +621,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -721,7 +688,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -789,7 +755,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -851,7 +816,6 @@ public class CompactionTaskTest
         customSpec,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -893,7 +857,6 @@ public class CompactionTaskTest
         null,
         customMetricsSpec,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -928,7 +891,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -969,7 +931,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -993,7 +954,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -1008,15 +968,8 @@ public class CompactionTaskTest
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        OBJECT_MAPPER,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        ROW_INGESTION_METERS_FACTORY,
-        INDEXING_SERVICE_CLIENT,
-        COORDINATOR_CLIENT,
         segmentLoaderFactory,
-        RETRY_POLICY_FACTORY,
-        APPENDERATORS_MANAGER
+        RETRY_POLICY_FACTORY
     );
 
     final CompactionTask task = builder
@@ -1035,7 +988,6 @@ public class CompactionTaskTest
         null,
         null,
         new PeriodGranularity(Period.months(3), null, null),
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -1071,7 +1023,6 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        OBJECT_MAPPER,
         COORDINATOR_CLIENT,
         segmentLoaderFactory,
         RETRY_POLICY_FACTORY
@@ -1312,6 +1263,14 @@ public class CompactionTaskTest
           null,
           null,
           new NoopTestTaskReportFileWriter(),
+          null,
+          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+          new NoopChatHandlerProvider(),
+          TEST_UTILS.getRowIngestionMetersFactory(),
+          new TestAppenderatorsManager(),
+          INDEXING_SERVICE_CLIENT,
+          COORDINATOR_CLIENT,
+          null,
           null
       );
       this.segmentFileMap = segmentFileMap;
@@ -1445,12 +1404,12 @@ public class CompactionTaskTest
 
   private static ColumnHolder createColumn(DimensionSchema dimensionSchema)
   {
-    return new TestColumn(IncrementalIndex.TYPE_MAP.get(dimensionSchema.getValueType()));
+    return new TestColumn(dimensionSchema.getValueType());
   }
 
   private static ColumnHolder createColumn(AggregatorFactory aggregatorFactory)
   {
-    return new TestColumn(ValueType.fromString(aggregatorFactory.getTypeName()));
+    return new TestColumn(aggregatorFactory.getType());
   }
 
   private static class TestColumn implements ColumnHolder

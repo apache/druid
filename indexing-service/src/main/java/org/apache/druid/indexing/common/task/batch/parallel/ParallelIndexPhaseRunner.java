@@ -25,7 +25,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -68,7 +67,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
    * Max number of sub tasks which can be executed concurrently at the same time.
    */
   private final int maxNumConcurrentSubTasks;
-  private final IndexingServiceClient indexingServiceClient;
 
   private final BlockingQueue<SubTaskCompleteEvent<SubTaskType>> taskCompleteEvents = new LinkedBlockingDeque<>();
 
@@ -85,8 +83,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
       String taskId,
       String groupId,
       ParallelIndexTuningConfig tuningConfig,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      Map<String, Object> context
   )
   {
     this.toolbox = toolbox;
@@ -95,7 +92,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     this.tuningConfig = tuningConfig;
     this.context = context;
     this.maxNumConcurrentSubTasks = tuningConfig.getMaxNumConcurrentSubTasks();
-    this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
   }
 
   /**
@@ -120,7 +116,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
-        Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient"),
+        toolbox.getIndexingServiceClient(),
         tuningConfig.getMaxRetry(),
         estimateTotalNumSubTasks()
     );
@@ -471,11 +467,5 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   int getAndIncrementNextSpecId()
   {
     return nextSpecId++;
-  }
-
-  @VisibleForTesting
-  IndexingServiceClient getIndexingServiceClient()
-  {
-    return indexingServiceClient;
   }
 }
