@@ -19,12 +19,12 @@
 
 package org.apache.druid.sql.calcite.rule;
 
-import com.google.common.base.Preconditions;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.util.mapping.Mappings;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
@@ -97,7 +97,9 @@ public class DruidUnionDataSourceRule extends RelOptRule
       );
     } else {
       // Sanity check.
-      Preconditions.checkState(firstDruidRel instanceof DruidQueryRel, "Expected first rel to be a DruidQueryRel");
+      if (!(firstDruidRel instanceof DruidQueryRel)) {
+        throw new ISE("Expected first rel to be a DruidQueryRel, but it was %s", firstDruidRel.getClass().getName());
+      }
 
       call.transformTo(
           DruidUnionDataSourceRel.create(
@@ -130,12 +132,21 @@ public class DruidUnionDataSourceRule extends RelOptRule
         return Optional.of(druidTable.get().getRowSignature().getColumnNames());
       } else {
         // Sanity check. Expected to be true due to the "scan or mapping" check.
-        Preconditions.checkState(partialQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT);
+        if (partialQuery.stage() != PartialDruidQuery.Stage.SELECT_PROJECT) {
+          throw new ISE("Expected stage %s but got %s", PartialDruidQuery.Stage.SELECT_PROJECT, partialQuery.stage());
+        }
 
         // Apply the mapping (with additional sanity checks).
         final RowSignature tableSignature = druidTable.get().getRowSignature();
         final Mappings.TargetMapping mapping = partialQuery.getSelectProject().getMapping();
-        Preconditions.checkState(mapping.getSourceCount() == tableSignature.size());
+
+        if (mapping.getSourceCount() != tableSignature.size()) {
+          throw new ISE(
+              "Expected mapping with %d columns but got %d columns",
+              tableSignature.size(),
+              mapping.getSourceCount()
+          );
+        }
 
         final List<String> retVal = new ArrayList<>();
 
