@@ -37,7 +37,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   private final Serializer serializer;
   private static final Logger log = new Logger(ComplexColumnPartSerde.class);
 
-  public ComplexColumnPartSerde(String typeName, Serializer serializer)
+  private ComplexColumnPartSerde(String typeName, Serializer serializer)
   {
     this.typeName = typeName;
     this.serde = ComplexMetrics.getSerdeForType(typeName);

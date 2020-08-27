@@ -48,7 +48,11 @@ public abstract class ComplexMetricSerde
    * @param builder ColumnBuilder to add the column to
    * @param columnConfig ColumnConfiguration used during deserialization
    */
-  public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+  public void deserializeColumn(
+      ByteBuffer buffer,
+      ColumnBuilder builder,
+      @SuppressWarnings("unused") ColumnConfig columnConfig
+  )
   {
     deserializeColumn(buffer, builder);
   }
