@@ -32,6 +32,7 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.joda.time.Interval;
 
@@ -181,9 +182,21 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
-    return delegate.getTypeName();
+    return delegate.getComplexTypeName();
+  }
+
+  @Override
+  public ValueType getType()
+  {
+    return delegate.getType();
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return delegate.getFinalizedType();
   }
 
   @Override

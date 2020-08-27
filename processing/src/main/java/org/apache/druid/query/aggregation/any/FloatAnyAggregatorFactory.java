@@ -32,6 +32,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -185,9 +186,15 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public ValueType getType()
   {
-    return "float";
+    return ValueType.FLOAT;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.FLOAT;
   }
 
   @Override

@@ -280,9 +280,27 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return FixedBucketsHistogramAggregator.TYPE_NAME;
+  }
+
+  /**
+   * actual type is {@link FixedBucketsHistogram}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  /**
+   * actual type is {@link FixedBucketsHistogram} if {@link #finalizeAsBase64Binary} is set
+   */
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return finalizeAsBase64Binary ? ValueType.COMPLEX : ValueType.STRING;
   }
 
   @Override

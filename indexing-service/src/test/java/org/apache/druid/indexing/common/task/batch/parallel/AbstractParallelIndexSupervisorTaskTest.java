@@ -33,7 +33,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputFormat;
@@ -88,9 +87,8 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.Authorizer;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -180,7 +178,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   private SimpleThreadingTaskRunner taskRunner;
   private ObjectMapper objectMapper;
   private LocalIndexingServiceClient indexingServiceClient;
-  private IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> indexTaskClientFactory;
   private IntermediaryDataManager intermediaryDataManager;
   private CoordinatorClient coordinatorClient;
 
@@ -191,7 +188,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     taskRunner = new SimpleThreadingTaskRunner();
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalIndexingServiceClient(objectMapper, taskRunner);
-    indexTaskClientFactory = new LocalParallelIndexTaskClientFactory(taskRunner);
     intermediaryDataManager = new IntermediaryDataManager(
         new WorkerConfig(),
         new TaskConfig(
@@ -207,16 +203,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         ),
         null
     );
-    LocalShuffleClient shuffleClient = new LocalShuffleClient(intermediaryDataManager);
     coordinatorClient = new LocalCoordinatorClient();
-    prepareObjectMapper(
-        objectMapper,
-        getIndexIO(),
-        indexingServiceClient,
-        indexTaskClientFactory,
-        shuffleClient,
-        coordinatorClient
-    );
+    prepareObjectMapper(objectMapper, getIndexIO());
   }
 
   @After
@@ -239,7 +227,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         null,
-        new MaxSizeSplitHintSpec(1L), // set maxSplitSize to 1 so that each split has only one file.
+        new MaxSizeSplitHintSpec(null, 1),
         partitionsSpec,
         null,
         null,
@@ -265,11 +253,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected LocalIndexingServiceClient getIndexingServiceClient()
   {
     return indexingServiceClient;
-  }
-
-  protected IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> getParallelIndexTaskClientFactory()
-  {
-    return indexTaskClientFactory;
   }
 
   protected CoordinatorClient getCoordinatorClient()
@@ -527,14 +510,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
   }
 
-  public static void prepareObjectMapper(
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexingServiceClient indexingServiceClient,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> indexTaskClientFactory,
-      ShuffleClient shuffleClient,
-      CoordinatorClient coordinatorClient
-  )
+  public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -546,12 +522,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, new DropwizardRowIngestionMetersFactory())
             .addValue(DataSegment.PruneSpecsHolder.class, DataSegment.PruneSpecsHolder.DEFAULT)
-            .addValue(IndexingServiceClient.class, indexingServiceClient)
             .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
             .addValue(AppenderatorsManager.class, TestUtils.APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
-            .addValue(IndexTaskClientFactory.class, indexTaskClientFactory)
-            .addValue(ShuffleClient.class, shuffleClient)
             .addValue(CoordinatorClient.class, coordinatorClient)
             .addValue(SegmentLoaderFactory.class, new SegmentLoaderFactory(indexIO, objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
@@ -606,7 +579,15 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         null,
         null,
         new NoopTestTaskReportFileWriter(),
-        intermediaryDataManager
+        intermediaryDataManager,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        new TestUtils().getRowIngestionMetersFactory(),
+        new TestAppenderatorsManager(),
+        indexingServiceClient,
+        coordinatorClient,
+        new LocalParallelIndexTaskClientFactory(taskRunner),
+        new LocalShuffleClient(intermediaryDataManager)
     );
   }
 
@@ -616,8 +597,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         String id,
         TaskResource taskResource,
         ParallelIndexIngestionSpec ingestionSchema,
-        Map<String, Object> context,
-        IndexingServiceClient indexingServiceClient
+        Map<String, Object> context
     )
     {
       super(
@@ -625,41 +605,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           null,
           taskResource,
           ingestionSchema,
-          context,
-          indexingServiceClient,
-          new NoopChatHandlerProvider(),
-          new AuthorizerMapper(ImmutableMap.of())
-          {
-            @Override
-            public Authorizer getAuthorizer(String name)
-            {
-              return new AllowAllAuthorizer();
-            }
-          },
-          new DropwizardRowIngestionMetersFactory(),
-          new TestAppenderatorsManager()
-      );
-    }
-  }
-
-  static class TestSinglePhaseParallelIndexTaskRunner extends SinglePhaseParallelIndexTaskRunner
-  {
-    TestSinglePhaseParallelIndexTaskRunner(
-        TaskToolbox toolbox,
-        String taskId,
-        String groupId,
-        ParallelIndexIngestionSpec ingestionSchema,
-        Map<String, Object> context,
-        @Nullable IndexingServiceClient indexingServiceClient
-    )
-    {
-      super(
-          toolbox,
-          taskId,
-          groupId,
-          ingestionSchema,
-          context,
-          indexingServiceClient
+          context
       );
     }
   }

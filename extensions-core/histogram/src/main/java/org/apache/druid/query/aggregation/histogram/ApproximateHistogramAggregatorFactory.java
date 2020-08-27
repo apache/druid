@@ -37,6 +37,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -317,9 +318,27 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "approximateHistogram";
+  }
+
+  /**
+   * actual type is {@link ApproximateHistogram}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  /**
+   * actual type is {@link ApproximateHistogram} if {@link #finalizeAsBase64Binary} is set, else {@link Histogram}
+   */
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override

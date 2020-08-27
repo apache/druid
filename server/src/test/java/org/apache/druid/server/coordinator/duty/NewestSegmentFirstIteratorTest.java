@@ -21,8 +21,14 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -72,5 +78,329 @@ public class NewestSegmentFirstIteratorTest
     );
 
     Assert.assertEquals(expectedIntervals, fullSkipIntervals);
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithNullTuningConfigReturnDynamicPartitinosSpecWithMaxTotalRowsOfLongMax()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(
+        new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithNullMaxTotalRowsReturnLongMaxValue()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        null,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            new DynamicPartitionsSpec(null, null),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithNonNullMaxTotalRowsReturnGivenValue()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        null,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            new DynamicPartitionsSpec(null, 1000L),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new DynamicPartitionsSpec(null, 1000L),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithNonNullMaxRowsPerSegmentReturnGivenValue()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        null,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            new DynamicPartitionsSpec(100, 1000L),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new DynamicPartitionsSpec(100, 1000L),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithDeprecatedMaxRowsPerSegmentAndMaxTotalRowsReturnGivenValues()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        100,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            1000L,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new DynamicPartitionsSpec(100, 1000L),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithDeprecatedMaxRowsPerSegmentAndPartitionsSpecIgnoreDeprecatedOne()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        100,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            new DynamicPartitionsSpec(null, null),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithDeprecatedMaxTotalRowsAndPartitionsSpecIgnoreDeprecatedOne()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        null,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            1000L,
+            null,
+            new DynamicPartitionsSpec(null, null),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithHashPartitionsSpec()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        null,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            new HashedPartitionsSpec(null, 10, ImmutableList.of("dim")),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new HashedPartitionsSpec(null, 10, ImmutableList.of("dim")),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecFromConfigWithRangePartitionsSpec()
+  {
+    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+        "datasource",
+        null,
+        null,
+        null,
+        null,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            new SingleDimensionPartitionsSpec(10000, null, "dim", false),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null
+    );
+    Assert.assertEquals(
+        new SingleDimensionPartitionsSpec(10000, null, "dim", false),
+        NewestSegmentFirstIterator.findPartitinosSpecFromConfig(
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment())
+        )
+    );
   }
 }

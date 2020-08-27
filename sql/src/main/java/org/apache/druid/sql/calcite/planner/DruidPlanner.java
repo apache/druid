@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.Ints;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -52,7 +51,6 @@ import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql.validate.SqlValidatorUtil;
@@ -270,7 +268,10 @@ public class DruidPlanner implements Closeable
       return planExplanation(bindableRel, explain, ImmutableSet.of());
     } else {
       final BindableRel theRel = bindableRel;
-      final DataContext dataContext = plannerContext.createDataContext((JavaTypeFactory) planner.getTypeFactory(), plannerContext.getParameters());
+      final DataContext dataContext = plannerContext.createDataContext(
+          (JavaTypeFactory) planner.getTypeFactory(),
+          plannerContext.getParameters()
+      );
       final Supplier<Sequence<Object[]>> resultsSupplier = () -> {
         final Enumerable enumerable = theRel.bind(dataContext);
         final Enumerator enumerator = enumerable.enumerator();
@@ -317,12 +318,11 @@ public class DruidPlanner implements Closeable
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
+   *
    * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
    */
   @Nullable
-  private RelNode possiblyWrapRootWithOuterLimitFromContext(
-      RelRoot root
-  )
+  private RelNode possiblyWrapRootWithOuterLimitFromContext(RelRoot root)
   {
     Object outerLimitObj = plannerContext.getQueryContext().get(PlannerContext.CTX_SQL_OUTER_LIMIT);
     Long outerLimit = DimensionHandlerUtils.convertObjectToLong(outerLimitObj, true);
@@ -331,42 +331,30 @@ public class DruidPlanner implements Closeable
     }
 
     if (root.rel instanceof Sort) {
-      Sort innerSort = (Sort) root.rel;
-      final int offset = Calcites.getOffset(innerSort);
-      final int innerLimit = Calcites.getFetch(innerSort);
-      final int fetch = Calcites.collapseFetch(
-          innerLimit,
-          Ints.checkedCast(outerLimit),
-          0
-      );
+      Sort sort = (Sort) root.rel;
 
-      if (fetch == innerLimit) {
+      final OffsetLimit originalOffsetLimit = OffsetLimit.fromSort(sort);
+      final OffsetLimit newOffsetLimit = originalOffsetLimit.andThen(new OffsetLimit(0, outerLimit));
+
+      if (newOffsetLimit.equals(originalOffsetLimit)) {
         // nothing to do, don't bother to make a new sort
         return root.rel;
       }
 
       return LogicalSort.create(
-          innerSort.getInput(),
-          innerSort.collation,
-          offset > 0 ? makeBigIntLiteral(offset) : null,
-          makeBigIntLiteral(fetch)
+          sort.getInput(),
+          sort.collation,
+          newOffsetLimit.getOffsetAsRexNode(rexBuilder),
+          newOffsetLimit.getLimitAsRexNode(rexBuilder)
+      );
+    } else {
+      return LogicalSort.create(
+          root.rel,
+          root.collation,
+          null,
+          new OffsetLimit(0, outerLimit).getLimitAsRexNode(rexBuilder)
       );
     }
-    return LogicalSort.create(
-        root.rel,
-        root.collation,
-        null,
-        makeBigIntLiteral(outerLimit)
-    );
-  }
-
-  private RexNode makeBigIntLiteral(long value)
-  {
-    return rexBuilder.makeLiteral(
-        value,
-        new BasicSqlType(DruidTypeSystem.INSTANCE, SqlTypeName.BIGINT),
-        false
-    );
   }
 
   private PlannerResult planExplanation(

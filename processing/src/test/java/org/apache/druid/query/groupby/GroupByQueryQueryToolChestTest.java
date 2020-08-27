@@ -685,7 +685,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
                     .add("rows", ValueType.LONG)
                     .add("index", ValueType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", null)
+                    .add("const", ValueType.LONG)
                     .build(),
         new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
@@ -710,7 +710,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
                     .add("rows", ValueType.LONG)
                     .add("index", ValueType.DOUBLE)
                     .add("uniques", null)
-                    .add("const", null)
+                    .add("const", ValueType.LONG)
                     .build(),
         new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );

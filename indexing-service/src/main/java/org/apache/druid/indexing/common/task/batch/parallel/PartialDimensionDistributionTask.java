@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
@@ -27,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.HandlingInputRowIterator;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -40,7 +38,6 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
@@ -80,8 +77,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   private final int numAttempts;
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final String supervisorTaskId;
-  private final IndexingServiceClient indexingServiceClient;
-  private final IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory;
 
   // For testing
   private final Supplier<DedupInputRowFilter> dedupInputRowFilterSupplier;
@@ -95,9 +90,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       @JsonProperty("supervisorTaskId") final String supervisorTaskId,
       @JsonProperty("numAttempts") final int numAttempts, // zero-based counting
       @JsonProperty("spec") final ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JacksonInject IndexingServiceClient indexingServiceClient,
-      @JacksonInject IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory
+      @JsonProperty("context") final Map<String, Object> context
   )
   {
     this(
@@ -108,8 +101,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         numAttempts,
         ingestionSchema,
         context,
-        indexingServiceClient,
-        taskClientFactory,
         () -> new DedupInputRowFilter(
             ingestionSchema.getDataSchema().getGranularitySpec().getQueryGranularity()
         )
@@ -125,8 +116,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       final int numAttempts,
       final ParallelIndexIngestionSpec ingestionSchema,
       final Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient,
-      IndexTaskClientFactory<ParallelIndexSupervisorTaskClient> taskClientFactory,
       Supplier<DedupInputRowFilter> dedupRowDimValueFilterSupplier
   )
   {
@@ -148,8 +137,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
-    this.indexingServiceClient = indexingServiceClient;
-    this.taskClientFactory = taskClientFactory;
     this.dedupInputRowFilterSupplier = dedupRowDimValueFilterSupplier;
   }
 
@@ -238,7 +225,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
           tuningConfig.isLogParseExceptions(),
           tuningConfig.getMaxParseExceptions()
       );
-      sendReport(new DimensionDistributionReport(getId(), distribution));
+      sendReport(toolbox, new DimensionDistributionReport(getId(), distribution));
     }
 
     return TaskStatus.success(getId());
@@ -302,10 +289,10 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     return intervalToDistribution;
   }
 
-  private void sendReport(DimensionDistributionReport report)
+  private void sendReport(TaskToolbox toolbox, DimensionDistributionReport report)
   {
-    final ParallelIndexSupervisorTaskClient taskClient = taskClientFactory.build(
-        new ClientBasedTaskInfoProvider(indexingServiceClient),
+    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
+        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
         getId(),
         1, // always use a single http thread
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),

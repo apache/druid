@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
@@ -59,8 +60,10 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
@@ -320,6 +323,14 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             null,
             null,
             new SingleFileTaskReportFileWriter(taskReportsFile),
+            null,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            new NoopChatHandlerProvider(),
+            testUtils.getRowIngestionMetersFactory(),
+            new TestAppenderatorsManager(),
+            new NoopIndexingServiceClient(),
+            null,
+            null,
             null
         );
 

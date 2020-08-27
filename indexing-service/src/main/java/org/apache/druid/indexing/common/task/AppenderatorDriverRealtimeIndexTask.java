@@ -19,12 +19,10 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -60,7 +58,6 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorIngestionSpec;
 import org.apache.druid.indexing.common.index.RealtimeAppenderatorTuningConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -77,12 +74,10 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ClippedFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
@@ -146,9 +141,6 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private volatile FireDepartmentMetrics metrics = null;
 
   @JsonIgnore
-  private final RowIngestionMeters rowIngestionMeters;
-
-  @JsonIgnore
   private volatile boolean gracefullyStopped = false;
 
   @JsonIgnore
@@ -161,33 +153,27 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private CircularBuffer<Throwable> savedParseExceptions;
 
   @JsonIgnore
-  private final Optional<ChatHandlerProvider> chatHandlerProvider;
-
-  @JsonIgnore
-  private final AuthorizerMapper authorizerMapper;
-
-  @JsonIgnore
   private final LockGranularity lockGranularity;
 
   @JsonIgnore
   private IngestionState ingestionState;
 
   @JsonIgnore
-  private String errorMsg;
+  private AuthorizerMapper authorizerMapper;
 
   @JsonIgnore
-  private AppenderatorsManager appenderatorsManager;
+  private RowIngestionMeters rowIngestionMeters;
+
+  @JsonIgnore
+  private String errorMsg;
+
 
   @JsonCreator
   public AppenderatorDriverRealtimeIndexTask(
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("spec") RealtimeAppenderatorIngestionSpec spec,
-      @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
@@ -199,16 +185,12 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     );
     this.spec = spec;
     this.pendingHandoffs = new ConcurrentLinkedQueue<>();
-    this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
-    this.authorizerMapper = authorizerMapper;
 
     if (spec.getTuningConfig().getMaxSavedParseExceptions() > 0) {
       savedParseExceptions = new CircularBuffer<>(spec.getTuningConfig().getMaxSavedParseExceptions());
     }
 
     this.ingestionState = IngestionState.NOT_STARTED;
-    this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
-    this.appenderatorsManager = appenderatorsManager;
     this.lockGranularity = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                            ? LockGranularity.TIME_CHUNK
                            : LockGranularity.SEGMENT;
@@ -259,6 +241,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   public TaskStatus run(final TaskToolbox toolbox)
   {
     runThread = Thread.currentThread();
+    authorizerMapper = toolbox.getAuthorizerMapper();
+    rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
 
     setupTimeoutAlert();
 
@@ -285,14 +269,10 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     StreamAppenderatorDriver driver = newDriver(dataSchema, appenderator, toolbox, metrics);
 
     try {
-      if (chatHandlerProvider.isPresent()) {
-        log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
-        chatHandlerProvider.get().register(getId(), this, false);
-      } else {
-        log.warn("No chat handler detected");
-      }
+      log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
+      toolbox.getChatHandlerProvider().register(getId(), this, false);
 
-      if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+      if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().announce();
         toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
       }
@@ -436,9 +416,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       );
     }
     finally {
-      if (chatHandlerProvider.isPresent()) {
-        chatHandlerProvider.get().unregister(getId());
-      }
+      toolbox.getChatHandlerProvider().unregister(getId());
 
       CloseQuietly.close(firehose);
       appenderator.close();
@@ -446,7 +424,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
 
       toolbox.removeMonitor(metricsMonitor);
 
-      if (appenderatorsManager.shouldTaskMakeNodeAnnouncements()) {
+      if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
         toolbox.getDataSegmentServerAnnouncer().unannounce();
         toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
       }
@@ -762,7 +740,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       final TaskToolbox toolbox
   )
   {
-    return appenderatorsManager.createRealtimeAppenderatorForTask(
+    return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
         getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
