@@ -722,7 +722,6 @@ public class RealtimePlumber implements Plumber
           sinkInterval,
           schema,
           config.getShardSpec(),
-          null,
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),

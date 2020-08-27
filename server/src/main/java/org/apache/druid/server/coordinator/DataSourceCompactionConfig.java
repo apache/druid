@@ -53,7 +53,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
-      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
@@ -90,6 +90,7 @@ public class DataSourceCompactionConfig
     return inputSegmentSizeBytes;
   }
 
+  @Deprecated
   @JsonProperty
   @Nullable
   public Integer getMaxRowsPerSegment()

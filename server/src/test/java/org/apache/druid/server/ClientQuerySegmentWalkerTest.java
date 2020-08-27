@@ -446,6 +446,39 @@ public class ClientQuerySegmentWalkerTest
   }
 
   @Test
+  public void testGroupByOnUnionOfOneTable()
+  {
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(
+                                       new UnionDataSource(ImmutableList.of(new TableDataSource(FOO)))
+                                   )
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Intervals.ONLY_ETERNITY)
+                                   .setDimensions(DefaultDimensionSpec.of("s"))
+                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+                                   .build()
+                                   .withId(UUID.randomUUID().toString());
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            ExpectedQuery.cluster(query.withDataSource(new TableDataSource(FOO)))
+        ),
+        ImmutableList.of(
+            new Object[]{"x", 2L},
+            new Object[]{"y", 1L},
+            new Object[]{"z", 1L}
+        )
+    );
+
+    Assert.assertEquals(1, scheduler.getTotalRun().get());
+    Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(1, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
   public void testJoinOnGroupByOnTable()
   {
     final GroupByQuery subquery =
@@ -503,6 +536,95 @@ public class ClientQuerySegmentWalkerTest
     Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(2, scheduler.getTotalAcquired().get());
     Assert.assertEquals(2, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testJoinOnGroupByOnUnionOfTables()
+  {
+    final UnionDataSource unionDataSource = new UnionDataSource(
+        ImmutableList.of(
+            new TableDataSource(FOO),
+            new TableDataSource(BAR)
+        )
+    );
+
+    final GroupByQuery subquery =
+        GroupByQuery.builder()
+                    .setDataSource(unionDataSource)
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Collections.singletonList(INTERVAL))
+                    .setDimensions(DefaultDimensionSpec.of("s"))
+                    .setDimFilter(new SelectorDimFilter("s", "y", null))
+                    .build();
+
+    final GroupByQuery query =
+        (GroupByQuery) GroupByQuery.builder()
+                                   .setDataSource(
+                                       JoinDataSource.create(
+                                           unionDataSource,
+                                           new QueryDataSource(subquery),
+                                           "j.",
+                                           "\"j.s\" == \"s\"",
+                                           JoinType.INNER,
+                                           ExprMacroTable.nil()
+                                       )
+                                   )
+                                   .setGranularity(Granularities.ALL)
+                                   .setInterval(Intervals.ONLY_ETERNITY)
+                                   .setDimensions(DefaultDimensionSpec.of("s"), DefaultDimensionSpec.of("j.s"))
+                                   .setAggregatorSpecs(new CountAggregatorFactory("cnt"))
+                                   .build()
+                                   .withId(UUID.randomUUID().toString());
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            ExpectedQuery.cluster(
+                subquery.withDataSource(
+                    subquery.getDataSource().getChildren().get(0)
+                )
+            ),
+            ExpectedQuery.cluster(
+                subquery.withDataSource(
+                    subquery.getDataSource().getChildren().get(1)
+                )
+            ),
+            ExpectedQuery.cluster(
+                query.withDataSource(
+                    query.getDataSource().withChildren(
+                        ImmutableList.of(
+                            unionDataSource.getChildren().get(0),
+                            InlineDataSource.fromIterable(
+                                ImmutableList.of(new Object[]{"y"}),
+                                RowSignature.builder().add("s", ValueType.STRING).build()
+                            )
+                        )
+                    )
+                )
+            ),
+            ExpectedQuery.cluster(
+                query.withDataSource(
+                    query.getDataSource().withChildren(
+                        ImmutableList.of(
+                            unionDataSource.getChildren().get(1),
+                            InlineDataSource.fromIterable(
+                                ImmutableList.of(new Object[]{"y"}),
+                                RowSignature.builder().add("s", ValueType.STRING).build()
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(new Object[]{"y", "y", 1L})
+    );
+
+    // note: this should really be 1, but in the interim queries that are composed of multiple queries count each
+    // invocation of either the cluster or local walker in ClientQuerySegmentWalker
+    Assert.assertEquals(4, scheduler.getTotalRun().get());
+    Assert.assertEquals(4, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(4, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(4, scheduler.getTotalReleased().get());
   }
 
   @Test

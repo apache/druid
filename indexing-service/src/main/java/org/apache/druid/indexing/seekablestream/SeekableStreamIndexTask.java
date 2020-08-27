@@ -21,7 +21,6 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -34,7 +33,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -49,13 +47,12 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CircularBuffer;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -70,18 +67,17 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final DataSchema dataSchema;
   protected final SeekableStreamIndexTaskTuningConfig tuningConfig;
   protected final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
-  protected final Optional<ChatHandlerProvider> chatHandlerProvider;
   protected final Map<String, Object> context;
-  protected final AuthorizerMapper authorizerMapper;
-  protected final RowIngestionMetersFactory rowIngestionMetersFactory;
   protected final CircularBuffer<Throwable> savedParseExceptions;
-  protected final AppenderatorsManager appenderatorsManager;
   protected final LockGranularity lockGranularityToUse;
 
   // Lazily initialized, to avoid calling it on the overlord when tasks are instantiated.
   // See https://github.com/apache/druid/issues/7724 for issues that can cause.
   // By the way, lazily init is synchronized because the runner may be needed in multiple threads.
   private final Supplier<SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType>> runnerSupplier;
+
+  @MonotonicNonNull
+  protected AuthorizerMapper authorizerMapper;
 
   public SeekableStreamIndexTask(
       final String id,
@@ -90,11 +86,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       final SeekableStreamIndexTaskTuningConfig tuningConfig,
       final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
       @Nullable final Map<String, Object> context,
-      @Nullable final ChatHandlerProvider chatHandlerProvider,
-      final AuthorizerMapper authorizerMapper,
-      final RowIngestionMetersFactory rowIngestionMetersFactory,
-      @Nullable final String groupId,
-      AppenderatorsManager appenderatorsManager
+      @Nullable final String groupId
   )
   {
     super(
@@ -107,17 +99,13 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
-    this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
     if (tuningConfig.getMaxSavedParseExceptions() > 0) {
       savedParseExceptions = new CircularBuffer<>(tuningConfig.getMaxSavedParseExceptions());
     } else {
       savedParseExceptions = null;
     }
     this.context = context;
-    this.authorizerMapper = authorizerMapper;
-    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.runnerSupplier = Suppliers.memoize(this::createTaskRunner);
-    this.appenderatorsManager = appenderatorsManager;
     this.lockGranularityToUse = getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK)
                                 ? LockGranularity.TIME_CHUNK
                                 : LockGranularity.SEGMENT;
@@ -193,7 +181,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   public Appenderator newAppenderator(FireDepartmentMetrics metrics, TaskToolbox toolbox)
   {
-    return appenderatorsManager.createRealtimeAppenderatorForTask(
+    return toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
         getId(),
         dataSchema,
         tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
