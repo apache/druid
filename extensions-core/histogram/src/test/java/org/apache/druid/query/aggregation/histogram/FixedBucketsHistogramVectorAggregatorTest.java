@@ -58,7 +58,7 @@ public class FixedBucketsHistogramVectorAggregatorTest
     EasyMock.replay(vectorValueSelector_2);
 
     ColumnCapabilities columnCapabilities
-        = new ColumnCapabilitiesImpl().setType(ValueType.DOUBLE).setDictionaryEncoded(true);
+        = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
     vectorColumnSelectorFactory = createMock(VectorColumnSelectorFactory.class);
     expect(vectorColumnSelectorFactory.getColumnCapabilities("field_1")).andReturn(columnCapabilities).anyTimes();
     expect(vectorColumnSelectorFactory.makeValueSelector("field_1"))

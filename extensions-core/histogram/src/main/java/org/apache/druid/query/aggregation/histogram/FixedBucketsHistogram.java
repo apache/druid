@@ -434,14 +434,15 @@ public class FixedBucketsHistogram
   }
 
   /**
-   * Merge another datapoint into this one. The other datapoin could be
+   * Merge another datapoint into this one. The other datapoint could be
    *  - base64 encoded string of {@code FixedBucketsHistogram}
    *  - {@code FixedBucketsHistogram} object
    *  - Numeric value
    *
    * @param val
    */
-  void combine(@Nullable Object val)
+  @VisibleForTesting
+  public void combine(@Nullable Object val)
   {
     if (val == null) {
       if (NullHandling.replaceWithDefault()) {
