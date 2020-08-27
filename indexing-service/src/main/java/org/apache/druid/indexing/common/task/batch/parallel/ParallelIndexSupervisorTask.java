@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -31,7 +30,6 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
@@ -47,7 +45,6 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
-import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.CurrentSubTaskHolder;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -69,11 +66,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -132,11 +127,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final InputSource baseInputSource;
-  private final IndexingServiceClient indexingServiceClient;
-  private final ChatHandlerProvider chatHandlerProvider;
-  private final AuthorizerMapper authorizerMapper;
-  private final RowIngestionMetersFactory rowIngestionMetersFactory;
-  private final AppenderatorsManager appenderatorsManager;
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -153,6 +143,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   private final boolean missingIntervalsInOverwriteMode;
 
   private final ConcurrentHashMap<Interval, AtomicInteger> partitionNumCountersPerInterval = new ConcurrentHashMap<>();
+
+  @MonotonicNonNull
+  private AuthorizerMapper authorizerMapper;
 
   /**
    * A holder for the current phase runner (parallel mode) or index task (sequential mode).
@@ -175,12 +168,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       @JsonProperty("groupId") @Nullable String groupId,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("spec") ParallelIndexIngestionSpec ingestionSchema,
-      @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject @Nullable IndexingServiceClient indexingServiceClient, // null in overlords
-      @JacksonInject @Nullable ChatHandlerProvider chatHandlerProvider,     // null in overlords
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject AppenderatorsManager appenderatorsManager
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(
@@ -204,11 +192,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
         ingestionSchema.getDataSchema().getParser()
     );
-    this.indexingServiceClient = indexingServiceClient;
-    this.chatHandlerProvider = chatHandlerProvider;
-    this.authorizerMapper = authorizerMapper;
-    this.rowIngestionMetersFactory = rowIngestionMetersFactory;
-    this.appenderatorsManager = appenderatorsManager;
     this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
                                            && !ingestionSchema.getDataSchema()
                                                               .getGranularitySpec()
@@ -251,12 +234,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     }
   }
 
-  @VisibleForTesting
-  IndexingServiceClient getIndexingServiceClient()
-  {
-    return indexingServiceClient;
-  }
-
   @Nullable
   private <T extends Task, R extends SubTaskReport> ParallelIndexTaskRunner<T, R> createRunner(
       TaskToolbox toolbox,
@@ -289,8 +266,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getId(),
         getGroupId(),
         ingestionSchema,
-        getContext(),
-        indexingServiceClient
+        getContext()
     );
   }
 
@@ -302,8 +278,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getId(),
         getGroupId(),
         ingestionSchema,
-        getContext(),
-        indexingServiceClient
+        getContext()
     );
   }
 
@@ -315,8 +290,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getId(),
         getGroupId(),
         ingestionSchema,
-        getContext(),
-        indexingServiceClient
+        getContext()
     );
   }
 
@@ -332,7 +306,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
        getGroupId(),
        ingestionSchema,
        getContext(),
-       indexingServiceClient,
        intervalToPartitions
     );
   }
@@ -350,8 +323,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         getIngestionSchema().getDataSchema(),
         ioConfigs,
         getIngestionSchema().getTuningConfig(),
-        getContext(),
-        indexingServiceClient
+        getContext()
     );
   }
 
@@ -416,11 +388,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           + "Forced to use timeChunk lock."
       );
     }
-    LOG.info(
+    LOG.debug(
         "Found chat handler of class[%s]",
-        Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider").getClass().getName()
+        Preconditions.checkNotNull(toolbox.getChatHandlerProvider(), "chatHandlerProvider").getClass().getName()
     );
-    chatHandlerProvider.register(getId(), this, false);
+    authorizerMapper = toolbox.getAuthorizerMapper();
+    toolbox.getChatHandlerProvider().register(getId(), this, false);
 
     try {
       initializeSubTaskCleaner();
@@ -453,7 +426,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       }
     }
     finally {
-      chatHandlerProvider.unregister(getId());
+      toolbox.getChatHandlerProvider().unregister(getId());
     }
   }
 
@@ -814,11 +787,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
             getIngestionSchema().getIOConfig(),
             convertToIndexTuningConfig(getIngestionSchema().getTuningConfig())
         ),
-        getContext(),
-        authorizerMapper,
-        chatHandlerProvider,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        getContext()
     );
 
     if (currentSubTaskHolder.setTask(indexTask) && indexTask.isReady(toolbox.getTaskActionClient())) {

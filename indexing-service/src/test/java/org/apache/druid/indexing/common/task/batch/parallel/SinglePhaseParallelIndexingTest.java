@@ -29,7 +29,6 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -143,10 +142,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
           spec.getSupervisorTaskId(),
           0,
           spec.getIngestionSpec(),
-          spec.getContext(),
-          getIndexingServiceClient(),
-          null,
-          new TestAppenderatorsManager()
+          spec.getContext()
       );
       final TaskActionClient subTaskActionClient = createActionClient(subTask);
       prepareTaskForLocking(subTask);
@@ -500,12 +496,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
         null,
         null,
         ingestionSpec,
-        Collections.emptyMap(),
-        getIndexingServiceClient(),
-        null,
-        null,
-        null,
-        null
+        Collections.emptyMap()
     );
   }
 

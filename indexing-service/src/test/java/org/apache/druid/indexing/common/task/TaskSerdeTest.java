@@ -269,10 +269,6 @@ public class TaskSerdeTest
                 null
             )
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
         null
     );
 
@@ -353,10 +349,6 @@ public class TaskSerdeTest
                 null
             )
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
         null
     );
 
