@@ -37,6 +37,7 @@ import org.apache.druid.query.aggregation.MaxIntermediateSizeAdjustStrategy;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -221,7 +222,19 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public String getTypeName()
+      public ValueType getType()
+      {
+        return ValueType.COMPLEX;
+      }
+
+      @Override
+      public ValueType getFinalizedType()
+      {
+        return ValueType.COMPLEX;
+      }
+
+      @Override
+      public String getComplexTypeName()
       {
         return "custom";
       }

@@ -303,10 +303,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                              if (aggregator.getMaxIntermediateSizeAdjustStrategy() != null && canAdjust) {
                                                final MaxIntermediateSizeAdjustStrategy maxIntermediateSizeAdjustStrategy = aggregator.getMaxIntermediateSizeAdjustStrategy();
                                                return aggregator.getMaxIntermediateSizeWithNulls() + maxIntermediateSizeAdjustStrategy.initAppendBytes()
-                                                   + Long.BYTES * 2;
+                                                   + Long.BYTES * 2L;
                                              }
                                              return aggregator.getMaxIntermediateSizeWithNulls()
-                                                 + Long.BYTES * 2;
+                                                 + Long.BYTES * 2L;
                                            })
                                            .sum();
     return maxAggregatorIntermediateSize;
