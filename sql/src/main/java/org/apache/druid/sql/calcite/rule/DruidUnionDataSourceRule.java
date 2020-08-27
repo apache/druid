@@ -97,7 +97,7 @@ public class DruidUnionDataSourceRule extends RelOptRule
       );
     } else {
       // Sanity check.
-      Preconditions.checkState(firstDruidRel instanceof DruidQueryRel);
+      Preconditions.checkState(firstDruidRel instanceof DruidQueryRel, "Expected first rel to be a DruidQueryRel");
 
       call.transformTo(
           DruidUnionDataSourceRel.create(
