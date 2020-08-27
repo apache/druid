@@ -33,6 +33,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class DruidRelsTest
 {
@@ -307,6 +308,18 @@ public class DruidRelsTest
       @Nullable Filter whereFilter
   )
   {
+    return mockDruidRel(clazz, rel -> {}, stage, druidTable, selectProject, whereFilter);
+  }
+
+  public static <T extends DruidRel<?>> T mockDruidRel(
+      final Class<T> clazz,
+      final Consumer<T> additionalExpectationsFunction,
+      final PartialDruidQuery.Stage stage,
+      @Nullable DruidTable druidTable,
+      @Nullable Project selectProject,
+      @Nullable Filter whereFilter
+  )
+  {
     // DruidQueryRels rely on a ton of Calcite stuff like RelOptCluster, RelOptTable, etc, which is quite verbose to
     // create real instances of. So, tragically, we'll use EasyMock.
     final PartialDruidQuery mockPartialQuery = EasyMock.mock(PartialDruidQuery.class);
@@ -317,9 +330,10 @@ public class DruidRelsTest
     final RelOptTable mockRelOptTable = EasyMock.mock(RelOptTable.class);
     EasyMock.expect(mockRelOptTable.unwrap(DruidTable.class)).andReturn(druidTable).anyTimes();
 
-    final DruidRel<?> mockRel = EasyMock.mock(clazz);
+    final T mockRel = EasyMock.mock(clazz);
     EasyMock.expect(mockRel.getPartialDruidQuery()).andReturn(mockPartialQuery).anyTimes();
     EasyMock.expect(mockRel.getTable()).andReturn(mockRelOptTable).anyTimes();
+    additionalExpectationsFunction.accept(mockRel);
 
     EasyMock.replay(mockRel, mockPartialQuery, mockRelOptTable);
     return mockRel;

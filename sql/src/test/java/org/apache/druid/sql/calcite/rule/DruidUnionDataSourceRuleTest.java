@@ -20,6 +20,8 @@
 package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.util.mapping.Mappings;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -31,9 +33,12 @@ import org.apache.druid.sql.calcite.rel.DruidRelsTest;
 import org.apache.druid.sql.calcite.rel.DruidUnionDataSourceRel;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 public class DruidUnionDataSourceRuleTest
@@ -120,8 +125,9 @@ public class DruidUnionDataSourceRuleTest
   @Test
   public void test_getColumnNamesIfTableOrUnion_unionScan()
   {
-    final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
+    final DruidUnionDataSourceRel druidRel = DruidRelsTest.mockDruidRel(
         DruidUnionDataSourceRel.class,
+        rel -> EasyMock.expect(rel.getUnionColumnNames()).andReturn(fooDruidTable.getRowSignature().getColumnNames()),
         PartialDruidQuery.Stage.SCAN,
         null,
         null,
@@ -135,10 +141,38 @@ public class DruidUnionDataSourceRuleTest
   }
 
   @Test
+  public void test_getColumnNamesIfTableOrUnion_unionMapping()
+  {
+    final Project project = DruidRelsTest.mockMappingProject(ImmutableList.of(2, 1), 3);
+    final Mappings.TargetMapping mapping = project.getMapping();
+    final String[] mappedColumnNames = new String[mapping.getTargetCount()];
+
+    final List<String> columnNames = fooDruidTable.getRowSignature().getColumnNames();
+    for (int i = 0; i < columnNames.size(); i++) {
+      mappedColumnNames[mapping.getTargetOpt(i)] = columnNames.get(i);
+    }
+
+    final DruidUnionDataSourceRel druidRel = DruidRelsTest.mockDruidRel(
+        DruidUnionDataSourceRel.class,
+        rel -> EasyMock.expect(rel.getUnionColumnNames()).andReturn(Arrays.asList(mappedColumnNames)),
+        PartialDruidQuery.Stage.SELECT_PROJECT,
+        null,
+        project,
+        null
+    );
+
+    Assert.assertEquals(
+        Optional.of(ImmutableList.of("col2", "col1")),
+        DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
+    );
+  }
+
+  @Test
   public void test_getColumnNamesIfTableOrUnion_unionProject()
   {
-    final DruidRel<?> druidRel = DruidRelsTest.mockDruidRel(
+    final DruidUnionDataSourceRel druidRel = DruidRelsTest.mockDruidRel(
         DruidUnionDataSourceRel.class,
+        rel -> EasyMock.expect(rel.getUnionColumnNames()).andReturn(fooDruidTable.getRowSignature().getColumnNames()),
         PartialDruidQuery.Stage.SELECT_PROJECT,
         null,
         DruidRelsTest.mockNonMappingProject(),
@@ -146,7 +180,7 @@ public class DruidUnionDataSourceRuleTest
     );
 
     Assert.assertEquals(
-        Optional.empty(),
+        Optional.of(ImmutableList.of("__time", "col1", "col2")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel)
     );
   }
