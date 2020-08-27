@@ -85,7 +85,6 @@ import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
@@ -222,11 +221,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(2, true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     Assert.assertFalse(indexTask.supportsQueries());
@@ -320,11 +315,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         indexIngestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
@@ -416,11 +407,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(10, true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -455,11 +442,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(50, true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -490,11 +473,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 1, null), true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -530,11 +509,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithPartitionsSpec(new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")), true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -606,11 +581,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(2, false),
             true
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
@@ -658,11 +629,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithMaxRowsPerSegment(2, true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -728,11 +695,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -788,11 +751,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -837,11 +796,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfig(2, 2, null, 2L, null, false, true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -884,11 +839,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfig(3, 2, null, 2L, null, true, true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -930,11 +881,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfig(3, 2, null, 2L, null, false, true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1016,11 +963,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         parseExceptionIgnoreSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1076,11 +1019,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         indexIngestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1180,11 +1119,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1313,11 +1248,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1437,11 +1368,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1540,11 +1467,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1616,11 +1539,7 @@ public class IndexTaskTest extends IngestionTestBase
         null,
         null,
         ingestionSpec,
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
 
     TaskStatus status = runTask(indexTask).lhs;
@@ -1665,11 +1584,7 @@ public class IndexTaskTest extends IngestionTestBase
               createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
-          null,
-          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-          null,
-          rowIngestionMetersFactory,
-          appenderatorsManager
+          null
       );
 
       final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1733,11 +1648,7 @@ public class IndexTaskTest extends IngestionTestBase
               createTuningConfig(3, 2, null, 2L, null, false, true),
               false
           ),
-          null,
-          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-          null,
-          rowIngestionMetersFactory,
-          appenderatorsManager
+          null
       );
 
       final List<DataSegment> segments = runTask(indexTask).rhs;
@@ -1772,11 +1683,7 @@ public class IndexTaskTest extends IngestionTestBase
             createTuningConfigWithPartitionsSpec(new SingleDimensionPartitionsSpec(null, 1, null, false), true),
             false
         ),
-        null,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory,
-        appenderatorsManager
+        null
     );
     expectedException.expect(UnsupportedOperationException.class);
     expectedException.expectMessage(
