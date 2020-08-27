@@ -557,7 +557,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
   ListenableFuture<SegmentsAndCommitMetadata> publishInBackground(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
       SegmentsAndCommitMetadata segmentsAndCommitMetadata,
-      TransactionalSegmentPublisher publisher
+      TransactionalSegmentPublisher publisher,
+      java.util.function.Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
   )
   {
     if (segmentsAndCommitMetadata.getSegments().isEmpty()) {
@@ -591,6 +592,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             final SegmentPublishResult publishResult = publisher.publishSegments(
                 segmentsToBeOverwritten,
                 ourSegments,
+                outputSegmentsAnnotateFunction,
                 callerMetadata
             );
 

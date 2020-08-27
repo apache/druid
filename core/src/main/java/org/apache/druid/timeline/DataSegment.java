@@ -427,6 +427,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
     return builder(this).binaryVersion(binaryVersion).build();
   }
 
+  public DataSegment withLastCompactionState(CompactionState compactionState)
+  {
+    return builder(this).lastCompactionState(compactionState).build();
+  }
+
   @Override
   public int compareTo(DataSegment dataSegment)
   {

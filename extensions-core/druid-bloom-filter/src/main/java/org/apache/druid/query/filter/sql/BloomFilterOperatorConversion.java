@@ -107,7 +107,7 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
       VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           plannerContext,
           druidExpression,
-          operands.get(0).getType().getSqlTypeName()
+          operands.get(0).getType()
       );
       if (virtualColumn == null) {
         return null;
