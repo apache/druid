@@ -43,6 +43,7 @@ public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandl
   public static final int WARM_UP_ROUNDS = 2;
   public static final int REPEAT_TIMES = 20;
   private static final int MAX_ROWS = 20_0000;
+  private static final int MAX_BYTES = 100_000_000;
   private OnheapIncrementalIndex index;
   private int dimCardinalNum;
   private int thetaCardinalNum;
@@ -78,6 +79,7 @@ public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandl
                   .build()
           )
           .setMaxRowCount(MAX_ROWS)
+          .setMaxBytesInMemory(MAX_BYTES)
           .buildOnheap();
       for (int j = 0; j < MAX_ROWS; ++j) {
         int dim = random.nextInt(dimCardinalNum);
@@ -115,6 +117,7 @@ public class ThetaSketchSizeAdjustStrategyBenchmark extends InitializedNullHandl
                   .build()
           )
           .setMaxRowCount(MAX_ROWS)
+          .setMaxBytesInMemory(MAX_BYTES)
           .buildOnheap();
       for (int j = 0; j < MAX_ROWS; ++j) {
         int dim = random.nextInt(dimCardinalNum);

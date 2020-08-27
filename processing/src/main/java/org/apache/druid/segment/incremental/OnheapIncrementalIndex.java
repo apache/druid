@@ -112,7 +112,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       startAsyncAdjust();
     }
     log.debug("adjustBytesInMemoryFlag:[%s],adjustBytesInMemoryPeriod[%s],rowNeedAsyncAdjustAggIndex:%s,rowNeedSyncAdjustAggIndex:%s" +
-            "maxBytesPerRowForAggregators[%s]",
+            ",maxBytesPerRowForAggregators[%s]",
         adjustBytesInMemoryFlag, adjustBytesInMemoryPeriod,
         Arrays.toString(rowNeedAsyncAdjustAggIndex),
         Arrays.toString(rowNeedSyncAdjustAggIndex),
@@ -121,17 +121,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   public boolean canAdjust()
   {
-    return adjustBytesInMemoryFlag && (rowNeedAsyncAdjustAggIndex.length > 0 || rowNeedSyncAdjustAggIndex.length > 0);
+    return adjustBytesInMemoryFlag
+        && maxBytesInMemory != Long.MAX_VALUE
+        && (rowNeedAsyncAdjustAggIndex.length > 0 || rowNeedSyncAdjustAggIndex.length > 0);
   }
 
   public boolean existsAsyncAdjust()
   {
-    return adjustBytesInMemoryFlag && (rowNeedAsyncAdjustAggIndex.length > 0);
+    return canAdjust() && rowNeedAsyncAdjustAggIndex.length > 0;
   }
 
   public boolean existsSyncAdjust()
   {
-    return adjustBytesInMemoryFlag && rowNeedSyncAdjustAggIndex.length > 0;
+    return canAdjust() && rowNeedSyncAdjustAggIndex.length > 0;
   }
 
   private void startAsyncAdjust()

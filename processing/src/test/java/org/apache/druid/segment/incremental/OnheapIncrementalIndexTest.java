@@ -63,6 +63,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
   private static final int MAX_ROWS = 100000;
+  private static final int MAX_BYTES = 100_000_000;
 
   private MaxIntermediateSizeAdjustStrategy customAggStrategy = null;
   private Aggregator customAgg = null;
@@ -309,6 +310,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
         .buildOnheap();
     IncrementalIndexAddResult addResult1 = null;
     for (int i = 0; i < MAX_ROWS; i++) {
@@ -333,6 +335,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
         .buildOnheap();
     Thread.sleep(indexAdjust.adjustBytesInMemoryPeriod);
 
@@ -391,6 +394,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
         .buildOnheap();
     IncrementalIndexAddResult addResult1 = null;
     for (int i = 0; i < MAX_ROWS; i++) {
@@ -414,6 +418,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
         .buildOnheap();
 
     final int addThreadCount = 2;

@@ -45,6 +45,7 @@ import java.util.Collections;
 public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTest
 {
   private static final int MAX_ROWS = 100000;
+  private static final int MAX_BYTES = 100_000_000;
 
   @Before
   public void setup()
@@ -88,6 +89,7 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
         .buildOnheap();
     Assert.assertEquals(true, index.existsAsyncAdjust() && !index.existsSyncAdjust()
         && index.getRowNeedAsyncAdjustAggIndex().length == 1 && index.getRowNeedSyncAdjustAggIndex().length == 0);
@@ -169,6 +171,7 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
                   .build()
           )
           .setMaxRowCount(MAX_ROWS)
+          .setMaxBytesInMemory(MAX_BYTES)
           .buildOnheap();
       OnheapIncrementalIndex index2 = (OnheapIncrementalIndex) new IncrementalIndex.Builder()
           .setIndexSchema(
@@ -178,6 +181,7 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
                   .build()
           )
           .setMaxRowCount(MAX_ROWS)
+          .setMaxBytesInMemory(MAX_BYTES)
           .buildOnheap();
 
       IncrementalIndexAddResult addResult = null;
@@ -239,6 +243,7 @@ public class ThetaSketchSizeAdjustStrategyTest extends InitializedNullHandlingTe
                 .build()
         )
         .setMaxRowCount(MAX_ROWS)
+        .setMaxBytesInMemory(MAX_BYTES)
         .buildOnheap();
     final int[] rowNeedAdjustAggIndex = index.getRowNeedAsyncAdjustAggIndex();
     Assert.assertArrayEquals(actualNeedAdjustMetricIndex, rowNeedAdjustAggIndex);
