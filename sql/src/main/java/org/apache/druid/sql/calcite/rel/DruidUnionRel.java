@@ -47,9 +47,9 @@ import java.util.stream.Collectors;
  * {@link #getPartialDruidQuery()} returns null, and this rel cannot be built on top of. It must be the outer rel in a
  * query plan.
  *
- * See {@link DruidUnionDataSourceRel} for a version that does a regular Druid query using a
- * {@link org.apache.druid.query.UnionDataSource}. In the future we expect that {@link UnionDataSource} will gain the
- * ability to union query datasources together, and then this rel could be replaced by {@link DruidUnionDataSourceRel}.
+ * See {@link DruidUnionDataSourceRel} for a version that does a regular Druid query using a {@link UnionDataSource}.
+ * In the future we expect that {@link UnionDataSource} will gain the ability to union query datasources together, and
+ * then this rel could be replaced by {@link DruidUnionDataSourceRel}.
  */
 public class DruidUnionRel extends DruidRel<DruidUnionRel>
 {

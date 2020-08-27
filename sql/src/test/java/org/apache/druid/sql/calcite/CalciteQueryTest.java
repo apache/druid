@@ -3795,7 +3795,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnionAllTablesColumnTypeMismatchStringLong() throws Exception
+  public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
     // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
     // query cannot be planned.
