@@ -77,7 +77,7 @@ final class ApproximateHistogramFoldingBufferAggregatorInternal
 
   public void foldFast(ApproximateHistogram left, ApproximateHistogram right)
   {
-    //TODO: do these have to set in every call
+    //These have to set in every call since limits are transient and lost during serialization-deserialization
     left.setLowerLimit(lowerLimit);
     left.setUpperLimit(upperLimit);
     left.foldFast(right, tmpBufferA, tmpBufferB);
