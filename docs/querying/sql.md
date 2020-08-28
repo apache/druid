@@ -145,12 +145,52 @@ There are two important factors that can affect the performance of queries that 
 
 ### UNION ALL
 
-The "UNION ALL" operator can be used to fuse multiple queries together. Their results will be concatenated, and each
-query will run separately, back to back (not in parallel). Druid does not currently support "UNION" without "ALL".
-UNION ALL must appear at the very outer layer of a SQL query (it cannot appear in a subquery or in the FROM clause).
+The "UNION ALL" operator fuses multiple queries together. Druid SQL supports the UNION ALL operator in two situations:
+top-level and table-level. Queries that use UNION ALL in any other way will not be able to execute.
 
-Note that despite the similar name, UNION ALL is not the same thing as as [union datasource](datasource.md#union).
-UNION ALL allows unioning the results of queries, whereas union datasources allow unioning tables.
+#### Top-level
+
+UNION ALL can be used at the very top outer layer of a SQL query (not in a subquery, and not in the FROM clause). In
+this case, the underlying queries will be run separately, back to back, and their results will all be returned in
+one result set.
+
+For example:
+
+```
+SELECT COUNT(*) FROM tbl WHERE my_column = 'value1'
+UNION ALL
+SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
+```
+
+When UNION ALL occurs at the top level of a query like this, the results from the unioned queries are concatenated
+together and appear one after the other.
+
+#### Table-level
+
+UNION ALL can be used to query multiple tables at the same time. In this case, it must appear in the FROM clause,
+and the subqueries that are inputs to the UNION ALL operator must be simple table SELECTs (no expressions, column
+aliasing, etc). The query will run natively using a [union datasource](datasource.md#union).
+
+The same columns must be selected from each table in the same order, and those columns must either have the same types,
+or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally
+more robust to write your queries to select specific columns. If you use `SELECT *`, you will need to modify your
+queries if a new column is added to one of the tables but not to the others.
+
+For example:
+
+```
+SELECT col1, COUNT(*)
+FROM (
+  SELECT col1, col2, col3 FROM tbl1
+  UNION ALL
+  SELECT col1, col2, col3 FROM tbl2
+)
+GROUP BY col1
+```
+
+When UNION ALL occurs at the table level, the rows from the unioned tables are not guaranteed to be processed in
+any particular order. They may be processed in an interleaved fashion. If you need a particular result ordering,
+use [ORDER BY](#order-by).
 
 ### EXPLAIN PLAN
 
@@ -754,7 +794,6 @@ Druid does not support all SQL features. In particular, the following features a
 Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features
 include:
 
-- [Union datasources](datasource.html#union).
 - [Inline datasources](datasource.html#inline).
 - [Spatial filters](../development/geo.html).
 - [Query cancellation](querying.html#query-cancellation).
