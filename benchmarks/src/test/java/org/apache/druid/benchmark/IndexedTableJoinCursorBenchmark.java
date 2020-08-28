@@ -95,7 +95,7 @@ public class IndexedTableJoinCursorBenchmark
     NullHandling.initializeForTests();
   }
 
-  private static final List<Set<String>> projections = ImmutableList.of(
+  private static final List<Set<String>> PROJECTIONS = ImmutableList.of(
       // 0 string key rhs
       ImmutableSet.of("j0.stringKey"),
       // 1 string key lhs
@@ -161,7 +161,7 @@ public class IndexedTableJoinCursorBenchmark
     table = closer.register(makeTable(indexedTableType, keyColumns, joinSegment));
 
     final String prefix = "j0.";
-    projectionColumns = projections.get(projection);
+    projectionColumns = PROJECTIONS.get(projection);
     final String[] split = joinColumns.split(",");
     final String lhsJoinColumn = split[0];
     final String rhsJoinColumn = split[1];

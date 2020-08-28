@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5)
 public class IndexedTableLoadingBenchmark
 {
-  private static List<Set<String>> keyColumnsSets = ImmutableList.of(
+  private static List<Set<String>> KEY_COLUMN_SETS = ImmutableList.of(
       ImmutableSet.of("stringKey", "longKey")
   );
 
@@ -84,9 +84,9 @@ public class IndexedTableLoadingBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void loadTable(Blackhole blackhole)
   {
-    try(
+    try (
         IndexedTable table =
-            IndexedTableJoinCursorBenchmark.makeTable(indexedTableType, keyColumnsSets.get(keyColumns), tableSegment)
+            IndexedTableJoinCursorBenchmark.makeTable(indexedTableType, KEY_COLUMN_SETS.get(keyColumns), tableSegment)
     ) {
       blackhole.consume(table);
     }
