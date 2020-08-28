@@ -322,7 +322,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
-      throw new ISE("WTF?! announceHistoricalSegments failed with null metadata, should not happen.");
+      throw new ISE("announceHistoricalSegments failed with null metadata, should not happen.");
     }
 
     return result.getSegments();

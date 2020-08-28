@@ -60,7 +60,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
         rexNode,
         operands -> {
           if (operands.size() < 2) {
-            throw new ISE("WTF?! Got binary operator[%s] with %s args?", operator.getName(), operands.size());
+            throw new ISE("Got binary operator[%s] with %s args", operator.getName(), operands.size());
           }
 
           return DruidExpression.fromExpression(
@@ -92,7 +92,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
         rexNode,
         operands -> {
           if (operands.size() < 2) {
-            throw new ISE("WTF?! Got binary operator[%s] with %s args?", operator.getName(), operands.size());
+            throw new ISE("Got binary operator[%s] with %s args", operator.getName(), operands.size());
           }
 
           return DruidExpression.fromExpression(

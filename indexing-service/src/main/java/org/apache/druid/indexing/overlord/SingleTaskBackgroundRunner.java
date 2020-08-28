@@ -171,7 +171,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         executorService.shutdown();
       }
       catch (SecurityException ex) {
-        log.wtf(ex, "I can't control my own threads!");
+        log.error(ex, "I can't control my own threads!");
       }
     }
 
@@ -233,7 +233,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         executorService.shutdownNow();
       }
       catch (SecurityException ex) {
-        log.wtf(ex, "I can't control my own threads!");
+        log.error(ex, "I can't control my own threads!");
       }
     }
   }
