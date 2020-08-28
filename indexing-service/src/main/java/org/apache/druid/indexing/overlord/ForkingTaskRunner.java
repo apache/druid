@@ -174,7 +174,7 @@ public class ForkingTaskRunner
                         final ForkingTaskRunnerWorkItem taskWorkItem = tasks.get(task.getId());
 
                         if (taskWorkItem == null) {
-                          LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                          LOGGER.makeAlert("TaskInfo disappeared!").addData("task", task.getId()).emit();
                           throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                         }
 
@@ -183,7 +183,7 @@ public class ForkingTaskRunner
                         }
 
                         if (taskWorkItem.processHolder != null) {
-                          LOGGER.makeAlert("WTF?! TaskInfo already has a processHolder")
+                          LOGGER.makeAlert("TaskInfo already has a processHolder")
                                 .addData("task", task.getId())
                                 .emit();
                           throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());

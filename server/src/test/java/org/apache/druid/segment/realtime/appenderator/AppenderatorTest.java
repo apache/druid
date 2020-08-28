@@ -844,7 +844,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
           } else if (a instanceof DataSegment && b instanceof DataSegment) {
             return ((DataSegment) a).getId().compareTo(((DataSegment) b).getId());
           } else {
-            throw new IllegalStateException("WTF??");
+            throw new IllegalStateException("BAD");
           }
         }
     );
