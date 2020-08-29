@@ -78,6 +78,15 @@ import java.util.Set;
 
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
+  /**
+   * The maximum number of values that should be used in hashcode computation.
+   * A performance bottleneck was first observed in filters with more than 20K values,
+   * so we set this to 5k as a guesstimate. No benchmarks have been done to validate
+   * the optimal number of values to include in the hashcode to minimize collisions,
+   * while still having the hashcode compute quickly.
+   */
+  private static final int MAX_NUM_VALS_IN_HASHCODE = 5_000;
+
   @Nonnull
   // Values can contain `null` object
   private final Set<String> values;
@@ -101,7 +110,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   // it will always be recalculated, unfortunately.
   // Inspired by com.google.common.collect.SingletonImmutableSet
   @JsonIgnore
-  private transient int cachedHashCode;
+  private transient int cachedValuesHashCode;
 
   @JsonCreator
   public InDimFilter(
@@ -169,15 +178,23 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   {
     Preconditions.checkNotNull(values, "values cannot be null");
 
-    this.cachedHashCode = 0;
+    this.cachedValuesHashCode = 0;
     // The values set can be huge. Try to avoid copying the set if possible.
     // Note that we may still need to copy values to a list for caching. See getCacheKey().
     if (!NullHandling.sqlCompatible() && values.contains("")) {
       // In Non sql compatible mode, empty strings should be converted to nulls for the filter.
       // In sql compatible mode, empty strings and nulls should be treated differently
       this.values = Sets.newHashSetWithExpectedSize(values.size());
+      int numVals = 0;
       for (String v : values) {
-        this.values.add(NullHandling.emptyToNullIfNeeded(v));
+        @Nullable String newVal = NullHandling.emptyToNullIfNeeded(v);
+        this.values.add(newVal);
+        numVals++;
+        // Make sure this is in sync with computeValuesHashCode.
+        // More details on why this approach was taken in there.
+        if (newVal != null && numVals < MAX_NUM_VALS_IN_HASHCODE) {
+          this.cachedValuesHashCode += newVal.hashCode();
+        }
       }
     } else {
       this.values = values;
@@ -416,21 +433,39 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public int hashCode()
   {
+    int hashCode = Objects.hash(dimension, extractionFn, filterTuning);
     // Racy single-check
-    int code = cachedHashCode;
+    int code = cachedValuesHashCode;
     if (code == 0) {
-      cachedHashCode = code = computeHashCode();
+      cachedValuesHashCode = code = computeValuesHashCode();
     }
-    return code;
+    hashCode = 31 * hashCode + code;
+    return hashCode;
   }
 
   /**
    * This method exists so that EqualsVerifier can validate the caching functionality.
    * @return
    */
-  private int computeHashCode()
+  private int computeValuesHashCode()
   {
-    return Objects.hash(values, dimension, extractionFn, filterTuning);
+    // The computation of hashCode in this function should be kept in sync with the computation of
+    // hashCode in the constructor.
+    // To deal with very large lists of in filter values, the hashCode computation is limited to
+    // MAX_NUM_VALS_IN_HASHCODE.
+    // This implementation of hashCode is based on the implementation in java.util.AbstractSet.
+    int h = 0, numVals = 0;
+    for (String v : values) {
+      numVals++;
+      if (numVals < MAX_NUM_VALS_IN_HASHCODE) {
+        if (v != null) {
+          h += v.hashCode();
+        }
+      } else {
+        break;
+      }
+    }
+    return h;
   }
 
   private byte[] computeCacheKey()

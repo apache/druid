@@ -155,9 +155,10 @@ public class InDimFilterTest extends InitializedNullHandlingTest
                   .withIgnoredFields(
                       "predicateFactory",
                       "cacheKeySupplier",
-                      "cachedOptimizedFilter"
+                      "cachedOptimizedFilter",
+                      "cachedValuesHashCode"
                   )
-                  .withCachedHashCode("cachedHashCode", "computeHashCode", null)
+                  .withCachedHashCode("cachedValuesHashCode", "computeValuesHashCode", null)
                   .suppress(Warning.NO_EXAMPLE_FOR_CACHED_HASHCODE)
                   .verify();
   }
