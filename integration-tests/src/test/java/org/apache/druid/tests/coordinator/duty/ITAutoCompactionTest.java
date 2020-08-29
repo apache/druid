@@ -21,12 +21,16 @@ package org.apache.druid.tests.coordinator.duty;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -99,6 +103,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
+
+      // TODO: verify auto compaction does nothing if it's all good
     }
   }
 
@@ -125,6 +131,10 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(10, 1);
 
       checkCompactionIntervals(intervalsBeforeCompaction);
+
+      // TODO: hash partitioning
+
+      // TODO: range
     }
   }
 
@@ -224,13 +234,38 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception
   {
-    DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(fullDatasourceName,
-                                                                                 null,
-                                                                                 null,
-                                                                                 maxRowsPerSegment,
-                                                                                 skipOffsetFromLatest,
-                                                                                 null,
-                                                                                 null);
+    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest);
+  }
+
+  private void submitCompactionConfig(PartitionsSpec partitionsSpec, Period skipOffsetFromLatest) throws Exception
+  {
+    DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
+        fullDatasourceName,
+        null,
+        null,
+        null,
+        skipOffsetFromLatest,
+        new UserCompactionTaskQueryTuningConfig(
+            null,
+            null,
+            null,
+            new MaxSizeSplitHintSpec(null, 1),
+            partitionsSpec,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2
+        ),
+        null
+    );
     compactionResource.submitCompactionConfig(compactionConfig);
 
     // Wait for compaction config to persist
@@ -245,12 +280,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       }
     }
     Assert.assertNotNull(foundDataSourceCompactionConfig);
-    Assert.assertEquals(foundDataSourceCompactionConfig.getMaxRowsPerSegment(), maxRowsPerSegment);
+    Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
+    Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
     Assert.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), skipOffsetFromLatest);
 
     foundDataSourceCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
     Assert.assertNotNull(foundDataSourceCompactionConfig);
-    Assert.assertEquals(foundDataSourceCompactionConfig.getMaxRowsPerSegment(), maxRowsPerSegment);
+    Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
+    Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
     Assert.assertEquals(foundDataSourceCompactionConfig.getSkipOffsetFromLatest(), skipOffsetFromLatest);
   }
 
