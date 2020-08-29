@@ -366,8 +366,11 @@
       "operations/rule-configuration": {
         "title": "Retaining or automatically dropping data"
       },
+      "operations/security-overview": {
+        "title": "Security overview"
+      },
       "operations/security-user-auth": {
-        "title": "Authentication and authorization"
+        "title": "User authentication and authorization"
       },
       "operations/segment-optimization": {
         "title": "Segment Size Optimization"

@@ -1,6 +1,6 @@
 ---
 id: security-user-auth
-title: "Authentication and authorization"
+title: "User authentication and authorization"
 ---
 
 <!--
@@ -23,8 +23,32 @@ title: "Authentication and authorization"
   -->
 
 
+This document describes the Druid security model that extensions use to enable user authentication and authorization services to Druid. 
 
-This document describes user security in Druid. Druid defines a security model that can be integrated with security extensions and third party user identity providers to secure your installation.   
+## Authentication and authorization model
+
+At the center of the Druid user authentication and authoratization model are _resources_ and _actions_. A resource is something that authenticated users are trying to access or modify. An action is something that users are trying to do. 
+
+There are three resource types:
+
+* DATASOURCE &ndash; Each Druid table (i.e., `tables` in the `druid` schema in SQL) is a resource.
+* CONFIG &ndash; Configuration resources exposed by the cluster components. 
+* STATE &ndash; Cluster-wide state resources.
+
+For specific resources associated with the types, see the endpoint list below and the corresponding descriptions of those endpoints on [API Reference](api-reference).
+
+There are two actions:
+
+* READ &ndash; Used for read-only operations.
+* WRITE &ndash; Used for operations that are not read-only.
+
+In practice, most deployments will only need to define to classes of users: 
+
+* Admins, who have WRITE action permissions on all resource types. These users will add datasources and administer the system.  
+* Data users, who only need READ access to DATASOURCE. These users should access Query APIs only through an API gateway. Other APIs and permissions include functionality that should be limited to server admins. 
+
+It is important to note that WRITE access to DATATSOURCE grants a user broad access. For instance, such users will have access to the Druid file system, S3 buckets, and credentials, among other things. As such, the ability to add and manage datasources should be allocated selectively to administrators.   
+
 
 ## Default user accounts
 

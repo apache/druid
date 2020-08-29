@@ -117,10 +117,12 @@
         "type": "subcategory",
         "label": "Security",
         "ids": [
+          "operations/security-overview",
           "operations/security-user-auth",
           "operations/auth-ldap",
-          "operations/tls-support",
-          "operations/password-provider"
+          "operations/password-provider",
+          "design/auth",
+          "operations/tls-support"
 
         ]
       }, 
