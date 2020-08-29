@@ -355,7 +355,7 @@ public class IndexGeneratorJob implements Jobby
       final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
 
       if (!bucket.isPresent()) {
-        throw new ISE("WTF?! No bucket found for row: %s", inputRow);
+        throw new ISE("No bucket found for row: %s", inputRow);
       }
 
       final long truncatedTimestamp = granularitySpec.getQueryGranularity()

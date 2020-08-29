@@ -95,7 +95,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
         final Task task = jsonMapper.readValue(taskFile, Task.class);
 
         if (!task.getId().equals(taskId)) {
-          throw new ISE("WTF?! Task[%s] restore file had wrong id[%s].", taskId, task.getId());
+          throw new ISE("Task[%s] restore file had wrong id[%s]", taskId, task.getId());
         }
 
         if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {

@@ -195,7 +195,7 @@ public class OperatorConversions
       final RexInputRef ref = (RexInputRef) rexNode;
       final String columnName = rowSignature.getColumnName(ref.getIndex());
       if (columnName == null) {
-        throw new ISE("WTF?! PostAgg referred to nonexistent index[%d]", ref.getIndex());
+        throw new ISE("PostAggregator referred to nonexistent index[%d]", ref.getIndex());
       }
 
       return new FieldAccessPostAggregator(

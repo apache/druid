@@ -2594,10 +2594,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     Assert.assertTrue(
-        serviceEmitter.getStackTrace().startsWith("org.apache.druid.java.util.common.ISE: WTH?! cannot find")
+        serviceEmitter.getStackTrace().startsWith("org.apache.druid.java.util.common.ISE: Cannot find")
     );
     Assert.assertEquals(
-        "WTH?! cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
+        "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
         serviceEmitter.getExceptionMessage()
     );
     Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());

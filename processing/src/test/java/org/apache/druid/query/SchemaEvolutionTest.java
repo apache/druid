@@ -210,7 +210,7 @@ public class SchemaEvolutionTest
 
     if (index4.getAvailableDimensions().size() != 0) {
       // Just double-checking that the exclusions are working properly
-      throw new ISE("WTF?! Expected no dimensions in index4");
+      throw new ISE("Expected no dimensions in index4");
     }
   }
 
