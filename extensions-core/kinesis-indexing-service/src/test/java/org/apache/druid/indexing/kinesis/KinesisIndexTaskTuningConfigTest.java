@@ -136,6 +136,7 @@ public class KinesisIndexTaskTuningConfigTest
   public void testSerdeWithModifiedTuningConfigAddedField() throws IOException
   {
     KinesisIndexTaskTuningConfig base = new KinesisIndexTaskTuningConfig(
+        null,
         1,
         3L,
         2,
@@ -195,6 +196,7 @@ public class KinesisIndexTaskTuningConfigTest
   public void testSerdeWithModifiedTuningConfigRemovedField() throws IOException
   {
     KinesisIndexTaskTuningConfig base = new KinesisIndexTaskTuningConfig(
+        null,
         1,
         3L,
         2,
@@ -282,6 +284,7 @@ public class KinesisIndexTaskTuningConfigTest
   public void testConvert()
   {
     KinesisSupervisorTuningConfig original = new KinesisSupervisorTuningConfig(
+        null,
         1,
         (long) 3,
         2,

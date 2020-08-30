@@ -271,6 +271,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
           null,
           null,
           null,
+          null,
           partitionsSpec,
           null,
           null,

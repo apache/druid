@@ -204,6 +204,7 @@ public class ClientCompactionTaskQuerySerdeTest
             new ParallelIndexTuningConfig(
                 null,
                 null,
+                null,
                 40000,
                 2000L,
                 null,

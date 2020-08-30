@@ -115,6 +115,7 @@ public class KafkaIndexTaskTuningConfigTest
   public void testConvert()
   {
     KafkaSupervisorTuningConfig original = new KafkaSupervisorTuningConfig(
+        null,
         1,
         null,
         2,
@@ -158,6 +159,7 @@ public class KafkaIndexTaskTuningConfigTest
   public void testSerdeWithModifiedTuningConfigAddedField() throws IOException
   {
     KafkaIndexTaskTuningConfig base = new KafkaIndexTaskTuningConfig(
+        null,
         1,
         null,
         2,
@@ -206,6 +208,7 @@ public class KafkaIndexTaskTuningConfigTest
   public void testSerdeWithModifiedTuningConfigRemovedField() throws IOException
   {
     TestModifiedKafkaIndexTaskTuningConfig base = new TestModifiedKafkaIndexTaskTuningConfig(
+        null,
         1,
         null,
         2,

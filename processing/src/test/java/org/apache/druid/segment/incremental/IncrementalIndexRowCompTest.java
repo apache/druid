@@ -38,10 +38,10 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
   @Test
   public void testBasic()
   {
-    IncrementalIndex<?> index = new IncrementalIndex.Builder()
+    IncrementalIndex<?> index = new OnheapIncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
         .setMaxRowCount(1000)
-        .buildOnheap();
+        .build();
 
     long time = System.currentTimeMillis();
     IncrementalIndexRow ir1 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B")).getIncrementalIndexRow();

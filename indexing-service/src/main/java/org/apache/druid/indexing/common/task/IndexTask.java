@@ -74,6 +74,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
@@ -1118,6 +1119,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUSH_TIMEOUT = 0;
 
+    private final AppendableIndexSpec appendableIndexSpec;
     private final int maxRowsInMemory;
     private final long maxBytesInMemory;
 
@@ -1189,6 +1191,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
         @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
+        @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
@@ -1211,6 +1214,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     )
     {
       this(
+          appendableIndexSpec,
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
           getPartitionsSpec(
@@ -1242,10 +1246,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
+        @Nullable AppendableIndexSpec appendableIndexSpec,
         @Nullable Integer maxRowsInMemory,
         @Nullable Long maxBytesInMemory,
         @Nullable PartitionsSpec partitionsSpec,
@@ -1262,6 +1267,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         @Nullable Integer maxSavedParseExceptions
     )
     {
+      this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
@@ -1300,6 +1306,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig withBasePersistDirectory(File dir)
     {
       return new IndexTuningConfig(
+          appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,
@@ -1320,6 +1327,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public IndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
     {
       return new IndexTuningConfig(
+          appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           partitionsSpec,
@@ -1335,6 +1343,13 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           maxParseExceptions,
           maxSavedParseExceptions
       );
+    }
+
+    @JsonProperty
+    @Override
+    public AppendableIndexSpec getAppendableIndexSpec()
+    {
+      return appendableIndexSpec;
     }
 
     @JsonProperty

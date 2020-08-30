@@ -75,6 +75,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.rules.TemporaryFolder;
@@ -429,7 +430,7 @@ public class AggregationTestHelper implements Closeable
     List<File> toMerge = new ArrayList<>();
 
     try {
-      index = new IncrementalIndex.Builder()
+      index = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
                   .withMinTimestamp(minTimestamp)
@@ -441,7 +442,7 @@ public class AggregationTestHelper implements Closeable
           )
           .setDeserializeComplexMetrics(deserializeComplexMetrics)
           .setMaxRowCount(maxRowCount)
-          .buildOnheap();
+          .build();
 
       while (rows.hasNext()) {
         Object row = rows.next();
@@ -450,7 +451,7 @@ public class AggregationTestHelper implements Closeable
           toMerge.add(tmp);
           indexMerger.persist(index, tmp, new IndexSpec(), null);
           index.close();
-          index = new IncrementalIndex.Builder()
+          index = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
                       .withMinTimestamp(minTimestamp)
@@ -462,7 +463,7 @@ public class AggregationTestHelper implements Closeable
               )
               .setDeserializeComplexMetrics(deserializeComplexMetrics)
               .setMaxRowCount(maxRowCount)
-              .buildOnheap();
+              .build();
         }
         if (row instanceof String && parser instanceof StringInputRowParser) {
           //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
@@ -519,7 +520,7 @@ public class AggregationTestHelper implements Closeable
       boolean rollup
   ) throws Exception
   {
-    IncrementalIndex index = new IncrementalIndex.Builder()
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(minTimestamp)
@@ -530,7 +531,7 @@ public class AggregationTestHelper implements Closeable
         )
         .setDeserializeComplexMetrics(deserializeComplexMetrics)
         .setMaxRowCount(maxRowCount)
-        .buildOnheap();
+        .build();
 
     while (rows.hasNext()) {
       Object row = rows.next();

@@ -17,25 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.segment.indexing;
+package org.apache.druid.segment.incremental;
 
-public class TuningConfigs
+import org.apache.druid.guice.annotations.ExtensionPoint;
+
+@ExtensionPoint
+public interface AppendableIndexSpec
 {
-  private TuningConfigs()
-  {
-  }
+  // Returns a builder of the appendable index.
+  AppendableIndexBuilder builder();
 
-  public static long getMaxBytesInMemoryOrDefault(final long maxBytesInMemory)
-  {
-    // In the main tuningConfig class constructor, we set the maxBytes to 0 if null to avoid setting
-    // maxBytes to max jvm memory of the process that starts first. Instead we set the default based on
-    // the actual task node's jvm memory.
-    long newMaxBytesInMemory = maxBytesInMemory;
-    if (maxBytesInMemory == 0) {
-      newMaxBytesInMemory = TuningConfig.DEFAULT_MAX_BYTES_IN_MEMORY;
-    } else if (maxBytesInMemory < 0) {
-      newMaxBytesInMemory = Long.MAX_VALUE;
-    }
-    return newMaxBytesInMemory;
-  }
+  // Returns the default max bytes in memory for this index.
+  long getDefaultMaxBytesInMemory();
 }

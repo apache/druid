@@ -32,6 +32,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -40,6 +41,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -434,4 +436,39 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
+  public static class Builder extends AppendableIndexBuilder
+  {
+    @Override
+    protected OnheapIncrementalIndex buildInner()
+    {
+      return new OnheapIncrementalIndex(
+          Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
+          deserializeComplexMetrics,
+          concurrentEventAdd,
+          sortFacts,
+          maxRowCount,
+          maxBytesInMemory
+      );
+    }
+  }
+
+  public static class Spec implements AppendableIndexSpec
+  {
+    public static final String TYPE = "onheap";
+
+    @Override
+    public AppendableIndexBuilder builder()
+    {
+      return new Builder();
+    }
+
+    @Override
+    public long getDefaultMaxBytesInMemory()
+    {
+      // We initially estimated this to be 1/3(max jvm memory), but bytesCurrentlyInMemory only
+      // tracks active index and not the index being flushed to disk, to account for that
+      // we halved default to 1/6(max jvm memory)
+      return JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
+    }
+  }
 }
