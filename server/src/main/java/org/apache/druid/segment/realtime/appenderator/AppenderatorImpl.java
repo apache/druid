@@ -277,8 +277,6 @@ public class AppenderatorImpl implements Appenderator
 
     if (addResult.isRowAdded()) {
       rowIngestionMeters.incrementProcessed();
-    } else if (addResult.getReasonOfNotAdded() != null) {
-      rowIngestionMeters.incrementThrownAway();
     } else if (addResult.hasParseException()) {
       parseExceptionHandler.handle(addResult.getParseException());
     }

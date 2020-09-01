@@ -33,7 +33,7 @@ public class IncrementalIndexAddResult
   @Nullable
   private final String reasonOfNotAdded;
 
-  public IncrementalIndexAddResult(
+  private IncrementalIndexAddResult(
       int rowCount,
       long bytesInMemory,
       @Nullable ParseException parseException,

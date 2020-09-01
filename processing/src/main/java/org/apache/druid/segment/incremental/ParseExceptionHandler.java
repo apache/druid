@@ -44,7 +44,7 @@ public class ParseExceptionHandler
   private final boolean logParseExceptions;
   private final int maxAllowedParseExceptions;
   @Nullable
-  private final CircularBuffer<Throwable> savedParseExceptions;
+  private final CircularBuffer<ParseException> savedParseExceptions;
 
   public ParseExceptionHandler(
       RowIngestionMeters rowIngestionMeters,
@@ -88,7 +88,7 @@ public class ParseExceptionHandler
   }
 
   @Nullable
-  public CircularBuffer<Throwable> getSavedParseExceptions()
+  public CircularBuffer<ParseException> getSavedParseExceptions()
   {
     return savedParseExceptions;
   }

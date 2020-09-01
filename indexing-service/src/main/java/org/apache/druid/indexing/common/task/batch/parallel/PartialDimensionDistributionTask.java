@@ -44,7 +44,6 @@ import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartit
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -217,9 +216,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
           iterator,
           granularitySpec,
           partitionDimension,
-          isAssumeGrouped,
-          tuningConfig.isLogParseExceptions(),
-          tuningConfig.getMaxParseExceptions()
+          isAssumeGrouped
       );
       sendReport(toolbox, new DimensionDistributionReport(getId(), distribution));
     }
@@ -231,9 +228,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
       HandlingInputRowIterator inputRowIterator,
       GranularitySpec granularitySpec,
       String partitionDimension,
-      boolean isAssumeGrouped,
-      boolean isLogParseExceptions,
-      int maxParseExceptions
+      boolean isAssumeGrouped
   )
   {
     Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
@@ -242,36 +237,22 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         ? dedupInputRowFilterSupplier.get()
         : new PassthroughInputRowFilter();
 
-    int numParseExceptions = 0;
-
     while (inputRowIterator.hasNext()) {
-      try {
-        InputRow inputRow = inputRowIterator.next();
-        if (inputRow == null) {
-          continue;
-        }
-
-        DateTime timestamp = inputRow.getTimestamp();
-
-        //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
-        Interval interval = granularitySpec.bucketInterval(timestamp).get();
-        String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
-
-        if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
-          StringDistribution stringDistribution =
-              intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
-          stringDistribution.put(partitionDimensionValue);
-        }
+      InputRow inputRow = inputRowIterator.next();
+      if (inputRow == null) {
+        continue;
       }
-      catch (ParseException e) {
-        if (isLogParseExceptions) {
-          LOG.error(e, "Encountered parse exception");
-        }
 
-        numParseExceptions++;
-        if (numParseExceptions > maxParseExceptions) {
-          throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
-        }
+      DateTime timestamp = inputRow.getTimestamp();
+
+      //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
+      Interval interval = granularitySpec.bucketInterval(timestamp).get();
+      String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
+
+      if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
+        StringDistribution stringDistribution =
+            intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
+        stringDistribution.put(partitionDimensionValue);
       }
     }
 

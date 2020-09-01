@@ -1697,7 +1697,7 @@ public class IndexTaskTest extends IngestionTestBase
     // full stacktrace will be too long and make tests brittle (e.g. if line # changes), just match the main message
     Assert.assertThat(
         status.getErrorMsg(),
-        CoreMatchers.containsString("Max parse exceptions exceeded")
+        CoreMatchers.containsString("Max parse exceptions")
     );
   }
 
