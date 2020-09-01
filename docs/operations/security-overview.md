@@ -153,7 +153,7 @@ After enabling the basic auth extension, you can add users, roles, and permissio
 
 ### Configuring LDAP as the authorizor
 
-As an alternative to using the basic metadata authenticator shown in the previous section, you can configure LDAP as the authorizor. 
+As an alternative to using the basic metadata authenticator, as shown in the previous section, you can use LDAP to authorize users. The following steps provide an overview of the setup steps. For more information on these settings, see [Properties for LDAP user authentication](https://druid.apache.org/docs/latest/development/extensions-core/druid-basic-security.html#properties-for-ldap-user-authentication).
 
 1. In `common.runtime.properties`, add LDAP to the authenticator chain in the order in which you want requests to be evaluated. For example:
    ```
@@ -161,7 +161,7 @@ As an alternative to using the basic metadata authenticator shown in the previou
    druid.auth.authenticatorChain=["ldap", "MyBasicMetadataAuthenticator"]
    ```
 
-2. Configure LDAP settings in `common.runtime.properties` according to your requirements. For example:
+2. Configure LDAP settings in `common.runtime.properties` as appropriate for your LDAP scheme and system. For example:
    ```
    druid.auth.authenticator.ldap.type=basic
    druid.auth.authenticator.ldap.enableCacheNotifications=true
@@ -208,17 +208,17 @@ As an alternative to using the basic metadata authenticator shown in the previou
    curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
    ```
    
-5. To add additional roles to the group mapping use the following API 
+5. To add additional roles to the group mapping, use the following API: 
    ``` 
    curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
    ```
 
-6. Add the LDAP user to Druid. To add a user use the following authentication API
+6. Add the LDAP user to Druid. To add a user, use the following authentication API:
    ```
    curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<ad_user> 
    ```
 
-7. Use the following command to assign the role to a user 
+7. Use the following command to assign the role to a user:
    ```
    curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/<ad_user>/roles/<rolename>
    ```   
