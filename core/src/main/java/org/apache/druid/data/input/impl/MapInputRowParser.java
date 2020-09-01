@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -109,8 +110,12 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
     return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
   }
 
-  private static String rawMapToPrint(Map<String, Object> rawMap)
+  @Nullable
+  private static String rawMapToPrint(@Nullable Map<String, Object> rawMap)
   {
+    if (rawMap == null) {
+      return null;
+    }
     final String input = rawMap.toString();
     return input.length() < 100 ? input : input.substring(0, 100) + "...";
   }

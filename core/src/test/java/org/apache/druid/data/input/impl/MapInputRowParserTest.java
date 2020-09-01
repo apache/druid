@@ -26,7 +26,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -94,7 +93,7 @@ public class MapInputRowParserTest
         timestampSpec,
         dimensions,
         dimensionExclusions,
-        ImmutableMap.of("time", new DateTime(JodaUtils.MIN_INSTANT - 1), "dim", 0, "met", 10)
+        ImmutableMap.of("time", DateTimes.utc(JodaUtils.MIN_INSTANT - 1), "dim", 0, "met", 10)
     );
     expectedException.expect(ParseException.class);
     expectedException.expectMessage("Encountered row with timestamp that cannot be represented as a long");
@@ -102,7 +101,7 @@ public class MapInputRowParserTest
         timestampSpec,
         dimensions,
         dimensionExclusions,
-        ImmutableMap.of("time", new DateTime(JodaUtils.MAX_INSTANT + 1), "dim", 0, "met", 10)
+        ImmutableMap.of("time", DateTimes.utc(JodaUtils.MAX_INSTANT + 1), "dim", 0, "met", 10)
     );
   }
 }
