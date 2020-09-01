@@ -8,34 +8,29 @@ title: "Security overview"
 
 By default, security features in Druid are disabled, that is, TLS is disabled and user authentication does not occur. To use these features, you need to configure security in Druid. 
 
-This document aims to give you an overview of the security features in Druid, and a quick look on how to go about configuring them. 
+This document gives you an overview of security features in Druid and how to configure them, and some best practices for securing Druid.
 
 
 ## Best practices
 
-* Do not expose the Druid Console on an untrusted network. Only trusted users should have access to it. Keep in mind that access to the console effectively confers access to the file system on the installation machine as well via file browsers built into the UI. 
-* TBD... 
+* Do not expose the Druid Console on an untrusted users or networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, whitelists the specific APIs that your users need to access, and implements account lockout and throttling features.
+* Grant users the minimum permissions necessary to perform their functions. For instance, do not allow user who only need to query data to write to data sources or view state.  
+* Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
+* Run Druid as an unprivileged Unix user on the installation machine (not root).
+
+You can configure authentication and authorization to control access to the the Druid APIs. The first step is enabling TLS for the cluster nodes. Then configure users, roles, and permissions, as described in the following sections. 
+
+The configuration settings mentioned below are primarily located in the `common.runtime.properties` file. Note that you need to make the configuration changes on each Druid server in the cluster. 
 
 
-## Securing Druid
+### Enable TLS
 
-
-You can configure authentication and authorization to control access to the the Druid APIs. The first step is enabling TLS for the cluster nodes. Then configure users, roles, and permissions. 
-
-Apache Druid uses Jetty as its embedded web server. The steps for securing a Druid cluster, therefore, aligns with securing any Jetty cluster.  
-
-To secure communication between cluster components, 
-
-#### Enable TLS
-
-You can enable TLS to secure external client connections to Druid as well as connections between cluster nodes. 
-
-Druid uses Jetty as its embedded web server. Therefore you refer to [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html) for complete instructions. 
+The first step in securing Druid is enabling TLS. You can enable TLS to secure external client connections to Druid as well as connections between cluster nodes. 
 
 An overview of the steps are: 
 
-1. Enable TLS by adding `druid.enableTlsPort=true` to `common.runtime.properties` on each node.
-2. Follow the steps in to [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#understanding-certificates-and-keys) to generate or import a key and certificate. 
+1. Enable TLS by adding `druid.enableTlsPort=true` to `common.runtime.properties` on each node in the Druid cluster.
+2. Follow the steps in [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#understanding-certificates-and-keys) to generate or import a key and certificate. 
 3. Configure the keystore and truststore settings in `common.runtime.properties`. The file should look something like this: 
   ```
   druid.enablePlaintextPort=false
@@ -57,12 +52,16 @@ An overview of the steps are:
 
 For more information, see [TLS support](tls-support) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext). 
 
+Druid uses Jetty as its embedded web server. Therefore you refer to [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html) for complete instructions. 
 
-### Configure Druid for basic-auth
 
-Extensions extend the authentication and authorization features built into core Druid. There are extensions for HTTP basic authentication, LDAP, and Kerberos. The following takes you through sample configuration steps for enabling basic auth:  
+### Enable an authenticator
 
-1. Add the `basic-auth` extension to `druid.extensions.loadList` in common.runtime.properties. For the quickstart installation, for example, ,the properties file is at `conf/druid/cluster/_common`:
+To authenticate requests in Druid, you configure an Authenticator. Authenticator extensions exist for HTTP basic authentication, LDAP, and Kerberos.  
+
+The following takes you through sample configuration steps for enabling basic auth:  
+
+1. Add the `basic-auth` extension to `druid.extensions.loadList` in common.runtime.properties. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
    ```
    druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service", "imply-utility-belt"]
    ```
@@ -91,8 +90,10 @@ Extensions extend the authentication and authorization features built into core 
 
 3. Restart the cluster. 
 
+See [Basic Security](../development/extensions-core/druid-basic-security) for more information. For more on authentication extensions, see [Kerberos](../development/extensions-core/druid-kerberos), [Authentication and Authorization](../design/auth), and [Authentication and Authorization](../design/auth) 
 
-#### Create users, roles, and permissions
+
+### Enable authorizors
 
 After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint.  
 
@@ -149,6 +150,87 @@ After enabling the basic auth extension, you can add users, roles, and permissio
     }
     ]
     ```
+
+
+### Configuring LDAP as the authorizor
+
+As an alternative to using the basic metadata authenticator shown in the previous section, you can configure LDAP as the authorizor. 
+
+1. In `common.runtime.properties`, add LDAP to the authenticator chain in the order in which you want requests to be evaluated. For example:
+   ```
+   # Druid basic security
+   druid.auth.authenticatorChain=["ldap", "MyBasicMetadataAuthenticator"]
+   ```
+
+2. Configure LDAP settings in `common.runtime.properties` according to your requirements. For example:
+
+   ```
+   druid.auth.authenticator.ldap.type=basic
+   druid.auth.authenticator.ldap.enableCacheNotifications=true
+   druid.auth.authenticator.ldap.credentialsValidator.type=ldap
+   druid.auth.authenticator.ldap.credentialsValidator.url=ldap://ad_host:389
+   druid.auth.authenticator.ldap.credentialsValidator.bindUser=ad_admin_user
+   druid.auth.authenticator.ldap.credentialsValidator.bindPassword=ad_admin_password
+   druid.auth.authenticator.ldap.credentialsValidator.baseDn=dc=example,dc=com 
+   druid.auth.authenticator.ldap.credentialsValidator.userSearch=(&(sAMAccountName=%s)(objectClass=user))
+   druid.auth.authenticator.ldap.credentialsValidator.userAttribute=sAMAccountName
+   druid.auth.authenticator.ldap.authorizerName=ldapauth
+   druid.escalator.type=basic
+   druid.escalator.internalClientUsername=ad_interal_user
+   druid.escalator.internalClientPassword=Welcome123
+   druid.escalator.authorizerName=ldapauth
+   druid.auth.authorizers=["ldapauth"]
+   druid.auth.authorizer.ldapauth.type=basic
+   druid.auth.authorizer.ldapauth.initialAdminUser=<ad_initial_admin_user>
+   druid.auth.authorizer.ldapauth.initialAdminRole=admin
+   druid.auth.authorizer.ldapauth.roleProvider.type=ldap
+   ```
+
+3. Given a group named "group1" in the directory, use the Druid API to create the group mapping and allocate initial roles as in the following example: 
+
+  ```
+  curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+  ```
+  The groupmap.json file contents would be something like:
+  ```
+  {
+    "name": "group1map",
+    "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
+    "roles": [
+        "readRole"
+    ]
+  }
+  ```
+
+4. Check if the group mapping is created successfully by executing the following API. This lists all group mappings.
+  ```
+  curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
+  ```
+
+  Alternatively, to check the details of a specific group mapping, use the following API:
+  
+  ```
+  curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+  ```
+
+5. To add additional roles to the group mapping use the following API 
+
+  ``` 
+  curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
+  ```
+
+6. Add the LDAP user to Druid. To add a user use the following authentication API
+  
+  ```
+  curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<ad_user> 
+
+  ```
+
+7. Use the following command to assign the role to a user 
+  ```
+  curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/<ad_user>/roles/<rolename>
+  ```   
+
 
 
 Congratulations, you now have permissioned roles with associated users in Druid!
