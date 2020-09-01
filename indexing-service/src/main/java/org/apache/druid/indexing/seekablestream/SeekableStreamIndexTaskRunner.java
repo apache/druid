@@ -631,14 +631,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   .findFirst()
                   .orElse(null);
 
-                if (sequenceToUse == null) {
-                  throw new ISE(
-                      "Cannot find any valid sequence for record with partition [%s] and sequenceNumber [%s]. Current sequences: %s",
-                      record.getPartitionId(),
-                      record.getSequenceNumber(),
-                      sequences
-                  );
-                }
+              if (sequenceToUse == null) {
+                throw new ISE(
+                    "Cannot find any valid sequence for record with partition [%s] and sequenceNumber [%s]. Current sequences: %s",
+                    record.getPartitionId(),
+                    record.getSequenceNumber(),
+                    sequences
+                );
+              }
 
               for (InputRow row : rows) {
                 final AppenderatorDriverAddResult addResult = driver.add(

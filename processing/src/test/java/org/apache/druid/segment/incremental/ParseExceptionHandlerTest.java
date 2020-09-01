@@ -21,17 +21,23 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.testing.junit.LoggerCaptureRule;
+import org.apache.logging.log4j.core.LogEvent;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.List;
 import java.util.stream.IntStream;
 
 public class ParseExceptionHandlerTest
 {
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
+
+  @Rule
+  public LoggerCaptureRule logger = new LoggerCaptureRule(ParseExceptionHandler.class);
 
   @Test
   public void testMetricWhenAllConfigurationsAreTurnedOff()
@@ -49,6 +55,25 @@ public class ParseExceptionHandlerTest
       parseExceptionHandler.handle(parseException);
       Assert.assertEquals(i + 1, rowIngestionMeters.getUnparseable());
     });
+  }
+
+  @Test
+  public void testLogParseExceptions()
+  {
+    final ParseException parseException = new ParseException("test");
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
+        rowIngestionMeters,
+        true,
+        Integer.MAX_VALUE,
+        0
+    );
+    parseExceptionHandler.handle(parseException);
+
+    List<LogEvent> logEvents = logger.getLogEvents();
+    Assert.assertEquals(1, logEvents.size());
+    String logMessage = logEvents.get(0).getMessage().getFormattedMessage();
+    Assert.assertTrue(logMessage.contains("Encountered parse exception"));
   }
 
   @Test

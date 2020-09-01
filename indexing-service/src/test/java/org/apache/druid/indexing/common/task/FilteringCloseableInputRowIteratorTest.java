@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -39,6 +38,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -199,7 +199,7 @@ public class FilteringCloseableInputRowIteratorTest
   {
     final MutableBoolean closed = new MutableBoolean(false);
     final CloseableIterator<InputRow> delegate = CloseableIterators.wrap(
-        Iterators.emptyIterator(),
+        Collections.emptyIterator(),
         closed::setTrue
     );
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
