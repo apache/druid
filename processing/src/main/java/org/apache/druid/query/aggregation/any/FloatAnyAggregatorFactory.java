@@ -28,11 +28,14 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -107,6 +110,18 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
           valueSelector
       );
     }
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    return new FloatAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   @Override

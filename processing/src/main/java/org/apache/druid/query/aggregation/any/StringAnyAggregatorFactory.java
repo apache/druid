@@ -27,10 +27,15 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -75,6 +80,37 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new StringAnyBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes);
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+
+    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    if (capabilities == null || capabilities.hasMultipleValues().isFalse()) {
+      return new StringAnyVectorAggregator(
+          selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
+          null,
+          maxStringBytes
+      );
+    } else {
+      return new StringAnyVectorAggregator(
+          null,
+          selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
+          maxStringBytes
+      );
+
+    }
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    if (fieldName != null) {
+      ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+      return capabilities == null || capabilities.getType() == ValueType.STRING;
+    }
+    return false;
   }
 
   @Override
