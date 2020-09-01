@@ -100,13 +100,12 @@ After enabling the basic auth extension, you can add users, roles, and permissio
 > The Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
 
 1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`, replacing USERNAME with the new username. For example: 
-   ```
+  ```
    curl -u admin:password -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/basic/users/myname
-   ```
+  ```
 2. Add a credential for the user by issuing a POST to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>/credentials`. For example:
     ```
     curl -u admin:password -H'Content-Type: application/json' -XPOST --data-binary @pass.json https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/basic/users/myname/credentials
-
     ```
     The password is conveyed in the pass.json file, the payload of which should be in the form:
    	```
@@ -163,7 +162,6 @@ As an alternative to using the basic metadata authenticator shown in the previou
    ```
 
 2. Configure LDAP settings in `common.runtime.properties` according to your requirements. For example:
-
    ```
    druid.auth.authenticator.ldap.type=basic
    druid.auth.authenticator.ldap.enableCacheNotifications=true
@@ -186,50 +184,44 @@ As an alternative to using the basic metadata authenticator shown in the previou
    druid.auth.authorizer.ldapauth.roleProvider.type=ldap
    ```
 
-3. Given a group named "group1" in the directory, use the Druid API to create the group mapping and allocate initial roles as in the following example: 
-
-  ```
-  curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
-  ```
-  The groupmap.json file contents would be something like:
-  ```
-  {
-    "name": "group1map",
-    "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
-    "roles": [
-        "readRole"
-    ]
-  }
-  ```
-
+3. Use the Druid API to create the group mapping and allocate initial roles. For example, using curl and given a group named "group1" in the directory, run: 
+   ```
+   curl -i -v  -H "Content-Type: application/json" -u internal -X POST -d @groupmap.json http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+   ```
+   The groupmap.json file contents would be something like:
+   ```
+   {
+     "name": "group1map",
+     "groupPattern": "CN=group1,CN=Users,DC=example,DC=com",
+     "roles": [
+         "readRole"
+     ]
+   }
+   ```
 4. Check if the group mapping is created successfully by executing the following API. This lists all group mappings.
-  ```
-  curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
-  ```
-
-  Alternatively, to check the details of a specific group mapping, use the following API:
-  
-  ```
-  curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
-  ```
-
+   ```
+   curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings
+   ```
+   
+   Alternatively, to check the details of a specific group mapping, use the following API:
+   ```
+   curl -i -v  -H "Content-Type: application/json" -u internal -X GET http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1map
+   ```
+   
 5. To add additional roles to the group mapping use the following API 
-
-  ``` 
-  curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
-  ```
+   ``` 
+   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/groupMappings/group1/roles/<newrole> 
+   ```
 
 6. Add the LDAP user to Druid. To add a user use the following authentication API
-  
-  ```
-  curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<ad_user> 
-
-  ```
+   ```
+   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authentication/db/ldap/users/<ad_user> 
+   ```
 
 7. Use the following command to assign the role to a user 
-  ```
-  curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/<ad_user>/roles/<rolename>
-  ```   
+   ```
+   curl -i -v  -H "Content-Type: application/json" -u internal -X POST http://localhost:8081/druid-ext/basic-security/authorization/db/ldapauth/users/<ad_user>/roles/<rolename>
+   ```   
 
 
 
