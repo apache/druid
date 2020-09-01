@@ -43,6 +43,11 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregator;
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorCollector;
 import org.apache.druid.query.aggregation.variance.VarianceAggregatorFactory;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -85,6 +90,8 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
+
+  private SqlLifecycle sqlLifecycle;
 
   @BeforeClass
   public static void setUpClass()
@@ -181,6 +188,8 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             CalciteTests.DRUID_SCHEMA_NAME
         )
     );
+    queryLogHook.clearRecordedQueries();
+    sqlLifecycle = sqlLifecycleFactory.factorize();
   }
 
   @After
@@ -221,7 +230,6 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testVarPop() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
     final String sql = "SELECT\n"
                        + "VAR_POP(d1),\n"
                        + "VAR_POP(f1),\n"
@@ -255,10 +263,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) holder3.getVariance(true),
         }
     );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
+    assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -281,7 +286,6 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testVarSamp() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
     final String sql = "SELECT\n"
                        + "VAR_SAMP(d1),\n"
                        + "VAR_SAMP(f1),\n"
@@ -315,10 +319,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) holder3.getVariance(false),
         }
     );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
+    assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -341,7 +342,6 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testStdDevPop() throws Exception
   {
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
     final String sql = "SELECT\n"
                        + "STDDEV_POP(d1),\n"
                        + "STDDEV_POP(f1),\n"
@@ -375,10 +375,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) Math.sqrt(holder3.getVariance(true)),
         }
     );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
+    assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -407,8 +404,6 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testStdDevSamp() throws Exception
   {
-    queryLogHook.clearRecordedQueries();
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
     final String sql = "SELECT\n"
                        + "STDDEV_SAMP(d1),\n"
                        + "STDDEV_SAMP(f1),\n"
@@ -442,10 +437,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) Math.sqrt(holder3.getVariance(false)),
         }
     );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
+    assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -473,8 +465,6 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testStdDevWithVirtualColumns() throws Exception
   {
-    queryLogHook.clearRecordedQueries();
-    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
     final String sql = "SELECT\n"
                        + "STDDEV(d1*7),\n"
                        + "STDDEV(f1*7),\n"
@@ -508,10 +498,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             (long) Math.sqrt(holder3.getVariance(false)),
         }
     );
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-    }
+    assertResultsEquals(expectedResults, results);
 
     Assert.assertEquals(
         Druids.newTimeseriesQueryBuilder()
@@ -539,5 +526,60 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
               .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
+  }
+
+
+  @Test
+  public void testVarianceOrderBy() throws Exception
+  {
+    queryLogHook.clearRecordedQueries();
+    final String sql = "select dim2, VARIANCE(f1) from druid.numfoo group by 1 order by 2 desc";
+    final List<Object[]> results =
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            CalciteTestBase.DEFAULT_PARAMETERS,
+            authenticationResult
+        ).toList();
+    List<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {"a", 0.5f},
+        new Object[] {NullHandling.sqlCompatible() ? null : "", 0.0033333334f},
+        new Object[] {"abc", 0f}
+    );
+    assertResultsEquals(expectedResults, results);
+
+    Assert.assertEquals(
+        GroupByQuery.builder()
+              .setDataSource(CalciteTests.DATASOURCE3)
+              .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .setGranularity(Granularities.ALL)
+              .setDimensions(new DefaultDimensionSpec("dim2", "_d0"))
+              .setAggregatorSpecs(
+                    new VarianceAggregatorFactory("a0:agg", "f1", "sample", "float")
+              )
+              .setLimitSpec(
+                  DefaultLimitSpec
+                      .builder()
+                      .orderBy(
+                          new OrderByColumnSpec(
+                              "a0:agg",
+                              OrderByColumnSpec.Direction.DESCENDING,
+                              StringComparators.NUMERIC
+                          )
+                      )
+                      .build()
+              )
+              .setContext(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
+  }
+
+  private static void assertResultsEquals(List<Object[]> expectedResults, List<Object[]> results)
+  {
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
+    }
   }
 }

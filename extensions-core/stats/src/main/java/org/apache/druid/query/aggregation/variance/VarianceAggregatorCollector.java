@@ -60,11 +60,11 @@ public class VarianceAggregatorCollector
   }
 
   public static final Comparator<VarianceAggregatorCollector> COMPARATOR = (o1, o2) -> {
-    int compare = Longs.compare(o1.count, o2.count);
+    int compare = Doubles.compare(o1.nvariance, o2.nvariance);
     if (compare == 0) {
-      compare = Doubles.compare(o1.sum, o2.sum);
+      compare = Longs.compare(o1.count, o2.count);
       if (compare == 0) {
-        compare = Doubles.compare(o1.nvariance, o2.nvariance);
+        compare = Doubles.compare(o1.sum, o2.sum);
       }
     }
     return compare;
