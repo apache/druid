@@ -112,7 +112,6 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     public MapIncrementalIndex(
         IncrementalIndexSchema incrementalIndexSchema,
         boolean deserializeComplexMetrics,
-        boolean reportParseExceptions,
         boolean concurrentEventAdd,
         boolean sortFacts,
         int maxRowCount,
@@ -122,7 +121,6 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
       super(
           incrementalIndexSchema,
           deserializeComplexMetrics,
-          reportParseExceptions,
           concurrentEventAdd,
           sortFacts,
           maxRowCount,
@@ -144,7 +142,6 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
               .withQueryGranularity(gran)
               .withMetrics(metrics)
               .build(),
-          true,
           true,
           false,
           true,
@@ -227,9 +224,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           }
           catch (ParseException e) {
             // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (getReportParseExceptions()) {
-              throw e;
-            }
+            throw e;
           }
         }
       }

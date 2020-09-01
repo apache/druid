@@ -26,7 +26,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
@@ -90,24 +90,31 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       dimensionsToUse = new ArrayList<>(Sets.difference(theMap.keySet(), dimensionExclusions));
     }
 
-    final DateTime timestamp;
     try {
-      timestamp = timestampSpec.extractTimestamp(theMap);
+      final DateTime timestamp = timestampSpec.extractTimestamp(theMap);
       if (timestamp == null) {
-        final String input = theMap.toString();
-        throw new NullPointerException(
-            StringUtils.format(
-                "Null timestamp in input: %s",
-                input.length() < 100 ? input : input.substring(0, 100) + "..."
-            )
+        throw new ParseException("Unparseable timestamp found! Event: %s", rawMapToPrint(theMap));
+      }
+      if (!Intervals.ETERNITY.contains(timestamp)) {
+        throw new ParseException(
+            "Encountered row with timestamp that cannot be represented as a long: [%s]",
+            rawMapToPrint(theMap)
         );
       }
+      return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
+    }
+    catch (ParseException e) {
+      throw e;
     }
     catch (Exception e) {
       throw new ParseException(e, "Unparseable timestamp found! Event: %s", theMap);
     }
+  }
 
-    return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
+  private static String rawMapToPrint(Map<String, Object> rawMap)
+  {
+    final String input = rawMap.toString();
+    return input.length() < 100 ? input : input.substring(0, 100) + "...";
   }
 
   @JsonProperty

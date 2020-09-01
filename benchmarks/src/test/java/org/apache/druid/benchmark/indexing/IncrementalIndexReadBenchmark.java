@@ -130,7 +130,6 @@ public class IncrementalIndexReadBenchmark
                 .withRollup(rollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
   }

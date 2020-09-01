@@ -54,6 +54,9 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
+import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -61,7 +64,7 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
@@ -229,6 +232,7 @@ public class AppenderatorTester implements AutoCloseable
         throw new UnsupportedOperationException();
       }
     };
+    final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
     appenderator = Appenderators.createRealtime(
         schema.getDataSource(),
         schema,
@@ -255,38 +259,15 @@ public class AppenderatorTester implements AutoCloseable
                 )
             )
         ),
-        new DataSegmentAnnouncer()
-        {
-          @Override
-          public void announceSegment(DataSegment segment)
-          {
-
-          }
-
-          @Override
-          public void unannounceSegment(DataSegment segment)
-          {
-
-          }
-
-          @Override
-          public void announceSegments(Iterable<DataSegment> segments)
-          {
-
-          }
-
-          @Override
-          public void unannounceSegments(Iterable<DataSegment> segments)
-          {
-
-          }
-        },
+        new NoopDataSegmentAnnouncer(),
         emitter,
         queryExecutor,
         NoopJoinableFactory.INSTANCE,
         MapCache.create(2048),
         new CacheConfig(),
-        new CachePopulatorStats()
+        new CachePopulatorStats(),
+        rowIngestionMeters,
+        new ParseExceptionHandler(rowIngestionMeters, false, 0, 0)
     );
   }
 
