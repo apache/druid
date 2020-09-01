@@ -23,8 +23,9 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -103,8 +104,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(2, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
-
-      // TODO: verify auto compaction does nothing if it's all good
     }
   }
 
@@ -129,12 +128,26 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(10);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(10, 1);
-
       checkCompactionIntervals(intervalsBeforeCompaction);
 
-      // TODO: hash partitioning
+      final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
+      submitCompactionConfig(hashedPartitionsSpec, SKIP_OFFSET_FROM_LATEST);
+      forceTriggerAutoCompaction(3);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(hashedPartitionsSpec, 3);
+      checkCompactionIntervals(intervalsBeforeCompaction);
 
-      // TODO: range
+      final SingleDimensionPartitionsSpec rangePartitionsSpec = new SingleDimensionPartitionsSpec(
+          5,
+          null,
+          "city",
+          false
+      );
+      submitCompactionConfig(rangePartitionsSpec, SKIP_OFFSET_FROM_LATEST);
+      forceTriggerAutoCompaction(2);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+      verifySegmentsCompacted(rangePartitionsSpec, 2);
+      checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
 
@@ -343,6 +356,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void verifySegmentsCompacted(int expectedCompactedSegmentCount, Integer expectedMaxRowsPerSegment)
   {
+    verifySegmentsCompacted(
+        new DynamicPartitionsSpec(expectedMaxRowsPerSegment, Long.MAX_VALUE),
+        expectedCompactedSegmentCount
+    );
+  }
+
+  private void verifySegmentsCompacted(PartitionsSpec partitionsSpec, int expectedCompactedSegmentCount)
+  {
     List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
     List<DataSegment> foundCompactedSegments = new ArrayList<>();
     for (DataSegment segment : segments) {
@@ -354,11 +375,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     for (DataSegment compactedSegment : foundCompactedSegments) {
       Assert.assertNotNull(compactedSegment.getLastCompactionState());
       Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
-      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getMaxRowsPerSegment(),
-                          expectedMaxRowsPerSegment);
-      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec().getType(),
-                          SecondaryPartitionType.LINEAR
-      );
+      Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec(), partitionsSpec);
     }
   }
 
