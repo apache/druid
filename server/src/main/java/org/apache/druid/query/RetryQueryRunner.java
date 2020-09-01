@@ -99,6 +99,10 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext context)
   {
+    final Sequence<T> baseSequence = baseRunner.run(queryPlus, context);
+    // runnableAfterFirstAttempt is only for testing, it must be no-op for production code.
+    runnableAfterFirstAttempt.run();
+
     return new YieldingSequenceBase<T>()
     {
       @Override
@@ -110,7 +114,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
               @Override
               public RetryingSequenceIterator make()
               {
-                return new RetryingSequenceIterator(queryPlus, context, baseRunner, runnableAfterFirstAttempt);
+                return new RetryingSequenceIterator(queryPlus, context, baseSequence);
               }
 
               @Override
@@ -181,36 +185,25 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   {
     private final QueryPlus<T> queryPlus;
     private final ResponseContext context;
-    private final QueryRunner<T> baseQueryRunner;
-    private final Runnable runnableAfterFirstAttempt;
 
-    private boolean first = true;
-    private Sequence<T> sequence = null;
+    private Sequence<T> sequence;
     private int retryCount = 0;
 
     private RetryingSequenceIterator(
         QueryPlus<T> queryPlus,
         ResponseContext context,
-        QueryRunner<T> baseQueryRunner,
-        Runnable runnableAfterFirstAttempt
+        Sequence<T> baseSequence
     )
     {
       this.queryPlus = queryPlus;
       this.context = context;
-      this.baseQueryRunner = baseQueryRunner;
-      this.runnableAfterFirstAttempt = runnableAfterFirstAttempt;
+      this.sequence = baseSequence;
     }
 
     @Override
     public boolean hasNext()
     {
-      if (first) {
-        sequence = baseQueryRunner.run(queryPlus, context);
-        // runnableAfterFirstAttempt is only for testing, it must be no-op for production code.
-        runnableAfterFirstAttempt.run();
-        first = false;
-        return true;
-      } else if (sequence != null) {
+      if (sequence != null) {
         return true;
       } else {
         final List<SegmentDescriptor> missingSegments = getMissingSegments(queryPlus, context);
