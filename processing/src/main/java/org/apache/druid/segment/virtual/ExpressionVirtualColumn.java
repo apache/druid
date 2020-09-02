@@ -40,6 +40,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,7 +55,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ExpressionVirtualColumn(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("outputType") ValueType outputType,
+      @JsonProperty("outputType") @Nullable ValueType outputType,
       @JacksonInject ExprMacroTable macroTable
   )
   {

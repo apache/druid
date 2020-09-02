@@ -141,7 +141,8 @@ public class Filtration
     );
 
     if (!transformed.getIntervals().equals(ImmutableList.of(eternity()))) {
-      throw new ISE("WTF?! optimizeFilterOnly was about to return filtration with intervals?!");
+      // Should not happen, but include as a sanity check to be sure.
+      throw new ISE("optimizeFilterOnly was about to return filtration with intervals");
     }
 
     return transformed;

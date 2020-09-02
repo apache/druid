@@ -66,10 +66,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         ParallelIndexTestingFactory.SUPERVISOR_TASK_ID,
         ParallelIndexTestingFactory.NUM_ATTEMPTS,
         INGESTION_SPEC,
-        ParallelIndexTestingFactory.CONTEXT,
-        ParallelIndexTestingFactory.INDEXING_SERVICE_CLIENT,
-        ParallelIndexTestingFactory.TASK_CLIENT_FACTORY,
-        ParallelIndexTestingFactory.SHUFFLE_CLIENT
+        ParallelIndexTestingFactory.CONTEXT
     );
   }
 

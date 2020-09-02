@@ -38,6 +38,7 @@ import com.google.inject.name.Named;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
@@ -103,7 +104,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -111,7 +112,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -2799,11 +2800,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         tuningConfig,
         ioConfig,
         context,
-        null,
-        null,
-        rowIngestionMetersFactory,
-        null,
-        appenderatorsManager
+        null
     );
   }
 
@@ -2976,6 +2973,14 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
         new SingleFileTaskReportFileWriter(reportsFile),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new NoopChatHandlerProvider(),
+        testUtils.getRowIngestionMetersFactory(),
+        new TestAppenderatorsManager(),
+        new NoopIndexingServiceClient(),
+        null,
+        null,
         null
     );
   }
@@ -2993,11 +2998,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
         @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
         @JsonProperty("context") Map<String, Object> context,
-        @JacksonInject ChatHandlerProvider chatHandlerProvider,
-        @JacksonInject AuthorizerMapper authorizerMapper,
-        @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-        @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig,
-        @JacksonInject AppenderatorsManager appenderatorsManager
+        @JacksonInject @Named(KinesisIndexingServiceModule.AWS_SCOPE) AWSCredentialsConfig awsCredentialsConfig
     )
     {
       super(
@@ -3007,11 +3008,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
           tuningConfig,
           ioConfig,
           context,
-          chatHandlerProvider,
-          authorizerMapper,
-          rowIngestionMetersFactory,
-          awsCredentialsConfig,
-          appenderatorsManager
+          awsCredentialsConfig
       );
     }
 

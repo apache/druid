@@ -22,6 +22,7 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -36,16 +37,17 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -53,14 +55,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.List;
 
 /**
  */
 public class WorkerTaskManagerTest
 {
   private final TaskLocation location = TaskLocation.create("localhost", 1, 2);
+  private final TestUtils testUtils;
   private final ObjectMapper jsonMapper;
   private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
@@ -69,7 +70,7 @@ public class WorkerTaskManagerTest
 
   public WorkerTaskManagerTest()
   {
-    TestUtils testUtils = new TestUtils();
+    testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     TestTasks.registerSubtypes(jsonMapper);
     indexMergerV9 = testUtils.getTestIndexMergerV9();
@@ -94,15 +95,6 @@ public class WorkerTaskManagerTest
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
-
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.emptyList();
-      }
-    };
 
     return new WorkerTaskManager(
         jsonMapper,
@@ -135,6 +127,14 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 new NoopTestTaskReportFileWriter(),
+                null,
+                AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+                new NoopChatHandlerProvider(),
+                testUtils.getRowIngestionMetersFactory(),
+                new TestAppenderatorsManager(),
+                new NoopIndexingServiceClient(),
+                null,
+                null,
                 null
             ),
             taskConfig,

@@ -80,7 +80,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -3195,9 +3194,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
 
     Assert.assertTrue(serviceEmitter.getStackTrace()
-                                    .startsWith("org.apache.druid.java.util.common.ISE: WTH?! cannot find"));
+                                    .startsWith("org.apache.druid.java.util.common.ISE: Cannot find"));
     Assert.assertEquals(
-        "WTH?! cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
+        "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
         serviceEmitter.getExceptionMessage()
     );
     Assert.assertEquals(ISE.class, serviceEmitter.getExceptionClass());
@@ -5187,11 +5186,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             false
         ),
         Collections.emptyMap(),
-        null,
-        null,
-        rowIngestionMetersFactory,
-        null,
-        new DummyForInjectionAppenderatorsManager()
+        null
     );
   }
 

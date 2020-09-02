@@ -22,8 +22,15 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -69,5 +76,49 @@ public class HllSketchToEstimatePostAggregatorTest
                   .withNonnullFields("name", "field")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count"),
+                  new HllSketchMergeAggregatorFactory(
+                      "hllMerge",
+                      "col",
+                      null,
+                      null,
+                      false
+                  )
+              )
+              .postAggregators(
+                  new HllSketchToEstimatePostAggregator(
+                      "hllEstimate",
+                      new FieldAccessPostAggregator(null, "hllMerge"),
+                      false
+                  ),
+                  new HllSketchToEstimatePostAggregator(
+                      "hllEstimateRound",
+                      new FieldAccessPostAggregator(null, "hllMerge"),
+                      true
+                  )
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ValueType.LONG)
+                    .add("hllMerge", null)
+                    .add("hllEstimate", ValueType.DOUBLE)
+                    .add("hllEstimateRound", ValueType.LONG)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

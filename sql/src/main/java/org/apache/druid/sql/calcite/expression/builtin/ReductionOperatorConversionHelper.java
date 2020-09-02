@@ -55,7 +55,7 @@ class ReductionOperatorConversionHelper
         for (int i = 0; i < n; i++) {
           RelDataType type = opBinding.getOperandType(i);
           SqlTypeName sqlTypeName = type.getSqlTypeName();
-          ValueType valueType = Calcites.getValueTypeForSqlTypeName(sqlTypeName);
+          ValueType valueType = Calcites.getValueTypeForRelDataType(type);
 
           // Return types are listed in order of preference:
           if (valueType == ValueType.STRING) {

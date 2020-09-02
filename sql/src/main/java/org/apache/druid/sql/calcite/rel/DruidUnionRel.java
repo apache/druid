@@ -33,6 +33,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.UnionDataSource;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -40,6 +41,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Represents a "UNION ALL" of various input {@link DruidRel}. Note that this rel doesn't represent a real native query,
+ * but rather, it represents the concatenation of a series of native queries in the SQL layer. Therefore,
+ * {@link #getPartialDruidQuery()} returns null, and this rel cannot be built on top of. It must be the outer rel in a
+ * query plan.
+ *
+ * See {@link DruidUnionDataSourceRel} for a version that does a regular Druid query using a {@link UnionDataSource}.
+ * In the future we expect that {@link UnionDataSource} will gain the ability to union query datasources together, and
+ * then this rel could be replaced by {@link DruidUnionDataSourceRel}.
+ */
 public class DruidUnionRel extends DruidRel<DruidUnionRel>
 {
   private final RelDataType rowType;

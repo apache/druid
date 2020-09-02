@@ -47,6 +47,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -3588,7 +3589,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnionAll() throws Exception
+  public void testUnionAllQueries() throws Exception
   {
     testQuery(
         "SELECT COUNT(*) FROM foo UNION ALL SELECT SUM(cnt) FROM foo UNION ALL SELECT COUNT(*) FROM foo",
@@ -3620,7 +3621,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnionAllWithLimit() throws Exception
+  public void testUnionAllQueriesWithLimit() throws Exception
   {
     testQuery(
         "SELECT * FROM ("
@@ -3643,6 +3644,431 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(new Object[]{6L}, new Object[]{6L})
+    );
+  }
+
+  @Test
+  public void testUnionAllDifferentTablesWithMapping() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim1, dim2, m1 FROM numfoo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new UnionDataSource(
+                                ImmutableList.of(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE3)
+                                )
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim1", "d0"),
+                            new DefaultDimensionSpec("dim2", "d1")
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1"),
+                                new CountAggregatorFactory("a1")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 2.0, 2L},
+            new Object[]{"1", "a", 8.0, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinUnionAllDifferentTablesWithMapping() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim1, dim2, m1 FROM numfoo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new UnionDataSource(
+                                ImmutableList.of(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE3)
+                                )
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim1", "d0"),
+                            new DefaultDimensionSpec("dim2", "d1")
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1"),
+                                new CountAggregatorFactory("a1")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 2.0, 2L},
+            new Object[]{"1", "a", 8.0, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnionAllTablesColumnCountMismatch() throws Exception
+  {
+    expectedException.expect(ValidationException.class);
+    expectedException.expectMessage("Column count mismatch in UNION ALL");
+
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM numfoo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testUnionAllTablesColumnTypeMismatchFloatLong() throws Exception
+  {
+    // "m1" has a different type in foo and foo2 (float vs long), but this query is OK anyway because they can both
+    // be implicitly cast to double.
+
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT dim1, dim2, m1 FROM foo2 UNION ALL SELECT dim1, dim2, m1 FROM foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new UnionDataSource(
+                                ImmutableList.of(
+                                    new TableDataSource(CalciteTests.DATASOURCE2),
+                                    new TableDataSource(CalciteTests.DATASOURCE1)
+                                )
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(in("dim2", ImmutableList.of("en", "a"), null))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim1", "d0"),
+                            new DefaultDimensionSpec("dim2", "d1")
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1"),
+                                new CountAggregatorFactory("a1")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 1.0, 1L},
+            new Object[]{"1", "a", 4.0, 1L},
+            new Object[]{"druid", "en", 1.0, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnionAllTablesColumnTypeMismatchStringLong()
+  {
+    // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
+    // query cannot be planned.
+
+    assertQueryIsUnplannable(
+        "SELECT\n"
+        + "dim3, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
+        + "GROUP BY 1, 2"
+    );
+  }
+
+  @Test
+  public void testUnionAllTablesWhenMappingIsRequired()
+  {
+    // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+
+    assertQueryIsUnplannable(
+        "SELECT\n"
+        + "c, COUNT(*)\n"
+        + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT dim2 AS c, m1 FROM numfoo)\n"
+        + "WHERE c = 'a' OR c = 'def'\n"
+        + "GROUP BY 1"
+    );
+  }
+
+  @Test
+  public void testUnionAllTablesWhenCastAndMappingIsRequired()
+  {
+    // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+
+    assertQueryIsUnplannable(
+        "SELECT\n"
+        + "c, COUNT(*)\n"
+        + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
+        + "WHERE c = 'a' OR c = 'def'\n"
+        + "GROUP BY 1"
+    );
+  }
+
+  @Test
+  public void testUnionAllSameTableTwice() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new UnionDataSource(
+                                ImmutableList.of(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE1)
+                                )
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim1", "d0"),
+                            new DefaultDimensionSpec("dim2", "d1")
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1"),
+                                new CountAggregatorFactory("a1")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 2.0, 2L},
+            new Object[]{"1", "a", 8.0, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnionAllSameTableTwiceWithSameMapping() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim1, dim2, m1 FROM foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new UnionDataSource(
+                                ImmutableList.of(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE1)
+                                )
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim1", "d0"),
+                            new DefaultDimensionSpec("dim2", "d1")
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1"),
+                                new CountAggregatorFactory("a1")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 2.0, 2L},
+            new Object[]{"1", "a", 8.0, 2L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnionAllSameTableTwiceWithDifferentMapping()
+  {
+    // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+
+    assertQueryIsUnplannable(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim2, dim1, m1 FROM foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2"
+    );
+  }
+
+  @Test
+  public void testUnionAllSameTableThreeTimes() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM foo UNION ALL SELECT * FROM foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new UnionDataSource(
+                                ImmutableList.of(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE1)
+                                )
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim1", "d0"),
+                            new DefaultDimensionSpec("dim2", "d1")
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1"),
+                                new CountAggregatorFactory("a1")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 3.0, 3L},
+            new Object[]{"1", "a", 12.0, 3L}
+        )
+    );
+  }
+
+  @Test
+  public void testUnionAllThreeTablesColumnCountMismatch1() throws Exception
+  {
+    expectedException.expect(ValidationException.class);
+    expectedException.expectMessage("Column count mismatch in UNION ALL");
+
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testUnionAllThreeTablesColumnCountMismatch2() throws Exception
+  {
+    expectedException.expect(ValidationException.class);
+    expectedException.expectMessage("Column count mismatch in UNION ALL");
+
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT * FROM numfoo UNION ALL SELECT * FROM foo UNION ALL SELECT * from foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testUnionAllThreeTablesColumnCountMismatch3() throws Exception
+  {
+    expectedException.expect(ValidationException.class);
+    expectedException.expectMessage("Column count mismatch in UNION ALL");
+
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT * FROM foo UNION ALL SELECT * FROM foo UNION ALL SELECT * from numfoo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testUnionAllSameTableThreeTimesWithSameMapping() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "dim1, dim2, SUM(m1), COUNT(*)\n"
+        + "FROM (SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim1, dim2, m1 FROM foo UNION ALL SELECT dim1, dim2, m1 FROM foo)\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new UnionDataSource(
+                                ImmutableList.of(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new TableDataSource(CalciteTests.DATASOURCE1)
+                                )
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimFilter(in("dim2", ImmutableList.of("def", "a"), null))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim1", "d0"),
+                            new DefaultDimensionSpec("dim2", "d1")
+                        )
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new DoubleSumAggregatorFactory("a0", "m1"),
+                                new CountAggregatorFactory("a1")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", 3.0, 3L},
+            new Object[]{"1", "a", 12.0, 3L}
+        )
     );
   }
 
@@ -7083,6 +7509,58 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testExactCountDistinctUsingSubqueryOnUnionAllTables() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "  SUM(cnt),\n"
+        + "  COUNT(*)\n"
+        + "FROM (\n"
+        + "  SELECT dim2, SUM(cnt) AS cnt\n"
+        + "  FROM (SELECT * FROM druid.foo UNION ALL SELECT * FROM druid.foo)\n"
+        + "  GROUP BY dim2\n"
+        + ")",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            new QueryDataSource(
+                                GroupByQuery.builder()
+                                            .setDataSource(
+                                                new UnionDataSource(
+                                                    ImmutableList.of(
+                                                        new TableDataSource(CalciteTests.DATASOURCE1),
+                                                        new TableDataSource(CalciteTests.DATASOURCE1)
+                                                    )
+                                                )
+                                            )
+                                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                                            .setGranularity(Granularities.ALL)
+                                            .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                                            .setContext(QUERY_CONTEXT_DEFAULT)
+                                            .build()
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(aggregators(
+                            new LongSumAggregatorFactory("_a0", "a0"),
+                            new CountAggregatorFactory("_a1")
+                        ))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.replaceWithDefault() ?
+        ImmutableList.of(
+            new Object[]{12L, 3L}
+        ) :
+        ImmutableList.of(
+            new Object[]{12L, 4L}
+        )
+    );
+  }
+
+  @Test
   public void testMinMaxAvgDailyCountWithLimit() throws Exception
   {
     // Cannot vectorize due to virtual columns.
@@ -9030,6 +9508,52 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{NULL_STRING, 3L},
             new Object[]{"xabc", 1L}
+        )
+    );
+  }
+
+  @Test
+  @Parameters(source = QueryContextForJoinProvider.class)
+  public void testJoinUnionTablesOnLookup(Map<String, Object> queryContext) throws Exception
+  {
+    // Cannot vectorize JOIN operator.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT lookyloo.v, COUNT(*)\n"
+        + "FROM\n"
+        + "  (SELECT dim2 FROM foo UNION ALL SELECT dim2 FROM numfoo) u\n"
+        + "  LEFT JOIN lookup.lookyloo ON u.dim2 = lookyloo.k\n"
+        + "WHERE lookyloo.v <> 'xa'\n"
+        + "GROUP BY lookyloo.v",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            join(
+                                new UnionDataSource(
+                                    ImmutableList.of(
+                                        new TableDataSource(CalciteTests.DATASOURCE1),
+                                        new TableDataSource(CalciteTests.DATASOURCE3)
+                                    )
+                                ),
+                                new LookupDataSource("lookyloo"),
+                                "j0.",
+                                equalsCondition(DruidExpression.fromColumn("dim2"), DruidExpression.fromColumn("j0.k")),
+                                JoinType.LEFT
+                            )
+                        )
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDimFilter(not(selector("j0.v", "xa", null)))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                        .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                        .setContext(queryContext)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NULL_STRING, 6L},
+            new Object[]{"xabc", 2L}
         )
     );
   }
@@ -14174,7 +14698,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ValueType.LONG_ARRAY))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -14196,7 +14720,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING))
+                .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim1\",'word'),'up')", ValueType.STRING_ARRAY))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)

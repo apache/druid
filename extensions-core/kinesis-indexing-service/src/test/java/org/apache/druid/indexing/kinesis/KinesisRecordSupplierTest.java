@@ -47,11 +47,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.END_OF_SHARD_MARKER;
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.EXPIRED_MARKER;
+import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER;
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
@@ -237,7 +242,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   {
     return records.stream()
                   .filter(x -> !x.getSequenceNumber()
-                                 .equals(KinesisSequenceNumber.END_OF_SHARD_MARKER))
+                                 .equals(END_OF_SHARD_MARKER))
                   .collect(Collectors.toList());
   }
 
@@ -804,14 +809,14 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID0),
         EasyMock.anyString(),
-        EasyMock.anyString()
+        EasyMock.or(EasyMock.matches("\\d+"), EasyMock.isNull())
     )).andReturn(getShardIteratorResult0).anyTimes();
 
     EasyMock.expect(kinesis.getShardIterator(
         EasyMock.anyObject(),
         EasyMock.eq(SHARD_ID1),
         EasyMock.anyString(),
-        EasyMock.anyString()
+        EasyMock.or(EasyMock.matches("\\d+"), EasyMock.isNull())
     )).andReturn(getShardIteratorResult1).anyTimes();
 
     EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
@@ -864,12 +869,21 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(SHARDS_LAG_MILLIS, timeLag);
 
-    Map<String, String> offsts = ImmutableMap.of(
+    Map<String, String> offsets = ImmutableMap.of(
         SHARD_ID1, SHARD1_RECORDS.get(0).getSequenceNumber(),
         SHARD_ID0, SHARD0_RECORDS.get(0).getSequenceNumber()
     );
-    Map<String, Long> independentTimeLag = recordSupplier.getPartitionsTimeLag(STREAM, offsts);
+    Map<String, Long> independentTimeLag = recordSupplier.getPartitionsTimeLag(STREAM, offsets);
     Assert.assertEquals(SHARDS_LAG_MILLIS, independentTimeLag);
+
+    // Verify that kinesis apis are not called for custom sequence numbers
+    for (String sequenceNum : Arrays.asList(NO_END_SEQUENCE_NUMBER, END_OF_SHARD_MARKER, EXPIRED_MARKER)) {
+      offsets = ImmutableMap.of(
+          SHARD_ID1, sequenceNum,
+          SHARD_ID0, sequenceNum
+      );
+      Assert.assertEquals(Collections.emptyMap(), recordSupplier.getPartitionsTimeLag(STREAM, offsets));
+    }
     verifyAll();
   }
 
