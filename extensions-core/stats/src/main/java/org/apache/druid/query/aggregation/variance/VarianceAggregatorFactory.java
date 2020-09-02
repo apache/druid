@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
+ *
  */
 @JsonTypeName("variance")
 public class VarianceAggregatorFactory extends AggregatorFactory
@@ -239,7 +240,9 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null ? null : ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
+    return object == null || ((VarianceAggregatorCollector) object).count == 0
+           ? null
+           : ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
   }
 
   @Override

@@ -461,7 +461,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
   }
-  
+
   @Test
   public void testStdDevWithVirtualColumns() throws Exception
   {
@@ -541,9 +541,15 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
             CalciteTestBase.DEFAULT_PARAMETERS,
             authenticationResult
         ).toList();
-    List<Object[]> expectedResults = ImmutableList.of(
+    List<Object[]> expectedResults = NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+        new Object[] {"a", 0f},
+        new Object[] {null, 0f},
+        new Object[] {"", 0f},
+        new Object[] {"abc", null}
+    ) : ImmutableList.of(
         new Object[] {"a", 0.5f},
-        new Object[] {NullHandling.sqlCompatible() ? null : "", 0.0033333334f},
+        new Object[] {"", 0.0033333334f},
         new Object[] {"abc", 0f}
     );
     assertResultsEquals(expectedResults, results);

@@ -68,4 +68,19 @@ public class VarianceAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testFinalizeComputationWithZeroCountShouldReturnNull()
+  {
+    VarianceAggregatorFactory target = new VarianceAggregatorFactory("test", "test", null, null);
+    VarianceAggregatorCollector v1 = new VarianceAggregatorCollector();
+    Assert.assertNull(target.finalizeComputation(v1));
+  }
+
+  @Test
+  public void testFinalizeComputationWithNullShouldReturnNull()
+  {
+    VarianceAggregatorFactory target = new VarianceAggregatorFactory("test", "test", null, null);
+    Assert.assertNull(target.finalizeComputation(null));
+  }
 }
