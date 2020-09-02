@@ -69,6 +69,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -148,6 +149,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
+  /**
+   * Returns an {@link InputRow} iterator which iterates over an input source.
+   * The returned iterator filters out rows which don't satisfy the given filter or cannot be parsed properly.
+   * The returned iterator can throw {@link org.apache.druid.java.util.common.parsers.ParseException}s in
+   * {@link Iterator#hasNext()} when it hits {@link ParseExceptionHandler#maxAllowedParseExceptions}.
+   */
   public static FilteringCloseableInputRowIterator inputSourceReader(
       File tmpDir,
       DataSchema dataSchema,

@@ -22,6 +22,11 @@ package org.apache.druid.segment.incremental;
 import java.util.Collections;
 import java.util.Map;
 
+/**
+ * This class is used only in {@code RealtimeIndexTask} which is deprecated now.
+ *
+ * Consider using {@link RowIngestionMetersFactory} instead.
+ */
 public class NoopRowIngestionMeters implements RowIngestionMeters
 {
   private static final RowIngestionMetersTotals EMPTY_TOTALS = new RowIngestionMetersTotals(0, 0, 0, 0);

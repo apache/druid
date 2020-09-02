@@ -184,6 +184,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         sizeInBytes.addAndGet(estimatedRowSize);
       } else {
         // We lost a race
+        parseExceptionMessages.clear();
         aggs = concurrentGet(prev);
         doAggregate(metrics, aggs, rowContainer, row, parseExceptionMessages);
         // Free up the misfire

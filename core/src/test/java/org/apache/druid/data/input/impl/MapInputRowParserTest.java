@@ -62,7 +62,7 @@ public class MapInputRowParserTest
   public void testParseInvalidTimestampThrowParseException()
   {
     expectedException.expect(ParseException.class);
-    expectedException.expectMessage("Unparseable timestamp found!");
+    expectedException.expectMessage("Timestamp[invalid timestamp] is unparseable!");
     final InputRow inputRow = MapInputRowParser.parse(
         timestampSpec,
         dimensions,
@@ -75,7 +75,7 @@ public class MapInputRowParserTest
   public void testParseMissingTimestampThrowParseException()
   {
     expectedException.expect(ParseException.class);
-    expectedException.expectMessage("Unparseable timestamp found!");
+    expectedException.expectMessage("Timestamp[null] is unparseable!");
     final InputRow inputRow = MapInputRowParser.parse(
         timestampSpec,
         dimensions,
@@ -85,18 +85,23 @@ public class MapInputRowParserTest
   }
 
   @Test
-  public void testParseTimestampOutOfRangeOfLongThrowParseException()
+  public void testParseTimestampSmallerThanMinThrowParseException()
   {
     expectedException.expect(ParseException.class);
-    expectedException.expectMessage("Encountered row with timestamp that cannot be represented as a long");
+    expectedException.expectMessage("Encountered row with timestamp[-146136543-09-08T08:23:32.095Z] that cannot be represented as a long");
     MapInputRowParser.parse(
         timestampSpec,
         dimensions,
         dimensionExclusions,
         ImmutableMap.of("time", DateTimes.utc(JodaUtils.MIN_INSTANT - 1), "dim", 0, "met", 10)
     );
+  }
+
+  @Test
+  public void testParseTimestampLargerThanMaxThrowParseException()
+  {
     expectedException.expect(ParseException.class);
-    expectedException.expectMessage("Encountered row with timestamp that cannot be represented as a long");
+    expectedException.expectMessage("Encountered row with timestamp[146140482-04-24T15:36:27.904Z] that cannot be represented as a long");
     MapInputRowParser.parse(
         timestampSpec,
         dimensions,

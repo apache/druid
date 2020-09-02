@@ -87,6 +87,7 @@ import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -151,21 +152,26 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   private volatile Thread runThread = null;
 
   @JsonIgnore
-  private ParseExceptionHandler parseExceptionHandler;
-
-  @JsonIgnore
   private final LockGranularity lockGranularity;
 
   @JsonIgnore
+  @MonotonicNonNull
+  private ParseExceptionHandler parseExceptionHandler;
+
+  @JsonIgnore
+  @MonotonicNonNull
   private IngestionState ingestionState;
 
   @JsonIgnore
+  @MonotonicNonNull
   private AuthorizerMapper authorizerMapper;
 
   @JsonIgnore
+  @MonotonicNonNull
   private RowIngestionMeters rowIngestionMeters;
 
   @JsonIgnore
+  @MonotonicNonNull
   private String errorMsg;
 
 
