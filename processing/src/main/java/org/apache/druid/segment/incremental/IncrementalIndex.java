@@ -33,7 +33,6 @@ import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -43,7 +42,6 @@ import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -104,21 +102,6 @@ import java.util.stream.Stream;
 
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
-  private volatile DateTime maxIngestedEventTime;
-
-  // Used to discover ValueType based on the class of values in a row
-  // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
-  public static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
-      .put(Long.class, ValueType.LONG)
-      .put(Double.class, ValueType.DOUBLE)
-      .put(Float.class, ValueType.FLOAT)
-      .put(String.class, ValueType.STRING)
-      .put(DimensionSchema.ValueType.LONG, ValueType.LONG)
-      .put(DimensionSchema.ValueType.FLOAT, ValueType.FLOAT)
-      .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
-      .put(DimensionSchema.ValueType.DOUBLE, ValueType.DOUBLE)
-      .build();
-
   /**
    * Column selector used at ingestion time for inputs to aggregators.
    *
@@ -147,10 +130,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       @Override
       public ColumnValueSelector<?> makeColumnValueSelector(final String column)
       {
-        final String typeName = agg.getTypeName();
-        final boolean isComplexMetric =
-            GuavaUtils.getEnumIfPresent(ValueType.class, StringUtils.toUpperCase(typeName)) == null ||
-            typeName.equalsIgnoreCase(ValueType.COMPLEX.name());
+        final boolean isComplexMetric = ValueType.COMPLEX.equals(agg.getType());
 
         final ColumnValueSelector selector = baseSelectorFactory.makeColumnValueSelector(column);
 
@@ -160,10 +140,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           // Wrap selector in a special one that uses ComplexMetricSerde to modify incoming objects.
           // For complex aggregators that read from multiple columns, we wrap all of them. This is not ideal but it
           // has worked so far.
-
-          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+          final String complexTypeName = agg.getComplexTypeName();
+          final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
           if (serde == null) {
-            throw new ISE("Don't know how to handle type[%s]", typeName);
+            throw new ISE("Don't know how to handle type[%s]", complexTypeName);
           }
 
           final ComplexMetricExtractor extractor = serde.getExtractor();
@@ -259,6 +239,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final ThreadLocal<InputRow> in = new ThreadLocal<>();
   private final Supplier<InputRow> rowSupplier = in::get;
 
+  private volatile DateTime maxIngestedEventTime;
+
+
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
@@ -312,7 +295,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     this.dimensionDescsList = new ArrayList<>();
     for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
-      ValueType type = TYPE_MAP.get(dimSchema.getValueType());
+      ValueType type = dimSchema.getValueType();
       String dimName = dimSchema.getName();
       ColumnCapabilitiesImpl capabilities = makeDefaultCapabilitiesFromValueType(type);
       capabilities.setHasBitmapIndexes(dimSchema.hasBitmapIndex());
@@ -474,10 +457,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  public boolean isRollup()
-  {
-    return rollup;
-  }
 
   public abstract FactsHolder getFacts();
 
@@ -570,6 +549,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       return parseExceptionMessages;
     }
+  }
+
+  public boolean isRollup()
+  {
+    return rollup;
   }
 
   @Override
@@ -926,15 +910,18 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   private ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ValueType type)
   {
-    if (type == ValueType.STRING) {
-      // we start out as not having multiple values, but this might change as we encounter them
-      return new ColumnCapabilitiesImpl().setType(type)
-                                         .setHasBitmapIndexes(true)
-                                         .setDictionaryEncoded(true)
-                                         .setDictionaryValuesUnique(true)
-                                         .setDictionaryValuesSorted(false);
-    } else {
-      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+    switch (type) {
+      case STRING:
+        // we start out as not having multiple values, but this might change as we encounter them
+        return new ColumnCapabilitiesImpl().setType(type)
+                                           .setHasBitmapIndexes(true)
+                                           .setDictionaryEncoded(true)
+                                           .setDictionaryValuesUnique(true)
+                                           .setDictionaryValuesSorted(false);
+      case COMPLEX:
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type).setHasNulls(true);
+      default:
+        return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
     }
   }
 
@@ -1130,20 +1117,25 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       this.index = index;
       this.name = factory.getName();
 
-      String typeInfo = factory.getTypeName();
-      if ("float".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
-        this.type = typeInfo;
-      } else if ("long".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
-        this.type = typeInfo;
-      } else if ("double".equalsIgnoreCase(typeInfo)) {
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.DOUBLE);
-        this.type = typeInfo;
+      ValueType valueType = factory.getType();
+
+      if (valueType.isNumeric()) {
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+        this.type = valueType.toString();
+      } else if (ValueType.COMPLEX.equals(valueType)) {
+        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX)
+                                             .setHasNulls(ColumnCapabilities.Capable.TRUE);
+        String complexTypeName = factory.getComplexTypeName();
+        ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(complexTypeName);
+        if (serde != null) {
+          this.type = serde.getTypeName();
+        } else {
+          throw new ISE("Unable to handle complex type[%s] of type[%s]", complexTypeName, valueType);
+        }
       } else {
-        // in an ideal world complex type reports its actual column capabilities...
-        capabilities = ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.COMPLEX);
-        this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
+        // if we need to handle non-numeric and non-complex types (e.g. strings, arrays) it should be done here
+        // and we should determine the appropriate ColumnCapabilities
+        throw new ISE("Unable to handle type[%s] for AggregatorFactory[%s]", valueType, factory.getClass());
       }
     }
 

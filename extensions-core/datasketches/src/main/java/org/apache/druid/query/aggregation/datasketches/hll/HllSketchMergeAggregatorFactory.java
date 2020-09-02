@@ -72,7 +72,7 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return HllSketchModule.MERGE_TYPE_NAME;
   }

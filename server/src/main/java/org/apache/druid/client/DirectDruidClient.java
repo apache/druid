@@ -509,8 +509,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 url,
                 query,
                 host,
-                toolChest.decorateObjectMapper(objectMapper, query),
-                null
+                toolChest.decorateObjectMapper(objectMapper, query)
             );
           }
 

@@ -31,11 +31,12 @@ import java.util.Set;
 
 public interface IndexingServiceClient
 {
-  void killUnusedSegments(String dataSource, Interval interval);
+  void killUnusedSegments(String idPrefix, String dataSource, Interval interval);
 
   int killPendingSegments(String dataSource, DateTime end);
 
   String compactSegments(
+      String idPrefix,
       List<DataSegment> segments,
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
@@ -44,7 +45,7 @@ public interface IndexingServiceClient
 
   int getTotalWorkerCapacity();
 
-  String runTask(Object taskObject);
+  String runTask(String taskId, Object taskObject);
 
   String cancelTask(String taskId);
 

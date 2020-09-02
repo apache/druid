@@ -17,28 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.momentsketch.aggregator;
+package org.apache.druid.segment;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.segment.data.Offset;
 
-public class MomentSketchAggregatorFactorySerdeTest
+public abstract class SimpleSettableOffset extends Offset
 {
-  @Test
-  public void serializeDeserializeFactoryWithFieldName() throws Exception
-  {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    MomentSketchAggregatorFactory factory = new MomentSketchAggregatorFactory(
-        "name", "fieldName", 128, true
-    );
-
-    MomentSketchAggregatorFactory other = objectMapper.readValue(
-        objectMapper.writeValueAsString(factory),
-        MomentSketchAggregatorFactory.class
-    );
-
-    Assert.assertEquals(factory, other);
-  }
+  public abstract void setCurrentOffset(int currentOffset);
 }

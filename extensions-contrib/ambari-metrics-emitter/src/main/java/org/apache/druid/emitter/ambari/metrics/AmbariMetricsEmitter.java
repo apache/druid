@@ -107,7 +107,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   public void emit(Event event)
   {
     if (!started.get()) {
-      throw new ISE("WTF emit was called while service is not started yet");
+      throw new ISE("Emit called unexpectedly before service start");
     }
     if (event instanceof ServiceMetricEvent) {
       final TimelineMetric timelineEvent = timelineMetricConverter.druidEventToTimelineMetric((ServiceMetricEvent) event);

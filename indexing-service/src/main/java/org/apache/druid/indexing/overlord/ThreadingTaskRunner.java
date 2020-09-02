@@ -176,7 +176,7 @@ public class ThreadingTaskRunner
                               taskWorkItem = tasks.get(task.getId());
 
                               if (taskWorkItem == null) {
-                                LOGGER.makeAlert("WTF?! TaskInfo disappeared!").addData("task", task.getId()).emit();
+                                LOGGER.makeAlert("TaskInfo disappeared").addData("task", task.getId()).emit();
                                 throw new ISE("TaskInfo disappeared for task[%s]!", task.getId());
                               }
 

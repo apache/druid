@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -61,6 +62,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -374,6 +376,24 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
+  }
+
+  public static Function<Set<DataSegment>, Set<DataSegment>> compactionStateAnnotateFunction(
+      boolean storeCompactionState,
+      TaskToolbox toolbox,
+      IndexTuningConfig tuningConfig
+  )
+  {
+    if (storeCompactionState) {
+      final Map<String, Object> indexSpecMap = tuningConfig.getIndexSpec().asMap(toolbox.getJsonMapper());
+      final CompactionState compactionState = new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap);
+      return segments -> segments
+          .stream()
+          .map(s -> s.withLastCompactionState(compactionState))
+          .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
   }
 
   @Nullable

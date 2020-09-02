@@ -19,7 +19,16 @@
 
 package org.apache.druid.query.aggregation.post;
 
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregator;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -47,5 +56,39 @@ public class FieldAccessPostAggregatorTest
     agg.aggregate();
     metricValues.put(aggName, agg.get());
     Assert.assertEquals(new Long(3L), fieldAccessPostAggregator.compute(metricValues));
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new CountAggregatorFactory("count"),
+                  new DoubleSumAggregatorFactory("double", "col1"),
+                  new FloatSumAggregatorFactory("float", "col2")
+              )
+              .postAggregators(
+                  new FieldAccessPostAggregator("a", "count"),
+                  new FieldAccessPostAggregator("b", "double"),
+                  new FieldAccessPostAggregator("c", "float")
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("count", ValueType.LONG)
+                    .add("double", ValueType.DOUBLE)
+                    .add("float", ValueType.FLOAT)
+                    .add("a", ValueType.LONG)
+                    .add("b", ValueType.DOUBLE)
+                    .add("c", ValueType.FLOAT)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

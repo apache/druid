@@ -85,7 +85,8 @@ public class ConvertSelectorsToIns extends BottomUpTransform
           for (final SelectorDimFilter selector : filterList) {
             values.add(selector.getValue());
             if (!children.remove(selector)) {
-              throw new ISE("WTF?! Tried to remove selector but couldn't?");
+              // Don't expect this to happen, but include it as a sanity check.
+              throw new ISE("Tried to remove selector but couldn't");
             }
           }
 
