@@ -117,7 +117,7 @@ public class StringFirstAggregationTest
   {
     SerializablePairLongString pair1 = new SerializablePairLongString(1467225000L, "AAAA");
     SerializablePairLongString pair2 = new SerializablePairLongString(1467240000L, "BBBB");
-    Assert.assertEquals(pair2, stringFirstAggFactory.combine(pair1, pair2));
+    Assert.assertEquals(pair1, stringFirstAggFactory.combine(pair1, pair2));
   }
 
   @Test
