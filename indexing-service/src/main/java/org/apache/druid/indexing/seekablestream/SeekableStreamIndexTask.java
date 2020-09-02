@@ -37,9 +37,7 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
@@ -241,14 +239,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
     final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
                                             && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
-
-    if (!Intervals.ETERNITY.contains(row.getTimestamp())) {
-      final String errorMsg = StringUtils.format(
-          "Encountered row with timestamp that cannot be represented as a long: [%s]",
-          row
-      );
-      throw new ParseException(errorMsg);
-    }
 
     if (log.isDebugEnabled()) {
       if (beforeMinimumMessageTime) {
