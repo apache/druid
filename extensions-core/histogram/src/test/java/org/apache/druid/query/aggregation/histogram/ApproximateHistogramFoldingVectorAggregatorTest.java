@@ -20,6 +20,8 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.easymock.EasyMock;
@@ -61,7 +63,26 @@ public class ApproximateHistogramFoldingVectorAggregatorTest
     vectorColumnSelectorFactory = createMock(VectorColumnSelectorFactory.class);
     expect(vectorColumnSelectorFactory.makeObjectSelector("field"))
         .andReturn(vectorObjectSelector).anyTimes();
+    expect(vectorColumnSelectorFactory.getColumnCapabilities("field")).andReturn(
+        new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX)
+    );
+    expect(vectorColumnSelectorFactory.getColumnCapabilities("string_field")).andReturn(
+        new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    );
+    expect(vectorColumnSelectorFactory.getColumnCapabilities("double_field")).andReturn(
+        new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    );
     EasyMock.replay(vectorColumnSelectorFactory);
+  }
+
+  @Test
+  public void doNotVectorizedNonComplexTypes()
+  {
+    ApproximateHistogramFoldingAggregatorFactory factory = buildHistogramFactory("string_field");
+    Assert.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
+
+    factory = buildHistogramFactory("double_field");
+    Assert.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
   }
 
   @Test
@@ -104,9 +125,14 @@ public class ApproximateHistogramFoldingVectorAggregatorTest
 
   private ApproximateHistogramFoldingAggregatorFactory buildHistogramFactory()
   {
+    return buildHistogramFactory("field");
+  }
+
+  private ApproximateHistogramFoldingAggregatorFactory buildHistogramFactory(String fieldName)
+  {
     return new ApproximateHistogramFoldingAggregatorFactory(
         "approximateHistoFold",
-        "field",
+        fieldName,
         5,
         5,
         0f,

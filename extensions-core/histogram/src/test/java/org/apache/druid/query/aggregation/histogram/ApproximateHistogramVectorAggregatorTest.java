@@ -67,7 +67,23 @@ public class ApproximateHistogramVectorAggregatorTest
     expect(vectorColumnSelectorFactory.getColumnCapabilities("field_2")).andReturn(columnCapabilities).anyTimes();
     expect(vectorColumnSelectorFactory.makeValueSelector("field_2"))
         .andReturn(vectorValueSelector_2).anyTimes();
+    expect(vectorColumnSelectorFactory.getColumnCapabilities("string_field")).andReturn(
+        new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    );
+    expect(vectorColumnSelectorFactory.getColumnCapabilities("complex_field")).andReturn(
+        new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX)
+    );
     EasyMock.replay(vectorColumnSelectorFactory);
+  }
+
+  @Test
+  public void doNotVectorizedNonNumericTypes()
+  {
+    ApproximateHistogramAggregatorFactory factory = buildHistogramAggFactory("string_field");
+    Assert.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
+
+    factory = buildHistogramAggFactory("complex_field");
+    Assert.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
   }
 
   @Test
