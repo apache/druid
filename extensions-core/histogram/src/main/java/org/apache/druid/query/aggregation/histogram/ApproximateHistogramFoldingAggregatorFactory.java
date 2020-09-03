@@ -29,8 +29,11 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
@@ -101,6 +104,14 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   {
     VectorObjectSelector selector = metricVectorFactory.makeObjectSelector(fieldName);
     return new ApproximateHistogramFoldingVectorAggregator(selector, resolution, lowerLimit, upperLimit);
+  }
+
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return (capabilities != null) && (capabilities.getType() == ValueType.COMPLEX);
   }
 
   @Override

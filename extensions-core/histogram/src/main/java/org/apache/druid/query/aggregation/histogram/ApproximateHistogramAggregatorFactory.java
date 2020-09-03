@@ -37,6 +37,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -118,7 +119,10 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return true;
+    /* skip vectorization for string types which may be parseable to numbers. There is no vector equivalent of
+     string value selector*/
+    ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return (capabilities != null) && capabilities.getType().isNumeric();
   }
 
   @Override
