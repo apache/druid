@@ -44,7 +44,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"mergeBytesLimit\": 1,\n"
                      + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
-                     + "  \"maxSegmentsToConsiderPerMove\": 1,\n"
+                     + "  \"maxPercentOfSegmentsToConsiderPerMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
@@ -78,7 +78,7 @@ public class CoordinatorDynamicConfigTest
     actual = CoordinatorDynamicConfig.builder().withPauseCoordination(true).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, 1);
 
-    actual = CoordinatorDynamicConfig.builder().withMaxSegmentsToConsiderPerMove(10).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withPercentOfSegmentsToConsiderPerMove(10).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 10, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5, true, 1);
   }
 
@@ -90,7 +90,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"mergeBytesLimit\": 1,\n"
                      + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
-                     + "  \"maxSegmentsToConsiderPerMove\": 1,\n"
+                     + "  \"maxPercentOfSegmentsToConsiderPerMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
@@ -127,7 +127,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"mergeBytesLimit\": 1,\n"
                      + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
-                     + "  \"maxSegmentsToConsiderPerMove\": 1,\n"
+                     + "  \"maxPercentOfSegmentsToConsiderPerMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
@@ -166,10 +166,10 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
-  public void testSerdeCorrectsInvalidBadMaxSegmentsToConsiderPerMove() throws Exception
+  public void testSerdeCorrectsInvalidBadMaxPercentOfSegmentsToConsiderPerMove() throws Exception
   {
     String jsonStr = "{\n"
-                     + "  \"maxSegmentsToConsiderPerMove\": 0\n"
+                     + "  \"maxPercentOfSegmentsToConsiderPerMove\": 0\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -182,10 +182,10 @@ public class CoordinatorDynamicConfigTest
         CoordinatorDynamicConfig.class
     );
 
-    Assert.assertEquals(Integer.MAX_VALUE, actual.getMaxSegmentsToConsiderPerMove());
+    Assert.assertEquals(100, actual.getPercentOfSegmentsToConsiderPerMove());
 
     jsonStr = "{\n"
-              + "  \"maxSegmentsToConsiderPerMove\": -100\n"
+              + "  \"maxPercentOfSegmentsToConsiderPerMove\": -100\n"
               + "}\n";
 
     actual = mapper.readValue(
@@ -198,7 +198,7 @@ public class CoordinatorDynamicConfigTest
         CoordinatorDynamicConfig.class
     );
 
-    Assert.assertEquals(Integer.MAX_VALUE, actual.getMaxSegmentsToConsiderPerMove());
+    Assert.assertEquals(100, actual.getPercentOfSegmentsToConsiderPerMove());
   }
 
   @Test
@@ -209,7 +209,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"mergeBytesLimit\": 1,\n"
                      + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
-                     + "  \"maxSegmentsToConsiderPerMove\": 1,\n"
+                     + "  \"maxPercentOfSegmentsToConsiderPerMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
@@ -235,7 +235,7 @@ public class CoordinatorDynamicConfigTest
       jsonStr = "{\n"
                 + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                 + "  \"killAllDataSources\": true,\n"
-                + "  \"maxSegmentsToConsiderPerMove\": 1\n"
+                + "  \"maxPercentOfSegmentsToConsiderPerMove\": 1\n"
                 + "}\n";
       mapper.readValue(
           jsonStr,
@@ -257,7 +257,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"mergeBytesLimit\": 1,\n"
                      + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
-                     + "  \"maxSegmentsToConsiderPerMove\": 1,\n"
+                     + "  \"maxPercentOfSegmentsToConsiderPerMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
@@ -289,7 +289,7 @@ public class CoordinatorDynamicConfigTest
         524288000,
         100,
         5,
-        Integer.MAX_VALUE,
+        100,
         10,
         1,
         false,
@@ -334,7 +334,7 @@ public class CoordinatorDynamicConfigTest
       long expectedMergeBytesLimit,
       int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
-      int expectedMaxSegmentsToConsiderPerMove,
+      int expectedMaxPercentOfSegmentsToConsiderPerMove,
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
       boolean expectedEmitingBalancingStats,
@@ -354,7 +354,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
     Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());
     Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
-    Assert.assertEquals(expectedMaxSegmentsToConsiderPerMove, config.getMaxSegmentsToConsiderPerMove());
+    Assert.assertEquals(expectedMaxPercentOfSegmentsToConsiderPerMove, config.getPercentOfSegmentsToConsiderPerMove());
     Assert.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());

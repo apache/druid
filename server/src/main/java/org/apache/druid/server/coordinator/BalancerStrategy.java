@@ -63,12 +63,10 @@ public interface BalancerStrategy
    *                             NOTE: this should really be handled on a per-segment basis, to properly support
    *                                   the interval or period-based broadcast rules. For simplicity of the initial
    *                                   implementation, only forever broadcast rules are supported.
-   * @param numberOfSegmentsToConsider The number of segments to consider when choosing which segment to move.
-   *                                   Implementations of this interface need to be cognizant of the
-   *                                   {@link CoordinatorDynamicConfig} default value for maxSegmentsToConsiderPerMove.
-   *                                   If use of an implementation is going to potentially leverage this value, the
-   *                                   implementation must ensure proper functionality with the potentially provided
-   *                                   values, especially the default value.
+   * @param percentOfSegmentsToConsider The percentage of the total number of segments that we will consider when
+   *                                    choosing which segment to move. {@link CoordinatorDynamicConfig} defines a
+   *                                    config percentOfSegmentsToConsiderPerMove that will be used as an argument
+   *                                    for implementations of this method.
    *
    * @return {@link BalancerSegmentHolder} containing segment to move and server it currently resides on, or null if
    *         there are no segments to pick from (i. e. all provided serverHolders are empty).
@@ -77,7 +75,7 @@ public interface BalancerStrategy
   BalancerSegmentHolder pickSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int numberOfSegmentsToConsider
+      int percentOfSegmentsToConsider
   );
 
   /**

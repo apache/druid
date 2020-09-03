@@ -57,13 +57,13 @@ public class RandomBalancerStrategy implements BalancerStrategy
   public BalancerSegmentHolder pickSegmentToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int numberOfSegmentsToConsider
+      int percentOfSegmentsToConsider
   )
   {
     return ReservoirSegmentSampler.getRandomBalancerSegmentHolder(
         serverHolders,
         broadcastDatasources,
-        numberOfSegmentsToConsider
+        percentOfSegmentsToConsider
     );
   }
 

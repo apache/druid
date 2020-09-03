@@ -191,7 +191,7 @@ public class ReservoirSegmentSamplerTest
 
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < 5000; i++) {
-      segmentCountMap.put(ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), Integer.MAX_VALUE).getSegment(), 1);
+      segmentCountMap.put(ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 100).getSegment(), 1);
     }
 
     for (DataSegment segment : segments) {
@@ -232,13 +232,18 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer3.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer3);
 
+    ImmutableDruidServerTests.expectSegments(druidServer4, segments4);
+    EasyMock.replay(druidServer4);
+
     EasyMock.expect(holder1.getServer()).andReturn(druidServer1).anyTimes();
     EasyMock.replay(holder1);
     EasyMock.expect(holder2.getServer()).andReturn(druidServer2).anyTimes();
     EasyMock.replay(holder2);
-
     EasyMock.expect(holder3.getServer()).andReturn(druidServer3).anyTimes();
     EasyMock.replay(holder3);
+    // We only run getServer() each time we calculate the limit on segments to consider. Always 5k
+    EasyMock.expect(holder4.getServer()).andReturn(druidServer4).times(5000);
+    EasyMock.replay(holder4);
 
     List<ServerHolder> holderList = new ArrayList<>();
     holderList.add(holder1);
@@ -249,7 +254,7 @@ public class ReservoirSegmentSamplerTest
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < 5000; i++) {
       segmentCountMap.put(
-          ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 3).getSegment(), 1
+          ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList, Collections.emptySet(), 75).getSegment(), 1
       );
     }
 

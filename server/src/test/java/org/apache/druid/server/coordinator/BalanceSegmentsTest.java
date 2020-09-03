@@ -238,7 +238,7 @@ public class BalanceSegmentsTest
                 new ServerHolder(druidServer2, peon2, false)
             ),
             broadcastDatasources,
-            Integer.MAX_VALUE
+            100
         )
     ).andReturn(
         new BalancerSegmentHolder(druidServer2, segment3)).andReturn(new BalancerSegmentHolder(druidServer2, segment4)
@@ -649,7 +649,7 @@ public class BalanceSegmentsTest
     public BalancerSegmentHolder pickSegmentToMove(
         List<ServerHolder> serverHolders,
         Set<String> broadcastDatasources,
-        int numberOfSegmentsToConsider
+        int percentOfSegmentsToConsider
     )
     {
       return pickOrder.get(pickCounter.getAndIncrement() % pickOrder.size());
@@ -680,7 +680,7 @@ public class BalanceSegmentsTest
                 new ServerHolder(druidServer2, peon2, true)
             ),
             broadcastDatasources,
-            Integer.MAX_VALUE
+            100
         )
     ).andReturn(
         new BalancerSegmentHolder(druidServer2, segment2)

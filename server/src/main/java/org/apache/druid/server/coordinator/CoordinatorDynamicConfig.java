@@ -53,7 +53,7 @@ public class CoordinatorDynamicConfig
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
-  private final int maxSegmentsToConsiderPerMove;
+  private final int percentOfSegmentsToConsiderPerMove;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
   private final int balancerComputeThreads;
@@ -96,7 +96,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
-      @JsonProperty("maxSegmentsToConsiderPerMove") int maxSegmentsToConsiderPerMove,
+      @JsonProperty("percentOfSegmentsToConsiderPerMove") int percentOfSegmentsToConsiderPerMove,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
@@ -126,10 +126,10 @@ public class CoordinatorDynamicConfig
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
     // This helps with ease of migration to the new config, but could confuse users. Docs explicitly state this value must be > 0
-    if (maxSegmentsToConsiderPerMove <= 0) {
-      this.maxSegmentsToConsiderPerMove = Integer.MAX_VALUE;
+    if (percentOfSegmentsToConsiderPerMove <= 0 || percentOfSegmentsToConsiderPerMove > 100) {
+      this.percentOfSegmentsToConsiderPerMove = 100;
     } else {
-      this.maxSegmentsToConsiderPerMove = maxSegmentsToConsiderPerMove;
+      this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
     }
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
@@ -220,9 +220,9 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
-  public int getMaxSegmentsToConsiderPerMove()
+  public int getPercentOfSegmentsToConsiderPerMove()
   {
-    return maxSegmentsToConsiderPerMove;
+    return percentOfSegmentsToConsiderPerMove;
   }
 
   @JsonProperty
@@ -316,7 +316,7 @@ public class CoordinatorDynamicConfig
            ", mergeBytesLimit=" + mergeBytesLimit +
            ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
-           ", maxSegmentsToConsiderPerMove=" + maxSegmentsToConsiderPerMove +
+           ", percentOfSegmentsToConsiderPerMove=" + percentOfSegmentsToConsiderPerMove +
            ", replicantLifetime=" + replicantLifetime +
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
@@ -356,7 +356,7 @@ public class CoordinatorDynamicConfig
     if (maxSegmentsToMove != that.maxSegmentsToMove) {
       return false;
     }
-    if (maxSegmentsToConsiderPerMove != that.maxSegmentsToConsiderPerMove) {
+    if (percentOfSegmentsToConsiderPerMove != that.percentOfSegmentsToConsiderPerMove) {
       return false;
     }
     if (replicantLifetime != that.replicantLifetime) {
@@ -400,7 +400,7 @@ public class CoordinatorDynamicConfig
         mergeBytesLimit,
         mergeSegmentsLimit,
         maxSegmentsToMove,
-        maxSegmentsToConsiderPerMove,
+        percentOfSegmentsToConsiderPerMove,
         replicantLifetime,
         replicationThrottleLimit,
         balancerComputeThreads,
@@ -427,7 +427,7 @@ public class CoordinatorDynamicConfig
     private static final long DEFAULT_MERGE_BYTES_LIMIT = 524_288_000L;
     private static final int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
     private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
-    private static final int DEFAULT_MAX_SEGMENTS_TO_CONSIDER_PER_MOVE = Integer.MAX_VALUE;
+    private static final int DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE = 100;
     private static final int DEFAULT_REPLICANT_LIFETIME = 15;
     private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
@@ -441,7 +441,7 @@ public class CoordinatorDynamicConfig
     private Long mergeBytesLimit;
     private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
-    private Integer maxSegmentsToConsiderPerMove;
+    private Integer percentOfSegmentsToConsiderPerMove;
     private Integer replicantLifetime;
     private Integer replicationThrottleLimit;
     private Boolean emitBalancingStats;
@@ -465,7 +465,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
-        @JsonProperty("maxSegmentsToConsiderPerMove") @Nullable Integer maxSegmentsToConsiderPerMove,
+        @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Integer percentOfSegmentsToConsiderPerMove,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
@@ -485,7 +485,7 @@ public class CoordinatorDynamicConfig
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
-      this.maxSegmentsToConsiderPerMove = maxSegmentsToConsiderPerMove;
+      this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
       this.balancerComputeThreads = balancerComputeThreads;
@@ -523,9 +523,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withMaxSegmentsToConsiderPerMove(int maxSegmentsToConsiderPerMove)
+    public Builder withPercentOfSegmentsToConsiderPerMove(int percentOfSegmentsToConsiderPerMove)
     {
-      this.maxSegmentsToConsiderPerMove = maxSegmentsToConsiderPerMove;
+      this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
       return this;
     }
 
@@ -598,7 +598,8 @@ public class CoordinatorDynamicConfig
           mergeBytesLimit == null ? DEFAULT_MERGE_BYTES_LIMIT : mergeBytesLimit,
           mergeSegmentsLimit == null ? DEFAULT_MERGE_SEGMENTS_LIMIT : mergeSegmentsLimit,
           maxSegmentsToMove == null ? DEFAULT_MAX_SEGMENTS_TO_MOVE : maxSegmentsToMove,
-          maxSegmentsToConsiderPerMove == null ? DEFAULT_MAX_SEGMENTS_TO_CONSIDER_PER_MOVE : maxSegmentsToConsiderPerMove,
+          percentOfSegmentsToConsiderPerMove == null ? DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE
+                                                     : percentOfSegmentsToConsiderPerMove,
           replicantLifetime == null ? DEFAULT_REPLICANT_LIFETIME : replicantLifetime,
           replicationThrottleLimit == null ? DEFAULT_REPLICATION_THROTTLE_LIMIT : replicationThrottleLimit,
           balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
@@ -628,7 +629,7 @@ public class CoordinatorDynamicConfig
           mergeBytesLimit == null ? defaults.getMergeBytesLimit() : mergeBytesLimit,
           mergeSegmentsLimit == null ? defaults.getMergeSegmentsLimit() : mergeSegmentsLimit,
           maxSegmentsToMove == null ? defaults.getMaxSegmentsToMove() : maxSegmentsToMove,
-          maxSegmentsToConsiderPerMove == null ? defaults.getMaxSegmentsToConsiderPerMove() : maxSegmentsToConsiderPerMove,
+          percentOfSegmentsToConsiderPerMove == null ? defaults.getPercentOfSegmentsToConsiderPerMove() : percentOfSegmentsToConsiderPerMove,
           replicantLifetime == null ? defaults.getReplicantLifetime() : replicantLifetime,
           replicationThrottleLimit == null ? defaults.getReplicationThrottleLimit() : replicationThrottleLimit,
           balancerComputeThreads == null ? defaults.getBalancerComputeThreads() : balancerComputeThreads,

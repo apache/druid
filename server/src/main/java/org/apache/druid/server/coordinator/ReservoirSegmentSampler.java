@@ -38,19 +38,33 @@ final class ReservoirSegmentSampler
    * @param serverHolders List of {@link ServerHolder} objects containing segments who are candidates to be chosen.
    * @param broadcastDatasources Set of DataSource names that identify broadcast datasources. We don't want to consider
    *                             segments from these datasources.
-   * @param numberOfSegmentsToConsider A limit on the number of segments to consider before short-circuiting and
+   * @param percentOfSegmentsToConsider The % of total cluster segments to consider before short-circuiting and
    *                                   returning immediately.
    * @return
    */
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(
       final List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
-      int numberOfSegmentsToConsider
+      int percentOfSegmentsToConsider
   )
   {
     ServerHolder fromServerHolder = null;
     DataSegment proposalSegment = null;
+    int calculatedSegmentLimit = Integer.MAX_VALUE;
     int numSoFar = 0;
+
+    // Calculate the integer limit for the number of segments to be considered for moving if % is less than 100
+    if (percentOfSegmentsToConsider < 100) {
+      int totalSegments = 0;
+      for (ServerHolder server : serverHolders) {
+        totalSegments += server.getServer().getNumSegments();
+      }
+      // If totalSegments are zero, we will assume it is a mistake and move on to iteration without updating
+      // calculatedSegmentLimit
+      if (totalSegments != 0) {
+        calculatedSegmentLimit = (int) Math.ceil((double) totalSegments * ((double) percentOfSegmentsToConsider / (double) 100));
+      }
+    }
 
     for (ServerHolder server : serverHolders) {
       if (!server.getServer().getType().isSegmentReplicationTarget()) {
@@ -73,16 +87,16 @@ final class ReservoirSegmentSampler
         numSoFar++;
 
         // We have iterated over the alloted number of segments and will return the currently proposed segment or null
-        if (numSoFar >= numberOfSegmentsToConsider) {
-          log.debug(
-              "Breaking out of iteration over potential segments to move because the limit for " +
-              "numberOfSegmentsToCondider [%d] has been hit", numberOfSegmentsToConsider
-          );
+        // We will only break out early if we are iterating less than 100% of the total cluster segments
+        if (percentOfSegmentsToConsider != 100 && numSoFar >= calculatedSegmentLimit) {
+          log.debug("Breaking out of iteration over potential segments to move because we hit the limit [%d percent] of"
+                    + " segments to consider to move. Segments Iterated: [%s]", percentOfSegmentsToConsider, numSoFar);
           break;
         }
       }
       // We have iterated over the alloted number of segments and will return the currently proposed segment or null
-      if (numSoFar >= numberOfSegmentsToConsider) {
+      // We will only break out early if we are iterating less than 100% of the total cluster segments
+      if (percentOfSegmentsToConsider != 100 && numSoFar >= calculatedSegmentLimit) {
         break;
       }
     }
