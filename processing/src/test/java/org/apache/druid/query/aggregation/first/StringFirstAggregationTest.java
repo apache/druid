@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -32,6 +31,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,7 +39,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class StringFirstAggregationTest extends NullHandlingTest
+public class StringFirstAggregationTest extends InitializedNullHandlingTest
 {
   private final Integer MAX_STRING_SIZE = 1024;
   private AggregatorFactory stringFirstAggFactory;
