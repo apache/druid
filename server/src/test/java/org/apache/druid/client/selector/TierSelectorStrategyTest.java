@@ -23,6 +23,7 @@ import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.Query;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -39,7 +40,26 @@ import java.util.List;
 
 public class TierSelectorStrategyTest
 {
+  
+  @Test
+  public void testHighestPriorityTierSelectorStrategyRealtime()
+  {
+    DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
+    QueryableDruidServer lowPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
+        client
+    );
+    QueryableDruidServer highPriority = new QueryableDruidServer(
+        new DruidServer("test1", "localhost", null, 0, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 1),
+        client
+    );
 
+    testTierSelectorStrategy(
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy()),
+        highPriority, lowPriority
+    );
+  }
+  
   @Test
   public void testHighestPriorityTierSelectorStrategy()
   {
@@ -217,6 +237,7 @@ public class TierSelectorStrategyTest
     }
 
     Assert.assertEquals(expectedSelection[0], serverSelector.pick());
+    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class)));
     Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1));
     Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2));
   }

@@ -21,6 +21,7 @@ package org.apache.druid.client.selector;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
+import org.apache.druid.query.Query;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -163,11 +164,19 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>, 
   @Override
   public QueryableDruidServer pick()
   {
+    if (!historicalServers.isEmpty()) {
+      return strategy.pick(historicalServers, segment.get());
+    }
+    return strategy.pick(realtimeServers, segment.get());
+  }
+
+  public <T> QueryableDruidServer pick(Query<T> query)
+  {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {
-        return strategy.pick(historicalServers, segment.get());
+        return strategy.pick(query, historicalServers, segment.get());
       }
-      return strategy.pick(realtimeServers, segment.get());
+      return strategy.pick(query, realtimeServers, segment.get());
     }
   }
 

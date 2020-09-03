@@ -22,9 +22,11 @@ package org.apache.druid.client.selector;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -47,6 +49,22 @@ public interface TierSelectorStrategy
   List<QueryableDruidServer> pick(
       Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
       DataSegment segment,
-      int numServersToPick
-  );
+      int numServersToPick);
+
+  @Nullable
+  default <T> QueryableDruidServer pick(Query<T> query,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      DataSegment segment)
+  {
+    return pick(prioritizedServers, segment);
+  }
+
+  default <T> List<QueryableDruidServer> pick(
+      Query<T> query,
+      Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+      DataSegment segment,
+      int numServersToPick)
+  {
+    return pick(prioritizedServers, segment, numServersToPick);
+  }
 }

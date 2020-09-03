@@ -21,6 +21,8 @@ package org.apache.druid.client.selector;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.Iterables;
+import org.apache.druid.query.Query;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -33,6 +35,17 @@ import java.util.Set;
 })
 public interface ServerSelectorStrategy
 {
+  default <T> QueryableDruidServer pick(Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment)
+  {
+    return Iterables.getOnlyElement(pick(query, servers, segment, 1), null);
+  }
+
+  default <T> List<QueryableDruidServer> pick(Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
+      int numServersToPick)
+  {
+    return pick(servers, segment, numServersToPick);
+  }
+
   QueryableDruidServer pick(Set<QueryableDruidServer> servers, DataSegment segment);
 
   List<QueryableDruidServer> pick(Set<QueryableDruidServer> servers, DataSegment segment, int numServersToPick);
