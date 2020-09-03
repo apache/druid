@@ -152,9 +152,22 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
 
   protected void addServer(DruidServer server, DataSegment dataSegment, QueryableIndex queryableIndex)
   {
+    addServer(server, dataSegment, queryableIndex, false);
+  }
+
+  protected void addServer(
+      DruidServer server,
+      DataSegment dataSegment,
+      QueryableIndex queryableIndex,
+      boolean throwQueryError
+  )
+  {
     servers.add(server);
     simpleServerView.addServer(server, dataSegment);
-    httpClient.addServerAndRunner(server, new SimpleServerManager(conglomerate, dataSegment, queryableIndex));
+    httpClient.addServerAndRunner(
+        server,
+        new SimpleServerManager(conglomerate, dataSegment, queryableIndex, throwQueryError)
+    );
   }
 
   protected void prepareCluster(int numServers)
@@ -168,19 +181,24 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
       addServer(
           SimpleServerView.createServer(i + 1),
           segment,
-          segmentGenerator.generate(
-              segment,
-              new GeneratorSchemaInfo(
-                  BASE_SCHEMA_INFO.getColumnSchemas(),
-                  BASE_SCHEMA_INFO.getAggs(),
-                  interval,
-                  BASE_SCHEMA_INFO.isWithRollup()
-              ),
-              Granularities.NONE,
-              10
-          )
+          generateSegment(segment)
       );
     }
+  }
+
+  protected QueryableIndex generateSegment(DataSegment segment)
+  {
+    return segmentGenerator.generate(
+        segment,
+        new GeneratorSchemaInfo(
+            BASE_SCHEMA_INFO.getColumnSchemas(),
+            BASE_SCHEMA_INFO.getAggs(),
+            segment.getInterval(),
+            BASE_SCHEMA_INFO.isWithRollup()
+        ),
+        Granularities.NONE,
+        10
+    );
   }
 
   protected static Query<Result<TimeseriesResultValue>> timeseriesQuery(Interval interval)

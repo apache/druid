@@ -19,11 +19,15 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.client.SimpleServerView;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,7 +58,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     prepareCluster(10);
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
-        newCacheConfig(false, true),
+        newCacheConfig(false, false),
         query
     );
 
@@ -64,9 +68,11 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
     Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
-        newCacheConfig(false, true),
+        newCacheConfig(false, false),
         query
     );
 
@@ -77,6 +83,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
     Assert.assertEquals(results1, results2);
     Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
   }
 
   @Test
@@ -85,7 +93,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     prepareCluster(10);
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
-        newCacheConfig(true, true),
+        newCacheConfig(true, false),
         query
     );
 
@@ -95,6 +103,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
     Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(true, false),
@@ -108,6 +118,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
     Assert.assertEquals(results1, results2);
     Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
   }
 
   @Test
@@ -116,7 +128,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     prepareCluster(10);
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
-        newCacheConfig(false, true),
+        newCacheConfig(false, false),
         query
     );
 
@@ -126,9 +138,11 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
     Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(0, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
-        newCacheConfig(true, true),
+        newCacheConfig(false, true),
         query
     );
 
@@ -139,6 +153,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
     Assert.assertEquals(results1, results2);
     Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
   }
 
   @Test
@@ -157,6 +173,8 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
     Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(true, true),
@@ -170,6 +188,44 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
     Assert.assertEquals(results1, results2);
     Assert.assertEquals(1, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
+  }
+
+  @Test
+  public void testPopulateCacheWhenQueryThrowExceptionShouldNotCache()
+  {
+    final Interval interval = Intervals.of("2000-01-01/PT1H");
+    final DataSegment segment = newSegment(interval, 0, 1);
+    addServer(
+        SimpleServerView.createServer(0),
+        segment,
+        generateSegment(segment),
+        true
+    );
+
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
+        newCacheConfig(true, false),
+        query
+    );
+
+    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    );
+    try {
+      sequence.toList();
+      Assert.fail("Expected to throw an exception");
+    }
+    catch (RuntimeException e) {
+      Assert.assertEquals("Exception for testing", e.getMessage());
+    }
+    finally {
+      Assert.assertEquals(0, cache.getStats().getNumHits());
+      Assert.assertEquals(0, cache.getStats().getNumEntries());
+      Assert.assertEquals(0, cache.getStats().getNumMisses());
+    }
   }
 
   private <T> ResultLevelCachingQueryRunner<T> createQueryRunner(

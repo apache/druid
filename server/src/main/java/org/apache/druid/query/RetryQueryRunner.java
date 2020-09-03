@@ -99,6 +99,12 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext context)
   {
+    // Calling baseRunner.run() (which is SpecificQueryRunnable.run()) in the RetryingSequenceIterator
+    // could be better because we can minimize the chance that data servers report missing segments as
+    // we construct the query distribution tree when the query processing is actually started.
+    // However, we call baseRunner.run() here instead where it's executed while constructing a query plan.
+    // This is because ResultLevelCachingQueryRunner requires to compute the cache key based on
+    // the segments to query which is computed in SpecificQueryRunnable.run().
     final Sequence<T> baseSequence = baseRunner.run(queryPlus, context);
     // runnableAfterFirstAttempt is only for testing, it must be no-op for production code.
     runnableAfterFirstAttempt.run();
