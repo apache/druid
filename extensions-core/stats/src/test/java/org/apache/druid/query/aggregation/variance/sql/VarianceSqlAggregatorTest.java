@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation.variance.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -34,10 +36,15 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.variance.StandardDeviationPostAggregator;
@@ -49,8 +56,14 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -79,10 +92,15 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+@RunWith(JUnitParamsRunner.class)
 public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
 {
   private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
@@ -259,8 +277,8 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             holder1.getVariance(true),
-            (float) holder2.getVariance(true),
-            (long) holder3.getVariance(true),
+            holder2.getVariance(true).floatValue(),
+            holder3.getVariance(true).longValue()
         }
     );
     assertResultsEquals(expectedResults, results);
@@ -315,8 +333,8 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             holder1.getVariance(false),
-            (float) holder2.getVariance(false),
-            (long) holder3.getVariance(false),
+            holder2.getVariance(false).floatValue(),
+            holder3.getVariance(false).longValue(),
         }
     );
     assertResultsEquals(expectedResults, results);
@@ -581,6 +599,51 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
     );
   }
 
+  public Object[] timeseriesQueryRunners()
+  {
+    return QueryRunnerTestHelper.makeQueryRunners(
+        new TimeseriesQueryRunnerFactory(
+            new TimeseriesQueryQueryToolChest(),
+            new TimeseriesQueryEngine(),
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        )
+    ).toArray();
+  }
+
+  @Test
+  @Parameters(method = "timeseriesQueryRunners")
+  public void testEmptyTimeseries(QueryRunner<Result<TimeseriesResultValue>> runner)
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+                                  .granularity(QueryRunnerTestHelper.ALL_GRAN)
+                                  .intervals(QueryRunnerTestHelper.EMPTY_INTERVAL)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.ROWS_COUNT,
+                                          QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+                                          new VarianceAggregatorFactory("variance", "index")
+                                      )
+                                  )
+                                  .descending(true)
+                                  .context(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                                  .build();
+    Map<String, Object> resultMap = new HashMap<>();
+    resultMap.put("rows", 0L);
+    resultMap.put("index", NullHandling.defaultDoubleValue());
+    resultMap.put("variance", NullHandling.defaultDoubleValue());
+    List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            DateTimes.of("2020-04-02"),
+            new TimeseriesResultValue(
+                resultMap
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> actualResults = runner.run(QueryPlus.wrap(query)).toList();
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
   private static void assertResultsEquals(List<Object[]> expectedResults, List<Object[]> results)
   {
     Assert.assertEquals(expectedResults.size(), results.size());
@@ -588,4 +651,6 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
       Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
     }
   }
+
+
 }

@@ -241,9 +241,9 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(@Nullable Object object)
   {
-    return object == null || ((VarianceAggregatorCollector) object).count == 0
+    return object == null
            ? NullHandling.defaultDoubleValue()
-           : (Double) ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
+           : ((VarianceAggregatorCollector) object).getVariance(isVariancePop);
   }
 
   @Override

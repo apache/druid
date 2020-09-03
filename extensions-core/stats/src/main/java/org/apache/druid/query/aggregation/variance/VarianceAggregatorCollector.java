@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
+import org.apache.druid.common.config.NullHandling;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -156,11 +157,11 @@ public class VarianceAggregatorCollector
     return this;
   }
 
-  public double getVariance(boolean variancePop)
+  @Nullable
+  public Double getVariance(boolean variancePop)
   {
     if (count == 0) {
-      // in SQL standard, we should return null for zero elements. But druid there should not be such a case
-      throw new IllegalStateException("should not be empty holder");
+      return NullHandling.defaultDoubleValue();
     } else if (count == 1) {
       return 0d;
     } else {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.variance;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -28,10 +29,11 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class VarianceAggregatorFactoryTest
+public class VarianceAggregatorFactoryTest extends InitializedNullHandlingTest
 {
   @Test
   public void testResultArraySignature()
@@ -74,13 +76,13 @@ public class VarianceAggregatorFactoryTest
   {
     VarianceAggregatorFactory target = new VarianceAggregatorFactory("test", "test", null, null);
     VarianceAggregatorCollector v1 = new VarianceAggregatorCollector();
-    Assert.assertNull(target.finalizeComputation(v1));
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), target.finalizeComputation(v1));
   }
 
   @Test
   public void testFinalizeComputationWithNullShouldReturnNull()
   {
     VarianceAggregatorFactory target = new VarianceAggregatorFactory("test", "test", null, null);
-    Assert.assertNull(target.finalizeComputation(null));
+    Assert.assertEquals(NullHandling.defaultDoubleValue(), target.finalizeComputation(null));
   }
 }
