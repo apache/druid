@@ -88,7 +88,7 @@ final class ReservoirSegmentSampler
 
         // We have iterated over the alloted number of segments and will return the currently proposed segment or null
         // We will only break out early if we are iterating less than 100% of the total cluster segments
-        if (percentOfSegmentsToConsider != 100 && numSoFar >= calculatedSegmentLimit) {
+        if (percentOfSegmentsToConsider < 100 && numSoFar >= calculatedSegmentLimit) {
           log.debug("Breaking out of iteration over potential segments to move because we hit the limit [%d percent] of"
                     + " segments to consider to move. Segments Iterated: [%s]", percentOfSegmentsToConsider, numSoFar);
           break;
@@ -96,7 +96,7 @@ final class ReservoirSegmentSampler
       }
       // We have iterated over the alloted number of segments and will return the currently proposed segment or null
       // We will only break out early if we are iterating less than 100% of the total cluster segments
-      if (percentOfSegmentsToConsider != 100 && numSoFar >= calculatedSegmentLimit) {
+      if (percentOfSegmentsToConsider < 100 && numSoFar >= calculatedSegmentLimit) {
         break;
       }
     }
