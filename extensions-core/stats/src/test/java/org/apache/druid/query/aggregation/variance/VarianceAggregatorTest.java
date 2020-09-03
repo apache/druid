@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.variance;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.TestFloatColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -93,16 +94,10 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(sum, holder.sum, 0.0001);
     Assert.assertEquals(nvariance, holder.nvariance, 0.0001);
     if (count == 0) {
-      try {
-        holder.getVariance(false);
-        Assert.fail("Should throw ISE");
-      }
-      catch (IllegalStateException e) {
-        Assert.assertTrue(e.getMessage().contains("should not be empty holder"));
-      }
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), holder.getVariance(false));
     } else {
-      Assert.assertEquals(holder.getVariance(true), variances_pop[(int) count - 1], 0.0001);
-      Assert.assertEquals(holder.getVariance(false), variances_samp[(int) count - 1], 0.0001);
+      Assert.assertEquals(variances_pop[(int) count - 1], holder.getVariance(true), 0.0001);
+      Assert.assertEquals(variances_samp[(int) count - 1], holder.getVariance(false), 0.0001);
     }
   }
 
