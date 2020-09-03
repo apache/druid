@@ -36,7 +36,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
@@ -228,7 +227,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   static class EarliestLatestReturnTypeInference implements SqlReturnTypeInference
   {
     private final int ordinal;
-    private static final Logger log = new Logger(EarliestLatestReturnTypeInference.class);
 
     public EarliestLatestReturnTypeInference(int ordinal)
     {
@@ -238,7 +236,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     @Override
     public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
     {
-      RelDataType type = sqlOperatorBinding.getOperandType(0);
+      RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
       // For non-number and non-string type, which is COMPLEX type, we set the return type to VARCHAR.
       if (!SqlTypeUtil.isNumeric(type) &&
           !SqlTypeUtil.isString(type)) {
@@ -251,13 +249,16 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
 
   private static class EarliestLatestSqlAggFunction extends SqlAggFunction
   {
+    private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
+        new EarliestLatestReturnTypeInference(0);
+
     EarliestLatestSqlAggFunction(AggregatorType aggregatorType)
     {
       super(
           aggregatorType.name(),
           null,
           SqlKind.OTHER_FUNCTION,
-          new EarliestLatestReturnTypeInference(0),
+          EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE,
           InferTypes.RETURN_TYPE,
           OperandTypes.or(
               OperandTypes.NUMERIC,
