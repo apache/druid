@@ -217,7 +217,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         if (IncrementalIndexRow.EMPTY_ROW_INDEX == prev) {
           getNumEntries().incrementAndGet();
         } else {
-          throw new ISE("WTF! we are in sychronized block.");
+          throw new ISE("Unexpected state: Concurrent fact addition.");
         }
       }
     }

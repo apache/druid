@@ -706,12 +706,12 @@ public class AppenderatorImpl implements Appenderator
     // Sanity checks
     for (FireHydrant hydrant : sink) {
       if (sink.isWritable()) {
-        throw new ISE("WTF?! Expected sink to be no longer writable before mergeAndPush. Segment[%s].", identifier);
+        throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
       }
 
       synchronized (hydrant) {
         if (!hydrant.hasSwapped()) {
-          throw new ISE("WTF?! Expected sink to be fully persisted before mergeAndPush. Segment[%s].", identifier);
+          throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
         }
       }
     }

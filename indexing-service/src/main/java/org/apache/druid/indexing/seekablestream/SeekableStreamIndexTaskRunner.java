@@ -470,7 +470,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         // Sanity checks.
         if (!restoredNextPartitions.getStream().equals(ioConfig.getStartSequenceNumbers().getStream())) {
           throw new ISE(
-              "WTF?! Restored stream[%s] but expected stream[%s]",
+              "Restored stream[%s] but expected stream[%s]",
               restoredNextPartitions.getStream(),
               ioConfig.getStartSequenceNumbers().getStream()
           );
@@ -478,7 +478,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
         if (!currOffsets.keySet().equals(ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet())) {
           throw new ISE(
-              "WTF?! Restored partitions[%s] but expected partitions[%s]",
+              "Restored partitions[%s] but expected partitions[%s]",
               currOffsets.keySet(),
               ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet()
           );
@@ -633,7 +633,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
                 if (sequenceToUse == null) {
                   throw new ISE(
-                      "WTH?! cannot find any valid sequence for record with partition [%s] and sequenceNumber [%s]. Current sequences: %s",
+                      "Cannot find any valid sequence for record with partition [%s] and sequenceNumber [%s]. Current sequences: %s",
                       record.getPartitionId(),
                       record.getSequenceNumber(),
                       sequences
@@ -1616,7 +1616,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         pauseLock.lockInterruptibly();
         // Perform all sequence related checks before checking for isPaused()
         // and after acquiring pauseLock to correctly guard against duplicate requests
-        Preconditions.checkState(sequenceNumbers.size() > 0, "WTH?! No Sequences found to set end sequences");
+        Preconditions.checkState(sequenceNumbers.size() > 0, "No sequences found to set end sequences");
 
         final SequenceMetadata<PartitionIdType, SequenceOffsetType> latestSequence = getLastSequenceMetadata();
         final Set<PartitionIdType> exclusiveStartPartitions;
@@ -1641,7 +1641,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
                          .entity(StringUtils.format(
-                             "WTH?! Sequence [%s] has already endOffsets set, cannot set to [%s]",
+                             "Sequence [%s] has already endOffsets set, cannot set to [%s]",
                              latestSequence,
                              sequenceNumbers
                          )).build();

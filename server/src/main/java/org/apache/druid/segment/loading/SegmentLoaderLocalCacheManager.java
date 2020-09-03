@@ -334,9 +334,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         dataSegment,
         (segment, existingLock) -> {
           if (existingLock == null) {
-            throw new ISE("WTH? the given lock has already been removed");
+            throw new ISE("Lock has already been removed");
           } else if (existingLock != lock) {
-            throw new ISE("WTH? Different lock instance");
+            throw new ISE("Different lock instance");
           } else {
             if (existingLock.numReferences == 1) {
               return null;
