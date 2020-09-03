@@ -53,6 +53,13 @@ final class ReservoirSegmentSampler
     int calculatedSegmentLimit = Integer.MAX_VALUE;
     int numSoFar = 0;
 
+    // Reset a bad value of percentOfSegmentsToConsider to 100. We don't allow consideration of 0% or less of segments.
+    if (percentOfSegmentsToConsider <= 0) {
+      log.debug("Resetting percentOfSegmentsToConsider to 100 because only values from 1 to 100 are allowed."
+                + "You Provided [%d]", percentOfSegmentsToConsider);
+      percentOfSegmentsToConsider = 100;
+    }
+
     // Calculate the integer limit for the number of segments to be considered for moving if % is less than 100
     if (percentOfSegmentsToConsider < 100) {
       int totalSegments = 0;
