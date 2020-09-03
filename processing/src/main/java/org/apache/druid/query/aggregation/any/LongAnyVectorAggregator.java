@@ -39,14 +39,10 @@ public class LongAnyVectorAggregator extends NumericAnyVectorAggregator
   }
 
   @Override
-  boolean putValue(ByteBuffer buf, int position, int startRow, int endRow)
+  void putValue(ByteBuffer buf, int position, int row)
   {
     long[] values = vectorValueSelector.getLongVector();
-    if (startRow <= values.length) {
-      buf.putLong(position + FOUND_VALUE_OFFSET, values[startRow]);
-      return true;
-    }
-    return false;
+    buf.putLong(position + FOUND_VALUE_OFFSET, values[row]);
   }
 
   @Override

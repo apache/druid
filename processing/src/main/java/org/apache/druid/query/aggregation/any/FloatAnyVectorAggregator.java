@@ -38,14 +38,10 @@ public class FloatAnyVectorAggregator extends NumericAnyVectorAggregator
   }
 
   @Override
-  boolean putValue(ByteBuffer buf, int position, int startRow, int endRow)
+  void putValue(ByteBuffer buf, int position, int row)
   {
     float[] values = vectorValueSelector.getFloatVector();
-    if (startRow <= values.length) {
-      buf.putFloat(position + FOUND_VALUE_OFFSET, values[startRow]);
-      return true;
-    }
-    return false;
+    buf.putFloat(position + FOUND_VALUE_OFFSET, values[row]);
   }
 
   @Override

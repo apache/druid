@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -30,7 +31,8 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
 {
   // Rightmost bit for is null check (0 for is null and 1 for not null)
   // Second rightmost bit for is found check (0 for not found and 1 for found)
-  private static final byte BYTE_FLAG_FOUND_MASK = 0x02;
+  @VisibleForTesting
+  static final byte BYTE_FLAG_FOUND_MASK = 0x02;
   private static final byte BYTE_FLAG_NULL_MASK = 0x01;
   protected static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
@@ -50,9 +52,8 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   /**
    * Place the primitive value in the buffer given the initial offset position within the byte buffer
    * at which the current aggregate value is stored.
-   * @return true if a value was put on the buffer, false otherwise.
    */
-  abstract boolean putValue(ByteBuffer buf, int position, int startRow, int endRow);
+  abstract void putValue(ByteBuffer buf, int position, int row);
 
   /**
    * Place the primitive null value in the buffer, fiven the initial offset position within the byte buffer
@@ -83,9 +84,8 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
         }
       }
       // There are no nulls, so put a value from the value selector
-      if (putValue(buf, position, startRow, endRow)) {
-        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
-      }
+      putValue(buf, position, startRow);
+      buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
     }
   }
 

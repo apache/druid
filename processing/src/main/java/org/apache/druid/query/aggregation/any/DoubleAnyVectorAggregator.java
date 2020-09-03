@@ -38,14 +38,10 @@ public class DoubleAnyVectorAggregator extends NumericAnyVectorAggregator
   }
 
   @Override
-  boolean putValue(ByteBuffer buf, int position, int startRow, int endRow)
+  void putValue(ByteBuffer buf, int position, int row)
   {
     double[] values = vectorValueSelector.getDoubleVector();
-    if (startRow <= values.length) {
-      buf.putDouble(position + FOUND_VALUE_OFFSET, values[startRow]);
-      return true;
-    }
-    return false;
+    buf.putDouble(position + FOUND_VALUE_OFFSET, values[row]);
   }
 
   @Override

@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.any;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -98,12 +97,32 @@ public class StringAnyVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
-    throw new UOE("Implement me!");
+    int prevPosition = -1;
+    @Nullable String theValue = null;
+    boolean found = false;
+    for (int i = 0; i < numRows; i++) {
+      int position = positions[i] + positionOffset;
+      int row = rows == null ? i : rows[i];
+      // If the aggregate is not found at the position
+      if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
+        // If there's a value at the previous position, use it in this position.
+        if (prevPosition >= 0 && (found || buf.getInt(prevPosition) != NOT_FOUND_FLAG_VALUE)) {
+          if (!found) {
+            theValue = get(buf, prevPosition);
+            found = true;
+          }
+          putValue(buf, position, theValue);
+        } else {
+          aggregate(buf, position, row, row);
+        }
+      }
+      prevPosition = position;
+    }
   }
 
   @Nullable
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public String get(ByteBuffer buf, int position)
   {
     ByteBuffer copyBuffer = buf.duplicate();
     copyBuffer.position(position);
