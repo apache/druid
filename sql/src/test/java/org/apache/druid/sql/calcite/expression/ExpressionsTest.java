@@ -35,9 +35,12 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
+import org.apache.druid.query.filter.SearchQueryDimFilter;
+import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
@@ -1072,6 +1075,108 @@ public class ExpressionsTest extends ExpressionTestBase
     );
   }
 
+  @Test
+  public void testContains()
+  {
+    testHelper.testFilter(
+        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("there")
+        ),
+        Collections.emptyList(),
+        new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("there", true), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        Collections.emptyList(),
+        new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("There", true), null),
+        false
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.createOperatorConversion(false).calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        Collections.emptyList(),
+        new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("There", false), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("what")
+        ),
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "v0",
+                "concat('what is',\"spacey\")",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        new SearchQueryDimFilter("v0", new ContainsSearchQuerySpec("what", true), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("there")
+        ),
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "v0",
+                "concat('what is',\"spacey\")",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        new SearchQueryDimFilter("v0", new ContainsSearchQuerySpec("there", true), null),
+        true
+    );
+
+    testHelper.testFilter(
+        ContainsOperatorConversion.createOperatorConversion(false).calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("What")
+        ),
+        ImmutableList.of(
+            new ExpressionVirtualColumn(
+                "v0",
+                "concat('what is',\"spacey\")",
+                ValueType.STRING,
+                TestExprMacroTable.INSTANCE
+            )
+        ),
+        new SearchQueryDimFilter("v0", new ContainsSearchQuerySpec("What", false), null),
+        true
+    );
+  }
 
   @Test
   public void testTimeFloor()
