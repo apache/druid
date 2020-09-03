@@ -25,11 +25,11 @@ import java.nio.ByteBuffer;
  * A helper class used by {@link ApproximateHistogramBufferAggregator} and {@link ApproximateHistogramVectorAggregator}
  * for aggregation operations on byte buffers. Getting the object from value selectors is outside this class.
  */
-final class ApproximateHistogramBufferAggregatorInternal
+final class ApproximateHistogramBufferAggregatorHelper
 {
   private final int resolution;
 
-  public ApproximateHistogramBufferAggregatorInternal(int resolution)
+  public ApproximateHistogramBufferAggregatorHelper(int resolution)
   {
     this.resolution = resolution;
   }

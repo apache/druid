@@ -29,7 +29,7 @@ public class ApproximateHistogramVectorAggregator implements VectorAggregator
 {
 
   private final VectorValueSelector selector;
-  private final ApproximateHistogramBufferAggregatorInternal innerAggregator;
+  private final ApproximateHistogramBufferAggregatorHelper innerAggregator;
 
   public ApproximateHistogramVectorAggregator(
       VectorValueSelector selector,
@@ -37,7 +37,7 @@ public class ApproximateHistogramVectorAggregator implements VectorAggregator
   )
   {
     this.selector = selector;
-    this.innerAggregator = new ApproximateHistogramBufferAggregatorInternal(resolution);
+    this.innerAggregator = new ApproximateHistogramBufferAggregatorHelper(resolution);
   }
 
   @Override

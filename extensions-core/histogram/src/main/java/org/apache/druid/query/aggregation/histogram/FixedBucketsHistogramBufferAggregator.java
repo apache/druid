@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector selector;
-  private final FixedBucketsHistogramBufferAggregatorInternal innerAggregator;
+  private final FixedBucketsHistogramBufferAggregatorHelper innerAggregator;
 
   public FixedBucketsHistogramBufferAggregator(
       BaseObjectColumnValueSelector selector,
@@ -39,7 +39,7 @@ public class FixedBucketsHistogramBufferAggregator implements BufferAggregator
   )
   {
     this.selector = selector;
-    this.innerAggregator = new FixedBucketsHistogramBufferAggregatorInternal(
+    this.innerAggregator = new FixedBucketsHistogramBufferAggregatorHelper(
         lowerLimit,
         upperLimit,
         numBuckets,

@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 public class ApproximateHistogramFoldingBufferAggregator implements BufferAggregator
 {
   private final BaseObjectColumnValueSelector<ApproximateHistogram> selector;
-  private final ApproximateHistogramFoldingBufferAggregatorInternal innerAggregator;
+  private final ApproximateHistogramFoldingBufferAggregatorHelper innerAggregator;
 
   public ApproximateHistogramFoldingBufferAggregator(
       BaseObjectColumnValueSelector<ApproximateHistogram> selector,
@@ -38,7 +38,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   )
   {
     this.selector = selector;
-    this.innerAggregator = new ApproximateHistogramFoldingBufferAggregatorInternal(resolution, lowerLimit, upperLimit);
+    this.innerAggregator = new ApproximateHistogramFoldingBufferAggregatorHelper(resolution, lowerLimit, upperLimit);
   }
 
   @Override

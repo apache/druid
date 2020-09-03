@@ -27,14 +27,14 @@ import java.nio.ByteBuffer;
  * {@link FixedBucketsHistogramVectorAggregator} for aggregation operations on byte buffers.
  * Getting the object from value selectors is outside this class.
  */
-final class FixedBucketsHistogramBufferAggregatorInternal
+final class FixedBucketsHistogramBufferAggregatorHelper
 {
   private final double lowerLimit;
   private final double upperLimit;
   private final int numBuckets;
   private final FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode;
 
-  public FixedBucketsHistogramBufferAggregatorInternal(
+  public FixedBucketsHistogramBufferAggregatorHelper(
       double lowerLimit,
       double upperLimit,
       int numBuckets,

@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
  * {@link ApproximateHistogramFoldingVectorAggregator} for aggregation operations on byte buffers.
  * Getting the object from value selectors is outside this class.
  */
-final class ApproximateHistogramFoldingBufferAggregatorInternal
+final class ApproximateHistogramFoldingBufferAggregatorHelper
 {
   private final int resolution;
   private final float upperLimit;
@@ -36,7 +36,7 @@ final class ApproximateHistogramFoldingBufferAggregatorInternal
   private float[] tmpBufferA;
   private long[] tmpBufferB;
 
-  public ApproximateHistogramFoldingBufferAggregatorInternal(
+  public ApproximateHistogramFoldingBufferAggregatorHelper(
       int resolution,
       float lowerLimit,
       float upperLimit

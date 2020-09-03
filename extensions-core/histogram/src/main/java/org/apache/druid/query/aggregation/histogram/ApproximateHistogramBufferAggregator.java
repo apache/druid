@@ -28,12 +28,12 @@ import java.nio.ByteBuffer;
 public class ApproximateHistogramBufferAggregator implements BufferAggregator
 {
   private final BaseFloatColumnValueSelector selector;
-  private final ApproximateHistogramBufferAggregatorInternal innerAggregator;
+  private final ApproximateHistogramBufferAggregatorHelper innerAggregator;
 
   public ApproximateHistogramBufferAggregator(BaseFloatColumnValueSelector selector, int resolution)
   {
     this.selector = selector;
-    this.innerAggregator = new ApproximateHistogramBufferAggregatorInternal(resolution);
+    this.innerAggregator = new ApproximateHistogramBufferAggregatorHelper(resolution);
   }
 
   @Override
