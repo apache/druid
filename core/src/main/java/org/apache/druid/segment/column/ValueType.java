@@ -130,7 +130,7 @@ public enum ValueType
   {
     return toExpressionType(this);
   }
-  
+
   @Nullable
   @JsonCreator
   public static ValueType fromString(@Nullable String name)
@@ -166,14 +166,19 @@ public enum ValueType
    */
   public static ValueType toExpressionType(@Nullable ValueType valueType)
   {
+    if (valueType == null) {
+      throw new IllegalStateException("No expression compatible type for unknown value type");
+    }
     switch (valueType) {
-      case LONG:
-        return ValueType.LONG;
-      case FLOAT:
-      case DOUBLE:
-        return ValueType.DOUBLE;
       case STRING:
-        return ValueType.STRING;
+      case STRING_ARRAY:
+      case LONG:
+      case LONG_ARRAY:
+      case DOUBLE:
+      case DOUBLE_ARRAY:
+        return valueType;
+      case FLOAT:
+        return ValueType.DOUBLE;
       default:
         throw new ISE("No expression compatible type for value type[%s]", valueType);
     }
