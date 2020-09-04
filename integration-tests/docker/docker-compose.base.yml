@@ -187,7 +187,6 @@ services:
     volumes:
       - ${HOME}/shared:/shared
       - ./service-supervisords/druid.conf:/usr/lib/druid/conf/druid.conf
-      - ../../sql/target/druid-sql-0.20.0-SNAPSHOT.jar:/usr/local/druid/lib/druid-sql-0.20.0-SNAPSHOT.jar
     env_file:
       - ./environment-configs/common
       - ./environment-configs/broker
