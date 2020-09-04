@@ -27,6 +27,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.annotation.Nullable;
@@ -41,6 +42,8 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
   private static final int NULL_POSITION = 10;
   private static final long FOUND_OBJECT = 23;
   private static final int BUFFER_SIZE = 128;
+  private static final int POSITION = 2;
+  private static final boolean[] NULLS = new boolean[] {false, false, true, false};
 
   private ByteBuffer buf;
   @Mock
@@ -51,7 +54,8 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
   @Before
   public void setUp()
   {
-    target = new NumericAnyVectorAggregator(selector)
+    Mockito.doReturn(NULLS).when(selector).getNullVector();
+    target = Mockito.spy(new NumericAnyVectorAggregator(selector)
     {
       @Nullable
       @Override
@@ -73,30 +77,73 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
       @Override
       void putValue(ByteBuffer buf, int position, int row)
       {
-        /* Do nothing. */
+        buf.putLong(position, row);
       }
 
       @Override
       void putNonNullValue(ByteBuffer buf, int position, Object value)
       {
-
+        buf.putLong(position, FOUND_OBJECT);
       }
-    };
+    });
     byte[] randomBuffer = new byte[BUFFER_SIZE];
     ThreadLocalRandom.current().nextBytes(randomBuffer);
     buf = ByteBuffer.wrap(randomBuffer);
+    buf.put(POSITION, (byte) 0);
   }
 
   @Test
   public void initShouldSetDoubleAfterPositionToZero()
   {
-    int position = 2;
-    target.init(buf, position);
-    Assert.assertEquals(0, buf.get(position) & BYTE_FLAG_FOUND_MASK);
+    target.init(buf, POSITION);
+    Assert.assertEquals(0, buf.get(POSITION) & BYTE_FLAG_FOUND_MASK);
     Assert.assertEquals(
         NullHandling.sqlCompatible() ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE,
-        buf.get(position)
+        buf.get(POSITION)
     );
   }
 
+  @Test
+  public void aggregateNotFoundAndHasNullsShouldPutNull()
+  {
+    target.aggregate(buf, POSITION, 0, 3);
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE, buf.get(POSITION));
+    } else {
+      Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE, buf.get(POSITION));
+    }
+  }
+
+  @Test
+  public void aggregateNotFoundAndHasNullsOutsideRangeShouldPutValue()
+  {
+    target.aggregate(buf, POSITION, 0, 1);
+    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE, buf.get(POSITION));
+  }
+
+  @Test
+  public void aggregateNotFoundAndNoNullsShouldPutValue()
+  {
+    Mockito.doReturn(null).when(selector).getNullVector();
+    target.aggregate(buf, POSITION, 0, 3);
+    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE, buf.get(POSITION));
+  }
+
+  @Test
+  public void aggregateFoundShouldDoNothing()
+  {
+    long previous = buf.getLong(POSITION + 1);
+    buf.put(POSITION, BYTE_FLAG_FOUND_MASK);
+    target.aggregate(buf, POSITION, 0, 3);
+    Assert.assertEquals(previous, buf.getLong(POSITION + 1));
+  }
+
+  @Test
+  public void isValueNull()
+  {
+    buf.put(POSITION, (byte) 4);
+    Assert.assertFalse(target.isValueNull(buf, POSITION));
+    buf.put(POSITION, (byte) 3);
+    Assert.assertTrue(target.isValueNull(buf, POSITION));
+  }
 }

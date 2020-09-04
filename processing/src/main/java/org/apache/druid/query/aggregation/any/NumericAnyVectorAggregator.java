@@ -78,7 +78,7 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
         for (int i = startRow; i < endRow; i++) {
           // And there is actually a null
           if (nulls[i]) {
-            putValue(buf, position, null);
+            putNull(buf, position);
             return;
           }
         }
@@ -116,17 +116,12 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
     return (buf.get(position) & BYTE_FLAG_NULL_MASK) == NullHandling.IS_NULL_BYTE;
   }
 
-  private void putValue(ByteBuffer buf, int position, @Nullable Object value)
+  private void putNull(ByteBuffer buf, int position)
   {
-    if (value == null) {
-      if (!replaceWithDefault) {
-        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
-      } else {
-        putNonNullValue(buf, position, 0);
-        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
-      }
+    if (!replaceWithDefault) {
+      buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
     } else {
-      putNonNullValue(buf, position, value);
+      putNonNullValue(buf, position, 0);
       buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
     }
   }

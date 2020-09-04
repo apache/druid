@@ -62,6 +62,13 @@ public class DoubleAnyVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void initValueShouldInitZero()
+  {
+    target.initValue(buf, POSITION);
+    Assert.assertEquals(0, buf.getDouble(POSITION + 1), EPSILON);
+  }
+
+  @Test
   public void getAtPositionIsNullShouldReturnNull()
   {
     Assert.assertNull(target.get(buf, NULL_POSITION));

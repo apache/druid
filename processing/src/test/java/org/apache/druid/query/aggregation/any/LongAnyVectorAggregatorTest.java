@@ -61,6 +61,13 @@ public class LongAnyVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void initValueShouldInitZero()
+  {
+    target.initValue(buf, POSITION);
+    Assert.assertEquals(0, buf.getLong(POSITION + 1));
+  }
+
+  @Test
   public void getAtPositionIsNullShouldReturnNull()
   {
     Assert.assertNull(target.get(buf, NULL_POSITION));

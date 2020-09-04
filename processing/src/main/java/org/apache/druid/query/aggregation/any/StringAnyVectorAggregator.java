@@ -71,7 +71,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
     if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
       if (multiValueSelector != null) {
         final IndexedInts[] rows = multiValueSelector.getRowVector();
-        if (startRow <= rows.length) {
+        if (startRow < rows.length) {
           IndexedInts row = rows[startRow];
           @Nullable
           String foundValue = row.size() == 0 ? null : multiValueSelector.lookupName(row.get(0));
@@ -79,7 +79,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
         }
       } else if (singleValueSelector != null) {
         final int[] rows = singleValueSelector.getRowVector();
-        if (startRow <= rows.length) {
+        if (startRow < rows.length) {
           int row = rows[startRow];
           @Nullable
           String foundValue = singleValueSelector.lookupName(row);

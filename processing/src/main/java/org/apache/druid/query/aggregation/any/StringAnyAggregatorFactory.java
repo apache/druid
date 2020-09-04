@@ -27,7 +27,6 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -83,34 +82,30 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  public StringAnyVectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
 
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.hasMultipleValues().isFalse()) {
-      return new StringAnyVectorAggregator(
-          selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
-          null,
-          maxStringBytes
-      );
-    } else {
+    if (capabilities == null || capabilities.hasMultipleValues().isMaybeTrue()) {
       return new StringAnyVectorAggregator(
           null,
           selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
           maxStringBytes
       );
-
+    } else {
+      return new StringAnyVectorAggregator(
+          selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
+          null,
+          maxStringBytes
+      );
     }
   }
 
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    if (fieldName != null) {
-      ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-      return capabilities == null || capabilities.getType() == ValueType.STRING;
-    }
-    return false;
+    ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return capabilities == null || capabilities.getType() == ValueType.STRING;
   }
 
   @Override

@@ -24,6 +24,9 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
+/**
+ * Vectorized implementation of the {@link DoubleAnyBufferAggregator}
+ */
 public class DoubleAnyVectorAggregator extends NumericAnyVectorAggregator
 {
   public DoubleAnyVectorAggregator(VectorValueSelector selector)
