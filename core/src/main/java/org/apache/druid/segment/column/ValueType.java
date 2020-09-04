@@ -46,7 +46,8 @@ public enum ValueType
   /**
    * 32-bit single precision floating point number primitive type. This type may be used as a grouping key, or as an
    * input to any aggregators which support primitive numerical operations like sums, minimums, maximums, etc, as well
-   * as an input to expression virtual columns.
+   * as an input to expression virtual columns, with the caveat that the expression system does not directly support
+   * this type and must be treated as {@link #DOUBLE} instead.
    */
   FLOAT,
   /**
