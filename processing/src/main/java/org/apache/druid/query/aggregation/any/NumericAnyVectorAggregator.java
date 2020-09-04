@@ -98,26 +98,10 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
-    int prevPosition = -1;
-    @Nullable Object theValue = null;
-    boolean found = false;
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      // If the aggregate is not found at the position
-      if ((buf.get(position) & BYTE_FLAG_FOUND_MASK) != BYTE_FLAG_FOUND_MASK) {
-        // If there's a value at the previous position, use it in this position.
-        if (prevPosition >= 0 && (found || (buf.get(prevPosition) & BYTE_FLAG_FOUND_MASK) == BYTE_FLAG_FOUND_MASK)) {
-          if (!found) {
-            theValue = get(buf, prevPosition);
-            found = true;
-          }
-          putValue(buf, position, theValue);
-        } else {
-          aggregate(buf, position, row, row);
-        }
-      }
-      prevPosition = position;
+      aggregate(buf, position, row, row);
     }
   }
 

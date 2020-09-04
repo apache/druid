@@ -97,26 +97,10 @@ public class StringAnyVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
-    int prevPosition = -1;
-    @Nullable String theValue = null;
-    boolean found = false;
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      // If the aggregate is not found at the position
-      if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
-        // If there's a value at the previous position, use it in this position.
-        if (prevPosition >= 0 && (found || buf.getInt(prevPosition) != NOT_FOUND_FLAG_VALUE)) {
-          if (!found) {
-            theValue = get(buf, prevPosition);
-            found = true;
-          }
-          putValue(buf, position, theValue);
-        } else {
-          aggregate(buf, position, row, row);
-        }
-      }
-      prevPosition = position;
+      aggregate(buf, position, row, row);
     }
   }
 
