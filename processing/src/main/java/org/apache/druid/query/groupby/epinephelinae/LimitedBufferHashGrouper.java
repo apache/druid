@@ -377,7 +377,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
   {
     long numBucketsNeeded = (long) Math.ceil((limit + 1) / maxLoadFactor);
     long targetTableArenaSize = numBucketsNeeded * bucketSize * 2;
-    long heapSize = (limit + 1) * (Integer.BYTES);
+    long heapSize = ((long) limit + 1) * (Integer.BYTES);
     long requiredSize = targetTableArenaSize + heapSize;
 
     if (bufferCapacity < requiredSize) {
