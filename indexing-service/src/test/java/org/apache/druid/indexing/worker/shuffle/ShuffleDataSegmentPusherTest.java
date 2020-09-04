@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.worker;
+package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;

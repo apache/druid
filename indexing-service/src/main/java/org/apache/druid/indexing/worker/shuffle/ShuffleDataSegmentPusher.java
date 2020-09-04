@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.worker;
+package org.apache.druid.indexing.worker.shuffle;
 
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;

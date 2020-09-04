@@ -17,22 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.indexing.worker.shuffle;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.server.metrics.MetricsModule;
 
-/**
- */
-public interface Monitor
+public class ShuffleModule implements Module
 {
-  void start();
+  @Override
+  public void configure(Binder binder)
+  {
+    Jerseys.addResource(binder, ShuffleResource.class);
 
-  void stop();
-
-  /**
-   * Emit metrics using the given emitter.
-   *
-   * @return true if this monitor needs to continue monitoring. False otherwise.
-   */
-  boolean monitor(ServiceEmitter emitter);
+    binder.bind(ShuffleMetrics.class).in(LazySingleton.class);
+    binder.bind(ShuffleMonitor.class).in(LazySingleton.class);
+    MetricsModule.register(binder, ShuffleMonitor.class);
+  }
 }

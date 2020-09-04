@@ -58,6 +58,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRun
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistributionMerger;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketchMerger;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -486,7 +487,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * - In the first phase, each task partitions input data and stores those partitions in local storage.
    *   - The partition is created based on the segment granularity (primary partition key) and the partition dimension
    *     values in {@link PartitionsSpec} (secondary partition key).
-   *   - Partitioned data is maintained by {@link org.apache.druid.indexing.worker.IntermediaryDataManager}.
+   *   - Partitioned data is maintained by {@link IntermediaryDataManager}.
    * - In the second phase, each task reads partitioned data from the intermediary data server (middleManager
    *   or indexer) and merges them to create the final segments.
    */
