@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.VectorAggregator;
@@ -32,8 +33,10 @@ import java.nio.ByteBuffer;
 public class StringAnyVectorAggregator implements VectorAggregator
 {
   private static final int FOUND_AND_NULL_FLAG_VALUE = -1;
-  private static final int NOT_FOUND_FLAG_VALUE = -2;
-  private static final int FOUND_VALUE_OFFSET = Integer.BYTES;
+  @VisibleForTesting
+  static final int NOT_FOUND_FLAG_VALUE = -2;
+  @VisibleForTesting
+  static final int FOUND_VALUE_OFFSET = Integer.BYTES;
 
   @Nullable
   private final SingleValueDimensionVectorSelector singleValueSelector;
@@ -43,7 +46,8 @@ public class StringAnyVectorAggregator implements VectorAggregator
 
   public StringAnyVectorAggregator(
       SingleValueDimensionVectorSelector singleValueSelector,
-      MultiValueDimensionVectorSelector multiValueSelector, int maxStringBytes
+      MultiValueDimensionVectorSelector multiValueSelector,
+      int maxStringBytes
   )
   {
     Preconditions.checkState(
@@ -68,7 +72,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-    if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE) {
+    if (buf.getInt(position) == NOT_FOUND_FLAG_VALUE && startRow < endRow) {
       if (multiValueSelector != null) {
         final IndexedInts[] rows = multiValueSelector.getRowVector();
         if (startRow < rows.length) {
@@ -100,7 +104,7 @@ public class StringAnyVectorAggregator implements VectorAggregator
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      aggregate(buf, position, row, row);
+      aggregate(buf, position, row, row + 1);
     }
   }
 

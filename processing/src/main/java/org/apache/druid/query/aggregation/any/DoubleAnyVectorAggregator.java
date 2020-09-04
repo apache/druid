@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.segment.vector.VectorValueSelector;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -37,27 +36,23 @@ public class DoubleAnyVectorAggregator extends NumericAnyVectorAggregator
   @Override
   void initValue(ByteBuffer buf, int position)
   {
-    buf.putDouble(position + FOUND_VALUE_OFFSET, 0);
+    buf.putDouble(position, 0);
   }
 
   @Override
-  void putValue(ByteBuffer buf, int position, int row)
+  boolean putAnyValueFromRow(ByteBuffer buf, int position, int startRow, int endRow)
   {
     double[] values = vectorValueSelector.getDoubleVector();
-    buf.putDouble(position + FOUND_VALUE_OFFSET, values[row]);
+    boolean isRowsWithinIndex = startRow < endRow && startRow < values.length;
+    if (isRowsWithinIndex) {
+      buf.putDouble(position, values[startRow]);
+    }
+    return isRowsWithinIndex;
   }
 
   @Override
-  void putNonNullValue(ByteBuffer buf, int position, Object value)
+  Object getNonNullObject(ByteBuffer buf, int position)
   {
-    buf.putDouble(position + FOUND_VALUE_OFFSET, (double) value);
-  }
-
-  @Nullable
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    final boolean isNull = isValueNull(buf, position);
-    return isNull ? null : buf.getDouble(position + FOUND_VALUE_OFFSET);
+    return buf.getDouble(position);
   }
 }

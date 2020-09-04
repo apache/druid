@@ -30,7 +30,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -40,8 +39,8 @@ import static org.apache.druid.query.aggregation.any.NumericAnyVectorAggregator.
 public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final int NULL_POSITION = 10;
-  private static final long FOUND_OBJECT = 23;
   private static final int BUFFER_SIZE = 128;
+  private static final long FOUND_OBJECT = 23;
   private static final int POSITION = 2;
   private static final boolean[] NULLS = new boolean[] {false, false, true, false};
 
@@ -57,17 +56,6 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
     Mockito.doReturn(NULLS).when(selector).getNullVector();
     target = Mockito.spy(new NumericAnyVectorAggregator(selector)
     {
-      @Nullable
-      @Override
-      public Object get(ByteBuffer buf, int position)
-      {
-        if (position == NULL_POSITION) {
-          return null;
-        } else {
-          return FOUND_OBJECT;
-        }
-      }
-
       @Override
       void initValue(ByteBuffer buf, int position)
       {
@@ -75,21 +63,30 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
       }
 
       @Override
-      void putValue(ByteBuffer buf, int position, int row)
+      boolean putAnyValueFromRow(ByteBuffer buf, int position, int startRow, int endRow)
       {
-        buf.putLong(position, row);
+        boolean isRowsWithinIndex = startRow < endRow && startRow < NULLS.length;
+        if (isRowsWithinIndex) {
+          buf.putLong(position, startRow);
+        }
+        return isRowsWithinIndex;
       }
 
       @Override
-      void putNonNullValue(ByteBuffer buf, int position, Object value)
+      Object getNonNullObject(ByteBuffer buf, int position)
       {
-        buf.putLong(position, FOUND_OBJECT);
+        if (position == POSITION + 1) {
+          return FOUND_OBJECT;
+        }
+        return -1;
       }
+
     });
     byte[] randomBuffer = new byte[BUFFER_SIZE];
     ThreadLocalRandom.current().nextBytes(randomBuffer);
     buf = ByteBuffer.wrap(randomBuffer);
-    buf.put(POSITION, (byte) 0);
+    clearBufferForPositions(0, POSITION);
+    buf.put(NULL_POSITION, (byte) 0x01);
   }
 
   @Test
@@ -130,6 +127,51 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void aggregateNotFoundNoNullsAndValuesOutsideRangeShouldNotPutValue()
+  {
+    Mockito.doReturn(null).when(selector).getNullVector();
+    target.aggregate(buf, POSITION, NULLS.length, NULLS.length + 1);
+    Assert.assertNotEquals(BYTE_FLAG_FOUND_MASK, (buf.get(POSITION) & BYTE_FLAG_FOUND_MASK));
+  }
+
+  @Test
+  public void aggregateBatchNoRowsShouldAggregateAllRows()
+  {
+    Mockito.doReturn(null).when(selector).getNullVector();
+    int[] positions = new int[] {0, 43, 70};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    target.aggregate(buf, 3, positions, null, positionOffset);
+    for (int i = 0; i < positions.length; i++) {
+      int position = positions[i] + positionOffset;
+      Assert.assertEquals(
+          BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE,
+          buf.get(position) & (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE)
+      );
+      Assert.assertEquals(i, buf.getLong(position + 1));
+    }
+  }
+
+  @Test
+  public void aggregateBatchWithRowsShouldAggregateAllRows()
+  {
+    Mockito.doReturn(null).when(selector).getNullVector();
+    int[] positions = new int[] {0, 43, 70};
+    int positionOffset = 2;
+    clearBufferForPositions(positionOffset, positions);
+    int[] rows = new int[] {3, 2, 0};
+    target.aggregate(buf, 3, positions, rows, positionOffset);
+    for (int i = 0; i < positions.length; i++) {
+      int position = positions[i] + positionOffset;
+      Assert.assertEquals(
+          BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE,
+          buf.get(position) & (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE)
+      );
+      Assert.assertEquals(rows[i], buf.getLong(position + 1));
+    }
+  }
+
+  @Test
   public void aggregateFoundShouldDoNothing()
   {
     long previous = buf.getLong(POSITION + 1);
@@ -139,11 +181,30 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void getNullShouldReturnNull()
+  {
+    Assert.assertNull(target.get(buf, NULL_POSITION));
+  }
+
+  @Test
+  public void getNotNullShouldReturnValue()
+  {
+    Assert.assertEquals(FOUND_OBJECT, target.get(buf, POSITION));
+  }
+
+  @Test
   public void isValueNull()
   {
     buf.put(POSITION, (byte) 4);
     Assert.assertFalse(target.isValueNull(buf, POSITION));
     buf.put(POSITION, (byte) 3);
     Assert.assertTrue(target.isValueNull(buf, POSITION));
+  }
+
+  private void clearBufferForPositions(int offset, int... positions)
+  {
+    for (int position : positions) {
+      buf.put(position + offset, (byte) 0);
+    }
   }
 }

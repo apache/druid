@@ -64,7 +64,7 @@ public class LongAnyVectorAggregatorTest extends InitializedNullHandlingTest
   public void initValueShouldInitZero()
   {
     target.initValue(buf, POSITION);
-    Assert.assertEquals(0, buf.getLong(POSITION + 1));
+    Assert.assertEquals(0, buf.getLong(POSITION));
   }
 
   @Test
@@ -81,16 +81,23 @@ public class LongAnyVectorAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void putNonNullValueShouldAddValueToBuffer()
+  public void putValueShouldAddToBuffer()
   {
-    target.putNonNullValue(buf, POSITION, VALUES[3]);
-    Assert.assertEquals(VALUES[3], buf.getLong(POSITION + 1));
+    Assert.assertTrue(target.putAnyValueFromRow(buf, POSITION, 2, 3));
+    Assert.assertEquals(VALUES[2], buf.getLong(POSITION));
   }
 
   @Test
-  public void putValueShouldAddToBuffer()
+  public void putValueStartAfterEndShouldNotAddToBuffer()
   {
-    target.putValue(buf, POSITION, 2);
-    Assert.assertEquals(VALUES[2], buf.getLong(POSITION + 1));
+    Assert.assertFalse(target.putAnyValueFromRow(buf, POSITION, 2, 2));
+    Assert.assertNotEquals(VALUES[2], buf.getLong(POSITION));
+  }
+
+  @Test
+  public void putValueStartOutsideRangeShouldNotAddToBuffer()
+  {
+    Assert.assertFalse(target.putAnyValueFromRow(buf, POSITION, 5, 6));
+    Assert.assertNotEquals(VALUES[2], buf.getLong(POSITION));
   }
 }

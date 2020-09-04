@@ -34,7 +34,7 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   @VisibleForTesting
   static final byte BYTE_FLAG_FOUND_MASK = 0x02;
   private static final byte BYTE_FLAG_NULL_MASK = 0x01;
-  protected static final int FOUND_VALUE_OFFSET = Byte.BYTES;
+  private static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
   private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
   protected final VectorValueSelector vectorValueSelector;
@@ -50,22 +50,23 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   abstract void initValue(ByteBuffer buf, int position);
 
   /**
-   * Place the primitive value in the buffer given the initial offset position within the byte buffer
-   * at which the current aggregate value is stored.
+   * Place any primitive value from the rows, starting at {@param startRow}(inclusive) up to {@param endRow}(exclusive),
+   * in the buffer given the initial offset position within the byte buffer at which the current aggregate value
+   * is stored.
+   * @return true if a value was added, false otherwise
    */
-  abstract void putValue(ByteBuffer buf, int position, int row);
+  abstract boolean putAnyValueFromRow(ByteBuffer buf, int position, int startRow, int endRow);
 
   /**
-   * Place the primitive null value in the buffer, fiven the initial offset position within the byte buffer
-   * at which the current aggregate value is stored.
+   * @return The primitive object stored at the position in the buffer.
    */
-  abstract void putNonNullValue(ByteBuffer buf, int position, Object value);
+  abstract Object getNonNullObject(ByteBuffer buf, int position);
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
     buf.put(position, replaceWithDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE);
-    initValue(buf, position);
+    initValue(buf, position + FOUND_VALUE_OFFSET);
   }
 
   @Override
@@ -74,8 +75,8 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
     if ((buf.get(position) & BYTE_FLAG_FOUND_MASK) != BYTE_FLAG_FOUND_MASK) {
       boolean[] nulls = vectorValueSelector.getNullVector();
       // check if there are any nulls
-      if (nulls != null && startRow <= nulls.length) {
-        for (int i = startRow; i < endRow; i++) {
+      if (nulls != null) {
+        for (int i = startRow; i < endRow && i < nulls.length; i++) {
           // And there is actually a null
           if (nulls[i]) {
             putNull(buf, position);
@@ -83,9 +84,10 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
           }
         }
       }
-      // There are no nulls, so put a value from the value selector
-      putValue(buf, position, startRow);
-      buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
+      // There are no nulls, so try to put a value from the value selector
+      if (putAnyValueFromRow(buf, position + FOUND_VALUE_OFFSET, startRow, endRow)) {
+        buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
+      }
     }
   }
 
@@ -101,8 +103,16 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows == null ? i : rows[i];
-      aggregate(buf, position, row, row);
+      aggregate(buf, position, row, row + 1);
     }
+  }
+
+  @Nullable
+  @Override
+  public Object get(ByteBuffer buf, int position)
+  {
+    final boolean isNull = isValueNull(buf, position);
+    return isNull ? null : getNonNullObject(buf, position + FOUND_VALUE_OFFSET);
   }
 
   @Override
@@ -111,7 +121,8 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
     // No resources to cleanup.
   }
 
-  protected boolean isValueNull(ByteBuffer buf, int position)
+  @VisibleForTesting
+  boolean isValueNull(ByteBuffer buf, int position)
   {
     return (buf.get(position) & BYTE_FLAG_NULL_MASK) == NullHandling.IS_NULL_BYTE;
   }
@@ -121,7 +132,7 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
     if (!replaceWithDefault) {
       buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
     } else {
-      putNonNullValue(buf, position, 0);
+      initValue(buf, position + FOUND_VALUE_OFFSET);
       buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
     }
   }
