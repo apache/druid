@@ -828,7 +828,7 @@ If this is the case, the coordinator's automatic compaction might get stuck beca
 This kind of problem may happen especially in Kafka/Kinesis indexing systems which allow late data arrival.
 If you see this problem, it's recommended to set `skipOffsetFromLatest` to some large enough value to avoid such conflicts between compaction tasks and realtime tasks.
 
-###### Auto Compaction TuningConfig
+###### Compaction TuningConfig
 
 Auto compaction supports a subset of the [tuningConfig for Parallel task](../ingestion/native-batch.md#tuningconfig).
 The below is a list of the supported configurations for auto compaction.
