@@ -276,7 +276,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
             null,
             null,
             null,
-            2,
+            1,
             null,
             null,
             null,
