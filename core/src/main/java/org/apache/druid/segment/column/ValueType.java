@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -118,6 +119,18 @@ public enum ValueType
     return this.equals(ValueType.STRING) || isNumeric(this);
   }
 
+  /**
+   * The expression system does not distinguish between {@link #FLOAT} and {@link #DOUBLE}, and cannot currently handle
+   * {@link #COMPLEX} inputs. This method will convert {@link #FLOAT} to {@link #DOUBLE}, or throw an exception if a
+   * {@link #COMPLEX} is encountered.
+   *
+   * @throws IllegalStateException
+   */
+  public ValueType toExpressionType()
+  {
+    return toExpressionType(this);
+  }
+  
   @Nullable
   @JsonCreator
   public static ValueType fromString(@Nullable String name)
@@ -128,13 +141,41 @@ public enum ValueType
     return valueOf(StringUtils.toUpperCase(name));
   }
 
+  /**
+   * Type is a numeric type, not including numeric array types
+   */
   public static boolean isNumeric(ValueType type)
   {
     return type == ValueType.LONG || type == ValueType.FLOAT || type == ValueType.DOUBLE;
   }
 
+  /**
+   * Type is an array type
+   */
   public static boolean isArray(ValueType type)
   {
     return type == ValueType.DOUBLE_ARRAY || type == ValueType.LONG_ARRAY || type == ValueType.STRING_ARRAY;
+  }
+
+  /**
+   * The expression system does not distinguish between {@link #FLOAT} and {@link #DOUBLE}, and cannot currently handle
+   * {@link #COMPLEX} inputs. This method will convert {@link #FLOAT} to {@link #DOUBLE}, or throw an exception if a
+   * {@link #COMPLEX} is encountered.
+   *
+   * @throws IllegalStateException
+   */
+  public static ValueType toExpressionType(@Nullable ValueType valueType)
+  {
+    switch (valueType) {
+      case LONG:
+        return ValueType.LONG;
+      case FLOAT:
+      case DOUBLE:
+        return ValueType.DOUBLE;
+      case STRING:
+        return ValueType.STRING;
+      default:
+        throw new ISE("No expression compatible type for value type[%s]", valueType);
+    }
   }
 }

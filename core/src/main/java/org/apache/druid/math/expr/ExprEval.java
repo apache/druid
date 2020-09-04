@@ -135,6 +135,9 @@ public abstract class ExprEval<T>
     this.value = value;
   }
 
+  /**
+   * Get the type of this evaluated {@link Expr} result.
+   */
   public abstract ValueType type();
 
   @Nullable

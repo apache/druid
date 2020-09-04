@@ -53,7 +53,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -663,21 +662,6 @@ public class Expressions
     return druidExpression != null
            ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
            : null;
-  }
-
-  public static ValueType exprValueTypeForValueType(final ValueType valueType)
-  {
-    switch (valueType) {
-      case LONG:
-        return ValueType.LONG;
-      case FLOAT:
-      case DOUBLE:
-        return ValueType.DOUBLE;
-      case STRING:
-        return ValueType.STRING;
-      default:
-        throw new ISE("No expression compatible type for value type[%s]", valueType);
-    }
   }
 
   /**
