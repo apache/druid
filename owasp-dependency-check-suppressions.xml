@@ -147,7 +147,7 @@
     <cve>CVE-2019-17195</cve>
   </suppress>
   <suppress>
-      <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-stroage -->
+      <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
       <notes><![CDATA[
    file name: libthrift-0.6.1.jar
    ]]></notes>
@@ -157,7 +157,7 @@
       <cve>CVE-2019-0205</cve>
   </suppress>
   <suppress>
-    <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-stroage -->
+    <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
     <notes><![CDATA[
     file name: snakeyaml-1.6.jar
     ]]></notes>
