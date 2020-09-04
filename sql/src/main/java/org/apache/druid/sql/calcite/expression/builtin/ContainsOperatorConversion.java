@@ -46,8 +46,8 @@ import java.util.List;
 
 public class ContainsOperatorConversion extends DirectOperatorConversion
 {
-  private static final String CASE_SENSITIVE_FN_NAME = "contains";
-  private static final String CASE_INSENSITIVE_FN_NAME = "icontains";
+  private static final String CASE_SENSITIVE_FN_NAME = "contains_str";
+  private static final String CASE_INSENSITIVE_FN_NAME = "icontains_str";
   private final boolean caseSensitive;
 
   public ContainsOperatorConversion(

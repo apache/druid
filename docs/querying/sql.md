@@ -561,6 +561,8 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
 |`NVL(expr,expr-for-null)`|Returns 'expr-for-null' if 'expr' is null (or empty string for string type).|
 |`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in a Base64-serialized bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
+|`CONTAINS_STR(<expr>, str)`|Returns true if the `str` is a substring of `expr`.|
+|`ICONTAINS_STR(<expr>, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 
 ## Multi-value string functions
 
