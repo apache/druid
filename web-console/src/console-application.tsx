@@ -92,9 +92,9 @@ export class ConsoleApplication extends React.PureComponent<
         if (!capabilities) ConsoleApplication.shownNotifications();
         return capabilities || Capabilities.FULL;
       },
-      onStateChange: ({ result, loading }) => {
+      onStateChange: ({ data, loading }) => {
         this.setState({
-          capabilities: result || Capabilities.FULL,
+          capabilities: data || Capabilities.FULL,
           capabilitiesLoading: loading,
         });
       },
@@ -283,7 +283,7 @@ export class ConsoleApplication extends React.PureComponent<
     if (capabilitiesLoading) {
       return (
         <div className="loading-capabilities">
-          <Loader loadingText="" loading />
+          <Loader loadingText="" />
         </div>
       );
     }

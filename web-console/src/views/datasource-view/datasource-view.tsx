@@ -32,10 +32,10 @@ import {
   ActionIcon,
   MoreButton,
   RefreshButton,
+  SegmentTimeline,
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
-import { SegmentTimeline } from '../../components/segment-timeline/segment-timeline';
 import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
@@ -50,6 +50,7 @@ import {
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
+  QueryState,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
 import { Capabilities, CapabilitiesMode } from '../../utils/capabilities';
@@ -111,6 +112,11 @@ interface Datasource {
   [key: string]: any;
 }
 
+interface DatasourcesAndDefaultRules {
+  datasources: Datasource[];
+  defaultRules: Rule[];
+}
+
 interface DatasourceQueryResultRow {
   datasource: string;
   num_segments: number;
@@ -142,12 +148,10 @@ export interface DatasourcesViewProps {
 }
 
 export interface DatasourcesViewState {
-  datasourcesLoading: boolean;
-  datasources: Datasource[] | null;
-  tiers: string[];
-  defaultRules: Rule[];
-  datasourcesError?: string;
   datasourceFilter: Filter[];
+  datasourcesAndDefaultRulesState: QueryState<DatasourcesAndDefaultRules>;
+
+  tiersState: QueryState<string[]>;
 
   showUnused: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
@@ -201,10 +205,8 @@ GROUP BY 1`;
     }
   }
 
-  private datasourceQueryManager: QueryManager<
-    Capabilities,
-    { tiers: string[]; defaultRules: any[]; datasources: Datasource[] }
-  >;
+  private datasourceQueryManager: QueryManager<Capabilities, DatasourcesAndDefaultRules>;
+  private tiersQueryManager: QueryManager<Capabilities, string[]>;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -215,11 +217,10 @@ GROUP BY 1`;
     }
 
     this.state = {
-      datasourcesLoading: true,
-      datasources: null,
-      tiers: [],
-      defaultRules: [],
       datasourceFilter,
+      datasourcesAndDefaultRulesState: QueryState.INIT,
+
+      tiersState: QueryState.INIT,
 
       showUnused: false,
       useUnuseAction: 'unuse',
@@ -272,7 +273,6 @@ GROUP BY 1`;
           });
           return {
             datasources,
-            tiers: [],
             defaultRules: [],
           };
         }
@@ -298,9 +298,6 @@ GROUP BY 1`;
           (c: any) => c.dataSource,
         );
 
-        const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
-        const tiers = tiersResp.data;
-
         const allDatasources = (datasources as any).concat(
           unused.map(d => ({ datasource: d, unused: true })),
         );
@@ -311,18 +308,27 @@ GROUP BY 1`;
 
         return {
           datasources: allDatasources,
-          tiers,
           defaultRules: rules['_default'],
         };
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: datasourcesAndDefaultRulesState => {
         this.setState({
-          datasourcesLoading: loading,
-          datasources: result ? result.datasources : null,
-          tiers: result ? result.tiers : [],
-          defaultRules: result ? result.defaultRules : [],
-          datasourcesError: error || undefined,
+          datasourcesAndDefaultRulesState,
         });
+      },
+    });
+
+    this.tiersQueryManager = new QueryManager({
+      processQuery: async capabilities => {
+        if (capabilities.hasCoordinatorAccess()) {
+          const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
+          return tiersResp.data;
+        } else {
+          throw new Error(`must have coordinator access`);
+        }
+      },
+      onStateChange: tiersState => {
+        this.setState({ tiersState });
       },
     });
   }
@@ -336,16 +342,19 @@ GROUP BY 1`;
 
   private refresh = (auto: any): void => {
     this.datasourceQueryManager.rerunLastQuery(auto);
+    this.tiersQueryManager.rerunLastQuery(auto);
   };
 
   componentDidMount(): void {
     const { capabilities } = this.props;
     this.datasourceQueryManager.runQuery(capabilities);
+    this.tiersQueryManager.runQuery(capabilities);
     window.addEventListener('resize', this.handleResize);
   }
 
   componentWillUnmount(): void {
     this.datasourceQueryManager.terminate();
+    this.tiersQueryManager.terminate();
   }
 
   renderUnuseAction() {
@@ -530,15 +539,16 @@ GROUP BY 1`;
   };
 
   private editDefaultRules = () => {
-    const { datasources, defaultRules } = this.state;
-    if (!datasources) return;
+    const { datasourcesAndDefaultRulesState } = this.state;
+    const datasourcesAndDefaultRules = datasourcesAndDefaultRulesState.data;
+    if (!datasourcesAndDefaultRules) return;
 
     this.setState({ retentionDialogOpenOn: undefined });
     setTimeout(() => {
       this.setState({
         retentionDialogOpenOn: {
           datasource: '_default',
-          rules: defaultRules,
+          rules: datasourcesAndDefaultRules.defaultRules,
         },
       });
     }, 50);
@@ -704,17 +714,21 @@ GROUP BY 1`;
     }
   }
 
-  renderRetentionDialog() {
-    const { retentionDialogOpenOn, tiers, defaultRules } = this.state;
-    if (!retentionDialogOpenOn) return null;
+  renderRetentionDialog(): JSX.Element | undefined {
+    const { retentionDialogOpenOn, tiersState, datasourcesAndDefaultRulesState } = this.state;
+    const { defaultRules } = datasourcesAndDefaultRulesState.data || {
+      datasources: [],
+      defaultRules: [],
+    };
+    if (!retentionDialogOpenOn) return;
 
     return (
       <RetentionDialog
         datasource={retentionDialogOpenOn.datasource}
         rules={retentionDialogOpenOn.rules}
-        defaultRules={defaultRules}
-        tiers={tiers}
+        tiers={tiersState.data || []}
         onEditDefaults={this.editDefaultRules}
+        defaultRules={defaultRules}
         onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}
         onSave={this.saveRules}
       />
@@ -722,9 +736,8 @@ GROUP BY 1`;
   }
 
   renderCompactionDialog() {
-    const { datasources, compactionDialogOpenOn } = this.state;
-
-    if (!compactionDialogOpenOn || !datasources) return;
+    const { datasourcesAndDefaultRulesState, compactionDialogOpenOn } = this.state;
+    if (!compactionDialogOpenOn || !datasourcesAndDefaultRulesState.data) return;
 
     return (
       <CompactionDialog
@@ -740,27 +753,29 @@ GROUP BY 1`;
   renderDatasourceTable() {
     const { goToSegments, capabilities } = this.props;
     const {
-      datasources,
-      defaultRules,
-      datasourcesLoading,
-      datasourcesError,
+      datasourcesAndDefaultRulesState,
       datasourceFilter,
       showUnused,
       hiddenColumns,
     } = this.state;
-    let data = datasources || [];
+
+    let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data
+      ? datasourcesAndDefaultRulesState.data
+      : { datasources: [], defaultRules: [] };
+
     if (!showUnused) {
-      data = data.filter(d => !d.unused);
+      datasources = datasources.filter(d => !d.unused);
     }
+
     return (
       <>
         <ReactTable
-          data={data}
-          loading={datasourcesLoading}
+          data={datasources}
+          loading={datasourcesAndDefaultRulesState.loading}
           noDataText={
-            !datasourcesLoading && datasources && !datasources.length
+            !datasourcesAndDefaultRulesState.loading && datasources && !datasources.length
               ? 'No datasources'
-              : datasourcesError || ''
+              : datasourcesAndDefaultRulesState.error || ''
           }
           filterable
           filtered={datasourceFilter}

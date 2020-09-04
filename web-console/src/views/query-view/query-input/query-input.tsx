@@ -214,8 +214,8 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
   public goToRowColumn(rowColumn: RowColumn) {
     const { aceEditor } = this;
     if (!aceEditor) return;
-    aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
     aceEditor.focus(); // Grab the focus also
+    aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
   }
 
   render(): JSX.Element {

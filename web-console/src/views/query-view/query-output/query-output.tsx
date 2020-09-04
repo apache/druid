@@ -41,15 +41,13 @@ function isComparable(x: unknown): boolean {
 }
 
 export interface QueryOutputProps {
-  loading: boolean;
   queryResult?: QueryResult;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
-  error?: string;
   runeMode: boolean;
 }
 
 export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputProps) {
-  const { queryResult, loading, error } = props;
+  const { queryResult } = props;
   const parsedQuery = queryResult ? queryResult.sqlQuery : undefined;
   const [showValue, setShowValue] = useState();
 
@@ -296,12 +294,7 @@ export const QueryOutput = React.memo(function QueryOutput(props: QueryOutputPro
     <div className="query-output">
       <ReactTable
         data={queryResult ? (queryResult.rows as any[][]) : []}
-        loading={loading}
-        noDataText={
-          !loading && queryResult && !queryResult.rows.length
-            ? 'Query returned no data'
-            : error || ''
-        }
+        noDataText={queryResult && !queryResult.rows.length ? 'Query returned no data' : ''}
         sortable={false}
         columns={(queryResult ? queryResult.header : []).map((column, i) => {
           const h = column.name;

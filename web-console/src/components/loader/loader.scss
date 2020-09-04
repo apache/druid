@@ -81,6 +81,15 @@
 
     .label {
       text-align: center;
+
+      &.cancel-label {
+        cursor: pointer;
+        color: #48aff0;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
     }
   }
 }

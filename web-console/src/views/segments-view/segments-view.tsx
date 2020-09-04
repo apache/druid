@@ -45,6 +45,7 @@ import {
   makeBooleanFilter,
   queryDruidSql,
   QueryManager,
+  QueryState,
   sqlQueryCustomTableFilter,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
@@ -105,11 +106,9 @@ export interface SegmentsViewProps {
 }
 
 export interface SegmentsViewState {
-  segmentsLoading: boolean;
-  segments?: SegmentQueryResultRow[];
-  segmentsError?: string;
+  segmentsState: QueryState<SegmentQueryResultRow[]>;
+  trimmedSegments?: SegmentQueryResultRow[];
   segmentFilter: Filter[];
-  allSegments?: SegmentQueryResultRow[];
   segmentTableActionDialogId?: string;
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
@@ -169,7 +168,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.state = {
       actions: [],
-      segmentsLoading: true,
+      segmentsState: QueryState.INIT,
       segmentFilter,
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
@@ -185,7 +184,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.segmentsSqlQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
         const totalQuerySize = (query.page + 1) * query.pageSize;
 
         const whereParts = filterMap(query.filtered, (f: Filter) => {
@@ -261,16 +260,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         }
         const sqlQuery = queryParts.join('\n');
         setIntermediateQuery(sqlQuery);
-        const results: any[] = (await queryDruidSql({ query: sqlQuery })).slice(
-          query.page * query.pageSize,
-        );
-        return results;
+        return (await queryDruidSql({ query: sqlQuery })).slice(query.page * query.pageSize);
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: segmentsState => {
         this.setState({
-          segments: result,
-          segmentsLoading: loading,
-          segmentsError: error,
+          segmentsState,
         });
       },
     });
@@ -303,16 +297,16 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           }),
         );
 
-        return nestedResults.flat().sort((d1: any, d2: any) => {
+        return nestedResults.flat().sort((d1, d2) => {
           return d2.start.localeCompare(d1.start);
         });
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: segmentsState => {
         this.setState({
-          allSegments: result,
-          segments: result ? result.slice(0, SegmentsView.PAGE_SIZE) : undefined,
-          segmentsLoading: loading,
-          segmentsError: error,
+          trimmedSegments: segmentsState.data
+            ? segmentsState.data.slice(0, SegmentsView.PAGE_SIZE)
+            : undefined,
+          segmentsState,
         });
       },
     });
@@ -343,31 +337,31 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   private fetchClientSideData = (state?: any) => {
     const { page, pageSize, filtered, sorted } = state ? state : state;
-    const { allSegments } = this.state;
-    if (allSegments == null) return;
+    const { segmentsState } = this.state;
+    const allSegments = segmentsState.data;
+    if (!allSegments) return;
     const startPage = page * pageSize;
     const endPage = (page + 1) * pageSize;
-    const sortPivot = sorted[0].id;
+    const sortPivot: keyof SegmentQueryResultRow = sorted[0].id;
     const sortDesc = sorted[0].desc;
-    const selectedSegments = allSegments
-      .filter((d: any) => {
-        return filtered.every((f: any) => {
-          return d[f.id].includes(f.value);
-        });
-      })
-      .sort((d1: any, d2: any) => {
-        const v1 = d1[sortPivot];
-        const v2 = d2[sortPivot];
-        if (typeof d1[sortPivot] === 'string') {
-          return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
-        } else {
-          return sortDesc ? v2 - v1 : v1 - v2;
-        }
-      })
-      .slice(startPage, endPage);
 
     this.setState({
-      segments: selectedSegments,
+      trimmedSegments: allSegments
+        .filter(d => {
+          return filtered.every((f: any) => {
+            return String(d[f.id as keyof SegmentQueryResultRow]).includes(f.value);
+          });
+        })
+        .sort((d1, d2) => {
+          const v1 = d1[sortPivot] as any;
+          const v2 = d2[sortPivot] as any;
+          if (typeof v1 === 'string') {
+            return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
+          } else {
+            return sortDesc ? v2 - v1 : v1 - v2;
+          }
+        })
+        .slice(startPage, endPage),
     });
   };
 
@@ -384,9 +378,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   renderSegmentsTable() {
     const {
-      segments,
-      segmentsLoading,
-      segmentsError,
+      segmentsState,
+      trimmedSegments,
       segmentFilter,
       hiddenColumns,
       groupByInterval,
@@ -395,11 +388,13 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     return (
       <ReactTable
-        data={segments || []}
+        data={trimmedSegments || segmentsState.data || []}
         pages={10000000} // Dummy, we are hiding the page selector
-        loading={segmentsLoading}
+        loading={segmentsState.loading}
         noDataText={
-          !segmentsLoading && segments && !segments.length ? 'No segments' : segmentsError || ''
+          !segmentsState.loading && segmentsState.isEmpty()
+            ? 'No segments'
+            : segmentsState.error || ''
         }
         manual
         filterable

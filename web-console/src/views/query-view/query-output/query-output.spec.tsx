@@ -36,8 +36,6 @@ ORDER BY "Count" DESC`);
     const queryOutput = (
       <QueryOutput
         runeMode={false}
-        loading={false}
-        error="lol"
         queryResult={QueryResult.fromRawResult(
           [
             ['language', 'Count', 'dist_language', 'language_filtered_count'],

@@ -18,8 +18,18 @@
 
 import axios from 'axios';
 import { AxiosResponse } from 'axios';
+import { QueryParameter, SqlQuery } from 'druid-query-toolkit';
 
 import { assemble } from './general';
+
+const CANCELED_MESSAGE = 'Query canceled by user.';
+
+export interface DruidErrorResponse {
+  error?: string;
+  errorMessage?: string;
+  errorClass?: string;
+  host?: string;
+}
 
 export function parseHtmlError(htmlStr: string): string | undefined {
   const startIndex = htmlStr.indexOf('</h3><pre>');
@@ -33,8 +43,8 @@ export function parseHtmlError(htmlStr: string): string | undefined {
     .replace(/&gt;/g, '>');
 }
 
-export function getDruidErrorMessage(e: any) {
-  const data: any = (e.response || {}).data || {};
+export function getDruidErrorMessage(e: any): string {
+  const data: DruidErrorResponse | string = (e.response || {}).data || {};
   switch (typeof data) {
     case 'object':
       return (
@@ -55,6 +65,41 @@ export function getDruidErrorMessage(e: any) {
   }
 }
 
+export class DruidError extends Error {
+  public canceled?: boolean;
+  public error?: string;
+  public errorMessage?: string;
+  public errorClass?: string;
+  public host?: string;
+
+  constructor(e: any) {
+    super(axios.isCancel(e) ? CANCELED_MESSAGE : getDruidErrorMessage(e));
+    if (axios.isCancel(e)) {
+      this.canceled = true;
+    } else {
+      const data: DruidErrorResponse | string = (e.response || {}).data || {};
+
+      let druidErrorResponse: DruidErrorResponse;
+      switch (typeof data) {
+        case 'object':
+          druidErrorResponse = data;
+          break;
+
+        case 'string':
+          druidErrorResponse = {
+            errorClass: 'HTML error',
+          };
+          break;
+
+        default:
+          druidErrorResponse = {};
+          break;
+      }
+      Object.assign(this, druidErrorResponse);
+    }
+  }
+}
+
 export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
   let runeResultResp: AxiosResponse<any>;
   try {
@@ -65,14 +110,32 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
   return runeResultResp.data;
 }
 
-export async function queryDruidSql<T = any>(sqlQuery: Record<string, any>): Promise<T[]> {
+export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
   let sqlResultResp: AxiosResponse<any>;
   try {
-    sqlResultResp = await axios.post('/druid/v2/sql', sqlQuery);
+    sqlResultResp = await axios.post('/druid/v2/sql', sqlQueryPayload);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
   return sqlResultResp.data;
+}
+
+export async function queryDruidSqlFirstColumn(
+  query: SqlQuery,
+  parameters?: readonly QueryParameter[],
+): Promise<any[]> {
+  const sqlQueryPayload: Record<string, any> = {
+    query: query.toString(),
+    resultFormat: 'array',
+    header: false,
+  };
+
+  if (parameters) {
+    sqlQueryPayload.parameters = parameters;
+  }
+
+  const values = await queryDruidSql(sqlQueryPayload);
+  return values.map(r => r[0]);
 }
 
 export interface BasicQueryExplanation {

@@ -22,7 +22,7 @@ import React from 'react';
 import ReactTable, { Column } from 'react-table';
 
 import { UrlBaser } from '../../singletons/url-baser';
-import { QueryManager } from '../../utils';
+import { QueryManager, QueryState } from '../../utils';
 import { deepGet } from '../../utils/object-change';
 import { Loader } from '../loader/loader';
 
@@ -52,9 +52,7 @@ export interface SupervisorStatisticsTableProps {
 }
 
 export interface SupervisorStatisticsTableState {
-  data?: TableRow[];
-  loading: boolean;
-  error?: string;
+  queryState: QueryState<TableRow[]>;
 }
 
 export class SupervisorStatisticsTable extends React.PureComponent<
@@ -66,7 +64,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
   constructor(props: SupervisorStatisticsTableProps, context: any) {
     super(props, context);
     this.state = {
-      loading: true,
+      queryState: QueryState.INIT,
     };
 
     this.supervisorStatisticsQueryManager = new QueryManager({
@@ -79,11 +77,9 @@ export class SupervisorStatisticsTable extends React.PureComponent<
           Object.keys(v).map(k => ({ taskId: k, summary: v[k] })),
         );
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: queryState => {
         this.setState({
-          data: result,
-          error,
-          loading,
+          queryState,
         });
       },
     });
@@ -102,8 +98,8 @@ export class SupervisorStatisticsTable extends React.PureComponent<
       .map(key => <div key={key}>{`${key}: ${Number(data[key]).toFixed(1)}`}</div>);
   }
 
-  renderTable(error?: string) {
-    const { data } = this.state;
+  renderTable() {
+    const { queryState } = this.state;
 
     let columns: Column<TableRow>[] = [
       {
@@ -124,7 +120,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
     ];
 
     const movingAveragesBuildSegments = deepGet(
-      data as any,
+      queryState.data as any,
       '0.summary.movingAverages.buildSegments',
     );
     if (movingAveragesBuildSegments) {
@@ -150,32 +146,33 @@ export class SupervisorStatisticsTable extends React.PureComponent<
 
     return (
       <ReactTable
-        data={this.state.data ? this.state.data : []}
+        data={queryState.data ? queryState.data : []}
         showPagination={false}
         defaultPageSize={6}
         columns={columns}
-        noDataText={error ? error : 'No statistics data found'}
+        noDataText={queryState.error ? queryState.error : 'No statistics data found'}
       />
     );
   }
 
   render(): JSX.Element {
     const { endpoint } = this.props;
-    const { loading, error } = this.state;
+    const { queryState } = this.state;
+
     return (
       <div className="supervisor-statistics-table">
         <div className="top-actions">
           <ButtonGroup className="right-buttons">
             <Button
               text="View raw"
-              disabled={loading}
+              disabled={queryState.loading}
               minimal
               onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
             />
           </ButtonGroup>
         </div>
         <div className="main-area">
-          {loading ? <Loader loadingText="" loading /> : this.renderTable(error)}
+          {queryState.loading ? <Loader loadingText="" /> : this.renderTable()}
         </div>
       </div>
     );
