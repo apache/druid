@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -666,18 +665,18 @@ public class Expressions
            : null;
   }
 
-  public static ExprType exprTypeForValueType(final ValueType valueType)
+  public static ValueType exprValueTypeForValueType(final ValueType valueType)
   {
     switch (valueType) {
       case LONG:
-        return ExprType.LONG;
+        return ValueType.LONG;
       case FLOAT:
       case DOUBLE:
-        return ExprType.DOUBLE;
+        return ValueType.DOUBLE;
       case STRING:
-        return ExprType.STRING;
+        return ValueType.STRING;
       default:
-        throw new ISE("No ExprType for valueType[%s]", valueType);
+        throw new ISE("No expression compatible type for value type[%s]", valueType);
     }
   }
 

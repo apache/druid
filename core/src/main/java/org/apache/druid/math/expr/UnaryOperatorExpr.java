@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Objects;
 
@@ -105,10 +106,10 @@ class UnaryMinusExpr extends UnaryExpr
     if (NullHandling.sqlCompatible() && (ret.value() == null)) {
       return ExprEval.of(null);
     }
-    if (ret.type() == ExprType.LONG) {
+    if (ret.type() == ValueType.LONG) {
       return ExprEval.of(-ret.asLong());
     }
-    if (ret.type() == ExprType.DOUBLE) {
+    if (ret.type() == ValueType.DOUBLE) {
       return ExprEval.of(-ret.asDouble());
     }
     throw new IAE("unsupported type " + ret.type());
@@ -148,7 +149,7 @@ class UnaryNotExpr extends UnaryExpr
       return ExprEval.of(null);
     }
     // conforming to other boolean-returning binary operators
-    ExprType retType = ret.type() == ExprType.DOUBLE ? ExprType.DOUBLE : ExprType.LONG;
+    ValueType retType = ret.type() == ValueType.DOUBLE ? ValueType.DOUBLE : ValueType.LONG;
     return ExprEval.of(!ret.asBoolean(), retType);
   }
 

@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -132,9 +133,9 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
       return ExprEval.of(null);
     }
 
-    if (leftVal.type() == ExprType.STRING && rightVal.type() == ExprType.STRING) {
+    if (leftVal.type() == ValueType.STRING && rightVal.type() == ValueType.STRING) {
       return evalString(leftVal.asString(), rightVal.asString());
-    } else if (leftVal.type() == ExprType.LONG && rightVal.type() == ExprType.LONG) {
+    } else if (leftVal.type() == ValueType.LONG && rightVal.type() == ValueType.LONG) {
       if (NullHandling.sqlCompatible() && (leftVal.isNumericNull() || rightVal.isNumericNull())) {
         return ExprEval.of(null);
       }
@@ -149,7 +150,7 @@ abstract class BinaryEvalOpExprBase extends BinaryOpExprBase
 
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    throw new IllegalArgumentException("unsupported type " + ExprType.STRING);
+    throw new IllegalArgumentException("unsupported type " + ValueType.STRING);
   }
 
   protected abstract long evalLong(long left, long right);

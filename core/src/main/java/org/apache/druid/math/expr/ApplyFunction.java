@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -56,7 +57,7 @@ public interface ApplyFunction
   ExprEval apply(LambdaExpr lambdaExpr, List<Expr> argsExpr, Expr.ObjectBinding bindings);
 
   /**
-   * Get list of input arguments which must evaluate to an array {@link ExprType}
+   * Get list of input arguments which must evaluate to an array {@link ValueType}
    */
   Set<Expr> getArrayInputs(List<Expr> args);
 
@@ -97,7 +98,7 @@ public interface ApplyFunction
       Long[] longsOut = null;
       Double[] doublesOut = null;
 
-      ExprType elementType = null;
+      ValueType elementType = null;
       for (int i = 0; i < length; i++) {
 
         ExprEval evaluated = expr.eval(bindings.withIndex(i));
@@ -274,7 +275,7 @@ public interface ApplyFunction
         accumulator = evaluated.value();
       }
       if (accumulator instanceof Boolean) {
-        return ExprEval.of((boolean) accumulator, ExprType.LONG);
+        return ExprEval.ofLongBoolean((boolean) accumulator);
       }
       return ExprEval.bestEffortOf(accumulator);
     }
@@ -501,7 +502,7 @@ public interface ApplyFunction
 
       final Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(false, ExprType.LONG);
+        return ExprEval.ofLongBoolean(false);
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
@@ -550,7 +551,7 @@ public interface ApplyFunction
     {
       boolean anyMatch = Arrays.stream(values)
                                .anyMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.of(anyMatch, ExprType.LONG);
+      return ExprEval.ofLongBoolean(anyMatch);
     }
   }
 
@@ -573,7 +574,7 @@ public interface ApplyFunction
     {
       boolean allMatch = Arrays.stream(values)
                                .allMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.of(allMatch, ExprType.LONG);
+      return ExprEval.ofLongBoolean(allMatch);
     }
   }
 

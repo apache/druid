@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -163,9 +164,9 @@ public interface Function
       if (NullHandling.sqlCompatible() && param.isNumericNull()) {
         return ExprEval.of(null);
       }
-      if (param.type() == ExprType.LONG) {
+      if (param.type() == ValueType.LONG) {
         return eval(param.asLong());
-      } else if (param.type() == ExprType.DOUBLE) {
+      } else if (param.type() == ValueType.DOUBLE) {
         return eval(param.asDouble());
       }
       return ExprEval.of(null);
@@ -191,10 +192,10 @@ public interface Function
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() == ExprType.STRING || y.type() == ExprType.STRING) {
+      if (x.type() == ValueType.STRING || y.type() == ValueType.STRING) {
         return ExprEval.of(null);
       }
-      if (x.type() == ExprType.LONG && y.type() == ExprType.LONG) {
+      if (x.type() == ValueType.LONG && y.type() == ValueType.LONG) {
         return eval(x.asLong(), y.asLong());
       } else {
         return eval(x.asDouble(), y.asDouble());
@@ -213,15 +214,15 @@ public interface Function
   }
 
   /**
-   * Base class for a 2 variable input {@link Function} whose first argument is a {@link ExprType#STRING} and second
-   * argument is {@link ExprType#LONG}
+   * Base class for a 2 variable input {@link Function} whose first argument is a {@link ValueType#STRING} and second
+   * argument is {@link ValueType#LONG}
    */
   abstract class StringLongFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (x.type() != ExprType.STRING || y.type() != ExprType.LONG) {
+      if (x.type() != ValueType.STRING || y.type() != ValueType.LONG) {
         throw new IAE(
             "Function[%s] needs a string as first argument and an integer as second argument",
             name()
@@ -709,7 +710,7 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value1 = args.get(0).eval(bindings);
-      if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+      if (value1.type() != ValueType.LONG && value1.type() != ValueType.DOUBLE) {
         throw new IAE(
             "The first argument to the function[%s] should be integer or double type but got the type: %s",
             name(),
@@ -721,7 +722,7 @@ public interface Function
         return eval(value1);
       } else {
         ExprEval value2 = args.get(1).eval(bindings);
-        if (value2.type() != ExprType.LONG) {
+        if (value2.type() != ValueType.LONG) {
           throw new IAE(
               "The second argument to the function[%s] should be integer type but got the type: %s",
               name(),
@@ -747,9 +748,9 @@ public interface Function
 
     private ExprEval eval(ExprEval param, int scale)
     {
-      if (param.type() == ExprType.LONG) {
+      if (param.type() == ValueType.LONG) {
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
-      } else if (param.type() == ExprType.DOUBLE) {
+      } else if (param.type() == ValueType.DOUBLE) {
         BigDecimal decimal = safeGetFromDouble(param.asDouble());
         return ExprEval.of(decimal.setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
@@ -1106,7 +1107,7 @@ public interface Function
     }
 
     /**
-     * Determines which {@link ExprType} to use to compare non-null evaluated expressions.
+     * Determines which {@link ValueType} to use to compare non-null evaluated expressions.
      *
      * @param exprs    Expressions to analyze
      * @param bindings Bindings for expressions
@@ -1115,12 +1116,12 @@ public interface Function
      */
     private ExprAnalysis analyzeExprs(List<Expr> exprs, Expr.ObjectBinding bindings)
     {
-      Set<ExprType> presentTypes = EnumSet.noneOf(ExprType.class);
+      Set<ValueType> presentTypes = EnumSet.noneOf(ValueType.class);
       List<ExprEval<?>> exprEvals = new ArrayList<>();
 
       for (Expr expr : exprs) {
         ExprEval<?> exprEval = expr.eval(bindings);
-        ExprType exprType = exprEval.type();
+        ValueType exprType = exprEval.type();
 
         if (isValidType(exprType)) {
           presentTypes.add(exprType);
@@ -1131,11 +1132,11 @@ public interface Function
         }
       }
 
-      ExprType comparisonType = getComparisionType(presentTypes);
+      ValueType comparisonType = getComparisionType(presentTypes);
       return new ExprAnalysis(comparisonType, exprEvals);
     }
 
-    private boolean isValidType(ExprType exprType)
+    private boolean isValidType(ValueType exprType)
     {
       switch (exprType) {
         case DOUBLE:
@@ -1152,23 +1153,23 @@ public interface Function
      *
      * @see org.apache.druid.sql.calcite.expression.builtin.ReductionOperatorConversionHelper#TYPE_INFERENCE
      */
-    private static ExprType getComparisionType(Set<ExprType> exprTypes)
+    private static ValueType getComparisionType(Set<ValueType> exprTypes)
     {
-      if (exprTypes.contains(ExprType.STRING)) {
-        return ExprType.STRING;
-      } else if (exprTypes.contains(ExprType.DOUBLE)) {
-        return ExprType.DOUBLE;
+      if (exprTypes.contains(ValueType.STRING)) {
+        return ValueType.STRING;
+      } else if (exprTypes.contains(ValueType.DOUBLE)) {
+        return ValueType.DOUBLE;
       } else {
-        return ExprType.LONG;
+        return ValueType.LONG;
       }
     }
 
     private static class ExprAnalysis
     {
-      final ExprType comparisonType;
+      final ValueType comparisonType;
       final List<ExprEval<?>> exprEvals;
 
-      ExprAnalysis(ExprType comparisonType, List<ExprEval<?>> exprEvals)
+      ExprAnalysis(ValueType comparisonType, List<ExprEval<?>> exprEvals)
       {
         this.comparisonType = comparisonType;
         this.exprEvals = exprEvals;
@@ -1331,9 +1332,9 @@ public interface Function
       if (NullHandling.sqlCompatible() && x.value() == null) {
         return ExprEval.of(null);
       }
-      ExprType castTo;
+      ValueType castTo;
       try {
-        castTo = ExprType.valueOf(StringUtils.toUpperCase(y.asString()));
+        castTo = ValueType.valueOf(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
         throw new IAE("invalid type '%s'", y.asString());
@@ -1345,7 +1346,7 @@ public interface Function
     public Set<Expr> getScalarInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        ValueType castTo = ValueType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
         switch (castTo) {
           case LONG_ARRAY:
           case DOUBLE_ARRAY:
@@ -1363,7 +1364,7 @@ public interface Function
     public Set<Expr> getArrayInputs(List<Expr> args)
     {
       if (args.get(1).isLiteral()) {
-        ExprType castTo = ExprType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
+        ValueType castTo = ValueType.valueOf(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()));
         switch (castTo) {
           case LONG:
           case DOUBLE:
@@ -1390,14 +1391,14 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       ExprEval value = args.get(0).eval(bindings);
-      if (value.type() != ExprType.STRING) {
+      if (value.type() != ValueType.STRING) {
         throw new IAE("first argument should be string type but got %s type", value.type());
       }
 
       DateTimes.UtcFormatter formatter = DateTimes.ISO_DATE_OPTIONAL_TIME;
       if (args.size() > 1) {
         ExprEval format = args.get(1).eval(bindings);
-        if (format.type() != ExprType.STRING) {
+        if (format.type() != ValueType.STRING) {
           throw new IAE("second argument should be string type but got %s type", format.type());
         }
         formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
@@ -1790,7 +1791,7 @@ public interface Function
     @Override
     protected ExprEval eval(ExprEval param)
     {
-      if (param.type() != ExprType.STRING) {
+      if (param.type() != ValueType.STRING) {
         throw new IAE(
             "Function[%s] needs a string argument",
             name()
@@ -1828,7 +1829,7 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() == null, ExprType.LONG);
+      return ExprEval.ofLongBoolean(expr.value() == null);
     }
 
     @Override
@@ -1852,7 +1853,7 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() != null, ExprType.LONG);
+      return ExprEval.ofLongBoolean(expr.value() != null);
     }
 
     @Override
@@ -1978,7 +1979,7 @@ public interface Function
       Long[] longsOut = null;
       Double[] doublesOut = null;
 
-      ExprType elementType = null;
+      ValueType elementType = null;
       for (int i = 0; i < length; i++) {
         ExprEval<?> evaluated = args.get(i).eval(bindings);
         if (elementType == null) {
@@ -2020,7 +2021,7 @@ public interface Function
         String[] stringsOut,
         Long[] longsOut,
         Double[] doublesOut,
-        ExprType elementType,
+        ValueType elementType,
         int i,
         ExprEval evaluated
     )
@@ -2414,7 +2415,7 @@ public interface Function
     {
       final Object[] array1 = lhsExpr.asArray();
       final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.of(Arrays.asList(array1).containsAll(Arrays.asList(array2)), ExprType.LONG);
+      return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
     }
   }
 
@@ -2435,7 +2436,7 @@ public interface Function
       for (Object check : array1) {
         any |= array2.contains(check);
       }
-      return ExprEval.of(any, ExprType.LONG);
+      return ExprEval.ofLongBoolean(any);
     }
   }
 

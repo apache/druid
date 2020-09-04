@@ -23,12 +23,13 @@ import com.google.common.primitives.Doubles;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
 /**
- * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
+ * Generic result holder for evaluated {@link Expr} containing the value and {@link ValueType} of the value to allow
  */
 public abstract class ExprEval<T>
 {
@@ -75,7 +76,7 @@ public abstract class ExprEval<T>
     return new StringArrayExprEval(stringValue);
   }
 
-  public static ExprEval of(boolean value, ExprType type)
+  public static ExprEval of(boolean value, ValueType type)
   {
     switch (type) {
       case DOUBLE:
@@ -87,6 +88,11 @@ public abstract class ExprEval<T>
       default:
         throw new IllegalArgumentException("invalid type " + type);
     }
+  }
+
+  public static ExprEval ofLongBoolean(boolean value)
+  {
+    return ExprEval.of(Evals.asLong(value));
   }
 
   public static ExprEval bestEffortOf(@Nullable Object val)
@@ -129,7 +135,7 @@ public abstract class ExprEval<T>
     this.value = value;
   }
 
-  public abstract ExprType type();
+  public abstract ValueType type();
 
   @Nullable
   public T value()
@@ -201,7 +207,7 @@ public abstract class ExprEval<T>
   @Nullable
   public abstract Double[] asDoubleArray();
 
-  public abstract ExprEval castTo(ExprType castTo);
+  public abstract ExprEval castTo(ValueType castTo);
 
   public abstract Expr toExpr();
 
@@ -266,9 +272,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprType type()
+    public final ValueType type()
     {
-      return ExprType.DOUBLE;
+      return ValueType.DOUBLE;
     }
 
     @Override
@@ -285,7 +291,7 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ValueType castTo)
     {
       switch (castTo) {
         case DOUBLE:
@@ -326,9 +332,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprType type()
+    public final ValueType type()
     {
-      return ExprType.LONG;
+      return ValueType.LONG;
     }
 
     @Override
@@ -352,7 +358,7 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ValueType castTo)
     {
       switch (castTo) {
         case DOUBLE:
@@ -408,9 +414,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprType type()
+    public final ValueType type()
     {
-      return ExprType.STRING;
+      return ValueType.STRING;
     }
 
     @Override
@@ -552,7 +558,7 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public final ExprEval castTo(ExprType castTo)
+    public final ExprEval castTo(ValueType castTo)
     {
       switch (castTo) {
         case DOUBLE:
@@ -658,9 +664,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public ValueType type()
     {
-      return ExprType.LONG_ARRAY;
+      return ValueType.LONG_ARRAY;
     }
 
     @Nullable
@@ -685,7 +691,7 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public ExprEval castTo(ValueType castTo)
     {
       if (value == null) {
         return StringExprEval.OF_NULL;
@@ -717,9 +723,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public ValueType type()
     {
-      return ExprType.DOUBLE_ARRAY;
+      return ValueType.DOUBLE_ARRAY;
     }
 
     @Nullable
@@ -744,7 +750,7 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public ExprEval castTo(ValueType castTo)
     {
       if (value == null) {
         return StringExprEval.OF_NULL;
@@ -781,9 +787,9 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprType type()
+    public ValueType type()
     {
-      return ExprType.STRING_ARRAY;
+      return ValueType.STRING_ARRAY;
     }
 
     @Nullable
@@ -816,7 +822,7 @@ public abstract class ExprEval<T>
     }
 
     @Override
-    public ExprEval castTo(ExprType castTo)
+    public ExprEval castTo(ValueType castTo)
     {
       if (value == null) {
         return StringExprEval.OF_NULL;

@@ -28,9 +28,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
@@ -119,7 +119,7 @@ public class DruidRexExecutor implements RexExecutor
           if (exprResult.isNumericNull()) {
             literal = rexBuilder.makeNullLiteral(constExp.getType());
           } else {
-            if (exprResult.type() == ExprType.LONG) {
+            if (exprResult.type() == ValueType.LONG) {
               bigDecimal = BigDecimal.valueOf(exprResult.asLong());
 
             } else {

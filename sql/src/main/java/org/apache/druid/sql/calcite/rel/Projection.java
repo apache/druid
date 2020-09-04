@@ -27,7 +27,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -316,8 +315,8 @@ public class Projection
     }
 
     // Check if a cast is necessary.
-    final ExprType toExprType = Expressions.exprTypeForValueType(columnValueType);
-    final ExprType fromExprType = Expressions.exprTypeForValueType(
+    final ValueType toExprType = Expressions.exprValueTypeForValueType(columnValueType);
+    final ValueType fromExprType = Expressions.exprValueTypeForValueType(
         Calcites.getValueTypeForRelDataType(rexNode.getType())
     );
 

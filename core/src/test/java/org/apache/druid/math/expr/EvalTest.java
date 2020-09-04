@@ -21,6 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,14 +33,14 @@ public class EvalTest extends InitializedNullHandlingTest
   private long evalLong(String x, Expr.ObjectBinding bindings)
   {
     ExprEval ret = eval(x, bindings);
-    Assert.assertEquals(ExprType.LONG, ret.type());
+    Assert.assertEquals(ValueType.LONG, ret.type());
     return ret.asLong();
   }
 
   private double evalDouble(String x, Expr.ObjectBinding bindings)
   {
     ExprEval ret = eval(x, bindings);
-    Assert.assertEquals(ExprType.DOUBLE, ret.type());
+    Assert.assertEquals(ValueType.DOUBLE, ret.type());
     return ret.asDouble();
   }
 
@@ -152,26 +153,26 @@ public class EvalTest extends InitializedNullHandlingTest
     );
     ExprEval eval = Parser.parse("x==y", ExprMacroTable.nil()).eval(bindings);
     Assert.assertTrue(eval.asBoolean());
-    Assert.assertEquals(ExprType.LONG, eval.type());
+    Assert.assertEquals(ValueType.LONG, eval.type());
 
     eval = Parser.parse("x!=y", ExprMacroTable.nil()).eval(bindings);
     Assert.assertFalse(eval.asBoolean());
-    Assert.assertEquals(ExprType.LONG, eval.type());
+    Assert.assertEquals(ValueType.LONG, eval.type());
 
     eval = Parser.parse("x==z", ExprMacroTable.nil()).eval(bindings);
     Assert.assertTrue(eval.asBoolean());
-    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+    Assert.assertEquals(ValueType.DOUBLE, eval.type());
 
     eval = Parser.parse("x!=z", ExprMacroTable.nil()).eval(bindings);
     Assert.assertFalse(eval.asBoolean());
-    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+    Assert.assertEquals(ValueType.DOUBLE, eval.type());
 
     eval = Parser.parse("z==w", ExprMacroTable.nil()).eval(bindings);
     Assert.assertTrue(eval.asBoolean());
-    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+    Assert.assertEquals(ValueType.DOUBLE, eval.type());
 
     eval = Parser.parse("z!=w", ExprMacroTable.nil()).eval(bindings);
     Assert.assertFalse(eval.asBoolean());
-    Assert.assertEquals(ExprType.DOUBLE, eval.type());
+    Assert.assertEquals(ValueType.DOUBLE, eval.type());
   }
 }
