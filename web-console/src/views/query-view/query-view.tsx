@@ -445,7 +445,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
         }
       >
         <Button minimal className="live-query-mode">
-          <span>Live query: </span>
+          <span>Live query:</span>{' '}
           <span
             className={classNames(
               liveQueryMode,
