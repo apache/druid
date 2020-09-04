@@ -90,7 +90,8 @@ requirements:
 include "selector", "bound", "in", "like", "regex", "search", "and", "or", and "not".
 - All filters in filtered aggregators must offer vectorized row-matchers.
 - All aggregators must offer vectorized implementations. These include "count", "doubleSum", "floatSum", "longSum", "longMin",
- "longMax", "doubleMin", "doubleMax", "floatMin", "floatMax", "hyperUnique", and "filtered".
+ "longMax", "doubleMin", "doubleMax", "floatMin", "floatMax", "longAny", "doubleAny", "floatAny", "stringAny",
+ "hyperUnique" and "filtered".
 - No virtual columns.
 - For GroupBy: All dimension specs must be "default" (no extraction functions or filtered dimension specs).
 - For GroupBy: No multi-value dimensions.
