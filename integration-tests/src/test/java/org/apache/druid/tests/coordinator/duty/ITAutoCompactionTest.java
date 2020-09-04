@@ -62,7 +62,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
-  private static final Period SKIP_OFFSET_FROM_LATEST = Period.seconds(0);
+  private static final Period NO_SKIP_OFFSET = Period.seconds(0);
 
   @Inject
   protected CompactionResourceTestClient compactionResource;
@@ -98,7 +98,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       checkCompactionIntervals(intervalsBeforeCompaction);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (2 total)
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -119,9 +119,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
       // Dummy compaction config which will be overwritten
-      submitCompactionConfig(10000, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(10000, NO_SKIP_OFFSET);
       // New compaction config should overwrites the existing compaction config
-      submitCompactionConfig(1, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(1, NO_SKIP_OFFSET);
+
+      LOG.info("Auto compaction test with dynamic partitioning");
 
       // Instead of merging segments, the updated config will split segments!
       //...compacted into 10 new segments across 2 days. 5 new segments each day (10 total)
@@ -130,12 +132,17 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCompacted(10, 1);
       checkCompactionIntervals(intervalsBeforeCompaction);
 
+      LOG.info("Auto compaction test with hash partitioning");
+
       final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-      submitCompactionConfig(hashedPartitionsSpec, SKIP_OFFSET_FROM_LATEST);
-      forceTriggerAutoCompaction(3);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET);
+      // 2 segments published per day after compaction.
+      forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(hashedPartitionsSpec, 3);
+      verifySegmentsCompacted(hashedPartitionsSpec, 4);
       checkCompactionIntervals(intervalsBeforeCompaction);
+
+      LOG.info("Auto compaction test with range partitioning");
 
       final SingleDimensionPartitionsSpec rangePartitionsSpec = new SingleDimensionPartitionsSpec(
           5,
@@ -143,7 +150,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -162,7 +169,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       deleteCompactionConfig();
 
       // ...should remains unchanged (4 total)
@@ -187,7 +194,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, SKIP_OFFSET_FROM_LATEST);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
       // ...should remains unchanged (4 total)
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
