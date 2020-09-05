@@ -21,13 +21,14 @@ import React from 'react';
 import './loader.scss';
 
 export interface LoaderProps {
-  loadingText?: string;
   loading?: boolean; // This is needed so that this component can be used as a LoadingComponent in react table
+  loadingText?: string;
+  cancelText?: string;
   onCancel?: () => void;
 }
 
 export const Loader = React.memo(function Loader(props: LoaderProps) {
-  const { loadingText, loading, onCancel } = props;
+  const { loadingText, loading, cancelText, onCancel } = props;
   if (loading === false) return null;
 
   return (
@@ -57,9 +58,9 @@ export const Loader = React.memo(function Loader(props: LoaderProps) {
           />
         </svg>
         {loadingText && <div className="label">{loadingText}</div>}
-        {onCancel && (
+        {cancelText && onCancel && (
           <div className="label cancel-label" onClick={() => onCancel()}>
-            Cancel query
+            {cancelText}
           </div>
         )}
       </div>

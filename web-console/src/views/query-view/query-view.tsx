@@ -561,6 +561,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           )}
           {queryResultState.loading && (
             <Loader
+              cancelText="Cancel query"
               onCancel={() => {
                 this.queryManager.cancelCurrent();
               }}
