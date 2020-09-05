@@ -77,9 +77,7 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
 
   return (
     <div className="datasource-columns-table">
-      <div className="main-area">
-        {columnsState.loading ? <Loader loadingText="" /> : renderTable()}
-      </div>
+      <div className="main-area">{columnsState.loading ? <Loader /> : renderTable()}</div>
     </div>
   );
 });

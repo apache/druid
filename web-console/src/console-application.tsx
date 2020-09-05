@@ -283,7 +283,7 @@ export class ConsoleApplication extends React.PureComponent<
     if (capabilitiesLoading) {
       return (
         <div className="loading-capabilities">
-          <Loader loadingText="" />
+          <Loader />
         </div>
       );
     }

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`home view matches snapshot (coordiantor) 1`] = `
+exports[`home view matches snapshot (coordinator) 1`] = `
 <div
   className="home-view app-view"
 >

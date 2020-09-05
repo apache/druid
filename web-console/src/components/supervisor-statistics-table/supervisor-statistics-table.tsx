@@ -171,9 +171,7 @@ export class SupervisorStatisticsTable extends React.PureComponent<
             />
           </ButtonGroup>
         </div>
-        <div className="main-area">
-          {queryState.loading ? <Loader loadingText="" /> : this.renderTable()}
-        </div>
+        <div className="main-area">{queryState.loading ? <Loader /> : this.renderTable()}</div>
       </div>
     );
   }

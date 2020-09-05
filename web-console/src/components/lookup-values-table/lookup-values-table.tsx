@@ -75,9 +75,7 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
 
   return (
     <div className="lookup-columns-table">
-      <div className="main-area">
-        {columnsState.loading ? <Loader loadingText="" /> : renderTable()}
-      </div>
+      <div className="main-area">{columnsState.loading ? <Loader /> : renderTable()}</div>
     </div>
   );
 });

@@ -178,7 +178,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
         </div>
         <div className="main-area">
           {logState.loading ? (
-            <Loader loadingText="" />
+            <Loader />
           ) : (
             <textarea
               className="bp3-input"
