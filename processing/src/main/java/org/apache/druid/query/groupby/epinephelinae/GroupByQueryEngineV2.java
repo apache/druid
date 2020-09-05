@@ -340,7 +340,7 @@ public class GroupByQueryEngineV2
 
               // Now check column capabilities.
               final ColumnCapabilities columnCapabilities = capabilitiesFunction.apply(dimension.getDimension());
-              return (columnCapabilities != null && !columnCapabilities.hasMultipleValues().isMaybeTrue()) ||
+              return (columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse()) ||
                      (missingMeansNonExistent && columnCapabilities == null);
             });
   }
@@ -621,6 +621,9 @@ public class GroupByQueryEngineV2
       }
 
       if (canDoLimitPushdown) {
+        // Sanity check; must not have "offset" at this point.
+        Preconditions.checkState(!limitSpec.isOffset(), "Cannot push down offsets");
+
         LimitedBufferHashGrouper<ByteBuffer> limitGrouper = new LimitedBufferHashGrouper<>(
             Suppliers.ofInstance(buffer),
             keySerde,

@@ -96,7 +96,7 @@ public class FireHydrant
           !newSegment.getId().equals(currentSegment.getId())) {
         // Sanity check: identifier should not change
         throw new ISE(
-            "WTF?! Cannot swap identifier[%s] -> [%s]!",
+            "Cannot swap identifier[%s] -> [%s]",
             currentSegment.getId(),
             newSegment.getId()
         );

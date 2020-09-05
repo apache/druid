@@ -153,8 +153,8 @@ public class ExpressionSelectors
         );
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING
-                 && capabilities.isDictionaryEncoded()
-                 && !capabilities.hasMultipleValues().isMaybeTrue()
+                 && capabilities.isDictionaryEncoded().isTrue()
+                 && capabilities.hasMultipleValues().isFalse()
                  && exprDetails.getArrayBindings().isEmpty()) {
         // Optimization for expressions that hit one scalar string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
@@ -225,10 +225,8 @@ public class ExpressionSelectors
       // not treating it as an array and not wanting to output an array
       if (capabilities != null
           && capabilities.getType() == ValueType.STRING
-          && capabilities.isDictionaryEncoded()
-          && !capabilities.hasMultipleValues().isUnknown()
-          && !exprDetails.hasInputArrays()
-          && !exprDetails.isOutputArray()
+          && capabilities.isDictionaryEncoded().isTrue()
+          && canMapOverDictionary(exprDetails, capabilities.hasMultipleValues())
       ) {
         return new SingleStringInputDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
@@ -337,6 +335,25 @@ public class ExpressionSelectors
         return new ExtractionExpressionDimensionSelector();
       }
     }
+  }
+
+  /**
+   * Returns whether an expression can be applied to unique values of a particular column (like those in a dictionary)
+   * rather than being applied to each row individually.
+   *
+   * This function should only be called if you have already determined that an expression is over a single column,
+   * and that single column has a dictionary.
+   *
+   * @param exprDetails       result of calling {@link Expr#analyzeInputs()} on an expression
+   * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
+   */
+  public static boolean canMapOverDictionary(
+      final Expr.BindingDetails exprDetails,
+      final ColumnCapabilities.Capable hasMultipleValues
+  )
+  {
+    Preconditions.checkState(exprDetails.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
+    return !hasMultipleValues.isUnknown() && !exprDetails.hasInputArrays() && !exprDetails.isOutputArray();
   }
 
   /**

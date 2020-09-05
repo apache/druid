@@ -66,5 +66,9 @@ public class AmbariMetricsEmitterTest
     Assert.assertEquals("hostname", emitter.getHostname());
     Assert.assertNull(emitter.getZookeeperQuorum());
     Assert.assertEquals(Collections.singleton("hostname"), emitter.getConfiguredCollectorHosts());
+
+    Assert.assertFalse(emitter.isHostInMemoryAggregationEnabled());
+    Assert.assertEquals(0, emitter.getHostInMemoryAggregationPort());
+    Assert.assertEquals("", emitter.getHostInMemoryAggregationProtocol());
   }
 }

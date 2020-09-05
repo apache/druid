@@ -36,7 +36,9 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
 
@@ -45,6 +47,9 @@ import java.util.List;
  */
 public class DefaultLimitSpecTest
 {
+  @Rule
+  public final ExpectedException expectedException = ExpectedException.none();
+
   private final List<ResultRow> testRowsList;
   private final List<ResultRow> testRowsWithTimestampList;
 
@@ -270,5 +275,37 @@ public class DefaultLimitSpecTest
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
         limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
+  }
+
+  @Test
+  public void testWithOffsetToLimit()
+  {
+    final DefaultLimitSpec limitSpec = DefaultLimitSpec.builder().orderBy("abc").limit(1).offset(2).build();
+    Assert.assertEquals(
+        DefaultLimitSpec.builder().orderBy("abc").limit(3).build(),
+        limitSpec.withOffsetToLimit()
+    );
+  }
+
+  @Test
+  public void testWithOffsetToLimitUnlimited()
+  {
+    final DefaultLimitSpec limitSpec = DefaultLimitSpec.builder().orderBy("abc").offset(2).build();
+    Assert.assertEquals(
+        DefaultLimitSpec.builder().orderBy("abc").build(),
+        limitSpec.withOffsetToLimit()
+    );
+  }
+
+  @Test
+  public void testWithOffsetToLimitTooCloseToMaxValue()
+  {
+    final DefaultLimitSpec limitSpec =
+        DefaultLimitSpec.builder().orderBy("abc").limit(Integer.MAX_VALUE - 1).offset(2).build();
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("Cannot apply limit[2147483646] with offset[2] due to overflow");
+
+    limitSpec.withOffsetToLimit();
   }
 }

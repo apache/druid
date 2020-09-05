@@ -29,20 +29,18 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -64,8 +62,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final Interval interval;
   private final DataSchema schema;
   private final ShardSpec shardSpec;
-  @Nullable
-  private final CompactionState compactionState;
   private final String version;
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -93,7 +89,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         interval,
         schema,
         shardSpec,
-        null,
         version,
         maxRowsInMemory,
         maxBytesInMemory,
@@ -107,33 +102,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       Interval interval,
       DataSchema schema,
       ShardSpec shardSpec,
-      @Nullable CompactionState compactionState,
-      String version,
-      int maxRowsInMemory,
-      long maxBytesInMemory,
-      boolean reportParseExceptions,
-      String dedupColumn
-  )
-  {
-    this(
-        interval,
-        schema,
-        shardSpec,
-        compactionState,
-        version,
-        maxRowsInMemory,
-        maxBytesInMemory,
-        reportParseExceptions,
-        dedupColumn,
-        Collections.emptyList()
-    );
-  }
-
-  public Sink(
-      Interval interval,
-      DataSchema schema,
-      ShardSpec shardSpec,
-      @Nullable CompactionState compactionState,
       String version,
       int maxRowsInMemory,
       long maxBytesInMemory,
@@ -144,7 +112,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   {
     this.schema = schema;
     this.shardSpec = shardSpec;
-    this.compactionState = compactionState;
     this.interval = interval;
     this.version = version;
     this.maxRowsInMemory = maxRowsInMemory;
@@ -278,7 +245,6 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         Collections.emptyList(),
         Lists.transform(Arrays.asList(schema.getAggregators()), AggregatorFactory::getName),
         shardSpec,
-        compactionState,
         null,
         0
     );
@@ -377,7 +343,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
           newCount = lastHydrant.getCount() + 1;
           if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
-            Map<String, ColumnCapabilitiesImpl> oldCapabilities;
+            Map<String, ColumnCapabilities> oldCapabilities;
             if (lastHydrant.hasSwapped()) {
               oldCapabilities = new HashMap<>();
               ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
@@ -385,7 +351,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
                 QueryableIndex oldIndex = segment.asQueryableIndex();
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
-                  oldCapabilities.put(dim, (ColumnCapabilitiesImpl) oldIndex.getColumnHolder(dim).getCapabilities());
+                  oldCapabilities.put(dim, oldIndex.getColumnHolder(dim).getCapabilities());
                 }
               }
               finally {

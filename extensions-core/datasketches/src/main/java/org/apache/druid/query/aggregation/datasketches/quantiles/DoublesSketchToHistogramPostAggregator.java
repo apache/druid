@@ -29,6 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -100,6 +101,15 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  /**
+   * actual type is {@link DoublesSketch}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.DOUBLE_ARRAY;
   }
 
   @JsonProperty

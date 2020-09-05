@@ -240,9 +240,24 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return TYPE_NAME;
+  }
+
+  /**
+   * actual type is {@link MomentSketchWrapper}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @Override

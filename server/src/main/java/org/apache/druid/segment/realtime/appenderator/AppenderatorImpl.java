@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
@@ -69,7 +68,6 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
@@ -109,7 +107,6 @@ public class AppenderatorImpl implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final boolean storeCompactionState;
   private final FireDepartmentMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
@@ -164,7 +161,6 @@ public class AppenderatorImpl implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      boolean storeCompactionState,
       FireDepartmentMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
@@ -178,7 +174,6 @@ public class AppenderatorImpl implements Appenderator
     this.myId = id;
     this.schema = Preconditions.checkNotNull(schema, "schema");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
-    this.storeCompactionState = storeCompactionState;
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.dataSegmentPusher = Preconditions.checkNotNull(dataSegmentPusher, "dataSegmentPusher");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
@@ -390,15 +385,10 @@ public class AppenderatorImpl implements Appenderator
     Sink retVal = sinks.get(identifier);
 
     if (retVal == null) {
-      final Map<String, Object> indexSpecMap = objectMapper.convertValue(
-          tuningConfig.getIndexSpec(),
-          new TypeReference<Map<String, Object>>() {}
-      );
       retVal = new Sink(
           identifier.getInterval(),
           schema,
           identifier.getShardSpec(),
-          storeCompactionState ? new CompactionState(tuningConfig.getPartitionsSpec(), indexSpecMap) : null,
           identifier.getVersion(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
@@ -716,12 +706,12 @@ public class AppenderatorImpl implements Appenderator
     // Sanity checks
     for (FireHydrant hydrant : sink) {
       if (sink.isWritable()) {
-        throw new ISE("WTF?! Expected sink to be no longer writable before mergeAndPush. Segment[%s].", identifier);
+        throw new ISE("Expected sink to be no longer writable before mergeAndPush for segment[%s].", identifier);
       }
 
       synchronized (hydrant) {
         if (!hydrant.hasSwapped()) {
-          throw new ISE("WTF?! Expected sink to be fully persisted before mergeAndPush. Segment[%s].", identifier);
+          throw new ISE("Expected sink to be fully persisted before mergeAndPush for segment[%s].", identifier);
         }
       }
     }
@@ -1117,7 +1107,6 @@ public class AppenderatorImpl implements Appenderator
             identifier.getInterval(),
             schema,
             identifier.getShardSpec(),
-            null,
             identifier.getVersion(),
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,

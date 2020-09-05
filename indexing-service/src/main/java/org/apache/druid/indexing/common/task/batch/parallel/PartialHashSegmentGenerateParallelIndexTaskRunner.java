@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 
@@ -38,11 +37,10 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      Map<String, Object> context
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context, indexingServiceClient);
+    super(toolbox, taskId, groupId, ingestionSchema, context);
   }
 
   @Override
@@ -79,10 +77,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
             supervisorTaskId,
             numAttempts,
             subTaskIngestionSpec,
-            context,
-            null,
-            null,
-            null
+            context
         );
       }
     };

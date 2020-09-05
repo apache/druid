@@ -17,28 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.momentsketch.aggregator;
+package org.apache.druid.collections;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
-public class MomentSketchAggregatorFactorySerdeTest
+public class StableLimitingSorterTest
 {
   @Test
-  public void serializeDeserializeFactoryWithFieldName() throws Exception
+  public void testEquals()
   {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    MomentSketchAggregatorFactory factory = new MomentSketchAggregatorFactory(
-        "name", "fieldName", 128, true
-    );
-
-    MomentSketchAggregatorFactory other = objectMapper.readValue(
-        objectMapper.writeValueAsString(factory),
-        MomentSketchAggregatorFactory.class
-    );
-
-    Assert.assertEquals(factory, other);
+    EqualsVerifier.forClass(StableLimitingSorter.NumberedElement.class).usingGetClass().verify();
   }
 }
