@@ -135,7 +135,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       LOG.info("Auto compaction test with hash partitioning");
 
       final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
-      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET);
+      submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1);
       // 2 segments published per day after compaction.
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -150,7 +150,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           "city",
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET);
+      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 2);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
       verifySegmentsCompacted(rangePartitionsSpec, 2);
@@ -254,10 +254,14 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception
   {
-    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest);
+    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1);
   }
 
-  private void submitCompactionConfig(PartitionsSpec partitionsSpec, Period skipOffsetFromLatest) throws Exception
+  private void submitCompactionConfig(
+      PartitionsSpec partitionsSpec,
+      Period skipOffsetFromLatest,
+      int maxNumConcurrentSubTasks
+  ) throws Exception
   {
     DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
         fullDatasourceName,
@@ -276,7 +280,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
             null,
             null,
             null,
-            1,
+            maxNumConcurrentSubTasks,
             null,
             null,
             null,
