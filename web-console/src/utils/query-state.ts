@@ -20,6 +20,7 @@ export type QueryStateState = 'init' | 'loading' | 'data' | 'error';
 
 export class QueryState<T, E extends Error = Error> {
   static INIT: QueryState<any> = new QueryState({});
+  static LOADING: QueryState<any> = new QueryState({ loading: true });
 
   public state: QueryStateState = 'init';
   public error?: E;

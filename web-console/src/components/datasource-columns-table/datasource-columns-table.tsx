@@ -21,13 +21,12 @@ import React from 'react';
 import ReactTable from 'react-table';
 
 import { useQueryManager } from '../../hooks';
-import { queryDruidSql, QueryState } from '../../utils';
-import { ColumnMetadata } from '../../utils/column-metadata';
+import { ColumnMetadata, queryDruidSql, QueryState } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './datasource-columns-table.scss';
 
-interface TableRow {
+export interface DatasourceColumnsTableRow {
   COLUMN_NAME: string;
   DATA_TYPE: string;
 }
@@ -38,13 +37,13 @@ export interface DatasourceColumnsTableProps {
 }
 
 export interface DatasourceColumnsTableState {
-  columnsState: QueryState<TableRow[]>;
+  columnsState: QueryState<DatasourceColumnsTableRow[]>;
 }
 
 export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable(
   props: DatasourceColumnsTableProps,
 ) {
-  const [columnsState] = useQueryManager<string, TableRow[]>({
+  const [columnsState] = useQueryManager<string, DatasourceColumnsTableRow[]>({
     processQuery: async (datasourceId: string) => {
       return await queryDruidSql<ColumnMetadata>({
         query: `SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
@@ -70,7 +69,7 @@ export const DatasourceColumnsTable = React.memo(function DatasourceColumnsTable
             accessor: 'DATA_TYPE',
           },
         ]}
-        noDataText={columnsState.error ? columnsState.error : 'No column data found'}
+        noDataText={columnsState.getErrorMessage() || 'No column data found'}
       />
     );
   }

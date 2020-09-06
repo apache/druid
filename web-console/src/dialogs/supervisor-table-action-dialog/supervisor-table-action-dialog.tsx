@@ -80,7 +80,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       )}
       {activeTab === 'stats' && (
         <SupervisorStatisticsTable
-          endpoint={`/druid/indexer/v1/supervisor/${supervisorId}/stats`}
+          supervisorId={supervisorId}
           downloadFilename={`supervisor-stats-${supervisorId}.json`}
         />
       )}

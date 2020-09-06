@@ -36,7 +36,12 @@ import {
   TableColumnSelector,
   ViewControlBar,
 } from '../../components';
-import { AsyncActionDialog, CompactionDialog, RetentionDialog } from '../../dialogs';
+import {
+  AsyncActionDialog,
+  CompactionDialog,
+  DEFAULT_MAX_ROWS_PER_SEGMENT,
+  RetentionDialog,
+} from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
 import { AppToaster } from '../../singletons/toaster';
 import {
@@ -937,9 +942,7 @@ GROUP BY 1`;
                 let text: string;
                 if (compaction) {
                   if (compaction.maxRowsPerSegment == null) {
-                    text = `Target: Default (${formatNumber(
-                      CompactionDialog.DEFAULT_MAX_ROWS_PER_SEGMENT,
-                    )})`;
+                    text = `Target: Default (${formatNumber(DEFAULT_MAX_ROWS_PER_SEGMENT)})`;
                   } else {
                     text = `Target: ${formatNumber(compaction.maxRowsPerSegment)}`;
                   }
