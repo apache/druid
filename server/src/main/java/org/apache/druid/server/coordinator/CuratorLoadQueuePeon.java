@@ -302,8 +302,9 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   {
     switch (segmentHolder.getType()) {
       case LOAD:
-        segmentsToLoad.remove(segmentHolder.getSegment());
-        queuedSize.addAndGet(-segmentHolder.getSegmentSize());
+        if (null != segmentsToLoad.remove(segmentHolder.getSegment())) {
+          queuedSize.addAndGet(-segmentHolder.getSegmentSize());
+        }
         break;
       case DROP:
         segmentsToDrop.remove(segmentHolder.getSegment());

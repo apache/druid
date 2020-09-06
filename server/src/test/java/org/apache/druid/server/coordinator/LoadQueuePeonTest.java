@@ -336,6 +336,12 @@ public class LoadQueuePeonTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentLoadedSignal));
     Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
     Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
+    curator.delete().guaranteed().forPath(loadRequestPath);
+    while (null != curator.checkExists().forPath(loadRequestPath)) {
+      Thread.sleep(5);
+    }
+    Assert.assertEquals(0, loadQueuePeon.getSegmentsToLoad().size());
+    Assert.assertEquals(0L, loadQueuePeon.getLoadQueueSize());
   }
 
   private DataSegment dataSegmentWithInterval(String intervalStr)
