@@ -29,7 +29,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import classNames from 'classnames';
-import { QueryParameter, QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import memoizeOne from 'memoize-one';
 import React, { RefObject } from 'react';
@@ -90,7 +90,6 @@ const LIVE_QUERY_MODE_TITLE: Record<LiveQueryMode, string> = {
 interface QueryWithContext {
   queryString: string;
   queryContext: QueryContext;
-  queryParameters: QueryParameter[];
   wrapQueryLimit: number | undefined;
 }
 
@@ -104,7 +103,6 @@ export interface QueryViewState {
   queryString: string;
   parsedQuery?: SqlQuery;
   queryContext: QueryContext;
-  queryParameters: QueryParameter[];
   wrapQueryLimit: number | undefined;
   liveQueryMode: LiveQueryMode;
 
@@ -193,8 +191,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     const queryContext =
       localStorageGetJson(LocalStorageKeys.QUERY_CONTEXT) || props.defaultQueryContext || {};
 
-    const queryParameters = localStorageGetJson(LocalStorageKeys.QUERY_PARAMETERS) || [];
-
     const possibleQueryHistory = localStorageGetJson(LocalStorageKeys.QUERY_HISTORY);
     const queryHistory = Array.isArray(possibleQueryHistory) ? possibleQueryHistory : [];
 
@@ -207,7 +203,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
       queryString,
       parsedQuery,
       queryContext,
-      queryParameters,
       wrapQueryLimit: 100,
       liveQueryMode,
 
@@ -267,7 +262,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           return await queryRunner.runQuery({
             query,
             extraQueryContext: context,
-            queryParameters,
             cancelToken,
           });
         } catch (e) {
@@ -283,7 +277,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
 
     this.explainQueryManager = new QueryManager({
       processQuery: async (queryWithContext: QueryWithContext) => {
-        const { queryString, queryContext, queryParameters, wrapQueryLimit } = queryWithContext;
+        const { queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
         let context: Record<string, any> | undefined;
         if (!isEmptyContext(queryContext) || wrapQueryLimit || mandatoryQueryContext) {
@@ -298,7 +292,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
           result = await queryRunner.runQuery({
             query: QueryView.wrapInExplainIfNeeded(queryString),
             extraQueryContext: context,
-            queryParameters,
           });
         } catch (e) {
           throw new Error(getDruidErrorMessage(e));
@@ -609,7 +602,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private handleRun = () => {
-    const { queryString, queryContext, queryParameters, wrapQueryLimit, queryHistory } = this.state;
+    const { queryString, queryContext, wrapQueryLimit, queryHistory } = this.state;
     if (QueryView.isJsonLike(queryString) && !QueryView.validRune(queryString)) return;
 
     const newQueryHistory = QueryRecordUtil.addQueryToHistory(
@@ -621,10 +614,9 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     localStorageSetJson(LocalStorageKeys.QUERY_HISTORY, newQueryHistory);
     localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
     localStorageSetJson(LocalStorageKeys.QUERY_CONTEXT, queryContext);
-    localStorageSetJson(LocalStorageKeys.QUERY_PARAMETERS, queryParameters);
 
     this.setState({ queryHistory: newQueryHistory });
-    this.queryManager.runQuery({ queryString, queryContext, queryParameters, wrapQueryLimit });
+    this.queryManager.runQuery({ queryString, queryContext, wrapQueryLimit });
   };
 
   private autoLiveQueryModeShouldRun() {
@@ -644,13 +636,12 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   };
 
   private handleExplain = () => {
-    const { queryString, queryContext, queryParameters, wrapQueryLimit } = this.state;
+    const { queryString, queryContext, wrapQueryLimit } = this.state;
 
     this.setState({ explainDialogOpen: true });
     this.explainQueryManager.runQuery({
       queryString,
       queryContext,
-      queryParameters,
       wrapQueryLimit,
     });
   };

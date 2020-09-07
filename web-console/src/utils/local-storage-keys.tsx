@@ -27,7 +27,6 @@ export const LocalStorageKeys = {
   LOOKUP_TABLE_COLUMN_SELECTION: 'lookup-table-column-selection' as 'lookup-table-column-selection',
   QUERY_KEY: 'druid-console-query' as 'druid-console-query',
   QUERY_CONTEXT: 'query-context' as 'query-context',
-  QUERY_PARAMETERS: 'query-parameters' as 'query-parameters',
   INGESTION_VIEW_PANE_SIZE: 'ingestion-view-pane-size' as 'ingestion-view-pane-size',
   QUERY_VIEW_PANE_SIZE: 'query-view-pane-size' as 'query-view-pane-size',
   TASKS_REFRESH_RATE: 'task-refresh-rate' as 'task-refresh-rate',

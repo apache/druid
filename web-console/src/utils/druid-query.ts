@@ -18,7 +18,6 @@
 
 import axios from 'axios';
 import { AxiosResponse } from 'axios';
-import { QueryParameter, SqlQuery } from 'druid-query-toolkit';
 
 import { assemble } from './general';
 
@@ -118,24 +117,6 @@ export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any
     throw new Error(getDruidErrorMessage(e));
   }
   return sqlResultResp.data;
-}
-
-export async function queryDruidSqlFirstColumn(
-  query: SqlQuery,
-  parameters?: readonly QueryParameter[],
-): Promise<any[]> {
-  const sqlQueryPayload: Record<string, any> = {
-    query: query.toString(),
-    resultFormat: 'array',
-    header: false,
-  };
-
-  if (parameters) {
-    sqlQueryPayload.parameters = parameters;
-  }
-
-  const values = await queryDruidSql(sqlQueryPayload);
-  return values.map(r => r[0]);
 }
 
 export interface BasicQueryExplanation {
