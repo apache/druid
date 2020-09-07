@@ -103,7 +103,6 @@ export interface QueryViewProps {
 export interface QueryViewState {
   queryString: string;
   parsedQuery?: SqlQuery;
-  lastParsedQuery?: SqlQuery;
   queryContext: QueryContext;
   queryParameters: QueryParameter[];
   wrapQueryLimit: number | undefined;
@@ -207,7 +206,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     this.state = {
       queryString,
       parsedQuery,
-      lastParsedQuery: parsedQuery,
       queryContext,
       queryParameters,
       wrapQueryLimit: 100,
@@ -594,7 +592,6 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private handleQueryStringChange = (queryString: string, preferablyRun?: boolean): void => {
     const parsedQuery = parser(queryString);
     const newSate = { queryString, parsedQuery };
-    if (parsedQuery) (newSate as any).lastParsedQuery = parsedQuery;
     this.setState(newSate, preferablyRun ? this.handleRunIfLive : undefined);
   };
 
