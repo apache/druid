@@ -43,7 +43,6 @@ const path = `./src/${where}/${name}/`;
 fs.ensureDirSync(path);
 console.log('Making path:', path);
 
-const spaceName = name.replace(/-/g, ' ');
 const camelName = name.replace(/(^|-)[a-z]/g, s => s.replace('-', '').toUpperCase());
 const snakeName = camelName[0].toLowerCase() + camelName.substr(1);
 
@@ -149,7 +148,7 @@ import React from 'react';
 
 import { ${camelName} } from './${name}';
 
-describe('${spaceName}', () => {
+describe('${camelName}', () => {
   it('matches snapshot', () => {
     const ${snakeName} = shallow(
       <${camelName}/>
