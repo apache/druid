@@ -99,6 +99,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
           )
       );
     }
+
     this.strategy = config.getStorageLocationSelectorStrategy();
     this.strategy.setLocations(locations);
   }

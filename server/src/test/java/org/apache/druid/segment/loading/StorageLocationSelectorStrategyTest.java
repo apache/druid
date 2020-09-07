@@ -19,16 +19,29 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import org.apache.druid.guice.DruidGuiceExtensions;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.JsonConfigurator;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.jackson.JacksonModule;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.validation.Validation;
+import javax.validation.Validator;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 
 public class StorageLocationSelectorStrategyTest
 {
@@ -256,4 +269,70 @@ public class StorageLocationSelectorStrategyTest
     Assert.assertEquals("The next element of the iterator should point to path local_storage_folder_1",
         localStorageFolder1, loc3.getPath());
   }
+
+  @Test
+  public void testDefaultSelectorStrategyConfig() throws Exception
+  {
+    //no druid.segmentCache.locationSelectorStrategy.type specified
+    final Properties props = new Properties();
+    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+    Assert.assertEquals( LeastBytesUsedStorageLocationSelectorStrategy.class ,loaderConfig.getStorageLocationSelectorStrategy().getClass());
+  }
+
+  @Test
+  public void testRoundRobinSelectorStrategyConfig() throws Exception
+  {
+    final Properties props = new Properties();
+    props.put("druid.segmentCache.locationSelectorStrategy.type", "roundRobin");
+    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+    Assert.assertEquals( RoundRobinStorageLocationSelectorStrategy.class ,loaderConfig.getStorageLocationSelectorStrategy().getClass());
+  }
+
+  @Test
+  public void testLeastBytesUsedSelectorStrategyConfig() throws Exception
+  {
+    final Properties props = new Properties();
+    props.put("druid.segmentCache.locationSelectorStrategy.type", "leastBytesUsed");
+    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+    Assert.assertEquals( LeastBytesUsedStorageLocationSelectorStrategy.class ,loaderConfig.getStorageLocationSelectorStrategy().getClass());
+  }
+
+  @Test
+  public void testRandomSelectorStrategyConfig() throws Exception
+  {
+    final Properties props = new Properties();
+    props.put("druid.segmentCache.locationSelectorStrategy.type", "random");
+    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+    Assert.assertEquals( RandomStorageLocationSelectorStrategy.class ,loaderConfig.getStorageLocationSelectorStrategy().getClass());
+  }
+
+  @Test
+  public void testMostAvailableSizeSelectorStrategyConfig() throws Exception
+  {
+    final Properties props = new Properties();
+    props.put("druid.segmentCache.locationSelectorStrategy.type", "mostAvailableSize");
+    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+    Assert.assertEquals( MostAvailableSizeStorageLocationSelectorStrategy.class ,loaderConfig.getStorageLocationSelectorStrategy().getClass());
+  }
+
+  private Injector makeInjectorWithProperties(final Properties props)
+  {
+    return Guice.createInjector(
+        ImmutableList.of(
+            new DruidGuiceExtensions(),
+            new JacksonModule(),
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+                binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+                binder.bind(Properties.class).toInstance(props);
+                JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
+              }
+            }
+        ));
+  }
+
 }
