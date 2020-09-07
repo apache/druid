@@ -31,6 +31,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,7 +39,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class StringFirstAggregationTest
+public class StringFirstAggregationTest extends InitializedNullHandlingTest
 {
   private final Integer MAX_STRING_SIZE = 1024;
   private AggregatorFactory stringFirstAggFactory;
@@ -111,11 +112,27 @@ public class StringFirstAggregationTest
   }
 
   @Test
-  public void testCombine()
+  public void testCombineLeftLower()
   {
     SerializablePairLongString pair1 = new SerializablePairLongString(1467225000L, "AAAA");
     SerializablePairLongString pair2 = new SerializablePairLongString(1467240000L, "BBBB");
+    Assert.assertEquals(pair1, stringFirstAggFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testCombineRightLower()
+  {
+    SerializablePairLongString pair1 = new SerializablePairLongString(1467240000L, "AAAA");
+    SerializablePairLongString pair2 = new SerializablePairLongString(1467225000L, "BBBB");
     Assert.assertEquals(pair2, stringFirstAggFactory.combine(pair1, pair2));
+  }
+
+  @Test
+  public void testCombineLeftRightSame()
+  {
+    SerializablePairLongString pair1 = new SerializablePairLongString(1467225000L, "AAAA");
+    SerializablePairLongString pair2 = new SerializablePairLongString(1467225000L, "BBBB");
+    Assert.assertEquals(pair1, stringFirstAggFactory.combine(pair1, pair2));
   }
 
   @Test

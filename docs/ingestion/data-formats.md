@@ -208,7 +208,7 @@ The `inputFormat` to load data of Parquet format. An example is:
           "expr": "$.path.to.nested"
         }
       ]
-    }
+    },
     "binaryAsString": false
   },
   ...
