@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
@@ -38,8 +37,8 @@ public class RandomStorageLocationSelectorStrategy implements StorageLocationSel
   private List<StorageLocation> storageLocations = null;
 
   @JsonCreator
-  public RandomStorageLocationSelectorStrategy() {
-
+  public RandomStorageLocationSelectorStrategy()
+  {
   }
 
   @VisibleForTesting

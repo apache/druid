@@ -39,8 +39,8 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
   private final AtomicInteger startIndex = new AtomicInteger(0);
 
   @JsonCreator
-  public RoundRobinStorageLocationSelectorStrategy() {
-
+  public RoundRobinStorageLocationSelectorStrategy()
+  {
   }
 
   @VisibleForTesting
@@ -52,7 +52,8 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
   @Override
   public Iterator<StorageLocation> getLocations()
   {
-    return new Iterator<StorageLocation>() {
+    return new Iterator<StorageLocation>()
+    {
 
       private final int numStorageLocations = storageLocations.size();
       private int remainingIterations = numStorageLocations;
