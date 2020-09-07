@@ -544,17 +544,18 @@ GROUP BY 1`;
   };
 
   private editDefaultRules = () => {
-    const { datasourcesAndDefaultRulesState } = this.state;
-    const datasourcesAndDefaultRules = datasourcesAndDefaultRulesState.data;
-    if (!datasourcesAndDefaultRules) return;
-
     this.setState({ retentionDialogOpenOn: undefined });
     setTimeout(() => {
-      this.setState({
-        retentionDialogOpenOn: {
-          datasource: '_default',
-          rules: datasourcesAndDefaultRules.defaultRules,
-        },
+      this.setState(state => {
+        const datasourcesAndDefaultRules = state.datasourcesAndDefaultRulesState.data;
+        if (!datasourcesAndDefaultRules) return {};
+
+        return {
+          retentionDialogOpenOn: {
+            datasource: '_default',
+            rules: datasourcesAndDefaultRules.defaultRules,
+          },
+        };
       });
     }, 50);
   };
