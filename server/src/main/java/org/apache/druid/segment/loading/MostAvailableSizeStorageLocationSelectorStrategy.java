@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 
 import java.util.Comparator;
@@ -37,7 +39,13 @@ public class MostAvailableSizeStorageLocationSelectorStrategy implements Storage
 
   private List<StorageLocation> storageLocations;
 
-  public MostAvailableSizeStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  @JsonCreator
+  public MostAvailableSizeStorageLocationSelectorStrategy() {
+
+  }
+
+  @VisibleForTesting
+  MostAvailableSizeStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
   {
     this.storageLocations = storageLocations;
   }
@@ -46,6 +54,12 @@ public class MostAvailableSizeStorageLocationSelectorStrategy implements Storage
   public Iterator<StorageLocation> getLocations()
   {
     return ORDERING.sortedCopy(this.storageLocations).iterator();
+  }
+
+  @Override
+  public void setLocations(List<StorageLocation> locations)
+  {
+    this.storageLocations = locations;
   }
 
   @Override

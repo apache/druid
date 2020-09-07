@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 
 import java.util.Comparator;
@@ -36,7 +38,13 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
 
   private List<StorageLocation> storageLocations;
 
-  public LeastBytesUsedStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  @JsonCreator
+  public LeastBytesUsedStorageLocationSelectorStrategy() {
+
+  }
+
+  @VisibleForTesting
+  LeastBytesUsedStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
   {
     this.storageLocations = storageLocations;
   }
@@ -45,6 +53,12 @@ public class LeastBytesUsedStorageLocationSelectorStrategy implements StorageLoc
   public Iterator<StorageLocation> getLocations()
   {
     return ORDERING.sortedCopy(this.storageLocations).iterator();
+  }
+
+  @Override
+  public void setLocations(List<StorageLocation> locations)
+  {
+    this.storageLocations = locations;
   }
 
   @Override

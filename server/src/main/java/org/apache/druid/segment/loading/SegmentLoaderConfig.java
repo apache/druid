@@ -101,11 +101,11 @@ public class SegmentLoaderConfig
     return numBootstrapThreads == null ? numLoadingThreads : numBootstrapThreads;
   }
 
-  public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  public StorageLocationSelectorStrategy getStorageLocationSelectorStrategy()
   {
     if (locationSelectorStrategy == null) {
       // default strategy if no strategy is specified in the config
-      locationSelectorStrategy = new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations);
+      locationSelectorStrategy = new LeastBytesUsedStorageLocationSelectorStrategy();
     }
     return locationSelectorStrategy;
   }
