@@ -16,17 +16,7 @@
  * limitations under the License.
  */
 
-import {
-  Button,
-  Intent,
-  Menu,
-  MenuItem,
-  Popover,
-  PopoverPosition,
-  Switch,
-  Tooltip,
-} from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
+import { Intent, Switch, Tooltip } from '@blueprintjs/core';
 import axios from 'axios';
 import classNames from 'classnames';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
@@ -63,6 +53,11 @@ import { isEmptyContext, QueryContext } from '../../utils/query-context';
 import { QueryRecord, QueryRecordUtil } from '../../utils/query-history';
 
 import { ColumnTree } from './column-tree/column-tree';
+import {
+  LIVE_QUERY_MODES,
+  LiveQueryMode,
+  LiveQueryModeSelector,
+} from './live-query-mode-selector/live-query-mode-selector';
 import { QueryError } from './query-error/query-error';
 import { QueryExtraInfo } from './query-extra-info/query-extra-info';
 import { QueryInput } from './query-input/query-input';
@@ -78,14 +73,6 @@ const parser = memoizeOne((sql: string): SqlQuery | undefined => {
     return;
   }
 });
-
-type LiveQueryMode = 'auto' | 'on' | 'off';
-const LIVE_QUERY_MODES: LiveQueryMode[] = ['auto', 'on', 'off'];
-const LIVE_QUERY_MODE_TITLE: Record<LiveQueryMode, string> = {
-  auto: 'Auto',
-  on: 'On',
-  off: 'Off',
-};
 
 interface QueryWithContext {
   queryString: string;
@@ -419,34 +406,11 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
     if (QueryView.isJsonLike(queryString)) return;
 
     return (
-      <Popover
-        minimal
-        position={PopoverPosition.BOTTOM_LEFT}
-        content={
-          <Menu>
-            {LIVE_QUERY_MODES.map(m => (
-              <MenuItem
-                key={m}
-                icon={m === liveQueryMode ? IconNames.TICK : IconNames.BLANK}
-                text={LIVE_QUERY_MODE_TITLE[m]}
-                onClick={() => this.handleLiveQueryModeChange(m)}
-              />
-            ))}
-          </Menu>
-        }
-      >
-        <Button minimal className="live-query-mode">
-          <span>Live query:</span>{' '}
-          <span
-            className={classNames(
-              liveQueryMode,
-              this.autoLiveQueryModeShouldRun() ? 'auto-on' : 'auto-off',
-            )}
-          >
-            {LIVE_QUERY_MODE_TITLE[liveQueryMode]}
-          </span>
-        </Button>
-      </Popover>
+      <LiveQueryModeSelector
+        liveQueryMode={liveQueryMode}
+        onLiveQueryModeChange={this.handleLiveQueryModeChange}
+        autoLiveQueryModeShouldRun={this.autoLiveQueryModeShouldRun()}
+      />
     );
   }
 
