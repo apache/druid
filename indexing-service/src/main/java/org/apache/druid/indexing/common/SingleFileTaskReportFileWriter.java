@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import org.apache.commons.io.FileUtils;
@@ -37,7 +38,13 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public SingleFileTaskReportFileWriter(@Named("taskReportPath") File reportsFile, @Json ObjectMapper jsonMapper)
+  public SingleFileTaskReportFileWriter(@Named("taskReportPath") String reportsFilePath, @Json ObjectMapper jsonMapper)
+  {
+    this(new File(reportsFilePath), jsonMapper);
+  }
+
+  @VisibleForTesting
+  public SingleFileTaskReportFileWriter(File reportsFile, ObjectMapper jsonMapper)
   {
     this.reportsFile = reportsFile;
     this.jsonMapper = jsonMapper;
