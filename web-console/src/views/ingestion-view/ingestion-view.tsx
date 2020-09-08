@@ -559,9 +559,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           data={supervisorsState.data || []}
           loading={supervisorsState.loading}
           noDataText={
-            !supervisorsState.loading && supervisorsState.isEmpty()
-              ? 'No supervisors'
-              : supervisorsState.getErrorMessage() || ''
+            supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
           }
           filtered={supervisorFilter}
           onFilteredChange={filtered => {
@@ -719,11 +717,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
         <ReactTable
           data={tasksState.data || []}
           loading={tasksState.loading}
-          noDataText={
-            !tasksState.loading && tasksState.isEmpty()
-              ? 'No tasks'
-              : tasksState.getErrorMessage() || ''
-          }
+          noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
           filterable
           filtered={taskFilter}
           onFilteredChange={filtered => {

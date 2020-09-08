@@ -385,11 +385,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         data={trimmedSegments || segmentsState.data || []}
         pages={10000000} // Dummy, we are hiding the page selector
         loading={segmentsState.loading}
-        noDataText={
-          !segmentsState.loading && segmentsState.isEmpty()
-            ? 'No segments'
-            : segmentsState.getErrorMessage() || ''
-        }
+        noDataText={segmentsState.isEmpty() ? 'No segments' : segmentsState.getErrorMessage() || ''}
         manual
         filterable
         filtered={segmentFilter}
