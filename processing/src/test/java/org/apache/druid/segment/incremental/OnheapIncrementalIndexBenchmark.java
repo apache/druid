@@ -219,13 +219,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       for (Aggregator agg : aggs) {
         synchronized (agg) {
-          try {
-            agg.aggregate();
-          }
-          catch (ParseException e) {
-            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            throw e;
-          }
+          agg.aggregate();
         }
       }
 
