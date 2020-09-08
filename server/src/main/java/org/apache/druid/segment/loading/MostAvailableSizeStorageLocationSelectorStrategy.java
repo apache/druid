@@ -34,8 +34,8 @@ import java.util.List;
 public class MostAvailableSizeStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
   private static final Ordering<StorageLocation> ORDERING = Ordering.from(Comparator
-                                                                              .comparingLong(StorageLocation::availableSizeBytes)
-                                                                              .reversed());
+      .comparingLong(StorageLocation::availableSizeBytes)
+      .reversed());
 
   private List<StorageLocation> storageLocations;
 

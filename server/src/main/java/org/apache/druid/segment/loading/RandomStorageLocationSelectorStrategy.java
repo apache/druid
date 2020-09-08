@@ -34,7 +34,7 @@ import java.util.List;
 public class RandomStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
 
-  private List<StorageLocation> storageLocations = null;
+  private List<StorageLocation> storageLocations;
 
   @JsonCreator
   public RandomStorageLocationSelectorStrategy()

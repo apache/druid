@@ -271,7 +271,7 @@ public class StorageLocationSelectorStrategyTest
   }
 
   @Test
-  public void testDefaultSelectorStrategyConfig() throws Exception
+  public void testDefaultSelectorStrategyConfig()
   {
     //no druid.segmentCache.locationSelectorStrategy.type specified
     final Properties props = new Properties();
@@ -281,40 +281,40 @@ public class StorageLocationSelectorStrategyTest
   }
 
   @Test
-  public void testRoundRobinSelectorStrategyConfig() throws Exception
+  public void testRoundRobinSelectorStrategyConfig()
   {
     final Properties props = new Properties();
-    props.put("druid.segmentCache.locationSelectorStrategy.type", "roundRobin");
+    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "roundRobin");
     SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
     Assert.assertEquals(RoundRobinStorageLocationSelectorStrategy.class,
                         loaderConfig.getStorageLocationSelectorStrategy().getClass());
   }
 
   @Test
-  public void testLeastBytesUsedSelectorStrategyConfig() throws Exception
+  public void testLeastBytesUsedSelectorStrategyConfig()
   {
     final Properties props = new Properties();
-    props.put("druid.segmentCache.locationSelectorStrategy.type", "leastBytesUsed");
+    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "leastBytesUsed");
     SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
     Assert.assertEquals(LeastBytesUsedStorageLocationSelectorStrategy.class,
                         loaderConfig.getStorageLocationSelectorStrategy().getClass());
   }
 
   @Test
-  public void testRandomSelectorStrategyConfig() throws Exception
+  public void testRandomSelectorStrategyConfig()
   {
     final Properties props = new Properties();
-    props.put("druid.segmentCache.locationSelectorStrategy.type", "random");
+    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "random");
     SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
     Assert.assertEquals(RandomStorageLocationSelectorStrategy.class,
                         loaderConfig.getStorageLocationSelectorStrategy().getClass());
   }
 
   @Test
-  public void testMostAvailableSizeSelectorStrategyConfig() throws Exception
+  public void testMostAvailableSizeSelectorStrategyConfig()
   {
     final Properties props = new Properties();
-    props.put("druid.segmentCache.locationSelectorStrategy.type", "mostAvailableSize");
+    props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "mostAvailableSize");
     SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
     Assert.assertEquals(MostAvailableSizeStorageLocationSelectorStrategy.class,
                         loaderConfig.getStorageLocationSelectorStrategy().getClass());

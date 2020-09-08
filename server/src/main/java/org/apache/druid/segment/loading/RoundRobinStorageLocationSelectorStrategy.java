@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RoundRobinStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
-  private List<StorageLocation> storageLocations = null;
+  private List<StorageLocation> storageLocations;
   private final AtomicInteger startIndex = new AtomicInteger(0);
 
   @JsonCreator
