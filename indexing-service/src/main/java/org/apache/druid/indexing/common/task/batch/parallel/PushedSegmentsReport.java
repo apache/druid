@@ -22,8 +22,11 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.stats.IngestionMetricsSnapshot;
+import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.Set;
 
@@ -32,24 +35,48 @@ import java.util.Set;
  * and sends a report to the supervisorTask. Once the supervisorTask collects all reports,
  * it publishes all the pushed segments at once.
  */
-public class PushedSegmentsReport implements SubTaskReport
+public class PushedSegmentsReport implements SucceededSubtaskReport
 {
   public static final String TYPE = "pushed_segments";
 
+  private final long createdTimeNs;
   private final String taskId;
   private final Set<DataSegment> oldSegments;
   private final Set<DataSegment> newSegments;
+  private final IngestionMetricsSnapshot metrics;
 
-  @JsonCreator
   public PushedSegmentsReport(
-      @JsonProperty("taskId") String taskId,
-      @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
-      @JsonProperty("segments") Set<DataSegment> newSegments
+      String taskId,
+      Set<DataSegment> oldSegments,
+      Set<DataSegment> newSegments,
+      IngestionMetricsSnapshot metrics
   )
   {
+    this(System.nanoTime(), taskId, oldSegments, newSegments, metrics);
+  }
+
+  @JsonCreator
+  PushedSegmentsReport(
+      @JsonProperty("createdTimeNs") long createdTimeNs, // will be 0
+      @JsonProperty("taskId") String taskId,
+      @JsonProperty("oldSegments") Set<DataSegment> oldSegments,
+      @JsonProperty("segments") Set<DataSegment> newSegments,
+      // Metrics can be null when you have middleManagers of mixed versions during rolling update.
+      @JsonProperty("metrics") @Nullable IngestionMetricsSnapshot metrics
+  )
+  {
+    this.createdTimeNs = createdTimeNs;
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
     this.oldSegments = Preconditions.checkNotNull(oldSegments, "oldSegments");
     this.newSegments = Preconditions.checkNotNull(newSegments, "newSegments");
+    this.metrics = metrics == null ? NoopIngestionMetricsSnapshot.INSTANCE : metrics;
+  }
+
+  @Override
+  @JsonProperty
+  public long getCreatedTimeNs()
+  {
+    return createdTimeNs;
   }
 
   @Override
@@ -72,6 +99,13 @@ public class PushedSegmentsReport implements SubTaskReport
   }
 
   @Override
+  @JsonProperty
+  public IngestionMetricsSnapshot getMetrics()
+  {
+    return metrics;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -81,14 +115,28 @@ public class PushedSegmentsReport implements SubTaskReport
       return false;
     }
     PushedSegmentsReport that = (PushedSegmentsReport) o;
-    return Objects.equals(taskId, that.taskId) &&
+    return createdTimeNs == that.createdTimeNs &&
+           Objects.equals(taskId, that.taskId) &&
            Objects.equals(oldSegments, that.oldSegments) &&
-           Objects.equals(newSegments, that.newSegments);
+           Objects.equals(newSegments, that.newSegments) &&
+           Objects.equals(metrics, that.metrics);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(taskId, oldSegments, newSegments);
+    return Objects.hash(createdTimeNs, taskId, oldSegments, newSegments, metrics);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PushedSegmentsReport{" +
+           "createdTimeNs=" + createdTimeNs +
+           ", taskId='" + taskId + '\'' +
+           ", oldSegments=" + oldSegments +
+           ", newSegments=" + newSegments +
+           ", metrics=" + metrics +
+           '}';
   }
 }

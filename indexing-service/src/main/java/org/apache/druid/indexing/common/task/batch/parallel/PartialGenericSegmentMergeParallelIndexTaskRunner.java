@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -37,14 +38,14 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
   private static final String PHASE_NAME = "partial segment merge";
 
   private final DataSchema dataSchema;
-  private final List<PartialGenericSegmentMergeIOConfig> mergeIOConfigs;
+  private final Supplier<List<PartialGenericSegmentMergeIOConfig>> mergeIOConfigs;
 
   PartialGenericSegmentMergeParallelIndexTaskRunner(
       TaskToolbox toolbox,
       String taskId,
       String groupId,
       DataSchema dataSchema,
-      List<PartialGenericSegmentMergeIOConfig> mergeIOConfigs,
+      Supplier<List<PartialGenericSegmentMergeIOConfig>> mergeIOConfigs,
       ParallelIndexTuningConfig tuningConfig,
       Map<String, Object> context
   )
@@ -64,13 +65,13 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
   @Override
   Iterator<SubTaskSpec<PartialGenericSegmentMergeTask>> subTaskSpecIterator()
   {
-    return mergeIOConfigs.stream().map(this::newTaskSpec).iterator();
+    return mergeIOConfigs.get().stream().map(this::newTaskSpec).iterator();
   }
 
   @Override
   int estimateTotalNumSubTasks()
   {
-    return mergeIOConfigs.size();
+    return mergeIOConfigs.get().size();
   }
 
   @VisibleForTesting

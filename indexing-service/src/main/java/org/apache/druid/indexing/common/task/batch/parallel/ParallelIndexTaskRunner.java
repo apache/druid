@@ -42,7 +42,7 @@ import java.util.Set;
  * and {@link PartialGenericSegmentMergeParallelIndexTaskRunner}.
  * More runners can be added in the future.
  */
-public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReportType extends SubTaskReport>
+public interface ParallelIndexTaskRunner<SubtaskType extends Task, FinalReportType extends SubTaskReport>
 {
   /**
    * Returns the name of this runner.
@@ -60,16 +60,18 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
    */
   void stopGracefully();
 
+  void collectLiveReport(RunningSubtaskReport report);
+
   /**
-   * {@link SubTaskReport} is the report sent by {@link SubTaskType}s. The subTasks call this method to
+   * {@link SubTaskReport} is the report sent by {@link SubtaskType}s. The subTasks call this method to
    * send their reports after pushing generated segments to deep storage.
    */
-  void collectReport(SubTaskReportType report);
+  void collectReport(FinalReportType report);
 
   /**
    * Returns a map between subTaskId and its report.
    */
-  Map<String, SubTaskReportType> getReports();
+  Map<String, FinalReportType> getReports();
 
   /**
    * Returns the current {@link ParallelIndexingPhaseProgress}.
@@ -84,7 +86,7 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
   /**
    * Returns all {@link SubTaskSpec}s.
    */
-  List<SubTaskSpec<SubTaskType>> getSubTaskSpecs();
+  List<SubTaskSpec<SubtaskType>> getSubTaskSpecs();
 
   /**
    * Returns running {@link SubTaskSpec}s. A {@link SubTaskSpec} is running if there is a running {@link Task} created
@@ -92,7 +94,7 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
    *
    * @see SubTaskSpec#newSubTask
    */
-  List<SubTaskSpec<SubTaskType>> getRunningSubTaskSpecs();
+  List<SubTaskSpec<SubtaskType>> getRunningSubTaskSpecs();
 
   /**
    * Returns complete {@link SubTaskSpec}s. A {@link SubTaskSpec} is complete if there is a succeeded or failed
@@ -100,13 +102,13 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
    *
    * @see SubTaskSpec#newSubTask
    */
-  List<SubTaskSpec<SubTaskType>> getCompleteSubTaskSpecs();
+  List<SubTaskSpec<SubtaskType>> getCompleteSubTaskSpecs();
 
   /**
    * Returns the {@link SubTaskSpec} of the given ID or null if it's not found.
    */
   @Nullable
-  SubTaskSpec<SubTaskType> getSubTaskSpec(String subTaskSpecId);
+  SubTaskSpec<SubtaskType> getSubTaskSpec(String subTaskSpecId);
 
   /**
    * Returns {@link SubTaskSpecStatus} of the given ID or null if it's not found.
@@ -118,7 +120,7 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
    * Returns {@link TaskHistory} of the given ID or null if it's not found.
    */
   @Nullable
-  TaskHistory<SubTaskType> getCompleteSubTaskSpecAttemptHistory(String subTaskSpecId);
+  TaskHistory<SubtaskType> getCompleteSubTaskSpecAttemptHistory(String subTaskSpecId);
 
   class SubTaskSpecStatus
   {

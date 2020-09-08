@@ -57,7 +57,7 @@ public class TaskMonitor<T extends Task>
   private final ScheduledExecutorService taskStatusChecker = Execs.scheduledSingleThreaded(("task-monitor-%d"));
 
   /**
-   * A map of subTaskSpecId to {@link MonitorEntry}. This map stores the state of running {@link SubTaskSpec}s. This is
+   * A map of subtaskId to {@link MonitorEntry}. This map stores the state of running {@link SubTaskSpec}s. This is
    * read in {@link java.util.concurrent.Callable} executed by {@link #taskStatusChecker} and updated in {@link #submit}
    * and {@link #retry}. This can also be read by calling {@link #getRunningTaskMonitorEntry},
    * {@link #getRunningTaskIds}, and {@link #getRunningSubTaskSpecs}.
@@ -80,7 +80,7 @@ public class TaskMonitor<T extends Task>
 
   // overlord client
   private final IndexingServiceClient indexingServiceClient;
-  private final int maxRetry;
+  private final int maxSubtaskRetries;
   private final int estimatedNumSucceededTasks;
 
   @GuardedBy("taskCountLock")
@@ -100,73 +100,84 @@ public class TaskMonitor<T extends Task>
   @GuardedBy("startStopLock")
   private boolean running = false;
 
-  TaskMonitor(IndexingServiceClient indexingServiceClient, int maxRetry, int estimatedNumSucceededTasks)
+  TaskMonitor(IndexingServiceClient indexingServiceClient, int maxSubtaskRetries, int estimatedNumSucceededTasks)
   {
     this.indexingServiceClient = Preconditions.checkNotNull(indexingServiceClient, "indexingServiceClient");
-    this.maxRetry = maxRetry;
+    this.maxSubtaskRetries = maxSubtaskRetries;
     this.estimatedNumSucceededTasks = estimatedNumSucceededTasks;
 
     log.info("TaskMonitor is initialized with estimatedNumSucceededTasks[%d]", estimatedNumSucceededTasks);
   }
 
-  public void start(long taskStatusCheckingPeriod)
+  public void start(long taskStatusCheckPeriodMs, long liveReportTimeoutMs)
   {
+    final long liveReportTimeoutNs = TimeUnit.MILLISECONDS.toNanos(liveReportTimeoutMs);
     synchronized (startStopLock) {
       running = true;
       log.info("Starting taskMonitor");
-      // NOTE: This polling can be improved to event-driven pushing by registering TaskRunnerListener to TaskRunner.
-      // That listener should be able to send the events reported to TaskRunner to this TaskMonitor.
+      // In Parallel task, subtasks periodically report their states with metrics. However, this could not be
+      // enough for monitoring subtask status because the report can be missing or even wrong for various reasons
+      // in distributed systems. TaskMonitor always checks the final status of subtask with the Overlord where
+      // is the source of truth for task statuses.
       taskStatusChecker.scheduleAtFixedRate(
           () -> {
             try {
               final Iterator<Entry<String, MonitorEntry>> iterator = runningTasks.entrySet().iterator();
               while (iterator.hasNext()) {
                 final Entry<String, MonitorEntry> entry = iterator.next();
-                final String specId = entry.getKey();
+                final String taskId = entry.getKey();
                 final MonitorEntry monitorEntry = entry.getValue();
-                final String taskId = monitorEntry.runningTask.getId();
-                final TaskStatusResponse taskStatusResponse = indexingServiceClient.getTaskStatus(taskId);
-                final TaskStatusPlus taskStatus = taskStatusResponse.getStatus();
-                if (taskStatus != null) {
-                  switch (Preconditions.checkNotNull(taskStatus.getStatusCode(), "taskState")) {
-                    case SUCCESS:
-                      incrementNumSucceededTasks();
 
-                      // Remote the current entry after updating taskHistories to make sure that task history
-                      // exists either runningTasks or taskHistories.
-                      monitorEntry.setLastStatus(taskStatus);
-                      iterator.remove();
-                      break;
-                    case FAILED:
-                      incrementNumFailedTasks();
+                // We here measure the current time for individual subtask because it could take long time to talk to
+                // the Overlord.
+                if (monitorEntry.needStatusCheck(System.nanoTime(), liveReportTimeoutNs)) {
+                  final TaskStatusResponse taskStatusResponse = indexingServiceClient.getTaskStatus(taskId);
+                  final TaskStatusPlus taskStatus = taskStatusResponse.getStatus();
+                  if (taskStatus != null) {
+                    switch (Preconditions.checkNotNull(taskStatus.getStatusCode(), "taskState")) {
+                      case SUCCESS:
+                        incrementNumSucceededTasks();
 
-                      log.warn("task[%s] failed!", taskId);
-                      if (monitorEntry.numTries() < maxRetry) {
-                        log.info(
-                            "We still have more chances[%d/%d] to process the spec[%s].",
-                            monitorEntry.numTries(),
-                            maxRetry,
-                            monitorEntry.spec.getId()
-                        );
-                        retry(specId, monitorEntry, taskStatus);
-                      } else {
-                        log.error(
-                            "spec[%s] failed after [%d] tries",
-                            monitorEntry.spec.getId(),
-                            monitorEntry.numTries()
-                        );
-                        // Remote the current entry after updating taskHistories to make sure that task history
+                        // Remove the current entry after updating taskHistories to make sure that task history
                         // exists either runningTasks or taskHistories.
                         monitorEntry.setLastStatus(taskStatus);
                         iterator.remove();
-                      }
-                      break;
-                    case RUNNING:
-                      monitorEntry.updateStatus(taskStatus);
-                      break;
-                    default:
-                      throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getStatusCode(), taskId);
+                        break;
+                      case FAILED:
+                        incrementNumFailedTasks();
+
+                        log.warn("task[%s] failed!", taskId);
+                        if (monitorEntry.numTries() < maxSubtaskRetries) {
+                          log.info(
+                              "We still have more chances[%d/%d] to process the spec[%s].",
+                              monitorEntry.numTries(),
+                              maxSubtaskRetries,
+                              monitorEntry.spec.getId()
+                          );
+                          retry(monitorEntry, taskStatus);
+                        } else {
+                          log.error(
+                              "spec[%s] failed after [%d] tries",
+                              monitorEntry.spec.getId(),
+                              monitorEntry.numTries()
+                          );
+                          // Remove the current entry after updating taskHistories to make sure that task history
+                          // exists either runningTasks or taskHistories.
+                          monitorEntry.setLastStatus(taskStatus);
+                          iterator.remove();
+                        }
+                        break;
+                      case RUNNING:
+                        monitorEntry.updateRunningStatus(taskStatus);
+                        break;
+                      default:
+                        throw new ISE("Unknown taskStatus[%s] for task[%s[", taskStatus.getStatusCode(), taskId);
+                    }
                   }
+                } else {
+                  // If we recently received a report from a subtask, it would be likely still running. We don't
+                  // have to be aggresive for checking its status.
+                  log.info("Skipping status check for subtask[%s] because it recently sent a report", taskId);
                 }
               }
             }
@@ -177,8 +188,8 @@ public class TaskMonitor<T extends Task>
               log.error(t, "Error while monitoring");
             }
           },
-          taskStatusCheckingPeriod,
-          taskStatusCheckingPeriod,
+          taskStatusCheckPeriodMs,
+          taskStatusCheckPeriodMs,
           TimeUnit.MILLISECONDS
       );
     }
@@ -193,7 +204,6 @@ public class TaskMonitor<T extends Task>
       if (running) {
         running = false;
         taskStatusChecker.shutdownNow();
-
 
         synchronized (taskCountLock) {
           if (numRunningTasks > 0) {
@@ -223,6 +233,23 @@ public class TaskMonitor<T extends Task>
   }
 
   /**
+   * This method is called when a subtask reports its state. When TaskMonitor receives a {@link TaskState#RUNNING}
+   * report from a subtask, it will pause the status check for the subtask for a while but assume that the subtask
+   * is still running. When the reported state is {@link TaskState#SUCCESS} or {@link TaskState#FAILED}, TaskMonitor
+   * will double-check the last status of the task with Overlord.
+   */
+  public void statusReport(String subtaskId, TaskState state)
+  {
+    final MonitorEntry monitorEntry = runningTasks.get(subtaskId);
+    if (monitorEntry == null) {
+      // This shouldn't usually happen, but even if it happens, we can simply ignore the reports from unknown subtasks.
+      log.warn("Got a status report[%s] from an unknown subtask[%s]", state, subtaskId);
+    } else {
+      monitorEntry.updateStatusCheckState(System.nanoTime(), state.isComplete());
+    }
+  }
+
+  /**
    * Submits a {@link SubTaskSpec} to process to this TaskMonitor. TaskMonitor can issue one or more tasks to process
    * the given spec. The returned future is done when
    * 1) a sub task successfully processed the given spec or
@@ -239,10 +266,7 @@ public class TaskMonitor<T extends Task>
       incrementNumRunningTasks();
 
       final SettableFuture<SubTaskCompleteEvent<T>> taskFuture = SettableFuture.create();
-      runningTasks.put(
-          spec.getId(),
-          new MonitorEntry(spec, task, indexingServiceClient.getTaskStatus(task.getId()).getStatus(), taskFuture)
-      );
+      runningTasks.put(task.getId(), new MonitorEntry(spec, task, taskFuture));
 
       return taskFuture;
     }
@@ -252,7 +276,7 @@ public class TaskMonitor<T extends Task>
    * Submit a retry task for a failed spec. This method should be called inside of the
    * {@link java.util.concurrent.Callable} executed by {@link #taskStatusChecker}.
    */
-  private void retry(String subTaskSpecId, MonitorEntry monitorEntry, TaskStatusPlus lastFailedTaskStatus)
+  private void retry(MonitorEntry monitorEntry, TaskStatusPlus lastFailedTaskStatus)
   {
     synchronized (startStopLock) {
       if (running) {
@@ -262,12 +286,8 @@ public class TaskMonitor<T extends Task>
         incrementNumRunningTasks();
 
         runningTasks.put(
-            subTaskSpecId,
-            monitorEntry.withNewRunningTask(
-                task,
-                indexingServiceClient.getTaskStatus(task.getId()).getStatus(),
-                lastFailedTaskStatus
-            )
+            task.getId(),
+            monitorEntry.withNewRunningTask(task, lastFailedTaskStatus)
         );
       }
     }
@@ -365,7 +385,7 @@ public class TaskMonitor<T extends Task>
 
   Set<String> getRunningTaskIds()
   {
-    return runningTasks.values().stream().map(entry -> entry.runningTask.getId()).collect(Collectors.toSet());
+    return runningTasks.keySet();
   }
 
   List<SubTaskSpec<T>> getRunningSubTaskSpecs()
@@ -396,51 +416,71 @@ public class TaskMonitor<T extends Task>
 
   class MonitorEntry
   {
+    private static final long UNKNOWN_UPDATE_TIME = -1;
+
     private final SubTaskSpec<T> spec;
     private final T runningTask;
     // old tasks to recent tasks. running task is not included
     private final CopyOnWriteArrayList<TaskStatusPlus> taskHistory;
     private final SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture;
 
+    private final Object statusCheckLock = new Object();
+
     /**
-     * This variable is updated inside of the {@link java.util.concurrent.Callable} executed by
-     * {@link #taskStatusChecker}, and can be read by calling {@link #getRunningStatus}.
+     * Last time when {@link #runningTask} sent a report.
      */
-    @Nullable
-    private volatile TaskStatusPlus runningStatus;
+    @GuardedBy("statusCheckLock")
+    private long lastStatusUpdateTimeNs = UNKNOWN_UPDATE_TIME;
+    /**
+     * A flag indicating that the task status should be checked regardless of {@link #lastStatusUpdateTimeNs}. This is
+     * usually set when {@link #runningTask} is finished.
+     */
+    @GuardedBy("statusCheckLock")
+    private boolean needStatusCheck = false;
 
     private MonitorEntry(
         SubTaskSpec<T> spec,
         T runningTask,
-        @Nullable TaskStatusPlus runningStatus,
         SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture
     )
     {
-      this(spec, runningTask, runningStatus, new CopyOnWriteArrayList<>(), completeEventFuture);
+      this(spec, runningTask, new CopyOnWriteArrayList<>(), completeEventFuture);
     }
 
     private MonitorEntry(
         SubTaskSpec<T> spec,
         T runningTask,
-        @Nullable TaskStatusPlus runningStatus,
         CopyOnWriteArrayList<TaskStatusPlus> taskHistory,
         SettableFuture<SubTaskCompleteEvent<T>> completeEventFuture
     )
     {
       this.spec = spec;
       this.runningTask = runningTask;
-      this.runningStatus = runningStatus;
       this.taskHistory = taskHistory;
       this.completeEventFuture = completeEventFuture;
     }
 
-    MonitorEntry withNewRunningTask(T newTask, @Nullable TaskStatusPlus newStatus, TaskStatusPlus statusOfLastTask)
+    private void updateStatusCheckState(long lastStatusUpdateTimeNs, boolean needStatusCheck)
+    {
+      synchronized (statusCheckLock) {
+        this.lastStatusUpdateTimeNs = lastStatusUpdateTimeNs;
+        this.needStatusCheck = needStatusCheck;
+      }
+    }
+
+    boolean needStatusCheck(long currentTimeNs, long statusCheckTimeoutNs)
+    {
+      synchronized (statusCheckLock) {
+        return needStatusCheck || currentTimeNs > lastStatusUpdateTimeNs + statusCheckTimeoutNs;
+      }
+    }
+
+    MonitorEntry withNewRunningTask(T newTask, TaskStatusPlus statusOfLastTask)
     {
       taskHistory.add(statusOfLastTask);
       return new MonitorEntry(
           spec,
           newTask,
-          newStatus,
           taskHistory,
           completeEventFuture
       );
@@ -451,7 +491,7 @@ public class TaskMonitor<T extends Task>
       return taskHistory.size() + 1; // count runningTask as well
     }
 
-    void updateStatus(TaskStatusPlus statusPlus)
+    void updateRunningStatus(TaskStatusPlus statusPlus)
     {
       if (!runningTask.getId().equals(statusPlus.getId())) {
         throw new ISE(
@@ -460,7 +500,7 @@ public class TaskMonitor<T extends Task>
             runningTask.getId()
         );
       }
-      this.runningStatus = statusPlus;
+      updateStatusCheckState(System.nanoTime(), false);
     }
 
     void setLastStatus(TaskStatusPlus lastStatus)
@@ -473,7 +513,8 @@ public class TaskMonitor<T extends Task>
         );
       }
 
-      this.runningStatus = lastStatus;
+      // We don't have to update the lastStatuUpdateTime since this MonitorEntry will be removed from runningTasks
+      // after this method call.
       taskHistory.add(lastStatus);
       taskHistories.put(spec.getId(), new TaskHistory<>(spec, taskHistory));
       completeEventFuture.set(SubTaskCompleteEvent.success(spec, lastStatus));
@@ -484,10 +525,9 @@ public class TaskMonitor<T extends Task>
       return spec;
     }
 
-    @Nullable
-    TaskStatusPlus getRunningStatus()
+    T getRunningTask()
     {
-      return runningStatus;
+      return runningTask;
     }
 
     List<TaskStatusPlus> getTaskHistory()

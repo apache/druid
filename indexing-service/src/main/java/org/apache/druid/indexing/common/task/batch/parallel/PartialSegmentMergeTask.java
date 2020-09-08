@@ -34,6 +34,8 @@ import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.stats.NoopIngestionMetrics;
+import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -73,7 +75,6 @@ import java.util.stream.Collectors;
 abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionLocation> extends PerfectRollupWorkerTask
 {
   private static final Logger LOG = new Logger(PartialSegmentMergeTask.class);
-
 
   private final PartialSegmentMergeIOConfig<P> ioConfig;
   private final int numAttempts;
@@ -127,42 +128,6 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    // Group partitionLocations by interval and partitionId
-    final Map<Interval, Int2ObjectMap<List<P>>> intervalToBuckets = new HashMap<>();
-    for (P location : ioConfig.getPartitionLocations()) {
-      intervalToBuckets.computeIfAbsent(location.getInterval(), k -> new Int2ObjectOpenHashMap<>())
-                         .computeIfAbsent(location.getBucketId(), k -> new ArrayList<>())
-                         .add(location);
-    }
-
-    final List<TaskLock> locks = toolbox.getTaskActionClient().submit(
-        new SurrogateAction<>(supervisorTaskId, new LockListAction())
-    );
-    final Map<Interval, String> intervalToVersion = Maps.newHashMapWithExpectedSize(locks.size());
-    locks.forEach(lock -> {
-      if (lock.isRevoked()) {
-        throw new ISE("Lock[%s] is revoked", lock);
-      }
-      final String mustBeNull = intervalToVersion.put(lock.getInterval(), lock.getVersion());
-      if (mustBeNull != null) {
-        throw new ISE(
-            "Unexpected state: Two versions([%s], [%s]) for the same interval[%s]",
-            lock.getVersion(),
-            mustBeNull,
-            lock.getInterval()
-        );
-      }
-    });
-
-    final Stopwatch fetchStopwatch = Stopwatch.createStarted();
-    final Map<Interval, Int2ObjectMap<List<File>>> intervalToUnzippedFiles = fetchSegmentFiles(
-        toolbox,
-        intervalToBuckets
-    );
-    final long fetchTime = fetchStopwatch.elapsed(TimeUnit.SECONDS);
-    fetchStopwatch.stop();
-    LOG.info("Fetch took [%s] seconds", fetchTime);
-
     final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
         new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
         getId(),
@@ -171,22 +136,103 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec, P extends PartitionL
         getTuningConfig().getChatHandlerNumRetries()
     );
 
-    final File persistDir = toolbox.getPersistDir();
-    FileUtils.deleteQuietly(persistDir);
-    FileUtils.forceMkdir(persistDir);
+    try {
+      // Group partitionLocations by interval and partitionId
+      final Map<Interval, Int2ObjectMap<List<P>>> intervalToBuckets = new HashMap<>();
+      for (P location : ioConfig.getPartitionLocations()) {
+        intervalToBuckets.computeIfAbsent(location.getInterval(), k -> new Int2ObjectOpenHashMap<>())
+                         .computeIfAbsent(location.getBucketId(), k -> new ArrayList<>())
+                         .add(location);
+      }
 
-    final Set<DataSegment> pushedSegments = mergeAndPushSegments(
-        toolbox,
-        getDataSchema(),
-        getTuningConfig(),
-        persistDir,
-        intervalToVersion,
-        intervalToUnzippedFiles
+      final List<TaskLock> locks = toolbox.getTaskActionClient().submit(
+          new SurrogateAction<>(supervisorTaskId, new LockListAction())
+      );
+      final Map<Interval, String> intervalToVersion = Maps.newHashMapWithExpectedSize(locks.size());
+      locks.forEach(lock -> {
+        if (lock.isRevoked()) {
+          throw new ISE("Lock[%s] is revoked", lock);
+        }
+        final String mustBeNull = intervalToVersion.put(lock.getInterval(), lock.getVersion());
+        if (mustBeNull != null) {
+          throw new ISE(
+              "Unexpected state: Two versions([%s], [%s]) for the same interval[%s]",
+              lock.getVersion(),
+              mustBeNull,
+              lock.getInterval()
+          );
+        }
+      });
+
+      final Set<DataSegment> pushedSegments = fetchAndMergeSegments(
+          toolbox,
+          taskClient,
+          intervalToBuckets,
+          intervalToVersion
+      );
+
+      taskClient.report(
+          supervisorTaskId,
+          new PushedSegmentsReport(
+              getId(),
+              Collections.emptySet(),
+              pushedSegments,
+              NoopIngestionMetricsSnapshot.INSTANCE
+          )
+      );
+
+      return TaskStatus.success(getId());
+    }
+    catch (Exception e) {
+      // We don't report exception here. The supervisor task will get the details of exception from the Overlord.
+      taskClient.report(supervisorTaskId, new FailedSubtaskReport(getId()));
+      throw e;
+    }
+  }
+
+  private Set<DataSegment> fetchAndMergeSegments(
+      TaskToolbox toolbox,
+      ParallelIndexSupervisorTaskClient taskClient,
+      Map<Interval, Int2ObjectMap<List<P>>> intervalToBuckets,
+      Map<Interval, String> intervalToVersion
+  ) throws Exception
+  {
+    final LiveMetricsReporter liveMetricsReporter = new LiveMetricsReporter(
+        supervisorTaskId,
+        getId(),
+        taskClient,
+        NoopIngestionMetrics.INSTANCE,
+        getTuningConfig().getTaskStatusCheckPeriodMs(),
+        getTuningConfig().getChatHandlerNumRetries()
     );
+    liveMetricsReporter.start();
 
-    taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), Collections.emptySet(), pushedSegments));
+    try {
+      final Stopwatch fetchStopwatch = Stopwatch.createStarted();
+      final Map<Interval, Int2ObjectMap<List<File>>> intervalToUnzippedFiles = fetchSegmentFiles(
+          toolbox,
+          intervalToBuckets
+      );
+      final long fetchTime = fetchStopwatch.elapsed(TimeUnit.SECONDS);
+      fetchStopwatch.stop();
+      LOG.info("Fetch took [%s] seconds", fetchTime);
 
-    return TaskStatus.success(getId());
+      final File persistDir = toolbox.getPersistDir();
+      FileUtils.deleteQuietly(persistDir);
+      FileUtils.forceMkdir(persistDir);
+
+      return mergeAndPushSegments(
+          toolbox,
+          getDataSchema(),
+          getTuningConfig(),
+          persistDir,
+          intervalToVersion,
+          intervalToUnzippedFiles
+      );
+    }
+    finally {
+      liveMetricsReporter.stop();
+    }
   }
 
   private Map<Interval, Int2ObjectMap<List<File>>> fetchSegmentFiles(

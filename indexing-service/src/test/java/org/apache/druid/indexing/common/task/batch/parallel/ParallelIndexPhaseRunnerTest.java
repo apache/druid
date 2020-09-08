@@ -26,6 +26,8 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.stats.IngestionMetricsSnapshot;
+import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -108,7 +110,8 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     Assert.assertEquals(TaskState.SUCCESS, runner.run());
   }
 
-  private static class TestPhaseRunner extends ParallelIndexPhaseRunner<ReportingNoopTask, EmptySubTaskReport>
+  private static class TestPhaseRunner
+      extends ParallelIndexPhaseRunner<ReportingNoopTask, EmptySubTaskReport>
   {
     private final int actualNumSubTasks;
     private final int estimatedNumSubTasks;
@@ -200,6 +203,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
 
   private static class EmptySubTaskReport implements SubTaskReport
   {
+    private final long createdTimeNs = System.nanoTime();
     private final String taskId;
 
     private EmptySubTaskReport(String taskId)
@@ -208,9 +212,27 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     }
 
     @Override
+    public long getCreatedTimeNs()
+    {
+      return createdTimeNs;
+    }
+
+    @Override
     public String getTaskId()
     {
       return taskId;
+    }
+
+    @Override
+    public TaskState getState()
+    {
+      return TaskState.SUCCESS;
+    }
+
+    @Override
+    public IngestionMetricsSnapshot getMetrics()
+    {
+      return NoopIngestionMetricsSnapshot.INSTANCE;
     }
   }
 

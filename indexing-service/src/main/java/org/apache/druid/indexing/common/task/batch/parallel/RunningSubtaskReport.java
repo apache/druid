@@ -19,38 +19,37 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.stats.IngestionMetricsSnapshot;
-import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 
-/**
- * Report containing the {@link PartitionStat}s created by a {@link PartialSegmentGenerateTask}.
- * This report is collected by {@link ParallelIndexSupervisorTask} and
- * used to generate {@link PartialSegmentMergeIOConfig}.
- */
-abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SucceededSubtaskReport
+public class RunningSubtaskReport implements SubTaskReport
 {
+  public static final String TYPE = "running";
+
   private final long createdTimeNs;
-  private final String taskId;
-  private final List<T> partitionStats;
+  private final String subtaskId;
   private final IngestionMetricsSnapshot metrics;
 
-  GeneratedPartitionsReport(
-      long createdTimeNs,
-      String taskId,
-      List<T> partitionStats,
-      @Nullable IngestionMetricsSnapshot metrics
+  public RunningSubtaskReport(String subtaskId, IngestionMetricsSnapshot metrics)
+  {
+    this(System.nanoTime(), subtaskId, metrics);
+  }
+
+  @JsonCreator
+  private RunningSubtaskReport(
+      @JsonProperty("createdTimeNs") long createdTimeNs,
+      @JsonProperty("taskId") String subtaskId,
+      @JsonProperty("metrics") IngestionMetricsSnapshot metrics
   )
   {
     this.createdTimeNs = createdTimeNs;
-    this.taskId = Preconditions.checkNotNull(taskId, "taskId");
-    this.partitionStats = Preconditions.checkNotNull(partitionStats, "partitionStats");
-    this.metrics = metrics == null ? NoopIngestionMetricsSnapshot.INSTANCE : metrics;
+    this.subtaskId = Preconditions.checkNotNull(subtaskId, "subtaskId");
+    this.metrics = Preconditions.checkNotNull(metrics, "metrics");
   }
 
   @Override
@@ -60,21 +59,21 @@ abstract class GeneratedPartitionsReport<T extends PartitionStat> implements Suc
     return createdTimeNs;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public String getTaskId()
   {
-    return taskId;
-  }
-
-  @JsonProperty
-  public List<T> getPartitionStats()
-  {
-    return partitionStats;
+    return subtaskId;
   }
 
   @Override
+  public TaskState getState()
+  {
+    return TaskState.RUNNING;
+  }
+
   @JsonProperty
+  @Override
   public IngestionMetricsSnapshot getMetrics()
   {
     return metrics;
@@ -89,16 +88,15 @@ abstract class GeneratedPartitionsReport<T extends PartitionStat> implements Suc
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GeneratedPartitionsReport<?> that = (GeneratedPartitionsReport<?>) o;
+    RunningSubtaskReport that = (RunningSubtaskReport) o;
     return createdTimeNs == that.createdTimeNs &&
-           Objects.equals(taskId, that.taskId) &&
-           Objects.equals(partitionStats, that.partitionStats) &&
+           Objects.equals(subtaskId, that.subtaskId) &&
            Objects.equals(metrics, that.metrics);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(createdTimeNs, taskId, partitionStats, metrics);
+    return Objects.hash(createdTimeNs, subtaskId, metrics);
   }
 }

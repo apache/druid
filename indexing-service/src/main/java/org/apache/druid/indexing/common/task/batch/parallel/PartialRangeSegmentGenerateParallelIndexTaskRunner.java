@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.base.Supplier;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
@@ -34,7 +35,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
 {
   private static final String PHASE_NAME = "partial segment generation";
 
-  private final Map<Interval, PartitionBoundaries> intervalToPartitions;
+  private final Supplier<Map<Interval, PartitionBoundaries>> intervalToPartitions;
 
   PartialRangeSegmentGenerateParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -42,7 +43,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
       Map<String, Object> context,
-      Map<Interval, PartitionBoundaries> intervalToPartitions
+      Supplier<Map<Interval, PartitionBoundaries>> intervalToPartitions
   )
   {
     super(toolbox, taskId, groupId, ingestionSchema, context);
@@ -84,7 +85,7 @@ class PartialRangeSegmentGenerateParallelIndexTaskRunner
             numAttempts,
             subTaskIngestionSpec,
             context,
-            intervalToPartitions
+            intervalToPartitions.get()
         );
       }
     };

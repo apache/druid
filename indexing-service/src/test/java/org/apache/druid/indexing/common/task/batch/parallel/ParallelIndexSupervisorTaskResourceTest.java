@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -692,7 +693,12 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 
       taskClient.report(
           getSupervisorTaskId(),
-          new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment))
+          new PushedSegmentsReport(
+              getId(),
+              Collections.emptySet(),
+              Collections.singleton(segment),
+              NoopIngestionMetricsSnapshot.INSTANCE
+          )
       );
       return TaskStatus.fromCode(getId(), state);
     }

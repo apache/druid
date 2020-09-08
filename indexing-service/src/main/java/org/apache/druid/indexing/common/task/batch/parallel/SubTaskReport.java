@@ -23,17 +23,42 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexing.stats.IngestionMetricsSnapshot;
 
 /**
- * Each sub task of {@link ParallelIndexSupervisorTask} reports the result of indexing using this class.
+ * Report sent by subtasks to {@link ParallelIndexSupervisorTask} during native parallel ingestion.
  */
 @JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = PushedSegmentsReport.class)
 @JsonSubTypes(value = {
     @Type(name = PushedSegmentsReport.TYPE, value = PushedSegmentsReport.class),
     @Type(name = DimensionDistributionReport.TYPE, value = DimensionDistributionReport.class),
-    @Type(name = GeneratedPartitionsMetadataReport.TYPE, value = GeneratedPartitionsMetadataReport.class)
+    @Type(name = GeneratedPartitionsMetadataReport.TYPE, value = GeneratedPartitionsMetadataReport.class),
+    @Type(name = RunningSubtaskReport.TYPE, value = RunningSubtaskReport.class),
+    @Type(name = FailedSubtaskReport.TYPE, value = FailedSubtaskReport.class)
 })
 public interface SubTaskReport
 {
+  /**
+   * Returns the time in nanoseconds when this report is created. This is usually used to identify each report.
+   * It can return 0 if the sender task was running in an old version of middleManager.
+   */
+  long getCreatedTimeNs();
+
+  /**
+   * Returns an ID of the subtask which created this report.
+   */
   String getTaskId();
+
+  /**
+   * Returns the state of the subtask at the moment when this report was created.
+   */
+  TaskState getState();
+
+  /**
+   * Returns a snapshot of metrics of the subtask at the moment when this report was created.
+   * It can return {@link org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot} if the sender task
+   * was running in an old version of middleManager.
+   */
+  IngestionMetricsSnapshot getMetrics();
 }

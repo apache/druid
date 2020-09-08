@@ -21,7 +21,9 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.stats.IngestionMetricsSnapshot;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -32,12 +34,24 @@ class GeneratedPartitionsMetadataReport extends GeneratedPartitionsReport<Generi
 {
   public static final String TYPE = "generated_partitions_metadata";
 
-  @JsonCreator
   GeneratedPartitionsMetadataReport(
-      @JsonProperty("taskId") String taskId,
-      @JsonProperty("partitionStats") List<GenericPartitionStat> partitionStats
+      String taskId,
+      List<GenericPartitionStat> partitionStats,
+      IngestionMetricsSnapshot metrics
   )
   {
-    super(taskId, partitionStats);
+    this(System.nanoTime(), taskId, partitionStats, metrics);
+  }
+
+  @JsonCreator
+  GeneratedPartitionsMetadataReport(
+      @JsonProperty("createdTimeNs") long createdTimeNs,
+      @JsonProperty("taskId") String taskId,
+      @JsonProperty("partitionStats") List<GenericPartitionStat> partitionStats,
+      // Metrics can be null when you have middleManagers of mixed versions during rolling update.
+      @JsonProperty("metrics") @Nullable IngestionMetricsSnapshot metrics
+  )
+  {
+    super(createdTimeNs, taskId, partitionStats, metrics);
   }
 }

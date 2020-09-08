@@ -19,13 +19,16 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
+import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,13 +48,35 @@ public class DimensionDistributionReportTest
     StringSketch sketch = new StringSketch();
     Map<Interval, StringDistribution> intervalToDistribution = Collections.singletonMap(interval, sketch);
     String taskId = "abc";
-    target = new DimensionDistributionReport(taskId, intervalToDistribution);
+    target = new DimensionDistributionReport(taskId, intervalToDistribution, NoopIngestionMetricsSnapshot.INSTANCE);
   }
 
   @Test
   public void serializesDeserializes()
   {
     TestHelper.testSerializesDeserializes(OBJECT_MAPPER, target);
+  }
+
+  @Test
+  public void testSerdeWithoutCreatedTimeNsAndMetrics() throws JsonProcessingException
+  {
+    final String json = "{\n"
+                        + "  \"type\" : \"dimension_distribution\",\n"
+                        + "  \"taskId\" : \"abc\",\n"
+                        + "  \"distributions\" : {\n"
+                        + "    \"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\" : {\n"
+                        + "      \"type\" : \"sketch\",\n"
+                        + "      \"sketch\" : \"AQMIDAAQAAA=\"\n"
+                        + "    }\n"
+                        + "  }\n"
+                        + "}";
+    final DimensionDistributionReport expected = new DimensionDistributionReport(
+        0,
+        target.getTaskId(),
+        target.getIntervalToDistribution(),
+        NoopIngestionMetricsSnapshot.INSTANCE
+    );
+    Assert.assertEquals(expected, OBJECT_MAPPER.readValue(json, SubTaskReport.class));
   }
 
   @Test

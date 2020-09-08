@@ -43,6 +43,8 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringD
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.stats.NoopIngestionMetrics;
+import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -69,6 +71,7 @@ import java.util.stream.Collectors;
 public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
 {
   public static final String TYPE = "partial_dimension_distribution";
+
   private static final Logger LOG = new Logger(PartialDimensionDistributionTask.class);
 
   // Future work: StringDistribution does not handle inserting NULLs. This is the same behavior as hadoop indexing.
@@ -176,121 +179,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    DataSchema dataSchema = ingestionSchema.getDataSchema();
-    GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-
-    SingleDimensionPartitionsSpec partitionsSpec = (SingleDimensionPartitionsSpec) tuningConfig.getPartitionsSpec();
-    Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
-    String partitionDimension = partitionsSpec.getPartitionDimension();
-    Preconditions.checkNotNull(partitionDimension, "partitionDimension required in partitionsSpec");
-    boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
-
-    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
-    List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
-                                      .map(AggregatorFactory::getName)
-                                      .collect(Collectors.toList());
-    InputFormat inputFormat = inputSource.needsFormat()
-                              ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
-                              : null;
-    InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
-        inputSource.reader(
-            new InputRowSchema(
-                dataSchema.getTimestampSpec(),
-                dataSchema.getDimensionsSpec(),
-                metricsNames
-            ),
-            inputFormat,
-            toolbox.getIndexingTmpDir()
-        )
-    );
-
-    try (
-        CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read();
-        HandlingInputRowIterator iterator =
-            new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimension, SKIP_NULL)
-                .delegate(inputRowIterator)
-                .granularitySpec(granularitySpec)
-                .nullRowRunnable(IndexTaskInputRowIteratorBuilder.NOOP_RUNNABLE)
-                .absentBucketIntervalConsumer(IndexTaskInputRowIteratorBuilder.NOOP_CONSUMER)
-                .build()
-    ) {
-      Map<Interval, StringDistribution> distribution = determineDistribution(
-          iterator,
-          granularitySpec,
-          partitionDimension,
-          isAssumeGrouped,
-          tuningConfig.isLogParseExceptions(),
-          tuningConfig.getMaxParseExceptions()
-      );
-      sendReport(toolbox, new DimensionDistributionReport(getId(), distribution));
-    }
-
-    return TaskStatus.success(getId());
-  }
-
-  private Map<Interval, StringDistribution> determineDistribution(
-      HandlingInputRowIterator inputRowIterator,
-      GranularitySpec granularitySpec,
-      String partitionDimension,
-      boolean isAssumeGrouped,
-      boolean isLogParseExceptions,
-      int maxParseExceptions
-  )
-  {
-    Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
-    InputRowFilter inputRowFilter =
-        !isAssumeGrouped && granularitySpec.isRollup()
-        ? dedupInputRowFilterSupplier.get()
-        : new PassthroughInputRowFilter();
-
-    int numParseExceptions = 0;
-
-    while (inputRowIterator.hasNext()) {
-      try {
-        InputRow inputRow = inputRowIterator.next();
-        if (inputRow == null) {
-          continue;
-        }
-
-        DateTime timestamp = inputRow.getTimestamp();
-
-        //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
-        Interval interval = granularitySpec.bucketInterval(timestamp).get();
-        String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
-
-        if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
-          StringDistribution stringDistribution =
-              intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
-          stringDistribution.put(partitionDimensionValue);
-        }
-      }
-      catch (ParseException e) {
-        if (isLogParseExceptions) {
-          LOG.error(e, "Encountered parse exception");
-        }
-
-        numParseExceptions++;
-        if (numParseExceptions > maxParseExceptions) {
-          throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
-        }
-      }
-    }
-
-    // DedupInputRowFilter may not accept the min/max dimensionValue. If needed, add the min/max
-    // values to the distributions so they have an accurate min/max.
-    inputRowFilter.getIntervalToMinPartitionDimensionValue()
-                  .forEach((interval, min) -> intervalToDistribution.get(interval).putIfNewMin(min));
-    inputRowFilter.getIntervalToMaxPartitionDimensionValue()
-                  .forEach((interval, max) -> intervalToDistribution.get(interval).putIfNewMax(max));
-
-    return intervalToDistribution;
-  }
-
-  private void sendReport(TaskToolbox toolbox, DimensionDistributionReport report)
-  {
     final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
         new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
         getId(),
@@ -298,7 +186,142 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
-    taskClient.report(supervisorTaskId, report);
+
+    try {
+      DataSchema dataSchema = ingestionSchema.getDataSchema();
+      GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
+      ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
+
+      SingleDimensionPartitionsSpec partitionsSpec = (SingleDimensionPartitionsSpec) tuningConfig.getPartitionsSpec();
+      Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
+      String partitionDimension = partitionsSpec.getPartitionDimension();
+      Preconditions.checkNotNull(partitionDimension, "partitionDimension required in partitionsSpec");
+      boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
+
+      InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
+          ingestionSchema.getDataSchema().getParser()
+      );
+      List<String> metricsNames = Arrays.stream(dataSchema.getAggregators())
+                                        .map(AggregatorFactory::getName)
+                                        .collect(Collectors.toList());
+      InputFormat inputFormat = inputSource.needsFormat()
+                                ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
+                                : null;
+      InputSourceReader inputSourceReader = dataSchema.getTransformSpec().decorate(
+          inputSource.reader(
+              new InputRowSchema(
+                  dataSchema.getTimestampSpec(),
+                  dataSchema.getDimensionsSpec(),
+                  metricsNames
+              ),
+              inputFormat,
+              toolbox.getIndexingTmpDir()
+          )
+      );
+
+      try (
+          CloseableIterator<InputRow> inputRowIterator = inputSourceReader.read();
+          HandlingInputRowIterator iterator =
+              new RangePartitionIndexTaskInputRowIteratorBuilder(partitionDimension, SKIP_NULL)
+                  .delegate(inputRowIterator)
+                  .granularitySpec(granularitySpec)
+                  .nullRowRunnable(IndexTaskInputRowIteratorBuilder.NOOP_RUNNABLE)
+                  .absentBucketIntervalConsumer(IndexTaskInputRowIteratorBuilder.NOOP_CONSUMER)
+                  .build()
+      ) {
+        Map<Interval, StringDistribution> distribution = determineDistribution(
+            taskClient,
+            iterator,
+            granularitySpec,
+            partitionDimension,
+            isAssumeGrouped,
+            tuningConfig
+        );
+        taskClient.report(
+            supervisorTaskId,
+            new DimensionDistributionReport(getId(), distribution, NoopIngestionMetricsSnapshot.INSTANCE)
+        );
+      }
+
+      return TaskStatus.success(getId());
+    }
+    catch (Exception e) {
+      // We don't report exception here. The supervisor task will get the details of exception from the Overlord.
+      taskClient.report(supervisorTaskId, new FailedSubtaskReport(getId()));
+      throw e;
+    }
+  }
+
+  private Map<Interval, StringDistribution> determineDistribution(
+      ParallelIndexSupervisorTaskClient taskClient,
+      HandlingInputRowIterator inputRowIterator,
+      GranularitySpec granularitySpec,
+      String partitionDimension,
+      boolean isAssumeGrouped,
+      ParallelIndexTuningConfig tuningConfig
+  )
+  {
+    final LiveMetricsReporter liveMetricsReporter = new LiveMetricsReporter(
+        supervisorTaskId,
+        getId(),
+        taskClient,
+        NoopIngestionMetrics.INSTANCE,
+        tuningConfig.getTaskStatusCheckPeriodMs(),
+        tuningConfig.getChatHandlerNumRetries()
+    );
+    liveMetricsReporter.start();
+    try {
+      Map<Interval, StringDistribution> intervalToDistribution = new HashMap<>();
+      InputRowFilter inputRowFilter =
+          !isAssumeGrouped && granularitySpec.isRollup()
+          ? dedupInputRowFilterSupplier.get()
+          : new PassthroughInputRowFilter();
+
+      int numParseExceptions = 0;
+
+      while (inputRowIterator.hasNext()) {
+        try {
+          InputRow inputRow = inputRowIterator.next();
+          if (inputRow == null) {
+            continue;
+          }
+
+          DateTime timestamp = inputRow.getTimestamp();
+
+          //noinspection OptionalGetWithoutIsPresent (InputRowIterator returns rows with present intervals)
+          Interval interval = granularitySpec.bucketInterval(timestamp).get();
+          String partitionDimensionValue = Iterables.getOnlyElement(inputRow.getDimension(partitionDimension));
+
+          if (inputRowFilter.accept(interval, partitionDimensionValue, inputRow)) {
+            StringDistribution stringDistribution =
+                intervalToDistribution.computeIfAbsent(interval, k -> new StringSketch());
+            stringDistribution.put(partitionDimensionValue);
+          }
+        }
+        catch (ParseException e) {
+          if (tuningConfig.isLogParseExceptions()) {
+            LOG.error(e, "Encountered parse exception");
+          }
+
+          numParseExceptions++;
+          if (numParseExceptions > tuningConfig.getMaxParseExceptions()) {
+            throw new RuntimeException("Max parse exceptions exceeded, terminating task...");
+          }
+        }
+      }
+
+      // DedupInputRowFilter may not accept the min/max dimensionValue. If needed, add the min/max
+      // values to the distributions so they have an accurate min/max.
+      inputRowFilter.getIntervalToMinPartitionDimensionValue()
+                    .forEach((interval, min) -> intervalToDistribution.get(interval).putIfNewMin(min));
+      inputRowFilter.getIntervalToMaxPartitionDimensionValue()
+                    .forEach((interval, max) -> intervalToDistribution.get(interval).putIfNewMax(max));
+
+      return intervalToDistribution;
+    }
+    finally {
+      liveMetricsReporter.stop();
+    }
   }
 
   private interface InputRowFilter

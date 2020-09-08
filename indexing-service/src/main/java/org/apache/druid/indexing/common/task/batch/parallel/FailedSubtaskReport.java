@@ -19,65 +19,62 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.stats.IngestionMetricsSnapshot;
 import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 
 /**
- * Report containing the {@link PartitionStat}s created by a {@link PartialSegmentGenerateTask}.
- * This report is collected by {@link ParallelIndexSupervisorTask} and
- * used to generate {@link PartialSegmentMergeIOConfig}.
+ * A report sent when a subtask fails. This report doesn't include the exception thrown in the failed subtask.
+ * The exception of the failed task should be stored in {@link org.apache.druid.indexer.TaskStatus#errorMsg} and
+ * propagated to the Overlord via task status tracking framework.
  */
-abstract class GeneratedPartitionsReport<T extends PartitionStat> implements SucceededSubtaskReport
+public class FailedSubtaskReport implements SubTaskReport
 {
+  public static final String TYPE = "failed";
+
   private final long createdTimeNs;
   private final String taskId;
-  private final List<T> partitionStats;
-  private final IngestionMetricsSnapshot metrics;
 
-  GeneratedPartitionsReport(
-      long createdTimeNs,
-      String taskId,
-      List<T> partitionStats,
-      @Nullable IngestionMetricsSnapshot metrics
-  )
+  public FailedSubtaskReport(String taskId)
+  {
+    this(System.nanoTime(), taskId);
+  }
+
+  @JsonCreator
+  private FailedSubtaskReport(@JsonProperty("createdTimeNs") long createdTimeNs, @JsonProperty("taskId") String taskId)
   {
     this.createdTimeNs = createdTimeNs;
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
-    this.partitionStats = Preconditions.checkNotNull(partitionStats, "partitionStats");
-    this.metrics = metrics == null ? NoopIngestionMetricsSnapshot.INSTANCE : metrics;
   }
 
   @Override
-  @JsonProperty
   public long getCreatedTimeNs()
   {
     return createdTimeNs;
   }
 
-  @Override
   @JsonProperty
+  @Override
   public String getTaskId()
   {
     return taskId;
   }
 
-  @JsonProperty
-  public List<T> getPartitionStats()
+  @Override
+  public TaskState getState()
   {
-    return partitionStats;
+    return TaskState.FAILED;
   }
 
   @Override
-  @JsonProperty
   public IngestionMetricsSnapshot getMetrics()
   {
-    return metrics;
+    return NoopIngestionMetricsSnapshot.INSTANCE;
   }
 
   @Override
@@ -89,16 +86,14 @@ abstract class GeneratedPartitionsReport<T extends PartitionStat> implements Suc
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    GeneratedPartitionsReport<?> that = (GeneratedPartitionsReport<?>) o;
-    return createdTimeNs == that.createdTimeNs &&
-           Objects.equals(taskId, that.taskId) &&
-           Objects.equals(partitionStats, that.partitionStats) &&
-           Objects.equals(metrics, that.metrics);
+    FailedSubtaskReport report = (FailedSubtaskReport) o;
+    return createdTimeNs == report.createdTimeNs &&
+           Objects.equals(taskId, report.taskId);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(createdTimeNs, taskId, partitionStats, metrics);
+    return Objects.hash(createdTimeNs, taskId);
   }
 }

@@ -29,6 +29,7 @@ import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
+import org.apache.druid.indexing.stats.NoopIngestionMetricsSnapshot;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -140,7 +141,7 @@ public class PartialHashSegmentGenerateTask extends PartialSegmentGenerateTask<G
     List<GenericPartitionStat> partitionStats = segments.stream()
                                                         .map(segment -> createPartitionStat(toolbox, segment))
                                                         .collect(Collectors.toList());
-    return new GeneratedPartitionsMetadataReport(getId(), partitionStats);
+    return new GeneratedPartitionsMetadataReport(getId(), partitionStats, NoopIngestionMetricsSnapshot.INSTANCE);
   }
 
   private GenericPartitionStat createPartitionStat(TaskToolbox toolbox, DataSegment segment)

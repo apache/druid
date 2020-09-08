@@ -690,7 +690,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       if (supervisorTask == null) {
         throw new ISE("Cannot find supervisor task for [%s]", supervisorTaskId);
       }
-      supervisorTask.getCurrentRunner().collectReport(report);
+      if (report instanceof RunningSubtaskReport) {
+        supervisorTask.getCurrentRunner().collectLiveReport((RunningSubtaskReport) report);
+      } else {
+        supervisorTask.getCurrentRunner().collectReport(report);
+      }
     }
 
     @Nullable

@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -31,7 +32,9 @@ import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.stats.NoopIngestionMetrics;
 import org.apache.druid.indexing.worker.ShuffleDataSegmentPusher;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -88,10 +91,6 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   @Override
   public final TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
-
     final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
         new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
         getId(),
@@ -100,15 +99,25 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
 
-    final List<DataSegment> segments = generateSegments(
-        toolbox,
-        taskClient,
-        inputSource,
-        toolbox.getIndexingTmpDir()
-    );
-    taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments));
+    try {
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
+          ingestionSchema.getDataSchema().getParser()
+      );
+      final List<DataSegment> segments = generateSegments(
+          toolbox,
+          taskClient,
+          inputSource,
+          toolbox.getIndexingTmpDir()
+      );
+      taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments));
 
-    return TaskStatus.success(getId());
+      return TaskStatus.success(getId());
+    }
+    catch (Exception e) {
+      // We don't report exception here. The supervisor task will get the details of exception from the Overlord.
+      taskClient.report(supervisorTaskId, new FailedSubtaskReport(getId()));
+      throw e;
+    }
   }
 
   /**
@@ -151,6 +160,14 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     );
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
+    final LiveMetricsReporter liveMetricsReporter = new LiveMetricsReporter(
+        supervisorTaskId,
+        getId(),
+        taskClient,
+        NoopIngestionMetrics.INSTANCE,
+        tuningConfig.getTaskStatusCheckPeriodMs(),
+        tuningConfig.getChatHandlerNumRetries()
+    );
     final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
     final long pushTimeout = tuningConfig.getPushTimeout();
 
@@ -166,8 +183,19 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         tuningConfig,
         new ShuffleDataSegmentPusher(supervisorTaskId, getId(), toolbox.getIntermediaryDataManager())
     );
-    boolean exceptionOccurred = false;
+    final MutableBoolean exceptionOccurred = new MutableBoolean(false);
+    final Closer closer = Closer.create();
+    closer.register(liveMetricsReporter::stop);
+    closer.register(() -> {
+      if (exceptionOccurred.isTrue()) {
+        appenderator.closeNow();
+      } else {
+        appenderator.close();
+      }
+    });
+
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
+      liveMetricsReporter.start();
       driver.startJob();
 
       final InputSourceProcessor inputSourceProcessor = new InputSourceProcessor(
@@ -191,15 +219,13 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
       return pushed.getSegments();
     }
     catch (Exception e) {
-      exceptionOccurred = true;
+      exceptionOccurred.setTrue();
       throw e;
     }
     finally {
-      if (exceptionOccurred) {
-        appenderator.closeNow();
-      } else {
-        appenderator.close();
-      }
+      // closer cannot be closed using try-with-resources because how to close appenderator should be different
+      // when an exception is thrown. Note that catch or finally blocks are run after the resource has been closed.
+      closer.close();
     }
   }
 }

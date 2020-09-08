@@ -62,7 +62,7 @@ public class TaskMonitorTest
   public void setup()
   {
     tasks.clear();
-    monitor.start(100);
+    monitor.start(100, 300);
   }
 
   @After
@@ -81,8 +81,13 @@ public class TaskMonitorTest
             new TestTaskSpec("specId" + i, "groupId", "supervisorId", null, new IntegerInputSplit(i), 100L, 0, false)
         ))
         .collect(Collectors.toList());
+    // TaskMonitor will skip status check for these tasks for a while.
+    monitor.statusReport("specId" + 0, TaskState.RUNNING);
+    monitor.statusReport("specId" + 1, TaskState.RUNNING);
+    // Unknown taskId should be ignored
+    monitor.statusReport("specId" + 11, TaskState.RUNNING);
     for (int i = 0; i < futures.size(); i++) {
-      // # of threads of taskRunner is 5, so the expected max timeout is 2 sec. We additionally wait three more seconds
+      // # of threads in taskRunner is 5, so the expected max timeout is 2 sec. We additionally wait three more seconds
       // here to make sure the test passes.
       final SubTaskCompleteEvent<TestTask> result = futures.get(i).get(1, TimeUnit.SECONDS);
       Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
@@ -116,7 +121,7 @@ public class TaskMonitorTest
         .map(monitor::submit)
         .collect(Collectors.toList());
     for (int i = 0; i < futures.size(); i++) {
-      // # of threads of taskRunner is 5, and each task is expected to be run 3 times (with 2 retries), so the expected
+      // # of threads in taskRunner is 5, and each task is expected to be run 3 times (with 2 retries), so the expected
       // max timeout is 6 sec. We additionally wait 4 more seconds here to make sure the test passes.
       final SubTaskCompleteEvent<TestTask> result = futures.get(i).get(2, TimeUnit.SECONDS);
       Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
@@ -160,7 +165,7 @@ public class TaskMonitorTest
         .map(monitor::submit)
         .collect(Collectors.toList());
     for (int i = 0; i < futures.size(); i++) {
-      // # of threads of taskRunner is 5, and each task is expected to be run 3 times (with 2 retries), so the expected
+      // # of threads in taskRunner is 5, and each task is expected to be run 3 times (with 2 retries), so the expected
       // max timeout is 6 sec. We additionally wait 4 more seconds here to make sure the test passes.
       final SubTaskCompleteEvent<TestTask> result = futures.get(i).get(2, TimeUnit.SECONDS);
       Assert.assertEquals("supervisorId", result.getSpec().getSupervisorTaskId());
