@@ -20,8 +20,7 @@ import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core'
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -105,35 +104,19 @@ export interface SegmentsViewProps {
   capabilities: Capabilities;
 }
 
-export interface SegmentsViewState {
-  segmentsState: QueryState<SegmentQueryResultRow[]>;
-  trimmedSegments?: SegmentQueryResultRow[];
-  segmentFilter: Filter[];
-  segmentTableActionDialogId?: string;
-  datasourceTableActionDialogId?: string;
-  actions: BasicAction[];
-  terminateSegmentId?: string;
-  terminateDatasourceId?: string;
-  hiddenColumns: LocalStorageBackedArray<string>;
-  groupByInterval: boolean;
-
-  // table state
-  page: number | null;
-  pageSize: number | null;
-  filtered: number[] | null;
-  sorted: Sorted | null;
-}
-
 interface Sorted {
-  id: number;
+  id: string;
   desc: boolean;
 }
 
-interface SegmentsQuery {
+interface TableState {
   page: number;
   pageSize: number;
   filtered: Filter[];
   sorted: Sorted[];
+}
+
+interface SegmentsQuery extends TableState {
   groupByInterval: boolean;
 }
 
@@ -153,11 +136,26 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
+export interface SegmentsViewState {
+  segmentsState: QueryState<SegmentQueryResultRow[]>;
+  trimmedSegments?: SegmentQueryResultRow[];
+  segmentFilter: Filter[];
+  segmentTableActionDialogId?: string;
+  datasourceTableActionDialogId?: string;
+  actions: BasicAction[];
+  terminateSegmentId?: string;
+  terminateDatasourceId?: string;
+  hiddenColumns: LocalStorageBackedArray<string>;
+  groupByInterval: boolean;
+}
+
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   static PAGE_SIZE = 25;
 
   private segmentsSqlQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
   private segmentsNoSqlQueryManager: QueryManager<null, SegmentQueryResultRow[]>;
+
+  private lastTableState: TableState | undefined;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -174,12 +172,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
       groupByInterval: false,
-
-      // Table state
-      page: null,
-      pageSize: null,
-      sorted: null,
-      filtered: null,
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
@@ -324,8 +316,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     this.segmentsNoSqlQueryManager.terminate();
   }
 
-  private fetchData = (groupByInterval: boolean, state?: any) => {
-    const { page, pageSize, filtered, sorted } = state ? state : this.state;
+  private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+    if (tableState) this.lastTableState = tableState;
+    const { page, pageSize, filtered, sorted } = this.lastTableState!;
     this.segmentsSqlQueryManager.runQuery({
       page,
       pageSize,
@@ -335,33 +328,34 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   };
 
-  private fetchClientSideData = (state?: any) => {
-    const { page, pageSize, filtered, sorted } = state ? state : state;
-    const { segmentsState } = this.state;
-    const allSegments = segmentsState.data;
-    if (!allSegments) return;
-    const startPage = page * pageSize;
-    const endPage = (page + 1) * pageSize;
-    const sortPivot: keyof SegmentQueryResultRow = sorted[0].id;
-    const sortDesc = sorted[0].desc;
+  private fetchClientSideData = (tableState?: TableState) => {
+    if (tableState) this.lastTableState = tableState;
+    const { page, pageSize, filtered, sorted } = this.lastTableState!;
 
-    this.setState({
-      trimmedSegments: allSegments
-        .filter(d => {
-          return filtered.every((f: any) => {
-            return String(d[f.id as keyof SegmentQueryResultRow]).includes(f.value);
-          });
-        })
-        .sort((d1, d2) => {
-          const v1 = d1[sortPivot] as any;
-          const v2 = d2[sortPivot] as any;
-          if (typeof v1 === 'string') {
-            return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
-          } else {
-            return sortDesc ? v2 - v1 : v1 - v2;
-          }
-        })
-        .slice(startPage, endPage),
+    this.setState(state => {
+      const allSegments = state.segmentsState.data;
+      if (!allSegments) return {};
+      const sortKey = sorted[0].id as keyof SegmentQueryResultRow;
+      const sortDesc = sorted[0].desc;
+
+      return {
+        trimmedSegments: allSegments
+          .filter(d => {
+            return filtered.every((f: any) => {
+              return String(d[f.id as keyof SegmentQueryResultRow]).includes(f.value);
+            });
+          })
+          .sort((d1, d2) => {
+            const v1 = d1[sortKey] as any;
+            const v2 = d2[sortKey] as any;
+            if (typeof v1 === 'string') {
+              return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
+            } else {
+              return sortDesc ? v2 - v1 : v1 - v2;
+            }
+          })
+          .slice(page * pageSize, (page + 1) * pageSize),
+      };
     });
   };
 
@@ -403,17 +397,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         onFilteredChange={filtered => {
           this.setState({ segmentFilter: filtered });
         }}
-        onFetchData={state => {
+        onFetchData={tableState => {
           if (capabilities.hasSql()) {
-            this.setState({
-              page: state.page,
-              pageSize: state.pageSize,
-              filtered: state.filtered,
-              sorted: state.sorted,
-            });
-            this.fetchData(groupByInterval, state);
+            this.fetchData(groupByInterval, tableState);
           } else if (capabilities.hasCoordinatorAccess()) {
-            this.fetchClientSideData(state);
+            this.fetchClientSideData(tableState);
           }
         }}
         showPageJump={false}
