@@ -6,28 +6,37 @@ title: "Security overview"
 
 ## Overview
 
-By default, security features in Druid are disabled, that is, TLS is disabled and user authentication does not occur. To use these features, you need to configure security in Druid. 
+By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features including TLS, authentication, and authorization.
+
+To implement Druid security, you configure authenticators and authorizors. Authenticators control the way user identities are verified, while authorizers map the authenticated users (via user roles) to the datasources they are permitted to access. Consequently, implementing Druid security also involves consideration of your datasource scheme, given they represent the granularity at which data access permissions are allocated. 
+
+The following graphic depicts the course of request through the authentication process: 
+
+
+![Druid security check flow](../assets/security-model-1.png "Druid security check flow") 
+
 
 This document gives you an overview of security features in Druid and how to configure them, and some best practices for securing Druid.
 
 
 ## Best practices
 
-* Do not expose the Druid Console on an untrusted users or networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, whitelists the specific APIs that your users need to access, and implements account lockout and throttling features.
+* Do not expose the Druid Console without authentication on untrusted networks. Access to the console effectively confers access the file system on the installation machine, via file browsers in the UI. You should use an API gateway that restricts who can connect from untrusted networks, whitelists the specific APIs that your users need to access, and implements account lockout and throttling features.
 * Grant users the minimum permissions necessary to perform their functions. For instance, do not allow user who only need to query data to write to data sources or view state.  
 * Disable JavaScript, as noted in the [Security section](https://druid.apache.org/docs/latest/development/javascript.html#security) of the JavaScript guide.
 * Run Druid as an unprivileged Unix user on the installation machine (not root).
+   > This is an important point! Administrator users on Druid have the same permission as the Unix user account it is running under. If the Druid process is running under the root user account in the OS, then Administrator users on Druid can read/write all files that the root account has access to, including sensitive files such as /etc/passwd.
 
 You can configure authentication and authorization to control access to the the Druid APIs. The first step is enabling TLS for the cluster nodes. Then configure users, roles, and permissions, as described in the following sections. 
 
 The configuration settings mentioned below are primarily located in the `common.runtime.properties` file. Note that you need to make the configuration changes on each Druid server in the cluster. 
 
 
-### Enable TLS
+## Enable TLS
 
 The first step in securing Druid is enabling TLS. You can enable TLS to secure external client connections to Druid as well as connections between cluster nodes. 
 
-An overview of the steps are: 
+The configuration steps are: 
 
 1. Enable TLS by adding `druid.enableTlsPort=true` to `common.runtime.properties` on each node in the Druid cluster.
 2. Follow the steps in [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#understanding-certificates-and-keys) to generate or import a key and certificate. 
@@ -55,7 +64,7 @@ For more information, see [TLS support](tls-support) and [Simple SSLContext Prov
 Druid uses Jetty as its embedded web server. Therefore you refer to [Understanding Certificates and Keys](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html) for complete instructions. 
 
 
-### Enable an authenticator
+## Enable an authenticator
 
 To authenticate requests in Druid, you configure an Authenticator. Authenticator extensions exist for HTTP basic authentication, LDAP, and Kerberos.  
 
@@ -93,9 +102,16 @@ The following takes you through sample configuration steps for enabling basic au
 See [Basic Security](../development/extensions-core/druid-basic-security) for more information. For more on authentication extensions, see [Kerberos](../development/extensions-core/druid-kerberos), [Authentication and Authorization](../design/auth), and [Authentication and Authorization](../design/auth) 
 
 
-### Enable authorizors
+## Enable authorizors
 
-After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint.  
+After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint. Note that you cannot assign permissions directly to individual users. They must be assigned through roles. 
+
+The following diagram depicts the authorization model, and the relationship between users, roles, permissions, and resources.
+ 
+![Druid Security model](../assets/security-model-2.png "Druid security model") 
+
+
+The following steps walk through a sample setup procedure:  
 
 > The Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
 
@@ -151,7 +167,7 @@ After enabling the basic auth extension, you can add users, roles, and permissio
     ```
 
 
-### Configuring LDAP as the authorizor
+## Configuring an LDAP authorizor
 
 As an alternative to using the basic metadata authenticator, as shown in the previous section, you can use LDAP to authorize users. The following steps provide an overview of the setup steps. For more information on these settings, see [Properties for LDAP user authentication](https://druid.apache.org/docs/latest/development/extensions-core/druid-basic-security.html#properties-for-ldap-user-authentication).
 
