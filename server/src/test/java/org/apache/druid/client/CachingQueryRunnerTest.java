@@ -38,6 +38,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -278,6 +279,7 @@ public class CachingQueryRunnerTest
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     CachingQueryRunner runner = new CachingQueryRunner(
         cacheId,
+        StringUtils.EMPTY_BYTES,
         segmentDescriptor,
         objectMapper,
         cache,
@@ -364,6 +366,7 @@ public class CachingQueryRunnerTest
 
     CachingQueryRunner runner = new CachingQueryRunner(
         cacheId,
+        StringUtils.EMPTY_BYTES,
         segmentDescriptor,
         objectMapper,
         cache,

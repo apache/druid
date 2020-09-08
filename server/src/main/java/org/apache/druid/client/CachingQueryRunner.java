@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.primitives.Bytes;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
@@ -44,6 +45,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 {
   private final String cacheId;
   private final SegmentDescriptor segmentDescriptor;
+  private final byte[] cacheKeyPrefix;
   private final QueryRunner<T> base;
   private final QueryToolChest toolChest;
   private final Cache cache;
@@ -53,6 +55,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
 
   public CachingQueryRunner(
       String cacheId,
+      byte[] cacheKeyPrefix,
       SegmentDescriptor segmentDescriptor,
       ObjectMapper mapper,
       Cache cache,
@@ -62,6 +65,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       CacheConfig cacheConfig
   )
   {
+    this.cacheKeyPrefix = cacheKeyPrefix;
     this.base = base;
     this.cacheId = cacheId;
     this.segmentDescriptor = segmentDescriptor;
@@ -90,7 +94,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       key = CacheUtil.computeSegmentCacheKey(
           cacheId,
           segmentDescriptor,
-          strategy.computeCacheKey(query)
+          Bytes.concat(cacheKeyPrefix, strategy.computeCacheKey(query))
       );
     } else {
       key = null;

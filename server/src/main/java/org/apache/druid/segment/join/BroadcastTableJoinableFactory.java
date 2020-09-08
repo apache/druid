@@ -76,4 +76,27 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
     }
     return Optional.empty();
   }
+
+  @Override
+  public Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
+  {
+    GlobalTableDataSource broadcastDataSource = (GlobalTableDataSource) dataSource;
+    DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSource);
+    return segmentManager.getIndexedTables(analysis).flatMap(tables -> {
+      Iterator<ReferenceCountingIndexedTable> tableIterator = tables.iterator();
+      if (!tableIterator.hasNext()) {
+        return Optional.empty();
+      }
+      try {
+        ReferenceCountingIndexedTable table = Iterators.getOnlyElement(tableIterator);
+        return table.computeCacheKey();
+      }
+      catch (IllegalArgumentException iae) {
+        throw new ISE(
+            "Currently only single segment datasources are supported for broadcast joins, dataSource[%s] has multiple segments. Reingest the data so that it is entirely contained within a single segment to use in JOIN queries.",
+            broadcastDataSource.getName()
+        );
+      }
+    });
+  }
 }

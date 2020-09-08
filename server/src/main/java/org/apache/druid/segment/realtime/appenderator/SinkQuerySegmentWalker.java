@@ -174,6 +174,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         analysis.getBaseQuery().orElse(query)
     );
 
+    final Optional<byte[]> cacheKeyPrefix = Joinables.computeDataSourceCacheKey(
+        analysis,
+        joinableFactory
+    );
+
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,
         descriptor -> {
@@ -223,9 +228,11 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
                       // 1) Only use caching if data is immutable
                       // 2) Hydrants are not the same between replicas, make sure cache is local
-                      if (hydrantDefinitelySwapped && cache.isLocal()) {
-                        runner = new CachingQueryRunner<>(
+                      // 3) cache key prefix is present
+                      if (hydrantDefinitelySwapped && cache.isLocal() && cacheKeyPrefix.isPresent()) {
+                        runner = new CachingQueryRunner<T>(
                             makeHydrantCacheIdentifier(hydrant),
+                            cacheKeyPrefix.get(),
                             descriptor,
                             objectMapper,
                             cache,

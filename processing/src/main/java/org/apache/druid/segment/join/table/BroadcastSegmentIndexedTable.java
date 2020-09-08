@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -44,11 +45,13 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -239,6 +242,22 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         offset,
         new HashMap<>()
     );
+  }
+
+  @Override
+  public Optional<byte[]> computeCacheKey()
+  {
+    SegmentId segmentId = segment.getId();
+    byte[] versionBytes = StringUtils.toUtf8(segmentId.getVersion());
+    byte[] dataSourceBytes = StringUtils.toUtf8(segmentId.getDataSource());
+    return Optional.of(ByteBuffer
+                           .allocate(16 + versionBytes.length + dataSourceBytes.length + 4)
+                           .putLong(segmentId.getInterval().getStartMillis())
+                           .putLong(segmentId.getInterval().getEndMillis())
+                           .put(versionBytes)
+                           .put(dataSourceBytes)
+                           .putInt(segmentId.getPartitionNum())
+                           .array());
   }
 
   @Override

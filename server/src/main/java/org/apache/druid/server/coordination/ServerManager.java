@@ -76,7 +76,7 @@ import java.util.function.Function;
 
 /**
  * Query handler for Historical processes (see CliHistorical).
- *
+ * <p>
  * In tests, this class's behavior is partially mimicked by TestClusterQuerySegmentWalker.
  */
 public class ServerManager implements QuerySegmentWalker
@@ -204,6 +204,11 @@ public class ServerManager implements QuerySegmentWalker
         analysis.getBaseQuery().orElse(query)
     );
 
+    final Optional<byte[]> cacheKeyPrefix = Joinables.computeDataSourceCacheKey(
+        analysis,
+        joinableFactory
+    );
+
     final FunctionalIterable<QueryRunner<T>> queryRunners = FunctionalIterable
         .create(specs)
         .transformCat(
@@ -215,7 +220,8 @@ public class ServerManager implements QuerySegmentWalker
                     toolChest,
                     timeline,
                     segmentMapFn,
-                    cpuTimeAccumulator
+                    cpuTimeAccumulator,
+                    cacheKeyPrefix
                 )
             )
         );
@@ -239,7 +245,8 @@ public class ServerManager implements QuerySegmentWalker
       final QueryToolChest<T, Query<T>> toolChest,
       final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
-      final AtomicLong cpuTimeAccumulator
+      final AtomicLong cpuTimeAccumulator,
+      Optional<byte[]> cacheKeyPrefix
   )
   {
     final PartitionHolder<ReferenceCountingSegment> entry = timeline.findEntry(
@@ -261,6 +268,7 @@ public class ServerManager implements QuerySegmentWalker
         factory,
         toolChest,
         segmentMapFn.apply(segment),
+        cacheKeyPrefix,
         descriptor,
         cpuTimeAccumulator
     );
@@ -270,6 +278,7 @@ public class ServerManager implements QuerySegmentWalker
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
       final SegmentReference segment,
+      final Optional<byte[]> cacheKeyPrefix,
       final SegmentDescriptor segmentDescriptor,
       final AtomicLong cpuTimeAccumulator
   )
@@ -293,21 +302,28 @@ public class ServerManager implements QuerySegmentWalker
         queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
-        segmentIdString,
-        segmentDescriptor,
-        objectMapper,
-        cache,
-        toolChest,
-        metricsEmittingQueryRunnerInner,
-        cachePopulator,
-        cacheConfig
-    );
+    QueryRunner<T> queryRunner;
+    if (cacheKeyPrefix.isPresent()) {
+      queryRunner = new CachingQueryRunner<>(
+          segmentIdString,
+          cacheKeyPrefix.get(),
+          segmentDescriptor,
+          objectMapper,
+          cache,
+          toolChest,
+          metricsEmittingQueryRunnerInner,
+          cachePopulator,
+          cacheConfig
+      );
+    } else {
+      // Empty key prefix implies that its a join segment but unsupported data sources
+      queryRunner = metricsEmittingQueryRunnerInner;
+    }
 
     BySegmentQueryRunner<T> bySegmentQueryRunner = new BySegmentQueryRunner<>(
         segmentId,
         segmentInterval.getStart(),
-        cachingQueryRunner
+        queryRunner
     );
 
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerOuter = new MetricsEmittingQueryRunner<>(

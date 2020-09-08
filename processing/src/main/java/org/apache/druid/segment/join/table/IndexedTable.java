@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -85,6 +86,17 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
   default ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
   {
     return null;
+  }
+
+  /**
+   * Computes a {@code byte[]} key for the table that can be used for computing cache keys for join operations.
+   * see {@link org.apache.druid.segment.join.JoinableFactory#computeJoinCacheKey}
+   *
+   * @return Empty optional if operation is not supported, otherwise the byte array for cache key
+   */
+  default Optional<byte[]> computeCacheKey()
+  {
+    return Optional.empty();
   }
 
   /**

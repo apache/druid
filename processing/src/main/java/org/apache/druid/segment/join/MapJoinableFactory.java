@@ -80,4 +80,21 @@ public class MapJoinableFactory implements JoinableFactory
     }
     return maybeJoinable;
   }
+
+  @Override
+  public Optional<byte[]> computeJoinCacheKey(DataSource dataSource)
+  {
+    Set<JoinableFactory> factories = joinableFactories.get(dataSource.getClass());
+    Optional<byte[]> maybeCacheKey = Optional.empty();
+    for (JoinableFactory joinableFactory : factories) {
+      Optional<byte[]> candidate = joinableFactory.computeJoinCacheKey(dataSource);
+      if (candidate.isPresent() && maybeCacheKey.isPresent()) {
+        throw new ISE("Multiple joinable factories are valid for table[%s]", dataSource);
+      }
+      if (candidate.isPresent()) {
+        maybeCacheKey = candidate;
+      }
+    }
+    return maybeCacheKey;
+  }
 }

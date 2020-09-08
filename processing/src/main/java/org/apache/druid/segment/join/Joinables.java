@@ -20,7 +20,10 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -35,6 +38,7 @@ import org.apache.druid.utils.JvmUtils;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -45,6 +49,10 @@ public class Joinables
 {
   private static final Comparator<String> DESCENDING_LENGTH_STRING_COMPARATOR = (s1, s2) ->
       Integer.compare(s2.length(), s1.length());
+
+  private static final byte REGULAR_OPERATION = 0x1;
+  private static final byte JOIN_OPERATION = 0x2;
+  private static final Logger log = new Logger(Joinables.class);
 
   /**
    * Checks that "prefix" is a valid prefix for a join clause (see {@link JoinableClause#getPrefix()}) and, if so,
@@ -80,7 +88,7 @@ public class Joinables
    *                           callers to remember to track metrics on CPU time required for creation of Joinables
    * @param query              The query that will be run on the mapped segments. Usually this should be
    *                           {@code analysis.getBaseQuery().orElse(query)}, where "analysis" is a
-   *                           {@link org.apache.druid.query.planning.DataSourceAnalysis} and "query" is the original
+   *                           {@link DataSourceAnalysis} and "query" is the original
    *                           query from the end user.
    */
   public static Function<SegmentReference, SegmentReference> createSegmentMapFn(
@@ -116,6 +124,47 @@ public class Joinables
           }
         }
     );
+  }
+
+  /**
+   * Compute a cache key prefix for data sources that is to be used in segment level and result level caches. The
+   * data source can either be base (clauses is empty) or RHS of a join (clauses is non-empty). In both of the cases,
+   * a non-null cache is returned. However, the cache key is null if there is a join and some of the right data sources
+   * participating in the join do not support caching yet
+   *
+   * @param dataSourceAnalysis
+   * @param joinableFactory
+   * @return
+   */
+  public static Optional<byte[]> computeDataSourceCacheKey(
+      final DataSourceAnalysis dataSourceAnalysis,
+      final JoinableFactory joinableFactory
+  )
+  {
+    final CacheKeyBuilder keyBuilder;
+    final List<PreJoinableClause> clauses = dataSourceAnalysis.getPreJoinableClauses();
+    if (clauses.isEmpty()) {
+      keyBuilder = new CacheKeyBuilder(REGULAR_OPERATION);
+    } else {
+      keyBuilder = new CacheKeyBuilder(JOIN_OPERATION);
+      for (PreJoinableClause clause : clauses) {
+        if (!clause.getCondition().canHashJoin()) {
+          log.debug("skipping caching for join since [%s] does not support hash-join", clause.getCondition());
+          return Optional.empty();
+        }
+        Optional<byte[]> bytes = joinableFactory.computeJoinCacheKey(clause.getDataSource());
+        if (!bytes.isPresent()) {
+          // Encountered a data source which didn't support cache yet
+          log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
+          return Optional.empty();
+        }
+        keyBuilder.appendByteArray(bytes.get());
+        keyBuilder.appendString(clause.getPrefix());    //TODO - prefix shouldn't be required IMO
+        keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+        keyBuilder.appendString(clause.getJoinType().name());
+      }
+    }
+    return Optional.ofNullable(keyBuilder.build());
   }
 
   /**

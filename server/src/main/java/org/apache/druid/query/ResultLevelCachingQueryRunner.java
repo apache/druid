@@ -35,6 +35,9 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.Joinables;
 import org.apache.druid.server.QueryResource;
 
 import javax.annotation.Nullable;
@@ -53,6 +56,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   private final boolean useResultCache;
   private final boolean populateResultCache;
   private Query<T> query;
+  private JoinableFactory joinableFactory;
   private final CacheStrategy<T, Object, Query<T>> strategy;
 
 
@@ -62,7 +66,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       Query<T> query,
       ObjectMapper objectMapper,
       Cache cache,
-      CacheConfig cacheConfig
+      CacheConfig cacheConfig,
+      JoinableFactory joinableFactory
   )
   {
     this.baseRunner = baseRunner;
@@ -70,6 +75,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.query = query;
+    this.joinableFactory = joinableFactory;
     this.strategy = queryToolChest.getCacheStrategy(query);
     this.populateResultCache = CacheUtil.isPopulateResultCache(
         query,
@@ -86,7 +92,15 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     if (useResultCache || populateResultCache) {
 
       final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
-      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
+      DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+      byte[] dataSourceCacheKey = Joinables.computeDataSourceCacheKey(analysis, joinableFactory).orElse(null);
+      if (null == dataSourceCacheKey) {
+        return baseRunner.run(
+            queryPlus,
+            responseContext
+        );
+      }
+      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr, dataSourceCacheKey);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
       existingResultSetId = existingResultSetId == null ? "" : existingResultSetId;
@@ -106,6 +120,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         @Nullable
         ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
             cacheKeyStr,
+            dataSourceCacheKey,
             newResultSetId
         );
         if (resultLevelCachePopulator == null) {
@@ -162,12 +177,14 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     }
   }
 
+  @Nullable
   private byte[] fetchResultsFromResultLevelCache(
-      final String queryCacheKey
+      final String queryCacheKey,
+      final byte[] dataSourceCacheKey
   )
   {
     if (useResultCache && queryCacheKey != null) {
-      return cache.get(CacheUtil.computeResultLevelCacheKey(queryCacheKey));
+      return cache.get(new Cache.NamedKey(queryCacheKey, dataSourceCacheKey));
     }
     return null;
   }
@@ -213,7 +230,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   }
 
   private ResultLevelCachePopulator createResultLevelCachePopulator(
-      String cacheKeyStr,
+      String cacheKeyNamespace,
+      byte[] cacheKey,
       String resultSetId
   )
   {
@@ -221,7 +239,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
-          CacheUtil.computeResultLevelCacheKey(cacheKeyStr),
+          new Cache.NamedKey(cacheKeyNamespace, cacheKey),
           cacheConfig,
           true
       );
