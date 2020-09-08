@@ -22,8 +22,26 @@ import React from 'react';
 import { LiveQueryModeSelector } from './live-query-mode-selector';
 
 describe('LiveQueryModeSelector', () => {
-  it('matches snapshot', () => {
-    const liveQueryModeSelector = shallow(<LiveQueryModeSelector />);
+  it('matches snapshot on', () => {
+    const liveQueryModeSelector = shallow(
+      <LiveQueryModeSelector
+        liveQueryMode="on"
+        onLiveQueryModeChange={() => {}}
+        autoLiveQueryModeShouldRun
+      />,
+    );
+
+    expect(liveQueryModeSelector).toMatchSnapshot();
+  });
+
+  it('matches snapshot auto', () => {
+    const liveQueryModeSelector = shallow(
+      <LiveQueryModeSelector
+        liveQueryMode="auto"
+        onLiveQueryModeChange={() => {}}
+        autoLiveQueryModeShouldRun
+      />,
+    );
 
     expect(liveQueryModeSelector).toMatchSnapshot();
   });
