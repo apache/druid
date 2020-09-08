@@ -298,7 +298,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           noDataText={
             !lookupEntriesAndTiersState.loading && lookups && !lookups.length
               ? 'No lookups'
-              : lookupEntriesAndTiersState.error || ''
+              : lookupEntriesAndTiersState.getErrorMessage() || ''
           }
           filterable
           columns={[

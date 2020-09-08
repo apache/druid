@@ -388,7 +388,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         noDataText={
           !segmentsState.loading && segmentsState.isEmpty()
             ? 'No segments'
-            : segmentsState.error || ''
+            : segmentsState.getErrorMessage() || ''
         }
         manual
         filterable

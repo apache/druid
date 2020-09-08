@@ -781,7 +781,7 @@ GROUP BY 1`;
           noDataText={
             !datasourcesAndDefaultRulesState.loading && datasources && !datasources.length
               ? 'No datasources'
-              : datasourcesAndDefaultRulesState.error || ''
+              : datasourcesAndDefaultRulesState.getErrorMessage() || ''
           }
           filterable
           filtered={datasourceFilter}

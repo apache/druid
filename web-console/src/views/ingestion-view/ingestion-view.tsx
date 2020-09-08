@@ -561,7 +561,7 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           noDataText={
             !supervisorsState.loading && supervisorsState.isEmpty()
               ? 'No supervisors'
-              : supervisorsState.error || ''
+              : supervisorsState.getErrorMessage() || ''
           }
           filtered={supervisorFilter}
           onFilteredChange={filtered => {
@@ -720,7 +720,9 @@ ORDER BY "rank" DESC, "created_time" DESC`;
           data={tasksState.data || []}
           loading={tasksState.loading}
           noDataText={
-            !tasksState.loading && tasksState.isEmpty() ? 'No tasks' : tasksState.error || ''
+            !tasksState.loading && tasksState.isEmpty()
+              ? 'No tasks'
+              : tasksState.getErrorMessage() || ''
           }
           filterable
           filtered={taskFilter}

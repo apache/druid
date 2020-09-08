@@ -306,7 +306,7 @@ ORDER BY "rank" DESC, "service" DESC`;
         noDataText={
           !servicesState.loading && services && !services.length
             ? 'No historicals'
-            : servicesState.error || ''
+            : servicesState.getErrorMessage() || ''
         }
         filterable
         filtered={serviceFilter}

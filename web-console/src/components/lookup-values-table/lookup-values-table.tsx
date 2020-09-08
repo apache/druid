@@ -65,9 +65,8 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
           },
         ]}
         noDataText={
-          columnsState.error
-            ? columnsState.error
-            : 'Lookup data not found. If this is a new lookup it might not have propagated yet.'
+          columnsState.getErrorMessage() ||
+          'Lookup data not found. If this is a new lookup it might not have propagated yet.'
         }
       />
     );
