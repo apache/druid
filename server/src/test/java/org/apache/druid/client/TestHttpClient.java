@@ -154,22 +154,30 @@ public class TestHttpClient implements HttpClient
     private final QueryRunnerFactoryConglomerate conglomerate;
     private final DataSegment segment;
     private final QueryableIndex queryableIndex;
+    private final boolean throwQueryError;
 
     private boolean isSegmentDropped = false;
 
     public SimpleServerManager(
         QueryRunnerFactoryConglomerate conglomerate,
         DataSegment segment,
-        QueryableIndex queryableIndex
+        QueryableIndex queryableIndex,
+        boolean throwQueryError
     )
     {
       this.conglomerate = conglomerate;
       this.segment = segment;
       this.queryableIndex = queryableIndex;
+      this.throwQueryError = throwQueryError;
     }
 
     private QueryRunner getQueryRunner()
     {
+      if (throwQueryError) {
+        return (queryPlus, responseContext) -> {
+          throw new RuntimeException("Exception for testing");
+        };
+      }
       if (isSegmentDropped) {
         return new ReportTimelineMissingSegmentQueryRunner<>(
             new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
