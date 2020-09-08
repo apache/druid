@@ -376,16 +376,13 @@ public class ExpressionSelectors
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
-        ColumnValueSelector selector = columnSelectorFactory
-            .makeColumnValueSelector(columnName);
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
       } else if (nativeType == ValueType.LONG) {
-        ColumnValueSelector selector = columnSelectorFactory
-            .makeColumnValueSelector(columnName);
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
       } else if (nativeType == ValueType.DOUBLE) {
-        ColumnValueSelector selector = columnSelectorFactory
-            .makeColumnValueSelector(columnName);
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
       } else if (nativeType == ValueType.STRING) {
         supplier = supplierFromDimensionSelector(

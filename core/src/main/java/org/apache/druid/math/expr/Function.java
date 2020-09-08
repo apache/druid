@@ -1828,7 +1828,7 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() == null, ExprType.LONG);
+      return ExprEval.ofLongBoolean(expr.value() == null);
     }
 
     @Override
@@ -1852,7 +1852,7 @@ public interface Function
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
       final ExprEval expr = args.get(0).eval(bindings);
-      return ExprEval.of(expr.value() != null, ExprType.LONG);
+      return ExprEval.ofLongBoolean(expr.value() != null);
     }
 
     @Override
@@ -2414,7 +2414,7 @@ public interface Function
     {
       final Object[] array1 = lhsExpr.asArray();
       final Object[] array2 = rhsExpr.asArray();
-      return ExprEval.of(Arrays.asList(array1).containsAll(Arrays.asList(array2)), ExprType.LONG);
+      return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
     }
   }
 
@@ -2435,7 +2435,7 @@ public interface Function
       for (Object check : array1) {
         any |= array2.contains(check);
       }
-      return ExprEval.of(any, ExprType.LONG);
+      return ExprEval.ofLongBoolean(any);
     }
   }
 

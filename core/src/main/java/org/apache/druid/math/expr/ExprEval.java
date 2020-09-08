@@ -89,6 +89,11 @@ public abstract class ExprEval<T>
     }
   }
 
+  public static ExprEval ofLongBoolean(boolean value)
+  {
+    return ExprEval.of(Evals.asLong(value));
+  }
+
   public static ExprEval bestEffortOf(@Nullable Object val)
   {
     if (val instanceof ExprEval) {

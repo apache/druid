@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.query.filter.LikeDimFilter;
 
 import javax.annotation.Nonnull;
@@ -81,7 +80,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(likeMatcher.matches(arg.eval(bindings).asString()), ExprType.LONG);
+        return ExprEval.ofLongBoolean(likeMatcher.matches(arg.eval(bindings).asString()));
       }
 
       @Override

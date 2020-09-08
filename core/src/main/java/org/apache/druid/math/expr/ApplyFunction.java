@@ -274,7 +274,7 @@ public interface ApplyFunction
         accumulator = evaluated.value();
       }
       if (accumulator instanceof Boolean) {
-        return ExprEval.of((boolean) accumulator, ExprType.LONG);
+        return ExprEval.ofLongBoolean((boolean) accumulator);
       }
       return ExprEval.bestEffortOf(accumulator);
     }
@@ -501,7 +501,7 @@ public interface ApplyFunction
 
       final Object[] array = arrayEval.asArray();
       if (array == null) {
-        return ExprEval.of(false, ExprType.LONG);
+        return ExprEval.ofLongBoolean(false);
       }
 
       SettableLambdaBinding lambdaBinding = new SettableLambdaBinding(lambdaExpr, bindings);
@@ -550,7 +550,7 @@ public interface ApplyFunction
     {
       boolean anyMatch = Arrays.stream(values)
                                .anyMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.of(anyMatch, ExprType.LONG);
+      return ExprEval.ofLongBoolean(anyMatch);
     }
   }
 
@@ -573,7 +573,7 @@ public interface ApplyFunction
     {
       boolean allMatch = Arrays.stream(values)
                                .allMatch(o -> expr.eval(bindings.withBinding(expr.getIdentifier(), o)).asBoolean());
-      return ExprEval.of(allMatch, ExprType.LONG);
+      return ExprEval.ofLongBoolean(allMatch);
     }
   }
 
