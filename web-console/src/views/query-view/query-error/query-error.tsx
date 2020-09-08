@@ -35,28 +35,24 @@ export const QueryError = React.memo(function QueryError(props: QueryErrorProps)
     return <div className="query-error">{error.message}</div>;
   }
 
-  const m = String(error.errorMessage).match(/line (\d+), column (\d+)/);
-
+  const { position } = error;
   return (
     <div className="query-error">
       {error.error && <p>{`Error: ${error.error}`}</p>}
       {error.errorMessage && (
         <p>
-          {m ? (
+          {position ? (
             <HighlightText
               text={error.errorMessage}
-              find={m[0]}
+              find={position.match}
               replace={
                 <span
                   className="cursor-link"
                   onClick={() => {
-                    moveCursorTo({
-                      row: Number(m[1]) - 1,
-                      column: Number(m[2]) - 1,
-                    });
+                    moveCursorTo(position);
                   }}
                 >
-                  {m[0]}
+                  {position.match}
                 </span>
               }
             />

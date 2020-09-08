@@ -20,6 +20,7 @@ import axios from 'axios';
 import { AxiosResponse } from 'axios';
 
 import { assemble } from './general';
+import { RowColumn } from './query-cursor';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -65,9 +66,36 @@ export function getDruidErrorMessage(e: any): string {
 }
 
 export class DruidError extends Error {
+  static parsePosition(errorMessage: string): RowColumn | undefined {
+    const range = String(errorMessage).match(
+      /from line (\d+), column (\d+) to line (\d+), column (\d+)/i,
+    );
+    if (range) {
+      return {
+        match: range[0],
+        row: Number(range[1]) - 1,
+        column: Number(range[2]) - 1,
+        endRow: Number(range[3]) - 1,
+        endColumn: Number(range[4]), // No -1 because we need to include the last char
+      };
+    }
+
+    const single = String(errorMessage).match(/at line (\d+), column (\d+)/i);
+    if (single) {
+      return {
+        match: single[0],
+        row: Number(single[1]) - 1,
+        column: Number(single[2]) - 1,
+      };
+    }
+
+    return;
+  }
+
   public canceled?: boolean;
   public error?: string;
   public errorMessage?: string;
+  public position?: RowColumn;
   public errorClass?: string;
   public host?: string;
 
@@ -95,6 +123,10 @@ export class DruidError extends Error {
           break;
       }
       Object.assign(this, druidErrorResponse);
+
+      if (this.errorMessage) {
+        this.position = DruidError.parsePosition(this.errorMessage);
+      }
     }
   }
 }

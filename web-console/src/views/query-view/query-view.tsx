@@ -566,7 +566,7 @@ export class QueryView extends React.PureComponent<QueryViewProps, QueryViewStat
   private moveToPosition(position: RowColumn) {
     const currentQueryInput = this.queryInputRef.current;
     if (!currentQueryInput) return;
-    currentQueryInput.goToRowColumn(position);
+    currentQueryInput.goToPosition(position);
   }
 
   private handleQueryChange = (query: SqlQuery, preferablyRun?: boolean): void => {

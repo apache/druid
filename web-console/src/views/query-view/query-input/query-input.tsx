@@ -211,11 +211,16 @@ export class QueryInput extends React.PureComponent<QueryInputProps, QueryInputS
     onQueryStringChange(value);
   };
 
-  public goToRowColumn(rowColumn: RowColumn) {
+  public goToPosition(rowColumn: RowColumn) {
     const { aceEditor } = this;
     if (!aceEditor) return;
     aceEditor.focus(); // Grab the focus also
     aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
+    if (rowColumn.endRow && rowColumn.endColumn) {
+      aceEditor
+        .getSelection()
+        .selectToPosition({ row: rowColumn.endRow, column: rowColumn.endColumn });
+    }
   }
 
   render(): JSX.Element {
