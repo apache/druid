@@ -56,7 +56,7 @@ final class ReservoirSegmentSampler
     // Reset a bad value of percentOfSegmentsToConsider to 100. We don't allow consideration of 0% or less of segments.
     if (percentOfSegmentsToConsider <= 0) {
       log.debug("Resetting percentOfSegmentsToConsider to 100 because only values from 1 to 100 are allowed."
-                + "You Provided [%d]", percentOfSegmentsToConsider);
+                + " You Provided [%d]", percentOfSegmentsToConsider);
       percentOfSegmentsToConsider = 100;
     }
 
