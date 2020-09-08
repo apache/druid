@@ -58,72 +58,11 @@ exports[`sql view matches snapshot 1`] = `
             onChange={[Function]}
           />
         </Blueprint3.Tooltip>
-        <Blueprint3.Popover
-          boundary="scrollParent"
-          captureDismiss={false}
-          content={
-            <Blueprint3.Menu>
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="tick"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Auto"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="blank"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="On"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="blank"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Off"
-              />
-            </Blueprint3.Menu>
-          }
-          defaultIsOpen={false}
-          disabled={false}
-          fill={false}
-          hasBackdrop={false}
-          hoverCloseDelay={300}
-          hoverOpenDelay={150}
-          inheritDarkTheme={true}
-          interactionKind="click"
-          minimal={true}
-          modifiers={Object {}}
-          openOnTargetFocus={true}
-          position="bottom-left"
-          targetTagName="span"
-          transitionDuration={300}
-          usePortal={true}
-          wrapperTagName="span"
-        >
-          <Blueprint3.Button
-            className="live-query-mode"
-            minimal={true}
-          >
-            <span>
-              Live query:
-            </span>
-             
-            <span
-              className="auto auto-on"
-            >
-              Auto
-            </span>
-          </Blueprint3.Button>
-        </Blueprint3.Popover>
+        <Memo(LiveQueryModeSelector)
+          autoLiveQueryModeShouldRun={true}
+          liveQueryMode="auto"
+          onLiveQueryModeChange={[Function]}
+        />
       </div>
     </div>
     <div
@@ -196,72 +135,11 @@ exports[`sql view matches snapshot with query 1`] = `
             onChange={[Function]}
           />
         </Blueprint3.Tooltip>
-        <Blueprint3.Popover
-          boundary="scrollParent"
-          captureDismiss={false}
-          content={
-            <Blueprint3.Menu>
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="tick"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Auto"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="blank"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="On"
-              />
-              <Blueprint3.MenuItem
-                disabled={false}
-                icon="blank"
-                multiline={false}
-                onClick={[Function]}
-                popoverProps={Object {}}
-                shouldDismissPopover={true}
-                text="Off"
-              />
-            </Blueprint3.Menu>
-          }
-          defaultIsOpen={false}
-          disabled={false}
-          fill={false}
-          hasBackdrop={false}
-          hoverCloseDelay={300}
-          hoverOpenDelay={150}
-          inheritDarkTheme={true}
-          interactionKind="click"
-          minimal={true}
-          modifiers={Object {}}
-          openOnTargetFocus={true}
-          position="bottom-left"
-          targetTagName="span"
-          transitionDuration={300}
-          usePortal={true}
-          wrapperTagName="span"
-        >
-          <Blueprint3.Button
-            className="live-query-mode"
-            minimal={true}
-          >
-            <span>
-              Live query:
-            </span>
-             
-            <span
-              className="auto auto-on"
-            >
-              Auto
-            </span>
-          </Blueprint3.Button>
-        </Blueprint3.Popover>
+        <Memo(LiveQueryModeSelector)
+          autoLiveQueryModeShouldRun={true}
+          liveQueryMode="auto"
+          onLiveQueryModeChange={[Function]}
+        />
       </div>
     </div>
     <div
