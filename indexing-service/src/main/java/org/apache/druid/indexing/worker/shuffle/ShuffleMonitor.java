@@ -45,7 +45,7 @@ public class ShuffleMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshot();
+    final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
     snapshot.forEach((supervisorTaskId, perDatasourceShuffleMetrics) -> {
       final Builder metricBuilder = ServiceMetricEvent
           .builder()

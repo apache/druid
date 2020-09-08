@@ -146,7 +146,7 @@ public class ShuffleResourceTest
         interval.getEnd().toString(),
         segment.getId().getPartitionNum()
     );
-    final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshot();
+    final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(1, snapshot.get(supervisorTaskId).getShuffleRequests());
     Assert.assertEquals(134, snapshot.get(supervisorTaskId).getShuffleBytes());
