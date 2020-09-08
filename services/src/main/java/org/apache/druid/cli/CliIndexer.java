@@ -122,7 +122,7 @@ public class CliIndexer extends ServerRunnable
 
             CliPeon.bindTaskConfigAndClients(binder);
 
-            binder.bind(TaskReportFileWriter.class).toInstance(new MultipleFileTaskReportFileWriter());
+            binder.bind(TaskReportFileWriter.class).to(MultipleFileTaskReportFileWriter.class).in(LazySingleton.class);
 
             binder.bind(TaskRunner.class).to(ThreadingTaskRunner.class);
             binder.bind(QuerySegmentWalker.class).to(ThreadingTaskRunner.class);

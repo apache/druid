@@ -30,7 +30,7 @@ public class IngestionStatsAndErrorsTaskReport implements TaskReport
   public static final String REPORT_KEY = "ingestionStatsAndErrors";
 
   @JsonProperty
-  private String taskId;
+  private final String taskId;
 
   @JsonProperty
   private IngestionStatsAndErrorsTaskReportData payload;

@@ -2714,7 +2714,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
         new DataNodeService("tier", 1, ServerType.INDEXER_EXECUTOR, 0),
-        new SingleFileTaskReportFileWriter(reportsFile),
+        new SingleFileTaskReportFileWriter(reportsFile, objectMapper),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new NoopChatHandlerProvider(),

@@ -196,7 +196,6 @@ public class TaskToolbox
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
-    this.taskReportFileWriter.setObjectMapper(this.jsonMapper);
     this.intermediaryDataManager = intermediaryDataManager;
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;

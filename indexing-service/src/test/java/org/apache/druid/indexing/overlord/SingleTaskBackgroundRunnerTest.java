@@ -119,7 +119,7 @@ public class SingleTaskBackgroundRunnerTest
         node,
         null,
         null,
-        new SingleFileTaskReportFileWriter(new File("fake")),
+        new SingleFileTaskReportFileWriter(new File("fake"), utils.getTestObjectMapper()),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         new NoopChatHandlerProvider(),

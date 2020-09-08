@@ -322,7 +322,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             null,
             null,
             null,
-            new SingleFileTaskReportFileWriter(taskReportsFile),
+            new SingleFileTaskReportFileWriter(taskReportsFile, objectMapper),
             null,
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new NoopChatHandlerProvider(),

@@ -212,8 +212,8 @@ public class CliPeon extends GuiceRunnable
                     .setStatusFile(new File(taskStatusPath))
             );
 
-            binder.bind(TaskReportFileWriter.class)
-                  .toInstance(new SingleFileTaskReportFileWriter(new File(taskReportPath)));
+            binder.bindConstant().annotatedWith(Names.named("taskReportPath")).to(taskReportPath);
+            binder.bind(TaskReportFileWriter.class).to(SingleFileTaskReportFileWriter.class).in(LazySingleton.class);
 
             binder.bind(TaskRunner.class).to(SingleTaskBackgroundRunner.class);
             binder.bind(QuerySegmentWalker.class).to(SingleTaskBackgroundRunner.class);

@@ -89,7 +89,7 @@ public abstract class WorkerTaskManager
   private final ConcurrentMap<String, Task> assignedTasks = new ConcurrentHashMap<>();
 
   // ZK_CLEANUP_TODO : these are marked protected to be used in subclass WorkerTaskMonitor that updates ZK.
-  // should be marked private alongwith WorkerTaskMonitor removal.
+  // should be marked private along with WorkerTaskMonitor removal.
   protected final ConcurrentMap<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
   protected final ConcurrentMap<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
 

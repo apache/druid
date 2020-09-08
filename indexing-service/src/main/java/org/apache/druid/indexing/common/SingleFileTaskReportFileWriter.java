@@ -20,7 +20,10 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
@@ -31,11 +34,13 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
   private static final Logger log = new Logger(SingleFileTaskReportFileWriter.class);
 
   private final File reportsFile;
-  private ObjectMapper objectMapper;
+  private final ObjectMapper jsonMapper;
 
-  public SingleFileTaskReportFileWriter(File reportsFile)
+  @Inject
+  public SingleFileTaskReportFileWriter(@Named("taskReportPath") File reportsFile, @Json ObjectMapper jsonMapper)
   {
     this.reportsFile = reportsFile;
+    this.jsonMapper = jsonMapper;
   }
 
   @Override
@@ -46,17 +51,10 @@ public class SingleFileTaskReportFileWriter implements TaskReportFileWriter
       if (reportsFileParent != null) {
         FileUtils.forceMkdir(reportsFileParent);
       }
-      objectMapper.writeValue(reportsFile, reports);
+      jsonMapper.writeValue(reportsFile, reports);
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in write().");
     }
-  }
-
-
-  @Override
-  public void setObjectMapper(ObjectMapper objectMapper)
-  {
-    this.objectMapper = objectMapper;
   }
 }
