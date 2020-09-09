@@ -134,10 +134,17 @@ public enum ExprType
     if (STRING.equals(type) || STRING.equals(other)) {
       return STRING;
     }
-    // all numbers win over Integer
-    if (LONG.equals(type)) {
-      return other;
+
+    if (isNumeric(type) && isNumeric(other)) {
+      // all numbers win over longs
+      if (LONG.equals(type)) {
+        return other;
+      }
+      // floats vs longs would be handled here, but we currently only support doubles...
+      return type;
     }
-    return type;
+
+    // unhandled is unknown
+    return null;
   }
 }
