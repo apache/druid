@@ -26,8 +26,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -168,6 +170,13 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
       return shuttle.visit(new TrimStaticCharsExpr(mode, newStringExpr, chars, charsExpr));
     }
 
+    @Nullable
+    @Override
+    public ExprType getOutputType(InputBindingTypes inputTypes)
+    {
+      return ExprType.STRING;
+    }
+
     @Override
     public String stringify()
     {
@@ -290,11 +299,18 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public BindingDetails analyzeInputs()
+    public ExprInputBindingAnalysis analyzeInputs()
     {
       return stringExpr.analyzeInputs()
                        .with(charsExpr)
                        .withScalarArguments(ImmutableSet.of(stringExpr, charsExpr));
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(InputBindingTypes inputTypes)
+    {
+      return ExprType.STRING;
     }
 
     @Override

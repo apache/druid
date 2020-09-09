@@ -105,11 +105,17 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public ExprInputBindingAnalysis analyzeInputs()
   {
     final Set<String> lambdaArgs = args.stream().map(IdentifierExpr::toString).collect(Collectors.toSet());
-    BindingDetails bodyDetails = expr.analyzeInputs();
+    ExprInputBindingAnalysis bodyDetails = expr.analyzeInputs();
     return bodyDetails.removeLambdaArguments(lambdaArgs);
+  }
+
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return expr.getOutputType(inputTypes);
   }
 
   @Override
@@ -187,9 +193,9 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public ExprInputBindingAnalysis analyzeInputs()
   {
-    BindingDetails accumulator = new BindingDetails();
+    ExprInputBindingAnalysis accumulator = new ExprInputBindingAnalysis();
 
     for (Expr arg : args) {
       accumulator = accumulator.with(arg);
@@ -198,6 +204,12 @@ class FunctionExpr implements Expr
                       .withArrayArguments(function.getArrayInputs(args))
                       .withArrayInputs(function.hasArrayInputs())
                       .withArrayOutput(function.hasArrayOutput());
+  }
+
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return function.getOutputType(inputTypes, args);
   }
 
   @Override
@@ -232,9 +244,9 @@ class ApplyFunctionExpr implements Expr
   final String name;
   final LambdaExpr lambdaExpr;
   final ImmutableList<Expr> argsExpr;
-  final BindingDetails bindingDetails;
-  final BindingDetails lambdaBindingDetails;
-  final ImmutableList<BindingDetails> argsBindingDetails;
+  final ExprInputBindingAnalysis exprInputBindingAnalysis;
+  final ExprInputBindingAnalysis lambdaExprInputBindingAnalysis;
+  final ImmutableList<ExprInputBindingAnalysis> argsExprInputBindingAnalysis;
 
   ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
   {
@@ -247,21 +259,21 @@ class ApplyFunctionExpr implements Expr
 
     // apply function expressions are examined during expression selector creation, so precompute and cache the
     // binding details of children
-    ImmutableList.Builder<BindingDetails> argBindingDetailsBuilder = ImmutableList.builder();
-    BindingDetails accumulator = new BindingDetails();
+    ImmutableList.Builder<ExprInputBindingAnalysis> argBindingDetailsBuilder = ImmutableList.builder();
+    ExprInputBindingAnalysis accumulator = new ExprInputBindingAnalysis();
     for (Expr arg : argsExpr) {
-      BindingDetails argDetails = arg.analyzeInputs();
+      ExprInputBindingAnalysis argDetails = arg.analyzeInputs();
       argBindingDetailsBuilder.add(argDetails);
       accumulator = accumulator.with(argDetails);
     }
 
-    lambdaBindingDetails = lambdaExpr.analyzeInputs();
+    lambdaExprInputBindingAnalysis = lambdaExpr.analyzeInputs();
 
-    bindingDetails = accumulator.with(lambdaBindingDetails)
-                                .withArrayArguments(function.getArrayInputs(argsExpr))
-                                .withArrayInputs(true)
-                                .withArrayOutput(function.hasArrayOutput(lambdaExpr));
-    argsBindingDetails = argBindingDetailsBuilder.build();
+    exprInputBindingAnalysis = accumulator.with(lambdaExprInputBindingAnalysis)
+                                          .withArrayArguments(function.getArrayInputs(argsExpr))
+                                          .withArrayInputs(true)
+                                          .withArrayOutput(function.hasArrayOutput(lambdaExpr));
+    argsExprInputBindingAnalysis = argBindingDetailsBuilder.build();
   }
 
   @Override
@@ -306,9 +318,16 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public ExprInputBindingAnalysis analyzeInputs()
   {
-    return bindingDetails;
+    return exprInputBindingAnalysis;
+  }
+
+  @Nullable
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return function.getOutputType(inputTypes, lambdaExpr, argsExpr);
   }
 
   @Override

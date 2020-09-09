@@ -22,9 +22,11 @@ package org.apache.druid.query.expression;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExprType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -200,6 +202,13 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
 
     @Override
     public Expr visit(Shuttle shuttle)
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public ExprType getOutputType(InputBindingTypes inputTypes)
     {
       return null;
     }

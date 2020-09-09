@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ValueType;
 
@@ -35,6 +36,12 @@ public enum ExprType
   DOUBLE_ARRAY,
   LONG_ARRAY,
   STRING_ARRAY;
+
+
+  public boolean isNumeric()
+  {
+    return isNumeric(this);
+  }
 
   /**
    * The expression system does not distinguish between {@link ValueType#FLOAT} and {@link ValueType#DOUBLE}, and
@@ -66,5 +73,70 @@ public enum ExprType
       default:
         throw new ISE("Unsupported value type[%s]", valueType);
     }
+  }
+
+  public static boolean isNumeric(ExprType type)
+  {
+    return LONG.equals(type) || DOUBLE.equals(type);
+  }
+
+  public static boolean isArray(@Nullable ExprType type)
+  {
+    return LONG_ARRAY.equals(type) || DOUBLE_ARRAY.equals(type) || STRING_ARRAY.equals(type);
+  }
+
+  @Nullable
+  public static ExprType elementType(ExprType type)
+  {
+    if (isArray(type)) {
+      switch (type) {
+        case STRING_ARRAY:
+          return STRING;
+        case LONG_ARRAY:
+          return LONG;
+        case DOUBLE_ARRAY:
+          return DOUBLE;
+      }
+    }
+    return type;
+  }
+
+  @Nullable
+  public static ExprType asArrayType(ExprType elementType)
+  {
+    if (!isArray(elementType)) {
+      switch (elementType) {
+        case STRING:
+          return STRING_ARRAY;
+        case LONG:
+          return LONG_ARRAY;
+        case DOUBLE:
+          return DOUBLE_ARRAY;
+      }
+    }
+    return null;
+  }
+
+  public static ExprType implicitCast(@Nullable ExprType type, @Nullable ExprType other)
+  {
+    if (type == null || other == null) {
+      throw new IAE("Cannot implicitly cast unknown types");
+    }
+    // arrays cannot be implicitly cast
+    if (isArray(type)) {
+      if (!type.equals(other)) {
+        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+      }
+      return type;
+    }
+    // if either argument is a string, type becomes a string
+    if (STRING.equals(type) || STRING.equals(other)) {
+      return STRING;
+    }
+    // all numbers win over Integer
+    if (LONG.equals(type)) {
+      return other;
+    }
+    return type;
   }
 }

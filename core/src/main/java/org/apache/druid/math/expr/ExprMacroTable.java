@@ -102,7 +102,7 @@ public class ExprMacroTable
     protected final Expr arg;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
-    private final Supplier<BindingDetails> analyzeInputsSupplier;
+    private final Supplier<ExprInputBindingAnalysis> analyzeInputsSupplier;
 
     public BaseScalarUnivariateMacroFunctionExpr(String name, Expr arg)
     {
@@ -119,7 +119,7 @@ public class ExprMacroTable
     }
 
     @Override
-    public BindingDetails analyzeInputs()
+    public ExprInputBindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
     }
@@ -150,7 +150,7 @@ public class ExprMacroTable
       return Objects.hash(name, arg);
     }
 
-    private BindingDetails supplyAnalyzeInputs()
+    private ExprInputBindingAnalysis supplyAnalyzeInputs()
     {
       return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
     }
@@ -165,7 +165,7 @@ public class ExprMacroTable
     protected final List<Expr> args;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
-    private final Supplier<BindingDetails> analyzeInputsSupplier;
+    private final Supplier<ExprInputBindingAnalysis> analyzeInputsSupplier;
 
     public BaseScalarMacroFunctionExpr(String name, final List<Expr> args)
     {
@@ -194,7 +194,7 @@ public class ExprMacroTable
     }
 
     @Override
-    public BindingDetails analyzeInputs()
+    public ExprInputBindingAnalysis analyzeInputs()
     {
       return analyzeInputsSupplier.get();
     }
@@ -219,10 +219,10 @@ public class ExprMacroTable
       return Objects.hash(name, args);
     }
 
-    private BindingDetails supplyAnalyzeInputs()
+    private ExprInputBindingAnalysis supplyAnalyzeInputs()
     {
       final Set<Expr> argSet = Sets.newHashSetWithExpectedSize(args.size());
-      BindingDetails accumulator = new BindingDetails();
+      ExprInputBindingAnalysis accumulator = new ExprInputBindingAnalysis();
       for (Expr arg : args) {
         accumulator = accumulator.with(arg);
         argSet.add(arg);

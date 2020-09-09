@@ -37,8 +37,8 @@ class ReductionOperatorConversionHelper
    * Implements type precedence rules similar to:
    * https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
    *
-   * @see org.apache.druid.math.expr.Function.ReduceFunc#apply
-   * @see org.apache.druid.math.expr.Function.ReduceFunc#getComparisionType
+   * @see org.apache.druid.math.expr.Function.ReduceFunction#apply
+   * @see org.apache.druid.math.expr.Function.ReduceFunction#getComparisionType
    */
   static final SqlReturnTypeInference TYPE_INFERENCE =
       opBinding -> {

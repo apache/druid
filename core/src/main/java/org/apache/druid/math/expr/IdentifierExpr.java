@@ -102,9 +102,15 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public BindingDetails analyzeInputs()
+  public ExprInputBindingAnalysis analyzeInputs()
   {
-    return new BindingDetails(this);
+    return new ExprInputBindingAnalysis(this);
+  }
+
+  @Override
+  public ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return inputTypes.getType(binding);
   }
 
   @Override

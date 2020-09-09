@@ -30,14 +30,14 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 public class LeastOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(Function.LeastFunc.NAME))
+      .operatorBuilder(StringUtils.toUpperCase(Function.LeastFunction.NAME))
       .operandTypeChecker(OperandTypes.VARIADIC)
       .returnTypeInference(ReductionOperatorConversionHelper.TYPE_INFERENCE)
       .build();
 
   public LeastOperatorConversion()
   {
-    super(SQL_FUNCTION, Function.LeastFunc.NAME);
+    super(SQL_FUNCTION, Function.LeastFunction.NAME);
   }
 
   @Override

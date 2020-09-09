@@ -136,7 +136,7 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    final Expr.BindingDetails exprDetails = expression.analyzeInputs();
+    final Expr.ExprInputBindingAnalysis exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
     final List<String> columns = exprDetails.getRequiredBindingsList();
 
@@ -212,7 +212,7 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final Expr.BindingDetails exprDetails = expression.analyzeInputs();
+    final Expr.ExprInputBindingAnalysis exprDetails = expression.analyzeInputs();
     Parser.validateExpr(expression, exprDetails);
     final List<String> columns = exprDetails.getRequiredBindingsList();
 
@@ -348,7 +348,7 @@ public class ExpressionSelectors
    * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
    */
   public static boolean canMapOverDictionary(
-      final Expr.BindingDetails exprDetails,
+      final Expr.ExprInputBindingAnalysis exprDetails,
       final ColumnCapabilities.Capable hasMultipleValues
   )
   {
@@ -357,17 +357,17 @@ public class ExpressionSelectors
   }
 
   /**
-   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingDetails} which
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.ExprInputBindingAnalysis} which
    * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
    * are used as array or scalar inputs
    */
   private static Expr.ObjectBinding createBindings(
-      Expr.BindingDetails bindingDetails,
+      Expr.ExprInputBindingAnalysis exprInputBindingAnalysis,
       ColumnSelectorFactory columnSelectorFactory
   )
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    final List<String> columns = bindingDetails.getRequiredBindingsList();
+    final List<String> columns = exprInputBindingAnalysis.getRequiredBindingsList();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
@@ -601,7 +601,7 @@ public class ExpressionSelectors
    */
   private static Pair<Set<String>, Set<String>> examineColumnSelectorFactoryArrays(
       ColumnSelectorFactory columnSelectorFactory,
-      Expr.BindingDetails exprDetails,
+      Expr.ExprInputBindingAnalysis exprDetails,
       List<String> columns
   )
   {
