@@ -30,14 +30,14 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 public class GreatestOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder(StringUtils.toUpperCase(Function.GreatestFunction.NAME))
+      .operatorBuilder(StringUtils.toUpperCase(Function.GreatestFunc.NAME))
       .operandTypeChecker(OperandTypes.VARIADIC)
       .returnTypeInference(ReductionOperatorConversionHelper.TYPE_INFERENCE)
       .build();
 
   public GreatestOperatorConversion()
   {
-    super(SQL_FUNCTION, Function.GreatestFunction.NAME);
+    super(SQL_FUNCTION, Function.GreatestFunc.NAME);
   }
 
   @Override

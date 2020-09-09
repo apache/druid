@@ -1324,11 +1324,11 @@ public interface Function
     }
   }
 
-  class GreatestFunction extends ReduceFunction
+  class GreatestFunc extends ReduceFunction
   {
     public static final String NAME = "greatest";
 
-    public GreatestFunction()
+    public GreatestFunc()
     {
       super(
           Math::max,
@@ -1344,11 +1344,11 @@ public interface Function
     }
   }
 
-  class LeastFunction extends ReduceFunction
+  class LeastFunc extends ReduceFunction
   {
     public static final String NAME = "least";
 
-    public LeastFunction()
+    public LeastFunc()
     {
       super(
           Math::min,
