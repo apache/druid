@@ -36,7 +36,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 @Path("/druid/coordinator/v1/compaction")
 public class CompactionResource
@@ -88,21 +90,16 @@ public class CompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    final AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
-    if (autoCompactionSnapshot == null) {
-      return Response.status(Response.Status.BAD_REQUEST).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+    final Collection<AutoCompactionSnapshot> snapshots;
+    if (dataSource == null || dataSource.isEmpty()) {
+      snapshots = coordinator.getAutoCompactionSnapshot().values();
     } else {
-      return Response.ok(ImmutableMap.of("latestSnapshots", ImmutableList.of(autoCompactionSnapshot))).build();
+      AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
+      if (autoCompactionSnapshot == null) {
+        return Response.status(Response.Status.BAD_REQUEST).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+      }
+      snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
-  }
-
-  @GET
-  @Path("/snapshot")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
-  public Response getCompactionSnapshot()
-  {
-    final Collection<AutoCompactionSnapshot> snapshots = coordinator.getAutoCompactionSnapshot().values();
     return Response.ok(ImmutableMap.of("latestSnapshots", snapshots)).build();
   }
 }

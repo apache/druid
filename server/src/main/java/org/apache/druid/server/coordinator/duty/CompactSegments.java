@@ -90,17 +90,17 @@ public class CompactSegments implements CoordinatorDuty
 
     final CoordinatorCompactionConfig dynamicConfig = params.getCoordinatorCompactionConfig();
     final CoordinatorStats stats = new CoordinatorStats();
-    List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
-    Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
-        .stream()
-        .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-    updateAutoCompactionSnapshot(compactionConfigs);
 
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
           params.getUsedSegmentsTimelinesPerDataSource();
+      List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
 
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
+        Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
+            .stream()
+            .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+        updateAutoCompactionSnapshot(compactionConfigs);
         final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
         // dataSource -> list of intervals of compaction tasks
         final Map<String, List<Interval>> compactionTaskIntervals = Maps.newHashMapWithExpectedSize(
