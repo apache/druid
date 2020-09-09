@@ -34,13 +34,19 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.NoopAggregator;
 import org.apache.druid.query.aggregation.NoopBufferAggregator;
+import org.apache.druid.query.aggregation.NoopVectorAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.NilVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -158,6 +164,24 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       return new VarianceBufferAggregator.LongVarianceAggregator(selector);
     } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
       return new VarianceBufferAggregator.ObjectVarianceAggregator(selector);
+    }
+    throw new IAE(
+        "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
+        fieldName,
+        inputType
+    );
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  {
+    VectorValueSelector selector = selectorFactory.makeValueSelector(fieldName);
+    if (selector instanceof NilVectorSelector) {
+      return NoopVectorAggregator.instance();
+    }
+    final String type = getTypeString(selectorFactory);
+    if (ValueType.FLOAT.name().equals(type)) {
+      return new VarianceFloatVectorAggregator(selector);
     }
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
@@ -340,11 +364,11 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     return Objects.hash(fieldName, name, estimator, inputType, isVariancePop);
   }
 
-  private String getTypeString(ColumnSelectorFactory metricFactory)
+  private String getTypeString(ColumnInspector columnInspector)
   {
     String type = inputType;
     if (type == null) {
-      ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
+      ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
       if (capabilities != null) {
         type = StringUtils.toLowerCase(capabilities.getType().name());
       } else {
@@ -353,5 +377,4 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     }
     return type;
   }
-
 }
