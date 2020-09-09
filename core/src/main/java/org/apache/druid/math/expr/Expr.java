@@ -132,6 +132,7 @@ public interface Expr
 
   interface InputBindingTypes
   {
+    @Nullable
     ExprType getType(String name);
   }
 
