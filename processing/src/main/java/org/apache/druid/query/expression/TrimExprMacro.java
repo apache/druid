@@ -299,7 +299,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public ExprInputBindingAnalysis analyzeInputs()
+    public BindingAnalysis analyzeInputs()
     {
       return stringExpr.analyzeInputs()
                        .with(charsExpr)

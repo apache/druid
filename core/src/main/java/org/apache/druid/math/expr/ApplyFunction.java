@@ -293,8 +293,8 @@ public interface ApplyFunction
     @Override
     public boolean hasArrayOutput(LambdaExpr lambdaExpr)
     {
-      Expr.ExprInputBindingAnalysis lambdaExprInputBindingAnalysis = lambdaExpr.analyzeInputs();
-      return lambdaExprInputBindingAnalysis.isOutputArray();
+      Expr.BindingAnalysis lambdaBindingAnalysis = lambdaExpr.analyzeInputs();
+      return lambdaBindingAnalysis.isOutputArray();
     }
 
     @Nullable

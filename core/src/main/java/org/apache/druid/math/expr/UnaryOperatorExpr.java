@@ -60,7 +60,7 @@ abstract class UnaryExpr implements Expr
   }
 
   @Override
-  public ExprInputBindingAnalysis analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
     // currently all unary operators only operate on scalar inputs
     return expr.analyzeInputs().withScalarArguments(ImmutableSet.of(expr));

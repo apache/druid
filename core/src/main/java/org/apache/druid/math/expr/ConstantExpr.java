@@ -67,9 +67,9 @@ abstract class ConstantExpr implements Expr
   }
 
   @Override
-  public ExprInputBindingAnalysis analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    return new ExprInputBindingAnalysis();
+    return new BindingAnalysis();
   }
 
   @Override

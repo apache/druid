@@ -116,16 +116,16 @@ public interface Expr
   void visit(Visitor visitor);
 
   /**
-   * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}.Each {@link Expr} is responsible for
+   * Programatically rewrite the {@link Expr} tree with a {@link Shuttle}. Each {@link Expr} is responsible for
    * ensuring the {@link Shuttle} can visit all of its {@link Expr} children, as well as updating its children
    * {@link Expr} with the results from the {@link Shuttle}, before finally visiting an updated form of itself.
    */
   Expr visit(Shuttle shuttle);
 
   /**
-   * Examine the usage of {@link IdentifierExpr} children of an {@link Expr}, constructing a {@link ExprInputBindingAnalysis}
+   * Examine the usage of {@link IdentifierExpr} children of an {@link Expr}, constructing a {@link BindingAnalysis}
    */
-  ExprInputBindingAnalysis analyzeInputs();
+  BindingAnalysis analyzeInputs();
 
   @Nullable
   ExprType getOutputType(InputBindingTypes inputTypes);
@@ -189,7 +189,7 @@ public interface Expr
    *
    * This means in rare cases and mostly for "questionable" expressions which we still allow to function 'correctly',
    * these lists might not be fully reliable without a complete type inference system in place. Due to this shortcoming,
-   * boolean values {@link ExprInputBindingAnalysis#hasInputArrays()} and {@link ExprInputBindingAnalysis#isOutputArray()} are provided to
+   * boolean values {@link BindingAnalysis#hasInputArrays()} and {@link BindingAnalysis#isOutputArray()} are provided to
    * allow functions to explicitly declare that they utilize array typed values, used when determining if some types of
    * optimizations can be applied when constructing the expression column value selector.
    *
@@ -203,7 +203,7 @@ public interface Expr
    * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
    */
   @SuppressWarnings("JavadocReference")
-  class ExprInputBindingAnalysis
+  class BindingAnalysis
   {
     private final ImmutableSet<IdentifierExpr> freeVariables;
     private final ImmutableSet<IdentifierExpr> scalarVariables;
@@ -211,17 +211,17 @@ public interface Expr
     private final boolean hasInputArrays;
     private final boolean isOutputArray;
 
-    ExprInputBindingAnalysis()
+    BindingAnalysis()
     {
       this(ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
-    ExprInputBindingAnalysis(IdentifierExpr expr)
+    BindingAnalysis(IdentifierExpr expr)
     {
       this(ImmutableSet.of(expr), ImmutableSet.of(), ImmutableSet.of(), false, false);
     }
 
-    private ExprInputBindingAnalysis(
+    private BindingAnalysis(
         ImmutableSet<IdentifierExpr> freeVariables,
         ImmutableSet<IdentifierExpr> scalarVariables,
         ImmutableSet<IdentifierExpr> arrayVariables,
@@ -319,19 +319,19 @@ public interface Expr
     }
 
     /**
-     * Combine with {@link ExprInputBindingAnalysis} from {@link Expr#analyzeInputs()}
+     * Combine with {@link BindingAnalysis} from {@link Expr#analyzeInputs()}
      */
-    public ExprInputBindingAnalysis with(Expr other)
+    public BindingAnalysis with(Expr other)
     {
       return with(other.analyzeInputs());
     }
 
     /**
-     * Combine (union) another {@link ExprInputBindingAnalysis}
+     * Combine (union) another {@link BindingAnalysis}
      */
-    public ExprInputBindingAnalysis with(ExprInputBindingAnalysis other)
+    public BindingAnalysis with(BindingAnalysis other)
     {
-      return new ExprInputBindingAnalysis(
+      return new BindingAnalysis(
           ImmutableSet.copyOf(Sets.union(freeVariables, other.freeVariables)),
           ImmutableSet.copyOf(Sets.union(scalarVariables, other.scalarVariables)),
           ImmutableSet.copyOf(Sets.union(arrayVariables, other.arrayVariables)),
@@ -341,10 +341,10 @@ public interface Expr
     }
 
     /**
-     * Add set of arguments as {@link ExprInputBindingAnalysis#scalarVariables} that are *directly* {@link IdentifierExpr},
+     * Add set of arguments as {@link BindingAnalysis#scalarVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
-    public ExprInputBindingAnalysis withScalarArguments(Set<Expr> scalarArguments)
+    public BindingAnalysis withScalarArguments(Set<Expr> scalarArguments)
     {
       Set<IdentifierExpr> moreScalars = new HashSet<>();
       for (Expr expr : scalarArguments) {
@@ -353,7 +353,7 @@ public interface Expr
           moreScalars.add((IdentifierExpr) expr);
         }
       }
-      return new ExprInputBindingAnalysis(
+      return new BindingAnalysis(
           ImmutableSet.copyOf(Sets.union(freeVariables, moreScalars)),
           ImmutableSet.copyOf(Sets.union(scalarVariables, moreScalars)),
           arrayVariables,
@@ -363,10 +363,10 @@ public interface Expr
     }
 
     /**
-     * Add set of arguments as {@link ExprInputBindingAnalysis#arrayVariables} that are *directly* {@link IdentifierExpr},
+     * Add set of arguments as {@link BindingAnalysis#arrayVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
-    ExprInputBindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
+    BindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
     {
       Set<IdentifierExpr> arrayIdentifiers = new HashSet<>();
       for (Expr expr : arrayArguments) {
@@ -375,7 +375,7 @@ public interface Expr
           arrayIdentifiers.add((IdentifierExpr) expr);
         }
       }
-      return new ExprInputBindingAnalysis(
+      return new BindingAnalysis(
           ImmutableSet.copyOf(Sets.union(freeVariables, arrayIdentifiers)),
           scalarVariables,
           ImmutableSet.copyOf(Sets.union(arrayVariables, arrayIdentifiers)),
@@ -387,9 +387,9 @@ public interface Expr
     /**
      * Copy, setting if an expression has array inputs
      */
-    ExprInputBindingAnalysis withArrayInputs(boolean hasArrays)
+    BindingAnalysis withArrayInputs(boolean hasArrays)
     {
-      return new ExprInputBindingAnalysis(
+      return new BindingAnalysis(
           freeVariables,
           scalarVariables,
           arrayVariables,
@@ -401,9 +401,9 @@ public interface Expr
     /**
      * Copy, setting if an expression produces an array output
      */
-    ExprInputBindingAnalysis withArrayOutput(boolean isOutputArray)
+    BindingAnalysis withArrayOutput(boolean isOutputArray)
     {
-      return new ExprInputBindingAnalysis(
+      return new BindingAnalysis(
           freeVariables,
           scalarVariables,
           arrayVariables,
@@ -416,9 +416,9 @@ public interface Expr
      * Remove any {@link IdentifierExpr} that are from a {@link LambdaExpr}, since the {@link ApplyFunction} will
      * provide bindings for these variables.
      */
-    ExprInputBindingAnalysis removeLambdaArguments(Set<String> lambda)
+    BindingAnalysis removeLambdaArguments(Set<String> lambda)
     {
-      return new ExprInputBindingAnalysis(
+      return new BindingAnalysis(
           ImmutableSet.copyOf(freeVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
           ImmutableSet.copyOf(scalarVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),
           ImmutableSet.copyOf(arrayVariables.stream().filter(x -> !lambda.contains(x.getIdentifier())).iterator()),

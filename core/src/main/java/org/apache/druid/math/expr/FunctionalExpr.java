@@ -105,10 +105,10 @@ class LambdaExpr implements Expr
   }
 
   @Override
-  public ExprInputBindingAnalysis analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
     final Set<String> lambdaArgs = args.stream().map(IdentifierExpr::toString).collect(Collectors.toSet());
-    ExprInputBindingAnalysis bodyDetails = expr.analyzeInputs();
+    BindingAnalysis bodyDetails = expr.analyzeInputs();
     return bodyDetails.removeLambdaArguments(lambdaArgs);
   }
 
@@ -193,9 +193,9 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public ExprInputBindingAnalysis analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    ExprInputBindingAnalysis accumulator = new ExprInputBindingAnalysis();
+    BindingAnalysis accumulator = new BindingAnalysis();
 
     for (Expr arg : args) {
       accumulator = accumulator.with(arg);
@@ -244,9 +244,9 @@ class ApplyFunctionExpr implements Expr
   final String name;
   final LambdaExpr lambdaExpr;
   final ImmutableList<Expr> argsExpr;
-  final ExprInputBindingAnalysis exprInputBindingAnalysis;
-  final ExprInputBindingAnalysis lambdaExprInputBindingAnalysis;
-  final ImmutableList<ExprInputBindingAnalysis> argsExprInputBindingAnalysis;
+  final BindingAnalysis bindingAnalysis;
+  final BindingAnalysis lambdaBindingAnalysis;
+  final ImmutableList<BindingAnalysis> argsBindingAnalyses;
 
   ApplyFunctionExpr(ApplyFunction function, String name, LambdaExpr expr, List<Expr> args)
   {
@@ -259,21 +259,21 @@ class ApplyFunctionExpr implements Expr
 
     // apply function expressions are examined during expression selector creation, so precompute and cache the
     // binding details of children
-    ImmutableList.Builder<ExprInputBindingAnalysis> argBindingDetailsBuilder = ImmutableList.builder();
-    ExprInputBindingAnalysis accumulator = new ExprInputBindingAnalysis();
+    ImmutableList.Builder<BindingAnalysis> argBindingDetailsBuilder = ImmutableList.builder();
+    BindingAnalysis accumulator = new BindingAnalysis();
     for (Expr arg : argsExpr) {
-      ExprInputBindingAnalysis argDetails = arg.analyzeInputs();
+      BindingAnalysis argDetails = arg.analyzeInputs();
       argBindingDetailsBuilder.add(argDetails);
       accumulator = accumulator.with(argDetails);
     }
 
-    lambdaExprInputBindingAnalysis = lambdaExpr.analyzeInputs();
+    lambdaBindingAnalysis = lambdaExpr.analyzeInputs();
 
-    exprInputBindingAnalysis = accumulator.with(lambdaExprInputBindingAnalysis)
-                                          .withArrayArguments(function.getArrayInputs(argsExpr))
-                                          .withArrayInputs(true)
-                                          .withArrayOutput(function.hasArrayOutput(lambdaExpr));
-    argsExprInputBindingAnalysis = argBindingDetailsBuilder.build();
+    bindingAnalysis = accumulator.with(lambdaBindingAnalysis)
+                                 .withArrayArguments(function.getArrayInputs(argsExpr))
+                                 .withArrayInputs(true)
+                                 .withArrayOutput(function.hasArrayOutput(lambdaExpr));
+    argsBindingAnalyses = argBindingDetailsBuilder.build();
   }
 
   @Override
@@ -318,9 +318,9 @@ class ApplyFunctionExpr implements Expr
   }
 
   @Override
-  public ExprInputBindingAnalysis analyzeInputs()
+  public BindingAnalysis analyzeInputs()
   {
-    return exprInputBindingAnalysis;
+    return bindingAnalysis;
   }
 
   @Nullable

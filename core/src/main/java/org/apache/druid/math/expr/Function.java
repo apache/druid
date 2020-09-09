@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -368,6 +367,7 @@ public interface Function
 
     abstract ExprEval doApply(ExprEval lhsExpr, ExprEval rhsExpr);
   }
+
   abstract class ReduceFunction implements Function
   {
     private final DoubleBinaryOperator doubleReducer;
@@ -409,8 +409,24 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      ExprAnalysis exprAnalysis = analyzeExprs(args, bindings);
-      if (exprAnalysis.exprEvals.isEmpty()) {
+      // evaluate arguments and collect output type
+      List<ExprEval<?>> evals = new ArrayList<>();
+      ExprType outputType = ExprType.LONG;
+
+      for (Expr expr : args) {
+        ExprEval<?> exprEval = expr.eval(bindings);
+        ExprType exprType = exprEval.type();
+
+        if (isValidType(exprType)) {
+          outputType = ExprType.implicitCast(outputType, exprType);
+        }
+
+        if (exprEval.value() != null) {
+          evals.add(exprEval);
+        }
+      }
+
+      if (evals.isEmpty()) {
         // The GREATEST/LEAST functions are not in the SQL standard. Emulate the behavior of postgres (return null if
         // all expressions are null, otherwise skip null values) since it is used as a base for a wide number of
         // databases. This also matches the behavior the the long/double greatest/least post aggregators. Some other
@@ -420,48 +436,17 @@ public interface Function
         return ExprEval.of(null);
       }
 
-      Stream<ExprEval<?>> exprEvalStream = exprAnalysis.exprEvals.stream();
-      switch (exprAnalysis.comparisonType) {
+      switch (outputType) {
         case DOUBLE:
           //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
-          return ExprEval.of(exprEvalStream.mapToDouble(ExprEval::asDouble).reduce(doubleReducer).getAsDouble());
+          return ExprEval.of(evals.stream().mapToDouble(ExprEval::asDouble).reduce(doubleReducer).getAsDouble());
         case LONG:
           //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
-          return ExprEval.of(exprEvalStream.mapToLong(ExprEval::asLong).reduce(longReducer).getAsLong());
+          return ExprEval.of(evals.stream().mapToLong(ExprEval::asLong).reduce(longReducer).getAsLong());
         default:
           //noinspection OptionalGetWithoutIsPresent (empty list handled earlier)
-          return ExprEval.of(exprEvalStream.map(ExprEval::asString).reduce(stringReducer).get());
+          return ExprEval.of(evals.stream().map(ExprEval::asString).reduce(stringReducer).get());
       }
-    }
-
-    /**
-     * Determines which {@link ExprType} to use to compare non-null evaluated expressions.
-     *
-     * @param exprs    Expressions to analyze
-     * @param bindings Bindings for expressions
-     *
-     * @return Comparison type and non-null evaluated expressions.
-     */
-    private ExprAnalysis analyzeExprs(List<Expr> exprs, Expr.ObjectBinding bindings)
-    {
-      Set<ExprType> presentTypes = EnumSet.noneOf(ExprType.class);
-      List<ExprEval<?>> exprEvals = new ArrayList<>();
-
-      for (Expr expr : exprs) {
-        ExprEval<?> exprEval = expr.eval(bindings);
-        ExprType exprType = exprEval.type();
-
-        if (isValidType(exprType)) {
-          presentTypes.add(exprType);
-        }
-
-        if (exprEval.value() != null) {
-          exprEvals.add(exprEval);
-        }
-      }
-
-      ExprType comparisonType = getComparisionType(presentTypes);
-      return new ExprAnalysis(comparisonType, exprEvals);
     }
 
     private boolean isValidType(ExprType exprType)
@@ -473,34 +458,6 @@ public interface Function
           return true;
         default:
           throw new IAE("Function[%s] does not accept %s types", name(), exprType);
-      }
-    }
-
-    /**
-     * Implements rules similar to: https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#function_least
-     *
-     * @see org.apache.druid.sql.calcite.expression.builtin.ReductionOperatorConversionHelper#TYPE_INFERENCE
-     */
-    private static ExprType getComparisionType(Set<ExprType> exprTypes)
-    {
-      if (exprTypes.contains(ExprType.STRING)) {
-        return ExprType.STRING;
-      } else if (exprTypes.contains(ExprType.DOUBLE)) {
-        return ExprType.DOUBLE;
-      } else {
-        return ExprType.LONG;
-      }
-    }
-
-    private static class ExprAnalysis
-    {
-      final ExprType comparisonType;
-      final List<ExprEval<?>> exprEvals;
-
-      ExprAnalysis(ExprType comparisonType, List<ExprEval<?>> exprEvals)
-      {
-        this.comparisonType = comparisonType;
-        this.exprEvals = exprEvals;
       }
     }
   }

@@ -380,8 +380,8 @@ public class JoinFilterCorrelations
       String identifier = lhsExpr.getBindingIfIdentifier();
       if (identifier == null) {
         // We push down if the function only requires base table columns
-        Expr.ExprInputBindingAnalysis exprInputBindingAnalysis = lhsExpr.analyzeInputs();
-        Set<String> requiredBindings = exprInputBindingAnalysis.getRequiredBindings();
+        Expr.BindingAnalysis bindingAnalysis = lhsExpr.analyzeInputs();
+        Set<String> requiredBindings = bindingAnalysis.getRequiredBindings();
 
         if (joinableClauses.areSomeColumnsFromJoin(requiredBindings)) {
           break;

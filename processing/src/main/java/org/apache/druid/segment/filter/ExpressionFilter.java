@@ -45,7 +45,7 @@ import java.util.Set;
 public class ExpressionFilter implements Filter
 {
   private final Supplier<Expr> expr;
-  private final Supplier<Expr.ExprInputBindingAnalysis> bindingDetails;
+  private final Supplier<Expr.BindingAnalysis> bindingDetails;
   private final FilterTuning filterTuning;
 
   public ExpressionFilter(final Supplier<Expr> expr, final FilterTuning filterTuning)
@@ -107,7 +107,7 @@ public class ExpressionFilter implements Filter
   @Override
   public boolean supportsBitmapIndex(final BitmapIndexSelector selector)
   {
-    final Expr.ExprInputBindingAnalysis details = this.bindingDetails.get();
+    final Expr.BindingAnalysis details = this.bindingDetails.get();
 
     if (details.getRequiredBindings().isEmpty()) {
       // Constant expression.

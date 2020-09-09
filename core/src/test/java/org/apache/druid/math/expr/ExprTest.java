@@ -113,7 +113,7 @@ public class ExprTest
   {
     EqualsVerifier.forClass(ApplyFunctionExpr.class)
                   .usingGetClass()
-                  .withIgnoredFields("function", "exprInputBindingAnalysis", "lambdaExprInputBindingAnalysis", "argsExprInputBindingAnalysis")
+                  .withIgnoredFields("function", "bindingAnalysis", "lambdaBindingAnalysis", "argsBindingAnalyses")
                   .verify();
   }
 
