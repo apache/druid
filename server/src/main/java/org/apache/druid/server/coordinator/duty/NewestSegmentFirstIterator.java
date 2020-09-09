@@ -376,7 +376,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
         if (isCompactibleSize && needsCompaction) {
           CompactionStatistics statistics = returnedSegments.computeIfAbsent(
-              dataSourceName, v -> CompactionStatistics.initializeCompactionStatistics()
+              dataSourceName,
+              v -> CompactionStatistics.initializeCompactionStatistics()
           );
           statistics.incrementCompactedByte(candidates.getTotalSize());
           statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
@@ -384,7 +385,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           return candidates;
         } else {
           CompactionStatistics statistics = skippedSegments.computeIfAbsent(
-              dataSourceName, v -> CompactionStatistics.initializeCompactionStatistics()
+              dataSourceName,
+              v -> CompactionStatistics.initializeCompactionStatistics()
           );
           statistics.incrementCompactedByte(candidates.getTotalSize());
           statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
