@@ -683,8 +683,6 @@ public class DruidCoordinator
     private final long startTimeNanos = System.nanoTime();
     private final List<CoordinatorDuty> duties;
     private final int startingLeaderCounter;
-    //private int cachedBalancerThreadNumber;
-    //private ListeningExecutorService balancerExec;
 
     protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter)
     {
