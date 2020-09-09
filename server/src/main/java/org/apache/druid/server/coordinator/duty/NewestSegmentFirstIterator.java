@@ -179,6 +179,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     Preconditions.checkState(!resultSegments.isEmpty(), "Queue entry must not be empty");
 
     final String dataSource = resultSegments.get(0).getDataSource();
+
+    CompactionStatistics statistics = returnedSegments.computeIfAbsent(
+        dataSource,
+        v -> CompactionStatistics.initializeCompactionStatistics()
+    );
+    statistics.incrementCompactedByte(resultSegments.stream().mapToLong(DataSegment::getSize).sum());
+    statistics.incrementCompactedIntervals(resultSegments.stream().map(DataSegment::getInterval).distinct().count());
+    statistics.incrementCompactedSegments(resultSegments.size());
+
     updateQueue(dataSource, compactionConfigs.get(dataSource));
 
     return resultSegments;
@@ -375,13 +384,6 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         );
 
         if (isCompactibleSize && needsCompaction) {
-          CompactionStatistics statistics = returnedSegments.computeIfAbsent(
-              dataSourceName,
-              v -> CompactionStatistics.initializeCompactionStatistics()
-          );
-          statistics.incrementCompactedByte(candidates.getTotalSize());
-          statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
-          statistics.incrementCompactedSegments(candidates.getNumberOfSegments());
           return candidates;
         } else {
           CompactionStatistics statistics = skippedSegments.computeIfAbsent(
