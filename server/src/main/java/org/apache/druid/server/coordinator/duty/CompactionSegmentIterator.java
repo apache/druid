@@ -19,11 +19,12 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Segments in the lists which are the elements of this iterator are sorted according to the natural segment order
@@ -33,8 +34,9 @@ public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
   long UNKNOWN_TOTAL_REMAINING_SEGMENTS_SIZE = -1L;
   /**
-   * Return a map of (dataSource, total size of remaining segments) for all dataSources.
+   * Return a map of (dataSource, CompactionStatistics) for all dataSources.
    * This method should consider all segments except the segments returned by {@link #next()}.
    */
-  Object2LongOpenHashMap<String> totalRemainingSegmentsSizeBytes();
+  Map<String, CompactionStatistics> totalRemainingStatistics();
+
 }

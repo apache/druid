@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentUtils;
+import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -51,6 +52,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -112,25 +114,29 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   @Override
-  public Object2LongOpenHashMap<String> totalRemainingSegmentsSizeBytes()
+  public Map<String, CompactionStatistics> totalRemainingStatistics()
   {
-    final Object2LongOpenHashMap<String> resultMap = new Object2LongOpenHashMap<>();
-    resultMap.defaultReturnValue(UNKNOWN_TOTAL_REMAINING_SEGMENTS_SIZE);
+    final Map<String, CompactionStatistics> resultMap = new HashMap<>();
     for (QueueEntry entry : queue) {
       final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(entry.getDataSource());
       final Interval interval = new Interval(timeline.first().getInterval().getStart(), entry.interval.getEnd());
 
       final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(interval);
 
-      long size = 0;
+      long byteSum = 0;
+      long segmentNumberCountSum = 0;
+      long segmentIntervalCountSum = holders.size();
+
       for (DataSegment segment : FluentIterable
           .from(holders)
           .transformAndConcat(TimelineObjectHolder::getObject)
           .transform(PartitionChunk::getObject)) {
-        size += segment.getSize();
+        byteSum += segment.getSize();
+        segmentNumberCountSum += 1;
       }
 
-      resultMap.put(entry.getDataSource(), size);
+      CompactionStatistics statistics = new CompactionStatistics(null, byteSum, segmentNumberCountSum, segmentIntervalCountSum);
+      resultMap.put(entry.getDataSource(), statistics);
     }
     return resultMap;
   }

@@ -363,6 +363,16 @@ public class DruidCoordinator
     return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
 
+  @Nullable
+  public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
+  {
+    return compactSegments.getAutoCompactionSnapshot(dataSource);
+  }
+
+  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot() {
+    return compactSegments.getAutoCompactionSnapshot();
+  }
+
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
     return CoordinatorDynamicConfig.current(configManager);

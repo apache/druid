@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.duty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -30,6 +29,8 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CompactionStatistics;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -49,7 +50,15 @@ import java.util.stream.Collectors;
 public class CompactSegments implements CoordinatorDuty
 {
   static final String COMPACTION_TASK_COUNT = "compactTaskCount";
+  static final String AVAILABLE_COMPACTION_TASK_SLOT = "availableCompactionTaskSlot";
+  static final String MAX_COMPACTION_TASK_SLOT = "maxCompactionTaskSlot";
+
   static final String TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION = "segmentSizeWaitCompact";
+  static final String TOTAL_COUNT_OF_SEGMENTS_AWAITING_COMPACTION = "segmentCountWaitCompact";
+  static final String TOTAL_INTERVAL_OF_SEGMENTS_AWAITING_COMPACTION = "segmentIntervalWaitCompact";
+  static final String TOTAL_SIZE_OF_SEGMENTS_COMPACTED = "segmentSizeCompacted";
+  static final String TOTAL_COUNT_OF_SEGMENTS_COMPACTED = "segmentCountCompacted";
+  static final String TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED = "segmentIntervalCompacted";
 
   /** Must be synced with org.apache.druid.indexing.common.task.CompactionTask.TYPE. */
   public static final String COMPACTION_TASK_TYPE = "compact";
@@ -61,7 +70,8 @@ public class CompactSegments implements CoordinatorDuty
   private final CompactionSegmentSearchPolicy policy;
   private final IndexingServiceClient indexingServiceClient;
 
-  private Object2LongOpenHashMap<String> totalSizesOfSegmentsAwaitingCompactionPerDataSource;
+  private HashMap<String, AutoCompactionSnapshot> autoCompactionSnapshotPerDataSource = new HashMap<>();
+  private HashMap<String, CompactionStatistics> compactionScheduledPerDataSource = new HashMap<>();
 
   @Inject
   public CompactSegments(
@@ -80,16 +90,17 @@ public class CompactSegments implements CoordinatorDuty
 
     final CoordinatorCompactionConfig dynamicConfig = params.getCoordinatorCompactionConfig();
     final CoordinatorStats stats = new CoordinatorStats();
+    List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
+    Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
+        .stream()
+        .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+    updateAutoCompactionSnapshot(compactionConfigs);
 
     if (dynamicConfig.getMaxCompactionTaskSlots() > 0) {
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
           params.getUsedSegmentsTimelinesPerDataSource();
-      List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
 
       if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
-        Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
-            .stream()
-            .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
         final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
         // dataSource -> list of intervals of compaction tasks
         final Map<String, List<Interval>> compactionTaskIntervals = Maps.newHashMapWithExpectedSize(
@@ -136,6 +147,9 @@ public class CompactSegments implements CoordinatorDuty
             numAvailableCompactionTaskSlots,
             compactionTaskCapacity
         );
+        stats.addToGlobalStat(AVAILABLE_COMPACTION_TASK_SLOT, numAvailableCompactionTaskSlots);
+        stats.addToGlobalStat(MAX_COMPACTION_TASK_SLOT, compactionTaskCapacity);
+
         if (numAvailableCompactionTaskSlots > 0) {
           stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
         } else {
@@ -169,6 +183,33 @@ public class CompactSegments implements CoordinatorDuty
       return tuningConfig.getMaxNumConcurrentSubTasks();
     } else {
       return 0;
+    }
+  }
+
+  private void updateAutoCompactionSnapshot(Map<String, DataSourceCompactionConfig> compactionConfigs)
+  {
+    // Initialize compaction statistics to 0 for all enabled dataSources
+    compactionScheduledPerDataSource.clear();
+    for (String compactionConfigDataSource : compactionConfigs.keySet()) {
+      compactionScheduledPerDataSource.put(
+          compactionConfigDataSource,
+          CompactionStatistics.initializeCompactionStatistics()
+      );
+    }
+
+    // Update AutoCompactionScheduleStatus for dataSource that now has auto compaction disabled
+    for (Map.Entry<String, AutoCompactionSnapshot> snapshot : autoCompactionSnapshotPerDataSource.entrySet()) {
+      if (!compactionConfigs.containsKey(snapshot.getKey())) {
+        snapshot.getValue().setScheduleStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED);
+      }
+    }
+
+    // Create and Update snapshot for dataSource that has auto compaction enabled
+    for (String compactionConfigDataSource : compactionConfigs.keySet()) {
+      autoCompactionSnapshotPerDataSource.computeIfAbsent(
+          compactionConfigDataSource,
+          k -> new AutoCompactionSnapshot(k, AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+      );
     }
   }
 
@@ -209,6 +250,13 @@ public class CompactSegments implements CoordinatorDuty
             ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             newAutoCompactionContext(config.getTaskContext())
         );
+        autoCompactionSnapshotPerDataSource.get(dataSourceName).setLatestScheduledTaskId(taskId);
+        CompactionStatistics dataSourceStatistics = compactionScheduledPerDataSource.get(dataSourceName);
+        dataSourceStatistics.incrementCompactedTasks(1);
+        dataSourceStatistics.incrementCompactedByte(segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum());
+        dataSourceStatistics.incrementCompactedIntervals(segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count());
+        dataSourceStatistics.incrementCompactedSegments(segmentsToCompact.size());
+
         LOG.info(
             "Submitted a compactionTask[%s] for %s segments",
             taskId,
@@ -238,25 +286,93 @@ public class CompactSegments implements CoordinatorDuty
   {
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(COMPACTION_TASK_COUNT, numCompactionTasks);
-    totalSizesOfSegmentsAwaitingCompactionPerDataSource = iterator.totalRemainingSegmentsSizeBytes();
-    totalSizesOfSegmentsAwaitingCompactionPerDataSource.object2LongEntrySet().fastForEach(
-        entry -> {
-          final String dataSource = entry.getKey();
-          final long totalSizeOfSegmentsAwaitingCompaction = entry.getLongValue();
-          stats.addToDataSourceStat(
-              TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION,
-              dataSource,
-              totalSizeOfSegmentsAwaitingCompaction
-          );
-        }
-    );
+    Map<String, CompactionStatistics> totalRemainingStatistics = iterator.totalRemainingStatistics();
+
+    for (Map.Entry<String, AutoCompactionSnapshot> autoCompactionSnapshotEntry : autoCompactionSnapshotPerDataSource.entrySet()) {
+      final String dataSource = autoCompactionSnapshotEntry.getKey();
+      CompactionStatistics remainingStatistics = totalRemainingStatistics.get(dataSource);
+      long byteAwaitingCompaction = 0;
+      long segmentCountAwaitingCompaction = 0;
+      long intervalCountAwaitingCompaction = 0;
+      if (remainingStatistics != null) {
+        // If null means that all segments are either compacted or skipped.
+        // Hence, we can leave these set to default value of 0. If not null, we set it to the collected statistic.
+        byteAwaitingCompaction = remainingStatistics.getByteSum();
+        segmentCountAwaitingCompaction = remainingStatistics.getSegmentNumberCountSum();
+        intervalCountAwaitingCompaction = remainingStatistics.getSegmentIntervalCountSum();
+      }
+
+      CompactionStatistics scheduledStatistics = compactionScheduledPerDataSource.get(dataSource);
+      long byteCompacted = 0;
+      long segmentCountCompacted = 0;
+      long intervalCountCompacted = 0;
+      if (scheduledStatistics != null) {
+        // If null means that we did not get to schedule any compaction for the dataSource.
+        // Hence, we can leave these set to default value of 0. If not null, we set it to the collected statistic.
+        byteCompacted = scheduledStatistics.getByteSum();
+        segmentCountCompacted = scheduledStatistics.getSegmentNumberCountSum();
+        intervalCountCompacted = scheduledStatistics.getSegmentIntervalCountSum();
+      }
+
+      autoCompactionSnapshotEntry.getValue().setByteAwaitingCompaction(byteAwaitingCompaction);
+      autoCompactionSnapshotEntry.getValue().setByteCompacted(byteCompacted);
+      autoCompactionSnapshotEntry.getValue().setSegmentCountAwaitingCompaction(segmentCountAwaitingCompaction);
+      autoCompactionSnapshotEntry.getValue().setSegmentCountCompacted(segmentCountCompacted);
+      autoCompactionSnapshotEntry.getValue().setIntervalCountAwaitingCompaction(intervalCountAwaitingCompaction);
+      autoCompactionSnapshotEntry.getValue().setIntervalCountCompacted(intervalCountCompacted);
+
+      stats.addToDataSourceStat(
+          TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION,
+          dataSource,
+          byteAwaitingCompaction
+      );
+      stats.addToDataSourceStat(
+          TOTAL_COUNT_OF_SEGMENTS_AWAITING_COMPACTION,
+          dataSource,
+          segmentCountAwaitingCompaction
+      );
+      stats.addToDataSourceStat(
+          TOTAL_INTERVAL_OF_SEGMENTS_AWAITING_COMPACTION,
+          dataSource,
+          intervalCountAwaitingCompaction
+      );
+      stats.addToDataSourceStat(
+          TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
+          dataSource,
+          byteCompacted
+      );
+      stats.addToDataSourceStat(
+          TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
+          dataSource,
+          segmentCountCompacted
+      );
+      stats.addToDataSourceStat(
+          TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
+          dataSource,
+          intervalCountCompacted
+      );
+    }
+
     return stats;
   }
 
-  @SuppressWarnings("deprecation") // Intentionally using boxing get() to return null if dataSource is unknown
   @Nullable
   public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
   {
-    return totalSizesOfSegmentsAwaitingCompactionPerDataSource.get(dataSource);
+    AutoCompactionSnapshot autoCompactionSnapshot = autoCompactionSnapshotPerDataSource.get(dataSource);
+    if (autoCompactionSnapshot == null) {
+      return null;
+    }
+    return autoCompactionSnapshotPerDataSource.get(dataSource).getByteAwaitingCompaction();
+  }
+
+  @Nullable
+  public AutoCompactionSnapshot getAutoCompactionSnapshot(String dataSource)
+  {
+    return autoCompactionSnapshotPerDataSource.get(dataSource);
+  }
+
+  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot() {
+    return autoCompactionSnapshotPerDataSource;
   }
 }
