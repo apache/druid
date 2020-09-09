@@ -105,6 +105,7 @@ public interface Function
    */
   void validateArguments(List<Expr> args);
 
+  @Nullable
   ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args);
 
   /**
@@ -184,6 +185,7 @@ public interface Function
       return eval((long) param);
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -196,6 +198,7 @@ public interface Function
    */
   abstract class DoubleUnivariateMathFunction extends UnivariateMathFunction
   {
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -232,6 +235,7 @@ public interface Function
       return eval((long) x, (long) y);
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -244,6 +248,7 @@ public interface Function
    */
   abstract class DoubleBivariateMathFunction extends BivariateMathFunction
   {
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -386,6 +391,7 @@ public interface Function
       // anything goes
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -517,6 +523,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -574,6 +581,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -926,6 +934,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1240,6 +1249,7 @@ public interface Function
       return "scalb";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1313,6 +1323,7 @@ public interface Function
       return Collections.emptySet();
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1387,6 +1398,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1430,6 +1442,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1473,6 +1486,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1504,6 +1518,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1534,6 +1549,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1564,6 +1580,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1613,6 +1630,7 @@ public interface Function
       // anything goes
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1643,6 +1661,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1683,6 +1702,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1727,6 +1747,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1776,6 +1797,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1791,6 +1813,7 @@ public interface Function
       return "right";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1822,6 +1845,7 @@ public interface Function
       return "left";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1872,6 +1896,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1905,6 +1930,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1938,6 +1964,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1953,6 +1980,7 @@ public interface Function
       return "reverse";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -1981,6 +2009,7 @@ public interface Function
       return "repeat";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2025,6 +2054,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2063,6 +2093,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2112,6 +2143,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2170,6 +2202,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2282,6 +2315,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2337,6 +2371,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2366,6 +2401,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2406,6 +2442,7 @@ public interface Function
       return "array_to_string";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2434,6 +2471,7 @@ public interface Function
       return "array_offset";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2461,6 +2499,7 @@ public interface Function
       return "array_ordinal";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2488,6 +2527,7 @@ public interface Function
       return "array_offset_of";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2525,6 +2565,7 @@ public interface Function
       return "array_ordinal_of";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2567,6 +2608,7 @@ public interface Function
       return true;
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2630,6 +2672,7 @@ public interface Function
       return true;
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2692,6 +2735,7 @@ public interface Function
       return true;
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2715,6 +2759,7 @@ public interface Function
       return "array_overlap";
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2750,6 +2795,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
@@ -2835,6 +2881,7 @@ public interface Function
       }
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {

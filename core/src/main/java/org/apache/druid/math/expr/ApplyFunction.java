@@ -75,6 +75,7 @@ public interface ApplyFunction
    */
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
+  @Nullable
   ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args);
 
   /**
@@ -90,6 +91,7 @@ public interface ApplyFunction
       return true;
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
     {
@@ -295,6 +297,7 @@ public interface ApplyFunction
       return lambdaExprInputBindingAnalysis.isOutputArray();
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
     {
@@ -497,6 +500,7 @@ public interface ApplyFunction
       );
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
     {
@@ -551,6 +555,7 @@ public interface ApplyFunction
       );
     }
 
+    @Nullable
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args)
     {
