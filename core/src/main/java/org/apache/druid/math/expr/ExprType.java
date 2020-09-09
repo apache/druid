@@ -37,7 +37,6 @@ public enum ExprType
   LONG_ARRAY,
   STRING_ARRAY;
 
-
   public boolean isNumeric()
   {
     return isNumeric(this);
@@ -102,9 +101,9 @@ public enum ExprType
   }
 
   @Nullable
-  public static ExprType asArrayType(ExprType elementType)
+  public static ExprType asArrayType(@Nullable ExprType elementType)
   {
-    if (!isArray(elementType)) {
+    if (elementType != null && !isArray(elementType)) {
       switch (elementType) {
         case STRING:
           return STRING_ARRAY;
@@ -114,13 +113,15 @@ public enum ExprType
           return DOUBLE_ARRAY;
       }
     }
-    return null;
+    return elementType;
   }
 
+  @Nullable
   public static ExprType implicitCast(@Nullable ExprType type, @Nullable ExprType other)
   {
     if (type == null || other == null) {
-      throw new IAE("Cannot implicitly cast unknown types");
+      // cannot implicitly cast unknown types
+      return null;
     }
     // arrays cannot be implicitly cast
     if (isArray(type)) {
