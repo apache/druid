@@ -895,6 +895,7 @@ public interface ApplyFunction
       }
     }
 
+    @Nullable
     @Override
     public ExprType getType(String name)
     {

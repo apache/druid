@@ -86,9 +86,9 @@ public enum ExprType
   }
 
   @Nullable
-  public static ExprType elementType(ExprType type)
+  public static ExprType elementType(@Nullable ExprType type)
   {
-    if (isArray(type)) {
+    if (type != null && isArray(type)) {
       switch (type) {
         case STRING_ARRAY:
           return STRING;
