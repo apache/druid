@@ -19,23 +19,18 @@
 
 package org.apache.druid.server.coordinator;
 
-import javax.annotation.Nullable;
-
 public class CompactionStatistics
 {
-  private Integer compactedTaskCount;
   private long byteSum;
   private long segmentNumberCountSum;
   private long segmentIntervalCountSum;
 
   public CompactionStatistics(
-      Integer compactedTaskCount,
       long byteSum,
       long segmentNumberCountSum,
       long segmentIntervalCountSum
   )
   {
-    this.compactedTaskCount = compactedTaskCount;
     this.byteSum = byteSum;
     this.segmentNumberCountSum = segmentNumberCountSum;
     this.segmentIntervalCountSum = segmentIntervalCountSum;
@@ -43,13 +38,7 @@ public class CompactionStatistics
 
   public static CompactionStatistics initializeCompactionStatistics()
   {
-    return new CompactionStatistics(0, 0, 0, 0);
-  }
-
-  @Nullable
-  public int getCompactedTaskCount()
-  {
-    return compactedTaskCount;
+    return new CompactionStatistics(0, 0, 0);
   }
 
   public long getByteSum()
@@ -65,14 +54,6 @@ public class CompactionStatistics
   public long getSegmentIntervalCountSum()
   {
     return segmentIntervalCountSum;
-  }
-
-  public void incrementCompactedTasks(int incrementValue)
-  {
-    if (compactedTaskCount == null) {
-      compactedTaskCount = 0;
-    }
-    compactedTaskCount = compactedTaskCount + incrementValue;
   }
 
   public void incrementCompactedByte(long incrementValue)

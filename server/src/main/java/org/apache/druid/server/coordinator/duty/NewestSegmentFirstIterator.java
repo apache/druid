@@ -70,6 +70,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   private final ObjectMapper objectMapper;
   private final Map<String, DataSourceCompactionConfig> compactionConfigs;
   private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
+  private final Map<String, CompactionStatistics> skippedSegments = new HashMap<>();
+  private final Map<String, CompactionStatistics> returnedSegments = new HashMap<>();
+
 
   // dataSource -> intervalToFind
   // searchIntervals keeps track of the current state of which interval should be considered to search segments to
@@ -134,10 +137,22 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         segmentNumberCountSum += 1;
       }
 
-      CompactionStatistics statistics = new CompactionStatistics(null, byteSum, segmentNumberCountSum, segmentIntervalCountSum);
+      CompactionStatistics statistics = new CompactionStatistics(byteSum, segmentNumberCountSum, segmentIntervalCountSum);
       resultMap.put(entry.getDataSource(), statistics);
     }
     return resultMap;
+  }
+
+  @Override
+  public Map<String, CompactionStatistics> totalProcessedStatistics()
+  {
+    return returnedSegments;
+  }
+
+  @Override
+  public Map<String, CompactionStatistics> totalSkippedStatistics()
+  {
+    return skippedSegments;
   }
 
   @Override
@@ -186,6 +201,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     }
 
     final SegmentsToCompact segmentsToCompact = findSegmentsToCompact(
+        dataSourceName,
         compactibleTimelineObjectHolderCursor,
         config
     );
@@ -341,6 +357,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    * @return segments to compact
    */
   private SegmentsToCompact findSegmentsToCompact(
+      final String dataSourceName,
       final CompactibleTimelineObjectHolderCursor compactibleTimelineObjectHolderCursor,
       final DataSourceCompactionConfig config
   )
@@ -358,8 +375,20 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         );
 
         if (isCompactibleSize && needsCompaction) {
+          CompactionStatistics statistics = returnedSegments.computeIfAbsent(
+              dataSourceName, v -> CompactionStatistics.initializeCompactionStatistics()
+          );
+          statistics.incrementCompactedByte(candidates.getTotalSize());
+          statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
+          statistics.incrementCompactedSegments(candidates.getNumberOfSegments());
           return candidates;
         } else {
+          CompactionStatistics statistics = skippedSegments.computeIfAbsent(
+              dataSourceName, v -> CompactionStatistics.initializeCompactionStatistics()
+          );
+          statistics.incrementCompactedByte(candidates.getTotalSize());
+          statistics.incrementCompactedIntervals(candidates.getNumberOfIntervals());
+          statistics.incrementCompactedSegments(candidates.getNumberOfSegments());
           if (!isCompactibleSize) {
             log.warn(
                 "total segment size[%d] for datasource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
@@ -566,6 +595,16 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     private long getTotalSize()
     {
       return totalSize;
+    }
+
+    private long getNumberOfSegments()
+    {
+      return segments.size();
+    }
+
+    private long getNumberOfIntervals()
+    {
+      return segments.stream().map(DataSegment::getInterval).distinct().count();
     }
 
     @Override

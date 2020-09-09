@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
@@ -31,22 +34,29 @@ public class AutoCompactionSnapshot
     RUNNING
   }
 
+  @JsonProperty
   private String dataSource;
+  @JsonProperty
   private AutoCompactionScheduleStatus scheduleStatus;
+  @JsonProperty
   private String latestScheduledTaskId;
-
+  @JsonProperty
   private long byteAwaitingCompaction;
-  private long byteCompacted;
-
+  @JsonProperty
+  private long byteProcessed;
+  @JsonProperty
   private long segmentCountAwaitingCompaction;
-  private long segmentCountCompacted;
-
+  @JsonProperty
+  private long segmentCountProcessed;
+  @JsonProperty
   private long intervalCountAwaitingCompaction;
-  private long intervalCountCompacted;
+  @JsonProperty
+  private long intervalCountProcessed;
 
+  @JsonCreator
   public AutoCompactionSnapshot(
-      @NotNull String dataSource,
-      @NotNull AutoCompactionScheduleStatus scheduleStatus
+      @JsonProperty @NotNull String dataSource,
+      @JsonProperty @NotNull AutoCompactionScheduleStatus scheduleStatus
   )
   {
     this.dataSource = dataSource;
@@ -76,9 +86,9 @@ public class AutoCompactionSnapshot
     return byteAwaitingCompaction;
   }
 
-  public long getByteCompacted()
+  public long getByteProcessed()
   {
-    return byteCompacted;
+    return byteProcessed;
   }
 
   public long getSegmentCountAwaitingCompaction()
@@ -86,9 +96,9 @@ public class AutoCompactionSnapshot
     return segmentCountAwaitingCompaction;
   }
 
-  public long getSegmentCountCompacted()
+  public long getSegmentCountProcessed()
   {
-    return segmentCountCompacted;
+    return segmentCountProcessed;
   }
 
   public long getIntervalCountAwaitingCompaction()
@@ -96,9 +106,9 @@ public class AutoCompactionSnapshot
     return intervalCountAwaitingCompaction;
   }
 
-  public long getIntervalCountCompacted()
+  public long getIntervalCountProcessed()
   {
-    return intervalCountCompacted;
+    return intervalCountProcessed;
   }
 
   public void setScheduleStatus(AutoCompactionScheduleStatus scheduleStatus)
@@ -116,9 +126,9 @@ public class AutoCompactionSnapshot
     this.byteAwaitingCompaction = byteAwaitingCompaction;
   }
 
-  public void setByteCompacted(long byteCompacted)
+  public void setByteProcessed(long byteProcessed)
   {
-    this.byteCompacted = byteCompacted;
+    this.byteProcessed = byteProcessed;
   }
 
   public void setSegmentCountAwaitingCompaction(long segmentCountAwaitingCompaction)
@@ -126,9 +136,9 @@ public class AutoCompactionSnapshot
     this.segmentCountAwaitingCompaction = segmentCountAwaitingCompaction;
   }
 
-  public void setSegmentCountCompacted(long segmentCountCompacted)
+  public void setSegmentCountProcessed(long segmentCountProcessed)
   {
-    this.segmentCountCompacted = segmentCountCompacted;
+    this.segmentCountProcessed = segmentCountProcessed;
   }
 
   public void setIntervalCountAwaitingCompaction(long intervalCountAwaitingCompaction)
@@ -136,9 +146,9 @@ public class AutoCompactionSnapshot
     this.intervalCountAwaitingCompaction = intervalCountAwaitingCompaction;
   }
 
-  public void setIntervalCountCompacted(long intervalCountCompacted)
+  public void setIntervalCountProcessed(long intervalCountProcessed)
   {
-    this.intervalCountCompacted = intervalCountCompacted;
+    this.intervalCountProcessed = intervalCountProcessed;
   }
 
 
@@ -154,11 +164,11 @@ public class AutoCompactionSnapshot
     }
     AutoCompactionSnapshot that = (AutoCompactionSnapshot) o;
     return byteAwaitingCompaction == that.byteAwaitingCompaction &&
-           byteCompacted == that.byteCompacted &&
+           byteProcessed == that.byteProcessed &&
            segmentCountAwaitingCompaction == that.segmentCountAwaitingCompaction &&
-           segmentCountCompacted == that.segmentCountCompacted &&
+           segmentCountProcessed == that.segmentCountProcessed &&
            intervalCountAwaitingCompaction == that.intervalCountAwaitingCompaction &&
-           intervalCountCompacted == that.intervalCountCompacted &&
+           intervalCountProcessed == that.intervalCountProcessed &&
            dataSource.equals(that.dataSource) &&
            Objects.equals(scheduleStatus, that.scheduleStatus) &&
            Objects.equals(latestScheduledTaskId, that.latestScheduledTaskId);
@@ -172,11 +182,11 @@ public class AutoCompactionSnapshot
         scheduleStatus,
         latestScheduledTaskId,
         byteAwaitingCompaction,
-        byteCompacted,
+        byteProcessed,
         segmentCountAwaitingCompaction,
-        segmentCountCompacted,
+        segmentCountProcessed,
         intervalCountAwaitingCompaction,
-        intervalCountCompacted
+        intervalCountProcessed
     );
   }
 }

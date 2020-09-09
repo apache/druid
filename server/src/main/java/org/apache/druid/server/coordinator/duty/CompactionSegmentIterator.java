@@ -32,11 +32,21 @@ import java.util.Map;
  */
 public interface CompactionSegmentIterator extends Iterator<List<DataSegment>>
 {
-  long UNKNOWN_TOTAL_REMAINING_SEGMENTS_SIZE = -1L;
   /**
    * Return a map of (dataSource, CompactionStatistics) for all dataSources.
-   * This method should consider all segments except the segments returned by {@link #next()}.
+   * This method should consider all segments except the segments iterated by {@link #next()}.
    */
   Map<String, CompactionStatistics> totalRemainingStatistics();
 
+  /**
+   * Return a map of (dataSource, CompactionStatistics) for all dataSources.
+   * This method should consider only segments that was iterated and returned by {@link #next().
+   */
+  Map<String, CompactionStatistics> totalProcessedStatistics();
+
+  /**
+   * Return a map of (dataSource, CompactionStatistics) for all dataSources.
+   * This method should consider only segments that was iterated but not returned by {@link #next().
+   */
+  Map<String, CompactionStatistics> totalSkippedStatistics();
 }

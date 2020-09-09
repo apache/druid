@@ -71,7 +71,6 @@ public class CompactSegments implements CoordinatorDuty
   private final IndexingServiceClient indexingServiceClient;
 
   private HashMap<String, AutoCompactionSnapshot> autoCompactionSnapshotPerDataSource = new HashMap<>();
-  private HashMap<String, CompactionStatistics> compactionScheduledPerDataSource = new HashMap<>();
 
   @Inject
   public CompactSegments(
@@ -188,15 +187,6 @@ public class CompactSegments implements CoordinatorDuty
 
   private void updateAutoCompactionSnapshot(Map<String, DataSourceCompactionConfig> compactionConfigs)
   {
-    // Initialize compaction statistics to 0 for all enabled dataSources
-    compactionScheduledPerDataSource.clear();
-    for (String compactionConfigDataSource : compactionConfigs.keySet()) {
-      compactionScheduledPerDataSource.put(
-          compactionConfigDataSource,
-          CompactionStatistics.initializeCompactionStatistics()
-      );
-    }
-
     // Update AutoCompactionScheduleStatus for dataSource that now has auto compaction disabled
     for (Map.Entry<String, AutoCompactionSnapshot> snapshot : autoCompactionSnapshotPerDataSource.entrySet()) {
       if (!compactionConfigs.containsKey(snapshot.getKey())) {
@@ -251,11 +241,6 @@ public class CompactSegments implements CoordinatorDuty
             newAutoCompactionContext(config.getTaskContext())
         );
         autoCompactionSnapshotPerDataSource.get(dataSourceName).setLatestScheduledTaskId(taskId);
-        CompactionStatistics dataSourceStatistics = compactionScheduledPerDataSource.get(dataSourceName);
-        dataSourceStatistics.incrementCompactedTasks(1);
-        dataSourceStatistics.incrementCompactedByte(segmentsToCompact.stream().mapToLong(DataSegment::getSize).sum());
-        dataSourceStatistics.incrementCompactedIntervals(segmentsToCompact.stream().map(DataSegment::getInterval).distinct().count());
-        dataSourceStatistics.incrementCompactedSegments(segmentsToCompact.size());
 
         LOG.info(
             "Submitted a compactionTask[%s] for %s segments",
@@ -286,11 +271,21 @@ public class CompactSegments implements CoordinatorDuty
   {
     final CoordinatorStats stats = new CoordinatorStats();
     stats.addToGlobalStat(COMPACTION_TASK_COUNT, numCompactionTasks);
+    // Statistics of all segments that was not iterated (during this run)
     Map<String, CompactionStatistics> totalRemainingStatistics = iterator.totalRemainingStatistics();
+    // Statistics of all segments iterated but not scheduled in compaction task (during this run) since segments
+    // were already compacted or skipped
+    Map<String, CompactionStatistics> totalSkippedStatistics = iterator.totalSkippedStatistics();
+    // Statistics of all segments scheduled in compaction tasks (during this run)
+    Map<String, CompactionStatistics> totalProcessedStatistics = iterator.totalProcessedStatistics();
+
 
     for (Map.Entry<String, AutoCompactionSnapshot> autoCompactionSnapshotEntry : autoCompactionSnapshotPerDataSource.entrySet()) {
       final String dataSource = autoCompactionSnapshotEntry.getKey();
       CompactionStatistics remainingStatistics = totalRemainingStatistics.get(dataSource);
+      CompactionStatistics skippedStatistics = totalSkippedStatistics.get(dataSource);
+      CompactionStatistics processedStatistics = totalProcessedStatistics.get(dataSource);
+
       long byteAwaitingCompaction = 0;
       long segmentCountAwaitingCompaction = 0;
       long intervalCountAwaitingCompaction = 0;
@@ -302,24 +297,26 @@ public class CompactSegments implements CoordinatorDuty
         intervalCountAwaitingCompaction = remainingStatistics.getSegmentIntervalCountSum();
       }
 
-      CompactionStatistics scheduledStatistics = compactionScheduledPerDataSource.get(dataSource);
-      long byteCompacted = 0;
-      long segmentCountCompacted = 0;
-      long intervalCountCompacted = 0;
-      if (scheduledStatistics != null) {
-        // If null means that we did not get to schedule any compaction for the dataSource.
-        // Hence, we can leave these set to default value of 0. If not null, we set it to the collected statistic.
-        byteCompacted = scheduledStatistics.getByteSum();
-        segmentCountCompacted = scheduledStatistics.getSegmentNumberCountSum();
-        intervalCountCompacted = scheduledStatistics.getSegmentIntervalCountSum();
+      long byteDoNotNeedCompaction = 0;
+      long segmentCountDoNotNeedCompaction = 0;
+      long intervalCountDoNotNeedCompaction = 0;
+      if (processedStatistics != null) {
+        byteDoNotNeedCompaction += processedStatistics.getByteSum();
+        segmentCountDoNotNeedCompaction += processedStatistics.getSegmentNumberCountSum();
+        intervalCountDoNotNeedCompaction += processedStatistics.getSegmentIntervalCountSum();
+      }
+      if (skippedStatistics != null) {
+        byteDoNotNeedCompaction += skippedStatistics.getByteSum();
+        segmentCountDoNotNeedCompaction += skippedStatistics.getSegmentNumberCountSum();
+        intervalCountDoNotNeedCompaction += skippedStatistics.getSegmentIntervalCountSum();
       }
 
       autoCompactionSnapshotEntry.getValue().setByteAwaitingCompaction(byteAwaitingCompaction);
-      autoCompactionSnapshotEntry.getValue().setByteCompacted(byteCompacted);
+      autoCompactionSnapshotEntry.getValue().setByteProcessed(byteDoNotNeedCompaction);
       autoCompactionSnapshotEntry.getValue().setSegmentCountAwaitingCompaction(segmentCountAwaitingCompaction);
-      autoCompactionSnapshotEntry.getValue().setSegmentCountCompacted(segmentCountCompacted);
+      autoCompactionSnapshotEntry.getValue().setSegmentCountProcessed(segmentCountDoNotNeedCompaction);
       autoCompactionSnapshotEntry.getValue().setIntervalCountAwaitingCompaction(intervalCountAwaitingCompaction);
-      autoCompactionSnapshotEntry.getValue().setIntervalCountCompacted(intervalCountCompacted);
+      autoCompactionSnapshotEntry.getValue().setIntervalCountProcessed(intervalCountDoNotNeedCompaction);
 
       stats.addToDataSourceStat(
           TOTAL_SIZE_OF_SEGMENTS_AWAITING_COMPACTION,
@@ -339,17 +336,17 @@ public class CompactSegments implements CoordinatorDuty
       stats.addToDataSourceStat(
           TOTAL_SIZE_OF_SEGMENTS_COMPACTED,
           dataSource,
-          byteCompacted
+          byteDoNotNeedCompaction
       );
       stats.addToDataSourceStat(
           TOTAL_COUNT_OF_SEGMENTS_COMPACTED,
           dataSource,
-          segmentCountCompacted
+          segmentCountDoNotNeedCompaction
       );
       stats.addToDataSourceStat(
           TOTAL_INTERVAL_OF_SEGMENTS_COMPACTED,
           dataSource,
-          intervalCountCompacted
+          intervalCountDoNotNeedCompaction
       );
     }
 
