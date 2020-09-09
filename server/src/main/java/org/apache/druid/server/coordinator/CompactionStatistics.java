@@ -41,7 +41,8 @@ public class CompactionStatistics
     this.segmentIntervalCountSum = segmentIntervalCountSum;
   }
 
-  public static CompactionStatistics initializeCompactionStatistics() {
+  public static CompactionStatistics initializeCompactionStatistics()
+  {
     return new CompactionStatistics(0, 0, 0, 0);
   }
 

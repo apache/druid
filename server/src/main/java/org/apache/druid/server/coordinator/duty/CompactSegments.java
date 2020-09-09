@@ -29,8 +29,8 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.CompactionStatistics;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -372,7 +372,8 @@ public class CompactSegments implements CoordinatorDuty
     return autoCompactionSnapshotPerDataSource.get(dataSource);
   }
 
-  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot() {
+  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
+  {
     return autoCompactionSnapshotPerDataSource;
   }
 }

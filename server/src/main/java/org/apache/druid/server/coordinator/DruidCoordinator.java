@@ -369,7 +369,8 @@ public class DruidCoordinator
     return compactSegments.getAutoCompactionSnapshot(dataSource);
   }
 
-  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot() {
+  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
+  {
     return compactSegments.getAutoCompactionSnapshot();
   }
 
