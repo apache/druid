@@ -29,6 +29,11 @@ import org.eclipse.jetty.util.component.AbstractLifeCycle;
 public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
 {
   private static final Logger logger = new Logger("org.apache.druid.jetty.RequestLog");
+  private static final String COORDINATOR = "/coordinator";
+  private static final String OVERLORD = "/indexer";
+  private static final String POST = "POST";
+  private static final String DELETE = "DELETE";
+  private static final String PUT = "PUT";
 
   @Override
   public void log(Request request, Response response)
@@ -40,6 +45,20 @@ public class JettyRequestLog extends AbstractLifeCycle implements RequestLog
           request.getMethod(),
           request.getHttpURI().toString(),
           request.getProtocol()
+      );
+    } else if ((POST.equals(request.getMethod())
+        || DELETE.equals(request.getMethod())
+        || PUT.equals(request.getMethod()))
+        && (request.getHttpURI().toString().contains(COORDINATOR)
+        || request.getHttpURI().toString().contains(OVERLORD))) {
+      logger.info(
+          "%s %s %s %s %s",
+          request.getRemoteAddr(),
+          request.getMethod(),
+          request.getHttpURI().toString(),
+          request.getProtocol(),
+          ((request.getRemoteUser() != null) ? request.getRemoteUser() :
+              (request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : ""))
       );
     }
   }
