@@ -1079,7 +1079,7 @@ public class ExpressionsTest extends ExpressionTestBase
   public void testContains()
   {
     testHelper.testFilter(
-        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("there")
@@ -1090,7 +1090,7 @@ public class ExpressionsTest extends ExpressionTestBase
     );
 
     testHelper.testFilter(
-        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("There")
@@ -1101,7 +1101,7 @@ public class ExpressionsTest extends ExpressionTestBase
     );
 
     testHelper.testFilter(
-        ContainsOperatorConversion.createOperatorConversion(false).calciteOperator(),
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeInputRef("spacey"),
             testHelper.makeLiteral("There")
@@ -1112,7 +1112,7 @@ public class ExpressionsTest extends ExpressionTestBase
     );
 
     testHelper.testFilter(
-        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
                 SqlStdOperatorTable.CONCAT,
@@ -1134,7 +1134,7 @@ public class ExpressionsTest extends ExpressionTestBase
     );
 
     testHelper.testFilter(
-        ContainsOperatorConversion.createOperatorConversion(true).calciteOperator(),
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
                 SqlStdOperatorTable.CONCAT,
@@ -1156,7 +1156,7 @@ public class ExpressionsTest extends ExpressionTestBase
     );
 
     testHelper.testFilter(
-        ContainsOperatorConversion.createOperatorConversion(false).calciteOperator(),
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
         ImmutableList.of(
             testHelper.makeCall(
                 SqlStdOperatorTable.CONCAT,

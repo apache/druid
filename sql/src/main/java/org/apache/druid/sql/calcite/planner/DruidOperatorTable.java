@@ -182,8 +182,8 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
           .add(new LPadOperatorConversion())
           .add(new RPadOperatorConversion())
-          .add(ContainsOperatorConversion.createOperatorConversion(true))
-          .add(ContainsOperatorConversion.createOperatorConversion(false))
+          .add(ContainsOperatorConversion.caseSensitive())
+          .add(ContainsOperatorConversion.caseInsensitive())
           .build();
 
   private static final List<SqlOperatorConversion> VALUE_COERCION_OPERATOR_CONVERSIONS =

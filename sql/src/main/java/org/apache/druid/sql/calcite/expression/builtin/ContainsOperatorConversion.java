@@ -24,6 +24,7 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
@@ -33,7 +34,6 @@ import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.search.SearchQuerySpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -44,10 +44,11 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class ContainsOperatorConversion extends DirectOperatorConversion
+public class ContainsOperatorConversion implements SqlOperatorConversion
 {
   private static final String CASE_SENSITIVE_FN_NAME = "contains_str";
   private static final String CASE_INSENSITIVE_FN_NAME = "icontains_str";
+  private final SqlOperator operator;
   private final boolean caseSensitive;
 
   public ContainsOperatorConversion(
@@ -56,15 +57,20 @@ public class ContainsOperatorConversion extends DirectOperatorConversion
       final boolean caseSensitive
   )
   {
-    super(sqlFunction, functionName);
+    this.operator = sqlFunction;
     this.caseSensitive = caseSensitive;
   }
 
-  public static SqlOperatorConversion createOperatorConversion(boolean caseSensitive)
+  public static SqlOperatorConversion caseSensitive()
   {
-    final String functionName = caseSensitive ? CASE_SENSITIVE_FN_NAME : CASE_INSENSITIVE_FN_NAME;
-    final SqlFunction sqlFunction = createSqlFunction(functionName);
-    return new ContainsOperatorConversion(sqlFunction, functionName, caseSensitive);
+    final SqlFunction sqlFunction = createSqlFunction(CASE_SENSITIVE_FN_NAME);
+    return new ContainsOperatorConversion(sqlFunction, CASE_SENSITIVE_FN_NAME, true);
+  }
+
+  public static SqlOperatorConversion caseInsensitive()
+  {
+    final SqlFunction sqlFunction = createSqlFunction(CASE_INSENSITIVE_FN_NAME);
+    return new ContainsOperatorConversion(sqlFunction, CASE_INSENSITIVE_FN_NAME, false);
   }
 
   private static SqlFunction createSqlFunction(final String functionName)
@@ -77,6 +83,23 @@ public class ContainsOperatorConversion extends DirectOperatorConversion
         .returnTypeNonNull(SqlTypeName.BOOLEAN)
         .functionCategory(SqlFunctionCategory.STRING)
         .build();
+  }
+
+  @Override
+  public SqlOperator calciteOperator()
+  {
+    return operator;
+  }
+
+  @Nullable
+  @Override
+  public DruidExpression toDruidExpression(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode
+  )
+  {
+    return null;
   }
 
   @Nullable
