@@ -243,7 +243,7 @@ public interface Function
     @Override
     public ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args)
     {
-      return ExprType.implicitCast(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
+      return ExprType.autoTypeConversion(args.get(0).getOutputType(inputTypes), args.get(1).getOutputType(inputTypes));
     }
   }
 
@@ -402,7 +402,7 @@ public interface Function
     {
       ExprType outputType = ExprType.LONG;
       for (Expr expr : args) {
-        outputType = ExprType.implicitCast(outputType, expr.getOutputType(inputTypes));
+        outputType = ExprType.autoTypeConversion(outputType, expr.getOutputType(inputTypes));
       }
       return outputType;
     }
@@ -423,7 +423,7 @@ public interface Function
         ExprType exprType = exprEval.type();
 
         if (isValidType(exprType)) {
-          outputType = ExprType.implicitCast(outputType, exprType);
+          outputType = ExprType.autoTypeConversion(outputType, exprType);
         }
 
         if (exprEval.value() != null) {
@@ -2283,7 +2283,7 @@ public interface Function
     {
       ExprType type = ExprType.LONG;
       for (Expr arg : args) {
-        type = ExprType.implicitCast(type, arg.getOutputType(inputTypes));
+        type = ExprType.autoTypeConversion(type, arg.getOutputType(inputTypes));
       }
       return ExprType.asArrayType(type);
     }

@@ -116,14 +116,17 @@ public enum ExprType
     return elementType;
   }
 
+  /**
+   * Given 2 'input' types, choose the most appropriate combined type, if possible
+   */
   @Nullable
-  public static ExprType implicitCast(@Nullable ExprType type, @Nullable ExprType other)
+  public static ExprType autoTypeConversion(@Nullable ExprType type, @Nullable ExprType other)
   {
     if (type == null || other == null) {
-      // cannot implicitly cast unknown types
+      // cannot auto conversion unknown types
       return null;
     }
-    // arrays cannot be implicitly cast
+    // arrays cannot be auto converted
     if (isArray(type)) {
       if (!type.equals(other)) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
