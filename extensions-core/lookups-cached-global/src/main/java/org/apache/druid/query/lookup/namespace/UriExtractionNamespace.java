@@ -296,9 +296,10 @@ public class UriExtractionNamespace implements ExtractionNamespace
           this.valueColumn,
           Arrays.toString(columns.toArray())
       );
-
+      CSVParser csvParser = new CSVParser(null, columns, hasHeaderRow, skipHeaderRows);
+      csvParser.startFileFromBeginning();
       this.parser = new DelegateParser(
-          new CSVParser(null, columns, hasHeaderRow, skipHeaderRows),
+          csvParser,
           this.keyColumn,
           this.valueColumn
       );
@@ -401,6 +402,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
           hasHeaderRow,
           skipHeaderRows
       );
+      delegate.startFileFromBeginning();
       Preconditions.checkArgument(
           !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
           "Must specify both `keyColumn` and `valueColumn` or neither `keyColumn` nor `valueColumn`"
