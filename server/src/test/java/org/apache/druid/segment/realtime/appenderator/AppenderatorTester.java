@@ -54,9 +54,9 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -119,9 +119,20 @@ public class AppenderatorTester implements AutoCloseable
 
   public AppenderatorTester(
       final int maxRowsInMemory,
-      long maxSizeInBytes,
+      final long maxSizeInBytes,
       final File basePersistDirectory,
       final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, new SimpleRowIngestionMeters());
+  }
+
+  public AppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      final File basePersistDirectory,
+      final boolean enablePushFailure,
+      final RowIngestionMeters rowIngestionMeters
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -150,10 +161,9 @@ public class AppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-    maxSizeInBytes = maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes;
     tuningConfig = new RealtimeTuningConfig(
         maxRowsInMemory,
-        maxSizeInBytes,
+        maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         null,
         null,
         basePersistDirectory,
@@ -232,7 +242,6 @@ public class AppenderatorTester implements AutoCloseable
         throw new UnsupportedOperationException();
       }
     };
-    final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
     appenderator = Appenderators.createRealtime(
         schema.getDataSource(),
         schema,
@@ -267,7 +276,7 @@ public class AppenderatorTester implements AutoCloseable
         new CacheConfig(),
         new CachePopulatorStats(),
         rowIngestionMeters,
-        new ParseExceptionHandler(rowIngestionMeters, false, 0, 0)
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0)
     );
   }
 

@@ -32,6 +32,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.Result;
@@ -43,6 +44,8 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -481,6 +484,23 @@ public class AppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testVerifyRowIngestionMetrics() throws Exception
+  {
+    final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
+    try (final AppenderatorTester tester = new AppenderatorTester(5, 1000L, null, false, rowIngestionMeters)) {
+      final Appenderator appenderator = tester.getAppenderator();
+      appenderator.startJob();
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", "invalid_met"), Committers.nilSupplier());
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Committers.nilSupplier());
+
+      Assert.assertEquals(1, rowIngestionMeters.getProcessed());
+      Assert.assertEquals(1, rowIngestionMeters.getProcessedWithError());
+      Assert.assertEquals(0, rowIngestionMeters.getUnparseable());
+      Assert.assertEquals(0, rowIngestionMeters.getThrownAway());
+    }
+  }
+
+  @Test
   public void testQueryByIntervals() throws Exception
   {
     try (final AppenderatorTester tester = new AppenderatorTester(2, true)) {
@@ -792,7 +812,7 @@ public class AppenderatorTest extends InitializedNullHandlingTest
     );
   }
 
-  static InputRow ir(String ts, String dim, long met)
+  static InputRow ir(String ts, String dim, Object met)
   {
     return new MapBasedInputRow(
         DateTimes.of(ts).getMillis(),
