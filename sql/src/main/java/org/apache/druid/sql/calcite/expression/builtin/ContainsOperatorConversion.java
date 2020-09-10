@@ -28,6 +28,8 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.expression.CaseInsensitiveContainsExprMacro;
+import org.apache.druid.query.expression.ContainsExprMacro;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
@@ -51,8 +53,6 @@ import java.util.List;
  */
 public class ContainsOperatorConversion implements SqlOperatorConversion
 {
-  private static final String CASE_SENSITIVE_FN_NAME = "contains_string";
-  private static final String CASE_INSENSITIVE_FN_NAME = "icontains_string";
   private final SqlOperator operator;
   private final boolean caseSensitive;
 
@@ -67,13 +67,13 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
 
   public static SqlOperatorConversion caseSensitive()
   {
-    final SqlFunction sqlFunction = createSqlFunction(CASE_SENSITIVE_FN_NAME);
+    final SqlFunction sqlFunction = createSqlFunction(ContainsExprMacro.FN_NAME);
     return new ContainsOperatorConversion(sqlFunction, true);
   }
 
   public static SqlOperatorConversion caseInsensitive()
   {
-    final SqlFunction sqlFunction = createSqlFunction(CASE_INSENSITIVE_FN_NAME);
+    final SqlFunction sqlFunction = createSqlFunction(CaseInsensitiveContainsExprMacro.FN_NAME);
     return new ContainsOperatorConversion(sqlFunction, false);
   }
 
@@ -103,7 +103,15 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
       RexNode rexNode
   )
   {
-    return null;
+    return OperatorConversions.convertCall(
+        plannerContext,
+        rowSignature,
+        rexNode,
+        operands -> DruidExpression.fromExpression(DruidExpression.functionCall(
+            StringUtils.toLowerCase(operator.getName()),
+            operands
+        ))
+    );
   }
 
   @Nullable

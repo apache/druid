@@ -1078,6 +1078,119 @@ public class ExpressionsTest extends ExpressionTestBase
   @Test
   public void testContains()
   {
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("there")
+        ),
+        DruidExpression.fromExpression("contains_string(\"spacey\",'there')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        DruidExpression.fromExpression("contains_string(\"spacey\",'There')"),
+        0L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeLiteral("There")
+        ),
+        DruidExpression.fromExpression("icontains_string(\"spacey\",'There')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("what")
+        ),
+        DruidExpression.fromExpression("contains_string(concat('what is',\"spacey\"),'what')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseSensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("there")
+        ),
+        DruidExpression.fromExpression("contains_string(concat('what is',\"spacey\"),'there')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("what is"),
+                testHelper.makeInputRef("spacey")
+            ),
+            testHelper.makeLiteral("There")
+        ),
+        DruidExpression.fromExpression("icontains_string(concat('what is',\"spacey\"),'There')"),
+        1L
+    );
+
+    testHelper.testExpression(
+        SqlStdOperatorTable.AND,
+        ImmutableList.of(
+            testHelper.makeCall(
+                ContainsOperatorConversion.caseSensitive().calciteOperator(),
+                testHelper.makeInputRef("spacey"),
+                testHelper.makeLiteral("there")
+            ),
+            testHelper.makeCall(
+                SqlStdOperatorTable.EQUALS,
+                testHelper.makeLiteral("yes"),
+                testHelper.makeLiteral("yes")
+            )
+        ),
+        DruidExpression.fromExpression("(contains_string(\"spacey\",'there') && ('yes' == 'yes'))"),
+        1L
+    );
+
+    testHelper.testExpression(
+        SqlStdOperatorTable.AND,
+        ImmutableList.of(
+            testHelper.makeCall(
+                ContainsOperatorConversion.caseInsensitive().calciteOperator(),
+                testHelper.makeInputRef("spacey"),
+                testHelper.makeLiteral("There")
+            ),
+            testHelper.makeCall(
+                SqlStdOperatorTable.EQUALS,
+                testHelper.makeLiteral("yes"),
+                testHelper.makeLiteral("yes")
+            )
+        ),
+        DruidExpression.fromExpression("(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
+        1L
+    );
+
+  }
+
+  @Test
+  public void testContainsAsFilter()
+  {
     testHelper.testFilter(
         ContainsOperatorConversion.caseSensitive().calciteOperator(),
         ImmutableList.of(
