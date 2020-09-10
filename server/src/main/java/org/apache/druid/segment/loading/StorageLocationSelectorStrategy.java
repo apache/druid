@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * This interface describes the storage location selection strategy which is responsible for ordering the
@@ -57,6 +56,4 @@ public interface StorageLocationSelectorStrategy
    * @return An iterator of {@link StorageLocation}s from which the callers can iterate and pick a location.
    */
   Iterator<StorageLocation> getLocations();
-
-  void setLocations(List<StorageLocation> locations);
 }

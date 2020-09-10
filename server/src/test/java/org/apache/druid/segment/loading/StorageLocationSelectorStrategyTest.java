@@ -19,16 +19,17 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.module.guice.ObjectMapperModule;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -275,39 +276,57 @@ public class StorageLocationSelectorStrategyTest
   {
     //no druid.segmentCache.locationSelectorStrategy.type specified
     final Properties props = new Properties();
-    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+    props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
+
+    StorageLocationSelectorStrategy strategy = makeInjectorWithProperties(props).getInstance(StorageLocationSelectorStrategy.class);
     Assert.assertEquals(LeastBytesUsedStorageLocationSelectorStrategy.class,
-                        loaderConfig.getStorageLocationSelectorStrategy().getClass());
+                        strategy.getClass());
+    Assert.assertEquals("/tmp/druid/indexCache", strategy.getLocations().next().getPath().getAbsolutePath());
   }
 
   @Test
   public void testRoundRobinSelectorStrategyConfig()
   {
     final Properties props = new Properties();
+    props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
     props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "roundRobin");
-    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+
+    Injector injector = makeInjectorWithProperties(props);
+    StorageLocationSelectorStrategy strategy = injector.getInstance(StorageLocationSelectorStrategy.class);
+
     Assert.assertEquals(RoundRobinStorageLocationSelectorStrategy.class,
-                        loaderConfig.getStorageLocationSelectorStrategy().getClass());
+                        strategy.getClass());
+    Assert.assertEquals("/tmp/druid/indexCache", strategy.getLocations().next().getPath().getAbsolutePath());
   }
 
   @Test
   public void testLeastBytesUsedSelectorStrategyConfig()
   {
     final Properties props = new Properties();
+    props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
     props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "leastBytesUsed");
-    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+
+    Injector injector = makeInjectorWithProperties(props);
+    StorageLocationSelectorStrategy strategy = injector.getInstance(StorageLocationSelectorStrategy.class);
+
     Assert.assertEquals(LeastBytesUsedStorageLocationSelectorStrategy.class,
-                        loaderConfig.getStorageLocationSelectorStrategy().getClass());
+                        strategy.getClass());
+    Assert.assertEquals("/tmp/druid/indexCache", strategy.getLocations().next().getPath().getAbsolutePath());
   }
 
   @Test
   public void testRandomSelectorStrategyConfig()
   {
     final Properties props = new Properties();
+    props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
     props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "random");
-    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+
+    Injector injector = makeInjectorWithProperties(props);
+    StorageLocationSelectorStrategy strategy = injector.getInstance(StorageLocationSelectorStrategy.class);
+
     Assert.assertEquals(RandomStorageLocationSelectorStrategy.class,
-                        loaderConfig.getStorageLocationSelectorStrategy().getClass());
+                        strategy.getClass());
+    Assert.assertEquals("/tmp/druid/indexCache", strategy.getLocations().next().getPath().getAbsolutePath());
   }
 
   @Test
@@ -315,29 +334,43 @@ public class StorageLocationSelectorStrategyTest
   {
     final Properties props = new Properties();
     props.setProperty("druid.segmentCache.locationSelectorStrategy.type", "mostAvailableSize");
-    SegmentLoaderConfig loaderConfig = makeInjectorWithProperties(props).getInstance(SegmentLoaderConfig.class);
+    props.setProperty("druid.segmentCache.locations", "[{\"path\": \"/tmp/druid/indexCache\"}]");
+
+    Injector injector = makeInjectorWithProperties(props);
+    StorageLocationSelectorStrategy strategy = injector.getInstance(StorageLocationSelectorStrategy.class);
+
     Assert.assertEquals(MostAvailableSizeStorageLocationSelectorStrategy.class,
-                        loaderConfig.getStorageLocationSelectorStrategy().getClass());
+                        strategy.getClass());
+    Assert.assertEquals("/tmp/druid/indexCache", strategy.getLocations().next().getPath().getAbsolutePath());
   }
 
   private Injector makeInjectorWithProperties(final Properties props)
   {
     return Guice.createInjector(
-        ImmutableList.of(
-            new DruidGuiceExtensions(),
-            new JacksonModule(),
-            new Module()
+        new Module()
+          {
+            @Override
+            public void configure(Binder binder)
             {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
-                binder.bind(JsonConfigurator.class).in(LazySingleton.class);
-                binder.bind(Properties.class).toInstance(props);
-                JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
-              }
-            }
-        ));
-  }
+              //ObjectMapperModule introduce Guice injector for jackson
+              binder.install(new ObjectMapperModule()
+                                 .withObjectMapper(new DefaultObjectMapper()));
+              binder.install(new DruidGuiceExtensions());
 
+              binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+              binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+              binder.bind(Properties.class).toInstance(props);
+
+              JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
+              JsonConfigProvider.bind(binder, "druid.segmentCache.locationSelectorStrategy", StorageLocationSelectorStrategy.class);
+            }
+
+            @Provides
+            public List provideStorageLocation(SegmentLoaderConfig segmentLoader)
+            {
+              return segmentLoader.toStorageLocations();
+            }
+          }
+      );
+  }
 }

@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.annotations.VisibleForTesting;
 
 import java.util.Iterator;
 import java.util.List;
@@ -35,16 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RoundRobinStorageLocationSelectorStrategy implements StorageLocationSelectorStrategy
 {
-  private List<StorageLocation> storageLocations;
+  private final List<StorageLocation> storageLocations;
   private final AtomicInteger startIndex = new AtomicInteger(0);
 
   @JsonCreator
-  public RoundRobinStorageLocationSelectorStrategy()
-  {
-  }
-
-  @VisibleForTesting
-  RoundRobinStorageLocationSelectorStrategy(List<StorageLocation> storageLocations)
+  public RoundRobinStorageLocationSelectorStrategy(@JacksonInject List<StorageLocation> storageLocations)
   {
     this.storageLocations = storageLocations;
   }
@@ -82,11 +77,4 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
       }
     };
   }
-
-  @Override
-  public void setLocations(List<StorageLocation> locations)
-  {
-    this.storageLocations = locations;
-  }
-
 }
