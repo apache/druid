@@ -39,7 +39,8 @@ public class ShuffleMetrics
    * This lock is used to synchronize accesses to the reference to {@link #datasourceMetrics} and the
    * {@link PerDatasourceShuffleMetrics} values of the map. This means,
    *
-   * - Any updates on PerDatasourceShuffleMetrics in the map (and thus its key) should be synchronized under this lock.
+   * - Any updates on PerDatasourceShuffleMetrics in the map (and thus its key as well) should be synchronized
+   * under this lock.
    * - Any updates on the reference to datasourceMetrics should be synchronized under this lock.
    */
   private final Object lock = new Object();
@@ -66,10 +67,10 @@ public class ShuffleMetrics
   }
 
   /**
-   * This method is called whenever the monitoring thread takes a snapshot of the current metrics. The map inside
-   * AtomicReference will be reset to an empty map after this call. This is to return the snapshot metrics collected
-   * during the monitornig period. There is a happens-before relationship between snapshotAndReset() and
-   * {@link #shuffleRequested}.
+   * This method is called whenever the monitoring thread takes a snapshot of the current metrics.
+   * {@link #datasourceMetrics} will be reset to an empty map after this call. This is to return the snapshot
+   * metrics collected during the monitornig period. There is a happens-before relationship between snapshotAndReset()
+   * and {@link #shuffleRequested}.
    */
   public Map<String, PerDatasourceShuffleMetrics> snapshotAndReset()
   {
