@@ -75,6 +75,12 @@ public interface ApplyFunction
    */
   void validateArguments(LambdaExpr lambdaExpr, List<Expr> args);
 
+  /**
+   * Compute the output type of this function for a given lambda and the argument expressions which will be applied as
+   * its inputs.
+   *
+   * @see Expr#getOutputType
+   */
   @Nullable
   ExprType getOutputType(Expr.InputBindingTypes inputTypes, LambdaExpr expr, List<Expr> args);
 
@@ -883,6 +889,12 @@ public interface ApplyFunction
     }
   }
 
+  /**
+   * Helper that can wrap another {@link Expr.InputBindingTypes} to use to supply the type information of a
+   * {@link LambdaExpr} when evaluating {@link ApplyFunctionExpr#getOutputType}. Lambda identifiers do not exist
+   * in the underlying {@link Expr.InputBindingTypes}, but can be created by mapping the lambda identifiers to the
+   * arguments that will be applied to them, to map the type information.
+   */
   class LambdaInputBindingTypes implements Expr.InputBindingTypes
   {
     private final Object2IntMap<String> lambdaIdentifiers;

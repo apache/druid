@@ -127,9 +127,20 @@ public interface Expr
    */
   BindingAnalysis analyzeInputs();
 
+  /**
+   * Given an {@link InputBindingTypes}, compute what the output {@link ExprType} will be for this expression. A return
+   * value of null indicates that the given type information was not enough to resolve the output type, so the
+   * expression must be evaluated using default {@link #eval} handling where types are only known after evaluation,
+   * through {@link ExprEval#type}.
+   */
   @Nullable
   ExprType getOutputType(InputBindingTypes inputTypes);
 
+  /**
+   * Mechanism to supply input types for the bindings which will back {@link IdentifierExpr}, to use in the aid of
+   * inferring the output type of an expression with {@link #getOutputType}. A null value means that either the binding
+   * doesn't exist, or, that the type information is unavailable.
+   */
   interface InputBindingTypes
   {
     @Nullable

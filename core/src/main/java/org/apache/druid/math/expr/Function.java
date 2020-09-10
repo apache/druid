@@ -104,6 +104,11 @@ public interface Function
    */
   void validateArguments(List<Expr> args);
 
+  /**
+   * Compute the output type of this function for a given set of argument expression inputs.
+   *
+   * @see Expr#getOutputType
+   */
   @Nullable
   ExprType getOutputType(Expr.InputBindingTypes inputTypes, List<Expr> args);
 
