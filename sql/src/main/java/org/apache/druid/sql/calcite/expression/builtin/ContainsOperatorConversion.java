@@ -44,6 +44,11 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import javax.annotation.Nullable;
 import java.util.List;
 
+/**
+ * Register {@code contains_string} and {@code icontains_string} functions with calcite that internally
+ * translate these functions into {@link SearchQueryDimFilter} with {@link ContainsSearchQuerySpec} as
+ * search query spec.
+ */
 public class ContainsOperatorConversion implements SqlOperatorConversion
 {
   private static final String CASE_SENSITIVE_FN_NAME = "contains_string";
@@ -53,7 +58,6 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
 
   public ContainsOperatorConversion(
       final SqlFunction sqlFunction,
-      final String functionName,
       final boolean caseSensitive
   )
   {
@@ -64,13 +68,13 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
   public static SqlOperatorConversion caseSensitive()
   {
     final SqlFunction sqlFunction = createSqlFunction(CASE_SENSITIVE_FN_NAME);
-    return new ContainsOperatorConversion(sqlFunction, CASE_SENSITIVE_FN_NAME, true);
+    return new ContainsOperatorConversion(sqlFunction, true);
   }
 
   public static SqlOperatorConversion caseInsensitive()
   {
     final SqlFunction sqlFunction = createSqlFunction(CASE_INSENSITIVE_FN_NAME);
-    return new ContainsOperatorConversion(sqlFunction, CASE_INSENSITIVE_FN_NAME, false);
+    return new ContainsOperatorConversion(sqlFunction, false);
   }
 
   private static SqlFunction createSqlFunction(final String functionName)
