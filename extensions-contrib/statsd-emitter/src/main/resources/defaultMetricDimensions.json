@@ -62,6 +62,12 @@
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
+  "worker/total/count" : { "dimensions" : [], "type" : "count" },
+  "worker/idle/count" : { "dimensions" : [], "type" : "count" },
+  "worker/busy/count" : { "dimensions" : [], "type" : "count" },
+  "worker/lazy/count" : { "dimensions" : [], "type" : "count" },
+  "worker/blacklisted/count" : { "dimensions" : [], "type" : "count" },
+
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "segment/moved/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },

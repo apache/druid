@@ -1547,6 +1547,36 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
   }
 
+  @Override
+  public long getTotalWorkerCount()
+  {
+    return getWorkers().size();
+  }
+
+  @Override
+  public long getIdleWorkerCount()
+  {
+    return getWorkersEligibleToRunTasks().size();
+  }
+
+  @Override
+  public long getUsedWorkerCount()
+  {
+    return getWorkersWithUnacknowledgedTasks().size();
+  }
+
+  @Override
+  public long getLazyWorkerCount()
+  {
+    return getLazyWorkers().size();
+  }
+
+  @Override
+  public long getBlacklistedWorkerCount()
+  {
+    return getBlacklistedWorkers().size();
+  }
+
   private static class HttpRemoteTaskRunnerWorkItem extends RemoteTaskRunnerWorkItem
   {
     enum State

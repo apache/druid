@@ -95,6 +95,7 @@ public class ThreadingTaskRunner
   private final MultipleFileTaskReportFileWriter taskReportFileWriter;
   private final ListeningExecutorService taskExecutor;
   private final ListeningExecutorService controlThreadExecutor;
+  private final WorkerConfig workerConfig;
 
   private volatile boolean stopping = false;
 
@@ -116,6 +117,7 @@ public class ThreadingTaskRunner
     this.node = node;
     this.appenderatorsManager = appenderatorsManager;
     this.taskReportFileWriter = (MultipleFileTaskReportFileWriter) taskReportFileWriter;
+    this.workerConfig = workerConfig;
     this.taskExecutor = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "threading-task-runner-executor-%d")
     );
@@ -449,6 +451,36 @@ public class ThreadingTaskRunner
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();
+  }
+
+  @Override
+  public long getTotalWorkerCount()
+  {
+    return workerConfig.getCapacity();
+  }
+
+  @Override
+  public long getIdleWorkerCount()
+  {
+    return getTotalWorkerCount() - getUsedWorkerCount();
+  }
+
+  @Override
+  public long getUsedWorkerCount()
+  {
+    return getRunningTasks().size();
+  }
+
+  @Override
+  public long getLazyWorkerCount()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getBlacklistedWorkerCount()
+  {
+    return 0;
   }
 
   @Override

@@ -113,6 +113,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
+import org.apache.druid.server.metrics.WorkerCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
@@ -179,6 +180,7 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
+            binder.bind(WorkerCountStatsProvider.class).to(TaskMaster.class);
 
             binder.bind(TaskLogStreamer.class).to(SwitchingTaskLogStreamer.class).in(LazySingleton.class);
             binder.bind(

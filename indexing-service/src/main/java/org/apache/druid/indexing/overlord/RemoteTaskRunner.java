@@ -1434,4 +1434,34 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     return workersWithUnacknowledgedTask;
   }
+
+  @Override
+  public long getTotalWorkerCount()
+  {
+    return getWorkers().size();
+  }
+
+  @Override
+  public long getIdleWorkerCount()
+  {
+    return getTotalWorkerCount() - (getUsedWorkerCount() + getLazyWorkerCount() + getBlacklistedWorkerCount());
+  }
+
+  @Override
+  public long getUsedWorkerCount()
+  {
+    return getWorkersWithUnacknowledgedTask().size();
+  }
+
+  @Override
+  public long getLazyWorkerCount()
+  {
+    return getLazyWorkers().size();
+  }
+
+  @Override
+  public long getBlacklistedWorkerCount()
+  {
+    return getBlackListedWorkers().size();
+  }
 }

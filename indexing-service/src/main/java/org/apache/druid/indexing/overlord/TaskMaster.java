@@ -42,6 +42,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
+import org.apache.druid.server.metrics.WorkerCountStatsProvider;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,7 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster implements TaskCountStatsProvider
+public class TaskMaster implements TaskCountStatsProvider, WorkerCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -336,6 +337,61 @@ public class TaskMaster implements TaskCountStatsProvider
     }
     catch (Exception ex) {
       // fail silently since we are stopping anyway
+    }
+  }
+
+  @Override
+  public long getTotalWorkerCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getTotalWorkerCount();
+    } else {
+      return 0;
+    }
+  }
+
+  @Override
+  public long getIdleWorkerCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getIdleWorkerCount();
+    } else {
+      return 0;
+    }
+  }
+
+  @Override
+  public long getUsedWorkerCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getUsedWorkerCount();
+    } else {
+      return 0;
+    }
+  }
+
+  @Override
+  public long getLazyWorkerCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getLazyWorkerCount();
+    } else {
+      return 0;
+    }
+  }
+
+  @Override
+  public long getBlacklistedWorkerCount()
+  {
+    Optional<TaskRunner> taskRunner = getTaskRunner();
+    if (taskRunner.isPresent()) {
+      return taskRunner.get().getBlacklistedWorkerCount();
+    } else {
+      return 0;
     }
   }
 }

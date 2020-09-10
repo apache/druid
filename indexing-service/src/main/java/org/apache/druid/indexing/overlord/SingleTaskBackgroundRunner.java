@@ -314,6 +314,36 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
   }
 
   @Override
+  public long getTotalWorkerCount()
+  {
+    return 1;
+  }
+
+  @Override
+  public long getIdleWorkerCount()
+  {
+    return getTotalWorkerCount() - getUsedWorkerCount();
+  }
+
+  @Override
+  public long getUsedWorkerCount()
+  {
+    return getRunningTasks().size();
+  }
+
+  @Override
+  public long getLazyWorkerCount()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getBlacklistedWorkerCount()
+  {
+    return 0;
+  }
+
+  @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
     return getQueryRunnerImpl(query);

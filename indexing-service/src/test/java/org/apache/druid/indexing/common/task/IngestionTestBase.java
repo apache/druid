@@ -383,5 +383,35 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public long getTotalWorkerCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getIdleWorkerCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getUsedWorkerCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getLazyWorkerCount()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getBlacklistedWorkerCount()
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }
