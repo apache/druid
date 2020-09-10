@@ -1513,8 +1513,8 @@ total_size
 useApproximateCountDistinct
 useApproximateTopN
 wikipedia
-CONTAINS_STR
-ICONTAINS_STR
+CONTAINS_STRING
+ICONTAINS_STRING
  - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2

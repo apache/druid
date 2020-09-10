@@ -46,8 +46,8 @@ import java.util.List;
 
 public class ContainsOperatorConversion implements SqlOperatorConversion
 {
-  private static final String CASE_SENSITIVE_FN_NAME = "contains_str";
-  private static final String CASE_INSENSITIVE_FN_NAME = "icontains_str";
+  private static final String CASE_SENSITIVE_FN_NAME = "contains_string";
+  private static final String CASE_INSENSITIVE_FN_NAME = "icontains_string";
   private final SqlOperator operator;
   private final boolean caseSensitive;
 
