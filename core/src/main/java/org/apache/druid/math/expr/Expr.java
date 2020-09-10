@@ -134,7 +134,10 @@ public interface Expr
    * through {@link ExprEval#type}.
    */
   @Nullable
-  ExprType getOutputType(InputBindingTypes inputTypes);
+  default ExprType getOutputType(InputBindingTypes inputTypes)
+  {
+    return null;
+  }
 
   /**
    * Mechanism to supply input types for the bindings which will back {@link IdentifierExpr}, to use in the aid of
