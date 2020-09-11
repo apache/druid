@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
+import org.apache.druid.storage.s3.S3TransferConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
@@ -272,7 +273,7 @@ public class RetryableS3OutputStreamTest
 
     private TestAmazonS3(int totalUploadFailures)
     {
-      super(EasyMock.createMock(AmazonS3.class), new NoopServerSideEncryption());
+      super(EasyMock.createMock(AmazonS3.class), new NoopServerSideEncryption(), new S3TransferConfig());
       this.uploadFailuresLeft = totalUploadFailures;
     }
 

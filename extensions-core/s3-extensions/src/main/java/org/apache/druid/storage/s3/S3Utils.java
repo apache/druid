@@ -81,6 +81,9 @@ public class S3Utils
         // SdkClientException can be thrown for many reasons and the only way to distinguish it is to look at
         // the message. This is not ideal, since the message may change, so it may need to be adjusted in the future.
         return true;
+      } else if (e instanceof InterruptedException) {
+        Thread.interrupted(); // Clear interrupted state and not retry
+        return false;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
       } else {
@@ -312,7 +315,7 @@ public class S3Utils
       String bucket,
       String key,
       File file
-  )
+  ) throws InterruptedException
   {
     final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
 
@@ -320,7 +323,7 @@ public class S3Utils
       putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
     }
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.putObject(putObjectRequest);
+    service.upload(putObjectRequest);
   }
 
   @Nullable
