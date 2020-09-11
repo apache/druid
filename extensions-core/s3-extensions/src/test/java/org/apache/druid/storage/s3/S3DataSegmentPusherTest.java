@@ -24,7 +24,7 @@ import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
@@ -83,9 +83,8 @@ public class S3DataSegmentPusherTest
     acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
     EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(acl).once();
 
-    EasyMock.expect(s3Client.putObject(EasyMock.anyObject()))
-            .andReturn(new PutObjectResult())
-            .once();
+    s3Client.upload(EasyMock.anyObject(PutObjectRequest.class));
+    EasyMock.expectLastCall().once();
 
     EasyMock.replay(s3Client);
 
