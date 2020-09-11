@@ -1368,6 +1368,48 @@ Compared to the other native batch InputSources, SQL InputSource behaves differe
 * Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
 
 
+### Combining Input Source
+
+The Combining input source is used to read data from multiple InputSources. This input source should be only used if all the delegate input sources are
+ _splittable_ and can be used by the [Parallel task](#parallel-task). This input source will identify the splits from its delegates and each split will be processed by a worker task. Similar to other input sources, this input source supports a single `inputFormat`. Therefore, please note that delegate input sources requiring an `inputFormat` must have the same format for input data.
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This should be "combining".|Yes|
+|delegates|List of _splittable_ InputSources to read data from.|Yes|
+
+Sample spec:
+
+
+```json
+...
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "combining",
+        "delegates" : [
+         {
+          "type": "local",
+          "filter" : "*.csv",
+          "baseDir": "/data/directory",
+          "files": ["/bar/foo", "/foo/bar"]
+         },
+         {
+          "type": "druid",
+          "dataSource": "wikipedia",
+          "interval": "2013-01-01/2013-01-02"
+         }
+        ]
+      },
+      "inputFormat": {
+        "type": "csv"
+      },
+      ...
+    },
+...
+```
+
+
 ###
 
 ## Firehoses (Deprecated)
