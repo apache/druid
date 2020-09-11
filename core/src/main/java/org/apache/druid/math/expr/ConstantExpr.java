@@ -42,6 +42,7 @@ abstract class ConstantExpr implements Expr
     this.outputType = outputType;
   }
 
+  @Nullable
   @Override
   public ExprType getOutputType(InputBindingTypes inputTypes)
   {

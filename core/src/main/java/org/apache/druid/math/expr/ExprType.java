@@ -87,7 +87,7 @@ public enum ExprType
   @Nullable
   public static ExprType elementType(@Nullable ExprType type)
   {
-    if (type != null && isArray(type)) {
+    if (type != null) {
       switch (type) {
         case STRING_ARRAY:
           return STRING;
@@ -103,7 +103,7 @@ public enum ExprType
   @Nullable
   public static ExprType asArrayType(@Nullable ExprType elementType)
   {
-    if (elementType != null && !isArray(elementType)) {
+    if (elementType != null) {
       switch (elementType) {
         case STRING:
           return STRING_ARRAY;
@@ -127,7 +127,7 @@ public enum ExprType
       return null;
     }
     // arrays cannot be auto converted
-    if (isArray(type)) {
+    if (isArray(type) || isArray(other)) {
       if (!type.equals(other)) {
         throw new IAE("Cannot implicitly cast %s to %s", type, other);
       }

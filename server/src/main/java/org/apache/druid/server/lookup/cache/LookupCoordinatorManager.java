@@ -518,7 +518,7 @@ public class LookupCoordinatorManager
         configManager.set(
             LOOKUP_CONFIG_KEY,
             converted,
-            new AuditInfo("autoTypeConversion", "autoTypeConversion", "127.0.0.1")
+            new AuditInfo("autoConversion", "autoConversion", "127.0.0.1")
         );
       }
     }
