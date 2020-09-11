@@ -487,18 +487,12 @@ public class DruidCoordinator
     }
   }
 
-  /**
-   * This method should be used for only testing.
-   */
   @VisibleForTesting
   public int getCachedBalancerThreadNumber()
   {
     return cachedBalancerThreadNumber;
   }
-
-  /**
-   * This method should be used for only testing.
-   */
+  
   @VisibleForTesting
   public ListeningExecutorService getBalancerExec()
   {
@@ -678,6 +672,7 @@ public class DruidCoordinator
     return ImmutableList.of(compactSegments);
   }
 
+  @VisibleForTesting
   protected class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
