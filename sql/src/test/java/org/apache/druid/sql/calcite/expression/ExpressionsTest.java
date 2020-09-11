@@ -1185,16 +1185,6 @@ public class ExpressionsTest extends ExpressionTestBase
         DruidExpression.fromExpression("(icontains_string(\"spacey\",'There') && ('yes' == 'yes'))"),
         1L
     );
-
-    testHelper.testExpression(
-        ContainsOperatorConversion.caseSensitive().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("spacey"),
-            testHelper.makeLiteral("")
-        ),
-        DruidExpression.fromExpression("contains_string(\"spacey\",'')"),
-        NullHandling.replaceWithDefault() ? 0L : 1L
-    );
   }
 
   @Test
@@ -1308,33 +1298,6 @@ public class ExpressionsTest extends ExpressionTestBase
         Collections.emptyList(),
         new SearchQueryDimFilter("spacey", new ContainsSearchQuerySpec("", true), null),
         true
-    );
-  }
-
-  @Test(expected = IAE.class)
-  public void testContainsIncorrectArgs()
-  {
-    testHelper.testExpression(
-        ContainsOperatorConversion.caseSensitive().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("spacey")
-        ),
-        DruidExpression.fromExpression("contains_string(\"spacey\")"),
-        0L
-    );
-  }
-
-  @Test(expected = IAE.class)
-  public void testContainsSecondArgNotLiteral()
-  {
-    testHelper.testExpression(
-        ContainsOperatorConversion.caseSensitive().calciteOperator(),
-        ImmutableList.of(
-            testHelper.makeInputRef("spacey"),
-            testHelper.makeInputRef("spacey")
-        ),
-        DruidExpression.fromExpression("contains_string(\"spacey\",\"spacey\")"),
-        1L
     );
   }
 

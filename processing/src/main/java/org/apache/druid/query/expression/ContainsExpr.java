@@ -84,11 +84,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
 
   private Function<String, Boolean> createFunction(Expr searchStrExpr, boolean caseSensitive)
   {
-    String searchStr = (String) searchStrExpr.getLiteralValue();
-    if (null == searchStr) {
-      return s -> false;
-    }
-
+    String searchStr = StringUtils.nullToEmptyNonDruidDataString((String) searchStrExpr.getLiteralValue());
     if (caseSensitive) {
       return s -> s.contains(searchStr);
     }
