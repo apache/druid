@@ -154,7 +154,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
                 .withRollup(withRollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .buildOnheap();
