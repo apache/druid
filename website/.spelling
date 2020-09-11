@@ -1094,6 +1094,8 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+contains_string
+icontains_string
 result1
 result2
 rint
@@ -1513,8 +1515,6 @@ total_size
 useApproximateCountDistinct
 useApproximateTopN
 wikipedia
-CONTAINS_STRING
-ICONTAINS_STRING
  - ../docs/querying/timeseriesquery.md
 fieldName1
 fieldName2

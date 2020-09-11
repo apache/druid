@@ -92,7 +92,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
     if (caseSensitive) {
       return s -> s.contains(searchStr);
     }
-    return s -> org.apache.commons.lang3.StringUtils.containsIgnoreCase(s, searchStr);
+    return s -> org.apache.commons.lang.StringUtils.containsIgnoreCase(s, searchStr);
   }
 
   private Expr validateSearchExpr(Expr searchExpr, String functioName)
