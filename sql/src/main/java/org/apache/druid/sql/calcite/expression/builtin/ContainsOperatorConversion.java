@@ -56,7 +56,7 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
   private final SqlOperator operator;
   private final boolean caseSensitive;
 
-  public ContainsOperatorConversion(
+  private ContainsOperatorConversion(
       final SqlFunction sqlFunction,
       final boolean caseSensitive
   )

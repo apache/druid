@@ -20,6 +20,7 @@
 package org.apache.druid.query.expression;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -41,7 +42,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   ContainsExpr(String functioName, Expr arg, Expr searchStrExpr, boolean caseSensitive)
   {
     super(functioName, arg);
-    this.searchStrExpr = searchStrExpr;
+    this.searchStrExpr = validateSearchExpr(searchStrExpr, functioName);
     // Creates the function eagerly to avoid branching in eval.
     this.searchFunction = createFunction(searchStrExpr, caseSensitive);
   }
@@ -50,7 +51,7 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   {
     super(functioName, arg);
     this.searchFunction = searchFunction;
-    this.searchStrExpr = searchStrExpr;
+    this.searchStrExpr = validateSearchExpr(searchStrExpr, functioName);
   }
 
   @Nonnull
@@ -84,8 +85,21 @@ class ContainsExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   private Function<String, Boolean> createFunction(Expr searchStrExpr, boolean caseSensitive)
   {
     String searchStr = (String) searchStrExpr.getLiteralValue();
-    return caseSensitive ?
-           (s -> s.contains(searchStr)) :
-           (s -> org.apache.commons.lang3.StringUtils.containsIgnoreCase(s, searchStr));
+    if (null == searchStr) {
+      return s -> false;
+    }
+
+    if (caseSensitive) {
+      return s -> s.contains(searchStr);
+    }
+    return s -> org.apache.commons.lang3.StringUtils.containsIgnoreCase(s, searchStr);
+  }
+
+  private Expr validateSearchExpr(Expr searchExpr, String functioName)
+  {
+    if (!ExprUtils.isStringLiteral(searchExpr)) {
+      throw new IAE("Function[%s] substring must be a string literal", functioName);
+    }
+    return searchExpr;
   }
 }

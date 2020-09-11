@@ -57,10 +57,6 @@ public class ContainsExprMacro implements ExprMacroTable.ExprMacro
 
     final Expr arg = args.get(0);
     final Expr searchStr = args.get(1);
-
-    if (!ExprUtils.isStringLiteral(searchStr)) {
-      throw new IAE("Function[%s] substring must be a string literal", name());
-    }
     return new ContainsExpr(FN_NAME, arg, searchStr, true);
   }
 }
