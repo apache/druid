@@ -30,6 +30,7 @@ import {
   ACTION_COLUMN_WIDTH,
   ActionCell,
   ActionIcon,
+  BracedText,
   MoreButton,
   RefreshButton,
   SegmentTimeline,
@@ -48,7 +49,8 @@ import {
   addFilter,
   countBy,
   formatBytes,
-  formatNumber,
+  formatInteger,
+  formatMegabytes,
   getDruidErrorMessage,
   LocalStorageKeys,
   lookupBy,
@@ -67,35 +69,37 @@ import './datasource-view.scss';
 
 const tableColumns: Record<CapabilitiesMode, string[]> = {
   full: [
-    'Datasource',
+    'Datasource name',
     'Availability',
     'Segment load/drop',
-    'Retention',
+    'Total data size',
+    'Segment size',
+    'Total rows',
+    'Avg. row size',
     'Replicated size',
-    'Size',
     'Compaction',
-    'Avg. segment size',
-    'Num rows',
+    'Retention',
     ACTION_COLUMN_LABEL,
   ],
   'no-sql': [
-    'Datasource',
+    'Datasource name',
     'Availability',
     'Segment load/drop',
-    'Retention',
-    'Size',
+    'Total data size',
+    'Segment size',
     'Compaction',
-    'Avg. segment size',
+    'Retention',
     ACTION_COLUMN_LABEL,
   ],
   'no-proxy': [
-    'Datasource',
+    'Datasource name',
     'Availability',
     'Segment load/drop',
+    'Total data size',
+    'Segment size',
+    'Total rows',
+    'Avg. row size',
     'Replicated size',
-    'Size',
-    'Avg. segment size',
-    'Num rows',
     ACTION_COLUMN_LABEL,
   ],
 };
@@ -109,6 +113,22 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
     loadDrop.push(`${segmentsToDrop} segments to drop`);
   }
   return loadDrop.join(', ') || 'No segments to load/drop';
+}
+
+const formatTotalDataSize = formatBytes;
+const formatSegmentSize = formatMegabytes;
+const formatTotalRows = formatInteger;
+const formatAvgRowSize = (v: number) => `${formatInteger(v)} B`;
+const formatReplicatedSize = formatBytes;
+
+function twoLines(line1: string, line2: string) {
+  return (
+    <>
+      {line1}
+      <br />
+      {line2}
+    </>
+  );
 }
 
 interface Datasource {
@@ -128,10 +148,13 @@ interface DatasourceQueryResultRow {
   num_available_segments: number;
   num_segments_to_load: number;
   num_segments_to_drop: number;
+  total_data_size: number;
   replicated_size: number;
-  size: number;
+  min_segment_size: number;
   avg_segment_size: number;
-  num_rows: number;
+  max_segment_size: number;
+  total_rows: number;
+  avg_row_size: number;
 }
 
 interface RetentionDialogOpenOn {
@@ -190,13 +213,19 @@ export class DatasourcesView extends React.PureComponent<
   COUNT(*) FILTER (WHERE is_available = 1 AND ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_available_segments,
   COUNT(*) FILTER (WHERE is_published = 1 AND is_overshadowed = 0 AND is_available = 0) AS num_segments_to_load,
   COUNT(*) FILTER (WHERE is_available = 1 AND NOT ((is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)) AS num_segments_to_drop,
+  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_data_size,
   SUM("size" * "num_replicas") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS replicated_size,
-  SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS size,
+  MIN("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS min_segment_size,
   (
     SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) /
     COUNT(*) FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)
   ) AS avg_segment_size,
-  SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS num_rows
+  MAX("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS max_segment_size,
+  SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) AS total_rows,
+  (
+    SUM("size") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1) /
+    SUM("num_rows") FILTER (WHERE (is_published = 1 AND is_overshadowed = 0) OR is_realtime = 1)
+  ) AS avg_row_size
 FROM sys.segments
 GROUP BY 1`;
 
@@ -251,7 +280,7 @@ GROUP BY 1`;
           const loadstatus = loadstatusResp.data;
           datasources = datasourcesResp.data.map(
             (d: any): DatasourceQueryResultRow => {
-              const size = deepGet(d, 'properties.segments.size') || -1;
+              const totalDataSize = deepGet(d, 'properties.segments.size') || -1;
               const segmentsToLoad = Number(loadstatus[d.name] || 0);
               const availableSegments = Number(deepGet(d, 'properties.segments.count'));
               const numSegments = availableSegments + segmentsToLoad;
@@ -262,9 +291,12 @@ GROUP BY 1`;
                 num_segments_to_load: segmentsToLoad,
                 num_segments_to_drop: 0,
                 replicated_size: -1,
-                size,
-                avg_segment_size: size / numSegments,
-                num_rows: -1,
+                total_data_size: totalDataSize,
+                min_segment_size: -1,
+                avg_segment_size: totalDataSize / numSegments,
+                max_segment_size: -1,
+                total_rows: -1,
+                avg_row_size: -1,
               };
             },
           );
@@ -773,6 +805,22 @@ GROUP BY 1`;
       datasources = datasources.filter(d => !d.unused);
     }
 
+    // Calculate column values for bracing
+
+    const totalDataSizeValues = datasources.map(d => formatTotalDataSize(d.total_data_size));
+
+    const minSegmentSizeValues = datasources.map(d => formatSegmentSize(d.min_segment_size));
+
+    const avgSegmentSizeValues = datasources.map(d => formatSegmentSize(d.avg_segment_size));
+
+    const maxSegmentSizeValues = datasources.map(d => formatSegmentSize(d.max_segment_size));
+
+    const totalRowsValues = datasources.map(d => formatTotalRows(d.total_rows));
+
+    const avgRowSizeValues = datasources.map(d => formatAvgRowSize(d.avg_row_size));
+
+    const replicatedSizeValues = datasources.map(d => formatReplicatedSize(d.replicated_size));
+
     return (
       <>
         <ReactTable
@@ -790,7 +838,8 @@ GROUP BY 1`;
           }}
           columns={[
             {
-              Header: 'Datasource',
+              Header: twoLines('Datasource', 'name'),
+              show: hiddenColumns.exists('Datasource name'),
               accessor: 'datasource',
               width: 150,
               Cell: row => {
@@ -807,10 +856,10 @@ GROUP BY 1`;
                   </a>
                 );
               },
-              show: hiddenColumns.exists('Datasource'),
             },
             {
               Header: 'Availability',
+              show: hiddenColumns.exists('Availability'),
               id: 'availability',
               filterable: false,
               accessor: row => {
@@ -871,10 +920,10 @@ GROUP BY 1`;
                 const percentAvailable2 = d2.num_available / d2.num_total;
                 return percentAvailable1 - percentAvailable2 || d1.num_total - d2.num_total;
               },
-              show: hiddenColumns.exists('Availability'),
             },
             {
               Header: 'Segment load/drop',
+              show: hiddenColumns.exists('Segment load/drop'),
               id: 'load-drop',
               accessor: 'num_segments_to_load',
               filterable: false,
@@ -882,10 +931,108 @@ GROUP BY 1`;
                 const { num_segments_to_load, num_segments_to_drop } = row.original;
                 return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
               },
-              show: hiddenColumns.exists('Segment load/drop'),
+            },
+            {
+              Header: twoLines('Total', 'data size'),
+              show: hiddenColumns.exists('Total data size'),
+              accessor: 'total_data_size',
+              filterable: false,
+              width: 100,
+              Cell: row => (
+                <BracedText text={formatTotalDataSize(row.value)} braces={totalDataSizeValues} />
+              ),
+            },
+            {
+              Header: twoLines('Segment size (MB)', 'min / avg / max'),
+              show: hiddenColumns.exists('Segment size'),
+              accessor: 'avg_segment_size',
+              filterable: false,
+              width: 200,
+              Cell: row => (
+                <>
+                  <BracedText
+                    text={formatSegmentSize(row.original.min_segment_size)}
+                    braces={minSegmentSizeValues}
+                  />{' '}
+                  &nbsp;{' '}
+                  <BracedText text={formatSegmentSize(row.value)} braces={avgSegmentSizeValues} />{' '}
+                  &nbsp;{' '}
+                  <BracedText
+                    text={formatSegmentSize(row.original.max_segment_size)}
+                    braces={maxSegmentSizeValues}
+                  />
+                </>
+              ),
+            },
+            {
+              Header: twoLines('Total', 'rows'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Total rows'),
+              accessor: 'total_rows',
+              filterable: false,
+              width: 100,
+              Cell: row => (
+                <BracedText text={formatTotalRows(row.value)} braces={totalRowsValues} />
+              ),
+            },
+            {
+              Header: twoLines('Avg. row size', '(bytes)'),
+              show: hiddenColumns.exists('Avg. row size'),
+              accessor: 'avg_row_size',
+              filterable: false,
+              width: 100,
+              Cell: row => (
+                <BracedText text={formatAvgRowSize(row.value)} braces={avgRowSizeValues} />
+              ),
+            },
+            {
+              Header: twoLines('Replicated', 'size'),
+              show: capabilities.hasSql() && hiddenColumns.exists('Replicated size'),
+              accessor: 'replicated_size',
+              filterable: false,
+              width: 100,
+              Cell: row => (
+                <BracedText text={formatReplicatedSize(row.value)} braces={replicatedSizeValues} />
+              ),
+            },
+            {
+              Header: 'Compaction',
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
+              id: 'compaction',
+              accessor: row => Boolean(row.compaction),
+              filterable: false,
+              Cell: row => {
+                const { compaction } = row.original;
+                let text: string;
+                if (compaction) {
+                  if (compaction.maxRowsPerSegment == null) {
+                    text = `Target: Default (${formatInteger(DEFAULT_MAX_ROWS_PER_SEGMENT)})`;
+                  } else {
+                    text = `Target: ${formatInteger(compaction.maxRowsPerSegment)}`;
+                  }
+                } else {
+                  text = 'Not enabled';
+                }
+                return (
+                  <span
+                    className="clickable-cell"
+                    onClick={() =>
+                      this.setState({
+                        compactionDialogOpenOn: {
+                          datasource: row.original.datasource,
+                          compactionConfig: compaction,
+                        },
+                      })
+                    }
+                  >
+                    {text}&nbsp;
+                    <ActionIcon icon={IconNames.EDIT} />
+                  </span>
+                );
+              },
             },
             {
               Header: 'Retention',
+              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Retention'),
               id: 'retention',
               accessor: row => row.rules.length,
               filterable: false,
@@ -915,78 +1062,10 @@ GROUP BY 1`;
                   </span>
                 );
               },
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Retention'),
-            },
-            {
-              Header: 'Replicated size',
-              accessor: 'replicated_size',
-              filterable: false,
-              width: 100,
-              Cell: row => formatBytes(row.value),
-              show: capabilities.hasSql() && hiddenColumns.exists('Replicated size'),
-            },
-            {
-              Header: 'Size',
-              accessor: 'size',
-              filterable: false,
-              width: 100,
-              Cell: row => formatBytes(row.value),
-              show: hiddenColumns.exists('Size'),
-            },
-            {
-              Header: 'Compaction',
-              id: 'compaction',
-              accessor: row => Boolean(row.compaction),
-              filterable: false,
-              Cell: row => {
-                const { compaction } = row.original;
-                let text: string;
-                if (compaction) {
-                  if (compaction.maxRowsPerSegment == null) {
-                    text = `Target: Default (${formatNumber(DEFAULT_MAX_ROWS_PER_SEGMENT)})`;
-                  } else {
-                    text = `Target: ${formatNumber(compaction.maxRowsPerSegment)}`;
-                  }
-                } else {
-                  text = 'None';
-                }
-                return (
-                  <span
-                    className="clickable-cell"
-                    onClick={() =>
-                      this.setState({
-                        compactionDialogOpenOn: {
-                          datasource: row.original.datasource,
-                          compactionConfig: compaction,
-                        },
-                      })
-                    }
-                  >
-                    {text}&nbsp;
-                    <ActionIcon icon={IconNames.EDIT} />
-                  </span>
-                );
-              },
-              show: capabilities.hasCoordinatorAccess() && hiddenColumns.exists('Compaction'),
-            },
-            {
-              Header: 'Avg. segment size',
-              accessor: 'avg_segment_size',
-              filterable: false,
-              width: 100,
-              Cell: row => formatBytes(row.value),
-              show: hiddenColumns.exists('Avg. segment size'),
-            },
-            {
-              Header: 'Num rows',
-              accessor: 'num_rows',
-              filterable: false,
-              width: 100,
-              Cell: row => formatNumber(row.value),
-              show: capabilities.hasSql() && hiddenColumns.exists('Num rows'),
             },
             {
               Header: ACTION_COLUMN_LABEL,
+              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
               accessor: 'datasource',
               id: ACTION_COLUMN_ID,
               width: ACTION_COLUMN_WIDTH,
@@ -1012,7 +1091,6 @@ GROUP BY 1`;
                   />
                 );
               },
-              show: hiddenColumns.exists(ACTION_COLUMN_LABEL),
             },
           ]}
           defaultPageSize={50}
