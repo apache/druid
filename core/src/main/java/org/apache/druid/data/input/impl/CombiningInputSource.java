@@ -37,6 +37,10 @@ import java.util.stream.Stream;
 
 /**
  * InputSource that combines data from multiple inputSources. The delegate inputSources must be splittable.
+ * The splits for this inputSource are created from the {@link SplittableInputSource#createSplits} of the delegate inputSources.
+ * Each inputSplit is paired up with its respective delegate inputSource so that during split,
+ * {@link SplittableInputSource#withSplit}is called against the correct inputSource for each inputSplit.
+ * This inputSource presently only supports a single {@link InputFormat}.
  */
 
 public class CombiningInputSource extends AbstractInputSource implements SplittableInputSource
@@ -69,8 +73,6 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
   {
     return delegates.stream().flatMap(inputSource -> {
       try {
-        // Each inputSplit is paired up with its respective inputSource so that during split, withSplit() is called against
-        // the correct inputSource for each inputSplit
         return inputSource.createSplits(inputFormat, splitHintSpec)
                           .map(inputsplit -> new InputSplit(Pair.of(inputSource, inputsplit)));
       }
@@ -104,7 +106,7 @@ public class CombiningInputSource extends AbstractInputSource implements Splitta
   public boolean needsFormat()
   {
     // This is called only when ParallelIndexIngestionSpec needs to decide if either inputformat vs parserspec is required.
-    // So if atleast one of the delegate inputSources needsFormat, we set this to true.
+    // So if at least one of the delegate inputSources needsFormat, we set this to true.
     // All other needsFormat calls will be made against the delegate inputSources.
     return delegates.stream().anyMatch(SplittableInputSource::needsFormat);
   }
