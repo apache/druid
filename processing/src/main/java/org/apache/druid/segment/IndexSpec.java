@@ -21,15 +21,20 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.loading.SegmentizerFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -62,13 +67,26 @@ public class IndexSpec
   private final CompressionStrategy metricCompression;
   private final CompressionFactory.LongEncodingStrategy longEncoding;
 
+  @Nullable
+  private final SegmentizerFactory segmentLoader;
 
   /**
    * Creates an IndexSpec with default parameters
    */
   public IndexSpec()
   {
-    this(null, null, null, null);
+    this(null, null, null, null, null);
+  }
+
+  @VisibleForTesting
+  public IndexSpec(
+      @Nullable BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable CompressionStrategy dimensionCompression,
+      @Nullable CompressionStrategy metricCompression,
+      @Nullable CompressionFactory.LongEncodingStrategy longEncoding
+  )
+  {
+    this(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding, null);
   }
 
   /**
@@ -93,7 +111,8 @@ public class IndexSpec
       @JsonProperty("bitmap") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("dimensionCompression") @Nullable CompressionStrategy dimensionCompression,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
-      @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding
+      @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
+      @JsonProperty("segmentLoader") @Nullable SegmentizerFactory segmentLoader
   )
   {
     Preconditions.checkArgument(dimensionCompression == null || DIMENSION_COMPRESSION.contains(dimensionCompression),
@@ -111,6 +130,7 @@ public class IndexSpec
     this.dimensionCompression = dimensionCompression == null ? DEFAULT_DIMENSION_COMPRESSION : dimensionCompression;
     this.metricCompression = metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression;
     this.longEncoding = longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding;
+    this.segmentLoader = segmentLoader;
   }
 
   @JsonProperty("bitmap")
@@ -137,6 +157,21 @@ public class IndexSpec
     return longEncoding;
   }
 
+  @JsonProperty
+  @Nullable
+  public SegmentizerFactory getSegmentLoader()
+  {
+    return segmentLoader;
+  }
+
+  public Map<String, Object> asMap(ObjectMapper objectMapper)
+  {
+    return objectMapper.convertValue(
+        this,
+        new TypeReference<Map<String, Object>>() {}
+    );
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -150,13 +185,14 @@ public class IndexSpec
     return Objects.equals(bitmapSerdeFactory, indexSpec.bitmapSerdeFactory) &&
            dimensionCompression == indexSpec.dimensionCompression &&
            metricCompression == indexSpec.metricCompression &&
-           longEncoding == indexSpec.longEncoding;
+           longEncoding == indexSpec.longEncoding &&
+           Objects.equals(segmentLoader, indexSpec.segmentLoader);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding);
+    return Objects.hash(bitmapSerdeFactory, dimensionCompression, metricCompression, longEncoding, segmentLoader);
   }
 
   @Override
@@ -167,6 +203,7 @@ public class IndexSpec
            ", dimensionCompression=" + dimensionCompression +
            ", metricCompression=" + metricCompression +
            ", longEncoding=" + longEncoding +
+           ", segmentLoader=" + segmentLoader +
            '}';
   }
 }

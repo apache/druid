@@ -30,6 +30,8 @@ import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -39,6 +41,9 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.SimpleAscendingOffset;
+import org.apache.druid.segment.SimpleDescendingOffset;
+import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.join.Equality;
@@ -77,16 +82,24 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   @Nullable
   private IntIterator currentIterator;
   private int currentRow;
+  private final SimpleSettableOffset joinableOffset;
 
   IndexedTableJoinMatcher(
       final IndexedTable table,
       final ColumnSelectorFactory leftSelectorFactory,
       final JoinConditionAnalysis condition,
-      final boolean remainderNeeded
+      final boolean remainderNeeded,
+      final boolean descending,
+      final Closer closer
   )
   {
     this.table = table;
-    this.currentRow = UNINITIALIZED_CURRENT_ROW;
+    if (descending) {
+      this.joinableOffset = new SimpleDescendingOffset(table.numRows());
+    } else {
+      this.joinableOffset = new SimpleAscendingOffset(table.numRows());
+    }
+    reset();
 
     if (condition.isAlwaysTrue()) {
       this.conditionMatchers = Collections.singletonList(() -> IntIterators.fromTo(0, table.numRows()));
@@ -105,7 +118,10 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
 
     this.currentMatchedRows = new IntIterator[conditionMatchers.size()];
-    this.selectorFactory = new IndexedTableColumnSelectorFactory(table, () -> currentRow);
+    ColumnSelectorFactory selectorFactory = table.makeColumnSelectorFactory(joinableOffset, descending, closer);
+    this.selectorFactory = selectorFactory != null
+                           ? selectorFactory
+                           : new IndexedTableColumnSelectorFactory(table, () -> currentRow, closer);
 
     if (remainderNeeded) {
       this.matchedRows = new IntRBTreeSet();
@@ -242,6 +258,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     currentIterator = null;
     currentRow = UNINITIALIZED_CURRENT_ROW;
     matchingRemainder = false;
+    joinableOffset.reset();
   }
 
   private void advanceCurrentRow()
@@ -251,6 +268,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     } else {
       currentIterator = null;
       currentRow = UNINITIALIZED_CURRENT_ROW;
+      joinableOffset.setCurrentOffset(currentRow);
     }
   }
 
@@ -326,9 +344,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             int dimensionId = row.get(0);
             IntList rowNumbers = getRowNumbers(selector, dimensionId);
             return rowNumbers.iterator();
-          } else {
-            // Multi-valued rows are not handled by the join system right now; treat them as nulls.
+          } else if (row.size() == 0) {
             return IntIterators.EMPTY_ITERATOR;
+          } else {
+            // Multi-valued rows are not handled by the join system right now
+            // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
+            throw new QueryUnsupportedException("Joining against a multi-value dimension is not supported.");
           }
         };
       } else {
@@ -341,9 +362,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
             int dimensionId = row.get(0);
             IntList rowNumbers = getAndCacheRowNumbers(selector, dimensionId);
             return rowNumbers.iterator();
-          } else {
-            // Multi-valued rows are not handled by the join system right now; treat them as nulls.
+          } else if (row.size() == 0) {
             return IntIterators.EMPTY_ITERATOR;
+          } else {
+            // Multi-valued rows are not handled by the join system right now
+            // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
+            throw new QueryUnsupportedException("Joining against a multi-value dimension is not supported.");
           }
         };
       }

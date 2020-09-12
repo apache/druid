@@ -39,7 +39,7 @@ public class LeftOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("LEFT")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeNonNull(SqlTypeName.VARCHAR)
       .build();
 
   @Override

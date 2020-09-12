@@ -28,9 +28,11 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class DoublesSketchToStringPostAggregator implements PostAggregator
@@ -55,6 +57,12 @@ public class DoublesSketchToStringPostAggregator implements PostAggregator
     return name;
   }
 
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.STRING;
+  }
+
   @JsonProperty
   public PostAggregator getField()
   {
@@ -75,6 +83,20 @@ public class DoublesSketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    final CacheKeyBuilder builder = new CacheKeyBuilder(
+        AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID).appendCacheable(field);
+    return builder.build();
+  }
+
+  @Override
+  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
+  {
+    return this;
+  }
+
+  @Override
   public Set<String> getDependentFields()
   {
     return field.getDependentFields();
@@ -90,7 +112,7 @@ public class DoublesSketchToStringPostAggregator implements PostAggregator
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
@@ -98,31 +120,14 @@ public class DoublesSketchToStringPostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final DoublesSketchToStringPostAggregator that = (DoublesSketchToStringPostAggregator) o;
-    if (!name.equals(that.name)) {
-      return false;
-    }
-    return field.equals(that.field);
+    DoublesSketchToStringPostAggregator that = (DoublesSketchToStringPostAggregator) o;
+    return name.equals(that.name) &&
+           field.equals(that.field);
   }
 
   @Override
   public int hashCode()
   {
-    return (name.hashCode() * 31 + field.hashCode()) * 31;
+    return Objects.hash(name, field);
   }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    final CacheKeyBuilder builder = new CacheKeyBuilder(
-        AggregatorUtil.QUANTILES_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID).appendCacheable(field);
-    return builder.build();
-  }
-
-  @Override
-  public PostAggregator decorate(final Map<String, AggregatorFactory> map)
-  {
-    return this;
-  }
-
 }

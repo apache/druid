@@ -168,7 +168,7 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
       List<String> dimensions,
       List<String> metrics,
       ShardSpec shardSpec,
-      CompactionState lastCompactionState,
+      @Nullable CompactionState lastCompactionState,
       Integer binaryVersion,
       long size
   )
@@ -425,6 +425,11 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public DataSegment withBinaryVersion(int binaryVersion)
   {
     return builder(this).binaryVersion(binaryVersion).build();
+  }
+
+  public DataSegment withLastCompactionState(CompactionState compactionState)
+  {
+    return builder(this).lastCompactionState(compactionState).build();
   }
 
   @Override

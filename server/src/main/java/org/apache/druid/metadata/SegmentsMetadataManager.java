@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.timeline.DataSegment;
@@ -112,6 +113,22 @@ public interface SegmentsMetadataManager
    * several times.
    */
   Iterable<DataSegment> iterateAllUsedSegments();
+
+  /**
+   * Returns an iterable to go over all used and non-overshadowed segments of given data sources over given interval.
+   * The order in which segments are iterated is unspecified. Note: the iteration may not be as trivially cheap as,
+   * for example, iteration over an ArrayList. Try (to some reasonable extent) to organize the code so that it
+   * iterates the returned iterable only once rather than several times.
+   * If {@param requiresLatest} is true then a force metadatastore poll will be triggered. This can cause a longer
+   * response time but will ensure that the latest segment information (at the time this method is called) is returned.
+   * If {@param requiresLatest} is false then segment information from stale snapshot of up to the last periodic poll
+   * period {@link SqlSegmentsMetadataManager#periodicPollDelay} will be used.
+   */
+  Optional<Iterable<DataSegment>> iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+      String datasource,
+      Interval interval,
+      boolean requiresLatest
+  );
 
   /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments

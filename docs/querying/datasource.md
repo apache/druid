@@ -131,6 +131,9 @@ Union datasources allow you to treat two or more table datasources as a single d
 do not need to have identical schemas. If they do not fully match up, then columns that exist in one table but not
 another will be treated as if they contained all null values in the tables where they do not exist.
 
+The list of "dataSources" must be nonempty. If you want to query an empty dataset, use an [`inline` datasource](#inline)
+instead.
+
 Union datasources are not available in Druid SQL.
 
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
@@ -332,14 +335,21 @@ perform best if `d.field` is a string.
 4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
 to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
 common use cases.
+5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into 
+Join's children). Druid only supports pushing predicates into the join if they originated from 
+above the join. Hence, the location of predicates and filters in your Druid SQL is very important. 
+Also, as a result of this, comma joins should be avoided.
 
 #### Future work for joins
 
 Joins are an area of active development in Druid. The following features are missing today but may appear in
 future versions:
 
+- Reordering of predicates and filters (pushing up and/or pushing down) to get the most performant plan.
 - Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value).
 - RIGHT OUTER and FULL OUTER joins. Currently, they are partially implemented. Queries will run but results will not
 always be correct.
 - Performance-related optimizations as mentioned in the [previous section](#join-performance).
 - Join algorithms other than broadcast hash-joins.
+- Join condition on a column compared to a constant value.
+- Join conditions on a column containing a multi-value dimension.

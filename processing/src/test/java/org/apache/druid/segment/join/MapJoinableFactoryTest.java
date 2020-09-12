@@ -20,7 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.DataSource;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.InlineDataSource;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
@@ -31,20 +31,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.Map;
 import java.util.Optional;
 
 @RunWith(EasyMockRunner.class)
 public class MapJoinableFactoryTest
 {
-  /**
-   * A utility to create a {@link MapJoinableFactory} to be used by tests.
-   */
-  public static MapJoinableFactory fromMap(Map<Class<? extends DataSource>, JoinableFactory> map)
-  {
-    return new MapJoinableFactory(map);
-  }
-
   @Mock
   private InlineDataSource inlineDataSource;
   @Mock(MockType.NICE)
@@ -63,8 +54,12 @@ public class MapJoinableFactoryTest
     noopDataSource = new NoopDataSource();
 
     target = new MapJoinableFactory(
-        ImmutableMap.of(NoopDataSource.class, noopJoinableFactory));
+        ImmutableSet.of(noopJoinableFactory),
+        ImmutableMap.of(noopJoinableFactory.getClass(), NoopDataSource.class)
+    );
   }
+
+
   @Test
   public void testBuildDataSourceNotRegisteredShouldReturnAbsent()
   {
@@ -88,5 +83,19 @@ public class MapJoinableFactoryTest
     EasyMock.replay(noopJoinableFactory);
     Optional<Joinable> joinable = target.build(noopDataSource, condition);
     Assert.assertEquals(mockJoinable, joinable.get());
+  }
+
+  @Test
+  public void testIsDirectShouldBeFalseForNotRegistered()
+  {
+    Assert.assertFalse(target.isDirectlyJoinable(inlineDataSource));
+  }
+
+  @Test
+  public void testIsDirectlyJoinableShouldBeTrueForRegisteredThatIsJoinable()
+  {
+    EasyMock.expect(noopJoinableFactory.isDirectlyJoinable(noopDataSource)).andReturn(true).anyTimes();
+    EasyMock.replay(noopJoinableFactory);
+    Assert.assertTrue(target.isDirectlyJoinable(noopDataSource));
   }
 }

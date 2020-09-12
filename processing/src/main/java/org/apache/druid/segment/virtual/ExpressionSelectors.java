@@ -153,9 +153,8 @@ public class ExpressionSelectors
         );
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING
-                 && capabilities.isDictionaryEncoded()
-                 && capabilities.isComplete()
-                 && !capabilities.hasMultipleValues()
+                 && capabilities.isDictionaryEncoded().isTrue()
+                 && capabilities.hasMultipleValues().isFalse()
                  && exprDetails.getArrayBindings().isEmpty()) {
         // Optimization for expressions that hit one scalar string column and nothing else.
         return new SingleStringInputCachingExpressionColumnValueSelector(
@@ -226,10 +225,8 @@ public class ExpressionSelectors
       // not treating it as an array and not wanting to output an array
       if (capabilities != null
           && capabilities.getType() == ValueType.STRING
-          && capabilities.isDictionaryEncoded()
-          && capabilities.isComplete()
-          && !exprDetails.hasInputArrays()
-          && !exprDetails.isOutputArray()
+          && capabilities.isDictionaryEncoded().isTrue()
+          && canMapOverDictionary(exprDetails, capabilities.hasMultipleValues())
       ) {
         return new SingleStringInputDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
@@ -341,6 +338,25 @@ public class ExpressionSelectors
   }
 
   /**
+   * Returns whether an expression can be applied to unique values of a particular column (like those in a dictionary)
+   * rather than being applied to each row individually.
+   *
+   * This function should only be called if you have already determined that an expression is over a single column,
+   * and that single column has a dictionary.
+   *
+   * @param exprDetails       result of calling {@link Expr#analyzeInputs()} on an expression
+   * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
+   */
+  public static boolean canMapOverDictionary(
+      final Expr.BindingDetails exprDetails,
+      final ColumnCapabilities.Capable hasMultipleValues
+  )
+  {
+    Preconditions.checkState(exprDetails.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
+    return !hasMultipleValues.isUnknown() && !exprDetails.hasInputArrays() && !exprDetails.isOutputArray();
+  }
+
+  /**
    * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingDetails} which
    * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
    * are used as array or scalar inputs
@@ -356,7 +372,7 @@ public class ExpressionSelectors
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
-      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues();
+      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
 
       if (nativeType == ValueType.FLOAT) {
@@ -597,11 +613,11 @@ public class ExpressionSelectors
     for (String column : columns) {
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
       if (capabilities != null) {
-        if (capabilities.hasMultipleValues()) {
+        if (capabilities.hasMultipleValues().isTrue()) {
           actualArrays.add(column);
         } else if (
-            !capabilities.isComplete() &&
             capabilities.getType().equals(ValueType.STRING) &&
+            capabilities.hasMultipleValues().isMaybeTrue() &&
             !exprDetails.getArrayBindings().contains(column)
         ) {
           unknownIfArrays.add(column);

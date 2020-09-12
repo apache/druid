@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.join;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.join.table.IndexedTable;
@@ -36,6 +37,15 @@ import java.util.Set;
 public class InlineJoinableFactory implements JoinableFactory
 {
   @Override
+  public boolean isDirectlyJoinable(DataSource dataSource)
+  {
+    // this should always be true if this is access through MapJoinableFactory, but check just in case...
+    // further, this should not ever be legitimately called, because this method is used to avoid subquery joins
+    // which use the InlineJoinableFactory
+    return dataSource instanceof InlineDataSource;
+  }
+
+  @Override
   public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
   {
     final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
@@ -49,7 +59,8 @@ public class InlineJoinableFactory implements JoinableFactory
                   inlineDataSource.getRowsAsList(),
                   inlineDataSource.rowAdapter(),
                   inlineDataSource.getRowSignature(),
-                  rightKeyColumns
+                  rightKeyColumns,
+                  DateTimes.nowUtc().toString()
               )
           )
       );

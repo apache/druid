@@ -60,6 +60,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -83,7 +84,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 @RunWith(Parameterized.class)
-public class RealtimePlumberSchoolTest
+public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
 {
   @Parameterized.Parameters(name = "rejectionPolicy = {0}, segmentWriteOutMediumFactory = {1}")
   public static Collection<?> constructorFeeder()
@@ -141,6 +142,7 @@ public class RealtimePlumberSchoolTest
                     new TimestampSpec("timestamp", "auto", null),
                     new DimensionsSpec(null, null, null),
                     null,
+                    null,
                     null
                 ),
                 null
@@ -160,6 +162,7 @@ public class RealtimePlumberSchoolTest
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
                     new DimensionsSpec(null, null, null),
+                    null,
                     null,
                     null
                 ),
@@ -277,7 +280,6 @@ public class RealtimePlumberSchoolTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -323,7 +325,6 @@ public class RealtimePlumberSchoolTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -374,7 +375,6 @@ public class RealtimePlumberSchoolTest
         DateTimes.of("2014-12-01T12:34:56.789").toString(),
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
     plumber2.getSinks().put(0L, sink);

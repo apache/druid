@@ -94,6 +94,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 public class JettyServerModule extends JerseyServletModule
 {
@@ -168,7 +169,7 @@ public class JettyServerModule extends JerseyServletModule
         node,
         config,
         TLSServerConfig,
-        injector.getExistingBinding(Key.get(SslContextFactory.class)),
+        injector.getExistingBinding(Key.get(SslContextFactory.Server.class)),
         injector.getInstance(TLSCertificateChecker.class)
     );
   }
@@ -197,7 +198,7 @@ public class JettyServerModule extends JerseyServletModule
       DruidNode node,
       ServerConfig config,
       TLSServerConfig tlsServerConfig,
-      Binding<SslContextFactory> sslContextFactoryBinding,
+      Binding<SslContextFactory.Server> sslContextFactoryBinding,
       TLSCertificateChecker certificateChecker
   )
   {
@@ -246,7 +247,8 @@ public class JettyServerModule extends JerseyServletModule
       serverConnectors.add(connector);
     }
 
-    final SslContextFactory sslContextFactory;
+    final SslContextFactory.Server sslContextFactory;
+
     if (node.isEnableTlsPort()) {
       log.info("Creating https connector with port [%d]", node.getTlsPort());
       if (sslContextFactoryBinding == null) {
@@ -500,7 +502,7 @@ public class JettyServerModule extends JerseyServletModule
     }
   }
 
-  private static class IdentityCheckOverrideSslContextFactory extends SslContextFactory
+  private static class IdentityCheckOverrideSslContextFactory extends SslContextFactory.Server
   {
     private final TLSServerConfig tlsServerConfig;
     private final TLSCertificateChecker certificateChecker;
@@ -510,7 +512,7 @@ public class JettyServerModule extends JerseyServletModule
         TLSCertificateChecker certificateChecker
     )
     {
-      super(false);
+      super();
       this.tlsServerConfig = tlsServerConfig;
       this.certificateChecker = certificateChecker;
     }

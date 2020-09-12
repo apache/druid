@@ -42,8 +42,8 @@ import java.util.function.Function;
  * 1) Copy wikipedia_index_data1.json, wikipedia_index_data2.json, and wikipedia_index_data3.json
  *    located in integration-tests/src/test/resources/data/batch_index/json to your HDFS at /batch_index/json/
  *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
- * 2) Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/tsv to your HDFS
- *    at /batch_index/tsv/
+ * 2) Copy batch_hadoop.data located in integration-tests/src/test/resources/data/batch_index/hadoop_tsv to your HDFS
+ *    at /batch_index/hadoop_tsv/
  *    If using the Docker-based Hadoop container, this is automatically done by the integration tests.
  * 2) Provide -Doverride.config.path=<PATH_TO_FILE> with HDFS configs set. See
  *    integration-tests/docker/environment-configs/override-examples/hdfs for env vars to provide.
@@ -57,7 +57,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
 
   private static final String BATCH_TASK = "/hadoop/batch_hadoop_indexer.json";
   private static final String BATCH_QUERIES_RESOURCE = "/hadoop/batch_hadoop_queries.json";
-  private static final String BATCH_DATASOURCE = "batchHadoop";
+  private static final String BATCH_DATASOURCE = "batchLegacyHadoop";
 
   private static final String INDEX_TASK = "/hadoop/wikipedia_hadoop_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
@@ -85,8 +85,9 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
   @Test
   public void testLegacyITHadoopIndexTest() throws Exception
   {
+    String indexDatasource = BATCH_DATASOURCE + "_" + UUID.randomUUID();
     try (
-        final Closeable ignored0 = unloader(BATCH_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable ignored0 = unloader(indexDatasource + config.getExtraDatasourceNameSuffix());
     ) {
       final Function<String, String> specPathsTransform = spec -> {
         try {
@@ -105,7 +106,7 @@ public class ITHadoopIndexTest extends AbstractITBatchIndexTest
       };
 
       doIndexTest(
-          BATCH_DATASOURCE,
+          indexDatasource,
           BATCH_TASK,
           specPathsTransform,
           BATCH_QUERIES_RESOURCE,

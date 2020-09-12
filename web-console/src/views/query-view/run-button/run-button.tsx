@@ -27,12 +27,12 @@ import {
   MenuItem,
   Popover,
   Position,
-  Tooltip,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
 import { MenuCheckbox } from '../../../components';
+import { getLink } from '../../../links';
 import { pluralIfNeeded } from '../../../utils';
 import {
   getUseApproximateCountDistinct,
@@ -43,7 +43,8 @@ import {
   setUseApproximateTopN,
   setUseCache,
 } from '../../../utils/query-context';
-import { DRUID_DOCS_RUNE, DRUID_DOCS_SQL } from '../../../variables';
+
+import './run-button.scss';
 
 export interface RunButtonProps {
   runeMode: boolean;
@@ -100,7 +101,7 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
         <MenuItem
           icon={IconNames.HELP}
           text={runeMode ? 'Native query documentation' : 'DruidSQL documentation'}
-          href={runeMode ? DRUID_DOCS_RUNE : DRUID_DOCS_SQL}
+          href={getLink(runeMode ? 'DOCS_RUNE' : 'DOCS_SQL')}
           target="_blank"
         />
         <MenuItem icon={IconNames.HISTORY} text="Query history" onClick={onHistory} />
@@ -151,25 +152,32 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
 
   render(): JSX.Element {
     const { runeMode, onRun, loading } = this.props;
-    const runButtonText = 'Run' + (runeMode ? 'e' : '');
 
     return (
       <ButtonGroup className="run-button">
         {onRun ? (
-          <Tooltip content="Control + Enter" hoverOpenDelay={900}>
-            <Button
-              disabled={loading}
-              icon={IconNames.CARET_RIGHT}
-              onClick={this.handleRun}
-              text={runButtonText}
-              intent={Intent.PRIMARY}
-            />
-          </Tooltip>
+          <Button
+            className={runeMode ? 'rune-button' : undefined}
+            disabled={loading}
+            icon={IconNames.CARET_RIGHT}
+            onClick={this.handleRun}
+            text="Run"
+            intent={Intent.PRIMARY}
+          />
         ) : (
-          <Button icon={IconNames.CARET_RIGHT} text={runButtonText} disabled />
+          <Button
+            className={runeMode ? 'rune-button' : undefined}
+            icon={IconNames.CARET_RIGHT}
+            text="Run"
+            disabled
+          />
         )}
         <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu()}>
-          <Button icon={IconNames.MORE} intent={onRun ? Intent.PRIMARY : undefined} />
+          <Button
+            className={runeMode ? 'rune-button' : undefined}
+            icon={IconNames.MORE}
+            intent={onRun ? Intent.PRIMARY : undefined}
+          />
         </Popover>
       </ButtonGroup>
     );

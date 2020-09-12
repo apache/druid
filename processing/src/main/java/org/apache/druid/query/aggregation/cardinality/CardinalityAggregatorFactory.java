@@ -43,6 +43,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -284,9 +285,24 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public String getTypeName()
+  public String getComplexTypeName()
   {
     return "hyperUnique";
+  }
+
+  /**
+   * actual type is {@link HyperLogLogCollector}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
+  }
+
+  @Override
+  public ValueType getFinalizedType()
+  {
+    return round ? ValueType.LONG : ValueType.DOUBLE;
   }
 
   @Override

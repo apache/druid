@@ -20,9 +20,15 @@
 package org.apache.druid.segment.join.table;
 
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.ReadableOffset;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Set;
 
 /**
@@ -30,8 +36,14 @@ import java.util.Set;
  *
  * The main user of this class is {@link IndexedTableJoinable}, and its main purpose is to participate in joins.
  */
-public interface IndexedTable
+public interface IndexedTable extends ReferenceCountedObject, Closeable
 {
+  /**
+   * Returns the version of this table, used to compare against when loading a new version of the table
+   */
+  @SuppressWarnings("unused")
+  String version();
+
   /**
    * Returns the columns of this table that have indexes.
    */
@@ -57,9 +69,23 @@ public interface IndexedTable
 
   /**
    * Returns a reader for a particular column. The provided column number must be that column's position in
-   * {@link #rowSignature()}.
+   * {@link #rowSignature()}. Don't forget to close your {@link Reader} when finished reading, to clean up any
+   * resources.
    */
   Reader columnReader(int column);
+
+  /**
+   * This method allows a table to directly provide an optimized {@link ColumnSelectorFactory} for
+   * {@link IndexedTableJoinMatcher} to create selectors. If this method returns null, the default
+   * {@link IndexedTableColumnSelectorFactory}, which creates {@link IndexedTableDimensionSelector} or
+   * {@link IndexedTableColumnValueSelector} as appropriate, both backed with a {@link #columnReader}, will be used
+   * instead.
+   */
+  @Nullable
+  default ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
+  {
+    return null;
+  }
 
   /**
    * Indexes support fast lookups on key columns.
@@ -75,7 +101,7 @@ public interface IndexedTable
   /**
    * Readers support reading values out of any column.
    */
-  interface Reader
+  interface Reader extends Closeable
   {
     /**
      * Read the value at a particular row number. Throws an exception if the row is out of bounds (must be between zero
@@ -83,5 +109,11 @@ public interface IndexedTable
      */
     @Nullable
     Object read(int row);
+
+    @Override
+    default void close() throws IOException
+    {
+      // nothing to close
+    }
   }
 }

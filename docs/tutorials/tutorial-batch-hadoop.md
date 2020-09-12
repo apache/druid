@@ -205,7 +205,7 @@ We've included a sample of Wikipedia edits from September 12, 2015 to get you st
 To load this data into Druid, you can submit an *ingestion task* pointing to the file. We've included
 a task that loads the `wikiticker-2015-09-12-sampled.json.gz` file included in the archive.
 
-Let's submit the `wikipedia-index-hadoop-.json` task:
+Let's submit the `wikipedia-index-hadoop.json` task:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/wikipedia-index-hadoop.json --url http://localhost:8081

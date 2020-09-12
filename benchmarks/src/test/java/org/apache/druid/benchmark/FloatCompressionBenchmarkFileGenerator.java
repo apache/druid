@@ -20,14 +20,14 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.benchmark.datagen.BenchmarkColumnSchema;
-import org.apache.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarFloatsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.generator.ColumnValueGenerator;
+import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 
 import java.io.BufferedReader;
@@ -65,7 +65,7 @@ public class FloatCompressionBenchmarkFileGenerator
       dirPath = args[0];
     }
 
-    BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated(
+    GeneratorColumnSchema enumeratedSchema = GeneratorColumnSchema.makeEnumerated(
         "",
         ValueType.FLOAT,
         true,
@@ -86,7 +86,7 @@ public class FloatCompressionBenchmarkFileGenerator
             0.0001
         )
     );
-    BenchmarkColumnSchema zipfLowSchema = BenchmarkColumnSchema.makeZipf(
+    GeneratorColumnSchema zipfLowSchema = GeneratorColumnSchema.makeZipf(
         "",
         ValueType.FLOAT,
         true,
@@ -96,7 +96,7 @@ public class FloatCompressionBenchmarkFileGenerator
         1000,
         1d
     );
-    BenchmarkColumnSchema zipfHighSchema = BenchmarkColumnSchema.makeZipf(
+    GeneratorColumnSchema zipfHighSchema = GeneratorColumnSchema.makeZipf(
         "",
         ValueType.FLOAT,
         true,
@@ -106,7 +106,7 @@ public class FloatCompressionBenchmarkFileGenerator
         1000,
         3d
     );
-    BenchmarkColumnSchema sequentialSchema = BenchmarkColumnSchema.makeSequential(
+    GeneratorColumnSchema sequentialSchema = GeneratorColumnSchema.makeSequential(
         "",
         ValueType.FLOAT,
         true,
@@ -115,7 +115,7 @@ public class FloatCompressionBenchmarkFileGenerator
         1470187671,
         2000000000
     );
-    BenchmarkColumnSchema uniformSchema = BenchmarkColumnSchema.makeContinuousUniform(
+    GeneratorColumnSchema uniformSchema = GeneratorColumnSchema.makeContinuousUniform(
         "",
         ValueType.FLOAT,
         true,
@@ -125,18 +125,18 @@ public class FloatCompressionBenchmarkFileGenerator
         1000
     );
 
-    Map<String, BenchmarkColumnValueGenerator> generators = new HashMap<>();
-    generators.put("enumerate", new BenchmarkColumnValueGenerator(enumeratedSchema, 1));
-    generators.put("zipfLow", new BenchmarkColumnValueGenerator(zipfLowSchema, 1));
-    generators.put("zipfHigh", new BenchmarkColumnValueGenerator(zipfHighSchema, 1));
-    generators.put("sequential", new BenchmarkColumnValueGenerator(sequentialSchema, 1));
-    generators.put("uniform", new BenchmarkColumnValueGenerator(uniformSchema, 1));
+    Map<String, ColumnValueGenerator> generators = new HashMap<>();
+    generators.put("enumerate", new ColumnValueGenerator(enumeratedSchema, 1));
+    generators.put("zipfLow", new ColumnValueGenerator(zipfLowSchema, 1));
+    generators.put("zipfHigh", new ColumnValueGenerator(zipfHighSchema, 1));
+    generators.put("sequential", new ColumnValueGenerator(sequentialSchema, 1));
+    generators.put("uniform", new ColumnValueGenerator(uniformSchema, 1));
 
     File dir = new File(dirPath);
     dir.mkdir();
 
     // create data files using BenchmarkColunValueGenerator
-    for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
+    for (Map.Entry<String, ColumnValueGenerator> entry : generators.entrySet()) {
       final File dataFile = new File(dir, entry.getKey());
       dataFile.delete();
       try (Writer writer = Files.newBufferedWriter(dataFile.toPath(), StandardCharsets.UTF_8)) {
@@ -147,7 +147,7 @@ public class FloatCompressionBenchmarkFileGenerator
     }
 
     // create compressed files using all combinations of CompressionStrategy and FloatEncoding provided
-    for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
+    for (Map.Entry<String, ColumnValueGenerator> entry : generators.entrySet()) {
       for (CompressionStrategy compression : COMPRESSIONS) {
         String name = entry.getKey() + "-" + compression;
         log.info("%s: ", name);

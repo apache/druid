@@ -1,114 +1,174 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`coordinator dynamic config matches snapshot 1`] = `
-<div
-  class="bp3-portal"
+<SnitchDialog
+  className="coordinator-dynamic-config-dialog"
+  onClose={[Function]}
+  onSave={[Function]}
+  title="Coordinator dynamic config"
 >
-  <div
-    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
-  >
-    <div
-      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
-    />
-    <div
-      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
-      tabindex="0"
+  <p>
+    Edit the coordinator dynamic configuration on the fly. For more information please refer to the
+     
+    <Memo(ExternalLink)
+      href="https://druid.apache.org/docs/0.19.0/configuration/index.html#dynamic-configuration"
     >
-      <div
-        class="bp3-dialog snitch-dialog coordinator-dynamic-config-dialog"
-      >
-        <div
-          class="bp3-dialog-header"
-        >
-          <h4
-            class="bp3-heading"
-          >
-            Coordinator dynamic config
-          </h4>
-          <button
-            aria-label="Close"
-            class="bp3-button bp3-minimal bp3-dialog-close-button"
-            type="button"
-          >
-            <span
-              class="bp3-icon bp3-icon-small-cross"
-              icon="small-cross"
-            >
-              <svg
-                data-icon="small-cross"
-                height="20"
-                viewBox="0 0 20 20"
-                width="20"
-              >
-                <desc>
-                  small-cross
-                </desc>
-                <path
-                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
-                  fill-rule="evenodd"
-                />
-              </svg>
-            </span>
-          </button>
-        </div>
-        <div
-          class="bp3-dialog-body"
-        >
-          <p>
-            Edit the coordinator dynamic configuration on the fly. For more information please refer to the
+      documentation
+    </Memo(ExternalLink)>
+    .
+  </p>
+  <AutoForm
+    fields={
+      Array [
+        Object {
+          "defaultValue": 5,
+          "info": <React.Fragment>
+            The maximum number of segments that can be moved at any given time.
+          </React.Fragment>,
+          "name": "maxSegmentsToMove",
+          "type": "number",
+        },
+        Object {
+          "defaultValue": 1,
+          "info": <React.Fragment>
+            Thread pool size for computing moving cost of segments in segment balancing. Consider increasing this if you have a lot of segments and moving segments starts to get stuck.
+          </React.Fragment>,
+          "name": "balancerComputeThreads",
+          "type": "number",
+        },
+        Object {
+          "defaultValue": false,
+          "info": <React.Fragment>
+            Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.
+          </React.Fragment>,
+          "name": "emitBalancingStats",
+          "type": "boolean",
+        },
+        Object {
+          "defaultValue": false,
+          "info": <React.Fragment>
+            Send kill tasks for ALL dataSources if property
              
-            <a
-              href="https://druid.apache.org/docs/0.17.0/configuration/index.html#dynamic-configuration"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              documentation
-            </a>
+            <Unknown>
+              druid.coordinator.kill.on
+            </Unknown>
+             is true. If this is set to true then
+             
+            <Unknown>
+              killDataSourceWhitelist
+            </Unknown>
+             must not be specified or be empty list.
+          </React.Fragment>,
+          "name": "killAllDataSources",
+          "type": "boolean",
+        },
+        Object {
+          "emptyValue": Array [],
+          "info": <React.Fragment>
+            List of dataSources for which kill tasks are sent if property
+             
+            <Unknown>
+              druid.coordinator.kill.on
+            </Unknown>
+             is true. This can be a list of comma-separated dataSources or a JSON array.
+          </React.Fragment>,
+          "name": "killDataSourceWhitelist",
+          "type": "string-array",
+        },
+        Object {
+          "emptyValue": Array [],
+          "info": <React.Fragment>
+            List of dataSources for which pendingSegments are NOT cleaned up if property
+             
+            <Unknown>
+              druid.coordinator.kill.pendingSegments.on
+            </Unknown>
+             is true. This can be a list of comma-separated dataSources or a JSON array.
+          </React.Fragment>,
+          "name": "killPendingSegmentsSkipList",
+          "type": "string-array",
+        },
+        Object {
+          "defaultValue": 0,
+          "info": <React.Fragment>
+            The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 0 (loading queue is unbounded)
+          </React.Fragment>,
+          "name": "maxSegmentsInNodeLoadingQueue",
+          "type": "number",
+        },
+        Object {
+          "defaultValue": 524288000,
+          "info": <React.Fragment>
+            The maximum total uncompressed size in bytes of segments to merge.
+          </React.Fragment>,
+          "name": "mergeBytesLimit",
+          "type": "size-bytes",
+        },
+        Object {
+          "defaultValue": 100,
+          "info": <React.Fragment>
+            The maximum number of segments that can be in a single append task.
+          </React.Fragment>,
+          "name": "mergeSegmentsLimit",
+          "type": "number",
+        },
+        Object {
+          "defaultValue": 900000,
+          "info": <React.Fragment>
+            How long does the Coordinator need to be active before it can start removing (marking unused) segments in metadata storage.
+          </React.Fragment>,
+          "name": "millisToWaitBeforeDeleting",
+          "type": "number",
+        },
+        Object {
+          "defaultValue": 15,
+          "info": <React.Fragment>
+            The maximum number of Coordinator runs for a segment to be replicated before we start alerting.
+          </React.Fragment>,
+          "name": "replicantLifetime",
+          "type": "number",
+        },
+        Object {
+          "defaultValue": 10,
+          "info": <React.Fragment>
+            The maximum number of segments that can be replicated at one time.
+          </React.Fragment>,
+          "name": "replicationThrottleLimit",
+          "type": "number",
+        },
+        Object {
+          "emptyValue": Array [],
+          "info": <React.Fragment>
+            List of historical services to 'decommission'. Coordinator will not assign new segments to 'decommissioning' services, and segments will be moved away from them to be placed on non-decommissioning services at the maximum rate specified by
+             
+            <Unknown>
+              decommissioningMaxPercentOfMaxSegmentsToMove
+            </Unknown>
             .
-          </p>
-          <div
-            class="auto-form"
-          />
-        </div>
-        <div
-          class="bp3-dialog-footer"
-        >
-          <div
-            class="bp3-dialog-footer-actions"
-          >
-            <button
-              class="bp3-button bp3-intent-primary"
-              type="button"
-            >
-              <span
-                class="bp3-button-text"
-              >
-                Next
-              </span>
-              <span
-                class="bp3-icon bp3-icon-arrow-right"
-                icon="arrow-right"
-              >
-                <svg
-                  data-icon="arrow-right"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <desc>
-                    arrow-right
-                  </desc>
-                  <path
-                    d="M14.7 7.29l-5-5a.965.965 0 00-.71-.3 1.003 1.003 0 00-.71 1.71l3.29 3.29H1.99c-.55 0-1 .45-1 1s.45 1 1 1h9.59l-3.29 3.29a1.003 1.003 0 001.42 1.42l5-5c.18-.18.29-.43.29-.71s-.12-.52-.3-.7z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+          </React.Fragment>,
+          "name": "decommissioningNodes",
+          "type": "string-array",
+        },
+        Object {
+          "defaultValue": 70,
+          "info": <React.Fragment>
+            The maximum number of segments that may be moved away from 'decommissioning' services to non-decommissioning (that is, active) services during one Coordinator run. This value is relative to the total maximum segment movements allowed during one run which is determined by 
+            <Unknown>
+              maxSegmentsToMove
+            </Unknown>
+            . If
+            <Unknown>
+              decommissioningMaxPercentOfMaxSegmentsToMove
+            </Unknown>
+             is 0, segments will neither be moved from or to 'decommissioning' services, effectively putting them in a sort of "maintenance" mode that will not participate in balancing or assignment by load rules. Decommissioning can also become stalled if there are no available active services to place the segments. By leveraging the maximum percent of decommissioning segment movements, an operator can prevent active services from overload by prioritizing balancing, or decrease decommissioning time instead. The value should be between 0 and 100.
+          </React.Fragment>,
+          "name": "decommissioningMaxPercentOfMaxSegmentsToMove",
+          "type": "number",
+        },
+      ]
+    }
+    model={Object {}}
+    onChange={[Function]}
+  />
+</SnitchDialog>
 `;

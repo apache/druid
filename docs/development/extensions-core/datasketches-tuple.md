@@ -23,7 +23,7 @@ title: "DataSketches Tuple Sketch module"
   -->
 
 
-This module provides Apache Druid aggregators based on Tuple sketch from [datasketches](https://datasketches.github.io/) library. ArrayOfDoublesSketch sketches extend the functionality of the count-distinct Theta sketches by adding arrays of double values associated with unique keys.
+This module provides Apache Druid aggregators based on Tuple sketch from [Apache DataSketches](https://datasketches.apache.org/) library. ArrayOfDoublesSketch sketches extend the functionality of the count-distinct Theta sketches by adding arrays of double values associated with unique keys.
 
 To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
 
@@ -49,7 +49,7 @@ druid.extensions.loadList=["druid-datasketches"]
 |type|This String should always be "arrayOfDoublesSketch"|yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field.|yes|
-|nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.github.io/docs/Theta/ThetaErrorTable.html) for details. |no, defaults to 16384|
+|nominalEntries|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Must be a power of 2. See the [Theta sketch accuracy](https://datasketches.apache.org/docs/Theta/ThetaErrorTable.html) for details. |no, defaults to 16384|
 |numberOfValues|Number of values associated with each distinct key. |no, defaults to 1|
 |metricColumns|If building sketches from raw data, an array of names of the input columns containing numeric values to be associated with each distinct key.|no, defaults to empty array|
 

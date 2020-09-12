@@ -40,6 +40,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,7 +55,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ExpressionVirtualColumn(
       @JsonProperty("name") String name,
       @JsonProperty("expression") String expression,
-      @JsonProperty("outputType") ValueType outputType,
+      @JsonProperty("outputType") @Nullable ValueType outputType,
       @JacksonInject ExprMacroTable macroTable
   )
   {
@@ -131,10 +132,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    // Note: Ideally we would only "setHasMultipleValues(true)" if the expression in question could potentially return
-    // multiple values. However, we don't currently have a good way of determining this, so to be safe we always
-    // set the flag.
-    return new ColumnCapabilitiesImpl().setType(outputType).setHasMultipleValues(true);
+    // Note: Ideally we would fill out additional information instead of leaving capabilities as 'unknown', e.g. examine
+    // if the expression in question could potentially return multiple values and anything else. However, we don't
+    // currently have a good way of determining this, so fill this out more once we do
+    return new ColumnCapabilitiesImpl().setType(outputType);
   }
 
   @Override

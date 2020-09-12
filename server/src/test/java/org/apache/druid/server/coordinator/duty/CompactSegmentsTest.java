@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
@@ -37,6 +38,9 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -50,13 +54,16 @@ import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.utils.Streams;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -70,23 +77,71 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class CompactSegmentsTest
 {
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> constructorFeeder()
+  {
+    final MutableInt nextRangePartitionBoundary = new MutableInt(0);
+    return ImmutableList.of(
+        new Object[]{
+            new DynamicPartitionsSpec(300000, null),
+            (BiFunction<Integer, Integer, ShardSpec>) NumberedShardSpec::new
+        },
+        new Object[]{
+            new HashedPartitionsSpec(null, 2, ImmutableList.of("dim")),
+            (BiFunction<Integer, Integer, ShardSpec>) (bucketId, numBuckets) -> new HashBasedNumberedShardSpec(
+                bucketId,
+                numBuckets,
+                bucketId,
+                numBuckets,
+                ImmutableList.of("dim"),
+                JSON_MAPPER
+            )
+        },
+        new Object[]{
+            new SingleDimensionPartitionsSpec(300000, null, "dim", false),
+            (BiFunction<Integer, Integer, ShardSpec>) (bucketId, numBuckets) -> new SingleDimensionShardSpec(
+                "dim",
+                bucketId == 0 ? null : String.valueOf(nextRangePartitionBoundary.getAndIncrement()),
+                bucketId.equals(numBuckets) ? null : String.valueOf(nextRangePartitionBoundary.getAndIncrement()),
+                bucketId,
+                numBuckets
+            )
+        }
+    );
+  }
+
+  private final PartitionsSpec partitionsSpec;
+  private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
+
   private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
+
+  public CompactSegmentsTest(PartitionsSpec partitionsSpec, BiFunction<Integer, Integer, ShardSpec> shardSpecFactory)
+  {
+    this.partitionsSpec = partitionsSpec;
+    this.shardSpecFactory = shardSpecFactory;
+  }
 
   @Before
   public void setup()
@@ -106,9 +161,9 @@ public class CompactSegmentsTest
         .getUsedSegmentsTimelinesPerDataSource();
   }
 
-  private static DataSegment createSegment(String dataSource, int startDay, boolean beforeNoon, int partition)
+  private DataSegment createSegment(String dataSource, int startDay, boolean beforeNoon, int partition)
   {
-    final ShardSpec shardSpec = new NumberedShardSpec(partition, 2);
+    final ShardSpec shardSpec = shardSpecFactory.apply(partition, 2);
     final Interval interval = beforeNoon ?
                               Intervals.of(
                                   StringUtils.format(
@@ -140,11 +195,10 @@ public class CompactSegmentsTest
   @Test
   public void testRun()
   {
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
-    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(jsonMapper);
+    final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
-    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(jsonMapper, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(jsonMapper, indexingServiceClient);
+    final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
+    final CompactSegments compactSegments = new CompactSegments(JSON_MAPPER, indexingServiceClient);
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
@@ -331,7 +385,7 @@ public class CompactSegmentsTest
     }
   }
 
-  private static List<DataSourceCompactionConfig> createCompactionConfigs()
+  private List<DataSourceCompactionConfig> createCompactionConfigs()
   {
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
@@ -343,7 +397,25 @@ public class CompactSegmentsTest
               50L,
               null,
               new Period("PT1H"), // smaller than segment interval
-              null,
+              new UserCompactionTaskQueryTuningConfig(
+                  null,
+                  null,
+                  null,
+                  null,
+                  partitionsSpec,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+              ),
               null
           )
       );
@@ -356,7 +428,6 @@ public class CompactSegmentsTest
     private final ObjectMapper jsonMapper;
 
     private int compactVersionSuffix = 0;
-    private int idSuffix = 0;
 
     private TestDruidLeaderClient(ObjectMapper jsonMapper)
     {
@@ -434,15 +505,15 @@ public class CompactSegmentsTest
                                                  .flatMap(holder -> Streams.sequentialStreamFrom(holder.getObject()))
                                                  .map(PartitionChunk::getObject)
                                                  .collect(Collectors.toList());
-      final String taskId = compactSegments(
+      compactSegments(
           timeline,
           segments,
           compactionTaskQuery.getTuningConfig()
       );
-      return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskId)));
+      return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskQuery.getId())));
     }
 
-    private String compactSegments(
+    private void compactSegments(
         VersionedIntervalTimeline<String, DataSegment> timeline,
         List<DataSegment> segments,
         ClientCompactionTaskQueryTuningConfig tuningConfig
@@ -468,6 +539,16 @@ public class CompactSegmentsTest
       );
       final String version = "newVersion_" + compactVersionSuffix++;
       final long segmentSize = segments.stream().mapToLong(DataSegment::getSize).sum() / 2;
+      final PartitionsSpec compactionPartitionsSpec;
+      if (tuningConfig.getPartitionsSpec() instanceof DynamicPartitionsSpec) {
+        compactionPartitionsSpec = new DynamicPartitionsSpec(
+            tuningConfig.getPartitionsSpec().getMaxRowsPerSegment(),
+            ((DynamicPartitionsSpec) tuningConfig.getPartitionsSpec()).getMaxTotalRowsOr(Long.MAX_VALUE)
+        );
+      } else {
+        compactionPartitionsSpec = tuningConfig.getPartitionsSpec();
+      }
+
       for (int i = 0; i < 2; i++) {
         DataSegment compactSegment = new DataSegment(
             segments.get(0).getDataSource(),
@@ -476,12 +557,9 @@ public class CompactSegmentsTest
             null,
             segments.get(0).getDimensions(),
             segments.get(0).getMetrics(),
-            new NumberedShardSpec(i, 0),
+            shardSpecFactory.apply(i, 2),
             new CompactionState(
-                new DynamicPartitionsSpec(
-                    tuningConfig.getMaxRowsPerSegment(),
-                    tuningConfig.getMaxTotalRowsOr(Long.MAX_VALUE)
-                ),
+                compactionPartitionsSpec,
                 ImmutableMap.of(
                     "bitmap",
                     ImmutableMap.of("type", "roaring", "compressRunOnSerialization", true),
@@ -503,8 +581,6 @@ public class CompactSegmentsTest
             compactSegment.getShardSpec().createChunk(compactSegment)
         );
       }
-
-      return "task_" + idSuffix++;
     }
   }
 

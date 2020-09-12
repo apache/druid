@@ -20,8 +20,7 @@ import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core'
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
-import ReactTable from 'react-table';
-import { Filter } from 'react-table';
+import ReactTable, { Filter } from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -45,6 +44,7 @@ import {
   makeBooleanFilter,
   queryDruidSql,
   QueryManager,
+  QueryState,
   sqlQueryCustomTableFilter,
 } from '../../utils';
 import { BasicAction } from '../../utils/basic-action';
@@ -104,37 +104,19 @@ export interface SegmentsViewProps {
   capabilities: Capabilities;
 }
 
-export interface SegmentsViewState {
-  segmentsLoading: boolean;
-  segments?: SegmentQueryResultRow[];
-  segmentsError?: string;
-  segmentFilter: Filter[];
-  allSegments?: SegmentQueryResultRow[];
-  segmentTableActionDialogId?: string;
-  datasourceTableActionDialogId?: string;
-  actions: BasicAction[];
-  terminateSegmentId?: string;
-  terminateDatasourceId?: string;
-  hiddenColumns: LocalStorageBackedArray<string>;
-  groupByInterval: boolean;
-
-  // table state
-  page: number | null;
-  pageSize: number | null;
-  filtered: number[] | null;
-  sorted: Sorted | null;
-}
-
 interface Sorted {
-  id: number;
+  id: string;
   desc: boolean;
 }
 
-interface SegmentsQuery {
+interface TableState {
   page: number;
   pageSize: number;
   filtered: Filter[];
   sorted: Sorted[];
+}
+
+interface SegmentsQuery extends TableState {
   groupByInterval: boolean;
 }
 
@@ -146,7 +128,6 @@ interface SegmentQueryResultRow {
   version: string;
   size: 0;
   partition_num: number;
-  payload: any;
   num_rows: number;
   num_replicas: number;
   is_available: number;
@@ -155,11 +136,26 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
+export interface SegmentsViewState {
+  segmentsState: QueryState<SegmentQueryResultRow[]>;
+  trimmedSegments?: SegmentQueryResultRow[];
+  segmentFilter: Filter[];
+  segmentTableActionDialogId?: string;
+  datasourceTableActionDialogId?: string;
+  actions: BasicAction[];
+  terminateSegmentId?: string;
+  terminateDatasourceId?: string;
+  hiddenColumns: LocalStorageBackedArray<string>;
+  groupByInterval: boolean;
+}
+
 export class SegmentsView extends React.PureComponent<SegmentsViewProps, SegmentsViewState> {
   static PAGE_SIZE = 25;
 
   private segmentsSqlQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
   private segmentsNoSqlQueryManager: QueryManager<null, SegmentQueryResultRow[]>;
+
+  private lastTableState: TableState | undefined;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -170,23 +166,17 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     this.state = {
       actions: [],
-      segmentsLoading: true,
+      segmentsState: QueryState.INIT,
       segmentFilter,
       hiddenColumns: new LocalStorageBackedArray<string>(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
       ),
       groupByInterval: false,
-
-      // Table state
-      page: null,
-      pageSize: null,
-      sorted: null,
-      filtered: null,
     };
 
     this.segmentsSqlQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
         const totalQuerySize = (query.page + 1) * query.pageSize;
 
         const whereParts = filterMap(query.filtered, (f: Filter) => {
@@ -211,6 +201,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             `FROM sys.segments`,
             whereClause ? `WHERE ${whereClause}` : '',
             `GROUP BY 1`,
+            `ORDER BY 1 DESC`,
             `LIMIT ${totalQuerySize}`,
           ]).join('\n');
 
@@ -221,7 +212,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           queryParts = compact([
             `SELECT`,
             `  ("start" || '/' || "end") AS "interval",`,
-            `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `  "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed"`,
             `FROM sys.segments`,
             `WHERE`,
             intervals ? `  ("start" || '/' || "end") IN (${intervals})` : 'FALSE',
@@ -240,7 +231,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           queryParts.push(`LIMIT ${totalQuerySize * 1000}`);
         } else {
           queryParts = [
-            `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed", "payload"`,
+            `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "is_overshadowed"`,
             `FROM sys.segments`,
           ];
 
@@ -261,23 +252,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         }
         const sqlQuery = queryParts.join('\n');
         setIntermediateQuery(sqlQuery);
-        const results: any[] = (await queryDruidSql({ query: sqlQuery })).slice(
-          query.page * query.pageSize,
-        );
-        results.forEach(result => {
-          try {
-            result.payload = JSON.parse(result.payload);
-          } catch {
-            result.payload = {};
-          }
-        });
-        return results;
+        return (await queryDruidSql({ query: sqlQuery })).slice(query.page * query.pageSize);
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: segmentsState => {
         this.setState({
-          segments: result,
-          segmentsLoading: loading,
-          segmentsError: error,
+          segmentsState,
         });
       },
     });
@@ -299,7 +278,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 version: segment.version,
                 partition_num: segment.shardSpec.partitionNum ? 0 : segment.shardSpec.partitionNum,
                 size: segment.size,
-                payload: segment,
                 num_rows: -1,
                 num_replicas: -1,
                 is_available: -1,
@@ -311,16 +289,16 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           }),
         );
 
-        return nestedResults.flat().sort((d1: any, d2: any) => {
+        return nestedResults.flat().sort((d1, d2) => {
           return d2.start.localeCompare(d1.start);
         });
       },
-      onStateChange: ({ result, loading, error }) => {
+      onStateChange: segmentsState => {
         this.setState({
-          allSegments: result,
-          segments: result ? result.slice(0, SegmentsView.PAGE_SIZE) : undefined,
-          segmentsLoading: loading,
-          segmentsError: error,
+          trimmedSegments: segmentsState.data
+            ? segmentsState.data.slice(0, SegmentsView.PAGE_SIZE)
+            : undefined,
+          segmentsState,
         });
       },
     });
@@ -338,8 +316,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     this.segmentsNoSqlQueryManager.terminate();
   }
 
-  private fetchData = (groupByInterval: boolean, state?: any) => {
-    const { page, pageSize, filtered, sorted } = state ? state : this.state;
+  private fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+    if (tableState) this.lastTableState = tableState;
+    const { page, pageSize, filtered, sorted } = this.lastTableState!;
     this.segmentsSqlQueryManager.runQuery({
       page,
       pageSize,
@@ -349,33 +328,34 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   };
 
-  private fetchClientSideData = (state?: any) => {
-    const { page, pageSize, filtered, sorted } = state ? state : state;
-    const { allSegments } = this.state;
-    if (allSegments == null) return;
-    const startPage = page * pageSize;
-    const endPage = (page + 1) * pageSize;
-    const sortPivot = sorted[0].id;
-    const sortDesc = sorted[0].desc;
-    const selectedSegments = allSegments
-      .filter((d: any) => {
-        return filtered.every((f: any) => {
-          return d[f.id].includes(f.value);
-        });
-      })
-      .sort((d1: any, d2: any) => {
-        const v1 = d1[sortPivot];
-        const v2 = d2[sortPivot];
-        if (typeof d1[sortPivot] === 'string') {
-          return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
-        } else {
-          return sortDesc ? v2 - v1 : v1 - v2;
-        }
-      })
-      .slice(startPage, endPage);
+  private fetchClientSideData = (tableState?: TableState) => {
+    if (tableState) this.lastTableState = tableState;
+    const { page, pageSize, filtered, sorted } = this.lastTableState!;
 
-    this.setState({
-      segments: selectedSegments,
+    this.setState(state => {
+      const allSegments = state.segmentsState.data;
+      if (!allSegments) return {};
+      const sortKey = sorted[0].id as keyof SegmentQueryResultRow;
+      const sortDesc = sorted[0].desc;
+
+      return {
+        trimmedSegments: allSegments
+          .filter(d => {
+            return filtered.every((f: any) => {
+              return String(d[f.id as keyof SegmentQueryResultRow]).includes(f.value);
+            });
+          })
+          .sort((d1, d2) => {
+            const v1 = d1[sortKey] as any;
+            const v2 = d2[sortKey] as any;
+            if (typeof v1 === 'string') {
+              return sortDesc ? v2.localeCompare(v1) : v1.localeCompare(v2);
+            } else {
+              return sortDesc ? v2 - v1 : v1 - v2;
+            }
+          })
+          .slice(page * pageSize, (page + 1) * pageSize),
+      };
     });
   };
 
@@ -392,9 +372,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
   renderSegmentsTable() {
     const {
-      segments,
-      segmentsLoading,
-      segmentsError,
+      segmentsState,
+      trimmedSegments,
       segmentFilter,
       hiddenColumns,
       groupByInterval,
@@ -403,12 +382,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
 
     return (
       <ReactTable
-        data={segments || []}
+        data={trimmedSegments || segmentsState.data || []}
         pages={10000000} // Dummy, we are hiding the page selector
-        loading={segmentsLoading}
-        noDataText={
-          !segmentsLoading && segments && !segments.length ? 'No segments' : segmentsError || ''
-        }
+        loading={segmentsState.loading}
+        noDataText={segmentsState.isEmpty() ? 'No segments' : segmentsState.getErrorMessage() || ''}
         manual
         filterable
         filtered={segmentFilter}
@@ -416,17 +393,11 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         onFilteredChange={filtered => {
           this.setState({ segmentFilter: filtered });
         }}
-        onFetchData={state => {
+        onFetchData={tableState => {
           if (capabilities.hasSql()) {
-            this.setState({
-              page: state.page,
-              pageSize: state.pageSize,
-              filtered: state.filtered,
-              sorted: state.sorted,
-            });
-            this.fetchData(groupByInterval, state);
+            this.fetchData(groupByInterval, tableState);
           } else if (capabilities.hasCoordinatorAccess()) {
-            this.fetchClientSideData(state);
+            this.fetchClientSideData(tableState);
           }
         }}
         showPageJump={false}

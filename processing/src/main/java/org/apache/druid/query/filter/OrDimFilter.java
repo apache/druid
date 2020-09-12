@@ -34,19 +34,18 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
-public class OrDimFilter implements DimFilter
+public class OrDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
   private final List<DimFilter> fields;
 
   @JsonCreator
-  public OrDimFilter(
-      @JsonProperty("fields") List<DimFilter> fields
-  )
+  public OrDimFilter(@JsonProperty("fields") List<DimFilter> fields)
   {
     fields = DimFilters.filterNulls(fields);
     Preconditions.checkArgument(fields.size() > 0, "OR operator requires at least one field");
@@ -82,8 +81,20 @@ public class OrDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    List<DimFilter> elements = DimFilters.optimize(fields);
-    return elements.size() == 1 ? elements.get(0) : new OrDimFilter(elements);
+    List<DimFilter> elements = DimFilters.optimize(fields)
+                                         .stream()
+                                         .filter(filter -> !(filter instanceof FalseDimFilter))
+                                         .collect(Collectors.toList());
+    if (elements.isEmpty()) {
+      // All elements were FalseDimFilter after optimization
+      return FalseDimFilter.instance();
+    } else if (elements.size() == 1) {
+      return elements.get(0);
+    } else if (elements.stream().anyMatch(filter -> filter instanceof TrueDimFilter)) {
+      return TrueDimFilter.instance();
+    } else {
+      return new OrDimFilter(elements);
+    }
   }
 
   @Override

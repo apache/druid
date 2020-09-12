@@ -56,7 +56,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -95,6 +95,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class RealtimePlumber implements Plumber
 {
@@ -115,7 +116,6 @@ public class RealtimePlumber implements Plumber
       String.CASE_INSENSITIVE_ORDER
   );
   private final QuerySegmentWalker texasRanger;
-
   private final Cache cache;
 
   private volatile long nextFlush = 0;
@@ -213,7 +213,8 @@ public class RealtimePlumber implements Plumber
   }
 
   @Override
-  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier)
+      throws IndexSizeExceededException
   {
     long messageTimestamp = row.getTimestampFromEpoch();
     final Sink sink = getSink(messageTimestamp);
@@ -261,7 +262,6 @@ public class RealtimePlumber implements Plumber
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -394,7 +394,7 @@ public class RealtimePlumber implements Plumber
               if (!isPushedMarker.exists()) {
                 removeSegment(sink, mergedTarget);
                 if (mergedTarget.exists()) {
-                  log.wtf("Merged target[%s] exists?!", mergedTarget);
+                  log.warn("Merged target[%s] still exists after attempt to delete it; skipping push.", mergedTarget);
                   return;
                 }
               } else {
@@ -424,7 +424,7 @@ public class RealtimePlumber implements Plumber
               Closer closer = Closer.create();
               try {
                 for (FireHydrant fireHydrant : sink) {
-                  Pair<Segment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
+                  Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
                   final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
                   log.info("Adding hydrant[%s]", fireHydrant);
                   indexes.add(queryableIndex);
@@ -722,11 +722,9 @@ public class RealtimePlumber implements Plumber
           sinkInterval,
           schema,
           config.getShardSpec(),
-          null,
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
           config.getDedupColumn(),
           hydrants
       );

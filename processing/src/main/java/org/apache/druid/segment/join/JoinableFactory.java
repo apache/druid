@@ -26,10 +26,18 @@ import java.util.Optional;
 /**
  * Utility for creating {@link Joinable} objects.
  *
- * @see org.apache.druid.guice.DruidBinders#joinableFactoryBinder to register factories
+ * @see org.apache.druid.guice.DruidBinders#joinableFactoryMultiBinder to register factories
+ * @see org.apache.druid.guice.DruidBinders#joinableMappingBinder to register factory types with datasource types
  */
 public interface JoinableFactory
 {
+  /**
+   * Returns true if a {@link Joinable} **may** be created for a given {@link DataSource}, but is not a guarantee that
+   * {@link #build} will return a non-empty result. Successfully building a {@link Joinable} might require specific
+   * criteria of the {@link JoinConditionAnalysis}.
+   */
+  boolean isDirectlyJoinable(DataSource dataSource);
+
   /**
    * Create a Joinable object. This may be an expensive operation involving loading data, creating a hash table, etc.
    *

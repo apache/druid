@@ -41,7 +41,9 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ConcatQueryRunner;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NoopQueryRunner;
@@ -52,12 +54,20 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.context.ResponseContext.Key;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
-import org.apache.druid.segment.AbstractSegment;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -71,19 +81,27 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -94,6 +112,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class ServerManagerTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private ServerManager serverManager;
   private MyQueryRunnerFactory factory;
   private CountDownLatch queryWaitLatch;
@@ -149,7 +170,11 @@ public class ServerManagerTest
           @Override
           public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
           {
-            return (QueryRunnerFactory) factory;
+            if (query instanceof SearchQuery) {
+              return (QueryRunnerFactory) factory;
+            } else {
+              return null;
+            }
           }
         },
         new NoopServiceEmitter(),
@@ -407,6 +432,161 @@ public class ServerManagerTest
     }
   }
 
+  @Test
+  public void testGetQueryRunnerForIntervalsWhenTimelineIsMissingReturningNoopQueryRunner()
+  {
+    final Interval interval = Intervals.of("0000-01-01/P1D");
+    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForIntervals(
+        searchQuery("unknown_datasource", interval, Granularities.ALL),
+        Collections.singletonList(interval)
+    );
+    Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
+  }
+
+  @Test
+  public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegments()
+  {
+    final Interval interval = Intervals.of("0000-01-01/P1D");
+    final SearchQuery query = searchQuery("unknown_datasource", interval, Granularities.ALL);
+    final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
+        new SegmentDescriptor(interval, "unknown_version", 0)
+    );
+    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
+        query,
+        unknownSegments
+    );
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
+    Assert.assertTrue(results.isEmpty());
+    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+  }
+
+  @Test
+  public void testGetQueryRunnerForSegmentsWhenTimelineEntryIsMissingReportingMissingSegments()
+  {
+    final Interval interval = Intervals.of("P1d/2011-04-01");
+    final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
+    final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
+        new SegmentDescriptor(interval, "unknown_version", 0)
+    );
+    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
+        query,
+        unknownSegments
+    );
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
+    Assert.assertTrue(results.isEmpty());
+    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+  }
+
+  @Test
+  public void testGetQueryRunnerForSegmentsWhenTimelinePartitionChunkIsMissingReportingMissingSegments()
+  {
+    final Interval interval = Intervals.of("P1d/2011-04-01");
+    final int unknownPartitionId = 1000;
+    final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
+    final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
+        new SegmentDescriptor(interval, "1", unknownPartitionId)
+    );
+    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
+        query,
+        unknownSegments
+    );
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
+    Assert.assertTrue(results.isEmpty());
+    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+  }
+
+  @Test
+  public void testGetQueryRunnerForSegmentsWhenSegmentIsClosedReportingMissingSegments()
+  {
+    final Interval interval = Intervals.of("P1d/2011-04-01");
+    final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
+    final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
+        .getTimeline(DataSourceAnalysis.forDataSource(query.getDataSource()));
+    Assert.assertTrue(maybeTimeline.isPresent());
+    final List<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = maybeTimeline.get().lookup(interval);
+    final List<SegmentDescriptor> closedSegments = new ArrayList<>();
+    for (TimelineObjectHolder<String, ReferenceCountingSegment> holder : holders) {
+      for (PartitionChunk<ReferenceCountingSegment> chunk : holder.getObject()) {
+        final ReferenceCountingSegment segment = chunk.getObject();
+        Assert.assertNotNull(segment.getId());
+        closedSegments.add(
+            new SegmentDescriptor(segment.getDataInterval(), segment.getVersion(), segment.getId().getPartitionNum())
+        );
+        segment.close();
+      }
+    }
+    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
+        query,
+        closedSegments
+    );
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
+    Assert.assertTrue(results.isEmpty());
+    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertEquals(closedSegments, responseContext.get(Key.MISSING_SEGMENTS));
+  }
+
+  @Test
+  public void testGetQueryRunnerForSegmentsForUnknownQueryThrowingException()
+  {
+    final Interval interval = Intervals.of("P1d/2011-04-01");
+    final List<SegmentDescriptor> descriptors = Collections.singletonList(new SegmentDescriptor(interval, "1", 0));
+    expectedException.expect(QueryUnsupportedException.class);
+    expectedException.expectMessage("Unknown query type");
+    serverManager.getQueryRunnerForSegments(
+        new BaseQuery<Object>(
+            new TableDataSource("test"),
+            new MultipleSpecificSegmentSpec(descriptors),
+            false,
+            new HashMap<>()
+        )
+        {
+          @Override
+          public boolean hasFilters()
+          {
+            return false;
+          }
+
+          @Override
+          public DimFilter getFilter()
+          {
+            return null;
+          }
+
+          @Override
+          public String getType()
+          {
+            return null;
+          }
+
+          @Override
+          public Query<Object> withOverriddenContext(Map<String, Object> contextOverride)
+          {
+            return null;
+          }
+
+          @Override
+          public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
+          {
+            return null;
+          }
+
+          @Override
+          public Query<Object> withDataSource(DataSource dataSource)
+          {
+            return null;
+          }
+        },
+        descriptors
+    );
+  }
+
   private void waitForTestVerificationAndCleanup(Future future)
   {
     try {
@@ -421,6 +601,17 @@ public class ServerManagerTest
     }
   }
 
+  private SearchQuery searchQuery(String datasource, Interval interval, Granularity granularity)
+  {
+    return Druids.newSearchQueryBuilder()
+                 .dataSource(datasource)
+                 .intervals(Collections.singletonList(interval))
+                 .granularity(granularity)
+                 .limit(10000)
+                 .query("wow")
+                 .build();
+  }
+
   private Future assertQueryable(
       Granularity granularity,
       String dataSource,
@@ -430,13 +621,7 @@ public class ServerManagerTest
   {
     final Iterator<Pair<String, Interval>> expectedIter = expected.iterator();
     final List<Interval> intervals = Collections.singletonList(interval);
-    final SearchQuery query = Druids.newSearchQueryBuilder()
-                                    .dataSource(dataSource)
-                                    .intervals(intervals)
-                                    .granularity(granularity)
-                                    .limit(10000)
-                                    .query("wow")
-                                    .build();
+    final SearchQuery query = searchQuery(dataSource, interval, granularity);
     final QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(
         query,
         intervals
@@ -600,7 +785,7 @@ public class ServerManagerTest
     }
   }
 
-  private static class SegmentForTesting extends AbstractSegment
+  private static class SegmentForTesting implements Segment
   {
     private final String version;
     private final Interval interval;

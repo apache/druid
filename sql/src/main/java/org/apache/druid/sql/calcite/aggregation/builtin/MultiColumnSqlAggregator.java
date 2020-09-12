@@ -122,7 +122,7 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
       List<FieldInfo> fieldInfoList
   )
   {
-    final ValueType valueType = Calcites.getValueTypeForSqlTypeName(aggregateCall.getType().getSqlTypeName());
+    final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
     List<AggregatorFactory> aggregatorFactories = new ArrayList<>();
     List<PostAggregator> postAggregators = new ArrayList<>();
 

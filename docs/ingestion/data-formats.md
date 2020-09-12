@@ -208,7 +208,7 @@ The `inputFormat` to load data of Parquet format. An example is:
           "expr": "$.path.to.nested"
         }
       ]
-    }
+    },
     "binaryAsString": false
   },
   ...
@@ -221,6 +221,53 @@ The Parquet `inputFormat` has the following components:
 |-------|------|-------------|----------|
 |type| String| This should be set to `parquet` to read Parquet file| yes |
 |flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Parquet file. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+| binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
+
+### Avro OCF
+
+> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro OCF input format.
+
+The `inputFormat` to load data of Avro OCF format. An example is:
+```json
+"ioConfig": {
+  "inputFormat": {
+    "type": "avro_ocf",
+    "flattenSpec": {
+      "useFieldDiscovery": true,
+      "fields": [
+        {
+          "type": "path",
+          "name": "someRecord_subInt",
+          "expr": "$.someRecord.subInt"
+        }
+      ]
+    },
+    "schema": {
+      "namespace": "org.apache.druid.data.input",
+      "name": "SomeDatum",
+      "type": "record",
+      "fields" : [
+        { "name": "timestamp", "type": "long" },
+        { "name": "eventType", "type": "string" },
+        { "name": "id", "type": "long" },
+        { "name": "someRecord", "type": {
+          "type": "record", "name": "MySubRecord", "fields": [
+            { "name": "subInt", "type": "int"},
+            { "name": "subLong", "type": "long"}
+          ]
+        }}]
+    },
+    "binaryAsString": false
+  },
+  ...
+}
+```
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+|type| String| This should be set to `avro_ocf` to read Avro OCF file| yes |
+|flattenSpec| JSON Object |Define a [`flattenSpec`](#flattenspec) to extract nested values from a Avro records. Note that only 'path' expression are supported ('jq' is unavailable).| no (default will auto-discover 'root' level properties) |
+|schema| JSON Object |Define a reader schema to be used when parsing Avro records, this is useful when parsing multiple versions of Avro OCF file data | no (default will decode using the writer schema contained in the OCF file) |
 | binaryAsString | Boolean | Specifies if the bytes parquet column which is not logically marked as a string or enum type should be treated as a UTF-8 encoded string. | no (default = false) |
 
 ### FlattenSpec

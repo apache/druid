@@ -75,7 +75,15 @@ public class DruidJoinRule extends RelOptRule
   public boolean matches(RelOptRuleCall call)
   {
     final Join join = call.rel(0);
-    return canHandleCondition(join.getCondition(), join.getLeft().getRowType());
+    final DruidRel<?> left = call.rel(1);
+    final DruidRel<?> right = call.rel(2);
+
+    // 1) Can handle the join condition as a native join.
+    // 2) Left has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
+    // 3) Right has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
+    return canHandleCondition(join.getCondition(), join.getLeft().getRowType())
+           && left.getPartialDruidQuery() != null
+           && right.getPartialDruidQuery() != null;
   }
 
   @Override
@@ -193,9 +201,24 @@ public class DruidJoinRule extends RelOptRule
     final int numLeftFields = leftRowType.getFieldCount();
 
     for (RexNode subCondition : subConditions) {
-      if (subCondition.isA(SqlKind.LITERAL)) {
-        // Literals are always OK.
-        literalSubConditions.add((RexLiteral) subCondition);
+      if (RexUtil.isLiteral(subCondition, true)) {
+        if (subCondition.isA(SqlKind.CAST)) {
+          // This is CAST(literal) which is always OK.
+          // We know that this is CAST(literal) as it passed the check from RexUtil.isLiteral
+          RexCall call = (RexCall) subCondition;
+          // We have to verify the types of the cast here, because if the underlying literal and the cast output type
+          // are different, then skipping the cast might change the meaning of the subcondition.
+          if (call.getType().getSqlTypeName().equals(call.getOperands().get(0).getType().getSqlTypeName())) {
+            // If the types are the same, unwrap the cast and use the underlying literal.
+            literalSubConditions.add((RexLiteral) call.getOperands().get(0));
+          } else {
+            // If the types are not the same, return Optional.empty() indicating the condition is not supported.
+            return Optional.empty();
+          }
+        } else {
+          // Literals are always OK.
+          literalSubConditions.add((RexLiteral) subCondition);
+        }
         continue;
       }
 

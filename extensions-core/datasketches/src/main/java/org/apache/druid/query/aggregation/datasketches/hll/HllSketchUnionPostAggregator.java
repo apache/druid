@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -68,6 +69,15 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  /**
+   * actual type is {@link HllSketch}
+   */
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.COMPLEX;
   }
 
   @JsonProperty
@@ -122,6 +132,17 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   }
 
   @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(AggregatorUtil.HLL_SKETCH_UNION_CACHE_TYPE_ID)
+        .appendString(name)
+        .appendCacheablesIgnoringOrder(fields)
+        .appendInt(lgK)
+        .appendInt(tgtHllType.ordinal())
+        .build();
+  }
+
+  @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{" +
@@ -133,30 +154,19 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof HllSketchUnionPostAggregator)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final HllSketchUnionPostAggregator that = (HllSketchUnionPostAggregator) o;
-
-    if (!name.equals(that.name)) {
-      return false;
-    }
-    if (!fields.equals(that.fields)) {
-      return false;
-    }
-    if (lgK != that.getLgK()) {
-      return false;
-    }
-    if (!tgtHllType.equals(that.tgtHllType)) {
-      return false;
-    }
-    return true;
+    HllSketchUnionPostAggregator that = (HllSketchUnionPostAggregator) o;
+    return lgK == that.lgK &&
+           name.equals(that.name) &&
+           fields.equals(that.fields) &&
+           tgtHllType == that.tgtHllType;
   }
 
   @Override
@@ -164,16 +174,4 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   {
     return Objects.hash(name, fields, lgK, tgtHllType);
   }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new CacheKeyBuilder(AggregatorUtil.HLL_SKETCH_UNION_CACHE_TYPE_ID)
-        .appendString(name)
-        .appendCacheablesIgnoringOrder(fields)
-        .appendInt(lgK)
-        .appendInt(tgtHllType.ordinal())
-        .build();
-  }
-
 }

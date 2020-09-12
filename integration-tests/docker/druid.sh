@@ -23,6 +23,7 @@ getConfPath()
     case "$1" in
     _common) echo $cluster_conf_base/_common ;;
     historical) echo $cluster_conf_base/data/historical ;;
+    historical-for-query-retry-test) echo $cluster_conf_base/data/historical ;;
     middleManager) echo $cluster_conf_base/data/middleManager ;;
     coordinator) echo $cluster_conf_base/master/coordinator ;;
     broker) echo $cluster_conf_base/query/broker ;;
@@ -82,16 +83,30 @@ setupData()
   # The "query" and "security" test groups require data to be setup before running the tests.
   # In particular, they requires segments to be download from a pre-existing s3 bucket.
   # This is done by using the loadSpec put into metadatastore and s3 credientials set below.
-  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]; then
+  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ] || [ "$DRUID_INTEGRATION_TEST_GROUP" = "security" ]; then
     # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
     find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
       && cat /test-data/${DRUID_INTEGRATION_TEST_GROUP}-sample-data.sql | mysql -u root druid && /etc/init.d/mysql stop
     # below s3 credentials needed to access the pre-existing s3 bucket
     setKey $DRUID_SERVICE druid.s3.accessKey AKIAJI7DG7CDECGBQ6NA
     setKey $DRUID_SERVICE druid.s3.secretKey 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
-    setKey $DRUID_SERVICE druid.extensions.loadList [\"druid-s3-extensions\"]
+    if [ "$DRUID_INTEGRATION_TEST_GROUP" = "query-retry" ]; then
+      setKey $DRUID_SERVICE druid.extensions.loadList [\"druid-s3-extensions\",\"druid-integration-tests\"]
+    else
+      setKey $DRUID_SERVICE druid.extensions.loadList [\"druid-s3-extensions\"]
+    fi
     # The region of the sample data s3 blobs needed for these test groups
     export AWS_REGION=us-east-1
+  fi
+
+
+  # The SqlInputSource tests in the "input-source" test group require data to be setup in MySQL before running the tests.
+  if [ "$DRUID_INTEGRATION_TEST_GROUP" = "input-source" ] ; then
+    # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
+    find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
+        && echo "GRANT ALL ON sqlinputsource.* TO 'druid'@'%'; CREATE database sqlinputsource DEFAULT CHARACTER SET utf8mb4;" | mysql -u root druid \
+        && cat /test-data/sql-input-source-sample-data.sql | mysql -u root druid \
+        && /etc/init.d/mysql stop
   fi
 }
 

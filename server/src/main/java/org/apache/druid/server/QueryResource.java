@@ -33,17 +33,20 @@ import com.google.inject.Inject;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
@@ -83,11 +86,6 @@ public class QueryResource implements QueryCountStatsProvider
   protected static final String APPLICATION_SMILE = "application/smile";
 
   /**
-   * The maximum length of {@link ResponseContext} serialized string that might be put into an HTTP response header
-   */
-  protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
-
-  /**
    * HTTP response header name containing {@link ResponseContext} serialized string
    */
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
@@ -103,7 +101,9 @@ public class QueryResource implements QueryCountStatsProvider
   protected final AuthConfig authConfig;
   protected final AuthorizerMapper authorizerMapper;
 
-  private final GenericQueryMetricsFactory queryMetricsFactory;
+  private final ResponseContextConfig responseContextConfig;
+  private final DruidNode selfNode;
+
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();
   private final AtomicLong interruptedQueryCount = new AtomicLong();
@@ -116,7 +116,8 @@ public class QueryResource implements QueryCountStatsProvider
       QueryScheduler queryScheduler,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
-      GenericQueryMetricsFactory queryMetricsFactory
+      ResponseContextConfig responseContextConfig,
+      @Self DruidNode selfNode
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -127,7 +128,8 @@ public class QueryResource implements QueryCountStatsProvider
     this.queryScheduler = queryScheduler;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.queryMetricsFactory = queryMetricsFactory;
+    this.responseContextConfig = responseContextConfig;
+    this.selfNode = selfNode;
   }
 
   @DELETE
@@ -281,19 +283,37 @@ public class QueryResource implements QueryCountStatsProvider
         //and encodes the string using ASCII, so 1 char is = 1 byte
         final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
             jsonMapper,
-            RESPONSE_CTX_HEADER_LEN_LIMIT
+            responseContextConfig.getMaxResponseContextHeaderSize()
         );
-        if (serializationResult.isReduced()) {
-          log.info(
-              "Response Context truncated for id [%s] . Full context is [%s].",
+
+        if (serializationResult.isTruncated()) {
+          final String logToPrint = StringUtils.format(
+              "Response Context truncated for id [%s]. Full context is [%s].",
               queryId,
               serializationResult.getFullResult()
           );
+          if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
+            log.error(logToPrint);
+            throw new QueryInterruptedException(
+                new TruncatedResponseContextException(
+                    "Serialized response context exceeds the max size[%s]",
+                    responseContextConfig.getMaxResponseContextHeaderSize()
+                ),
+                selfNode.getHostAndPortToUse()
+            );
+          } else {
+            log.warn(logToPrint);
+          }
         }
 
         return responseBuilder
-            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getTruncatedResult())
+            .header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult())
             .build();
+      }
+      catch (QueryException e) {
+        // make sure to close yielder if anything happened before starting to serialize the response.
+        yielder.close();
+        throw e;
       }
       catch (Exception e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
@@ -314,6 +334,11 @@ public class QueryResource implements QueryCountStatsProvider
       failedQueryCount.incrementAndGet();
       queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr(), -1);
       return ioReaderWriter.gotLimited(cap);
+    }
+    catch (QueryUnsupportedException unsupported) {
+      failedQueryCount.incrementAndGet();
+      queryLifecycle.emitLogsAndMetrics(unsupported, req.getRemoteAddr(), -1);
+      return ioReaderWriter.gotUnsupported(unsupported);
     }
     catch (ForbiddenException e) {
       // don't do anything for an authorization failure, ForbiddenExceptionMapper will catch this later and
@@ -443,6 +468,13 @@ public class QueryResource implements QueryCountStatsProvider
     Response gotLimited(QueryCapacityExceededException e) throws IOException
     {
       return Response.status(QueryCapacityExceededException.STATUS_CODE)
+                     .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
+                     .build();
+    }
+
+    Response gotUnsupported(QueryUnsupportedException e) throws IOException
+    {
+      return Response.status(QueryUnsupportedException.STATUS_CODE)
                      .entity(newOutputWriter(null, null, false).writeValueAsBytes(e))
                      .build();
     }

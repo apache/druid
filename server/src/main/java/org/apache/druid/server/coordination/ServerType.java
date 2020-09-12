@@ -63,6 +63,14 @@ public enum ServerType
     {
       return false;
     }
+  },
+
+  BROKER {
+    @Override
+    public boolean isSegmentReplicationTarget()
+    {
+      return false;
+    }
   };
 
   /**

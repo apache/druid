@@ -37,6 +37,7 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireHydrant;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -48,7 +49,7 @@ import java.util.List;
 
 /**
  */
-public class SinkTest
+public class SinkTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSwap() throws Exception
@@ -92,7 +93,6 @@ public class SinkTest
         version,
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
 
@@ -247,7 +247,6 @@ public class SinkTest
         version,
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
-        tuningConfig.isReportParseExceptions(),
         tuningConfig.getDedupColumn()
     );
 

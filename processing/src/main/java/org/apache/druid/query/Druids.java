@@ -22,8 +22,9 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -58,8 +59,11 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
+ *
  */
 public class Druids
 {
@@ -202,7 +206,9 @@ public class Druids
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null, null);
+      final Set<String> filterValues = Sets.newHashSet(values);
+      filterValues.add(value);
+      dimFilter = new InDimFilter(dimensionName, filterValues, null, null);
       return this;
     }
 
@@ -256,7 +262,18 @@ public class Druids
 
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public TimeseriesQueryBuilder queryId(String queryId)
+    {
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
 
@@ -463,7 +480,18 @@ public class Druids
 
     public SearchQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
+      return this;
+    }
+
+    public SearchQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public SearchQueryBuilder queryId(String queryId)
+    {
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
   }
@@ -569,7 +597,18 @@ public class Druids
 
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder randomQueryId()
+    {
+      return queryId(UUID.randomUUID().toString());
+    }
+
+    public TimeBoundaryQueryBuilder queryId(String queryId)
+    {
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
   }
@@ -718,7 +757,7 @@ public class Druids
 
     public SegmentMetadataQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
       return this;
     }
   }
@@ -751,6 +790,7 @@ public class Druids
     private Map<String, Object> context;
     private ScanQuery.ResultFormat resultFormat;
     private int batchSize;
+    private long offset;
     private long limit;
     private DimFilter dimFilter;
     private List<String> columns;
@@ -765,6 +805,7 @@ public class Druids
       context = null;
       resultFormat = null;
       batchSize = 0;
+      offset = 0;
       limit = 0;
       dimFilter = null;
       columns = new ArrayList<>();
@@ -780,6 +821,7 @@ public class Druids
           virtualColumns,
           resultFormat,
           batchSize,
+          offset,
           limit,
           order,
           dimFilter,
@@ -797,6 +839,7 @@ public class Druids
           .virtualColumns(query.getVirtualColumns())
           .resultFormat(query.getResultFormat())
           .batchSize(query.getBatchSize())
+          .offset(query.getScanRowsOffset())
           .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
@@ -836,7 +879,7 @@ public class Druids
 
     public ScanQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
       return this;
     }
 
@@ -849,6 +892,12 @@ public class Druids
     public ScanQueryBuilder batchSize(int b)
     {
       batchSize = b;
+      return this;
+    }
+
+    public ScanQueryBuilder offset(long o)
+    {
+      offset = o;
       return this;
     }
 
@@ -964,7 +1013,7 @@ public class Druids
 
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
-      context = c;
+      this.context = c;
       return this;
     }
   }

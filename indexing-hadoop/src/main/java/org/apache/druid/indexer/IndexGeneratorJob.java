@@ -47,7 +47,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.BaseProgressIndicator;
 import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.indexing.TuningConfigs;
@@ -289,7 +289,7 @@ public class IndexGeneratorJob implements Jobby
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
       Iterable<String> oldDimOrder,
-      Map<String, ColumnCapabilitiesImpl> oldCapabilities
+      Map<String, ColumnCapabilities> oldCapabilities
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -304,7 +304,6 @@ public class IndexGeneratorJob implements Jobby
 
     IncrementalIndex newIndex = new IncrementalIndex.Builder()
         .setIndexSchema(indexSchema)
-        .setReportParseExceptions(!tuningConfig.isIgnoreInvalidRows()) // only used by OffHeapIncrementalIndex
         .setMaxRowCount(tuningConfig.getRowFlushBoundary())
         .setMaxBytesInMemory(TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()))
         .buildOnheap();
@@ -355,7 +354,7 @@ public class IndexGeneratorJob implements Jobby
       final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
 
       if (!bucket.isPresent()) {
-        throw new ISE("WTF?! No bucket found for row: %s", inputRow);
+        throw new ISE("No bucket found for row: %s", inputRow);
       }
 
       final long truncatedTimestamp = granularitySpec.getQueryGranularity()

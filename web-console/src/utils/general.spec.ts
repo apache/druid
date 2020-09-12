@@ -16,7 +16,12 @@
  * limitations under the License.
  */
 
-import { alphanumericCompare, sortWithPrefixSuffix, sqlQueryCustomTableFilter } from './general';
+import {
+  alphanumericCompare,
+  sortWithPrefixSuffix,
+  sqlQueryCustomTableFilter,
+  swapElements,
+} from './general';
 
 describe('general', () => {
   describe('sortWithPrefixSuffix', () => {
@@ -50,7 +55,7 @@ describe('general', () => {
           id: 'datasource',
           value: `hello`,
         }),
-      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('hello%')"`);
+      ).toMatchInlineSnapshot(`"LOWER(\\"datasource\\") LIKE LOWER('%hello%')"`);
 
       expect(
         sqlQueryCustomTableFilter({
@@ -58,6 +63,24 @@ describe('general', () => {
           value: `"hello"`,
         }),
       ).toMatchInlineSnapshot(`"\\"datasource\\" = 'hello'"`);
+    });
+  });
+
+  describe('swapElements', () => {
+    const array = ['a', 'b', 'c', 'd', 'e'];
+
+    it('works when nothing changes', () => {
+      expect(swapElements(array, 0, 0)).toEqual(['a', 'b', 'c', 'd', 'e']);
+    });
+
+    it('works upward', () => {
+      expect(swapElements(array, 2, 1)).toEqual(['a', 'c', 'b', 'd', 'e']);
+      expect(swapElements(array, 2, 0)).toEqual(['c', 'b', 'a', 'd', 'e']);
+    });
+
+    it('works downward', () => {
+      expect(swapElements(array, 2, 3)).toEqual(['a', 'b', 'd', 'c', 'e']);
+      expect(swapElements(array, 2, 4)).toEqual(['a', 'b', 'e', 'd', 'c']);
     });
   });
 });

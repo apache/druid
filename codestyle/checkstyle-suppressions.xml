@@ -69,4 +69,5 @@
 
   <suppress checks="ImportOrder" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="EmptyLineSeparator" files="[\\/]target[\\/]generated-test-sources[\\/]" />
+  <suppress checks="AvoidStaticImport" files="[\\/]src[\\/](test)[\\/]"/>
 </suppressions>

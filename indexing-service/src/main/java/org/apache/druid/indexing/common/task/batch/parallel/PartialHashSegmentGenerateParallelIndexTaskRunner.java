@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexing.common.TaskToolbox;
 
@@ -27,11 +26,9 @@ import java.util.Map;
 
 /**
  * {@link ParallelIndexTaskRunner} for the phase to create hash partitioned segments in multi-phase parallel indexing.
- *
- * @see PartialHashSegmentMergeParallelIndexTaskRunner
  */
 class PartialHashSegmentGenerateParallelIndexTaskRunner
-    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedHashPartitionsReport>
+    extends InputSourceSplitParallelIndexTaskRunner<PartialHashSegmentGenerateTask, GeneratedPartitionsReport<GenericPartitionStat>>
 {
   private static final String PHASE_NAME = "partial segment generation";
 
@@ -40,11 +37,10 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context,
-      IndexingServiceClient indexingServiceClient
+      Map<String, Object> context
   )
   {
-    super(toolbox, taskId, groupId, ingestionSchema, context, indexingServiceClient);
+    super(toolbox, taskId, groupId, ingestionSchema, context);
   }
 
   @Override
@@ -81,10 +77,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
             supervisorTaskId,
             numAttempts,
             subTaskIngestionSpec,
-            context,
-            null,
-            null,
-            null
+            context
         );
       }
     };

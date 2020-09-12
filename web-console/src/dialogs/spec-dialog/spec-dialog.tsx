@@ -33,7 +33,7 @@ export interface SpecDialogProps {
 
 export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps) {
   const { onClose, onSubmit, title, initSpec } = props;
-  const [spec, setSpec] = useState(() => (initSpec ? JSON.stringify(initSpec, null, 2) : '{\n\n}'));
+  const [spec, setSpec] = useState(() => (initSpec ? JSON.stringify(initSpec, null, 2) : ''));
 
   function postSpec(): void {
     if (!validJson(spec)) return;
@@ -65,6 +65,7 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
           tabSize: 2,
         }}
         style={{}}
+        placeholder="{ JSON spec... }"
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

@@ -19,10 +19,15 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
+import com.google.inject.Inject;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.HumanReadableBytesRange;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Set;
 
@@ -31,8 +36,8 @@ import java.util.Set;
 public class DruidServerConfig
 {
   @JsonProperty
-  @Min(0)
-  private long maxSize = 0;
+  @HumanReadableBytesRange(min = 0)
+  private HumanReadableBytes maxSize = HumanReadableBytes.ZERO;
 
   @JsonProperty
   private String tier = DruidServer.DEFAULT_TIER;
@@ -44,9 +49,24 @@ public class DruidServerConfig
   @NotNull
   private Set<String> hiddenProperties = Sets.newHashSet("druid.s3.accessKey", "druid.s3.secretKey", "druid.metadata.storage.connector.password");
 
+  private SegmentLoaderConfig segmentLoaderConfig;
+
+  // Guice inject added here to properly bind this dependency into its dependents such as StatusResource
+  @Inject
+  @JsonCreator
+  public DruidServerConfig(
+      @JacksonInject SegmentLoaderConfig segmentLoaderConfig
+  )
+  {
+    this.segmentLoaderConfig = segmentLoaderConfig;
+  }
+
   public long getMaxSize()
   {
-    return maxSize;
+    if (maxSize.equals(HumanReadableBytes.ZERO)) {
+      return segmentLoaderConfig.getCombinedMaxSize();
+    }
+    return maxSize.getBytes();
   }
 
   public String getTier()
@@ -63,4 +83,5 @@ public class DruidServerConfig
   {
     return hiddenProperties;
   }
+
 }

@@ -53,7 +53,7 @@
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "paths": "/batch_index/tsv/batch_hadoop.data"
+        "paths": "/batch_index/hadoop_tsv/batch_hadoop.data"
       }
     },
     "tuningConfig": {

@@ -20,9 +20,6 @@
 package org.apache.druid.benchmark.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
-import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -32,6 +29,9 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.generator.DataGenerator;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -92,7 +92,7 @@ public class IndexPersistBenchmark
 
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
-  private BenchmarkSchemaInfo schemaInfo;
+  private GeneratorSchemaInfo schemaInfo;
 
   @Setup
   public void setup()
@@ -102,7 +102,7 @@ public class IndexPersistBenchmark
     ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
 
     rows = new ArrayList<InputRow>();
-    schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
+    schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
     int valuesPerTimestamp = 1;
     switch (rollupOpportunity) {
@@ -115,7 +115,7 @@ public class IndexPersistBenchmark
 
     }
 
-    BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
+    DataGenerator gen = new DataGenerator(
         schemaInfo.getColumnSchemas(),
         RNG_SEED,
         schemaInfo.getDataInterval().getStartMillis(),
@@ -158,7 +158,6 @@ public class IndexPersistBenchmark
                 .withRollup(rollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
   }

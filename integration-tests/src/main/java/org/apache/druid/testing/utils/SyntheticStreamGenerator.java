@@ -81,7 +81,7 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
             nowCeilingToSecond.plusSeconds(1).minus(cyclePaddingMs)
         );
 
-        if (streamEventWriter.isTransactionEnabled()) {
+        if (streamEventWriter.supportTransaction() && streamEventWriter.isTransactionEnabled()) {
           streamEventWriter.initTransaction();
         }
 
@@ -98,7 +98,7 @@ public abstract class SyntheticStreamGenerator implements StreamGenerator
           }
         }
 
-        if (streamEventWriter.isTransactionEnabled()) {
+        if (streamEventWriter.supportTransaction() && streamEventWriter.isTransactionEnabled()) {
           streamEventWriter.commitTransaction();
         }
 

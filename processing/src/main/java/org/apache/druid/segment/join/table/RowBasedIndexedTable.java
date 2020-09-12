@@ -30,11 +30,12 @@ import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -50,12 +51,14 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   private final RowSignature rowSignature;
   private final List<Function<RowType, Object>> columnFunctions;
   private final Set<String> keyColumns;
+  private final String version;
 
   public RowBasedIndexedTable(
       final List<RowType> table,
       final RowAdapter<RowType> rowAdapter,
       final RowSignature rowSignature,
-      final Set<String> keyColumns
+      final Set<String> keyColumns,
+      final String version
   )
   {
     this.table = table;
@@ -63,10 +66,7 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
     this.columnFunctions =
         rowSignature.getColumnNames().stream().map(rowAdapter::columnFunction).collect(Collectors.toList());
     this.keyColumns = keyColumns;
-
-    if (new HashSet<>(keyColumns).size() != keyColumns.size()) {
-      throw new ISE("keyColumns[%s] must not contain duplicates", keyColumns);
-    }
+    this.version = version;
 
     if (!ImmutableSet.copyOf(rowSignature.getColumnNames()).containsAll(keyColumns)) {
       throw new ISE(
@@ -107,6 +107,12 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   }
 
   @Override
+  public String version()
+  {
+    return version;
+  }
+
+  @Override
   public Set<String> keyColumns()
   {
     return keyColumns;
@@ -121,7 +127,43 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
   @Override
   public Index columnIndex(int column)
   {
-    final Map<Object, IntList> indexMap = index.get(column);
+    return getKeyColumnIndex(column, index, rowSignature);
+  }
+
+  @Override
+  public Reader columnReader(int column)
+  {
+    final Function<RowType, Object> columnFn = columnFunctions.get(column);
+
+    if (columnFn == null) {
+      throw new IAE("Column[%d] is not a valid column", column);
+    }
+
+    return row -> columnFn.apply(table.get(row));
+  }
+
+  @Override
+  public int numRows()
+  {
+    return table.size();
+  }
+
+  @Override
+  public Optional<Closeable> acquireReferences()
+  {
+    // nothing to close by default, whatever loaded this thing (probably) lives on heap
+    return Optional.of(() -> {});
+  }
+
+  @Override
+  public void close()
+  {
+    // nothing to close
+  }
+
+  static Index getKeyColumnIndex(int column, List<Map<Object, IntList>> keyColumnsIndex, RowSignature rowSignature)
+  {
+    final Map<Object, IntList> indexMap = keyColumnsIndex.get(column);
 
     if (indexMap == null) {
       throw new IAE("Column[%d] is not a key column", column);
@@ -144,23 +186,5 @@ public class RowBasedIndexedTable<RowType> implements IndexedTable
         return IntLists.EMPTY_LIST;
       }
     };
-  }
-
-  @Override
-  public Reader columnReader(int column)
-  {
-    final Function<RowType, Object> columnFn = columnFunctions.get(column);
-
-    if (columnFn == null) {
-      throw new IAE("Column[%d] is not a valid column", column);
-    }
-
-    return row -> columnFn.apply(table.get(row));
-  }
-
-  @Override
-  public int numRows()
-  {
-    return table.size();
   }
 }

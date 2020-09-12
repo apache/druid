@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,6 +32,23 @@ import java.util.Map;
 
 public class MaxPostAggregatorTest extends InitializedNullHandlingTest
 {
+  @Test
+  public void testSerde() throws Exception
+  {
+    MaxPostAggregator there =
+        new MaxPostAggregator("max", "test_field");
+
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    MaxPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        MaxPostAggregator.class
+    );
+
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+  }
+
   @Test
   public void testComparator()
   {
@@ -51,5 +71,26 @@ public class MaxPostAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(0, comp.compare(before, before));
     Assert.assertEquals(0, comp.compare(after, after));
     Assert.assertEquals(1, comp.compare(after, before));
+  }
+
+  @Test
+  public void testToString()
+  {
+    PostAggregator postAgg =
+        new MaxPostAggregator("max", "test_field");
+
+    Assert.assertEquals(
+        "MaxPostAggregator{fieldName='test_field'}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(MaxPostAggregator.class)
+                  .withNonnullFields("name", "fieldName")
+                  .usingGetClass()
+                  .verify();
   }
 }

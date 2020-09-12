@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -99,11 +100,18 @@ public class ZtestPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
+    Object sc1 = successCount1.compute(combinedAggregators);
+    Object ss1 = sample1Size.compute(combinedAggregators);
+    Object sc2 = successCount2.compute(combinedAggregators);
+    Object ss2 = sample2Size.compute(combinedAggregators);
+    if (!(sc1 instanceof Number) || !(sc2 instanceof Number) || !(ss1 instanceof Number) || !(ss2 instanceof Number)) {
+      return null;
+    }
     return zScoreTwoSamples(
-        ((Number) successCount1.compute(combinedAggregators)).doubleValue(),
-        ((Number) sample1Size.compute(combinedAggregators)).doubleValue(),
-        ((Number) successCount2.compute(combinedAggregators)).doubleValue(),
-        ((Number) sample2Size.compute(combinedAggregators)).doubleValue()
+        ((Number) sc1).doubleValue(),
+        ((Number) ss1).doubleValue(),
+        ((Number) sc2).doubleValue(),
+        ((Number) ss2).doubleValue()
     );
   }
 
@@ -112,6 +120,12 @@ public class ZtestPostAggregator implements PostAggregator
   public String getName()
   {
     return name;
+  }
+
+  @Override
+  public ValueType getType()
+  {
+    return ValueType.DOUBLE;
   }
 
   @Override

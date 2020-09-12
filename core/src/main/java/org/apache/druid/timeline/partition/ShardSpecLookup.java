@@ -23,5 +23,9 @@ import org.apache.druid.data.input.InputRow;
 
 public interface ShardSpecLookup
 {
+  /**
+   * Returns a {@link ShardSpec} for the given timestamp and the inputRow.
+   * The timestamp must be bucketed using {@code GranularitySpec#getQueryGranularity}.
+   */
   ShardSpec getShardSpec(long timestamp, InputRow row);
 }

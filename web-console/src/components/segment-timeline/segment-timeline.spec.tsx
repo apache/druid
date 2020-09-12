@@ -17,18 +17,81 @@
  */
 
 import { render } from '@testing-library/react';
+import { mount } from 'enzyme';
 import React from 'react';
 
+import { QueryManager } from '../../utils';
 import { Capabilities } from '../../utils/capabilities';
 
 import { SegmentTimeline } from './segment-timeline';
 
 describe('Segment Timeline', () => {
   it('matches snapshot', () => {
-    const tableColumn = (
+    const segmentTimeline = (
       <SegmentTimeline capabilities={Capabilities.FULL} chartHeight={100} chartWidth={100} />
     );
-    const { container } = render(tableColumn);
+    const { container } = render(segmentTimeline);
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('queries 3 months of data by default', () => {
+    const dataQueryManager = new MockDataQueryManager();
+    const segmentTimeline = (
+      <SegmentTimeline
+        capabilities={Capabilities.FULL}
+        chartHeight={100}
+        chartWidth={100}
+        dataQueryManager={dataQueryManager}
+      />
+    );
+    render(segmentTimeline);
+
+    // Ideally, the test should verify the rendered bar graph to see if the bars
+    // cover the selected period. Since the unit test does not have a druid
+    // instance to query from, just verify the query has the correct time span.
+    expect(dataQueryManager.queryTimeSpan).toBe(3);
+  });
+
+  it('queries matching time span when new period is selected from dropdown', () => {
+    const dataQueryManager = new MockDataQueryManager();
+    const segmentTimeline = (
+      <SegmentTimeline
+        capabilities={Capabilities.FULL}
+        chartHeight={100}
+        chartWidth={100}
+        dataQueryManager={dataQueryManager}
+      />
+    );
+    const wrapper = mount(segmentTimeline);
+    const selects = wrapper.find('select');
+    expect(selects.length).toBe(2); // Datasource & Period
+    const periodSelect = selects.at(1);
+    const newTimeSpanMonths = 6;
+    periodSelect.simulate('change', { target: { value: newTimeSpanMonths } });
+
+    // Ideally, the test should verify the rendered bar graph to see if the bars
+    // cover the selected period. Since the unit test does not have a druid
+    // instance to query from, just verify the query has the correct time span.
+    expect(dataQueryManager.queryTimeSpan).toBe(newTimeSpanMonths);
+  });
 });
+
+/**
+ * Mock the data query manager, since the unit test does not have a druid instance
+ */
+class MockDataQueryManager extends QueryManager<
+  { capabilities: Capabilities; timeSpan: number },
+  any
+> {
+  queryTimeSpan?: number;
+
+  constructor() {
+    super({
+      processQuery: async ({ timeSpan }) => {
+        this.queryTimeSpan = timeSpan;
+      },
+      debounceIdle: 0,
+      debounceLoading: 0,
+    });
+  }
+}

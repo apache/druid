@@ -43,6 +43,7 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -114,7 +115,7 @@ public class ScanQueryRunnerFactoryTest
     }
 
     @Test
-    public void testSortAndLimitScanResultValues()
+    public void testSortAndLimitScanResultValues() throws IOException
     {
       List<ScanResultValue> srvs = new ArrayList<>(numElements);
       List<Long> expectedEventTimestamps = new ArrayList<>();
@@ -137,7 +138,7 @@ public class ScanQueryRunnerFactoryTest
       });
       Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
       try {
-        List<ScanResultValue> output = FACTORY.priorityQueueSortAndLimit(
+        List<ScanResultValue> output = FACTORY.stableLimitingSort(
             inputSequence,
             query,
             ImmutableList.of(new Interval(

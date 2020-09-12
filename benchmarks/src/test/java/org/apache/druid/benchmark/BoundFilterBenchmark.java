@@ -33,6 +33,7 @@ import org.apache.druid.query.filter.BitmapIndexSelector;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -195,7 +196,7 @@ public class BoundFilterBenchmark
       }
 
       @Override
-      public boolean hasMultipleValues(final String dimension)
+      public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
       {
         throw new UnsupportedOperationException();
       }

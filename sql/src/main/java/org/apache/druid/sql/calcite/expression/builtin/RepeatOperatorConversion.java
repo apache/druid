@@ -39,7 +39,7 @@ public class RepeatOperatorConversion implements SqlOperatorConversion
       .operatorBuilder("REPEAT")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnType(SqlTypeName.VARCHAR)
+      .returnTypeNonNull(SqlTypeName.VARCHAR)
       .build();
 
   @Override

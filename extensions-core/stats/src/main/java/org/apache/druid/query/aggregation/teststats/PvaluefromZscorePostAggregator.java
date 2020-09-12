@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.segment.column.ValueType;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -79,9 +80,11 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-
-    double zScoreValue = ((Number) zScore.compute(combinedAggregators))
-        .doubleValue();
+    Object result = zScore.compute(combinedAggregators);
+    if (!(result instanceof Number)) {
+      return null;
+    }
+    double zScoreValue = ((Number) result).doubleValue();
 
     zScoreValue = Math.abs(zScoreValue);
     return 2 * (1 - cumulativeProbability(zScoreValue));
@@ -106,6 +109,12 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   }
 
   @Override
+  public ValueType getType()
+  {
+    return ValueType.DOUBLE;
+  }
+
+  @Override
   public PostAggregator decorate(Map<String, AggregatorFactory> aggregators)
   {
     return new PvaluefromZscorePostAggregator(
@@ -116,7 +125,7 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   }
 
   @JsonProperty
-  public PostAggregator getZscore()
+  public PostAggregator getzScore()
   {
     return zScore;
   }

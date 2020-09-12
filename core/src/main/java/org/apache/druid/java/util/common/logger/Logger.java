@@ -162,16 +162,6 @@ public class Logger
     log.error("ASSERTION_ERROR: " + message, formatArgs);
   }
 
-  public void wtf(String message, Object... formatArgs)
-  {
-    error(message, formatArgs);
-  }
-
-  public void wtf(Throwable t, String message, Object... formatArgs)
-  {
-    error(t, message, formatArgs);
-  }
-
   public void debugSegments(@Nullable final Collection<DataSegment> segments, @Nullable String preamble)
   {
     if (log.isDebugEnabled()) {

@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.filter;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -34,6 +36,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -155,6 +158,51 @@ public class FilterCnfConversionTest
   }
 
   @Test
+  public void testToNormalizedOrClausesWithMuchReducibleFilter()
+  {
+    final Filter muchReducible = FilterTestUtils.and(
+        // should be flattened
+        FilterTestUtils.and(
+            FilterTestUtils.and(
+                FilterTestUtils.and(FilterTestUtils.selector("col1", "val1"))
+            )
+        ),
+        // should be flattened
+        FilterTestUtils.and(
+            FilterTestUtils.or(
+                FilterTestUtils.and(FilterTestUtils.selector("col1", "val1"))
+            )
+        ),
+        // should be flattened
+        FilterTestUtils.or(
+            FilterTestUtils.and(
+                FilterTestUtils.or(FilterTestUtils.selector("col1", "val1"))
+            )
+        ),
+        // should eliminate duplicate filters
+        FilterTestUtils.selector("col1", "val1"),
+        FilterTestUtils.selector("col2", "val2"),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.selector("col2", "val2")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.and(
+                FilterTestUtils.selector("col2", "val2"),
+                FilterTestUtils.selector("col1", "val1")
+            )
+        )
+    );
+    final Set<Filter> expected = ImmutableSet.of(
+        FilterTestUtils.selector("col1", "val1"),
+        FilterTestUtils.selector("col2", "val2")
+    );
+    final Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(muchReducible);
+    Assert.assertEquals(expected, normalizedOrClauses);
+  }
+
+  @Test
   public void testToCnfWithComplexFilterIncludingNotAndOr()
   {
     final Filter filter = FilterTestUtils.and(
@@ -259,6 +307,110 @@ public class FilterCnfConversionTest
   }
 
   @Test
+  public void testToNormalizedOrClausesWithComplexFilterIncludingNotAndOr()
+  {
+    final Filter filter = FilterTestUtils.and(
+        FilterTestUtils.or(
+            FilterTestUtils.and(
+                FilterTestUtils.selector("col1", "val1"),
+                FilterTestUtils.selector("col2", "val2")
+            ),
+            FilterTestUtils.not(
+                FilterTestUtils.and(
+                    FilterTestUtils.selector("col4", "val4"),
+                    FilterTestUtils.selector("col5", "val5")
+                )
+            )
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(
+                FilterTestUtils.or(
+                    FilterTestUtils.selector("col2", "val2"),
+                    FilterTestUtils.selector("col4", "val4"),
+                    FilterTestUtils.selector("col5", "val5")
+                )
+            ),
+            FilterTestUtils.and(
+                FilterTestUtils.selector("col1", "val1"),
+                FilterTestUtils.selector("col3", "val3")
+            )
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.or(
+                FilterTestUtils.selector("col1", "val1"),
+                FilterTestUtils.selector("col2", "val22"), // selecting different value
+                FilterTestUtils.selector("col3", "val3")
+            ),
+            FilterTestUtils.not(
+                FilterTestUtils.selector("col1", "val11")
+            )
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.or(
+                FilterTestUtils.selector("col1", "val1"),
+                FilterTestUtils.selector("col2", "val22"),
+                FilterTestUtils.selector("col3", "val3")
+            ),
+            FilterTestUtils.not(
+                FilterTestUtils.selector("col1", "val11") // selecting different value
+            )
+        )
+    );
+    final Set<Filter> expected = ImmutableSet.of(
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.selector("col2", "val22"),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2"))
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.not(FilterTestUtils.selector("col2", "val2")),
+            FilterTestUtils.selector("col3", "val3")
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4"))
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col3", "val3"),
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4"))
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col3", "val3"),
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
+        ),
+        FilterTestUtils.not(FilterTestUtils.selector("col1", "val11")),
+        // The below OR filter could be eliminated because this filter also has
+        // (col1 = val1 || ~(col4 = val4)) && (col1 = val1 || ~(col5 = val5)).
+        // The reduction process would be
+        // (col1 = val1 || ~(col4 = val4)) && (col1 = val1 || ~(col5 = val5)) && (col1 = val1 || ~(col4 = val4) || ~(col5 = val5))
+        // => (col1 = val1 && ~(col4 = val4) || ~(col5 = val5)) && (col1 = val1 || ~(col4 = val4) || ~(col5 = val5))
+        // => (col1 = val1 && ~(col4 = val4) || ~(col5 = val5))
+        // => (col1 = val1 || ~(col4 = val4)) && (col1 = val1 || ~(col5 = val5)).
+        // However, we don't have this reduction now, so we have a filter in a suboptimized CNF.
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
+        ),
+        FilterTestUtils.or(
+            FilterTestUtils.selector("col2", "val2"),
+            FilterTestUtils.not(FilterTestUtils.selector("col4", "val4")),
+            FilterTestUtils.not(FilterTestUtils.selector("col5", "val5"))
+        )
+    );
+    final Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(filter);
+    Assert.assertEquals(expected, normalizedOrClauses);
+  }
+
+  @Test
   public void testToCnfCollapsibleBigFilter()
   {
     Set<Filter> ands = new HashSet<>();
@@ -352,6 +504,28 @@ public class FilterCnfConversionTest
     );
 
     assertFilter(filter, expectedCnf, Filters.toCnf(filter));
+  }
+
+  @Test
+  public void testToNormalizedOrClausesNonAndFilterShouldReturnSingleton()
+  {
+    Filter filter = FilterTestUtils.or(
+        FilterTestUtils.selector("col1", "val1"),
+        FilterTestUtils.selector("col2", "val2")
+    );
+    Set<Filter> expected = Collections.singleton(filter);
+    Set<Filter> normalizedOrClauses = Filters.toNormalizedOrClauses(filter);
+    Assert.assertEquals(expected, normalizedOrClauses);
+  }
+
+  @Test
+  public void testTrueFalseFilterRequiredColumnRewrite()
+  {
+    Assert.assertTrue(TrueFilter.instance().supportsRequiredColumnRewrite());
+    Assert.assertTrue(FalseFilter.instance().supportsRequiredColumnRewrite());
+
+    Assert.assertEquals(TrueFilter.instance(), TrueFilter.instance().rewriteRequiredColumns(ImmutableMap.of()));
+    Assert.assertEquals(FalseFilter.instance(), FalseFilter.instance().rewriteRequiredColumns(ImmutableMap.of()));
   }
 
   private void assertFilter(Filter original, Filter expectedConverted, Filter actualConverted)

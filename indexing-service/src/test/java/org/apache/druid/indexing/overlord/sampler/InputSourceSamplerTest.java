@@ -1088,7 +1088,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   {
     switch (parserType) {
       case STR_JSON:
-        return new JsonInputFormat(null, null);
+        return new JsonInputFormat(null, null, null);
       case STR_CSV:
         return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, null, false, 0);
       default:
@@ -1100,7 +1100,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   {
     switch (parserType) {
       case STR_JSON:
-        return new StringInputRowParser(new JSONParseSpec(timestampSpec, dimensionsSpec, null, null));
+        return new StringInputRowParser(new JSONParseSpec(timestampSpec, dimensionsSpec, null, null, null));
       case STR_CSV:
         return new StringInputRowParser(
             new DelimitedParseSpec(
@@ -1175,13 +1175,13 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   private String getUnparseableTimestampString()
   {
     return ParserType.STR_CSV.equals(parserType)
-           ? "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
-           : "Unparseable timestamp found! Event: {t=bad_timestamp, dim1=foo, met1=6}";
+           ? "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, dim2=null, met1=6}"
+           : "Timestamp[bad_timestamp] is unparseable! Event: {t=bad_timestamp, dim1=foo, met1=6}";
   }
 
   private String unparseableTimestampErrorString(Map<String, Object> rawColumns)
   {
-    return StringUtils.format("Unparseable timestamp found! Event: %s", rawColumns);
+    return StringUtils.format("Timestamp[null] is unparseable! Event: %s", rawColumns);
   }
 
   @Nullable

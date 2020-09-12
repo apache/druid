@@ -27,9 +27,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
@@ -43,6 +45,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
@@ -51,11 +54,13 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.PartitionIds;
+import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
@@ -64,12 +69,12 @@ import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
-import org.skife.jdbi.v2.util.StringMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -77,12 +82,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  */
 public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
+  private static final int MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE = 100;
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
@@ -321,7 +329,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
-      throw new ISE("WTF?! announceHistoricalSegments failed with null metadata, should not happen.");
+      throw new ISE("announceHistoricalSegments failed with null metadata, should not happen.");
     }
 
     return result.getSegments();
@@ -374,8 +382,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               // Set definitelyNotUpdated back to false upon retrying.
               definitelyNotUpdated.set(false);
 
-              final Set<DataSegment> inserted = new HashSet<>();
-
               if (startMetadata != null) {
                 final DataSourceMetadataUpdateResult result = updateDataSourceMetadataWithHandle(
                     handle,
@@ -397,11 +403,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 }
               }
 
-              for (final DataSegment segment : segments) {
-                if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
-                  inserted.add(segment);
-                }
-              }
+              final Set<DataSegment> inserted = announceHistoricalSegmentBatch(handle, segments, usedSegments);
 
               return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
             }
@@ -810,16 +812,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       return null;
 
     } else {
-      //noinspection ConstantConditions
-      if (FluentIterable
-          .from(existingChunks)
-          .transformAndConcat(TimelineObjectHolder::getObject)
-          .anyMatch(chunk -> !chunk.getObject().getShardSpec().isCompatible(partialShardSpec.getShardSpecClass()))) {
-        // All existing segments should have a compatible shardSpec with partialShardSpec.
-        return null;
-      }
-
-      // max partitionId of the SAME shardSpec
+      // max partitionId of the shardSpecs which share the same partition space.
       SegmentIdWithShardSpec maxId = null;
 
       if (!existingChunks.isEmpty()) {
@@ -829,10 +822,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         for (DataSegment segment : FluentIterable
             .from(existingHolder.getObject())
             .transform(PartitionChunk::getObject)
-            // Here we check only the segments of the same shardSpec to find out the max partitionId.
-            // Note that OverwriteShardSpec has the higher range for partitionId than others.
+            // Here we check only the segments of the shardSpec which shares the same partition space with the given
+            // partialShardSpec. Note that OverwriteShardSpec doesn't share the partition space with others.
             // See PartitionIds.
-            .filter(segment -> segment.getShardSpec().getClass() == partialShardSpec.getShardSpecClass())) {
+            .filter(segment -> segment.getShardSpec().sharePartitionSpace(partialShardSpec))) {
           // Don't use the stream API for performance.
           if (maxId == null || maxId.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
             maxId = SegmentIdWithShardSpec.fromDataSegment(segment);
@@ -851,7 +844,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
 
       maxId = pendings.stream()
-                      .filter(id -> id.getShardSpec().getClass() == partialShardSpec.getShardSpecClass())
+                      .filter(id -> id.getShardSpec().sharePartitionSpace(partialShardSpec))
                       .max((id1, id2) -> {
                         final int versionCompare = id1.getVersion().compareTo(id2.getVersion());
                         if (versionCompare != 0) {
@@ -873,9 +866,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
 
       if (maxId == null) {
-        final ShardSpec shardSpec = partialShardSpec.complete(jsonMapper, null);
+        // This code is executed when the Overlord coordinates segment allocation, which is either you append segments
+        // or you use segment lock. When appending segments, null maxId means that we are allocating the very initial
+        // segment for this time chunk. Since the core partitions set is not determined for appended segments, we set
+        // it 0. When you use segment lock, the core partitions set doesn't work with it. We simply set it 0 so that the
+        // OvershadowableManager handles the atomic segment update.
+        final int newPartitionId = partialShardSpec.useNonRootGenerationPartitionSpace()
+                                   ? PartitionIds.NON_ROOT_GEN_START_PARTITION_ID
+                                   : PartitionIds.ROOT_GEN_START_PARTITION_ID;
         String version = versionOfExistingChunks == null ? maxVersion : versionOfExistingChunks;
-        return new SegmentIdWithShardSpec(dataSource, interval, version, shardSpec);
+        return new SegmentIdWithShardSpec(
+            dataSource,
+            interval,
+            version,
+            partialShardSpec.complete(jsonMapper, newPartitionId, 0)
+        );
       } else if (!maxId.getInterval().equals(interval) || maxId.getVersion().compareTo(maxVersion) > 0) {
         log.warn(
             "Cannot allocate new segment for dataSource[%s], interval[%s], maxVersion[%s]: conflicting segment[%s].",
@@ -885,13 +890,23 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             maxId
         );
         return null;
+      } else if (maxId.getShardSpec().getNumCorePartitions() == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
+        log.warn(
+            "Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
+            maxId,
+            maxId.getShardSpec()
+        );
+        return null;
       } else {
-        final ShardSpec newShardSpec = partialShardSpec.complete(jsonMapper, maxId.getShardSpec());
         return new SegmentIdWithShardSpec(
             dataSource,
             maxId.getInterval(),
             Preconditions.checkNotNull(versionOfExistingChunks, "versionOfExistingChunks"),
-            newShardSpec
+            partialShardSpec.complete(
+                jsonMapper,
+                maxId.getShardSpec().getPartitionNum() + 1,
+                maxId.getShardSpec().getNumCorePartitions()
+            )
         );
       }
     }
@@ -932,83 +947,93 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    * Attempts to insert a single segment to the database. If the segment already exists, will do nothing; although,
    * this checking is imperfect and callers must be prepared to retry their entire transaction on exceptions.
    *
-   * @return true if the segment was added, false if it already existed
+   * @return DataSegment set inserted
    */
-  private boolean announceHistoricalSegment(
+  private Set<DataSegment> announceHistoricalSegmentBatch(
       final Handle handle,
-      final DataSegment segment,
-      final boolean used
+      final Set<DataSegment> segments,
+      final Set<DataSegment> usedSegments
   ) throws IOException
   {
+    final Set<DataSegment> toInsertSegments = new HashSet<>();
     try {
-      if (segmentExists(handle, segment)) {
-        log.info("Found [%s] in DB, not updating DB", segment.getId());
-        return false;
+      Set<String> existedSegments = segmentExistsBatch(handle, segments);
+      log.info("Found these segments already exist in DB: %s", existedSegments);
+      for (DataSegment segment : segments) {
+        if (!existedSegments.contains(segment.getId().toString())) {
+          toInsertSegments.add(segment);
+        }
       }
 
       // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
       // Avoiding ON DUPLICATE KEY since it's not portable.
       // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-      final int numRowsInserted = handle.createStatement(
+      final List<List<DataSegment>> partitionedSegments = Lists.partition(
+          new ArrayList<>(toInsertSegments),
+          MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE
+      );
+
+      PreparedBatch preparedBatch = handle.prepareBatch(
           StringUtils.format(
-              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, "
-              + "payload) "
-              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
               dbTables.getSegmentsTable(),
               connector.getQuoteString()
           )
-      )
-            .bind("id", segment.getId().toString())
-            .bind("dataSource", segment.getDataSource())
-            .bind("created_date", DateTimes.nowUtc().toString())
-            .bind("start", segment.getInterval().getStart().toString())
-            .bind("end", segment.getInterval().getEnd().toString())
-            .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-            .bind("version", segment.getVersion())
-            .bind("used", used)
-            .bind("payload", jsonMapper.writeValueAsBytes(segment))
-            .execute();
+      );
 
-      if (numRowsInserted == 1) {
-        log.info(
-            "Published segment [%s] to DB with used flag [%s], json[%s]",
-            segment.getId(),
-            used,
-            jsonMapper.writeValueAsString(segment)
-        );
-      } else if (numRowsInserted == 0) {
-        throw new ISE(
-            "Failed to publish segment[%s] to DB with used flag[%s], json[%s]",
-            segment.getId(),
-            used,
-            jsonMapper.writeValueAsString(segment)
-        );
-      } else {
-        throw new ISE(
-            "numRowsInserted[%s] is larger than 1 after inserting segment[%s] with used flag[%s], json[%s]",
-            numRowsInserted,
-            segment.getId(),
-            used,
-            jsonMapper.writeValueAsString(segment)
-        );
+      for (List<DataSegment> partition : partitionedSegments) {
+        for (DataSegment segment : partition) {
+          preparedBatch.add()
+              .bind("id", segment.getId().toString())
+              .bind("dataSource", segment.getDataSource())
+              .bind("created_date", DateTimes.nowUtc().toString())
+              .bind("start", segment.getInterval().getStart().toString())
+              .bind("end", segment.getInterval().getEnd().toString())
+              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+              .bind("version", segment.getVersion())
+              .bind("used", usedSegments.contains(segment))
+              .bind("payload", jsonMapper.writeValueAsBytes(segment));
+        }
+        final int[] affectedRows = preparedBatch.execute();
+        final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+        if (succeeded) {
+          log.infoSegments(partition, "Published segments to DB");
+        } else {
+          final List<DataSegment> failedToPublish = IntStream.range(0, partition.size())
+              .filter(i -> affectedRows[i] != 1)
+              .mapToObj(partition::get)
+              .collect(Collectors.toList());
+          throw new ISE(
+              "Failed to publish segments to DB: %s",
+              SegmentUtils.commaSeparatedIdentifiers(failedToPublish)
+          );
+        }
       }
     }
     catch (Exception e) {
-      log.error(e, "Exception inserting segment [%s] with used flag [%s] into DB", segment.getId(), used);
+      log.errorSegments(segments, "Exception inserting segments");
       throw e;
     }
 
-    return true;
+    return toInsertSegments;
   }
 
-  private boolean segmentExists(final Handle handle, final DataSegment segment)
+  private Set<String> segmentExistsBatch(final Handle handle, final Set<DataSegment> segments)
   {
-    return !handle
-        .createQuery(StringUtils.format("SELECT id FROM %s WHERE id = :identifier", dbTables.getSegmentsTable()))
-        .bind("identifier", segment.getId().toString())
-        .map(StringMapper.FIRST)
-        .list()
-        .isEmpty();
+    Set<String> existedSegments = new HashSet<>();
+
+    List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE);
+    for (List<DataSegment> segmentList : segmentsLists) {
+      String segmentIds = segmentList.stream()
+          .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
+          .collect(Collectors.joining(","));
+      List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
+          .mapTo(String.class)
+          .list();
+      existedSegments.addAll(existIds);
+    }
+    return existedSegments;
   }
 
   /**

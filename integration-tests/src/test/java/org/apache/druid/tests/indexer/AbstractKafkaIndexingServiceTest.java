@@ -19,11 +19,13 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.utils.KafkaAdminClient;
 import org.apache.druid.testing.utils.KafkaEventWriter;
+import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.testing.utils.StreamAdminClient;
 import org.apache.druid.testing.utils.StreamEventWriter;
 
@@ -36,13 +38,13 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   @Override
   StreamAdminClient createStreamAdminClient(IntegrationTestingConfig config)
   {
-    return new KafkaAdminClient(config.getKafkaHost());
+    return new KafkaAdminClient(config);
   }
 
   @Override
-  public StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, boolean transactionEnabled)
+  public StreamEventWriter createStreamEventWriter(IntegrationTestingConfig config, Boolean transactionEnabled)
   {
-    return new KafkaEventWriter(config, transactionEnabled);
+    return new KafkaEventWriter(config, Preconditions.checkNotNull(transactionEnabled, "transactionEnabled"));
   }
 
   @Override
@@ -56,6 +58,7 @@ public abstract class AbstractKafkaIndexingServiceTest extends AbstractStreamInd
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties consumerProperties = new Properties();
+    KafkaUtil.addPropertiesFromTestConfig(config, consumerProperties);
     consumerProperties.putAll(consumerConfigs);
     consumerProperties.setProperty("bootstrap.servers", config.getKafkaInternalHost());
     return spec -> {

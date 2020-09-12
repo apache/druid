@@ -29,6 +29,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -36,9 +37,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Utility methods useful for implementing deep storage extensions.
@@ -91,6 +95,15 @@ public class SegmentUtils
     }
     // Lazy, to avoid preliminary string creation if logging level is turned off
     return Collections2.transform(segments, DataSegment::getId);
+  }
+
+  public static Map<Interval, List<DataSegment>> groupSegmentsByInterval(Collection<DataSegment> segments)
+  {
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    segments.forEach(
+        segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+    );
+    return intervalToSegments;
   }
 
   private SegmentUtils()

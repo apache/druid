@@ -17,18 +17,14 @@
  */
 
 import { render } from '@testing-library/react';
-import { sqlParserFactory } from 'druid-query-toolkit';
+import { QueryResult, SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
-
-import { SQL_FUNCTIONS } from '../../../../lib/sql-docs';
 
 import { QueryOutput } from './query-output';
 
 describe('query output', () => {
   it('matches snapshot', () => {
-    const parser = sqlParserFactory(SQL_FUNCTIONS.map(sqlFunction => sqlFunction.name));
-
-    const parsedQuery = parser(`SELECT
+    const parsedQuery = SqlQuery.parse(`SELECT
   "language",
   COUNT(*) AS "Count", COUNT(DISTINCT "language") AS "dist_language", COUNT(*) FILTER (WHERE "language"= 'xxx') AS "language_filtered_count"
 FROM "github"
@@ -40,19 +36,18 @@ ORDER BY "Count" DESC`);
     const queryOutput = (
       <QueryOutput
         runeMode={false}
-        loading={false}
-        error="lol"
-        queryResult={{
-          header: ['language', 'Count', 'dist_language', 'language_filtered_count'],
-          rows: [
+        queryResult={QueryResult.fromRawResult(
+          [
+            ['language', 'Count', 'dist_language', 'language_filtered_count'],
             ['', 6881, 1, 0],
             ['JavaScript', 166, 1, 0],
             ['Python', 62, 1, 0],
             ['HTML', 46, 1, 0],
             [],
           ],
-        }}
-        parsedQuery={parsedQuery}
+          false,
+          true,
+        ).attachQuery({}, parsedQuery)}
         onQueryChange={() => null}
       />
     );

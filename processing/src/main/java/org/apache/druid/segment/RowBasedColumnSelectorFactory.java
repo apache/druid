@@ -96,21 +96,27 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       // TIME_COLUMN_NAME is handled specially; override the provided rowSignature.
-      return new ColumnCapabilitiesImpl().setType(ValueType.LONG).setIsComplete(true);
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG);
     } else {
       final ValueType valueType = rowSignature.getColumnType(columnName).orElse(null);
 
-      // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
-      // Do not set hasMultipleValues, because even though we might return multiple values, setting it affirmatively
-      // causes expression selectors to always treat us as arrays. If we might have multiple values (i.e. if our type
-      // is nonnumeric), set isComplete false to compensate.
+
       if (valueType != null) {
+        if (valueType.isNumeric()) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(valueType);
+        }
+
+        if (valueType.isArray()) {
+          return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(valueType);
+        }
+
+        // Do _not_ set isDictionaryEncoded or hasBitmapIndexes, because Row-based columns do not have those things.
+        // Do not set hasMultipleValues, because even though we might return multiple values, setting it affirmatively
+        // causes expression selectors to always treat us as arrays, so leave as unknown
         return new ColumnCapabilitiesImpl()
             .setType(valueType)
             .setDictionaryValuesUnique(false)
-            .setDictionaryValuesSorted(false)
-            // Numeric types should be reported as complete, but not STRING or COMPLEX (because we don't have full info)
-            .setIsComplete(valueType.isNumeric());
+            .setDictionaryValuesSorted(false);
       } else {
         return null;
       }

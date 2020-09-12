@@ -135,7 +135,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
         null,
         new KinesisSupervisorIOConfig(
             STREAM,
-            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of()),
+            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false),
             null,
             null,
             null,
@@ -262,7 +262,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             .build(),
         null,
         true,
-        "Timestamp cannot be represented as a long: [MapBasedInputRow{timestamp=246140482-04-24T15:36:27.903Z, event={timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}, dimensions=[dim1, dim1t, dim2, dimLong, dimFloat]}]"
+        "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}]"
     ), it.next());
     Assert.assertEquals(new SamplerResponse.SamplerResponseRow(
         null,

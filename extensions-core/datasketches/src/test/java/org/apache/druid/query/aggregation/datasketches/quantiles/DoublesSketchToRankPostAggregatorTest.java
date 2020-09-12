@@ -19,10 +19,19 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestDoubleColumnSelectorImpl;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,6 +40,48 @@ import java.util.Map;
 
 public class DoublesSketchToRankPostAggregatorTest
 {
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    final PostAggregator there = new DoublesSketchToRankPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        0
+    );
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    DoublesSketchToRankPostAggregator andBackAgain = mapper.readValue(
+        mapper.writeValueAsString(there),
+        DoublesSketchToRankPostAggregator.class
+    );
+
+    Assert.assertEquals(there, andBackAgain);
+    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+  }
+
+  @Test
+  public void testToString()
+  {
+    final PostAggregator postAgg = new DoublesSketchToRankPostAggregator(
+        "post",
+        new FieldAccessPostAggregator("field1", "sketch"),
+        0
+    );
+
+    Assert.assertEquals(
+        "DoublesSketchToRankPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, value=0.0}",
+        postAgg.toString()
+    );
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(DoublesSketchToRankPostAggregator.class)
+                  .withNonnullFields("name", "field", "value")
+                  .usingGetClass()
+                  .verify();
+  }
+
   @Test
   public void emptySketch()
   {
@@ -74,5 +125,35 @@ public class DoublesSketchToRankPostAggregatorTest
 
     final double rank = (double) postAgg.compute(fields);
     Assert.assertEquals(0.5, rank, 0);
+  }
+
+  @Test
+  public void testResultArraySignature()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("dummy")
+              .intervals("2000/3000")
+              .granularity(Granularities.HOUR)
+              .aggregators(
+                  new DoublesSketchAggregatorFactory("sketch", "col", 8)
+              )
+              .postAggregators(
+                  new DoublesSketchToRankPostAggregator(
+                      "a",
+                      new FieldAccessPostAggregator("field", "sketch"),
+                      4
+                  )
+              )
+              .build();
+
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("sketch", null)
+                    .add("a", ValueType.DOUBLE)
+                    .build(),
+        new TimeseriesQueryQueryToolChest().resultArraySignature(query)
+    );
   }
 }

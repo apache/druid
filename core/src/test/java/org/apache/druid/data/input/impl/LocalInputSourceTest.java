@@ -25,6 +25,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.utils.Streams;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -69,11 +70,11 @@ public class LocalInputSourceTest
   public void testCreateSplitsRespectingSplitHintSpec()
   {
     final long fileSize = 15;
-    final long maxSplitSize = 50;
+    final HumanReadableBytes maxSplitSize = new HumanReadableBytes(50L);
     final Set<File> files = mockFiles(10, fileSize);
     final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     final List<InputSplit<List<File>>> splits = inputSource
-        .createSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize))
+        .createSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize, null))
         .collect(Collectors.toList());
     Assert.assertEquals(4, splits.size());
     Assert.assertEquals(3, splits.get(0).get().size());
@@ -86,12 +87,12 @@ public class LocalInputSourceTest
   public void testEstimateNumSplitsRespectingSplitHintSpec()
   {
     final long fileSize = 13;
-    final long maxSplitSize = 40;
+    final HumanReadableBytes maxSplitSize = new HumanReadableBytes(40L);
     final Set<File> files = mockFiles(10, fileSize);
     final LocalInputSource inputSource = new LocalInputSource(null, null, files);
     Assert.assertEquals(
         4,
-        inputSource.estimateNumSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize))
+        inputSource.estimateNumSplits(new NoopInputFormat(), new MaxSizeSplitHintSpec(maxSplitSize, null))
     );
   }
 
