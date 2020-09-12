@@ -51,7 +51,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +72,7 @@ public class VectorizedVirtualColumnTest
   private List<Segment> segments = null;
 
   @Before
-  public void setup() throws IOException
+  public void setup()
   {
     groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
@@ -142,6 +141,19 @@ public class VectorizedVirtualColumnTest
   }
 
   @Test
+  public void testGroupByMultiValueStringNotDictionaryEncoded()
+  {
+    // cannot currently group by string columns that might be multi valued
+    cannotVectorize();
+    testGroupBy(new ColumnCapabilitiesImpl()
+                    .setType(ValueType.STRING)
+                    .setDictionaryEncoded(false)
+                    .setDictionaryValuesUnique(false)
+                    .setHasMultipleValues(true)
+    );
+  }
+
+  @Test
   public void testGroupByLong()
   {
     testGroupBy(ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.LONG));
@@ -199,6 +211,17 @@ public class VectorizedVirtualColumnTest
                        .setDictionaryEncoded(false)
                        .setDictionaryValuesUnique(false)
                        .setHasMultipleValues(false)
+    );
+  }
+
+  @Test
+  public void testTimeseriesMultiValueStringNotDictionaryEncoded()
+  {
+    testTimeseries(new ColumnCapabilitiesImpl()
+                       .setType(ValueType.STRING)
+                       .setDictionaryEncoded(false)
+                       .setDictionaryValuesUnique(false)
+                       .setHasMultipleValues(true)
     );
   }
 

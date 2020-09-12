@@ -36,6 +36,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorSizeInspector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.junit.Assert;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -61,6 +62,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   @Override
   public boolean canVectorize(ColumnInspector inspector)
   {
+    Assert.assertNotNull(inspector);
     return true;
   }
 
@@ -88,6 +90,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
+    Assert.assertEquals(outputName, dimensionSpec.getOutputName());
     return new SingleValueDimensionVectorSelector()
     {
       private final VectorSizeInspector inspector = factory.getVectorSizeInspector();
@@ -146,6 +149,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
+    Assert.assertEquals(outputName, dimensionSpec.getOutputName());
     final IndexedInts[] rowVector = new IndexedInts[factory.getVectorSizeInspector().getMaxVectorSize()];
     Arrays.fill(rowVector, new IndexedInts()
     {
@@ -223,6 +227,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
+    Assert.assertEquals(outputName, columnName);
     final long[] longs = new long[factory.getVectorSizeInspector().getMaxVectorSize()];
     final double[] doubles = new double[factory.getVectorSizeInspector().getMaxVectorSize()];
     final float[] floats = new float[factory.getVectorSizeInspector().getMaxVectorSize()];
@@ -276,8 +281,13 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
+    Assert.assertEquals(outputName, columnName);
     final Object[] objects = new Object[factory.getVectorSizeInspector().getMaxVectorSize()];
-    Arrays.fill(objects, "2");
+    if (capabilities.hasMultipleValues().isTrue()) {
+      Arrays.fill(objects, ImmutableList.of("2", "2"));
+    } else {
+      Arrays.fill(objects, "2");
+    }
     return new VectorObjectSelector()
     {
       @Override
