@@ -63,11 +63,6 @@ public interface VirtualColumn extends Cacheable
    * virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which
    * is useful if this column uses dot notation. The virtual column is expected to apply any
    * necessary decoration from the dimensionSpec.
-   *
-   * @param dimensionSpec the dimensionSpec this column was referenced with
-   * @param factory       column selector factory
-   *
-   * @return the selector, must not be null
    */
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory);
 
@@ -77,11 +72,6 @@ public interface VirtualColumn extends Cacheable
    *
    * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
    * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
-   *
-   * @param dimensionSpec
-   * @param columnSelector
-   * @param offset
-   * @return the selector
    */
   @SuppressWarnings("unused")
   @Nullable
@@ -93,11 +83,6 @@ public interface VirtualColumn extends Cacheable
   /**
    * Build a selector corresponding to this virtual column. Also provides the name that the
    * virtual column was referenced with, which is useful if this column uses dot notation.
-   *
-   * @param columnName the name this virtual column was referenced with
-   * @param factory    column selector factory
-   *
-   * @return the selector, must not be null
    */
   ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory);
 
@@ -107,11 +92,6 @@ public interface VirtualColumn extends Cacheable
    *
    * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
    * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
-   *
-   * @param columnName
-   * @param columnSelector
-   * @param offset
-   * @return the selector
    */
   @SuppressWarnings("unused")
   @Nullable
@@ -126,13 +106,9 @@ public interface VirtualColumn extends Cacheable
   }
 
   /**
-   * Build a vectorized dictionary indexed selector corresponding to this virtual column. Also provides the name that
+   * Build a {@link SingleValueDimensionVectorSelector} corresponding to this virtual column. Also provides the name that
    * the virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which is useful if this
    * column uses dot notation. The virtual column is expected to apply any necessary decoration from the dimensionSpec.
-   *
-   * @param dimensionSpec the dimensionSpec this column was referenced with
-   * @param factory       vector column selector factory
-   *
    * @return the selector, must not be null
    */
   default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
@@ -147,11 +123,6 @@ public interface VirtualColumn extends Cacheable
    * Returns similar {@link SingleValueDimensionVectorSelector} object as returned by
    * {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)} except this
    * method has full access to underlying column and can potentially provide a more efficient implementation.
-   *
-   * @param dimensionSpec
-   * @param columnSelector
-   * @param offset
-   * @return the selector
    */
   @SuppressWarnings("unused")
   @Nullable
@@ -165,15 +136,10 @@ public interface VirtualColumn extends Cacheable
   }
 
   /**
-   * Build a vectorized 'multi-valued' dictionary indexed selector corresponding to this virtual column. Also provides
+   * Build a {@link MultiValueDimensionVectorSelector} corresponding to this virtual column. Also provides
    * the name that the virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which is useful
    * if this column uses dot notation. The virtual column is expected to apply any necessary decoration from the
    * dimensionSpec.
-   *
-   * @param dimensionSpec the dimensionSpec this column was referenced with
-   * @param factory       vector column selector factory
-   *
-   * @return the selector, must not be null
    */
   default MultiValueDimensionVectorSelector makeMultiValueVectorDimensionSelector(
       DimensionSpec dimensionSpec,
@@ -187,11 +153,6 @@ public interface VirtualColumn extends Cacheable
    * Returns similar {@link SingleValueDimensionVectorSelector} object as returned by
    * {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)} except this
    * method has full access to underlying column and can potentially provide a more efficient implementation.
-   *
-   * @param dimensionSpec
-   * @param columnSelector
-   * @param offset
-   * @return the selector
    */
   @SuppressWarnings("unused")
   @Nullable
@@ -205,11 +166,23 @@ public interface VirtualColumn extends Cacheable
   }
 
 
+  /**
+   * Build a {@link VectorValueSelector} corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   */
   default VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     throw new UnsupportedOperationException("not supported");
   }
 
+  /**
+   * Returns similar VectorValueSelector object as returned by {@link #makeVectorValueSelector(String, VectorColumnSelectorFactory)}
+   * except this method has full access to underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
+   * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
+   */
+  @SuppressWarnings("unused")
   @Nullable
   default VectorValueSelector makeVectorValueSelector(
       String columnName,
@@ -220,12 +193,23 @@ public interface VirtualColumn extends Cacheable
     return null;
   }
 
-
+  /**
+   * Build a {@link VectorObjectSelector} corresponding to this virtual column. Also provides the name that the
+   * virtual column was referenced with, which is useful if this column uses dot notation.
+   */
   default VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     throw new UnsupportedOperationException("not supported");
   }
 
+  /**
+   * Returns similar VectorObjectSelector object as returned by {@link #makeVectorObjectSelector(String, VectorColumnSelectorFactory)}
+   * except this method has full access to underlying column and can potentially provide a more efficient implementation.
+   *
+   * Users of this interface must ensure to first call this method whenever possible. Typically this can not be called in
+   * query paths on top of IncrementalIndex which doesn't have columns as in persisted segments.
+   */
+  @SuppressWarnings("unused")
   @Nullable
   default VectorObjectSelector makeVectorObjectSelector(
       String columnName,
