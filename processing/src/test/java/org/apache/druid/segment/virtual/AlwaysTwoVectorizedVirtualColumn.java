@@ -21,7 +21,6 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -29,6 +28,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -42,6 +42,10 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * {@link VirtualColumn} which only can produce all kinds of vector selectors and report any type of
+ * {@link ColumnCapabilities}
+ */
 public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
 {
   private final String outputName;
@@ -151,26 +155,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   {
     Assert.assertEquals(outputName, dimensionSpec.getOutputName());
     final IndexedInts[] rowVector = new IndexedInts[factory.getVectorSizeInspector().getMaxVectorSize()];
-    Arrays.fill(rowVector, new IndexedInts()
-    {
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        // nothing
-      }
-
-      @Override
-      public int size()
-      {
-        return 2;
-      }
-
-      @Override
-      public int get(int index)
-      {
-        return 0;
-      }
-    });
+    Arrays.fill(rowVector, new ArrayBasedIndexedInts(new int[]{0, 0}));
     return new MultiValueDimensionVectorSelector()
     {
       private final VectorSizeInspector inspector = factory.getVectorSizeInspector();

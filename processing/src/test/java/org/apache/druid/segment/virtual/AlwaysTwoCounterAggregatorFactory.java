@@ -40,6 +40,12 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+/**
+ * Specialized aggregator factory for testing the selectors produced by {@link AlwaysTwoVectorizedVirtualColumn}, used
+ * for counting the number of values read so that tests can ensure the correct number of values have been processed. A
+ * {@link AlwaysTwoCounterVectorAggregator} will be produced, backed by a type appropriate selector for a given
+ * {@link ColumnCapabilities}.
+ */
 public class AlwaysTwoCounterAggregatorFactory extends CountAggregatorFactory
 {
   private final String fieldName;
