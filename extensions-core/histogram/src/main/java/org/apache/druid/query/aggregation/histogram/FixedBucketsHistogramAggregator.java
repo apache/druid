@@ -20,8 +20,6 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.primitives.Longs;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
@@ -66,22 +64,7 @@ public class FixedBucketsHistogramAggregator implements Aggregator
   public void aggregate()
   {
     Object val = selector.getObject();
-
-    if (val == null) {
-      if (NullHandling.replaceWithDefault()) {
-        histogram.add(NullHandling.defaultDoubleValue());
-      } else {
-        histogram.incrementMissing();
-      }
-    } else if (val instanceof String) {
-      histogram.combineHistogram(FixedBucketsHistogram.fromBase64((String) val));
-    } else if (val instanceof FixedBucketsHistogram) {
-      histogram.combineHistogram((FixedBucketsHistogram) val);
-    } else if (val instanceof Number) {
-      histogram.add(((Number) val).doubleValue());
-    } else {
-      throw new ISE("Unknown class for object: " + val.getClass());
-    }
+    histogram.combine(val);
   }
 
   @Nullable

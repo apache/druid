@@ -115,8 +115,7 @@ public class AvroOCFReader extends IntermediateRowParsingReader<GenericRecord>
   {
     return Collections.singletonList(
         MapInputRowParser.parse(
-            inputRowSchema.getTimestampSpec(),
-            inputRowSchema.getDimensionsSpec(),
+            inputRowSchema,
             recordFlattener.flatten(intermediateRow)
         )
     );

@@ -159,7 +159,7 @@ public class AppenderatorPlumber implements Plumber
     try {
       final Appenderator.AppenderatorAddResult addResult = appenderator.add(identifier, row, committerSupplier);
       lastCommitterSupplier = committerSupplier;
-      return new IncrementalIndexAddResult(addResult.getNumRowsInSegment(), 0, addResult.getParseException());
+      return new IncrementalIndexAddResult(addResult.getNumRowsInSegment(), 0);
     }
     catch (SegmentNotWritableException e) {
       // Segment already started handoff

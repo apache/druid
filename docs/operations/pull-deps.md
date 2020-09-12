@@ -27,7 +27,7 @@ title: "pull-deps tool"
 
 `pull-deps` has several command line options, they are as follows:
 
-`-c` or `--coordinate` (Can be specified multiply times)
+`-c` or `--coordinate` (Can be specified multiple times)
 
 Extension coordinate to pull down, followed by a maven coordinate, e.g. org.apache.druid.extensions:mysql-metadata-storage
 
