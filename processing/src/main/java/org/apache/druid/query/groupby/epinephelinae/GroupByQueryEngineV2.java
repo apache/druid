@@ -335,9 +335,9 @@ public class GroupByQueryEngineV2
                 return false;
               }
 
-              // Now check column capabilities.
+              // Now check column capabilities, which must be present and explicitly not multi-valued
               final ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(dimension.getDimension());
-              return columnCapabilities == null || columnCapabilities.hasMultipleValues().isFalse();
+              return columnCapabilities != null && columnCapabilities.hasMultipleValues().isFalse();
             });
   }
 
