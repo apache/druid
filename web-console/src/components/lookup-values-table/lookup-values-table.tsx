@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
+import { SqlRef } from 'druid-query-toolkit';
 import React from 'react';
 import ReactTable from 'react-table';
 
-import { queryDruidSql, QueryManager } from '../../utils';
+import { useQueryManager } from '../../hooks';
+import { queryDruidSql } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './lookup-values-table.scss';
@@ -29,55 +31,27 @@ interface LookupRow {
   v: string;
 }
 
-export interface LookupColumnsTableProps {
+export interface LookupValuesTableProps {
   lookupId: string;
   downloadFilename?: string;
 }
 
-export interface LookupColumnsTableState {
-  columns?: LookupRow[];
-  loading: boolean;
-  error?: string;
-}
+export const LookupValuesTable = React.memo(function LookupValuesTable(
+  props: LookupValuesTableProps,
+) {
+  const [columnsState] = useQueryManager<string, LookupRow[]>({
+    processQuery: async (lookupId: string) => {
+      return await queryDruidSql<LookupRow>({
+        query: `SELECT "k", "v" FROM ${SqlRef.column(lookupId, 'lookup')} LIMIT 5000`,
+      });
+    },
+    initQuery: props.lookupId,
+  });
 
-export class LookupValuesTable extends React.PureComponent<
-  LookupColumnsTableProps,
-  LookupColumnsTableState
-> {
-  private LookupColumnsQueryManager: QueryManager<null, LookupRow[]>;
-
-  constructor(props: LookupColumnsTableProps, context: any) {
-    super(props, context);
-    this.state = {
-      loading: true,
-    };
-
-    this.LookupColumnsQueryManager = new QueryManager({
-      processQuery: async () => {
-        const { lookupId } = this.props;
-
-        const resp = await queryDruidSql<LookupRow>({
-          query: `SELECT "k", "v" FROM lookup.${lookupId}
-          LIMIT 5000`,
-        });
-
-        return resp;
-      },
-      onStateChange: ({ result, error, loading }) => {
-        this.setState({ columns: result, error, loading });
-      },
-    });
-  }
-
-  componentDidMount(): void {
-    this.LookupColumnsQueryManager.runQuery(null);
-  }
-
-  renderTable(error?: string) {
-    const { columns } = this.state;
+  function renderTable() {
     return (
       <ReactTable
-        data={columns || []}
+        data={columnsState.data || []}
         defaultPageSize={20}
         filterable
         columns={[
@@ -91,23 +65,16 @@ export class LookupValuesTable extends React.PureComponent<
           },
         ]}
         noDataText={
-          error
-            ? error
-            : 'Lookup data not found. If this is a new lookup it might not have propagated yet.'
+          columnsState.getErrorMessage() ||
+          'Lookup data not found. If this is a new lookup it might not have propagated yet.'
         }
       />
     );
   }
 
-  render(): JSX.Element {
-    const { loading, error } = this.state;
-    this.renderTable(error);
-    return (
-      <div className="lookup-columns-table">
-        <div className="main-area">
-          {loading ? <Loader loadingText="" loading /> : this.renderTable()}
-        </div>
-      </div>
-    );
-  }
-}
+  return (
+    <div className="lookup-columns-table">
+      <div className="main-area">{columnsState.loading ? <Loader /> : renderTable()}</div>
+    </div>
+  );
+});

@@ -36,7 +36,6 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.utils.CircularBuffer;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.common.TopicPartition;
@@ -66,7 +65,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       KafkaIndexTask task,
       @Nullable InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
-      CircularBuffer<Throwable> savedParseExceptions,
       LockGranularity lockGranularityToUse
   )
   {
@@ -74,7 +72,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         task,
         parser,
         authorizerMapper,
-        savedParseExceptions,
         lockGranularityToUse
     );
     this.task = task;
