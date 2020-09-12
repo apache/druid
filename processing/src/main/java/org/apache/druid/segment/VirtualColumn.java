@@ -283,5 +283,4 @@ public interface VirtualColumn extends Cacheable
   {
     throw new UnsupportedOperationException("not supported");
   }
-
 }

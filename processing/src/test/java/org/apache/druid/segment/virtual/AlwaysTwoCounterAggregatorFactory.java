@@ -178,7 +178,8 @@ public class AlwaysTwoCounterAggregatorFactory extends CountAggregatorFactory
 
         long count = 0;
         for (int i = startRow; i < endRow; i++) {
-          for (int j = 0; j < rowVector[i].size(); j++){
+          //noinspection SSBasedInspection
+          for (int j = 0; j < rowVector[i].size(); j++) {
             Assert.assertEquals("2", multiValueDimensionSelector.lookupName(rowVector[i].get(j)));
             count += 1;
           }
@@ -236,7 +237,8 @@ public class AlwaysTwoCounterAggregatorFactory extends CountAggregatorFactory
         final IndexedInts[] rowVector = multiValueDimensionSelector.getRowVector();
         for (int i = 0; i < numRows; i++) {
           final int position = positions[i] + positionOffset;
-          for (int j = 0; j < rowVector[i].size(); j++){
+          //noinspection SSBasedInspection
+          for (int j = 0; j < rowVector[i].size(); j++) {
             Assert.assertEquals("2", multiValueDimensionSelector.lookupName(rowVector[i].get(j)));
             buf.putLong(position, buf.getLong(position) + 1);
           }

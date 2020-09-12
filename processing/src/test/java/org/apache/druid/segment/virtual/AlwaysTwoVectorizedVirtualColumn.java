@@ -54,7 +54,8 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   {
     this.outputName = name;
     this.capabilities = capabilites;
-    this.dictionaryEncoded = capabilites.isDictionaryEncoded().isTrue() && capabilites.areDictionaryValuesUnique().isTrue();
+    this.dictionaryEncoded = capabilites.isDictionaryEncoded().isTrue() &&
+                             capabilites.areDictionaryValuesUnique().isTrue();
   }
 
   @Override
@@ -70,17 +71,13 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public DimensionSelector makeDimensionSelector(
-      DimensionSpec dimensionSpec, ColumnSelectorFactory factory
-  )
+  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec, ColumnSelectorFactory factory)
   {
     throw new IllegalStateException("don't call this");
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(
-      String columnName, ColumnSelectorFactory factory
-  )
+  public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
     throw new IllegalStateException("don't call this");
   }
@@ -91,7 +88,6 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
-
     return new SingleValueDimensionVectorSelector()
     {
       private final VectorSizeInspector inspector = factory.getVectorSizeInspector();
@@ -146,7 +142,8 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
 
   @Override
   public MultiValueDimensionVectorSelector makeMultiValueVectorDimensionSelector(
-      DimensionSpec dimensionSpec, VectorColumnSelectorFactory factory
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
   )
   {
     final IndexedInts[] rowVector = new IndexedInts[factory.getVectorSizeInspector().getMaxVectorSize()];
@@ -222,7 +219,8 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
 
   @Override
   public VectorValueSelector makeVectorValueSelector(
-      String columnName, VectorColumnSelectorFactory factory
+      String columnName,
+      VectorColumnSelectorFactory factory
   )
   {
     final long[] longs = new long[factory.getVectorSizeInspector().getMaxVectorSize()];
@@ -274,7 +272,8 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
 
   @Override
   public VectorObjectSelector makeVectorObjectSelector(
-      String columnName, VectorColumnSelectorFactory factory
+      String columnName,
+      VectorColumnSelectorFactory factory
   )
   {
     final Object[] objects = new Object[factory.getVectorSizeInspector().getMaxVectorSize()];

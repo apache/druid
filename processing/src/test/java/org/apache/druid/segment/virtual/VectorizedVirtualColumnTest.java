@@ -226,7 +226,7 @@ public class VectorizedVirtualColumnTest
                                   .intervals("2000/2030")
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(Granularities.ALL)
-                                  .virtualColumns(new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO,capabilities))
+                                  .virtualColumns(new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities))
                                   .aggregators(new AlwaysTwoCounterAggregatorFactory(COUNT, ALWAYS_TWO))
                                   .context(CONTEXT)
                                   .build();
@@ -251,7 +251,7 @@ public class VectorizedVirtualColumnTest
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setGranularity(Granularities.ALL)
         .setVirtualColumns(
-            new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO,capabilities)
+            new AlwaysTwoVectorizedVirtualColumn(ALWAYS_TWO, capabilities)
         )
         .addDimension(new DefaultDimensionSpec(ALWAYS_TWO, ALWAYS_TWO, capabilities.getType()))
         .setAggregatorSpecs(new AlwaysTwoCounterAggregatorFactory(COUNT, ALWAYS_TWO))
@@ -263,7 +263,14 @@ public class VectorizedVirtualColumnTest
     List<ResultRow> rows = groupByTestHelper.runQueryOnSegmentsObjs(segments, query).toList();
 
     List<ResultRow> expectedRows = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(query, "2000", COUNT, getCount(capabilities), ALWAYS_TWO, getTwo(capabilities))
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            query,
+            "2000",
+            COUNT,
+            getCount(capabilities),
+            ALWAYS_TWO,
+            getTwo(capabilities)
+        )
     );
 
     TestHelper.assertExpectedObjects(expectedRows, rows, "failed");
