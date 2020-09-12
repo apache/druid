@@ -226,7 +226,6 @@ public class FilteredAggregatorBenchmark
   {
     return new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(metrics)
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
   }
