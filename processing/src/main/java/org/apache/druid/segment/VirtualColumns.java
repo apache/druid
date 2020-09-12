@@ -35,6 +35,12 @@ import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -152,6 +158,20 @@ public class VirtualColumns implements Cacheable
     return withDotSupport.get(baseColumnName);
   }
 
+  @Nullable
+  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(
+          columnName,
+          columnSelector
+      ) : null;
+    }
+  }
+
   /**
    * Create a dimension (string) selector.
    *
@@ -175,20 +195,6 @@ public class VirtualColumns implements Cacheable
   }
 
   @Nullable
-  public BitmapIndex getBitmapIndex(String columnName, ColumnSelector columnSelector)
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      return virtualColumn.capabilities(columnName).hasBitmapIndexes() ? virtualColumn.getBitmapIndex(
-          columnName,
-          columnSelector
-      ) : null;
-    }
-  }
-
-  @Nullable
   public DimensionSelector makeDimensionSelector(
       DimensionSpec dimensionSpec,
       ColumnSelector columnSelector,
@@ -200,21 +206,6 @@ public class VirtualColumns implements Cacheable
       throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
     } else {
       return virtualColumn.makeDimensionSelector(dimensionSpec, columnSelector, offset);
-    }
-  }
-
-  @Nullable
-  public ColumnValueSelector<?> makeColumnValueSelector(
-      String columnName,
-      ColumnSelector columnSelector,
-      ReadableOffset offset
-  )
-  {
-    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
-    if (virtualColumn == null) {
-      throw new IAE("No such virtual column[%s]", columnName);
-    } else {
-      return virtualColumn.makeColumnValueSelector(columnName, columnSelector, offset);
     }
   }
 
@@ -237,6 +228,146 @@ public class VirtualColumns implements Cacheable
       final ColumnValueSelector<?> selector = virtualColumn.makeColumnValueSelector(columnName, factory);
       Preconditions.checkNotNull(selector, "selector");
       return selector;
+    }
+  }
+
+  @Nullable
+  public ColumnValueSelector<?> makeColumnValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.makeColumnValueSelector(columnName, columnSelector, offset);
+    }
+  }
+
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return virtualColumns.stream().allMatch(virtualColumn -> virtualColumn.canVectorize(columnInspector));
+  }
+
+  public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
+    } else {
+      final SingleValueDimensionVectorSelector selector = virtualColumn.makeSingleValueVectorDimensionSelector(
+          dimensionSpec,
+          factory
+      );
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
+    }
+  }
+
+  @Nullable
+  public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
+    } else {
+      return virtualColumn.makeSingleValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
+    }
+  }
+
+  public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
+    } else {
+      final MultiValueDimensionVectorSelector selector = virtualColumn.makeMultiValueVectorDimensionSelector(
+          dimensionSpec,
+          factory
+      );
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
+    }
+  }
+
+  @Nullable
+  public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(dimensionSpec.getDimension());
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", dimensionSpec.getDimension());
+    } else {
+      return virtualColumn.makeMultiValueVectorDimensionSelector(dimensionSpec, columnSelector, offset);
+    }
+  }
+
+  public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      final VectorValueSelector selector = virtualColumn.makeVectorValueSelector(columnName, factory);
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
+    }
+  }
+
+  @Nullable
+  public VectorValueSelector makeVectorValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.makeVectorValueSelector(columnName, columnSelector, offset);
+    }
+  }
+
+  public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      final VectorObjectSelector selector = virtualColumn.makeVectorObjectSelector(columnName, factory);
+      Preconditions.checkNotNull(selector, "selector");
+      return selector;
+    }
+  }
+
+  @Nullable
+  public VectorObjectSelector makeVectorObjectSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    final VirtualColumn virtualColumn = getVirtualColumn(columnName);
+    if (virtualColumn == null) {
+      throw new IAE("No such virtual column[%s]", columnName);
+    } else {
+      return virtualColumn.makeVectorObjectSelector(columnName, columnSelector, offset);
     }
   }
 
@@ -339,4 +470,5 @@ public class VirtualColumns implements Cacheable
   {
     return virtualColumns.toString();
   }
+
 }

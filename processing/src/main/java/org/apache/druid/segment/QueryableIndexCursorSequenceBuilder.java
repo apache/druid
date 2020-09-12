@@ -193,7 +193,6 @@ public class QueryableIndexCursorSequenceBuilder
   public VectorCursor buildVectorized(final int vectorSize)
   {
     // Sanity check - matches QueryableIndexStorageAdapter.canVectorize
-    Preconditions.checkState(virtualColumns.size() == 0, "virtualColumns.size == 0");
     Preconditions.checkState(!descending, "!descending");
 
     final Map<String, BaseColumn> columnCache = new HashMap<>();
@@ -229,17 +228,15 @@ public class QueryableIndexCursorSequenceBuilder
         ? new NoFilterVectorOffset(vectorSize, startOffset, endOffset)
         : new BitmapVectorOffset(vectorSize, filterBitmap, startOffset, endOffset);
 
+    // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
+    final VectorColumnSelectorFactory baseColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
+        columnCache,
+        baseOffset,
+        closer
+    );
     if (postFilter == null) {
-      return new QueryableIndexVectorCursor(index, baseOffset, closer, columnCache, vectorSize);
+      return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize, closer);
     } else {
-      // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
-      final VectorColumnSelectorFactory baseColumnSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-          index,
-          baseOffset,
-          closer,
-          columnCache
-      );
-
       final VectorOffset filteredOffset = FilteredVectorOffset.create(
           baseOffset,
           baseColumnSelectorFactory,
@@ -254,8 +251,29 @@ public class QueryableIndexCursorSequenceBuilder
       // object will get hit twice for some of the values (anything that matched the filter). This is probably most
       // noticeable if it causes thrashing of decompression buffers due to out-of-order reads. I haven't observed
       // this directly but it seems possible in principle.
-      return new QueryableIndexVectorCursor(index, filteredOffset, closer, columnCache, vectorSize);
+      // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
+      final VectorColumnSelectorFactory filteredColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
+          columnCache,
+          filteredOffset,
+          closer
+      );
+      return new QueryableIndexVectorCursor(filteredColumnSelectorFactory, filteredOffset, vectorSize, closer);
     }
+  }
+
+  VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+      Map<String, BaseColumn> columnCache,
+      VectorOffset baseOffset,
+      Closer closer
+  )
+  {
+    return new QueryableIndexVectorColumnSelectorFactory(
+        index,
+        baseOffset,
+        closer,
+        columnCache,
+        virtualColumns
+    );
   }
 
   /**
@@ -318,17 +336,16 @@ public class QueryableIndexCursorSequenceBuilder
     private final VectorColumnSelectorFactory columnSelectorFactory;
 
     public QueryableIndexVectorCursor(
-        final QueryableIndex index,
+        final VectorColumnSelectorFactory vectorColumnSelectorFactory,
         final VectorOffset offset,
-        final Closer closer,
-        final Map<String, BaseColumn> columnCache,
-        final int vectorSize
+        final int vectorSize,
+        final Closer closer
     )
     {
+      this.columnSelectorFactory = vectorColumnSelectorFactory;
+      this.vectorSize = vectorSize;
       this.offset = offset;
       this.closer = closer;
-      this.vectorSize = vectorSize;
-      this.columnSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(index, offset, closer, columnCache);
     }
 
     @Override

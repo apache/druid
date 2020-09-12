@@ -26,14 +26,21 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.BitmapIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Virtual columns are "views" created over a ColumnSelectorFactory or ColumnSelector. They can potentially draw from multiple
- * underlying columns, although they always present themselves as if they were a single column.
+ * Virtual columns are "views" created over a {@link ColumnSelectorFactory} or {@link ColumnSelector}. They can
+ * potentially draw from multiple underlying columns, although they always present themselves as if they were a single
+ * column.
  *
  * A virtual column object will be shared amongst threads and must be thread safe. The selectors returned
  * from the various makeXXXSelector methods need not be thread safe.
@@ -113,6 +120,122 @@ public interface VirtualColumn extends Cacheable
     return null;
   }
 
+  default boolean canVectorize(ColumnInspector inspector)
+  {
+    return false;
+  }
+
+  /**
+   * Build a vectorized dictionary indexed selector corresponding to this virtual column. Also provides the name that
+   * the virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which is useful if this
+   * column uses dot notation. The virtual column is expected to apply any necessary decoration from the dimensionSpec.
+   *
+   * @param dimensionSpec the dimensionSpec this column was referenced with
+   * @param factory       vector column selector factory
+   *
+   * @return the selector, must not be null
+   */
+  default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  /**
+   * Returns similar {@link SingleValueDimensionVectorSelector} object as returned by
+   * {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)} except this
+   * method has full access to underlying column and can potentially provide a more efficient implementation.
+   *
+   * @param dimensionSpec
+   * @param columnSelector
+   * @param offset
+   * @return the selector
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default SingleValueDimensionVectorSelector makeSingleValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    return null;
+  }
+
+  /**
+   * Build a vectorized 'multi-valued' dictionary indexed selector corresponding to this virtual column. Also provides
+   * the name that the virtual column was referenced with (through {@link DimensionSpec#getDimension()}, which is useful
+   * if this column uses dot notation. The virtual column is expected to apply any necessary decoration from the
+   * dimensionSpec.
+   *
+   * @param dimensionSpec the dimensionSpec this column was referenced with
+   * @param factory       vector column selector factory
+   *
+   * @return the selector, must not be null
+   */
+  default MultiValueDimensionVectorSelector makeMultiValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      VectorColumnSelectorFactory factory
+  )
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  /**
+   * Returns similar {@link SingleValueDimensionVectorSelector} object as returned by
+   * {@link #makeSingleValueVectorDimensionSelector(DimensionSpec, ColumnSelector, ReadableVectorOffset)} except this
+   * method has full access to underlying column and can potentially provide a more efficient implementation.
+   *
+   * @param dimensionSpec
+   * @param columnSelector
+   * @param offset
+   * @return the selector
+   */
+  @SuppressWarnings("unused")
+  @Nullable
+  default MultiValueDimensionVectorSelector makeMultiValueVectorDimensionSelector(
+      DimensionSpec dimensionSpec,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    return null;
+  }
+
+
+  default VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  @Nullable
+  default VectorValueSelector makeVectorValueSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    return null;
+  }
+
+
+  default VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
+  {
+    throw new UnsupportedOperationException("not supported");
+  }
+
+  @Nullable
+  default VectorObjectSelector makeVectorObjectSelector(
+      String columnName,
+      ColumnSelector columnSelector,
+      ReadableVectorOffset offset
+  )
+  {
+    return null;
+  }
+
   /**
    * Returns the capabilities of this virtual column, which includes a type that corresponds to the best
    * performing base selector supertype (e. g. {@link BaseLongColumnValueSelector}) of the object, returned from
@@ -160,4 +283,5 @@ public interface VirtualColumn extends Cacheable
   {
     throw new UnsupportedOperationException("not supported");
   }
+
 }
