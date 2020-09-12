@@ -71,7 +71,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   full: [
     'Datasource name',
     'Availability',
-    'Segment load/drop',
+    'Segment load/drop queues',
     'Total data size',
     'Segment size',
     'Total rows',
@@ -84,7 +84,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-sql': [
     'Datasource name',
     'Availability',
-    'Segment load/drop',
+    'Segment load/drop queues',
     'Total data size',
     'Segment size',
     'Compaction',
@@ -94,7 +94,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   'no-proxy': [
     'Datasource name',
     'Availability',
-    'Segment load/drop',
+    'Segment load/drop queues',
     'Total data size',
     'Segment size',
     'Total rows',
@@ -118,7 +118,7 @@ function formatLoadDrop(segmentsToLoad: number, segmentsToDrop: number): string 
 const formatTotalDataSize = formatBytes;
 const formatSegmentSize = formatMegabytes;
 const formatTotalRows = formatInteger;
-const formatAvgRowSize = (v: number) => `${formatInteger(v)} B`;
+const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
 
 function twoLines(line1: string, line2: string) {
@@ -922,8 +922,8 @@ GROUP BY 1`;
               },
             },
             {
-              Header: 'Segment load/drop',
-              show: hiddenColumns.exists('Segment load/drop'),
+              Header: twoLines('Segment load/drop', 'queues'),
+              show: hiddenColumns.exists('Segment load/drop queues'),
               id: 'load-drop',
               accessor: 'num_segments_to_load',
               filterable: false,
