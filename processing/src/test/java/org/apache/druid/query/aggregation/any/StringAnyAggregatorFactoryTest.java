@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.any;
 
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -59,30 +58,14 @@ public class StringAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   @Before
   public void setUp()
   {
-    Mockito.doReturn(capabilities).when(columnInspector).getColumnCapabilities(FIELD_NAME);
     Mockito.doReturn(capabilities).when(vectorSelectorFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(ValueType.STRING).when(capabilities).getType();
     Mockito.doReturn(ColumnCapabilities.Capable.UNKNOWN).when(capabilities).hasMultipleValues();
     target = new StringAnyAggregatorFactory(NAME, FIELD_NAME, MAX_STRING_BYTES);
   }
 
   @Test
-  public void canVectorizeForStringColumnShouldReturnTrue()
-  {
-    Assert.assertTrue(target.canVectorize(columnInspector));
-  }
-
-  @Test
-  public void canVectorizeForNonStringColumnShouldReturnFalse()
-  {
-    Mockito.doReturn(ValueType.LONG).when(capabilities).getType();
-    Assert.assertFalse(target.canVectorize(columnInspector));
-  }
-
-  @Test
   public void canVectorizeWithoutCapabilitiesShouldReturnTrue()
   {
-    Mockito.doReturn(null).when(columnInspector).getColumnCapabilities(FIELD_NAME);
     Assert.assertTrue(target.canVectorize(columnInspector));
   }
 

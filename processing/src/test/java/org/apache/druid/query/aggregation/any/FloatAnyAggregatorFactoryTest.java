@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -28,6 +30,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -39,8 +42,10 @@ public class FloatAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   private static final String FIELD_NAME = "FIELD_NAME";
 
   @Mock
-  private ColumnInspector columnInspector;
+  private ColumnCapabilities capabilities;
   @Mock
+  private ColumnInspector columnInspector;
+  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
   private VectorColumnSelectorFactory selectorFactory;
   @Mock
   private VectorValueSelector valueSelector;
@@ -50,6 +55,7 @@ public class FloatAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   @Before
   public void setUp()
   {
+    Mockito.doReturn(null).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
     Mockito.doReturn(valueSelector).when(selectorFactory).makeValueSelector(FIELD_NAME);
     target = new FloatAnyAggregatorFactory(NAME, FIELD_NAME);
   }
@@ -61,10 +67,30 @@ public class FloatAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void factorizeVectorShouldReturnDoubleVectorAggregator()
+  public void factorizeVectorShouldReturnFloatVectorAggregator()
   {
-    VectorAggregator aggregator = target.factorizeVector(selectorFactory);
+    FloatAnyVectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
-    Assert.assertEquals(FloatAnyVectorAggregator.class, aggregator.getClass());
+    Assert.assertNotEquals(NilVectorSelector.class, aggregator.vectorValueSelector.getClass());
+  }
+
+  @Test
+  public void factorizeVectorForNumericTypeShouldReturnFloatVectorAggregator()
+  {
+    Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
+    Mockito.doReturn(ValueType.FLOAT).when(capabilities).getType();
+    FloatAnyVectorAggregator aggregator = target.factorizeVector(selectorFactory);
+    Assert.assertNotNull(aggregator);
+    Assert.assertNotEquals(NilVectorSelector.class, aggregator.vectorValueSelector.getClass());
+  }
+
+  @Test
+  public void factorizeVectorForStringTypeShouldReturnFloatVectorAggregatorWithNilSelector()
+  {
+    Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
+    Mockito.doReturn(ValueType.STRING).when(capabilities).getType();
+    FloatAnyVectorAggregator aggregator = target.factorizeVector(selectorFactory);
+    Assert.assertNotNull(aggregator);
+    Assert.assertEquals(NilVectorSelector.class, aggregator.vectorValueSelector.getClass());
   }
 }

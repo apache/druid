@@ -92,13 +92,13 @@ public class FloatAnyVectorAggregatorTest extends InitializedNullHandlingTest
   public void putValueStartAfterEndShouldNotAddToBuffer()
   {
     Assert.assertFalse(target.putAnyValueFromRow(buf, POSITION, 2, 2));
-    Assert.assertNotEquals(VALUES[2], buf.getFloat(POSITION));
+    Assert.assertNotEquals(VALUES[2], buf.getFloat(POSITION), EPSILON);
   }
 
   @Test
   public void putValueStartOutsideRangeShouldNotAddToBuffer()
   {
     Assert.assertFalse(target.putAnyValueFromRow(buf, POSITION, 5, 6));
-    Assert.assertNotEquals(VALUES[2], buf.getFloat(POSITION));
+    Assert.assertNotEquals(VALUES[2], buf.getFloat(POSITION), EPSILON);
   }
 }
