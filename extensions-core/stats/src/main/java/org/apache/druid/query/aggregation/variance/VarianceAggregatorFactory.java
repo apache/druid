@@ -34,7 +34,6 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.NoopAggregator;
 import org.apache.druid.query.aggregation.NoopBufferAggregator;
-import org.apache.druid.query.aggregation.NoopVectorAggregator;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -44,9 +43,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
-import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -175,19 +172,27 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    VectorValueSelector selector = selectorFactory.makeValueSelector(fieldName);
-    if (selector instanceof NilVectorSelector) {
-      return NoopVectorAggregator.instance();
-    }
     final String type = getTypeString(selectorFactory);
-    if (ValueType.FLOAT.name().equals(type)) {
-      return new VarianceFloatVectorAggregator(selector);
+    if (ValueType.FLOAT.name().equalsIgnoreCase(type)) {
+      return new VarianceFloatVectorAggregator(selectorFactory.makeValueSelector(fieldName));
+    } else if (ValueType.DOUBLE.name().equalsIgnoreCase(type)) {
+      return new VarianceDoubleVectorAggregator(selectorFactory.makeValueSelector(fieldName));
+    } else if (ValueType.LONG.name().equalsIgnoreCase(type)) {
+      return new VarianceLongVectorAggregator(selectorFactory.makeValueSelector(fieldName));
+    } else if (VARIANCE_TYPE_NAME.equalsIgnoreCase(type)) {
+      return new VarianceObjectVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
     }
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
         fieldName,
         inputType
     );
+  }
+
+  @Override
+  public boolean canVectorize(ColumnInspector columnInspector)
+  {
+    return true;
   }
 
   @Override

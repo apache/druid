@@ -250,9 +250,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
       count += holder2.count;
       sum += holder2.sum;
 
-      buf.putLong(position, count);
-      buf.putDouble(position + SUM_OFFSET, sum);
-      buf.putDouble(position + NVARIANCE_OFFSET, nvariance);
+      VarianceBufferAggregator.writeNVariance(buf, position, count, sum, nvariance);
     }
 
     @Override

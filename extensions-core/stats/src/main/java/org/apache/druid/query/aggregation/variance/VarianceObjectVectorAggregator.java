@@ -19,9 +19,8 @@
 
 package org.apache.druid.query.aggregation.variance;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
-import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -29,12 +28,11 @@ import java.nio.ByteBuffer;
 /**
  * Vectorized implementation of {@link VarianceBufferAggregator}
  */
-public class VarianceFloatVectorAggregator implements VectorAggregator
+public class VarianceObjectVectorAggregator implements VectorAggregator
 {
-  private final VectorValueSelector selector;
-  private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
+  private final VectorObjectSelector selector;
 
-  public VarianceFloatVectorAggregator(VectorValueSelector selector)
+  public VarianceObjectVectorAggregator(VectorObjectSelector selector)
   {
     this.selector = selector;
   }
@@ -48,7 +46,7 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-    float[] vector = selector.getFloatVector();
+    VarianceAggregatorCollector[] vector = (VarianceAggregatorCollector[]) selector.getObjectVector();
     doAggregate(buf, position, startRow, endRow, vector);
   }
 
@@ -61,7 +59,7 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
-    float[] vector = selector.getFloatVector();
+    VarianceAggregatorCollector[] vector = (VarianceAggregatorCollector[]) selector.getObjectVector();
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows != null ? rows[i] : i;
@@ -82,21 +80,14 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
     // Nothing to close.
   }
 
-  private void doAggregate(ByteBuffer buf, int position, int startRow, int endRow, float[] vector)
+  private void doAggregate(ByteBuffer buf, int position, int startRow, int endRow, VarianceAggregatorCollector[] vector)
   {
     long count = VarianceBufferAggregator.getCount(buf, position);
     double sum = VarianceBufferAggregator.getSum(buf, position);
     double nvariance = VarianceBufferAggregator.getVariance(buf, position);
-    boolean[] nulls = replaceWithDefault ? null : selector.getNullVector();
+    VarianceAggregatorCollector current = new VarianceAggregatorCollector(count, sum, nvariance);
     for (int i = startRow; i < endRow; i++) {
-      if (nulls == null || !nulls[i]) {
-        count++;
-        sum += vector[i];
-        if (count > 1) {
-          double t = count * vector[i] - sum;
-          nvariance = nvariance + (t * t) / ((double) count * (count - 1));
-        }
-      }
+      current.fold(vector[i]);
     }
     VarianceBufferAggregator.writeNVariance(buf, position, count, sum, nvariance);
   }

@@ -29,12 +29,12 @@ import java.nio.ByteBuffer;
 /**
  * Vectorized implementation of {@link VarianceBufferAggregator}
  */
-public class VarianceFloatVectorAggregator implements VectorAggregator
+public class VarianceDoubleVectorAggregator implements VectorAggregator
 {
   private final VectorValueSelector selector;
   private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
 
-  public VarianceFloatVectorAggregator(VectorValueSelector selector)
+  public VarianceDoubleVectorAggregator(VectorValueSelector selector)
   {
     this.selector = selector;
   }
@@ -48,7 +48,7 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
-    float[] vector = selector.getFloatVector();
+    double[] vector = selector.getDoubleVector();
     doAggregate(buf, position, startRow, endRow, vector);
   }
 
@@ -61,7 +61,7 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
       int positionOffset
   )
   {
-    float[] vector = selector.getFloatVector();
+    double[] vector = selector.getDoubleVector();
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows != null ? rows[i] : i;
@@ -82,7 +82,7 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
     // Nothing to close.
   }
 
-  private void doAggregate(ByteBuffer buf, int position, int startRow, int endRow, float[] vector)
+  private void doAggregate(ByteBuffer buf, int position, int startRow, int endRow, double[] vector)
   {
     long count = VarianceBufferAggregator.getCount(buf, position);
     double sum = VarianceBufferAggregator.getSum(buf, position);
