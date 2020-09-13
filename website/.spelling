@@ -1718,7 +1718,6 @@ runtime.properties.
 s3
 s3a
 s3n
-sendServerVersion
 slf4j
 sql
 sqlQuery

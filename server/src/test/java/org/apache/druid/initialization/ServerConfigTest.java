@@ -41,7 +41,6 @@ public class ServerConfigTest
     ServerConfig defaultConfig2 = OBJECT_MAPPER.readValue(defaultConfigJson, ServerConfig.class);
     Assert.assertEquals(defaultConfig, defaultConfig2);
     Assert.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
-    Assert.assertTrue(defaultConfig2.isSendServerVersion());
 
     ServerConfig modifiedConfig = new ServerConfig(
         999,

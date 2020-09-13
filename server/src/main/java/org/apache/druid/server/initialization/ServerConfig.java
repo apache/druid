@@ -242,7 +242,6 @@ public class ServerConfig
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
-           sendServerVersion == that.sendServerVersion &&
            maxIdleTime.equals(that.maxIdleTime) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
