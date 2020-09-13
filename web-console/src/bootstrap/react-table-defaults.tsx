@@ -24,17 +24,11 @@ import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
 import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
-/* tslint:disable:max-classes-per-file */
-
-class NoData extends React.PureComponent {
-  render(): JSX.Element | null {
-    const { children } = this.props;
-    if (!children) return null;
-    return <div className="rt-noData">{children}</div>;
-  }
-}
-
-/* tslint:enable:max-classes-per-file */
+export const NoData = React.memo(function NoData(props) {
+  const { children } = props;
+  if (!children) return null;
+  return <div className="rt-noData">{children}</div>;
+});
 
 Object.assign(ReactTableDefaults, {
   className: '-striped -highlight',
