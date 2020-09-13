@@ -76,18 +76,26 @@ public class VarianceAggregatorCollector
     if (other == null || other.count == 0) {
       return;
     }
-    if (this.count == 0) {
-      this.nvariance = other.nvariance;
-      this.count = other.count;
-      this.sum = other.sum;
+    fold(other.count, other.sum, other.nvariance);
+  }
+
+  void fold(long otherCount, double otherSum, double otherNVariance)
+  {
+    if (otherCount == 0) {
       return;
     }
-    final double ratio = this.count / (double) other.count;
-    final double t = this.sum / ratio - other.sum;
+    if (this.count == 0) {
+      this.nvariance = otherNVariance;
+      this.count = otherCount;
+      this.sum = otherSum;
+      return;
+    }
+    final double ratio = this.count / (double) otherCount;
+    final double t = this.sum / ratio - otherSum;
 
-    this.nvariance += other.nvariance + (ratio / (this.count + other.count) * t * t);
-    this.count += other.count;
-    this.sum += other.sum;
+    this.nvariance += otherNVariance + (ratio / (this.count + otherCount) * t * t);
+    this.count += otherCount;
+    this.sum += otherSum;
   }
 
   static Object combineValues(Object lhs, @Nullable Object rhs)

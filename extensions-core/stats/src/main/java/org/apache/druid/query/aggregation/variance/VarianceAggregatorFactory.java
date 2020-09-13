@@ -165,7 +165,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
         fieldName,
-        inputType
+        type
     );
   }
 
@@ -185,7 +185,7 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, double, long, or variance, but got a %s",
         fieldName,
-        inputType
+        type
     );
   }
 

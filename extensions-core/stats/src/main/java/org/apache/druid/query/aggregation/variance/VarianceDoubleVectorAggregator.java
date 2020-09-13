@@ -49,7 +49,31 @@ public class VarianceDoubleVectorAggregator implements VectorAggregator
   public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
   {
     double[] vector = selector.getDoubleVector();
-    doAggregate(buf, position, startRow, endRow, vector);
+    long count = 0;
+    double sum = 0, nvariance = 0;
+    boolean[] nulls = replaceWithDefault ? null : selector.getNullVector();
+    for (int i = startRow; i < endRow; i++) {
+      if (nulls == null || !nulls[i]) {
+        count++;
+        sum += vector[i];
+      }
+    }
+    double mean = sum / count;
+    if (count > 1) {
+      for (int i = startRow; i < endRow; i++) {
+        if (nulls == null || !nulls[i]) {
+          nvariance += (vector[i] - mean) * (vector[i] - mean);
+        }
+      }
+    }
+
+    VarianceAggregatorCollector previous = new VarianceAggregatorCollector(
+        VarianceBufferAggregator.getCount(buf, position),
+        VarianceBufferAggregator.getSum(buf, position),
+        VarianceBufferAggregator.getVariance(buf, position)
+    );
+    previous.fold(count, sum, nvariance);
+    VarianceBufferAggregator.writeNVariance(buf, position, previous.count, previous.sum, previous.nvariance);
   }
 
   @Override
@@ -62,10 +86,15 @@ public class VarianceDoubleVectorAggregator implements VectorAggregator
   )
   {
     double[] vector = selector.getDoubleVector();
+    boolean[] nulls = replaceWithDefault ? null : selector.getNullVector();
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows != null ? rows[i] : i;
-      doAggregate(buf, position, row, row + 1, vector);
+      if (nulls == null || !nulls[row]) {
+        VarianceAggregatorCollector previous = VarianceBufferAggregator.getVarianceCollector(buf, position);
+        previous.add(vector[row]);
+        VarianceBufferAggregator.writeNVariance(buf, position, previous.count, previous.sum, previous.nvariance);
+      }
     }
   }
 
@@ -80,24 +109,5 @@ public class VarianceDoubleVectorAggregator implements VectorAggregator
   public void close()
   {
     // Nothing to close.
-  }
-
-  private void doAggregate(ByteBuffer buf, int position, int startRow, int endRow, double[] vector)
-  {
-    long count = VarianceBufferAggregator.getCount(buf, position);
-    double sum = VarianceBufferAggregator.getSum(buf, position);
-    double nvariance = VarianceBufferAggregator.getVariance(buf, position);
-    boolean[] nulls = replaceWithDefault ? null : selector.getNullVector();
-    for (int i = startRow; i < endRow; i++) {
-      if (nulls == null || !nulls[i]) {
-        count++;
-        sum += vector[i];
-        if (count > 1) {
-          double t = count * vector[i] - sum;
-          nvariance = nvariance + (t * t) / ((double) count * (count - 1));
-        }
-      }
-    }
-    VarianceBufferAggregator.writeNVariance(buf, position, count, sum, nvariance);
   }
 }

@@ -103,6 +103,14 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   {
     return buf.getDouble(position + NVARIANCE_OFFSET);
   }
+  public static VarianceAggregatorCollector getVarianceCollector(ByteBuffer buf, int position)
+  {
+    return new VarianceAggregatorCollector(
+        getCount(buf, position),
+        getSum(buf, position),
+        getVariance(buf, position)
+    );
+  }
 
   public static void writeNVariance(ByteBuffer buf, int position, long count, double sum, double nvariance)
   {
@@ -250,7 +258,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
       count += holder2.count;
       sum += holder2.sum;
 
-      VarianceBufferAggregator.writeNVariance(buf, position, count, sum, nvariance);
+      writeNVariance(buf, position, count, sum, nvariance);
     }
 
     @Override
