@@ -37,8 +37,7 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   private static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
   private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
-  @VisibleForTesting
-  final VectorValueSelector vectorValueSelector;
+  protected final VectorValueSelector vectorValueSelector;
 
   public NumericAnyVectorAggregator(VectorValueSelector vectorValueSelector)
   {

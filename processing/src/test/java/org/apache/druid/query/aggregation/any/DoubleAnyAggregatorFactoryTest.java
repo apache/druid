@@ -19,10 +19,10 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -69,9 +69,9 @@ public class DoubleAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void factorizeVectorShouldReturnDoubleVectorAggregator()
   {
-    DoubleAnyVectorAggregator aggregator = target.factorizeVector(selectorFactory);
+    VectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
-    Assert.assertNotEquals(NilVectorSelector.class, aggregator.vectorValueSelector.getClass());
+    Assert.assertEquals(DoubleAnyVectorAggregator.class, aggregator.getClass());
   }
 
   @Test
@@ -79,9 +79,9 @@ public class DoubleAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   {
     Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
     Mockito.doReturn(ValueType.DOUBLE).when(capabilities).getType();
-    DoubleAnyVectorAggregator aggregator = target.factorizeVector(selectorFactory);
+    VectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
-    Assert.assertNotEquals(NilVectorSelector.class, aggregator.vectorValueSelector.getClass());
+    Assert.assertEquals(DoubleAnyVectorAggregator.class, aggregator.getClass());
   }
 
   @Test
@@ -89,8 +89,8 @@ public class DoubleAnyAggregatorFactoryTest extends InitializedNullHandlingTest
   {
     Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
     Mockito.doReturn(ValueType.STRING).when(capabilities).getType();
-    DoubleAnyVectorAggregator aggregator = target.factorizeVector(selectorFactory);
+    VectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
-    Assert.assertEquals(NilVectorSelector.class, aggregator.vectorValueSelector.getClass());
+    Assert.assertEquals(NumericNilVectorAggregator.DoubleNilVectorAggregator.class, aggregator.getClass());
   }
 }

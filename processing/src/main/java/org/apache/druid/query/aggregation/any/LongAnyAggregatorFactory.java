@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
@@ -35,7 +36,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -113,13 +113,13 @@ public class LongAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public LongAnyVectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     if (capabilities == null || capabilities.getType().isNumeric()) {
       return new LongAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
-      return new LongAnyVectorAggregator(NilVectorSelector.create(selectorFactory.getVectorSizeInspector()));
+      return NumericNilVectorAggregator.longNilVectorAggregator();
     }
   }
 
