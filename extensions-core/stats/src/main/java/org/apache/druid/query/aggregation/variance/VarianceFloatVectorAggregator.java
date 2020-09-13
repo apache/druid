@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * Vectorized implementation of {@link VarianceBufferAggregator}
+ * Vectorized implementation of {@link VarianceBufferAggregator} for floats.
  */
 public class VarianceFloatVectorAggregator implements VectorAggregator
 {
@@ -72,7 +72,7 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
         VarianceBufferAggregator.getSum(buf, position),
         VarianceBufferAggregator.getVariance(buf, position)
     );
-    previous.fold(count, sum, nvariance);
+    previous.fold(new VarianceAggregatorCollector(count, sum, nvariance));
     VarianceBufferAggregator.writeNVariance(buf, position, previous.count, previous.sum, previous.nvariance);
   }
 
@@ -100,9 +100,9 @@ public class VarianceFloatVectorAggregator implements VectorAggregator
 
   @Nullable
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public VarianceAggregatorCollector get(ByteBuffer buf, int position)
   {
-    return VarianceBufferAggregator.doGet(buf, position);
+    return VarianceBufferAggregator.getVarianceCollector(buf, position);
   }
 
   @Override

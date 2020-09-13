@@ -47,7 +47,7 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   @Override
   public VarianceAggregatorCollector get(final ByteBuffer buf, final int position)
   {
-    return doGet(buf, position);
+    return getVarianceCollector(buf, position);
   }
 
   @Override
@@ -78,15 +78,6 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     buf.putLong(position + COUNT_OFFSET, 0)
        .putDouble(position + SUM_OFFSET, 0)
        .putDouble(position + NVARIANCE_OFFSET, 0);
-  }
-
-  public static VarianceAggregatorCollector doGet(ByteBuffer buf, int position)
-  {
-    VarianceAggregatorCollector holder = new VarianceAggregatorCollector();
-    holder.count = getCount(buf, position);
-    holder.sum = getSum(buf, position);
-    holder.nvariance = buf.getDouble(position + NVARIANCE_OFFSET);
-    return holder;
   }
 
   public static long getCount(ByteBuffer buf, int position)

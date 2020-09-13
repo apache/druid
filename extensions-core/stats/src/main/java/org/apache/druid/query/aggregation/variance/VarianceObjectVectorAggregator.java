@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
- * Vectorized implementation of {@link VarianceBufferAggregator}
+ * Vectorized implementation of {@link VarianceBufferAggregator} for {@link VarianceAggregatorCollector}.
  */
 public class VarianceObjectVectorAggregator implements VectorAggregator
 {
@@ -75,9 +75,9 @@ public class VarianceObjectVectorAggregator implements VectorAggregator
 
   @Nullable
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public VarianceAggregatorCollector get(ByteBuffer buf, int position)
   {
-    return VarianceBufferAggregator.doGet(buf, position);
+    return VarianceBufferAggregator.getVarianceCollector(buf, position);
   }
 
   @Override

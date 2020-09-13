@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.variance;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
@@ -86,7 +87,8 @@ public class VarianceAggregatorFactory extends AggregatorFactory
     this.inputType = inputType;
   }
 
-  public VarianceAggregatorFactory(String name, String fieldName)
+  @VisibleForTesting
+  VarianceAggregatorFactory(String name, String fieldName)
   {
     this(name, fieldName, null, null);
   }

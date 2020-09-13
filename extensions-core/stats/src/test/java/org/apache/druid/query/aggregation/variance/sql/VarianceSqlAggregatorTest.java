@@ -623,7 +623,7 @@ public class VarianceSqlAggregatorTest extends InitializedNullHandlingTest
                                       Arrays.asList(
                                           QueryRunnerTestHelper.ROWS_COUNT,
                                           QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
-                                          new VarianceAggregatorFactory("variance", "index")
+                                          new VarianceAggregatorFactory("variance", "index", null, null)
                                       )
                                   )
                                   .descending(true)
