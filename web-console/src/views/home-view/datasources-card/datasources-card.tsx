@@ -20,7 +20,8 @@ import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import React from 'react';
 
-import { pluralIfNeeded, queryDruidSql, QueryManager } from '../../../utils';
+import { useQueryManager } from '../../../hooks';
+import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { Capabilities } from '../../../utils/capabilities';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
@@ -28,74 +29,36 @@ export interface DatasourcesCardProps {
   capabilities: Capabilities;
 }
 
-export interface DatasourcesCardState {
-  datasourceCountLoading: boolean;
-  datasourceCount: number;
-  datasourceCountError?: string;
-}
-
-export class DatasourcesCard extends React.PureComponent<
-  DatasourcesCardProps,
-  DatasourcesCardState
-> {
-  private datasourceQueryManager: QueryManager<Capabilities, any>;
-
-  constructor(props: DatasourcesCardProps, context: any) {
-    super(props, context);
-    this.state = {
-      datasourceCountLoading: false,
-      datasourceCount: 0,
-    };
-
-    this.datasourceQueryManager = new QueryManager({
-      processQuery: async capabilities => {
-        let datasources: string[];
-        if (capabilities.hasSql()) {
-          datasources = await queryDruidSql({
-            query: `SELECT datasource FROM sys.segments GROUP BY 1`,
-          });
-        } else if (capabilities.hasCoordinatorAccess()) {
-          const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources');
-          datasources = datasourcesResp.data;
-        } else {
-          throw new Error(`must have SQL or coordinator access`);
-        }
-
-        return datasources.length;
-      },
-      onStateChange: ({ result, loading, error }) => {
-        this.setState({
-          datasourceCountLoading: loading,
-          datasourceCount: result,
-          datasourceCountError: error || undefined,
+export const DatasourcesCard = React.memo(function DatasourcesCard(props: DatasourcesCardProps) {
+  const [datasourceCountState] = useQueryManager<Capabilities, number>({
+    processQuery: async capabilities => {
+      let datasources: string[];
+      if (capabilities.hasSql()) {
+        datasources = await queryDruidSql({
+          query: `SELECT datasource FROM sys.segments GROUP BY 1`,
         });
-      },
-    });
-  }
+      } else if (capabilities.hasCoordinatorAccess()) {
+        const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources');
+        datasources = datasourcesResp.data;
+      } else {
+        throw new Error(`must have SQL or coordinator access`);
+      }
 
-  componentDidMount(): void {
-    const { capabilities } = this.props;
+      return datasources.length;
+    },
+    initQuery: props.capabilities,
+  });
 
-    this.datasourceQueryManager.runQuery(capabilities);
-  }
-
-  componentWillUnmount(): void {
-    this.datasourceQueryManager.terminate();
-  }
-
-  render(): JSX.Element {
-    const { datasourceCountLoading, datasourceCountError, datasourceCount } = this.state;
-    return (
-      <HomeViewCard
-        className="datasources-card"
-        href={'#datasources'}
-        icon={IconNames.MULTI_SELECT}
-        title={'Datasources'}
-        loading={datasourceCountLoading}
-        error={datasourceCountError}
-      >
-        <p>{pluralIfNeeded(datasourceCount, 'datasource')}</p>
-      </HomeViewCard>
-    );
-  }
-}
+  return (
+    <HomeViewCard
+      className="datasources-card"
+      href={'#datasources'}
+      icon={IconNames.MULTI_SELECT}
+      title={'Datasources'}
+      loading={datasourceCountState.loading}
+      error={datasourceCountState.error}
+    >
+      <p>{pluralIfNeeded(datasourceCountState.data || 0, 'datasource')}</p>
+    </HomeViewCard>
+  );
+});
