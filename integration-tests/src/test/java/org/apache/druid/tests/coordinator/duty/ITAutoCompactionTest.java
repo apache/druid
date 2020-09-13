@@ -54,7 +54,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Test(groups = {TestNGGroup.OTHER_INDEX})
+@Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAutoCompactionTest extends AbstractIndexerTest
 {
