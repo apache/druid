@@ -596,6 +596,7 @@ url
  - ../docs/development/extensions-core/approximate-histograms.md
 approxHistogram
 approxHistogramFold
+fixedBucketsHistogram
 bucketNum
 lowerLimit
 numBuckets
@@ -1094,6 +1095,8 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+contains_string
+icontains_string
 result1
 result2
 rint

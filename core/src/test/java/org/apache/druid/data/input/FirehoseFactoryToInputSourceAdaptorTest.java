@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,7 +42,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class FirehoseFactoryToInputSourceAdaptorTest
+public class FirehoseFactoryToInputSourceAdaptorTest extends InitializedNullHandlingTest
 {
   @Test
   public void testUnimplementedInputFormat() throws IOException

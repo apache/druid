@@ -116,7 +116,6 @@ public class RealtimePlumber implements Plumber
       String.CASE_INSENSITIVE_ORDER
   );
   private final QuerySegmentWalker texasRanger;
-
   private final Cache cache;
 
   private volatile long nextFlush = 0;
@@ -263,7 +262,6 @@ public class RealtimePlumber implements Plumber
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
           config.getDedupColumn()
       );
       addSink(retVal);
@@ -727,7 +725,6 @@ public class RealtimePlumber implements Plumber
           versioningPolicy.getVersion(sinkInterval),
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
-          config.isReportParseExceptions(),
           config.getDedupColumn(),
           hydrants
       );

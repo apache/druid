@@ -218,7 +218,6 @@ public class IndexMergeBenchmark
                 .withRollup(rollup)
                 .build()
         )
-        .setReportParseExceptions(false)
         .setMaxRowCount(rowsPerSegment)
         .buildOnheap();
   }

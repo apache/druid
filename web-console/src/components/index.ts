@@ -24,6 +24,7 @@ export * from './center-message/center-message';
 export * from './clearable-input/clearable-input';
 export * from './external-link/external-link';
 export * from './header-bar/header-bar';
+export * from './highlight-text/highlight-text';
 export * from './json-collapse/json-collapse';
 export * from './json-input/json-input';
 export * from './loader/loader';

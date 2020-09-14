@@ -27,7 +27,6 @@ import {
   MenuItem,
   Popover,
   Position,
-  Tooltip,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
@@ -157,16 +156,14 @@ export class RunButton extends React.PureComponent<RunButtonProps> {
     return (
       <ButtonGroup className="run-button">
         {onRun ? (
-          <Tooltip content="Control + Enter" hoverOpenDelay={900}>
-            <Button
-              className={runeMode ? 'rune-button' : undefined}
-              disabled={loading}
-              icon={IconNames.CARET_RIGHT}
-              onClick={this.handleRun}
-              text="Run"
-              intent={Intent.PRIMARY}
-            />
-          </Tooltip>
+          <Button
+            className={runeMode ? 'rune-button' : undefined}
+            disabled={loading}
+            icon={IconNames.CARET_RIGHT}
+            onClick={this.handleRun}
+            text="Run"
+            intent={Intent.PRIMARY}
+          />
         ) : (
           <Button
             className={runeMode ? 'rune-button' : undefined}
