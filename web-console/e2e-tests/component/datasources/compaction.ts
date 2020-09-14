@@ -16,12 +16,18 @@
  * limitations under the License.
  */
 
-import path from 'path';
+/**
+ * Datasource compaction configuration
+ */
+export class CompactionConfig {
+  constructor(props: CompactionConfig) {
+    Object.assign(this, props);
+  }
+}
 
-export const UNIFIED_CONSOLE_URL = 'http://localhost:8888/unified-console.html';
-export const COORDINATOR_URL = 'http://localhost:8081';
+interface CompactionConfigProps {
+  readonly skipOffsetFromLatest: string;
+  readonly tuningConfig: string;
+}
 
-const UTIL_DIR = __dirname;
-const E2E_TEST_DIR = path.dirname(UTIL_DIR);
-const WEB_CONSOLE_DIR = path.dirname(E2E_TEST_DIR);
-export const DRUID_DIR = path.dirname(WEB_CONSOLE_DIR);
+export interface CompactionConfig extends CompactionConfigProps {}

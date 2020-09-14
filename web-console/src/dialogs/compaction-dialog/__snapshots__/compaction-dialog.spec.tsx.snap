@@ -28,14 +28,6 @@ exports[`compaction dialog matches snapshot 1`] = `
           "type": "string",
         },
         Object {
-          "defaultValue": 5000000,
-          "info": <p>
-            Determines how many rows are in each segment.
-          </p>,
-          "name": "maxRowsPerSegment",
-          "type": "number",
-        },
-        Object {
           "info": <p>
             <Memo(ExternalLink)
               href="https://druid.apache.org/docs/0.19.0/ingestion/tasks.html#task-context"

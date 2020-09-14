@@ -20,6 +20,7 @@ import * as playwright from 'playwright-core';
 
 import { extractTable } from '../../util/table';
 
+import { CompactionConfig } from './compaction';
 import { Datasource } from './datasource';
 
 /**
@@ -69,5 +70,56 @@ export class DatasourcesOverview {
 
   private static parseNumber(text: string): number {
     return Number(text.replace(/,/g, ''));
+  }
+
+  async setCompactionConfiguration(
+    datasourceName: string,
+    compactionConfig: CompactionConfig,
+  ): Promise<void> {
+    await this.openEditActions(datasourceName);
+
+    await this.page.click('"Edit compaction configuration"');
+
+    const skipOffsetFromLatest = await this.getInputElement('Skip offset from latest');
+    await DatasourcesOverview.setInput(
+      skipOffsetFromLatest!,
+      compactionConfig.skipOffsetFromLatest,
+    );
+
+    const tuningConfig = await this.getTextareaElement('Tuning config');
+    await DatasourcesOverview.setInput(tuningConfig!, compactionConfig.tuningConfig);
+
+    await this.clickButton('Submit');
+  }
+
+  private async openEditActions(datasourceName: string): Promise<void> {
+    const datasources = await this.getDatasources();
+    const index = datasources.findIndex(t => t.name === datasourceName);
+    if (index < 0) {
+      throw new Error(`Could not find datasource: ${datasourceName}`);
+    }
+
+    const editActions = await this.page.$$('span[icon=wrench]');
+    editActions[index].click();
+    await this.page.waitFor(5000);
+  }
+
+  private async getInputElement(label: string): Promise<playwright.ElementHandle<Element> | null> {
+    return this.page.$(`//*[text()="${label}"]/following-sibling::div//input`);
+  }
+
+  private async getTextareaElement(
+    label: string,
+  ): Promise<playwright.ElementHandle<Element> | null> {
+    return this.page.$(`//*[text()="${label}"]/following-sibling::div//textarea`);
+  }
+
+  private static async setInput(input: playwright.ElementHandle<Element>, value: string) {
+    await input.fill('');
+    await input.type(value);
+  }
+
+  private async clickButton(text: string) {
+    await this.page.click(`//button/*[contains(text(),"${text}")]`, { waitUntil: 'load' } as any);
   }
 }

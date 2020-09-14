@@ -53,12 +53,6 @@ const COMPACTION_CONFIG_FIELDS: Field<Record<string, any>>[] = [
     ),
   },
   {
-    name: 'maxRowsPerSegment',
-    type: 'number',
-    defaultValue: DEFAULT_MAX_ROWS_PER_SEGMENT,
-    info: <p>Determines how many rows are in each segment.</p>,
-  },
-  {
     name: 'taskContext',
     type: 'json',
     info: (
