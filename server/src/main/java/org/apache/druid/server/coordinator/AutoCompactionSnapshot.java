@@ -41,9 +41,9 @@ public class AutoCompactionSnapshot
   @JsonProperty
   private String latestScheduledTaskId;
   @JsonProperty
-  private long byteAwaitingCompaction;
+  private long byteCountAwaitingCompaction;
   @JsonProperty
-  private long byteProcessed;
+  private long byteCountProcessed;
   @JsonProperty
   private long segmentCountAwaitingCompaction;
   @JsonProperty
@@ -81,14 +81,14 @@ public class AutoCompactionSnapshot
     return latestScheduledTaskId;
   }
 
-  public long getByteAwaitingCompaction()
+  public long getByteCountAwaitingCompaction()
   {
-    return byteAwaitingCompaction;
+    return byteCountAwaitingCompaction;
   }
 
-  public long getByteProcessed()
+  public long getByteCountProcessed()
   {
-    return byteProcessed;
+    return byteCountProcessed;
   }
 
   public long getSegmentCountAwaitingCompaction()
@@ -121,14 +121,14 @@ public class AutoCompactionSnapshot
     this.latestScheduledTaskId = latestScheduledTaskId;
   }
 
-  public void setByteAwaitingCompaction(long byteAwaitingCompaction)
+  public void setByteCountAwaitingCompaction(long byteCountAwaitingCompaction)
   {
-    this.byteAwaitingCompaction = byteAwaitingCompaction;
+    this.byteCountAwaitingCompaction = byteCountAwaitingCompaction;
   }
 
-  public void setByteProcessed(long byteProcessed)
+  public void setByteCountProcessed(long byteCountProcessed)
   {
-    this.byteProcessed = byteProcessed;
+    this.byteCountProcessed = byteCountProcessed;
   }
 
   public void setSegmentCountAwaitingCompaction(long segmentCountAwaitingCompaction)
@@ -163,8 +163,8 @@ public class AutoCompactionSnapshot
       return false;
     }
     AutoCompactionSnapshot that = (AutoCompactionSnapshot) o;
-    return byteAwaitingCompaction == that.byteAwaitingCompaction &&
-           byteProcessed == that.byteProcessed &&
+    return byteCountAwaitingCompaction == that.byteCountAwaitingCompaction &&
+           byteCountProcessed == that.byteCountProcessed &&
            segmentCountAwaitingCompaction == that.segmentCountAwaitingCompaction &&
            segmentCountProcessed == that.segmentCountProcessed &&
            intervalCountAwaitingCompaction == that.intervalCountAwaitingCompaction &&
@@ -181,8 +181,8 @@ public class AutoCompactionSnapshot
         dataSource,
         scheduleStatus,
         latestScheduledTaskId,
-        byteAwaitingCompaction,
-        byteProcessed,
+        byteCountAwaitingCompaction,
+        byteCountProcessed,
         segmentCountAwaitingCompaction,
         segmentCountProcessed,
         intervalCountAwaitingCompaction,

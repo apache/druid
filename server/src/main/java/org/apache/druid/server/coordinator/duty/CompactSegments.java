@@ -307,8 +307,8 @@ public class CompactSegments implements CoordinatorDuty
         intervalCountProcessed = processedStatistics.getSegmentIntervalCountSum();
       }
 
-      autoCompactionSnapshotEntry.getValue().setByteAwaitingCompaction(byteAwaitingCompaction);
-      autoCompactionSnapshotEntry.getValue().setByteProcessed(byteProcessed);
+      autoCompactionSnapshotEntry.getValue().setByteCountAwaitingCompaction(byteAwaitingCompaction);
+      autoCompactionSnapshotEntry.getValue().setByteCountProcessed(byteProcessed);
       autoCompactionSnapshotEntry.getValue().setSegmentCountAwaitingCompaction(segmentCountAwaitingCompaction);
       autoCompactionSnapshotEntry.getValue().setSegmentCountProcessed(segmentCountProcessed);
       autoCompactionSnapshotEntry.getValue().setIntervalCountAwaitingCompaction(intervalCountAwaitingCompaction);
@@ -356,7 +356,7 @@ public class CompactSegments implements CoordinatorDuty
     if (autoCompactionSnapshot == null) {
       return null;
     }
-    return autoCompactionSnapshotPerDataSource.get(dataSource).getByteAwaitingCompaction();
+    return autoCompactionSnapshotPerDataSource.get(dataSource).getByteCountAwaitingCompaction();
   }
 
   @Nullable

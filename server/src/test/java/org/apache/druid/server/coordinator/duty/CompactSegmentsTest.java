@@ -100,9 +100,9 @@ public class CompactSegmentsTest
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
   // Each dataSource starts with 440 byte, 44 segments, and 11 intervals needing compaction
-  int TOTAL_BYTE_PER_DATASOURCE = 440;
-  int TOTAL_SEGMENT_PER_DATASOURCE = 44;
-  int TOTAL_INTERVAL_PER_DATASOURCE = 11;
+  private static final int TOTAL_BYTE_PER_DATASOURCE = 440;
+  private static final int TOTAL_SEGMENT_PER_DATASOURCE = 44;
+  private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
@@ -300,8 +300,8 @@ public class CompactSegmentsTest
       AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(DATA_SOURCE_PREFIX + i);
       Assert.assertEquals(DATA_SOURCE_PREFIX + i, snapshot.getDataSource());
       Assert.assertEquals(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING, snapshot.getScheduleStatus());
-      Assert.assertEquals(0, snapshot.getByteAwaitingCompaction());
-      Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE, snapshot.getByteProcessed());
+      Assert.assertEquals(0, snapshot.getByteCountAwaitingCompaction());
+      Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE, snapshot.getByteCountProcessed());
       Assert.assertEquals(0, snapshot.getIntervalCountAwaitingCompaction());
       Assert.assertEquals(TOTAL_INTERVAL_PER_DATASOURCE, snapshot.getIntervalCountProcessed());
       Assert.assertEquals(0, snapshot.getSegmentCountAwaitingCompaction());
@@ -332,8 +332,8 @@ public class CompactSegmentsTest
           AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(DATA_SOURCE_PREFIX + i);
           Assert.assertEquals(DATA_SOURCE_PREFIX + i, snapshot.getDataSource());
           Assert.assertEquals(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING, snapshot.getScheduleStatus());
-          Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE - 40 * (compaction_run_count + 1), snapshot.getByteAwaitingCompaction());
-          Assert.assertEquals(40 * (compaction_run_count + 1), snapshot.getByteProcessed());
+          Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE - 40 * (compaction_run_count + 1), snapshot.getByteCountAwaitingCompaction());
+          Assert.assertEquals(40 * (compaction_run_count + 1), snapshot.getByteCountProcessed());
           Assert.assertEquals(TOTAL_INTERVAL_PER_DATASOURCE - (compaction_run_count + 1), snapshot.getIntervalCountAwaitingCompaction());
           Assert.assertEquals((compaction_run_count + 1), snapshot.getIntervalCountProcessed());
           Assert.assertEquals(TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compaction_run_count + 1), snapshot.getSegmentCountAwaitingCompaction());
@@ -342,8 +342,8 @@ public class CompactSegmentsTest
           AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(DATA_SOURCE_PREFIX + i);
           Assert.assertEquals(DATA_SOURCE_PREFIX + i, snapshot.getDataSource());
           Assert.assertEquals(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING, snapshot.getScheduleStatus());
-          Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE - 40 * (compaction_run_count + 1), snapshot.getByteAwaitingCompaction());
-          Assert.assertEquals(40 * (compaction_run_count + 1), snapshot.getByteProcessed());
+          Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE - 40 * (compaction_run_count + 1), snapshot.getByteCountAwaitingCompaction());
+          Assert.assertEquals(40 * (compaction_run_count + 1), snapshot.getByteCountProcessed());
           Assert.assertEquals(TOTAL_INTERVAL_PER_DATASOURCE - (compaction_run_count + 1), snapshot.getIntervalCountAwaitingCompaction());
           Assert.assertEquals((compaction_run_count + 1), snapshot.getIntervalCountProcessed());
           Assert.assertEquals(TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compaction_run_count + 1), snapshot.getSegmentCountAwaitingCompaction());
@@ -356,8 +356,8 @@ public class CompactSegmentsTest
         AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(DATA_SOURCE_PREFIX + i);
         Assert.assertEquals(DATA_SOURCE_PREFIX + i, snapshot.getDataSource());
         Assert.assertEquals(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING, snapshot.getScheduleStatus());
-        Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE - 40 * compaction_run_count, snapshot.getByteAwaitingCompaction());
-        Assert.assertEquals(40 * compaction_run_count, snapshot.getByteProcessed());
+        Assert.assertEquals(TOTAL_BYTE_PER_DATASOURCE - 40 * compaction_run_count, snapshot.getByteCountAwaitingCompaction());
+        Assert.assertEquals(40 * compaction_run_count, snapshot.getByteCountProcessed());
         Assert.assertEquals(TOTAL_INTERVAL_PER_DATASOURCE - compaction_run_count, snapshot.getIntervalCountAwaitingCompaction());
         Assert.assertEquals(compaction_run_count, snapshot.getIntervalCountProcessed());
         Assert.assertEquals(TOTAL_SEGMENT_PER_DATASOURCE - 4 * compaction_run_count, snapshot.getSegmentCountAwaitingCompaction());

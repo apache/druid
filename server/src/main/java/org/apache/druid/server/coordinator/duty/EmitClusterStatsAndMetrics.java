@@ -296,21 +296,21 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
 
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
-            "compact/task/scheduled/count",
+            "compact/task/count",
             stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
         )
     );
 
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
-            "compact/task/maxSlot/count",
+            "compact/maxSlot/count",
             stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT)
         )
     );
 
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
-            "compact/task/availableSlot/count",
+            "compact/availableSlot/count",
             stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT)
         )
     );
