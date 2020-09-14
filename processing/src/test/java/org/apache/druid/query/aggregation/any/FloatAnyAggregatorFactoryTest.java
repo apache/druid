@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.any;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -35,11 +36,15 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.nio.ByteBuffer;
+
 @RunWith(MockitoJUnitRunner.class)
 public class FloatAnyAggregatorFactoryTest extends InitializedNullHandlingTest
 {
   private static final String NAME = "NAME";
   private static final String FIELD_NAME = "FIELD_NAME";
+  private static final int POSITION = 2;
+  private static final ByteBuffer BUFFER = ByteBuffer.allocate(128);
 
   @Mock
   private ColumnCapabilities capabilities;
@@ -91,6 +96,6 @@ public class FloatAnyAggregatorFactoryTest extends InitializedNullHandlingTest
     Mockito.doReturn(ValueType.STRING).when(capabilities).getType();
     VectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
-    Assert.assertEquals(NumericNilVectorAggregator.FloatNilVectorAggregator.class, aggregator.getClass());
+    Assert.assertEquals(NullHandling.defaultFloatValue(), aggregator.get(BUFFER, POSITION));
   }
 }

@@ -28,30 +28,50 @@ import java.nio.ByteBuffer;
 /**
  * A vector aggregator that returns the default numeric value.
  */
-public abstract class NumericNilVectorAggregator implements VectorAggregator
+public class NumericNilVectorAggregator implements VectorAggregator
 {
+  private static final NumericNilVectorAggregator DOUBLE_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+      NullHandling.defaultDoubleValue()
+  );
+
+  private static final NumericNilVectorAggregator FLOAT_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+      NullHandling.defaultFloatValue()
+  );
+
+  private static final NumericNilVectorAggregator LONG_NIL_VECTOR_AGGREGATOR = new NumericNilVectorAggregator(
+      NullHandling.defaultLongValue()
+  );
+
   /**
    * @return A vectorized aggregator that returns the default double value.
    */
-  public static DoubleNilVectorAggregator doubleNilVectorAggregator()
+  public static NumericNilVectorAggregator doubleNilVectorAggregator()
   {
-    return DoubleNilVectorAggregator.INSTANCE;
+    return DOUBLE_NIL_VECTOR_AGGREGATOR;
   }
 
   /**
    * @return A vectorized aggregator that returns the default float value.
    */
-  public static FloatNilVectorAggregator floatNilVectorAggregator()
+  public static NumericNilVectorAggregator floatNilVectorAggregator()
   {
-    return FloatNilVectorAggregator.INSTANCE;
+    return FLOAT_NIL_VECTOR_AGGREGATOR;
   }
 
   /**
    * @return A vectorized aggregator that returns the default long value.
    */
-  public static LongNilVectorAggregator longNilVectorAggregator()
+  public static NumericNilVectorAggregator longNilVectorAggregator()
   {
-    return LongNilVectorAggregator.INSTANCE;
+    return LONG_NIL_VECTOR_AGGREGATOR;
+  }
+
+  @Nullable
+  private final Object returnValue;
+
+  private NumericNilVectorAggregator(@Nullable Object returnValue)
+  {
+    this.returnValue = returnValue;
   }
 
   @Override
@@ -78,69 +98,16 @@ public abstract class NumericNilVectorAggregator implements VectorAggregator
     // Do nothing.
   }
 
+  @Nullable
+  @Override
+  public Object get(ByteBuffer buf, int position)
+  {
+    return returnValue;
+  }
+
   @Override
   public void close()
   {
     // Do nothing.
-  }
-
-  public static class DoubleNilVectorAggregator extends NumericNilVectorAggregator
-  {
-    private static final DoubleNilVectorAggregator INSTANCE = new DoubleNilVectorAggregator();
-
-    @Nullable
-    private final Double returnValue;
-
-    private DoubleNilVectorAggregator()
-    {
-      this.returnValue = NullHandling.defaultDoubleValue();
-    }
-
-    @Nullable
-    @Override
-    public Object get(ByteBuffer buf, int position)
-    {
-      return returnValue;
-    }
-  }
-
-  public static class LongNilVectorAggregator extends NumericNilVectorAggregator
-  {
-    private static final LongNilVectorAggregator INSTANCE = new LongNilVectorAggregator();
-
-    @Nullable
-    private final Long returnValue;
-
-    private LongNilVectorAggregator()
-    {
-      this.returnValue = NullHandling.defaultLongValue();
-    }
-
-    @Nullable
-    @Override
-    public Object get(ByteBuffer buf, int position)
-    {
-      return returnValue;
-    }
-  }
-
-  public static class FloatNilVectorAggregator extends NumericNilVectorAggregator
-  {
-    private static final FloatNilVectorAggregator INSTANCE = new FloatNilVectorAggregator();
-
-    @Nullable
-    private final Float returnValue;
-
-    private FloatNilVectorAggregator()
-    {
-      this.returnValue = NullHandling.defaultFloatValue();
-    }
-
-    @Nullable
-    @Override
-    public Object get(ByteBuffer buf, int position)
-    {
-      return returnValue;
-    }
   }
 }
