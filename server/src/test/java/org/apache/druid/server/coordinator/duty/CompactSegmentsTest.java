@@ -337,7 +337,7 @@ public class CompactSegmentsTest
           Assert.assertEquals(TOTAL_INTERVAL_PER_DATASOURCE - (compaction_run_count + 1), snapshot.getIntervalCountAwaitingCompaction());
           Assert.assertEquals((compaction_run_count + 1), snapshot.getIntervalCountProcessed());
           Assert.assertEquals(TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compaction_run_count + 1), snapshot.getSegmentCountAwaitingCompaction());
-          Assert.assertEquals( 2 * (compaction_run_count + 1), snapshot.getSegmentCountProcessed());
+          Assert.assertEquals(2 * (compaction_run_count + 1), snapshot.getSegmentCountProcessed());
         } else {
           AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(DATA_SOURCE_PREFIX + i);
           Assert.assertEquals(DATA_SOURCE_PREFIX + i, snapshot.getDataSource());
