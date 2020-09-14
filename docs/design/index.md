@@ -25,7 +25,7 @@ title: "Introduction to Apache Druid"
 ## What is Druid?
 
 Apache Druid is a real-time analytics database designed for fast slice-and-dice analytics
-("[OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing)" queries) on large data sets. Druid is most often
+([OLAP](http://en.wikipedia.org/wiki/Online_analytical_processing) queries) on large data sets. Druid is most often
 used as a database for powering use cases where real-time ingest, fast query performance, and high uptime are important.
 As such, Druid is commonly used for powering GUIs of analytical applications, or as a backend for highly-concurrent APIs
 that need fast aggregations. Druid works best with event-oriented data.
@@ -38,7 +38,7 @@ Common application areas for Druid include:
 - Supply chain analytics (manufacturing metrics)
 - Application performance metrics
 - Digital marketing/advertising analytics
-- Business intelligence / OLAP
+- Business intelligence/OLAP
 
 Druid's core architecture combines ideas from data warehouses, timeseries databases, and logsearch systems. Some of
 Druid's key features are:
@@ -53,8 +53,8 @@ few seconds.
 4. **Realtime or batch ingestion.** Druid can ingest data either real-time (ingested data is immediately available for
 querying) or in batches.
 5. **Self-healing, self-balancing, easy to operate.** As an operator, to scale the cluster out or in, simply add or
-remove servers and the cluster will rebalance itself automatically, in the background, without any downtime. If any
-Druid servers fail, the system will automatically route around the damage until those servers can be replaced. Druid
+remove servers and the cluster will rebalance itself automatically in the background without any downtime. If any
+Druid servers fail, the system automaticallys route around the damage until the failed servers are replaced. Druid
 is designed to run 24/7 with no need for planned downtimes for any reason, including configuration changes and software
 updates.
 6. **Cloud-native, fault-tolerant architecture that won't lose data.** Once Druid has ingested your data, a copy is
@@ -65,7 +65,7 @@ just a few Druid servers, replication ensures that queries are still possible wh
 [CONCISE](https://arxiv.org/pdf/1004.0403) compressed bitmap indexes to create indexes that power fast filtering and
 searching across multiple columns.
 8. **Time-based partitioning.** Druid first partitions data by time, and can additionally partition based on other fields.
-This means time-based queries will only access the partitions that match the time range of the query. This leads to
+Time-based queries only access the partitions that match the time range of the query, which leads to
 significant performance improvements for time-based data.
 9. **Approximate algorithms.** Druid includes algorithms for approximate count-distinct, approximate ranking, and
 computation of approximate histograms and quantiles. These algorithms offer bounded memory usage and are often
@@ -77,18 +77,18 @@ summarization partially pre-aggregates your data, and can lead to big costs savi
 ## When should I use Druid?
 
 Druid is used by many companies of various sizes for many different use cases. Check out the
-[Powered by Apache Druid](/druid-powered) page
+[Powered by Apache Druid](/druid-powered) page.
 
 Druid is likely a good choice if your use case fits a few of the following descriptors:
 
 - Insert rates are very high, but updates are less common.
-- Most of your queries are aggregation and reporting queries ("group by" queries). You may also have searching and
+- Most of your queries are aggregation and reporting queries (group by queries). You may also have searching and
 scanning queries.
 - You are targeting query latencies of 100ms to a few seconds.
 - Your data has a time component (Druid includes optimizations and design choices specifically related to time).
 - You may have more than one table, but each query hits just one big distributed table. Queries may potentially hit more
-than one smaller "lookup" table.
-- You have high cardinality data columns (e.g. URLs, user IDs) and need fast counting and ranking over them.
+than one smaller lookup table.
+- You have high cardinality data columns (e.g., URLs, user IDs) and need fast counting and ranking over them.
 - You want to load data from Kafka, HDFS, flat files, or object storage like Amazon S3.
 
 Situations where you would likely _not_ want to use Druid include:
@@ -96,5 +96,5 @@ Situations where you would likely _not_ want to use Druid include:
 - You need low-latency updates of _existing_ records using a primary key. Druid supports streaming inserts, but not streaming updates (updates are done using
 background batch jobs).
 - You are building an offline reporting system where query latency is not very important.
-- You want to do "big" joins (joining one big fact table to another big fact table) and you are okay with these queries
+- You want to do big joins (joining one big fact table to another big fact table) and you are okay with these queries
 taking a long time to complete.
