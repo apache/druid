@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import jdk.nashorn.internal.ir.annotations.Immutable;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -429,7 +428,8 @@ public class CompactSegmentsTest
       long expectedIntervalCountAwaitingCompaction,
       long expectedIntervalCountProcessed,
       long expectedSegmentCountAwaitingCompaction,
-      long expectedSegmentCountProcessed) {
+      long expectedSegmentCountProcessed
+  ) {
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
     AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(dataSourceName);
     Assert.assertEquals(dataSourceName, snapshot.getDataSource());
