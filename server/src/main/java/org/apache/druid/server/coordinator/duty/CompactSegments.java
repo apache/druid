@@ -94,68 +94,69 @@ public class CompactSegments implements CoordinatorDuty
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources =
           params.getUsedSegmentsTimelinesPerDataSource();
       List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
-
-      if (compactionConfigList != null && !compactionConfigList.isEmpty()) {
+      if (compactionConfigList != null) {
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
             .stream()
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
         updateAutoCompactionSnapshot(compactionConfigs);
-        final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
-        // dataSource -> list of intervals of compaction tasks
-        final Map<String, List<Interval>> compactionTaskIntervals = Maps.newHashMapWithExpectedSize(
-            compactionConfigList.size());
-        int numEstimatedNonCompleteCompactionTasks = 0;
-        for (TaskStatusPlus status : compactionTasks) {
-          final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
-          if (response == null) {
-            throw new ISE("Got a null paylord from overlord for task[%s]", status.getId());
+        if (!compactionConfigList.isEmpty()) {
+          final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
+          // dataSource -> list of intervals of compaction tasks
+          final Map<String, List<Interval>> compactionTaskIntervals = Maps.newHashMapWithExpectedSize(
+              compactionConfigList.size());
+          int numEstimatedNonCompleteCompactionTasks = 0;
+          for (TaskStatusPlus status : compactionTasks) {
+            final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
+            if (response == null) {
+              throw new ISE("Got a null paylord from overlord for task[%s]", status.getId());
+            }
+            if (COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
+              final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
+              final Interval interval = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
+              compactionTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
+              final int numSubTasks = findNumMaxConcurrentSubTasks(compactionTaskQuery.getTuningConfig());
+              numEstimatedNonCompleteCompactionTasks += numSubTasks + 1; // count the compaction task itself
+            } else {
+              throw new ISE("task[%s] is not a compactionTask", status.getId());
+            }
           }
-          if (COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
-            final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
-            final Interval interval = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
-            compactionTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
-            final int numSubTasks = findNumMaxConcurrentSubTasks(compactionTaskQuery.getTuningConfig());
-            numEstimatedNonCompleteCompactionTasks += numSubTasks + 1; // count the compaction task itself
-          } else {
-            throw new ISE("task[%s] is not a compactionTask", status.getId());
-          }
-        }
 
-        final CompactionSegmentIterator iterator =
-            policy.reset(compactionConfigs, dataSources, compactionTaskIntervals);
+          final CompactionSegmentIterator iterator =
+              policy.reset(compactionConfigs, dataSources, compactionTaskIntervals);
 
-        final int compactionTaskCapacity = (int) Math.min(
-            indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
-            dynamicConfig.getMaxCompactionTaskSlots()
-        );
-        final int numAvailableCompactionTaskSlots;
-        if (numEstimatedNonCompleteCompactionTasks > 0) {
-          numAvailableCompactionTaskSlots = Math.max(
-              0,
-              compactionTaskCapacity - numEstimatedNonCompleteCompactionTasks
+          final int compactionTaskCapacity = (int) Math.min(
+              indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
+              dynamicConfig.getMaxCompactionTaskSlots()
           );
-        } else {
-          // compactionTaskCapacity might be 0 if totalWorkerCapacity is low.
-          // This guarantees that at least one slot is available if
-          // compaction is enabled and numEstimatedNonCompleteCompactionTasks is 0.
-          numAvailableCompactionTaskSlots = Math.max(1, compactionTaskCapacity);
-        }
+          final int numAvailableCompactionTaskSlots;
+          if (numEstimatedNonCompleteCompactionTasks > 0) {
+            numAvailableCompactionTaskSlots = Math.max(
+                0,
+                compactionTaskCapacity - numEstimatedNonCompleteCompactionTasks
+            );
+          } else {
+            // compactionTaskCapacity might be 0 if totalWorkerCapacity is low.
+            // This guarantees that at least one slot is available if
+            // compaction is enabled and numEstimatedNonCompleteCompactionTasks is 0.
+            numAvailableCompactionTaskSlots = Math.max(1, compactionTaskCapacity);
+          }
 
-        LOG.info(
-            "Found [%d] available task slots for compaction out of [%d] max compaction task capacity",
-            numAvailableCompactionTaskSlots,
-            compactionTaskCapacity
-        );
-        stats.addToGlobalStat(AVAILABLE_COMPACTION_TASK_SLOT, numAvailableCompactionTaskSlots);
-        stats.addToGlobalStat(MAX_COMPACTION_TASK_SLOT, compactionTaskCapacity);
+          LOG.info(
+              "Found [%d] available task slots for compaction out of [%d] max compaction task capacity",
+              numAvailableCompactionTaskSlots,
+              compactionTaskCapacity
+          );
+          stats.addToGlobalStat(AVAILABLE_COMPACTION_TASK_SLOT, numAvailableCompactionTaskSlots);
+          stats.addToGlobalStat(MAX_COMPACTION_TASK_SLOT, compactionTaskCapacity);
 
-        if (numAvailableCompactionTaskSlots > 0) {
-          stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
+          if (numAvailableCompactionTaskSlots > 0) {
+            stats.accumulate(doRun(compactionConfigs, numAvailableCompactionTaskSlots, iterator));
+          } else {
+            stats.accumulate(makeStats(0, iterator));
+          }
         } else {
-          stats.accumulate(makeStats(0, iterator));
+          LOG.info("compactionConfig is empty. Skip.");
         }
-      } else {
-        LOG.info("compactionConfig is empty. Skip.");
       }
     } else {
       LOG.info("maxCompactionTaskSlots was set to 0. Skip compaction");
